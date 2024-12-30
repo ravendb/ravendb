@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
-using Tests.Infrastructure;
-using Xunit.Abstractions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
-using Xunit;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
-
+using Xunit;
+using Xunit.Abstractions;
 
 
 namespace SlowTests.Client.Queries
@@ -21,35 +20,83 @@ namespace SlowTests.Client.Queries
         }
 
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        public void IncludeWithSingleSplitTest()
+        public void IncludeWithMemberInitSplitTest()
         {
             using (var store = GetDocumentStore())
             {
-                InitializeData(store);
+                InitializeData1(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query1 = session.Query<Employee, Employees_ByFirstName>()
+                        .Select(a => new Foo()
+                        {
+                            _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
+                            Name = a.FirstName,
+                        });
+                    var res = query1.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session, 
+                        ["Companies/App", "Companies/Raven"], 
+                        query1.ToString(), 
+                        "declare function output(a) {\r\n\tinclude(a.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn { Name : a.FirstName };\r\n}\r\nfrom index 'Employees/ByFirstName' as a select output(a)");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeWithSplitAndMathTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
 
                 using (var session = store.OpenSession())
                 {
                     var query1 = session.Query<Employee, Employees_ByFirstName>()
                         .Select(a => new
                         {
-                            FirstName = a.FirstName,
-                            _ = Raven.Client.Documents.Queries.RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
+                            Name = a.FirstName,
+                            _ = RavenQuery.Include<Employee>(e => "Companies/dd"+Math.Round(e.Number)),
+                            __ = RavenQuery.Include<Employee>(e => e.Company.Split('#', StringSplitOptions.None)[0])
                         });
-
-                    var query1String = query1.ToString();
+                    
                     var results = query1.ToList();
 
-                    RavenTestHelper.AssertStartsWithRespectingNewLines("from index 'Employees/ByFirstName' as a select { FirstName : a.FirstName, _ : include(a.Company.split(new RegExp(\"#\", \"g\"))[0]) }",
-                        query1String);
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/dd3", "Companies/dd1", "Companies/Raven", "Companies/App"],
+                        query1.ToString(),
+                        "declare function output(a) {\r\n\tinclude(\"Companies/dd\"+Math.round(a.Number));\r\n\tinclude(a.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn { Name : a.FirstName };\r\n}\r\nfrom index 'Employees/ByFirstName' as a select output(a)");
+                }
+            }
+        }
 
-                    var includedDocs = ((DocumentSession)session).IncludedDocumentsById;
-                    Assert.Equal(2, includedDocs.Count);
-                    Assert.Equal("Companies/App", includedDocs.First().Key);
-                    Assert.Equal("Companies/Raven", includedDocs.Last().Key);
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeWithLetSingleSplitTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
 
-                    var numOfReq = session.Advanced.NumberOfRequests;
-                    var documents = session.Load<Company>(["Companies/Raven", "Companies/App"]);
-                    Assert.Equal(numOfReq, session.Advanced.NumberOfRequests);
+                using (var session = store.OpenSession())
+                {
+                    var query1 = from doc in session.Query<Employee, Employees_ByFirstName>()
+                        let name = doc.FirstName
+                        select new
+                        {
+                            FirstName = name,
+                            _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
+                        };
+
+                    var results = query1.ToList();
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/App", "Companies/Raven"], 
+                        query1.ToString(), 
+                        "declare function output(doc) {\r\n\tvar name = doc.FirstName;\r\n\tinclude(doc.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn { FirstName : name };\r\n}\r\nfrom index 'Employees/ByFirstName' as doc select output(doc)"
+                    );
                 }
             }
         }
@@ -59,7 +106,7 @@ namespace SlowTests.Client.Queries
         {
             using (var store = GetDocumentStore())
             {
-                InitializeData(store);
+                InitializeData1(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -67,20 +114,12 @@ namespace SlowTests.Client.Queries
                         let _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0])
                         select new { FirstName = e.FirstName };
 
-                    var query2String = query2.ToString();
-                    var results2 = query2.ToList();
-
-                    var includedDocs2 = ((DocumentSession)session).IncludedDocumentsById;
-                    RavenTestHelper.AssertStartsWithRespectingNewLines(
-                        "declare function output(e) {\r\n\tvar _ = include(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn { FirstName : e.FirstName };\r\n}\r\nfrom 'Employees' as e select output(e)",
-                        query2String);
-                    Assert.Equal(2, includedDocs2.Count);
-                    Assert.Equal("Companies/App", includedDocs2.First().Key);
-                    Assert.Equal("Companies/Raven", includedDocs2.Last().Key);
-
-                    var numOfReq2 = session.Advanced.NumberOfRequests;
-                    var documents2 = session.Load<Company>(new[] { "Companies/Raven", "Companies/App" });
-                    Assert.Equal(numOfReq2, session.Advanced.NumberOfRequests);
+                    var results = query2.ToList();
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/App", "Companies/Raven"],
+                        query2.ToString(),
+                        "declare function output(e) {\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn { FirstName : e.FirstName };\r\n}\r\nfrom 'Employees' as e select output(e)");
                 }
             }
         }
@@ -90,27 +129,21 @@ namespace SlowTests.Client.Queries
         {
             using (var store = GetDocumentStore())
             {
-                InitializeData(store);
+                InitializeData1(store);
 
                 using (var session = store.OpenSession())
                 {
                     var query3 = from e in session.Query<Employee>()
                         let _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0])
                         select e.FirstName;
-
-                    var results3String = query3.ToString();
                     var results3 = query3.ToList();
 
-                    var includedDocs3 = ((DocumentSession)session).IncludedDocumentsById;
-                    Assert.Equal(2, includedDocs3.Count);
-                    Assert.Equal(
-                        "declare function output(e) {\r\n\tvar _ = include(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn {FirstName:e.FirstName};\r\n}\r\nfrom 'Employees' as e select output(e)",
-                        results3String);
-                    Assert.NotEmpty(results3);
-
-                    var numOfReq3 = session.Advanced.NumberOfRequests;
-                    var documents3 = session.Load<Company>(new[] { "Companies/Raven", "Companies/App" });
-                    Assert.Equal(numOfReq3, session.Advanced.NumberOfRequests);
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/Raven", "Companies/App"],
+                        query3.ToString(),
+                        "declare function output(e) {\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn {FirstName:e.FirstName};\r\n}\r\nfrom 'Employees' as e select output(e)"
+                        );
                 }
             }
         }
@@ -121,30 +154,25 @@ namespace SlowTests.Client.Queries
         {
             using (var store = GetDocumentStore())
             {
-                InitializeData(store);
+                InitializeData1(store);
 
                 using (var session = store.OpenSession())
                 {
                     var query4 = session.Query<Employee, Employees_ByFirstName>()
-                        .Select(e => new
+                        .Select
+                        (e => new
                         {
                             FirstName = e.FirstName,
-                            _ = Raven.Client.Documents.Queries.RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
-                            __ = Raven.Client.Documents.Queries.RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[1])
+                            _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
+                            __ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[1])
                         });
 
-                    var results4 = query4.ToList();
-                    var includedDocs4 = ((DocumentSession)session).IncludedDocumentsById;
-
-                    Assert.Equal(4, includedDocs4.Count);
-
-                    var keysList = includedDocs4.Keys.ToHashSet();
-
-                    Assert.Contains("Companies/Amaz", keysList);
-                    Assert.Contains("Companies/App", keysList);
-                    Assert.Contains("Companies/Micro", keysList);
-                    Assert.Contains("Companies/Raven", keysList);
-                    Assert.NotEmpty(results4);
+                    var res = query4.ToList();
+                    AssertIncludedDocsAndRql(
+                        session, 
+                        ["Companies/Amaz", "Companies/App", "Companies/Raven", "Companies/App"], 
+                        query4.ToString(),
+                        "declare function output(e) {\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[1]);\r\n\treturn { FirstName : e.FirstName };\r\n}\r\nfrom index 'Employees/ByFirstName' as e select output(e)");
                 }
             }
         }
@@ -154,7 +182,7 @@ namespace SlowTests.Client.Queries
         {
             using (var store = GetDocumentStore())
             {
-                InitializeData(store);
+                InitializeData1(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -165,36 +193,11 @@ namespace SlowTests.Client.Queries
                             _ = Raven.Client.Documents.Queries.RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
                             Include = Raven.Client.Documents.Queries.RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[1])
                         });
-
+                        
                     var error = Assert.Throws<InvalidOperationException>(() => query5.ToList());
                     Assert.Equal("The include variable can only be assigned to the discard character (_)", error.Message);
                 }
             }
-        }
-
-        private void InitializeData(IDocumentStore store)
-        {
-            using (var session = store.OpenSession())
-            {
-                var employee1 = new Employee { FirstName = "Golan", Company = "Companies/Raven#Companies/Micro" };
-                var employee2 = new Employee { FirstName = "Grisha", Company = "Companies/App#Companies/Amaz" };
-                var company1 = new Company { Name = "RavenDB" };
-                var company2 = new Company { Name = "App" };
-                var company3 = new Company { Name = "Micro" };
-                var company4 = new Company { Name = "Amaz" };
-
-                session.Store(employee1);
-                session.Store(employee2);
-                session.Store(company1, "Companies/Raven");
-                session.Store(company2, "Companies/App");
-                session.Store(company3, "Companies/Micro");
-                session.Store(company4, "Companies/Amaz");
-
-                session.SaveChanges();
-            }
-
-            new Employees_ByFirstName().Execute(store);
-            Indexes.WaitForIndexing(store);
         }
 
         [RavenFact(RavenTestCategory.Querying)]
@@ -202,28 +205,20 @@ namespace SlowTests.Client.Queries
         {
             using (DocumentStore store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Order { Company = "1", Employee = "employees/1" }, "orders/1-A");
-                    session.Store(new Order { Company = "2", Employee = "employees/2" }, "orders/2-A");
+                InitializeData2(store);
 
-                    session.Store(new Employee { FirstName = "a" }, "employees/1");
-                    session.Store(new Employee { FirstName = "b" }, "employees/2");
-
-                    session.SaveChanges();
-                }
-
-                Assert.Throws<InvalidOperationException>(() =>
+                var error = Assert.Throws<InvalidOperationException>(() =>
                 {
                     using (var session = store.OpenSession())
                     {
                         var query3 = from o in session.Query<Order>()
-                            let includes = RavenQuery.Include<Order>(u => u.Employee)
-                            select new QueryResult { Comapny = o.Company };
+                                     let includes = RavenQuery.Include<Order>(u => u.Employee)
+                                     select new QueryResult { Comapny = o.Company };
 
                         var results = query3.ToList();
                     }
                 });
+                Assert.Equal("The include variable can only be assigned to the discard character (_)", error.Message);
             }
         }
 
@@ -232,47 +227,30 @@ namespace SlowTests.Client.Queries
         {
             using (DocumentStore store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Address { CountryState = "states/1#zip07", City = "new-york", StateId = "states/1" });
-                    session.Store(new Address { CountryState = "states/2#zip05", City = "haifa", StateId = "states/2" });
-
-                    session.Store(new State { Name = "Alabama" }, "states/1");
-                    session.Store(new State { Name = "Minassota" }, "states/2");
-
-                    session.SaveChanges();
-                }
+                InitializeData2(store);
 
                 using (var session = store.OpenSession())
                 {
                     var query3 = from a in session.Query<Address>()
                         let _ = RavenQuery.Include<Address>(x => x.StateId)
                         select new { Name = a.City };
-                    var res2 = query3.ToList();
 
-                    var doc1 = session.Load<State>("states/1");
-                    var doc2 = session.Load<State>("states/2");
-
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    query3.ToList();
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query3.ToString(),
+                        "declare function output(a) {\r\n\tinclude(a.StateId);\r\n\treturn { Name : a.City };\r\n}\r\nfrom 'Addresses' as a select output(a)");
                 }
             }
         }
 
         [RavenFact(RavenTestCategory.Querying)]
-        public void SessionQuerySelectAdressFromIncludeDoc_UsingRavenQueryWithComplexLambdaExpression()
-        {
+        public void SessionQuerySelectAddressFromIncludeDoc_UsingRavenQueryWithComplexLambdaExpression()
+        { 
             using (DocumentStore store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Address { CountryState = "states/1#zip07", City = "new-york", StateId = "states/1" });
-                    session.Store(new Address { CountryState = "states/2#zip05", City = "haifa", StateId = "states/2" });
-
-                    session.Store(new State { Name = "Alabama" }, "states/1");
-                    session.Store(new State { Name = "Minassota" }, "states/2");
-
-                    session.SaveChanges();
-                }
+              InitializeData2(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -284,16 +262,13 @@ namespace SlowTests.Client.Queries
                     var query3 = from a in session.Query<Address>()
                         let _ = RavenQuery.Include<Address>(x => x.CountryState.Split('#', StringSplitOptions.None)[0])
                         select new { Name = a.City };
-                    var res1 = query3.ToString();
+
                     var res2 = query3.ToList();
-                    Assert.Equal(2, res2.Count);
-                    Assert.Equal("new-york", res2[0].Name);
-                    Assert.Equal("haifa", res2[1].Name);
-
-                    var doc1 = session.Load<State>("states/1");
-                    var doc2 = session.Load<State>("states/2");
-
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query3.ToString(),
+                        "declare function output(a) {\r\n\tinclude(a.CountryState.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn { Name : a.City };\r\n}\r\nfrom 'Addresses' as a select output(a)");
                 }
             }
         }
@@ -301,37 +276,82 @@ namespace SlowTests.Client.Queries
         [RavenFact(RavenTestCategory.Querying)]
         public void SessionQuerySelectAdressFromIncludeDoc_UsingRavenQueryWithSimpleLambdaExpression()
         {
-            using (DocumentStore store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Address { CountryState = "states/1#zip07", City = "new-york", StateId = "states/1" });
-                    session.Store(new Address { CountryState = "states/2#zip05", City = "haifa", StateId = "states/2" });
-
-                    session.Store(new State { Name = "Alabama" }, "states/1");
-                    session.Store(new State { Name = "Minassota" }, "states/2");
-
-                    session.SaveChanges();
-                }
-
+                InitializeData2(store);
                 using (var session = store.OpenSession())
                 {
                     var query3 = from a in session.Query<Address>()
                         let _ = RavenQuery.Include<Address>(x => x.StateId)
                         select new { Name = a.City };
-                    var res1 = query3.ToString();
                     var res2 = query3.ToList();
 
-                    Assert.Equal(2, res2.Count);
-                    Assert.Equal("new-york", res2[0].Name);
-                    Assert.Equal("haifa", res2[1].Name);
-
-                    var doc1 = session.Load<State>("states/1");
-                    var doc2 = session.Load<State>("states/2");
-
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query3.ToString(),
+                        "declare function output(a) {\r\n\tinclude(a.StateId);\r\n\treturn { Name : a.City };\r\n}\r\nfrom 'Addresses' as a select output(a)");
                 }
             }
+        }
+            
+
+        private void InitializeData1(IDocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                var employee1 = new Employee { FirstName = "Golan", Number = 1.2, Company = "Companies/Raven#Companies/Micro" };
+                var employee2 = new Employee { FirstName = "Grisha", Number = 2.6, Company = "Companies/App#Companies/Amaz" };
+                var company1 = new Company { Name = "RavenDB" };
+                var company2 = new Company { Name = "App" };
+                var company3 = new Company { Name = "Micro" };
+                var company4 = new Company { Name = "Amaz" };
+                var company5 = new Company { Name = "dd1" };
+                var company6 = new Company { Name = "dd3" };
+
+                session.Store(employee1);
+                session.Store(employee2);
+                session.Store(company1, "Companies/Raven");
+                session.Store(company2, "Companies/App");
+                session.Store(company3, "Companies/Micro");
+                session.Store(company4, "Companies/Amaz");
+                session.Store(company5, "Companies/dd1");
+                session.Store(company6, "Companies/dd3");
+
+                session.SaveChanges();
+            }
+            new Employees_ByFirstName().Execute(store);
+            Indexes.WaitForIndexing(store);
+        }
+
+        private void InitializeData2(IDocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+
+                session.Store(new Address { CountryState = "states/1#zip07", City = "new-york", StateId = "states/1" });
+                session.Store(new Address { CountryState = "states/2#zip05", City = "haifa", StateId = "states/2" });
+
+                session.Store(new State { Name = "Alabama" }, "states/1");
+                session.Store(new State { Name = "Minassota" }, "states/2");
+
+                session.SaveChanges();
+            }
+        }
+
+        private void AssertIncludedDocsAndRql(IDocumentSession session, string[] expectedKeys, string actualRql, string expectedRql)
+        {
+            var includedDocs = ((DocumentSession)session).IncludedDocumentsById;
+            Assert.Equal(expectedKeys.Length, includedDocs.Count);
+            foreach (var key in expectedKeys)
+            {
+                Assert.Contains(key, includedDocs.Keys);
+            }
+            var initialRequestCount = session.Advanced.NumberOfRequests;
+            var documents = session.Load<dynamic>(expectedKeys);
+            var finalRequestCount = session.Advanced.NumberOfRequests;
+            Assert.Equal(initialRequestCount, finalRequestCount);
+            RavenTestHelper.AssertStartsWithRespectingNewLines(expectedRql, actualRql);
         }
 
         private class Employees_ByFirstName : AbstractIndexCreationTask<Employee>
@@ -349,11 +369,20 @@ namespace SlowTests.Client.Queries
             }
         }
 
+
+        private class Foo
+        {
+            public object _ { get; set; }
+            public string Name { get; set; }
+        }
+
         private class Employee
         {
             public string Id { get; set; }
+            public double Number { get; set; }
             public string FirstName { get; set; }
             public string Company { get; set; }
+            public string[] List { get; set; }
         }
 
         private class Company
@@ -377,18 +406,6 @@ namespace SlowTests.Client.Queries
         private class QueryResult
         {
             public string Comapny { get; set; }
-        }
-
-        private class User
-        {
-            public string UserName { get; set; }
-            public string? StateId;
-            public string? CityId;
-        }
-
-        private class City
-        {
-            public string Name { get; set; }
         }
     }
 }

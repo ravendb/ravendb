@@ -2736,6 +2736,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         HandleSelectId(GetSelectPath(field.Member));
                         continue;
                     }
+                    if (LinqPathProvider.IsIncludeCall(mce))
+                    {
+                        if (FromAlias == null)
+                        {
+                            AddFromAlias(lambdaExpression?.Parameters[0].Name);
+                        }
+                        _declareBuilder ??= new();
+                        AddReturnStatementToOutputFunction(memberInitExpression);
+                        return;
+                    }
                 }
 
                 //lambda 2 js
@@ -2819,6 +2829,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         HandleSelectId(GetSelectPath(newExpression.Members[index]));
                         continue;
+                    }
+                    if (LinqPathProvider.IsIncludeCall(mce))
+                    {
+                        if (FromAlias == null)
+                        {
+                            AddFromAlias(lambdaExpression?.Parameters[0].Name);
+                        }
+                        _declareBuilder ??= new();
+                        AddReturnStatementToOutputFunction(newExpression);
+                        return;
                     }
                 }
 
@@ -2952,6 +2972,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _typedParameterSupport = new JavascriptConversionExtensions.TypedParameterSupport(_manualLet.Name);
             }
             var js = TranslateSelectBodyToJs(expression);
+            if (null != _includeSupport?.IncludeFunctions)
+            {
+                foreach (var include in _includeSupport.IncludeFunctions)
+                {
+                    _declareBuilder.Append("\tinclude(").Append(include).AppendLine(");");
+
+                }
+            }
             _declareBuilder.Append('\t').Append("return ").Append(js).Append(';');
 
             var paramBuilder = new StringBuilder();
@@ -3228,10 +3256,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             _declareBuilder ??= new StringBuilder();
-            _declareBuilder.Append('\t')
-                .Append("var ").Append(name)
-                .Append(" = ").Append(js).Append(';')
-                .Append(Environment.NewLine);
+            if (String.IsNullOrEmpty(js) == false)
+            {
+                _declareBuilder.Append('\t')
+                    .Append("var ").Append(name)
+                    .Append(" = ").Append(js).Append(';')
+                    .Append(Environment.NewLine);
+
+            }
         }
 
         private static void AddPropertyToWrapperObject(string name, string js, StringBuilder wrapper)
@@ -3329,7 +3361,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         continue;
                     }
 
-                    AddJsProjection(name, field.Expression, sb, index != 0);
+                    if (null != _includeSupport?.IncludeFunctions?.Count)
+                    {
+                        AddJsProjection(name, field.Expression, sb, index - _includeSupport?.IncludeFunctions.Count != 0);
+                    }
+                    else
+                    {
+                        AddJsProjection(name, field.Expression, sb, index != 0);
+                    }
 
                 }
                 sb.Append(" }");
@@ -3337,7 +3376,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (expression is MemberExpression or MethodCallExpression)
             {
-                if (_includeSupport is not null && _includeSupport.HadAnyIncludes)
+                if (_includeSupport is not null && _includeSupport.IncludeFunctions.IsNullOrEmpty() == false)
                 {
                     sb.Append('{');
                     var name = GetMember(expression);
@@ -3350,7 +3389,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     script = ToJs(expression);
 
                 sb.Append(script);
-                if (_includeSupport is not null && _includeSupport.HadAnyIncludes)
+                if (_includeSupport is not null && _includeSupport.IncludeFunctions.IsNullOrEmpty() == false)
                 {
                     sb.Append("}");
                 }
@@ -3370,11 +3409,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_includeSupport?.HasInclude == true)
             {
-                _includeSupport.HasInclude = false;
                 if (name.All(c => c == '_') == false)
                 {
                     throw new InvalidOperationException("The include variable can only be assigned to the discard character (_)");
                 }
+
+                _jsProjectionNames.Remove(name);
+                _includeSupport.HasInclude = false;
+                return;
             }
 
             if (QueryGenerator.Conventions.FindProjectedPropertyNameForIndex != null)
@@ -4019,7 +4061,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareTokens, _loadTokens, true, hadAnyInclude: _includeSupport?.HadAnyIncludes ?? false)
+                return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, FromAlias, _declareTokens, _loadTokens, true, hadAnyInclude: _includeSupport?.IncludeFunctions.IsNullOrEmpty() == false)
                 {
                     QueryStatistics = _queryStatistics
                 });
@@ -4137,7 +4179,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             // used only for DocumentQuery
             var finalQuery = ((DocumentQuery<T>)DocumentQuery).CreateDocumentQueryInternal<TProjection>(
-                new QueryData(fields, projections, FromAlias, _declareTokens, _loadTokens, _declareTokens != null || _jsSelectBody != null, _includeSupport?.HadAnyIncludes ?? false)
+                new QueryData(fields, projections, FromAlias, _declareTokens, _loadTokens, _declareTokens != null || _jsSelectBody != null, _includeSupport?.IncludeFunctions.IsNullOrEmpty() == false)
                 {
                     IsProjectInto = _isProjectInto,
                     QueryStatistics =  _queryStatistics

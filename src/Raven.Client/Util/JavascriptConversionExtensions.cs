@@ -1026,8 +1026,8 @@ namespace Raven.Client.Util
 
         internal sealed class IncludeSupport(string fromAlias) : JavascriptConversionExtension
         {
+            public List<string> IncludeFunctions;
             public bool HasInclude;
-            public bool HadAnyIncludes;
             public readonly string Alias = fromAlias;
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
@@ -1047,23 +1047,16 @@ namespace Raven.Client.Util
                 var body = le.Body;
                 var parameter = le.Parameters[0];
                 var replacedBody = ReplaceParameter(body, parameter, Alias);
+                var replaced = replacedBody.CompileToJavascript(context.Options);
 
-                HasInclude = HadAnyIncludes = true;
+                (IncludeFunctions ??= new List<string>()).Add(replaced);
+                HasInclude = true;
                 context.PreventDefault();
-                var writer = context.GetWriter();
-                using (writer.Operation(methodCallExpression))
-                {
-                    writer.Write("include(");
-                    context.Visitor.Visit(replacedBody);
-                    writer.Write(")");
-                }
             }
 
             private static Expression ReplaceParameter(Expression body, ParameterExpression oldParam, string alias)
             {
-
                 var newParam = Expression.Parameter(oldParam.Type, alias);
-
                 var replacer = new ParameterReplacer(oldParam, newParam);
                 return replacer.Visit(body);
             }

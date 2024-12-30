@@ -632,5 +632,9 @@ namespace Raven.Client.Documents.Linq
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Metadata);
         }
 
+        public bool IsIncludeCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Include);
+        }
     }
 }
