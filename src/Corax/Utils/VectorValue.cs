@@ -10,6 +10,9 @@ public struct VectorValue : IDisposable
     private readonly Memory<byte> _memory;
     private int _length;
     public int Length => _length;
+    
+    public readonly bool IsNull;
+    public static readonly VectorValue Null = new(true);
 
     public ReadOnlySpan<byte> GetEmbedding()
     {
@@ -18,6 +21,11 @@ public struct VectorValue : IDisposable
 
     public VectorValue()
     {
+    }
+    
+    private VectorValue(bool isNull)
+    {
+        IsNull = isNull;
     }
 
     public VectorValue(IDisposable memoryScope, Memory<byte> embedding, int? length = null)
@@ -28,10 +36,9 @@ public struct VectorValue : IDisposable
     }
 
     public void OverrideLength(int len) => _length = len;
-
-
+    
     public void Dispose()
     {
-        _memoryScope.Dispose();
+        _memoryScope?.Dispose();
     }
 }

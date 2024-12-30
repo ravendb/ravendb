@@ -310,6 +310,12 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.Vector:
                 using (var vectorField = (VectorValue)value)
                 {
+                    if (vectorField.IsNull)
+                    {
+                        builder.WriteNull(fieldId, path);
+                        break;
+                    }
+                    
                     var embedding = vectorField.GetEmbedding();
                     var destinationEmbeddingType = field.Vector.DestinationEmbeddingType;
                     

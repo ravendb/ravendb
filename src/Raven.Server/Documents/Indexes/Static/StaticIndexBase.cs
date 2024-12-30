@@ -659,7 +659,10 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 var vectorList = new List<VectorValue>();
                 foreach (var item in enumerable)
+                {
                     vectorList.Add(CreateVectorValue(item));
+                }
+                
                 embedding = vectorList;
             }
 
@@ -679,7 +682,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 };
 
                 if (str == null)
-                    throw new InvalidDataException($"Unsupported vector value type: {valueToProcess?.GetType().FullName}");
+                    return VectorValue.Null;
 
                 return GenerateEmbeddings.FromText(allocator, indexField.Vector, str);
             }
