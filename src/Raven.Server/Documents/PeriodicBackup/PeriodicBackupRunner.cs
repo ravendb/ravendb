@@ -659,8 +659,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (localStatus == null)
                     {
                         // if there is no status for this, we don't need to take into account tombstones
-                        return 0; // cannot delete the tombstones until we've done a full backup
+                        continue;
                     }
+
+                    var config = record.GetPeriodicBackupConfiguration(taskId);
 
                     // if we are not the responsible node, we want to avoid gathering tombstones indefinitely since our local status will not be updated
                     var responsibleNode = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, taskId);

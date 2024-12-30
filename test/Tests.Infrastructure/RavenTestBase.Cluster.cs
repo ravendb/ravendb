@@ -4,14 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Esprima.Ast;
-using Lucene.Net.Documents;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server;
-using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
@@ -19,7 +16,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Sdk;
 
 namespace FastTests;
 
@@ -256,9 +252,9 @@ public partial class RavenTestBase
                 leader.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
 
             leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks = 0;  // this will trigger the cleaner to run immediately
-            var iteration = leader.ServerStore.Observer._iteration;
-            var iterated = await WaitForValueAsync(() => leader.ServerStore.Observer._iteration > iteration, true);
-            Assert.True(iterated);
+            
+            var cleanupTimeUpdated = await WaitForValueAsync(() => leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks > 0, true);
+            Assert.True(cleanupTimeUpdated);
 
             return state;
         }

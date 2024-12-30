@@ -486,7 +486,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(1, tombstonesCount);
                 }
 
-                Console.WriteLine($"TEST: creating 2nd tombstone");
                 // delete another doc
                 using (var session = store.OpenSession())
                 {
@@ -494,7 +493,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     session.SaveChanges();
                 }
 
-                Console.WriteLine($"TEST: waiting for incremental");
                 // run the incremental
                 await Task.Delay(GetTimeUntilBackupNextOccurence(incrementalFrequency, status.LastFullBackupInternal ?? DateTime.UtcNow));
                 var res = await WaitForValueAsync(async () =>
@@ -533,7 +531,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // wait until full is overdue on not-responsible
                 await Task.Delay(GetTimeUntilBackupNextOccurence(fullBackupFrequency, localStatus.LastFullBackupInternal ?? DateTime.UtcNow));
 
-                Console.WriteLine($"TEST: after waiting for backup to be overdue: now {DateTime.UtcNow}");
                 // run cleaner
                 await dbOriginal.TombstoneCleaner.ExecuteCleanup();
                 await dbOther.TombstoneCleaner.ExecuteCleanup();
