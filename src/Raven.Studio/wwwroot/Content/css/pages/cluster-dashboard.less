@@ -8,12 +8,11 @@
     }
 }
 
-@gc-info-gen0: @color-1;
-@gc-info-gen1: @color-4;
-@gc-info-gen2: @color-2-3;
-@gc-info-loh: @color-2;
-@gc-info-pinned: @color-4-3;
-
+@gc-info-gen0: @color-4-3;
+@gc-info-gen1: @color-3-3;
+@gc-info-gen2: @color-2-2;
+@gc-info-loh: @color-1-2;
+@gc-info-pinned: @color-5-2;
 
 .cluster-dashboard-container {
     width: 100%;
@@ -270,7 +269,7 @@
 
         .property {
             width: 100%;
-            --node-color: @color-4;
+            --node-color: @color-3-1;
 
             .nodes-container {
                 display: grid;
@@ -396,13 +395,6 @@
                                 order: 1;
                                 min-width: 65px;
                             }
-
-                            .rect {
-                                display: inline-block;
-                                width: 15px;
-                                height: 15px;
-                                margin-left: 3px;
-                            }
                             &.gen-0 {
                                 .details-item-value {
                                     color: @gc-info-gen0;
@@ -442,34 +434,6 @@
                                 .rect {
                                     background-color: @gc-info-pinned;
                                 }
-                            }
-                        }
-                    }
-                    
-                    &.no-data {
-                        .gen-0 {
-                            .details-item-value {
-                                color: @text-muted !important;
-                            }
-                        }
-                        .gen-1 {
-                            .details-item-value {
-                                color: @text-muted !important;
-                            }
-                        }
-                        .gen-2 {
-                            .details-item-value {
-                                color: @text-muted !important;
-                            }
-                        }
-                        .loh {
-                            .details-item-value {
-                                color: @text-muted !important;
-                            }
-                        }
-                        .pinned {
-                            .details-item-value {
-                                color: @text-muted !important;
                             }
                         }
                     }
@@ -584,6 +548,105 @@
 
                         .details-list {
                             flex-grow: 1;
+                        }
+                    }
+                }
+            }
+
+            .gc-legend {
+                display: flex;
+                flex-direction: row;
+                gap: 1rem;
+                margin-bottom: @gutter-xs;
+                padding-top: @gutter-xs;
+                width: 100%;
+                border-top: 1px solid fadeout(@hr-border, 50%);
+
+                &.no-data {
+                    .gen-0 {
+                        .details-item-value {
+                            color: @text-muted !important;
+                        }
+                    }
+                    .gen-1 {
+                        .details-item-value {
+                            color: @text-muted !important;
+                        }
+                    }
+                    .gen-2 {
+                        .details-item-value {
+                            color: @text-muted !important;
+                        }
+                    }
+                    .loh {
+                        .details-item-value {
+                            color: @text-muted !important;
+                        }
+                    }
+                    .pinned {
+                        .details-item-value {
+                            color: @text-muted !important;
+                        }
+                    }
+                }
+
+                .details-item {
+                    border-top: none !important;
+                    margin-top: 0;
+                    line-height: 1;
+
+                    .details-item-name {
+                        line-height: 1;
+                        font-size: 12px;
+                        display: flex;
+                        gap: @gutter-xxs;
+                        align-items: center;
+                    }
+
+                    .rect {
+                        display: inline-block;
+                        width: 15px;
+                        height: 15px;
+                        margin-left: 3px;
+                    }
+                    &.gen-0 {
+                        .details-item-value {
+                            color: @gc-info-gen0;
+                        }
+                        .rect {
+                            background-color: @gc-info-gen0;
+                        }
+                    }
+                    &.gen-1 {
+                        .details-item-value {
+                            color: @gc-info-gen1;
+                        }
+                        .rect {
+                            background-color: @gc-info-gen1;
+                        }
+                    }
+                    &.gen-2 {
+                        .details-item-value {
+                            color: @gc-info-gen2;
+                        }
+                        .rect {
+                            background-color: @gc-info-gen2;
+                        }
+                    }
+                    &.loh {
+                        .details-item-value {
+                            color: @gc-info-loh;
+                        }
+                        .rect {
+                            background-color: @gc-info-loh;
+                        }
+                    }
+                    &.pinned {
+                        .details-item-value {
+                            color: @gc-info-pinned;
+                        }
+                        .rect {
+                            background-color: @gc-info-pinned;
                         }
                     }
                 }

@@ -44,7 +44,7 @@ class clusterDashboard extends viewModelBase {
 
     static localStorageName = storageKeyProvider.storageKeyFor("clusterDashboardLayout");
     
-    private static readonly nodeColors = ["#2f9ef3", "#945ab5", "#f06582", "#f0b362", "#7bd85d", "#7069ee", "#d85b9a", "#f38a66", "#edcd51", "#37c4ac"];
+    private static readonly nodeColors = ["#51d27a", "#945ab5", "#2f9ef3", "#f0b362", "#7bd85d", "#7069ee", "#d85b9a", "#f38a66", "#edcd51", "#37c4ac"];
     
     private packery: Packery;
     resizeObserver: ResizeObserver;
