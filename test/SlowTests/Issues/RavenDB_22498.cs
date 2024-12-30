@@ -325,7 +325,7 @@ public class RavenDB_22498 : RavenTestBase
         }
     }
 
-    private class ConvertAutoIndexCommand : RavenCommand<IndexDefinition>
+    internal class ConvertAutoIndexCommand : RavenCommand<IndexDefinition>
     {
         private readonly string _name;
         public override bool IsReadRequest => false;
