@@ -46,7 +46,7 @@ internal sealed class
                     context.Write(writer, result);
                 }
             }
-            catch (AmazonSQSException ex) when (ex.ErrorCode.Contains("AWS.SimpleQueueService.NonExistentQueue"))
+            catch (AmazonSQSException ex) when (ex.ErrorCode.Contains("NonExistentQueue"))
             {
                 // In this case, it means the connection is valid but the queue is not accessible
                 DynamicJsonValue result = new() { [nameof(NodeConnectionTestResult.Success)] = true };
