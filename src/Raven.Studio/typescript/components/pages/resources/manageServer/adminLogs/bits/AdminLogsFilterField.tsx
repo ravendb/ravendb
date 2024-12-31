@@ -128,13 +128,57 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                     <div id="condition-tooltip">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </div>
-                    <UncontrolledPopover target="condition-tooltip" trigger="hover" className="bs5">
+                    <UncontrolledPopover target="condition-tooltip" trigger="hover" className="bs5" placement="top">
                         <div className="p-3">
-                            More info here:
-                            <br />
-                            <a href="https://github.com/NLog/NLog/wiki/When-filter#conditions" target="_blank">
-                                github.com/NLog/NLog/wiki/When-filter#conditions
-                            </a>
+                            <hr className="p-0 m-0" />
+                            <p>
+                                This expression will be evaluated against the log entries.
+                                <br />
+                                Some examples are:
+                            </p>
+                            <p>
+                                Log entries related to <strong>database &quot;DB1&quot;</strong>:
+                                <br />
+                                <code>
+                                    contains(&apos;&#36;&#123;event-properties:item=Resource&#125;&apos;,
+                                    &apos;DB1&apos;)
+                                </code>
+                            </p>
+                            <p>
+                                Log entries for <strong>database &quot;DB2&quot;</strong> with an{" "}
+                                <strong>exception</strong>:
+                                <br />
+                                <code>
+                                    contains(&apos;&#36;&#123;event-properties:item=Resource&#125;&apos;,
+                                    &apos;DB2&apos;) and exception &#33;&#61; null
+                                </code>
+                            </p>
+                            <p>
+                                Log entries associated with <strong>index &quot;MyIndex&quot;</strong>:
+                                <br />
+                                <code>
+                                    contains(&apos;&#36;&#123;event-properties:item=Component&#125;&apos;,
+                                    &apos;MyIndex&apos;)
+                                </code>
+                            </p>
+                            <p>
+                                Log entries from a specific <strong>logger</strong>:
+                                <br />
+                                <code>logger &#61;&#61; &apos;Voron.Impl.Journal.WriteAheadJournal&apos;</code>
+                            </p>
+                            <p>
+                                Log entries that exceed a certain length:
+                                <br />
+                                <code>length(message) &gt; 200</code>
+                            </p>
+                            <hr className="p-0 m-0" />
+                            <p className="m-0">
+                                Learn more about conditions in:
+                                <br />
+                                <a href="https://github.com/NLog/NLog/wiki/When-filter#conditions" target="_blank">
+                                    github.com/NLog/NLog/wiki/When-filter#conditions
+                                </a>
+                            </p>
                         </div>
                     </UncontrolledPopover>
                 </Label>
