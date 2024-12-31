@@ -217,7 +217,6 @@ namespace Sparrow.Json
         public struct EnumerableAs<TOut> : IEnumerator<TOut>
             where TOut : unmanaged
         {
-            private readonly BlittableVectorType _type;
             public int Count => _dataLength / _elementSize;
             private int _position = -1;
             private readonly byte* _dataStart;
@@ -408,8 +407,6 @@ namespace Sparrow.Json
                 if (typeof(TOut) == typeof(Half))
                     return (TOut)(object)(Half)Convert.ToSingle(value);
 #endif
-                
-                return (TOut)(object)value;
                 
                 return (TOut)(object)value;
             }

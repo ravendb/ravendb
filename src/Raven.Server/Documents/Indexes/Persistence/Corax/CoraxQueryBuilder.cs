@@ -657,7 +657,9 @@ public static class CoraxQueryBuilder
         }
         else if (value is BlittableJsonReaderObject json)
         {
-            json.TryGetMember(Sparrow.Global.Constants.Naming.VectorPropertyName, out var vectorObject);
+            var vectorObjectFound = json.TryGetMember(Sparrow.Global.Constants.Naming.VectorPropertyName, out var vectorObject);
+            PortableExceptions.ThrowIfNot<InvalidDataException>(vectorObjectFound, "Cannot find vector property in the object.");
+            
             var vectorReader = (BlittableJsonReaderVector)vectorObject;
             var bytesUsed = vectorReader.Length * vectorReader.ElementSize;
             var memoryScope = builderParameters.Allocator.Allocate(bytesUsed, out Memory<byte> vectorBytes);

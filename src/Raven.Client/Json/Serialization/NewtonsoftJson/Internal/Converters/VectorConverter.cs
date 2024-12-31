@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
 using System.Diagnostics;
+using System.IO;
 using System.Numerics;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
@@ -124,14 +126,16 @@ internal sealed class VectorConverter : JsonConverter
                 WriteVectorArray(writer, v, canWriteInNativeForm);
                 break;
 #endif
-            default:
+            case IEnumerable v:
                 if (canWriteInNativeForm)
                     writer.WriteStartArray();
                 canWriteInNativeForm = false;
-                foreach (var element in (IEnumerable)value)
+                foreach (var element in v)
                     writer.WriteValue(element);
                 break;
-                
+            default:
+                PortableExceptions.Throw<InvalidDataException>($"Cannot create 'RavenVector' from type '{value.GetType().FullName}'.");
+                break;
         }
         
         if (canWriteInNativeForm == false)

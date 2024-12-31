@@ -371,11 +371,12 @@ namespace Sparrow.Json
 
                                     _state.AddBuffered(decimal.ToDouble(value));
                                 }
-#else
-                                throw new NotSupportedException("Vector representations are only supported for .Net versions greater than 6.0");
-#endif
                                 processed = true;
                                 break;
+
+#else
+                                throw new NotSupportedException("Vector representations are only supported for .NET versions greater than 7.0");
+#endif
                         }
 
                         if (processed)
