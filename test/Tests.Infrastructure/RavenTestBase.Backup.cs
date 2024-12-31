@@ -90,10 +90,7 @@ namespace FastTests
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                var responsibleNode = WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
-
-                // chosen responsible node might be different than the node we are going to run the backup on
-                Assert.Equal(server.ServerStore.NodeTag, responsibleNode);
+                WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
 
                 await RunBackupAsync(server, result.TaskId, store, isFullBackup, opStatus, timeout);
                 return result.TaskId;

@@ -404,7 +404,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             // Tombstones on the non-responsible node can't be deleted until it is guaranteed the next backup will be full.
             // Once the non-responsible node is overdue on its full backup, the local status is deleted and tombstones will be deleted.
 
-            var fullBackupFrequency = "*/2 * * * *";//TODO stav: up the freq to stabilize
+            var fullBackupFrequency = "*/2 * * * *";
             var incrementalFrequency = "* * * * *";
 
             var settings = new Dictionary<string, string>

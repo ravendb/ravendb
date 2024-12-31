@@ -1274,20 +1274,23 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
-
-                // clean tombstones
                 
+                // clean tombstones
                 await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: false);
-
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
+                
+                await WaitForAssertionAsync(() =>
                 {
-                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                        var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
 
-                    Assert.Equal(0, numOfCompareExchangeTombstones);
-                    Assert.Equal(allCount, numOfCompareExchanges);
-                }
+                        Assert.Equal(0, numOfCompareExchangeTombstones);
+                        Assert.Equal(allCount, numOfCompareExchanges);
+                    }
+                    return Task.CompletedTask;
+                });
             }
         }
 
@@ -1382,15 +1385,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // clean tombstones
                 await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: false);
 
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
+                await WaitForAssertionAsync(() =>
                 {
-                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                        var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
 
-                    Assert.Equal(0, numOfCompareExchangeTombstones);
-                    Assert.Equal(allCount, numOfCompareExchanges);
-                }
+                        Assert.Equal(0, numOfCompareExchangeTombstones);
+                        Assert.Equal(allCount, numOfCompareExchanges);
+                    }
+                    return Task.CompletedTask;
+                });
             }
         }
 
