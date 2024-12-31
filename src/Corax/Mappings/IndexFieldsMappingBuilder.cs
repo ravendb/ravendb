@@ -51,14 +51,14 @@ public sealed class IndexFieldsMappingBuilder : IDisposable
     }
 
     public IndexFieldsMappingBuilder AddBindingToEnd(Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
-        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false,  bool hasSpatial = false) =>
-        AddBinding(_fields.Count, fieldName, analyzer, hasSuggestion, fieldIndexingMode, shouldStore,  hasSpatial);
+        FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false,  bool hasSpatial = false, VectorOptions vectorOptions = null) =>
+        AddBinding(_fields.Count, fieldName, analyzer, hasSuggestion, fieldIndexingMode, shouldStore,  hasSpatial, vectorOptions);
 
-    public IndexFieldsMappingBuilder AddDynamicBinding(Slice fieldName, FieldIndexingMode mode, bool shouldStore)
+    public IndexFieldsMappingBuilder AddDynamicBinding(Slice fieldName, FieldIndexingMode mode, bool shouldStore, VectorOptions vectorOptions = null)
     {
         if (_fields.TryGetValue(fieldName, out var storedBinding) == false)
         {
-            AddBindingToEnd(fieldName, GetAnalyzer(), fieldIndexingMode: mode, shouldStore: shouldStore);
+            AddBindingToEnd(fieldName, GetAnalyzer(), fieldIndexingMode: mode, shouldStore: shouldStore, hasSpatial: false, vectorOptions: vectorOptions);
         }
 
         Analyzer GetAnalyzer() => mode switch

@@ -6,6 +6,7 @@ using System.Threading;
 using Corax;
 using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
@@ -17,6 +18,7 @@ using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
 using IndexWriter = Corax.Indexing.IndexWriter;
+using VectorOptions = Corax.Mappings.VectorOptions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
@@ -135,7 +137,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             foreach (var (fieldName, fieldIndexing) in _indexingScope.DynamicFields)
             {
                 using var _ = Slice.From(_allocator, fieldName, out var slice);
-                _dynamicFieldsBuilder.AddDynamicBinding(slice, FieldIndexingIntoFieldIndexingMode(fieldIndexing.Indexing), fieldIndexing.Storage== FieldStorage.Yes);
+                VectorOptions vectorOptions = null;
+                if (fieldIndexing.Vector != null)
+                {
+                    vectorOptions = new()
+                    {
+                        NumberOfCandidates = fieldIndexing.Vector.NumberOfCandidatesForIndexing!.Value,
+                        NumberOfEdges = fieldIndexing.Vector.NumberOfEdges!.Value,
+                        VectorEmbeddingType = fieldIndexing.Vector.DestinationEmbeddingType switch
+                        {
+                            VectorEmbeddingType.Binary => Voron.Data.Graphs.VectorEmbeddingType.Binary,
+                            VectorEmbeddingType.Int8 => Voron.Data.Graphs.VectorEmbeddingType.Int8,
+                            VectorEmbeddingType.Single => Voron.Data.Graphs.VectorEmbeddingType.Single,
+                            _ => throw new ArgumentOutOfRangeException(nameof(fieldIndexing.Vector.DestinationEmbeddingType),
+                                fieldIndexing.Vector.DestinationEmbeddingType, null)
+                        }
+                    };
+                }
+                
+                _dynamicFieldsBuilder.AddDynamicBinding(slice, FieldIndexingIntoFieldIndexingMode(fieldIndexing.Indexing), fieldIndexing.Storage== FieldStorage.Yes, vectorOptions);
             }
 
             _dynamicFields = _dynamicFieldsBuilder.Build();

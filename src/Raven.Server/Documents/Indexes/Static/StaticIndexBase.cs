@@ -387,11 +387,23 @@ namespace Raven.Server.Documents.Indexes.Static
 
             indexField!.Vector!.ValidateDebug();
 
-            return indexField.Vector.SourceEmbeddingType switch
+            var vector = indexField!.Vector!.SourceEmbeddingType switch
             { 
                 VectorEmbeddingType.Text => VectorFromText(indexField, value),
                 _ => VectorFromEmbedding(indexField, value)
             };
+            
+            if (indexField.Id != Corax.Constants.IndexWriter.DynamicField)
+                return vector;
+            
+            currentIndexingScope.DynamicFields ??= new Dictionary<string, IndexField>();
+            if (currentIndexingScope.DynamicFields.TryGetValue(fieldName, out var existing) == false)
+            {
+                currentIndexingScope.DynamicFields[fieldName] = indexField;
+                currentIndexingScope.IncrementDynamicFields();
+            }
+
+            return new CoraxDynamicItem() { Field = indexField, Value = vector };
         }
 
         /// <summary>

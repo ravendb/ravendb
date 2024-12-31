@@ -5242,20 +5242,13 @@ namespace Raven.Server.Documents.Indexes
         {
             return _vectorFields.GetOrAdd(name, _ =>
             {
-                if (Definition.MapFields.TryGetValue(name, out var field) == false)
+                if (Definition.MapFields.TryGetValue(name, out var field) == false || field is IndexField { Vector: null })
                 {
                     var isTextual = IsFieldTextualAndPersistConfigurationOnDisk();
                     return IndexField.Create(name, new IndexFieldOptions()
                         {
                             Vector = CreateVectorOptionsBasedOnConfiguration(isTextual)
                         }, null, Corax.Constants.IndexWriter.DynamicField);
-                }
-
-                // When field doesn't contain vector options we've to create it manually by default values.
-                if (field is IndexField { Vector: null } indexField)
-                {
-                    var isTextual = IsFieldTextualAndPersistConfigurationOnDisk();
-                    indexField.Vector = CreateVectorOptionsBasedOnConfiguration(isTextual);
                 }
                 
                 return field switch

@@ -74,7 +74,7 @@ internal sealed class IndexedField
     }
 
     private IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
-        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, in SupportedFeatures supportedFeatures, string nameForStatistics, long fieldRootPage, long termsVectorFieldRootPage, FastList<EntriesModifications> storage, Dictionary<Slice, int> textual, Dictionary<long, int> longs, Dictionary<double, int> doubles, IndexedField parent)
+        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, in SupportedFeatures supportedFeatures, string nameForStatistics, long fieldRootPage, long termsVectorFieldRootPage, FastList<EntriesModifications> storage, Dictionary<Slice, int> textual, Dictionary<long, int> longs, Dictionary<double, int> doubles, VectorOptions vectorOptions, IndexedField parent)
     {
         _parent = parent;
         Name = name;
@@ -96,7 +96,7 @@ internal sealed class IndexedField
         ShouldIndex = supportedFeatures.StoreOnly == false || fieldIndexingMode != FieldIndexingMode.No;
         NameForStatistics = nameForStatistics ?? $"Field_{Name}";
         VectorIndexer = _parent.VectorIndexer;
-        
+        _vectorOptions = vectorOptions;
         IsVirtual = true;
         if (fieldIndexingMode is FieldIndexingMode.Search && _parent.EntryToTerms.IsValid == false)
             EntryToTerms = new();
@@ -145,9 +145,9 @@ internal sealed class IndexedField
                 break;
         }
         
-        return new IndexedField(Constants.IndexWriter.DynamicField, Name, NameLong, NameDouble,
-            NameTotalLengthOfTerms, analyzer, fieldIndexingMode, dynamicField.HasSuggestions, dynamicField.ShouldStore,
-            _supportedFeatures, dynamicField.FieldNameForStatistics, FieldRootPage, TermsVectorFieldRootPage, Storage, Textual, Longs, Doubles, this);
+        return new IndexedField(Constants.IndexWriter.DynamicField, dynamicField.FieldName, dynamicField.FieldNameLong, dynamicField.FieldNameDouble,
+            dynamicField.FieldTermTotalSumField, analyzer, fieldIndexingMode, dynamicField.HasSuggestions, dynamicField.ShouldStore,
+            _supportedFeatures, dynamicField.FieldNameForStatistics, FieldRootPage, TermsVectorFieldRootPage, Storage, Textual, Longs, Doubles, dynamicField.VectorOptions, this);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
