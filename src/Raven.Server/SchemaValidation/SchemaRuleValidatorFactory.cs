@@ -28,6 +28,8 @@ public abstract class SchemaRuleValidatorFactory : ISchemaRuleValidatorFactory
         {ConstantSchemaRuleValidator.RuleName, new ConstantSchemaRuleValidatorFactory()},
         {EnumSchemaRuleValidator.RuleName, new EnumSchemaRuleValidatorFactory()},
         {RequiredSchemaRuleValidator.RuleName, new RequiredSchemaRuleValidatorFactory()},
+        {MinPropertiesSchemaRuleValidator.RuleName, new MinPropertiesSchemaRuleValidatorFactory()},
+        {MaxPropertiesSchemaRuleValidator.RuleName, new MaxPropertiesSchemaRuleValidatorFactory()},
         #endregion
         
         #region strings
