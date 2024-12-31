@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Threading.Tasks;
 using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -17,7 +17,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
     [RavenTheory(RavenTestCategory.JavaScript)]
     [InlineData(true)]
     [InlineData(false)]
-    public void SchemaValidation_WhenAdditionalPropertiesIsNotAllowed(bool withDefinedProp)
+    public async Task SchemaValidation_WhenAdditionalPropertiesIsNotAllowed(bool withDefinedProp)
     {
         const string definedProp = "definedProp";
         const string notDefinedProp = "notDefinedProp";
@@ -32,26 +32,26 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
             jsonSchemaValidator["properties"] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
         }
 
-        using (var schemaDefinition = ReadObject(jsonSchemaValidator))
+        using (ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition))
         {
             schemaValidator.Init(schemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
                 if (withDefinedProp == false)
                     return;
                 
-                using var validObj = ReadObject(new DynamicJsonValue { ["definedProp"] = "12345" });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["definedProp"] = "12345" }, out var obj);
 
-                if (schemaValidator.Validate(validObj, out string errors) == false)
+                if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var invalidObj = ReadObject(new DynamicJsonValue { [notDefinedProp] = "1234" });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [notDefinedProp] = "1234" }, out var obj);
 
-                Assert.False(schemaValidator.Validate(invalidObj, out var errors));
+                Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The property 'notDefinedProp' at '' is not defined and additional properties are not allowed.", errors);
             });
     }
@@ -59,7 +59,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
     [RavenTheory(RavenTestCategory.JavaScript)]
     [InlineData(true)]
     [InlineData(false)]
-    public void SchemaValidation_WhenHasAdditionalPropertiesRestriction(bool withDefinedProp)
+    public async Task SchemaValidation_WhenHasAdditionalPropertiesRestriction(bool withDefinedProp)
     {
         const string definedProp = "definedProp";
         const string notDefinedProp = "notDefinedProp";
@@ -77,26 +77,26 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
             jsonSchemaValidator["properties"] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
         }
 
-        using (var schemaDefinition = ReadObject(jsonSchemaValidator))
+        using (ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition))
         {
             schemaValidator.Init(schemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
                 if(withDefinedProp == false)
                     return;
                 
-                using var validObj = ReadObject(new DynamicJsonValue { ["definedProp"] = 1 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["definedProp"] = 1 }, out var obj);
 
-                if (schemaValidator.Validate(validObj, out string errors) == false)
+                if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var invalidObj = ReadObject(new DynamicJsonValue { [notDefinedProp] = "1234" });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [notDefinedProp] = "1234" }, out var obj);
 
-                Assert.False(schemaValidator.Validate(invalidObj, out var errors));
+                Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value at 'notDefinedProp' must be '1', but it is '1234'.", errors);
             });
     }

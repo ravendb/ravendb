@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Threading.Tasks;
 using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -15,125 +15,126 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateMinStringLength()
+    public async Task SchemaValidation_WhenValidateMinStringLength()
     {
         var schemaValidator = new SchemaValidator();
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["type"] = "object", 
-           ["properties"] = new DynamicJsonValue
-           {
-               ["prop"] = new DynamicJsonValue
-               {
-                   ["minLength"] = 5
-               }
-           }
-        }))
+            ["type"] = "object", 
+            ["properties"] = new DynamicJsonValue
+            {
+                ["prop"] = new DynamicJsonValue
+                {
+                    ["minLength"] = 5
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
         
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 ["prop"] = "12345"
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 ["prop"] = "1234"
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out var errors));
+            Assert.False(schemaValidator.Validate(obj, out var errors));
             AssertError("The length of the value at 'prop' should be at least 5, but its actual length is 4.", errors);
         });
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateMaxStringLength()
+    public async Task SchemaValidation_WhenValidateMaxStringLength()
     {
         var schemaValidator = new SchemaValidator();
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["type"] = "object", 
-           ["properties"] = new DynamicJsonValue
-           {
-               ["prop"] = new DynamicJsonValue
-               {
-                   ["maxLength"] = 5
-               }
-           }
-        }))
+            ["type"] = "object", 
+            ["properties"] = new DynamicJsonValue
+            {
+                ["prop"] = new DynamicJsonValue
+                {
+                    ["maxLength"] = 5
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 ["prop"] = "12345"
-            });
+            }, out var obj);
             
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 ["prop"] = "123456"
-            });
-            Assert.False(schemaValidator.Validate(invalidObj, out var errors));
+            }, out var obj);
+            Assert.False(schemaValidator.Validate(obj, out var errors));
             AssertError("The length of the value at 'prop' should not exceed 5, but its actual length is 6.", errors);
         });
     }
 
-    private string Regex([StringSyntax(StringSyntaxAttribute.Regex)] string pattern) => pattern;
-    
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateForRegexPattern()
+    public async Task SchemaValidation_WhenValidateForRegexPattern()
     {
         var schemaValidator = new SchemaValidator();
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["type"] = "object", 
-           ["properties"] = new DynamicJsonValue
-           {
-               ["prop"] = new DynamicJsonValue
-               {
-                   ["pattern"] = Regex(@"[A-Za-z]{2,3}\d")
-               }
-           }
-        }))
+            ["type"] = "object", 
+            ["properties"] = new DynamicJsonValue
+            {
+                ["prop"] = new DynamicJsonValue
+                {
+                    ["pattern"] = Regex(@"[A-Za-z]{2,3}\d")
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
         
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
         {
-            var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 ["prop"] = "is3"
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 ["prop"] = "i3"
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out var errors));
+            Assert.False(schemaValidator.Validate(obj, out var errors));
             AssertError("The value 'i3' at 'prop' does not match the required pattern '[A-Za-z]{2,3}\\d'.", errors);
         });
     }

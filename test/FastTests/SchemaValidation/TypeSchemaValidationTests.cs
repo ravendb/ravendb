@@ -1,4 +1,5 @@
-﻿using Raven.Server.SchemaValidation;
+﻿using System.Threading.Tasks;
+using Raven.Server.SchemaValidation;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -9,6 +10,7 @@ namespace FastTests.SchemaValidation;
 
 public class TypeSchemaValidationTests : SchemaValidationTestsBase
 {
+    // ReSharper disable once ConvertToPrimaryConstructor
     public TypeSchemaValidationTests(ITestOutputHelper output) : base(output)
     {
     }
@@ -17,20 +19,18 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateObject_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var schemaDefinition = context.ReadObject(new DynamicJsonValue
+        var schemaValidator = new SchemaValidator();
+
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
-        }, "schema Definition");
-        
-        var testObj = context.ReadObject(new DynamicJsonValue
+        };
+        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
         {
-            
-        }, "test object");
-
-        var schemaValidator = new SchemaValidator();
-        schemaValidator.Init(schemaDefinition);
-        
-        if (schemaValidator.Validate(testObj, out string errors) == false)
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+        using var obj = context.ReadObject(new DynamicJsonValue(), "test object");
+        if (schemaValidator.Validate(obj, out string errors) == false)
             Assert.Fail(errors);
     }
 
@@ -38,7 +38,9 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateNestedObjAndTrue_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var schemaDefinition = context.ReadObject(new DynamicJsonValue
+        var schemaValidator = new SchemaValidator();
+
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
             ["properties"] = new DynamicJsonValue
@@ -48,16 +50,18 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                     ["type"] = "object"
                 }
             }
-        }, "schema Definition");
+        };
+        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
         
-        var testObj = context.ReadObject(new DynamicJsonValue
+        using var obj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = new DynamicJsonValue()
         }, "test object");
 
-        var schemaValidator = new SchemaValidator();
-        schemaValidator.Init(schemaDefinition);
-        if (schemaValidator.Validate(testObj, out string errors) == false)
+        if (schemaValidator.Validate(obj, out string errors) == false)
             Assert.Fail(string.Join("\n", errors));
     }
     
@@ -65,7 +69,9 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateNestedObjAndString_ShouldFail()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var schemaDefinition = context.ReadObject(new DynamicJsonValue
+        var schemaValidator = new SchemaValidator();
+
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
             ["properties"] = new DynamicJsonValue
@@ -75,24 +81,28 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                     ["type"] = "object"
                 }
             }
-        }, "schema Definition");
+        };
+        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
         
-        var testObj = context.ReadObject(new DynamicJsonValue
+        using var testObj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = "some string"
         }, "test object");
 
-        var schemaValidator = new SchemaValidator();
-        schemaValidator.Init(schemaDefinition);
         Assert.False(schemaValidator.Validate(testObj, out string errors));
-        //TODO Check exact error
+        AssertError("'prop' should be of type 'object' but actual type is 'string'.", errors);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidation_WhenValidateStringPropertyAndTrue_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var schemaDefinition = context.ReadObject(new DynamicJsonValue
+        var schemaValidator = new SchemaValidator();
+        
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
             ["properties"] = new DynamicJsonValue
@@ -102,15 +112,16 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                     ["type"] = "string"
                 }
             }
-        }, "schema Definition");
-        
-        var testObj = context.ReadObject(new DynamicJsonValue
+        };
+        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+        using var testObj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = "some string"
         }, "test object");
 
-        var schemaValidator = new SchemaValidator();
-        schemaValidator.Init(schemaDefinition);
         if (schemaValidator.Validate(testObj, out string errors) == false)
             Assert.Fail(string.Join("\n", errors));
     }
@@ -119,7 +130,9 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateStringPropertyAndObject_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var schemaDefinition = context.ReadObject(new DynamicJsonValue
+        var schemaValidator = new SchemaValidator();
+
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
             ["properties"] = new DynamicJsonValue
@@ -129,24 +142,27 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                     ["type"] = "string"
                 }
             }
-        }, "schema Definition");
-        
-        var testObj = context.ReadObject(new DynamicJsonValue
+        };
+        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+        using var obj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = new DynamicJsonValue()
         }, "test object");
 
-        var schemaValidator = new SchemaValidator();
-        schemaValidator.Init(schemaDefinition);
-        Assert.False(schemaValidator.Validate(testObj, out string errors));
-        //TODO Check exact error
+        Assert.False(schemaValidator.Validate(obj, out string errors));
+        AssertError("'prop' should be of type 'string' but actual type is 'object'.", errors);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidation_WhenValidateIntPropertyAndTrue_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var schemaDefinition = context.ReadObject(new DynamicJsonValue
+        var schemaValidator = new SchemaValidator();
+
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
             ["properties"] = new DynamicJsonValue
@@ -156,16 +172,17 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                     ["type"] = "integer"
                 }
             }
-        }, "schema Definition");
-        
-        var testObj = context.ReadObject(new DynamicJsonValue
+        };
+        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+        using var obj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = 1
         }, "test object");
 
-        var schemaValidator = new SchemaValidator();
-        schemaValidator.Init(schemaDefinition);
-        if (schemaValidator.Validate(testObj, out string errors) == false)
+        if (schemaValidator.Validate(obj, out string errors) == false)
             Assert.Fail(string.Join("\n", errors));
     }
     
@@ -173,7 +190,9 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateIntPropertyAndObject_ShouldFail()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var schemaDefinition = context.ReadObject(new DynamicJsonValue
+        var schemaValidator = new SchemaValidator();
+
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
             ["properties"] = new DynamicJsonValue
@@ -183,24 +202,27 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                     ["type"] = "integer"
                 }
             }
-        }, "schema Definition");
-        
-        var testObj = context.ReadObject(new DynamicJsonValue
+        };
+        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+        var obj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = new DynamicJsonValue()
         }, "test object");
 
-        var schemaValidator = new SchemaValidator();
-        schemaValidator.Init(schemaDefinition);
-        Assert.False(schemaValidator.Validate(testObj, out string errors));
-        //TODO Check exact error
+        Assert.False(schemaValidator.Validate(obj, out string errors));
+        AssertError("'prop' should be of type 'integer' but actual type is 'object'.", errors);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidation_WhenValidateIntPropertyAndFloat_ShouldFail()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var schemaDefinition = context.ReadObject(new DynamicJsonValue
+        var schemaValidator = new SchemaValidator();
+
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
             ["properties"] = new DynamicJsonValue
@@ -210,21 +232,22 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                     ["type"] = "integer"
                 }
             }
-        }, "schema Definition");
-        
-        var testObj = context.ReadObject(new DynamicJsonValue
+        };
+        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+        using var testObj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = 3.14
         }, "test object");
 
-        var schemaValidator = new SchemaValidator();
-        schemaValidator.Init(schemaDefinition);
         Assert.False(schemaValidator.Validate(testObj, out string errors));
-        //TODO Check exact error
+        AssertError("'prop' should be of type 'integer' but actual type is 'number'.", errors);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateBoolean()
+    public async Task SchemaValidation_WhenValidateBoolean()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
@@ -237,28 +260,28 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { ["type"] = "boolean" }
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = true });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = true }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = false });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = false }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 17.3 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = 17.3 }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("'prop' should be of type 'boolean' but actual type is 'number'.", errors);
@@ -266,7 +289,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateNull()
+    public async Task SchemaValidation_WhenValidateNull()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
@@ -279,21 +302,21 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { ["type"] = "null" }
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = null });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = null }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 17.3 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = 17.3 }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("'prop' should be of type 'null' but actual type is 'number'.", errors);
@@ -301,10 +324,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateObjectOrNull()
+    public async Task SchemaValidation_WhenValidateObjectOrNull()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -314,28 +335,28 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { ["type"] = new DynamicJsonArray{"null", "object"} }
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = null });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = null }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = new DynamicJsonValue() });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonValue() }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 54 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = 54 }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("'prop' should be of type 'null' or 'object' but actual type is 'integer'.", errors);
@@ -343,10 +364,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateEmptyArray()
+    public async Task SchemaValidation_WhenValidateEmptyArray()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -356,14 +375,14 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { ["type"] = new DynamicJsonArray{} }
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 54 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = 54 }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
@@ -371,10 +390,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateEnum()
+    public async Task SchemaValidation_WhenValidateEnum()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -384,49 +401,49 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { ["enum"] = new object[] { 15, "somevalue", new DynamicJsonValue { ["prop"] = 8 } } }
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 15 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = 15 }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = "somevalue" });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "somevalue" }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = new DynamicJsonValue { ["prop"] = 8 } });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonValue { ["prop"] = 8 } }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = "16" });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "16" }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value '16' at 'prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = "someothervalue" });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "someothervalue" }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value 'someothervalue' at 'prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = new DynamicJsonValue { ["prop"] = 9 } });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonValue { ["prop"] = 9 } }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value '{\"prop\":9}' at 'prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
@@ -440,8 +457,6 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     [InlineData(true, "Expected a value of type 'string' for 'type', but received 'boolean' of type 'True' at path 'prop'.")]
     public void InvalidSchema_WhenTypeIsNotValid_ShouldThrow(object type, string error)
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -450,7 +465,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { ["type"] = type }
             },
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             var e = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
             AssertError(error, e.Message);

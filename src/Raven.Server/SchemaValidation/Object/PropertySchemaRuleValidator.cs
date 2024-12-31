@@ -12,6 +12,7 @@ public class PropertySchemaRuleValidator
     private readonly string _schemaPath;
     private ISchemaRuleValidator[] _ruleValidators;
     private BlittableJsonToken[] _typesRestriction;
+    private string[] _publicTypesRestriction;
 
     public string PropertySpecifier { get; }
     
@@ -49,6 +50,7 @@ public class PropertySchemaRuleValidator
         }
 
         _typesRestriction = allowedTypes.ToArray();
+        _publicTypesRestriction = _typesRestriction.Select(SchemaValidationHelper.GetPublicType).Distinct().ToArray();
     }
     
     public virtual void Validate(BlittableJsonReaderObject parent, string property, SchemaValidatorPath path, IErrorBuilder errorBuilder)
@@ -65,7 +67,7 @@ public class PropertySchemaRuleValidator
 
         if (IsOfRequiredType(token) == false)
         {
-            errorBuilder.AddError($"'{path}' should be of type '{string.Join("' or '", _typesRestriction.Select(SchemaValidationHelper.GetPublicType))}' but actual type is '{SchemaValidationHelper.GetPublicType(token)}'.");
+            errorBuilder.AddError($"'{path}' should be of type '{string.Join("' or '", _publicTypesRestriction)}' but actual type is '{SchemaValidationHelper.GetPublicType(token)}'.");
             return;
         }
         

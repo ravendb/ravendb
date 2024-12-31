@@ -17,26 +17,27 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     {
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["patternProperties"] = new DynamicJsonValue
-           {
-               [Regex("[a-z]{3,}")] = new DynamicJsonValue
-               {
-                   ["minimum"] = 0
-               },
-           }
-        }))
+            ["patternProperties"] = new DynamicJsonValue
+            {
+                [Regex("[a-z]{3,}")] = new DynamicJsonValue
+                {
+                    ["minimum"] = 0
+                },
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
         
-        using var validObj = ReadObject(new DynamicJsonValue
+        using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
         {
             ["abc"] = 1
-        });
+        }, out var obj);
             
-        if (schemaValidator.Validate(validObj, out string errors) == false)
+        if (schemaValidator.Validate(obj, out string errors) == false)
             Assert.Fail(string.Join("\n", errors));;
     }
 
@@ -45,26 +46,27 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     {
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["patternProperties"] = new DynamicJsonValue
-           {
-               [Regex("[a-z]{3,}")] = new DynamicJsonValue
-               {
-                   ["minimum"] = 0
-               },
-           }
-        }))
+            ["patternProperties"] = new DynamicJsonValue
+            {
+                [Regex("[a-z]{3,}")] = new DynamicJsonValue
+                {
+                    ["minimum"] = 0
+                },
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
         
-        using var invalidObj = ReadObject(new DynamicJsonValue
+        using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
         {
             ["abc"] = -1
-        });
+        }, out var obj);
             
-        Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+        Assert.False(schemaValidator.Validate(obj, out string errors));
         AssertError("The value '-1' at 'abc' should be greater than or equal to 0.", errors);
     }
 
@@ -73,26 +75,27 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     {
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["patternProperties"] = new DynamicJsonValue
-           {
-               [Regex("[a-z]{3,}")] = new DynamicJsonValue
-               {
-                   ["minimum"] = 0
-               },
-           }
-        }))
+            ["patternProperties"] = new DynamicJsonValue
+            {
+                [Regex("[a-z]{3,}")] = new DynamicJsonValue
+                {
+                    ["minimum"] = 0
+                },
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
         
-        using var validObj = ReadObject(new DynamicJsonValue
+        using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
         {
             ["ABC"] = -1
-        });
+        }, out var obj);
             
-        if (schemaValidator.Validate(validObj, out string errors) == false)
+        if (schemaValidator.Validate(obj, out string errors) == false)
             Assert.Fail(string.Join("\n", errors));
     }
 }

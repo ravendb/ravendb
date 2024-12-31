@@ -1,4 +1,5 @@
-﻿using Raven.Server.SchemaValidation;
+﻿using System.Threading.Tasks;
+using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -16,74 +17,75 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     [RavenTheory(RavenTestCategory.JavaScript)]
     [InlineData(true)]
     [InlineData(false)]
-    public void SchemaValidation_WhenPropIsRequired(bool withAdditionalRestriction)
+    public async Task SchemaValidation_WhenPropIsRequired(bool withAdditionalRestriction)
     {
         const string prop = "prop";
 
         var schemaValidator = new SchemaValidator();
-        var dynamicJsonValue = new DynamicJsonValue { ["type"] = "object", ["required"] = new DynamicJsonArray { prop } };
+        var schemaDefinition = new DynamicJsonValue { ["type"] = "object", ["required"] = new DynamicJsonArray { prop } };
         if (withAdditionalRestriction)
         {
-            dynamicJsonValue["properties"] = new DynamicJsonValue { [prop] = new DynamicJsonValue { ["type"] = "string" } };
+            schemaDefinition["properties"] = new DynamicJsonValue { [prop] = new DynamicJsonValue { ["type"] = "string" } };
         }
 
-        using (var schemaDefinition = ReadObject(dynamicJsonValue))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                var validObj = ReadObject(new DynamicJsonValue { [prop] = "123" });
-
-                if (schemaValidator.Validate(validObj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
-            },
-            () =>
-            {
-                var invalidObj = ReadObject(new DynamicJsonValue { ["prop1"] = "123" });
-
-                Assert.False(schemaValidator.Validate(invalidObj, out var errors));
-                AssertError("The required property 'prop' is missing at ''.", errors);
-            });
-    }
-
-    [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenHasRestrictionOnNestedObject()
-    {
-        const string prop = "prop";
-
-        var schemaValidator = new SchemaValidator();
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
-               {
-                   ["properties"] = new DynamicJsonValue
-                   {
-                       [prop] = new DynamicJsonValue
-                       {
-                           ["properties"] = new DynamicJsonValue
-                           {
-                               [prop] = new DynamicJsonValue
-                               {
-                                   ["const"] = 123
-                               }
-                           }
-                       }
-                   }
-               }))
-        {
-            schemaValidator.Init(schemaDefinition);
-        }
-
-        Assert.Multiple(() =>
-            {
-                var obj = ReadObject(new DynamicJsonValue { [prop] = new DynamicJsonValue { [prop] = 123 } });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [prop] = "123" }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                var obj = ReadObject(new DynamicJsonValue { [prop] = new DynamicJsonValue { [prop] = 1234 } });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "123" }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The required property 'prop' is missing at ''.", errors);
+            });
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenHasRestrictionOnNestedObject()
+    {
+        const string prop = "prop";
+
+        var schemaValidator = new SchemaValidator();
+        var schemaDefinition = new DynamicJsonValue
+        {
+            ["properties"] = new DynamicJsonValue
+            {
+                [prop] = new DynamicJsonValue
+                {
+                    ["properties"] = new DynamicJsonValue
+                    {
+                        [prop] = new DynamicJsonValue
+                        {
+                            ["const"] = 123
+                        }
+                    }
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [prop] = new DynamicJsonValue { [prop] = 123 } }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [prop] = new DynamicJsonValue { [prop] = 1234 } }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value at 'prop.prop' must be '123', but it is '1234'.", errors);
