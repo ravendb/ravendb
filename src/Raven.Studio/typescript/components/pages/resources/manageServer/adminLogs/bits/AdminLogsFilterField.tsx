@@ -87,8 +87,8 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                             <UncontrolledPopover target="filter-action" trigger="hover" className="bs5" placement="top">
                                 <div className="p-3">
                                     <p>
-                                        The selected action will apply to all log entries that match the filter
-                                        logging-rules:
+                                        The selected action will apply to all log entries that match the filter&apos;s
+                                        logging-rules (condition + min + max levels):
                                     </p>
                                     <ul className="mb-1">
                                         <li className="mb-1">
