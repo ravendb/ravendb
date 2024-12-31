@@ -1,4 +1,5 @@
-﻿using Raven.Server.SchemaValidation;
+﻿using System.Threading.Tasks;
+using Raven.Server.SchemaValidation;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -14,7 +15,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateStringConstant()
+    public async Task SchemaValidation_WhenValidateStringConstant()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
@@ -27,21 +28,21 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 ["stringProp"] = new DynamicJsonValue { ["const"] = "somevalue" },
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["stringProp"] = "somevalue" });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["stringProp"] = "somevalue" }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["stringProp"] = "someothervalue" });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["stringProp"] = "someothervalue" }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value at 'stringProp' must be 'somevalue', but it is 'someothervalue'.", errors);
@@ -49,7 +50,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateIntConstant()
+    public async Task SchemaValidation_WhenValidateIntConstant()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
@@ -62,21 +63,21 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 ["intProp"] = new DynamicJsonValue { ["const"] = 21 },
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["intProp"] = 21 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["intProp"] = 21 }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["intProp"] = 21 + 3 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["intProp"] = 21 + 3 }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value at 'intProp' must be '21', but it is '24'.", errors);
@@ -84,7 +85,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateDoubleConstant()
+    public async Task SchemaValidation_WhenValidateDoubleConstant()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
@@ -97,21 +98,21 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 ["doubleProp"] = new DynamicJsonValue { ["const"] = 3.14 },
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["doubleProp"] = 3.14 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["doubleProp"] = 3.14 }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["doubleProp"] = 6.14 });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["doubleProp"] = 6.14 }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value at 'doubleProp' must be '3.14', but it is '6.14'.", errors);
@@ -119,7 +120,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateObjectConstant()
+    public async Task SchemaValidation_WhenValidateObjectConstant()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
@@ -132,21 +133,21 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 ["objectProp"] = new DynamicJsonValue { ["const"] = new DynamicJsonValue{["prop"] = 44} }
             }
         };
-        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["objectProp"] = new DynamicJsonValue{["prop"] = 44} });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["objectProp"] = new DynamicJsonValue{["prop"] = 44} }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var obj = ReadObject(new DynamicJsonValue { ["objectProp"] = new DynamicJsonValue{["anotherprop"] = 44} });
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["objectProp"] = new DynamicJsonValue{["anotherprop"] = 44} }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value at 'objectProp' must be '{\"prop\":44}', but it is '{\"anotherprop\":44}'.", errors);
@@ -154,7 +155,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
             () =>
             {
                 //TODO Make sure a string object is not valid as an object
-                // using var obj = ReadObject(new DynamicJsonValue { ["objectProp"] = ReadObject(new DynamicJsonValue{["prop"] = 44}).ToString() });
+                // using var ctx = ReadObject(new DynamicJsonValue { ["objectProp"] = ReadObject(new DynamicJsonValue{["prop"] = 44}).ToString() });
                 //
                 // Assert.False(schemaValidator.Validate(obj, out var errors));
                 // AssertError("The value at 'objectProp' must be '{\"prop\":44}', but it is '{\"prop\": 44}'.", errors);

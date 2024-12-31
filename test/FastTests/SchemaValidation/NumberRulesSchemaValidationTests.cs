@@ -1,4 +1,5 @@
-﻿using Raven.Server.SchemaValidation;
+﻿using System.Threading.Tasks;
+using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -14,472 +15,477 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateMinimum()
+    public async Task SchemaValidation_WhenValidateMinimum()
     {
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["type"] = "object",
-           ["properties"] = new DynamicJsonValue
-           {
-               [longProp] = new DynamicJsonValue
-               {
-                   ["minimum"] = 0
-               },
-               [doubleProp] = new DynamicJsonValue
-               {
-                   ["minimum"] = 0.5
-               }
-           }
-        }))
+            ["type"] = "object",
+            ["properties"] = new DynamicJsonValue
+            {
+                [longProp] = new DynamicJsonValue
+                {
+                    ["minimum"] = 0
+                },
+                [doubleProp] = new DynamicJsonValue
+                {
+                    ["minimum"] = 0.5
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
         
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 0
-            });
+            }, out var obj);
             
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = -1
-            });
+            }, out var obj);
             
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '-1' at 'longProp' should be greater than or equal to 0.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = -1.5
-            });
+            }, out var obj);
             
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '-1.5' at 'longProp' should be greater than or equal to 0.", errors);
         },
         () =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 0.5
-            });
+            }, out var obj);
             
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = -1
-            });
+            }, out var obj);
             
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '-1' at 'doubleProp' should be greater than or equal to 0.5.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = -1.5
-            });
+            }, out var obj);
             
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '-1.5' at 'doubleProp' should be greater than or equal to 0.5.", errors);
         });
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateExclusiveMinimum()
+    public async Task SchemaValidation_WhenValidateExclusiveMinimum()
     {
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
             ["type"] = "object",
             ["properties"] = new DynamicJsonValue
             {
-               [longProp] = new DynamicJsonValue
-               {
-                   ["minimum"] = 0, 
-                   ["exclusiveMinimum"] = true
-               },
-               [doubleProp] = new DynamicJsonValue
-               {
-                   ["minimum"] = 0.5, 
-                   ["exclusiveMinimum"] = true
-               }
+                [longProp] = new DynamicJsonValue
+                {
+                    ["minimum"] = 0, 
+                    ["exclusiveMinimum"] = true
+                },
+                [doubleProp] = new DynamicJsonValue
+                {
+                    ["minimum"] = 0.5, 
+                    ["exclusiveMinimum"] = true
+                }
             }
-        }))
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue { [longProp] = 1 });
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [longProp] = 1 }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue { [longProp] = 0 });
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [longProp] = 0 }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '0' at 'longProp' should be greater than 0.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue { [longProp] = -0.5 });
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [longProp] = -0.5 }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '-0.5' at 'longProp' should be greater than 0.", errors);
         },
         () =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue { [doubleProp] = 1.5 });
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [doubleProp] = 1.5 }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue { [doubleProp] = 0 });
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [doubleProp] = 0 }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '0' at 'doubleProp' should be greater than 0.5.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue { [doubleProp] = -1.5 });
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [doubleProp] = -1.5 }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '-1.5' at 'doubleProp' should be greater than 0.5.", errors);
         });
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateMaximum()
+    public async Task SchemaValidation_WhenValidateMaximum()
     {
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["type"] = "object",
-           ["properties"] = new DynamicJsonValue
-           {
-               [longProp] = new DynamicJsonValue
-               {
-                   ["maximum"] = 0
-               }, 
-               [doubleProp] = new DynamicJsonValue
-               {
-                   ["maximum"] = 0.5
-               },
-           }
-        }))
+            ["type"] = "object",
+            ["properties"] = new DynamicJsonValue
+            {
+                [longProp] = new DynamicJsonValue
+                {
+                    ["maximum"] = 0
+                }, 
+                [doubleProp] = new DynamicJsonValue
+                {
+                    ["maximum"] = 0.5
+                },
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
 
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
         {
-            var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 0
-            });
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            }, out var obj);
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 1
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '1' at 'longProp' should be less than or equal to 0.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 0.5
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '0.5' at 'longProp' should be less than or equal to 0.", errors);
         },
         () =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 0.5
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 1
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '1' at 'doubleProp' should be less than or equal to 0.5.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 1.5
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '1.5' at 'doubleProp' should be less than or equal to 0.5.", errors);
         });
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateExclusiveMaximum()
+    public async Task SchemaValidation_WhenValidateExclusiveMaximum()
     {
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["type"] = "object",
-           ["properties"] = new DynamicJsonValue
-           {
-               [longProp] = new DynamicJsonValue
-               {
-                   ["maximum"] = 0,
-                   ["exclusiveMaximum"] = true
-               },
-               [doubleProp] = new DynamicJsonValue
-               {
-                   ["maximum"] = 0.5,
-                   ["exclusiveMaximum"] = true
-               }
-           }
-        }))
+            ["type"] = "object",
+            ["properties"] = new DynamicJsonValue
+            {
+                [longProp] = new DynamicJsonValue
+                {
+                    ["maximum"] = 0,
+                    ["exclusiveMaximum"] = true
+                },
+                [doubleProp] = new DynamicJsonValue
+                {
+                    ["maximum"] = 0.5,
+                    ["exclusiveMaximum"] = true
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
         
         
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
         {
-            var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = -1
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 0
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '0' at 'longProp' should be less than 0.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 0.5
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '0.5' at 'longProp' should be less than 0.", errors);
         },
         () =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = -0.5
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 1
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '1' at 'doubleProp' should be less than 0.5.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 0.5
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '0.5' at 'doubleProp' should be less than 0.5.", errors);
         });
     }
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void SchemaValidation_WhenValidateMultipleOf()
+    public async Task SchemaValidation_WhenValidateMultipleOf()
     {
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+        var schemaDefinition = new DynamicJsonValue
         {
-           ["type"] = "object",
-           ["properties"] = new DynamicJsonValue
-           {
-               [longProp] = new DynamicJsonValue
-               {
-                   ["multipleOf"] = 3
-               },
-               [doubleProp] = new DynamicJsonValue
-               {
-                   ["multipleOf"] = 0.6
-               }
-           }
-        }))
+            ["type"] = "object",
+            ["properties"] = new DynamicJsonValue
+            {
+                [longProp] = new DynamicJsonValue
+                {
+                    ["multipleOf"] = 3
+                },
+                [doubleProp] = new DynamicJsonValue
+                {
+                    ["multipleOf"] = 0.6
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
-            schemaValidator.Init(schemaDefinition);
+            schemaValidator.Init(blitSchemaDefinition);
         }
         
         
-        Assert.Multiple(() =>
+        await AssertMultipleParallel(() =>
         {
-            var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 3
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         }, 
         () =>
         {
-            var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 6
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = -9
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 4
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '4' at 'longProp' should be a multiple of 3.", errors);
         },
         () =>
         {
-            var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [longProp] = 4.5
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '4.5' at 'longProp' should be a multiple of 3.", errors);
         },
         () =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 0.6
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 6
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var validObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = -1.8
-            });
+            }, out var obj);
 
-            if (schemaValidator.Validate(validObj, out string errors) == false)
+            if (schemaValidator.Validate(obj, out string errors) == false)
                 Assert.Fail(string.Join("\n", errors));
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 0.5
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '0.5' at 'doubleProp' should be a multiple of 0.6.", errors);
         },
         () =>
         {
-            using var invalidObj = ReadObject(new DynamicJsonValue
+            using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
             {
                 [doubleProp] = 1
-            });
+            }, out var obj);
 
-            Assert.False(schemaValidator.Validate(invalidObj, out string errors));
+            Assert.False(schemaValidator.Validate(obj, out string errors));
             AssertError("The value '1' at 'doubleProp' should be a multiple of 0.6.", errors);
         });
     }

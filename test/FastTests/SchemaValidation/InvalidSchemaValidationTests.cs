@@ -42,18 +42,19 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
     {
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
-               {
-                   ["properties"] = new DynamicJsonValue
-                   {
-                       ["prop"] = new DynamicJsonValue
-                       {
-                           [rule] = ruleValue
-                       }
-                   }
-               }))
+        var schemaDefinition = new DynamicJsonValue
         {
-            var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(schemaDefinition));
+            ["properties"] = new DynamicJsonValue
+            {
+                ["prop"] = new DynamicJsonValue
+                {
+                    [rule] = ruleValue
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
             AssertError(error, exception.Message);
         }
     }
@@ -66,12 +67,14 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
     {
         var schemaValidator = new SchemaValidator();
 
-        using (var schemaDefinition = ReadObject(new DynamicJsonValue
-               {
-                   [key] = value
-               }))
+        var schemaDefinition = new DynamicJsonValue
         {
-            var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(schemaDefinition));
+            [key] = value
+        };
+
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
             AssertError(error, exception.Message);
         }
     }
