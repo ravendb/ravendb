@@ -655,6 +655,8 @@ public unsafe partial class Hnsw
         private readonly long _globalVectorsContainerId;
         private PostingList _largePostingListSet;
 
+        public int AmountOfModifiedVectorsInTransaction => _vectorHashCache.Count;
+        
         public Registration(LowLevelTransaction llt, Slice name, Random random = null)
         {
             Random = random ?? Random.Shared;

@@ -92,6 +92,8 @@ namespace Corax
             public const int FrequencyTermFreeSpace = 0b1111_1111;
             public const int MaxSizeOfTermVectorList = int.MaxValue >> 1;
 
+            internal const long UninitializedFieldRootPage = -1L;
+
             public static class Hnsw
             {
                 public const int TreeExists = -1;

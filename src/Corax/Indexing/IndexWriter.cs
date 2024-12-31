@@ -156,7 +156,7 @@ namespace Corax.Indexing
         
         private void InitializeFieldRootPage(IndexedField field)
         {
-            if (field.FieldRootPage == -1)
+            if (field.FieldRootPage == Constants.IndexWriter.UninitializedFieldRootPage)
             {
                 _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 field.FieldRootPage = _fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
@@ -910,11 +910,11 @@ namespace Corax.Indexing
             Span<int> uniquePostingList = _knownFieldsTerms.Length > 256 ? new int[fieldCount] : stackalloc int[fieldCount];
             var fieldIt = 0;
             foreach (var field in _knownFieldsTerms.AsSpan())
-                (sortedFieldsBuffer[fieldIt], uniquePostingList[fieldIt++]) = (field, field.Textual.Count);
+                (sortedFieldsBuffer[fieldIt], uniquePostingList[fieldIt++]) = (field, field.GetApproximateNumberOfTerms());
             if (_dynamicFieldsTerms != null)
             { 
                 foreach (var field in _dynamicFieldsTerms.Values) 
-                    (sortedFieldsBuffer[fieldIt], uniquePostingList[fieldIt++]) = (field, field.Textual.Count);
+                    (sortedFieldsBuffer[fieldIt], uniquePostingList[fieldIt++]) = (field, field.GetApproximateNumberOfTerms());
             }
 
             var sortedFields = sortedFieldsBuffer.AsSpan(0, fieldIt);
@@ -923,7 +923,9 @@ namespace Corax.Indexing
             {
                 //Dynamic terms will be indexed with explicit field terms.
                 if (indexedField.IsVirtual)
+                {
                     continue;
+                }
                 
                 using var staticFieldScope = stats.For(indexedField.NameForStatistics);
 

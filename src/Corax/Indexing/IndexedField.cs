@@ -52,8 +52,22 @@ internal sealed class IndexedField
     private readonly SupportedFeatures _supportedFeatures;
     public readonly bool IsVirtual;
     public bool HasMultipleTermsPerField;
-    public long FieldRootPage;
-    
+    private long _fieldRootPage;
+
+    public long FieldRootPage
+    {
+        get => _fieldRootPage;
+   
+        // The parent may still be uninitialized while initializing its virtual clone.
+        // In such cases, we need to push the value to the parent.
+        set
+        {
+            _fieldRootPage = value;
+            if (IsVirtual && _parent.FieldRootPage == Constants.IndexWriter.UninitializedFieldRootPage)
+                _parent.FieldRootPage = value;
+        }
+    }
+
     /// <summary>
     /// Root page of the TermsVectorField (used for phrase queries)
     /// </summary>
@@ -62,7 +76,18 @@ internal sealed class IndexedField
     public bool HasVector => _vectorOptions != null;
 
     private bool _hnswIsCreated;
-    private readonly VectorOptions _vectorOptions;
+    private VectorOptions _vectorOptions;
+
+    public int GetApproximateNumberOfTerms()
+    {
+        var min = int.MaxValue;
+        min = Math.Min(min, Textual.Count);
+        if (VectorIndexer != null)
+            min = Math.Min(min, VectorIndexer.AmountOfModifiedVectorsInTransaction);
+
+        return min;
+    }
+    
     public override string ToString()
     {
         return Name.ToString() + " Id: " + Id;
@@ -95,6 +120,7 @@ internal sealed class IndexedField
         FieldIndexingMode = fieldIndexingMode;
         ShouldIndex = supportedFeatures.StoreOnly == false || fieldIndexingMode != FieldIndexingMode.No;
         NameForStatistics = nameForStatistics ?? $"Field_{Name}";
+
         VectorIndexer = _parent.VectorIndexer;
         _vectorOptions = vectorOptions;
         IsVirtual = true;
@@ -103,7 +129,7 @@ internal sealed class IndexedField
     }
     
     public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
-        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, in SupportedFeatures supportedFeatures, VectorOptions vectorOptions, string nameForStatistics = null, long fieldRootPage = -1, long termsVectorFieldRootPage = -1)
+        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, in SupportedFeatures supportedFeatures, VectorOptions vectorOptions, string nameForStatistics = null, long fieldRootPage = Constants.IndexWriter.UninitializedFieldRootPage, long termsVectorFieldRootPage = Constants.IndexWriter.UninitializedFieldRootPage)
     {
         Name = name;
         NameLong = nameLong;
@@ -155,8 +181,19 @@ internal sealed class IndexedField
     {
         if (_hnswIsCreated == false && vectorSize != Constants.IndexWriter.Hnsw.TreeExists)
             CreateHnswTree(llt, vectorSize);
+
+        if (VectorIndexer == null)
+        {
+            VectorIndexer = Hnsw.RegistrationFor(llt, Name);
+            if (IsVirtual)
+            {
+                _parent._hnswIsCreated = true;
+                _parent.VectorIndexer = VectorIndexer;
+                _parent._vectorOptions = _vectorOptions;
+            }
+        }
         
-        return VectorIndexer ??= Hnsw.RegistrationFor(llt, Name);
+        return VectorIndexer;
     }
 
     private void CreateHnswTree(LowLevelTransaction llt, int vectorSize)
