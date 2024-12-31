@@ -171,6 +171,10 @@ namespace Raven.Server.Documents.Patch
              
                 while (reader.FindNextStored(fieldRootPage))
                 {
+                    // Even though the vector hash is stored, it is Corax's internal value and is not meant to be projected.
+                    if (reader.IsVectorHash)
+                        return false;
+                    
                     // check if stored value is an array and we haven't initialized it yet
                     if (reader.IsList)
                     {

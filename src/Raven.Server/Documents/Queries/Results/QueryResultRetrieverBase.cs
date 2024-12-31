@@ -641,6 +641,10 @@ namespace Raven.Server.Documents.Queries.Results
             bool found = false;
             while (reader.FindNextStored(fieldRootPage))
             {
+                // Even though the vector hash is stored, it is Corax's internal value and is not meant to be projected.
+                if (reader.IsVectorHash)
+                    return false;
+                
                 found = true;
                 if (reader.IsList && value is null)
                 {
