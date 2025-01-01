@@ -18,7 +18,7 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
     protected override void ValidateInternal(string value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if(value.Length > _maxLength)
-            errorBuilder.AddError($"The length of the value at '{path}' should not exceed {_maxLength}, but its actual length is {value.Length}.");
+            errorBuilder.AddError($"The length of the {Target} '{value}' at '{path}' should not exceed {_maxLength}, but its actual length is {value.Length}.");
     }
 }
 

@@ -28,6 +28,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
             new object[] { "required", "somestring", "The value of 'required' at 'prop' must be an array, but received 'somestring' of type 'string'." },
             new object[] { "minProperties", "somestring", "The value of 'minProperties' at 'prop' must be an integer, but received 'somestring' of type 'string'." },
             new object[] { "maxProperties", "somestring", "The value of 'maxProperties' at 'prop' must be an integer, but received 'somestring' of type 'string'." },
+            new object[] { "propertyNames", 1, "The value of 'propertyNames' at 'prop' must be an object, but received '1' of type 'integer'." },
         };
 
     [RavenFact(RavenTestCategory.JavaScript)]
