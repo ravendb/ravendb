@@ -406,8 +406,9 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
         protected void RetrieveTerms(BlittableJsonReaderObject json, Dictionary<string, int> words)
         {
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            if (json is null) return;
 
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < json.Count; i++)
             {
                 json.GetPropertyByIndex(i, ref prop);

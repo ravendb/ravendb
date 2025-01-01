@@ -5,8 +5,10 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Issues;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -52,6 +54,86 @@ namespace SlowTests.Client.MoreLikeThis
                 };
 
             return list;
+        }
+
+
+        public record Item(string Category, string Name, string Description)
+        {
+            public string Id;
+        }
+
+        public class ItemIndex : AbstractIndexCreationTask<Item>
+        {
+            public ItemIndex()
+            {
+                Map = items => from item in items
+                    select new { item.Category, item.Description };
+                Indexes.Add(x=>x.Category, FieldIndexing.Search);
+                TermVectors.Add(item => item.Description, FieldTermVector.Yes);
+                TermVectors.Add(item => item.Category, FieldTermVector.Yes);
+            }
+        }
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        public void MoreLikeThisCanHandleNullPropertyValue(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            new ItemIndex().Execute(store);
+
+            string id;
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Item("Drinks", "Milk", "Great for coffee"));
+                session.Store(new Item("Drinks", "Orange Juice", "Very refreshing"));
+                session.Store(new Item("Food", "Bread", "Goes with everything"));
+                Item beer = new("Drinks", "Beer", null);
+                session.Store(beer);
+                id = session.Advanced.GetDocumentId(beer);
+                session.SaveChanges();
+            }
+            
+            Indexes.WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+            {
+                var list = session.Query<Item, ItemIndex>()
+                    .MoreLikeThis(f => f.UsingDocument(x=>x.Id == id).WithOptions(
+                        new MoreLikeThisOptions { Fields = ["Category", "Description"] }))
+                    .ToList();
+                Assert.Equal(2, list.Count);
+            }
+        }
+        
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        public void MoreLikeThisCanHandleNullPropertyValue_UsingJson(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            new ItemIndex().Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Item("Drinks", "Milk", "Great for coffee"));
+                session.Store(new Item("Drinks", "Orange Juice", "Very refreshing"));
+                session.Store(new Item("Food", "Bread", "Goes with everything"));
+                session.SaveChanges();
+            }
+            
+            Indexes.WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+            {
+                var list = session.Query<Item, ItemIndex>()
+                    .MoreLikeThis(f => f.UsingDocument(
+                        JsonConvert.SerializeObject(new Item("Drinks", "Beer", null))
+                        ).WithOptions(
+                        new MoreLikeThisOptions { Fields = ["Category", "Description"] }))
+                    .ToList();
+                Assert.Equal(2, list.Count);
+            }
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
