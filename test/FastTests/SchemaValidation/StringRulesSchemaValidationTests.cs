@@ -52,7 +52,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
             }, out var obj);
 
             Assert.False(schemaValidator.Validate(obj, out var errors));
-            AssertError("The length of the value at 'prop' should be at least 5, but its actual length is 4.", errors);
+            AssertError("The length of the value '1234' at 'prop' should be at least 5, but its actual length is 4.", errors);
         });
     }
 
@@ -93,7 +93,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = "123456"
             }, out var obj);
             Assert.False(schemaValidator.Validate(obj, out var errors));
-            AssertError("The length of the value at 'prop' should not exceed 5, but its actual length is 6.", errors);
+            AssertError("The length of the value '123456' at 'prop' should not exceed 5, but its actual length is 6.'", errors);
         });
     }
 
@@ -135,7 +135,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
             }, out var obj);
 
             Assert.False(schemaValidator.Validate(obj, out var errors));
-            AssertError("The value 'i3' at 'prop' does not match the required pattern '[A-Za-z]{2,3}\\d'.", errors);
+            AssertError("The pattern of the value 'i3' at 'prop' does not match the required pattern '[A-Za-z]{2,3}\\d'.", errors);
         });
     }
 }

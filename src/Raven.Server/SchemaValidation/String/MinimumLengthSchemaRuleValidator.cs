@@ -18,7 +18,7 @@ internal class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
     protected override void ValidateInternal(string value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if(value.Length < _minLength)
-            errorBuilder.AddError($"The length of the value at '{path}' should be at least {_minLength}, but its actual length is {value.Length}.");
+            errorBuilder.AddError($"The length of the {Target} '{value}' at '{path}' should be at least {_minLength}, but its actual length is {value.Length}.");
     }
 }
 

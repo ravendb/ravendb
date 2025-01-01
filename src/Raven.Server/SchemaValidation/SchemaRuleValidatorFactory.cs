@@ -30,6 +30,7 @@ public abstract class SchemaRuleValidatorFactory : ISchemaRuleValidatorFactory
         {RequiredSchemaRuleValidator.RuleName, new RequiredSchemaRuleValidatorFactory()},
         {MinPropertiesSchemaRuleValidator.RuleName, new MinPropertiesSchemaRuleValidatorFactory()},
         {MaxPropertiesSchemaRuleValidator.RuleName, new MaxPropertiesSchemaRuleValidatorFactory()},
+        {PropertyNamesSchemaRuleValidator.RuleName, new PropertyNamesSchemaRuleValidatorFactory()},
         #endregion
         
         #region strings
@@ -88,4 +89,24 @@ public abstract class SchemaRuleValidatorFactory : ISchemaRuleValidatorFactory
     }
 
     internal static string[] ForTestGetRuleNames() => SchemaRuleValidatorFactories.Keys.ToArray();
+    
+    protected static string GetStringOrThrow(string rule, BlittableJsonReaderObject schemaDefinition, string schemaPath, BlittableJsonToken type)
+    {
+        if (type != BlittableJsonToken.String)
+            TrowRuleTypeError(rule, schemaDefinition[rule], BlittableJsonToken.String, type, schemaPath);
+
+        if (schemaDefinition.TryGet(rule, out string pattern) == false)
+            throw new InvalidOperationException($"'{rule}' must to be convertable to {nameof(System.String)} here. Should not happen");
+        return pattern;
+    }
+    
+    protected static BlittableJsonReaderObject GetObjOrThrow(string rule, BlittableJsonReaderObject schemaDefinition, string schemaPath, BlittableJsonToken type)
+    {
+        if (type != BlittableJsonToken.StartObject)
+            TrowRuleTypeError(rule, schemaDefinition[rule], BlittableJsonToken.StartObject, type, schemaPath);
+
+        if (schemaDefinition.TryGet(rule, out BlittableJsonReaderObject pattern) == false)
+            throw new InvalidOperationException($"'{rule}' must to be convertable to {nameof(BlittableJsonReaderObject)} here. Should not happen");
+        return pattern;
+    }
 }

@@ -117,9 +117,8 @@ public class PropertySchemaRuleValidator
             }
             
             if(SchemaRuleValidatorFactory.TryCreateValidator(rule, propertySchemaDefinition, _schemaPath, out var validator) == false)
-            {
                 continue;
-            }
+
             //TODO To check if we want to collect all the errors and return a full report. Also some time we need to ignore a rule like if "maximum" defined "maximumExclusive" handled as part of it.
             (ruleValidators??=new List<ISchemaRuleValidator>()).Add(validator);
         }

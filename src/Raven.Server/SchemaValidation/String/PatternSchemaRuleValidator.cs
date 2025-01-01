@@ -10,20 +10,8 @@ internal class PatternSchemaRuleValidator : StringSchemaRuleValidator
     
     private readonly Regex _pattern;
 
-    public static ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
-    {
-        if (schemaDefinition.TryGet(RuleName, out object maximumObj) == false)
-            return null;
-
-        if (maximumObj is string maximum == false)
-            throw new InvalidSchemaValidationDefinitionException(
-                $"The value of 'pattern' at '{schemaPath}' must be a string, but received '{maximumObj}' of type '{SchemaValidationHelper.GetPublicTypeOfObj(maximumObj)}'.");
-
-        return new PatternSchemaRuleValidator(maximum);
-    }
-    
     // ReSharper disable once ConvertToPrimaryConstructor
-    public PatternSchemaRuleValidator(string pattern)
+    public PatternSchemaRuleValidator(string pattern) 
     {
         _pattern = new Regex(pattern, RegexOptions.Compiled);
     }
@@ -31,7 +19,7 @@ internal class PatternSchemaRuleValidator : StringSchemaRuleValidator
     protected override void ValidateInternal(string value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if(_pattern.IsMatch(value) == false)
-            errorBuilder.AddError($"The value '{value}' at '{path}' does not match the required pattern '{_pattern}'.");
+            errorBuilder.AddError($"The pattern of the {Target} '{value}' at '{path}' does not match the required pattern '{_pattern}'.");
     }
 }
 
@@ -44,12 +32,8 @@ public class PatternSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
         if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
             return null;
 
-        if (type != BlittableJsonToken.String)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], BlittableJsonToken.String, type, schemaPath);
+        var pattern = GetStringOrThrow(Rule, schemaDefinition, schemaPath, type);
 
-        if (schemaDefinition.TryGet(Rule, out string pattern) == false)
-            throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
-        
         return new PatternSchemaRuleValidator(pattern);
     }
 }
