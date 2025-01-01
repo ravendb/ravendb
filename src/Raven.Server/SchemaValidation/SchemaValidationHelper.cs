@@ -66,9 +66,9 @@ public static class SchemaValidationHelper
             tokens = [BlittableJsonToken.StartObject];
             return true;
         }
-        if (type.CompareTo(Object) == 0)
+        if (type.CompareTo(Array) == 0)
         {
-            tokens = [BlittableJsonToken.StartObject];
+            tokens = [BlittableJsonToken.StartArray];
             return true;
         }
 

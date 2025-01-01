@@ -324,6 +324,48 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenValidateArray()
+    {
+        using var context = JsonOperationContext.ShortTermSingleUse();
+
+        var schemaValidator = new SchemaValidator();
+        var schemaDefinition = new DynamicJsonValue
+        {
+            ["type"] = "object",
+            ["properties"] = new DynamicJsonValue
+            {
+                ["prop"] = new DynamicJsonValue { ["type"] = "array" }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonArray() }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonArray{"somevalue"} }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "notarray" }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("'prop' should be of type 'array' but actual type is 'string'.", errors);
+            });
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateObjectOrNull()
     {
         var schemaValidator = new SchemaValidator();
@@ -364,7 +406,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
-    public async Task SchemaValidation_WhenValidateEmptyArray()
+    public async Task SchemaValidation_WhenTypeRuleIsEmptyArray_ShouldAllowAllTypes()
     {
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
@@ -486,7 +528,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public void InvalidSchema_WhenTypeIsArray_ShouldThrow()
+    public void InvalidSchema_WhenTypeRuleIsArrayOfInt_ShouldThrow()
     {
         var type = new DynamicJsonArray { 54 };
         InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'integer' of type '54' at path 'prop'.");
