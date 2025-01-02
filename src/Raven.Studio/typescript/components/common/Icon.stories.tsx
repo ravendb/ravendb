@@ -488,6 +488,7 @@ const allIconNames = exhaustiveStringTuple<IconName>()(
     "user-info",
     "user",
     "vector",
+    "vector-search",
     "versioning",
     "waiting",
     "warning",
