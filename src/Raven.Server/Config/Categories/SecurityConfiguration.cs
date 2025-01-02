@@ -32,21 +32,21 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(128)]
         [MinValue(16)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Logs.AuditLog.ArchiveAboveSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.AuditLog.ArchiveAboveSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size AuditLogArchiveAboveSize { get; set; }
 
         [DefaultValue(3)]
-        [ConfigurationEntry("Logs.AuditLog.MaxArchiveDays", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.AuditLog.MaxArchiveDays", ConfigurationEntryScope.ServerWideOnly)]
         public int? AuditLogMaxArchiveDays { get; set; }
 
         [DefaultValue(null)]
         [MinValue(0)]
-        [ConfigurationEntry("Logs.AuditLog.MaxArchiveFiles", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.AuditLog.MaxArchiveFiles", ConfigurationEntryScope.ServerWideOnly)]
         public int? AuditLogMaxArchiveFiles { get; set; }
 
         [Description("Will determine whether to compress the audit log files.")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Logs.AuditLog.EnableArchiveFileCompression", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.AuditLog.EnableArchiveFileCompression", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Security.AuditLog.Compress", ConfigurationEntryScope.ServerWideOnly)]
         public bool AuditLogEnableArchiveFileCompression { get; set; }
 
