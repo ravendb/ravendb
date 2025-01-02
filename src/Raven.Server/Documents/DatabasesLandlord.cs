@@ -581,9 +581,8 @@ namespace Raven.Server.Documents
             try
             {
                 if (_wakeupTimers.TryRemove(databaseName.Value, out var timer))
-                {
                     timer.Dispose();
-                }
+
                 release = EnterReadLockImmediately(databaseName);
 
                 if (DatabasesCache.TryGetValue(databaseName, out var database))
@@ -827,7 +826,7 @@ namespace Raven.Server.Documents
                     s => new ConcurrentQueue<string>(),
                     (s, existing) => new ConcurrentQueue<string>());
 
-                AddToInitLog(LogMode.Operations,$"Starting database initialization. Action taken by '{caller}'");
+                AddToInitLog(LogMode.Operations, $"Starting database initialization. Action taken by '{caller}'");
 
                 var sp = Stopwatch.StartNew();
                 documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
@@ -958,7 +957,7 @@ namespace Raven.Server.Documents
         {
             if (ForTestingPurposes is { ShouldFetchIdleStateImmediately: true })
                 return resource.LastAccessTime;
-            
+
             // This allows us to increase the time large databases will be held in memory
             // Using this method, we'll add 0.5 ms per KB, or roughly half a second of idle time per MB.
 
@@ -1056,12 +1055,16 @@ namespace Raven.Server.Documents
 
                 // DateTime should be only null in tests
                 if (idleDatabaseActivity is { DateTime: not null })
-                    _wakeupTimers.TryAdd(databaseName.Value, new Timer(
-                        callback: _ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity),
-                        state: null,
-                        // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
-                        dueTime: idleDatabaseActivity.DueTime > 0 ? idleDatabaseActivity.DueTime : 0,
-                        period: Timeout.Infinite));
+                {
+                    // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
+                    _wakeupTimers.AddOrUpdate(databaseName.Value,
+                        _ => new Timer(_ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity), state: null, dueTime: idleDatabaseActivity.DueTime, period: Timeout.Infinite),
+                        (_, timer) =>
+                        {
+                            timer.Change(idleDatabaseActivity.DueTime, Timeout.Infinite);
+                            return timer;
+                        });
+                }
 
                 if (_logger.IsOperationsEnabled)
                 {
@@ -1101,16 +1104,21 @@ namespace Raven.Server.Documents
 
         public void RescheduleNextIdleDatabaseActivity(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
         {
-            if (_wakeupTimers.TryGetValue(databaseName, out var oldTimer))
+            if (idleDatabaseActivity == null)
             {
-                oldTimer.Dispose();
+                if (_wakeupTimers.TryRemove(databaseName, out var oldTimer))
+                    oldTimer.Dispose();
+
+                return;
             }
 
-            if (idleDatabaseActivity == null)
-                return;
-
-            var newTimer = new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite);
-            _wakeupTimers.AddOrUpdate(databaseName, _ => newTimer, (_, __) => newTimer);
+            _wakeupTimers.AddOrUpdate(databaseName,
+                _ => new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite),
+                (_, timer) =>
+                {
+                    timer.Change(idleDatabaseActivity.DueTime, Timeout.Infinite);
+                    return timer;
+                });
         }
 
         private void NextScheduledActivityCallback(string databaseName, IdleDatabaseActivity nextIdleDatabaseActivity)
