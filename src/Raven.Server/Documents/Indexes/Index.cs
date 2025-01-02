@@ -629,6 +629,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public virtual bool HasBoostedFields => false;
+        public virtual bool HasVectorFields => false;
 
         public virtual bool IsMultiMap => false;
 

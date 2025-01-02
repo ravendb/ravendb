@@ -582,6 +582,9 @@ namespace Raven.Server.Documents.Indexes.Static
             if (methods.HasBoost)
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
+            if (methods.HasCreateVector)
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasVectorFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+            
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
 
@@ -1000,6 +1003,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             public bool HasCreateField { get; set; }
 
+            public bool HasCreateVector { get; set; }
+            
             public bool HasBoost { get; set; }
         }
 

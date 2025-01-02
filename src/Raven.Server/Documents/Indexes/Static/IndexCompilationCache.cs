@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Configuration;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -48,7 +49,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
             try
             {
-                return (StaticIndexBase)result.Value;
+                var index = (StaticIndexBase)result.Value;
+                AssertVectorFields(index, definition.Configuration, configuration);
+                return index;
             }
             catch (Exception)
             {
@@ -66,7 +69,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
             try
             {
-                return (TIndexBase)result.Value;
+                var index =  (TIndexBase)result.Value;
+                AssertVectorFields(index, definition.Configuration, configuration);
+                return index;
             }
             catch (Exception)
             {
@@ -141,8 +146,18 @@ namespace Raven.Server.Documents.Indexes.Static
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }
             
-
+            AssertVectorFields(index, definition.Configuration, configuration);
             return index;
+        }
+        
+        private static void AssertVectorFields(AbstractStaticIndexBase index, IndexConfiguration indexConfiguration, RavenConfiguration configuration)
+        {
+            var singleConfig = new SingleIndexConfiguration(indexConfiguration, configuration);
+
+            if (index.HasVectorFields && singleConfig.StaticIndexingEngineType != SearchEngineType.Corax)
+            {
+                throw new NotSupportedException($"Vector fields are supported only by the Corax search engine. This deployment requested '{singleConfig.StaticIndexingEngineType}' search engine.");
+            }
         }
 
         private sealed class CacheKey : IEquatable<CacheKey>

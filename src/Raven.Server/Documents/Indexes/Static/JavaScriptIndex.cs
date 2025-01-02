@@ -296,6 +296,7 @@ function map(name, lambda) {
 
                         HasDynamicFields |= operation.HasDynamicReturns;
                         HasBoostedFields |= operation.HasBoostedFields;
+                        HasVectorFields |= operation.HasVectorFields;
 
                         fields.UnionWith(operation.Fields);
                         foreach (var (k, v) in operation.FieldOptions)

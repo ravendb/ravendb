@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool HasBoostedFields;
 
+        public bool HasVectorFields;
+
         public HashSet<string> Fields = new HashSet<string>();
         public Dictionary<string, IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
         private readonly Engine _engine;
@@ -151,6 +153,8 @@ namespace Raven.Server.Documents.Indexes.Static
                                     var fieldValue = property.Value;
                                     if (IsBoostExpression(fieldValue))
                                         HasBoostedFields = true;
+                                    if (IsCreateVectorExpression(fieldValue))
+                                        HasVectorFields = true;
                                 }
                             }
                         }
@@ -171,6 +175,11 @@ namespace Raven.Server.Documents.Indexes.Static
                             if (ce.Arguments[0] is ObjectExpression oe)
                                 AddObjectFieldsToIndexFields(oe);
                         }
+                        else if (IsCreateVectorExpression(ce))
+                        {
+                            HasVectorFields = true;
+                            HasDynamicReturns = true;
+                        }
                         else if (IsArrowFunctionExpressionWithObjectExpressionBody(ce, out var oea))
                             AddObjectFieldsToIndexFields(oea);
                         else
@@ -187,7 +196,12 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "boost";
             }
-
+            
+            static bool IsCreateVectorExpression(Node expression)
+            {
+                return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "createVector";
+            }
+            
             static bool IsArrowFunctionExpressionWithObjectExpressionBody(CallExpression callExpression, out ObjectExpression oea)
             {
                 oea = null;
