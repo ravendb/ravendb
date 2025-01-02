@@ -413,12 +413,14 @@ namespace Raven.Server.Config.Categories
         [DefaultValue("Packages/NuGet/Indexing")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.NuGet.PackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }
 
         [Description("Default NuGet source URL")]
         [DefaultValue("https://api.nuget.org/v3/index.json")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.NuGet.PackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string NuGetPackageSourceUrl { get; set; }
 
         [Description("Allow installation of NuGet prerelease packages")]
@@ -426,6 +428,8 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetAllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Indexing.NuGetAllowPreleasePackages", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.NuGet.AllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.NuGet.AllowPreleasePackages", ConfigurationEntryScope.ServerWideOnly)]
         public bool NuGetAllowPreReleasePackages { get; set; }
         
         [Description("Number of index history revisions to keep per index")]
