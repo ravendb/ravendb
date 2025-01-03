@@ -3,6 +3,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
 
@@ -19,11 +20,11 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            ["patternProperties"] = new DynamicJsonValue
+            [SVC.patternProperties] = new DynamicJsonValue
             {
                 [Regex("[a-z]{3,}")] = new DynamicJsonValue
                 {
-                    ["minimum"] = 0
+                    [SVC.minimum] = 0
                 },
             }
         };
@@ -48,11 +49,11 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            ["patternProperties"] = new DynamicJsonValue
+            [SVC.patternProperties] = new DynamicJsonValue
             {
                 [Regex("[a-z]{3,}")] = new DynamicJsonValue
                 {
-                    ["minimum"] = 0
+                    [SVC.minimum] = 0
                 },
             }
         };
@@ -77,11 +78,11 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            ["patternProperties"] = new DynamicJsonValue
+            [SVC.patternProperties] = new DynamicJsonValue
             {
                 [Regex("[a-z]{3,}")] = new DynamicJsonValue
                 {
-                    ["minimum"] = 0
+                    [SVC.minimum] = 0
                 },
             }
         };

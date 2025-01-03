@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators;
 
-[SchemaRule("enum")]
+[SchemaRule(SchemaValidatorConstants.@enum)]
 public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
 {
     private readonly object[] _enums;

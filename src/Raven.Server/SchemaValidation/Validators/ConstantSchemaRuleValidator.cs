@@ -2,7 +2,7 @@
 
 namespace Raven.Server.SchemaValidation.Validators;
 
-[SchemaRule("const")]
+[SchemaRule(SchemaValidatorConstants.@const)]
 public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
 {
     private readonly object _constantValue;

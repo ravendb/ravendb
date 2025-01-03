@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule("maxProperties")]
+[SchemaRule(SchemaValidatorConstants.maxProperties)]
 public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly int _maxProperties;

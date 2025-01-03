@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
 
@@ -22,10 +23,10 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         const string prop = "prop";
 
         var schemaValidator = new SchemaValidator();
-        var schemaDefinition = new DynamicJsonValue { ["type"] = "object", ["required"] = new DynamicJsonArray { prop } };
+        var schemaDefinition = new DynamicJsonValue { [SVC.@type] = "object", ["required"] = new DynamicJsonArray { prop } };
         if (withAdditionalRestriction)
         {
-            schemaDefinition["properties"] = new DynamicJsonValue { [prop] = new DynamicJsonValue { ["type"] = "string" } };
+            schemaDefinition[SVC.properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.@type] = "string" } };
         }
 
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -57,15 +58,15 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["properties"] = new DynamicJsonValue
+            [SVC.properties] = new DynamicJsonValue
             {
                 [prop] = new DynamicJsonValue
                 {
-                    ["properties"] = new DynamicJsonValue
+                    [SVC.properties] = new DynamicJsonValue
                     {
                         [prop] = new DynamicJsonValue
                         {
-                            ["const"] = 123
+                            [SVC.@const] = 123
                         }
                     }
                 }
@@ -98,7 +99,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["minProperties"] = 2
+            [SVC.minProperties] = 2
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
@@ -146,7 +147,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["maxProperties"] = 3
+            [SVC.maxProperties] = 3
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
@@ -188,6 +189,57 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The object at '' must have no more than 3 properties, but it has 4.", errors);
+            });
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnUniqueItems()
+    {
+        var schemaValidator = new SchemaValidator();
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.properties] = new DynamicJsonValue
+            {
+                ["prop1"] = new DynamicJsonValue
+                {
+                    [SVC.uniqueItems] = true
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["prop1"] = new DynamicJsonArray{1, 2, 3},
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["prop1"] = 1,
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["prop1"] = new DynamicJsonArray{1, 2, 1},
+                }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The array at 'prop1' contains duplicate value: '1'. Each item must be unique.", errors);
             });
     }
 }

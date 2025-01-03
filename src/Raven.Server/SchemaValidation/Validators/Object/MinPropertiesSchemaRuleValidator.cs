@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule("minProperties")]
+[SchemaRule(SchemaValidatorConstants.minProperties)]
 public class MinPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly int _minProperties;

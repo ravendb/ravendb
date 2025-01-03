@@ -1,26 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Array;
 
-[SchemaRule("uniqueItems")]
+[SchemaRule(SchemaValidatorConstants.uniqueItems)]
 public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
     // ReSharper disable once ConvertToPrimaryConstructor
     protected override void ValidateInternal(BlittableJsonReaderArray value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        var duplicates = new HashSet<object>();
+        HashSet<object> duplicates = null;
         var hashSet = new HashSet<object>();
         foreach (var item in value)
         {
             if (hashSet.Add(item) == false)
-                duplicates.Add(item);
+                (duplicates ??= []).Add(item);
         }
+
+        if (duplicates == null)
+            return;
         
-        if(duplicates.Any())
-            errorBuilder.AddError($"The array at '{path}' contains duplicate values: {string.Join(", ", duplicates)}. Each item must be unique.");
+        errorBuilder.AddError($"The array at '{path}' contains duplicate value{(duplicates.Count == 1?"":'s')}: '{string.Join("', '", duplicates)}'. Each item must be unique.");
     }
 }
 

@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
 
@@ -24,16 +25,16 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    ["minimum"] = 0
+                    [SVC.minimum] = 0
                 },
                 [doubleProp] = new DynamicJsonValue
                 {
-                    ["minimum"] = 0.5
+                    [SVC.minimum] = 0.5
                 }
             }
         };
@@ -114,18 +115,18 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    ["minimum"] = 0, 
-                    ["exclusiveMinimum"] = true
+                    [SVC.minimum] = 0, 
+                    [SVC.exclusiveMinimum] = true
                 },
                 [doubleProp] = new DynamicJsonValue
                 {
-                    ["minimum"] = 0.5, 
-                    ["exclusiveMinimum"] = true
+                    [SVC.minimum] = 0.5, 
+                    [SVC.exclusiveMinimum] = true
                 }
             }
         };
@@ -188,16 +189,16 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    ["maximum"] = 0
+                    [SVC.maximum] = 0
                 }, 
                 [doubleProp] = new DynamicJsonValue
                 {
-                    ["maximum"] = 0.5
+                    [SVC.maximum] = 0.5
                 },
             }
         };
@@ -277,18 +278,18 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    ["maximum"] = 0,
-                    ["exclusiveMaximum"] = true
+                    [SVC.maximum] = 0,
+                    [SVC.exclusiveMaximum] = true
                 },
                 [doubleProp] = new DynamicJsonValue
                 {
-                    ["maximum"] = 0.5,
-                    ["exclusiveMaximum"] = true
+                    [SVC.maximum] = 0.5,
+                    [SVC.exclusiveMaximum] = true
                 }
             }
         };
@@ -369,16 +370,16 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    ["multipleOf"] = 3
+                    [SVC.multipleOf] = 3
                 },
                 [doubleProp] = new DynamicJsonValue
                 {
-                    ["multipleOf"] = 0.6
+                    [SVC.multipleOf] = 0.6
                 }
             }
         };
