@@ -65,6 +65,7 @@ import getDocumentsPreviewCommand = require("commands/database/documents/getDocu
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import getIdentitiesCommand from "commands/database/identities/getIdentitiesCommand";
 import seedIdentityCommand from "commands/database/identities/seedIdentityCommand";
+import RevisionsBinConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration;
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -177,6 +178,14 @@ export default class DatabasesService {
 
     async saveRevisionsConfiguration(databaseName: string, dto: RevisionsConfiguration) {
         return new saveRevisionsConfigurationCommand(databaseName, dto).execute();
+    }
+
+    async getRevisionsBinCleanerConfiguration(databaseName: string) {
+        // return new getRevisionsBinCleanerConfigurationCommand(databaseName).execute();
+    }
+
+    async saveRevisionsBinCleanerConfiguration(databaseName: string, dto: RevisionsBinConfiguration) {
+        // return new saveRevisionsBinCleanerConfigurationCommand(databaseName, dto).execute();
     }
 
     async enforceRevisionsConfiguration(
