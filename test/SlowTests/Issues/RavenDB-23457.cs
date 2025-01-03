@@ -18,7 +18,7 @@ public class RavenDB_23457 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void Test(Options options)
     {
         using (var store = GetDocumentStore(options))
