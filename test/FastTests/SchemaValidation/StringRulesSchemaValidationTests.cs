@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
 
@@ -20,12 +21,12 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object", 
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object", 
+            [SVC.properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    ["minLength"] = 5
+                    [SVC.minLength] = 5
                 }
             }
         };
@@ -62,12 +63,12 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object", 
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object", 
+            [SVC.properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    ["maxLength"] = 5
+                    [SVC.maxLength] = 5
                 }
             }
         };
@@ -103,12 +104,12 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object", 
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object", 
+            [SVC.properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    ["pattern"] = Regex(@"[A-Za-z]{2,3}\d")
+                    [SVC.pattern] = Regex(@"[A-Za-z]{2,3}\d")
                 }
             }
         };

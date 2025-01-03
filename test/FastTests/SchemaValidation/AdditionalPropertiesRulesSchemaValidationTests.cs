@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 namespace FastTests.SchemaValidation;
 
 public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTestsBase
@@ -25,11 +25,11 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         var schemaValidator = new SchemaValidator();
         var jsonSchemaValidator = new DynamicJsonValue
         {
-            ["additionalProperties"] = false
+            [SVC.additionalProperties] = false
         };
         if (withDefinedProp)
         {
-            jsonSchemaValidator["properties"] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
+            jsonSchemaValidator[SVC.properties] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
         }
 
         using (ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition))
@@ -67,14 +67,14 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         var schemaValidator = new SchemaValidator();
         var jsonSchemaValidator = new DynamicJsonValue
         {
-            ["additionalProperties"] = new DynamicJsonValue
+            [SVC.additionalProperties] = new DynamicJsonValue
             {
-                ["const"] = 1
+                [SVC.@const] = 1
             }
         };
         if (withDefinedProp)
         {
-            jsonSchemaValidator["properties"] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
+            jsonSchemaValidator[SVC.properties] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
         }
 
         using (ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition))

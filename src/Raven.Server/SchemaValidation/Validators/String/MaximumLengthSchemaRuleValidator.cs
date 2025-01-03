@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.String;
 
-[SchemaRule("maxLength")]
+[SchemaRule(SchemaValidatorConstants.maxLength)]
 public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
 {
     private readonly long _maxLength;

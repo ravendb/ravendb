@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.String;
 
-[SchemaRule("pattern")]
+[SchemaRule(SchemaValidatorConstants.pattern)]
 public class PatternSchemaRuleValidator : StringSchemaRuleValidator
 {
     private readonly Regex _pattern;

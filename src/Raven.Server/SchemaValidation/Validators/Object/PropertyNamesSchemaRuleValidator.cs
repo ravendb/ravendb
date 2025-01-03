@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule("propertyNames")]
+[SchemaRule(SchemaValidatorConstants.propertyNames)]
 public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     SchemaRuleValidator<string>[] _propertyNameValidators;

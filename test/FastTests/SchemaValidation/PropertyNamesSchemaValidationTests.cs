@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
 
@@ -20,9 +21,9 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["propertyNames"] = new DynamicJsonValue
+            [SVC.propertyNames] = new DynamicJsonValue
             {
-                ["pattern"] = "^[A-Z]+$"
+                [SVC.pattern] = "^[A-Z]+$"
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -58,9 +59,9 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["propertyNames"] = new DynamicJsonValue
+            [SVC.propertyNames] = new DynamicJsonValue
             {
-                ["minLength"] = 3
+                [SVC.minLength] = 3
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -106,9 +107,9 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["propertyNames"] = new DynamicJsonValue
+            [SVC.propertyNames] = new DynamicJsonValue
             {
-                ["maxLength"] = 5
+                [SVC.maxLength] = 5
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))

@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.String;
 
-[SchemaRule("minLength")]
+[SchemaRule(SchemaValidatorConstants.minLength)]
 public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
 {
     private readonly long _minLength;

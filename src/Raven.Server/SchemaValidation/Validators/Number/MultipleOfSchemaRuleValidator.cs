@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Number;
 
-[SchemaRule("multipleOf")]
+[SchemaRule(SchemaValidatorConstants.multipleOf)]
 public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _multipleOf;

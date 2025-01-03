@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Number;
 
-[SchemaRule("minimum")]
+[SchemaRule(SchemaValidatorConstants.minimum)]
 public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _minimum;
@@ -34,7 +34,6 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 // ReSharper disable once UnusedType.Global
 public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumSchemaRuleValidator>
 {
-    public const string ExclusiveMinimumRuleName = "exclusiveMinimum";
 
     public override MinimumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
@@ -47,13 +46,14 @@ public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Mini
         if (schemaDefinition.TryGet(Rule, out decimal minimum) == false)
             throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
 
-        if (TryGetPropertyType(schemaDefinition, ExclusiveMinimumRuleName, out type))
+        const string emRuleName = SchemaValidatorConstants.exclusiveMinimum;
+        if (TryGetPropertyType(schemaDefinition, emRuleName, out type))
         {
             if (type != BlittableJsonToken.Boolean)
-                TrowRuleTypeError(ExclusiveMinimumRuleName, schemaDefinition[ExclusiveMinimumRuleName], BlittableJsonToken.Boolean, type, schemaPath);
+                TrowRuleTypeError(emRuleName, schemaDefinition[emRuleName], BlittableJsonToken.Boolean, type, schemaPath);
             //TODO Maybe also to handle old version of exclusiveMaximum
         }
-        schemaDefinition.TryGet(ExclusiveMinimumRuleName, out bool exclusiveMaximum);
+        schemaDefinition.TryGet(emRuleName, out bool exclusiveMaximum);
         
         return new MinimumSchemaRuleValidator(minimum, exclusiveMaximum);
     }

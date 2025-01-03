@@ -5,6 +5,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
 
@@ -22,10 +23,10 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
-                ["stringProp"] = new DynamicJsonValue { ["const"] = "somevalue" },
+                ["stringProp"] = new DynamicJsonValue { [SVC.@const] = "somevalue" },
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -57,10 +58,10 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
-                ["intProp"] = new DynamicJsonValue { ["const"] = 21 },
+                ["intProp"] = new DynamicJsonValue { [SVC.@const] = 21 },
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -92,10 +93,10 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
-                ["doubleProp"] = new DynamicJsonValue { ["const"] = 3.14 },
+                ["doubleProp"] = new DynamicJsonValue { [SVC.@const] = 3.14 },
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -127,10 +128,10 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
-            ["type"] = "object",
-            ["properties"] = new DynamicJsonValue
+            [SVC.@type] = "object",
+            [SVC.properties] = new DynamicJsonValue
             {
-                ["objectProp"] = new DynamicJsonValue { ["const"] = new DynamicJsonValue{["prop"] = 44} }
+                ["objectProp"] = new DynamicJsonValue { [SVC.@const] = new DynamicJsonValue{["prop"] = 44} }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
