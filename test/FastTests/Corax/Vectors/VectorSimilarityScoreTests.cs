@@ -70,6 +70,8 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
+    [InlineData(1253422244)]
+    [InlineData(1351777189)]
     public void TestInt8Similarity(int seed)
     {
         var random = new Random(seed);

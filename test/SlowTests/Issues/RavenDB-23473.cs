@@ -143,8 +143,8 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
     
     private class Embedding
     {
-        public string Id;
-        public List<float> Vector;
+        public string Id { get; set; }
+        public List<float> Vector { get; set; }
     }
 
     private class Question
