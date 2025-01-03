@@ -1589,12 +1589,25 @@ namespace Raven.Client.Documents.Conventions
             if (ForTestingPurposes != null)
                 return ForTestingPurposes;
 
-            return ForTestingPurposes = new TestingStuff();
+            return ForTestingPurposes = new TestingStuff(this);
         }
 
         internal class TestingStuff
         {
+            private readonly DocumentConventions _conventions;
+
+            public TestingStuff(DocumentConventions conventions)
+            {
+                _conventions = conventions;
+            }
+
             internal Action<RequestExecutor> OnBeforeTopologyUpdate;
+
+            internal HttpCompressionAlgorithm HttpCompressionAlgorithm
+            {
+                get => _conventions._httpCompressionAlgorithm;
+                set => _conventions._httpCompressionAlgorithm = value;
+            }
         }
     }
 }

@@ -67,7 +67,7 @@ namespace Tests.Infrastructure.InterversionTest
                 };
 
                 var argumentsString = string.Join(" ", commandArguments);
-                return new ProcessStartInfo
+                var processStartInfo = new ProcessStartInfo
                 {
                     FileName = locator.Command,
                     Arguments = argumentsString,
@@ -77,6 +77,14 @@ namespace Tests.Infrastructure.InterversionTest
                     RedirectStandardInput = true,
                     UseShellExecute = false,
                 };
+
+                if (locator.EnvironmentVariables is { Count: > 0 })
+                {
+                    foreach (var kvp in locator.EnvironmentVariables)
+                        processStartInfo.EnvironmentVariables[kvp.Key] = kvp.Value;
+                }
+
+                return processStartInfo;
             }
         }
 

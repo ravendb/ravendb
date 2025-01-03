@@ -42,13 +42,12 @@ namespace InterversionTests
             return base.GetNewServer(options, caller);
         }
 
-        protected async Task<List<ProcessNode>> CreateCluster(string[] peers, X509Certificate2 certificate = null
-            , bool watcherCluster = false)
+        protected async Task<List<ProcessNode>> CreateCluster(string[] peers, InterversionTestOptions options = null, X509Certificate2 certificate = null, bool watcherCluster = false)
         {
             var processes = new List<ProcessNode>();
             foreach (var peer in peers)
             {
-                processes.Add(await GetServerAsync(peer));
+                processes.Add(await GetServerAsync(peer, options));
             }
 
             var leader = processes[0];

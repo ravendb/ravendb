@@ -8,8 +8,11 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon.Util;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -23,6 +26,13 @@ namespace Tests.Infrastructure
 {
     public abstract class InterversionTestBase : ReplicationTestBase
     {
+        static InterversionTestBase()
+        {
+            DocumentConventions.DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+            DocumentConventions.Default.ForTestingPurposesOnly().HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+            DocumentConventions.DefaultForServer.ForTestingPurposesOnly().HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+        }
+
         protected InterversionTestBase(ITestOutputHelper output) : base(output)
         {
         }
@@ -116,7 +126,7 @@ namespace Tests.Infrastructure
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 
-            var locator = new ConfigurableRavenServerLocator(Path.Combine(testServerPath, "Server"), serverVersion);
+            var locator = new ConfigurableRavenServerLocator(Path.Combine(testServerPath, "Server"), serverVersion, environmentVariables: options?.EnvironmentVariables);
 
             var result = await RunServer(locator);
             return new ProcessNode
@@ -132,6 +142,7 @@ namespace Tests.Infrastructure
         protected async Task UpgradeServerAsync(
             string toVersion,
             ProcessNode node,
+            Dictionary<string, string> environmentVariables = null,
             CancellationToken token = default)
         {
             KillSlavedServerProcess(node.Process);
@@ -146,7 +157,7 @@ namespace Tests.Infrastructure
             var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo, token);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(node.ServerPath));
 
-            var locator = new ConfigurableRavenServerLocator(Path.Combine(node.ServerPath, "Server"), toVersion, node.DataDir, node.Url);
+            var locator = new ConfigurableRavenServerLocator(Path.Combine(node.ServerPath, "Server"), toVersion, node.DataDir, node.Url, environmentVariables);
 
             var result = await RunServer(locator);
             Assert.Equal(node.Url, result.ServerUrl);
@@ -357,6 +368,7 @@ namespace Tests.Infrastructure
             private Action<DocumentStore> _modifyDocumentStore;
             private Action<DatabaseRecord> _modifyDatabaseRecord;
             private Func<string, string> _modifyDatabaseName;
+            private Dictionary<string, string> _environmentVariables = new();
 
             public static readonly InterversionTestOptions Default = new InterversionTestOptions(true);
 
@@ -370,6 +382,16 @@ namespace Tests.Infrastructure
                 ReplicationFactor = 1;
 
                 _frozen = frozen;
+            }
+
+            public Dictionary<string, string> EnvironmentVariables
+            {
+                get => _environmentVariables;
+                set
+                {
+                    AssertNotFrozen();
+                    _environmentVariables = value;
+                }
             }
 
             public Func<string, string> ModifyDatabaseName
