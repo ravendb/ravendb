@@ -20,7 +20,7 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
     
     protected static void AssertError(string expected, string actual)
     {
-        Assert.True(expected.StartsWith(actual), $"expected: '{expected}', actual: '{actual}'.");
+        Assert.True(actual.StartsWith(expected), $"expected: '{expected}', \nactual: '{actual}'.");
     }
 
     protected static async Task AssertMultipleParallel(params Action[] checks)

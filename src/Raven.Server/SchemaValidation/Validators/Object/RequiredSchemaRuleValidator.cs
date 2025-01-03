@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Object;
+namespace Raven.Server.SchemaValidation.Validators.Object;
 
+[SchemaRule("required")]
 public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    public const string RuleName = "required";
-    
     private readonly HashSet<string> _requiredHashSet;
 
     public RequiredSchemaRuleValidator(BlittableJsonReaderArray required)
@@ -26,11 +25,10 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
     }
 }
 
-public class RequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+// ReSharper disable once UnusedType.Global
+public class RequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<RequiredSchemaRuleValidator>
 {
-    protected override string Rule => RequiredSchemaRuleValidator.RuleName;
-
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override RequiredSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
         if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
             return null;

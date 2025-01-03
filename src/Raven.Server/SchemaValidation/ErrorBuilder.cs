@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Raven.Server.SchemaValidation;
@@ -12,7 +11,7 @@ public class ErrorBuilder : IErrorBuilder
 {
     private readonly StringBuilder _errorBuilder = new StringBuilder();
     
-    public void AddError(DefaultInterpolatedStringHandler message) => _errorBuilder.Append(message.ToStringAndClear());
+    public void AddError(DefaultInterpolatedStringHandler message) => _errorBuilder.AppendLine(message.ToStringAndClear());
 
     public bool TryGetErrors(out string message)
     {

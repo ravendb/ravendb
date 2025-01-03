@@ -1,13 +1,11 @@
-﻿using System;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.String;
+namespace Raven.Server.SchemaValidation.Validators.String;
 
-internal class PatternSchemaRuleValidator : StringSchemaRuleValidator
+[SchemaRule("pattern")]
+public class PatternSchemaRuleValidator : StringSchemaRuleValidator
 {
-    public const string RuleName = "pattern";
-    
     private readonly Regex _pattern;
 
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -23,11 +21,10 @@ internal class PatternSchemaRuleValidator : StringSchemaRuleValidator
     }
 }
 
-public class PatternSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+// ReSharper disable once UnusedType.Global
+public class PatternSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PatternSchemaRuleValidator>
 {
-    protected override string Rule => PatternSchemaRuleValidator.RuleName;
-
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override PatternSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
         if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
             return null;

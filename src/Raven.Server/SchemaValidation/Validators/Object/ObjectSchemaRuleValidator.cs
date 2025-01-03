@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Object;
+namespace Raven.Server.SchemaValidation.Validators.Object;
 
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {

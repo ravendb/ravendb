@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Object;
+namespace Raven.Server.SchemaValidation.Validators.Object;
 
 [DebuggerDisplay("root validator")]
 public class RootSchemaRuleValidator : PropertySchemaRuleValidator

@@ -144,7 +144,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                 }, out var obj);
                 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The length of the property name '123456' at '' should not exceed 5, but its actual length is 6.'.", errors);
+                AssertError("The length of the property name '123456' at '' should not exceed 5, but its actual length is 6.", errors);
             });
     }
 }

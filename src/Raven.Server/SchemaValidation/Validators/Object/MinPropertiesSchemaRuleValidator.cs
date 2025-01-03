@@ -1,12 +1,11 @@
 ﻿using System;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Object;
+namespace Raven.Server.SchemaValidation.Validators.Object;
 
+[SchemaRule("minProperties")]
 public class MinPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    public const string RuleName = "minProperties";
-    
     private readonly int _minProperties;
 
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -22,11 +21,10 @@ public class MinPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
 }
 
-public class MinPropertiesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+// ReSharper disable once UnusedType.Global
+public class MinPropertiesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinPropertiesSchemaRuleValidator>
 {
-    protected override string Rule => MinPropertiesSchemaRuleValidator.RuleName;
-
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override MinPropertiesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
         if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
             return null;

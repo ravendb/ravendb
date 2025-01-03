@@ -1,10 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Sparrow;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Object;
+namespace Raven.Server.SchemaValidation.Validators.Object;
 
 [DebuggerDisplay("'{_schemaPath}' property validator")]
 public class PropertySchemaRuleValidator
@@ -116,7 +115,7 @@ public class PropertySchemaRuleValidator
                 continue;
             }
             
-            if(SchemaRuleValidatorFactory.TryCreateValidator(rule, propertySchemaDefinition, _schemaPath, out var validator) == false)
+            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertySchemaDefinition, _schemaPath, out var validator) == false)
                 continue;
 
             //TODO To check if we want to collect all the errors and return a full report. Also some time we need to ignore a rule like if "maximum" defined "maximumExclusive" handled as part of it.

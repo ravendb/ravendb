@@ -1,6 +1,6 @@
 ﻿using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.String;
+namespace Raven.Server.SchemaValidation.Validators.String;
 
 public abstract class StringSchemaRuleValidator : SchemaRuleValidator<string>
 {
