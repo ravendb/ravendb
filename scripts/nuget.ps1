@@ -83,6 +83,14 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     write-host "Copying Studio $studioZipPath -> $serverDir"
     Copy-Item "$studioZipPath" -Destination $serverDir
     
+    $directoriesToRemove = @("$serverDir\runtimes\ios*", "$serverDir\runtimes\android*", "$serverDir\runtimes\tvos*")
+    foreach ($dir in $directoriesToRemove) {
+        if (Test-Path $dir) {
+            Remove-Item -Path $dir -Recurse -Force
+            Write-Output "Removed: $dir"
+        }
+    }
+    
     $targetsSrc = [io.path]::combine($EMBEDDED_SRC_DIR, "RavenDB.Embedded.targets")
     $targetsDst = [io.path]::combine($EMBEDDED_BUILD_OUT_DIR, "RavenDB.Embedded.targets")
     Copy-Item "$targetsSrc" -Destination "$targetsDst"
