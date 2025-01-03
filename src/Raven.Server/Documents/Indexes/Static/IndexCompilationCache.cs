@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (index.HasVectorFields && singleConfig.StaticIndexingEngineType != SearchEngineType.Corax)
             {
-                throw new NotSupportedException($"Vector fields are supported only by the Corax search engine. This deployment requested '{singleConfig.StaticIndexingEngineType}' search engine.");
+                throw new NotSupportedException($"Vector fields are supported only by the Corax search engine. This deployment requested '{singleConfig.StaticIndexingEngineType}' search engine. Read more at https://ravendb.net/l/Y4B762/7.0");
             }
         }
 
