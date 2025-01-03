@@ -1,12 +1,11 @@
 ﻿using System;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.String;
+namespace Raven.Server.SchemaValidation.Validators.String;
 
+[SchemaRule("maxLength")]
 public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
 {
-    public const string RuleName = "maxLength";
-    
     private readonly long _maxLength;
 
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -22,11 +21,10 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
     }
 }
 
-public class MaximumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+// ReSharper disable once UnusedType.Global
+public class MaximumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaximumLengthSchemaRuleValidator>
 {
-    protected override string Rule => MaximumLengthSchemaRuleValidator.RuleName;
-
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override MaximumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
         if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
             return null;

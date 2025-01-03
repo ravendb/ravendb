@@ -2,8 +2,13 @@
 
 namespace Raven.Server.SchemaValidation;
 
-internal class SchemaRuleAttribute(string ruleProp, params string[] additionalInfoProps) : Attribute
+internal class SchemaRuleAttribute : Attribute
 {
-    public string Rule { get; } = ruleProp;
-    public string[] AdditionalInfoProps { get; } = additionalInfoProps;
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public SchemaRuleAttribute(string ruleProp)
+    {
+        Rule = ruleProp;
+    }
+
+    public string Rule { get; }
 }

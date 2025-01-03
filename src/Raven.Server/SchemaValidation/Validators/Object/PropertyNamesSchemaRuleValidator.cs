@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
-using Raven.Server.SchemaValidation.String;
+using Raven.Server.SchemaValidation.Validators.String;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Object;
+namespace Raven.Server.SchemaValidation.Validators.Object;
 
+[SchemaRule("propertyNames")]
 public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    public const string RuleName = "propertyNames";
-    
     SchemaRuleValidator<string>[] _propertyNameValidators;
     private readonly string _schemaPath;
 
@@ -22,7 +21,7 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
         List<SchemaRuleValidator<string>> propertyNameValidators = null;
         foreach (var rule in propertyNamesSchemaDefinition.GetPropertyNames())
         {
-            if(SchemaRuleValidatorFactory.TryCreateValidator(rule, propertyNamesSchemaDefinition, _schemaPath, out var validator) == false)
+            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertyNamesSchemaDefinition, _schemaPath, out var validator) == false)
                 continue;
 
             if (validator is not StringSchemaRuleValidator stringValidator)
@@ -53,11 +52,10 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
 }
 
-public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+// ReSharper disable once UnusedType.Global
+public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PropertyNamesSchemaRuleValidator>
 {
-    protected override string Rule => PropertyNamesSchemaRuleValidator.RuleName;
-
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override PropertyNamesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
         if(TryGetPropertyType(schemaDefinition, Rule, out var propertyNamesType) == false)
             return null;

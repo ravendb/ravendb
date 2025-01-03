@@ -93,7 +93,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = "123456"
             }, out var obj);
             Assert.False(schemaValidator.Validate(obj, out var errors));
-            AssertError("The length of the value '123456' at 'prop' should not exceed 5, but its actual length is 6.'", errors);
+            AssertError("The length of the value '123456' at 'prop' should not exceed 5, but its actual length is 6.", errors);
         });
     }
 

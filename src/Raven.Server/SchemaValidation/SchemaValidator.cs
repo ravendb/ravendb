@@ -1,4 +1,4 @@
-﻿using Raven.Server.SchemaValidation.Object;
+﻿using Raven.Server.SchemaValidation.Validators.Object;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation;

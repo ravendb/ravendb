@@ -1,8 +1,7 @@
 ﻿using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Number;
+namespace Raven.Server.SchemaValidation.Validators.Number;
 
-//TODO Find better name
 public abstract class NumberSchemaRuleValidator : SchemaRuleValidator<decimal>
 {
     protected override bool CheckTypeAndGetValue(object value, out decimal tValue)

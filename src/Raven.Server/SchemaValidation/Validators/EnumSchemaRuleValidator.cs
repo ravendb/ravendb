@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Object;
+namespace Raven.Server.SchemaValidation.Validators;
 
+[SchemaRule("enum")]
 public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
 {
-    public const string RuleName = "enum";
-
     private readonly object[] _enums;
 
     public EnumSchemaRuleValidator(IEnumerable<object> enums)
@@ -52,11 +51,10 @@ public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
     }
 }
 
-public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+// ReSharper disable once UnusedType.Global
+public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<EnumSchemaRuleValidator>
 {
-    protected override string Rule => EnumSchemaRuleValidator.RuleName;
-
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override EnumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
         if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
             return null;

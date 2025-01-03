@@ -1,0 +1,39 @@
+﻿using Sparrow.Json;
+
+namespace Raven.Server.SchemaValidation.Validators;
+
+[SchemaRule("const")]
+public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
+{
+    private readonly object _constantValue;
+
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public ConstantSchemaRuleValidator(object constantValue)
+    {
+        _constantValue = ConvertTypeForComparison(constantValue);
+    }
+
+    protected override void ValidateInternal(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    {
+        if(_constantValue.Equals(value) == false)
+            //TODO Clear error to differentiate between number and string (15 or "15")
+            errorBuilder.AddError($"The value at '{path}' must be '{_constantValue}', but it is '{value}'.");
+    }
+
+    protected override bool CheckTypeAndGetValue(object value, out object tValue)
+    {
+        tValue = ConvertTypeForComparison(value);
+        return true;
+    }
+}
+
+// ReSharper disable once UnusedType.Global
+public class ConstantSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ConstantSchemaRuleValidator>
+{
+    public override ConstantSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        return schemaDefinition.TryGet(Rule, out object multipleOf)
+            ? new ConstantSchemaRuleValidator(multipleOf) 
+            : null;
+    }
+}

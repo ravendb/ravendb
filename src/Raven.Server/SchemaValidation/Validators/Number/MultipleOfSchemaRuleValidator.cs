@@ -1,24 +1,14 @@
 ﻿using System;
-using Sparrow.Json;
 using System.Linq;
+using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Number;
+namespace Raven.Server.SchemaValidation.Validators.Number;
 
+[SchemaRule("multipleOf")]
 public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
 {
-    public const string RuleName = "multipleOf";
-
     private readonly decimal _multipleOf;
 
-    public static ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string s)
-    {
-        if (schemaDefinition.TryGet(RuleName, out decimal multipleOf) == false)
-            //TODO Should not happen. Also maybe collect all error to return full error report
-            return null;
-
-        return new MultipleOfSchemaRuleValidator(multipleOf);
-    }
-    
     // ReSharper disable once ConvertToPrimaryConstructor
     public MultipleOfSchemaRuleValidator(decimal multipleOf)
     {
@@ -32,11 +22,10 @@ public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
     }
 }
 
-public class MultipleOfSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+// ReSharper disable once UnusedType.Global
+public class MultipleOfSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MultipleOfSchemaRuleValidator>
 {
-    protected override string Rule => MultipleOfSchemaRuleValidator.RuleName;
-
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override MultipleOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
         if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
             return null;

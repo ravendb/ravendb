@@ -1,14 +1,12 @@
 ﻿using System;
-using Sparrow.Json;
 using System.Linq;
+using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Number;
+namespace Raven.Server.SchemaValidation.Validators.Number;
 
+[SchemaRule("minimum")]
 public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 {
-    public const string RuleName = "minimum";
-    public const string ExclusiveMinimumRuleName = "exclusiveMinimum";
-    
     private readonly decimal _minimum;
     private readonly Action<decimal, SchemaValidatorPath, IErrorBuilder> _validatePredicate;
 
@@ -33,11 +31,12 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
     }
 }
 
-public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+// ReSharper disable once UnusedType.Global
+public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumSchemaRuleValidator>
 {
-    protected override string Rule => MinimumSchemaRuleValidator.RuleName;
+    public const string ExclusiveMinimumRuleName = "exclusiveMinimum";
 
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override MinimumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
         if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
             return null;
@@ -47,15 +46,14 @@ public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
 
         if (schemaDefinition.TryGet(Rule, out decimal minimum) == false)
             throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
-        
-        const string exclusive = MinimumSchemaRuleValidator.ExclusiveMinimumRuleName;
-        if (TryGetPropertyType(schemaDefinition, exclusive, out type))
+
+        if (TryGetPropertyType(schemaDefinition, ExclusiveMinimumRuleName, out type))
         {
             if (type != BlittableJsonToken.Boolean)
-                TrowRuleTypeError(exclusive, schemaDefinition[exclusive], BlittableJsonToken.Boolean, type, schemaPath);
+                TrowRuleTypeError(ExclusiveMinimumRuleName, schemaDefinition[ExclusiveMinimumRuleName], BlittableJsonToken.Boolean, type, schemaPath);
             //TODO Maybe also to handle old version of exclusiveMaximum
         }
-        schemaDefinition.TryGet(exclusive, out bool exclusiveMaximum);
+        schemaDefinition.TryGet(ExclusiveMinimumRuleName, out bool exclusiveMaximum);
         
         return new MinimumSchemaRuleValidator(minimum, exclusiveMaximum);
     }
