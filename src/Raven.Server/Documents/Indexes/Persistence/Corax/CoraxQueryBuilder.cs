@@ -632,7 +632,7 @@ public static class CoraxQueryBuilder
             builderParameters.FieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, hasBoost: builderParameters.HasBoost);
 
         VectorOptions vectorOptions = null;
-        if (builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
+        if (builderParameters.FieldsToFetch != null && builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
         {
             // VectorOptions can be null when a user does not specify the configuration.
             // In such cases, we will choose the input depending on the value type (similar to how we handle it during indexing).
@@ -650,6 +650,8 @@ public static class CoraxQueryBuilder
             }
             
         }
+        else if (builderParameters.Index.Definition.IndexFields.TryGetValue(fieldName, out indexField))
+            vectorOptions = indexField.Vector;
         else
             PortableExceptions.Throw<InvalidDataException>($"Cannot find `{fieldName}` field in the index.");
         
