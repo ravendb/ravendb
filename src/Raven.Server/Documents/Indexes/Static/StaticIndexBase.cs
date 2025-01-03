@@ -429,6 +429,9 @@ namespace Raven.Server.Documents.Indexes.Static
             if (value is JsArray js)
                 return HandleJsArray(js);
 
+            if (value is IEnumerable ie)
+                return HandleEnumerable(ie);
+            
             throw new InvalidOperationException($"Unknown type. Value type: {value.GetType().FullName}");
 
             object Base64ToVector(object base64)
@@ -436,6 +439,58 @@ namespace Raven.Server.Documents.Indexes.Static
                 var str = base64.ToString();
                 return GenerateEmbeddings.FromBase64Array(vectorOptions, allocator, str);
             }
+
+            object HandleEnumerable(IEnumerable enumerable)
+            {
+                var enumerator = enumerable.GetEnumerator();
+                using var _ = enumerator as IDisposable;;
+                if (enumerator.MoveNext() == false)
+                    return null;
+
+                var isBase = IsBase64(enumerator.Current);
+                enumerator.Reset();
+                
+                List<object> values = new();
+                while (enumerator.MoveNext())
+                {
+                    if (isBase)
+                    {
+                        values.Add(Base64ToVector(enumerator.Current));
+                        continue;
+                    }
+
+                    switch (vectorOptions.SourceEmbeddingType)
+                    {
+                        case VectorEmbeddingType.Single:
+                        {
+                            var memScope = allocator.Allocate((((float[])enumerator.Current)!).Length * sizeof(float), out Memory<byte> mem);
+                            MemoryMarshal.Cast<float, byte>((float[])enumerator.Current).CopyTo(mem.Span);
+                            var vector = GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length);
+                            values.Add(vector);
+                            continue;
+                        }
+                        case VectorEmbeddingType.Int8:
+                        {
+                            var memScope = allocator.Allocate((((sbyte[])enumerator.Current)!).Length, out Memory<byte> mem);
+                            MemoryMarshal.Cast<sbyte, byte>((sbyte[])enumerator.Current).CopyTo(mem.Span);
+                            var vector = GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length);
+                            values.Add(vector);
+                            continue;
+                        }
+                        default:
+                        {
+                            var memScope = allocator.Allocate((((byte[])enumerator.Current)!).Length, out Memory<byte> mem);
+                            ((byte[])enumerator.Current).CopyTo(mem.Span);
+                            var vector = GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length);
+                            values.Add(vector);
+                            break;
+                        }
+                    }
+                }
+
+                return values;
+            }
+            
             object HandleBlittableJsonReaderArray(BlittableJsonReaderArray data)
             {
                 var first = data[0];
