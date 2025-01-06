@@ -658,8 +658,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var localStatus = BackupUtils.GetLocalBackupStatus(_serverStore, context, _database.Name, taskId);
                     if (localStatus == null)
                     {
-                        // if there is no status for this, we don't need to take into account tombstones
-                        continue;
+                        if (responsibleNode == _serverStore.NodeTag && _periodicBackups.TryGetValue(taskId, out var periodicBackup) && periodicBackup.RunningTask != null)
+                        {
+                            // backup is running now, we can't delete anything
+                            return 0;
+                        }
+                        else
+                        {
+                            // we never ran the backup and aren't in the middle of it either
+                            // our next backup on this node is going to be full, so we can delete tombstones
+                            continue;
+                        }
                     }
 
                     var config = record.GetPeriodicBackupConfiguration(taskId);

@@ -1304,14 +1304,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                                 "🐩", "🐈", "🐓", "🦃", "🕊",
                                                 "🐇", "🐁", "🐀", "🐿", "🦔" });
 
-            var settings = new Dictionary<string, string>
-            {
-                { RavenConfiguration.GetKey(x => x.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval), "0" }
-            };
-            using (var server = GetNewServer(new ServerCreationOptions()
-            {
-                CustomSettings = settings
-            }))
+            
+            using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 WaitForFirstCompareExchangeTombstonesClean(server);
@@ -1383,7 +1377,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // clean tombstones
-                await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: false);
+                await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: true);
 
                 await WaitForAssertionAsync(() =>
                 {
@@ -1446,8 +1440,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
-                // clean
-                await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: false);
+                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    Assert.Equal(1, numOfCompareExchangeTombstones);
+
+                    // clean
+                    await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: false);
+                }
 
                 using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -1784,7 +1785,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var settings = new Dictionary<string, string>
             {
-                { RavenConfiguration.GetKey(x => x.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval), "0" },//TODO stav: this acts as bottleneck for deleting tombstones
+                { RavenConfiguration.GetKey(x => x.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval), "0" },
             };
             using (var server = GetNewServer(new ServerCreationOptions()
             {

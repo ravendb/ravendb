@@ -96,9 +96,6 @@ namespace SlowTests.Server.Replication
                 var responsibleNode = Backup.GetBackupResponsibleNode(cluster.Leader, result.TaskId, database);
                 var responsibleServer = cluster.Nodes.First(x => x.ServerStore.NodeTag == responsibleNode);
 
-                await Backup.RunBackupAsync(responsibleServer, result.TaskId, store);
-                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInClusterAsync(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Karmel" }, "foo/bar");
@@ -126,6 +123,7 @@ namespace SlowTests.Server.Replication
 
                 var total = 0L;
                 
+                // responsible node will not delete tombstones before the backup happened
                 var storage = await responsibleServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 await storage.TombstoneCleaner.ExecuteCleanup();
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -136,6 +134,7 @@ namespace SlowTests.Server.Replication
                 
                 Assert.Equal(1, total);
 
+                // non responsible nodes will delete their tombstones
                 await WaitForValueAsync(async () =>
                 {
                     total = 0;
@@ -162,7 +161,6 @@ namespace SlowTests.Server.Replication
                 {
                     var c = 0L;
                     
-                    var storage = await responsibleServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     await storage.TombstoneCleaner.ExecuteCleanup();
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())

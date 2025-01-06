@@ -36,7 +36,7 @@ public class RavenDB_20206 : RavenTestBase
                 indexesList2.Add($"{i}", res2.Index);
             }
 
-            // incremental backup on store2 db so observer won't delete its tombstones
+            // incremental backup on store2 db so observer ob store2 won't delete its tombstones
             var config = Backup.CreateBackupConfiguration("backupFolder", incrementalBackupFrequency: "0 0 1 * *");
             var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store2, isFullBackup: false);
 
@@ -63,12 +63,8 @@ public class RavenDB_20206 : RavenTestBase
                 Assert.Equal(1, numOfCompareExchangeTombstones);
             }
 
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                // clean tombstones
-                await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: true);
-            }
+            // clean tombstones
+            await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: true);
 
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -85,14 +81,10 @@ public class RavenDB_20206 : RavenTestBase
             }
 
             await Backup.RunBackupAsync(server, taskId, store2, isFullBackup: false);
-
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                // clean tombstones
-                await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: true);
-            }
-
+            
+            // clean tombstones
+            await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: true);
+            
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {

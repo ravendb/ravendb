@@ -258,8 +258,6 @@ namespace SlowTests.Server.Documents.Counters
                     session.SaveChanges();
                 }
 
-                await Backup.RunBackupInClusterAsync(store, taskId, isFullBackup: true);
-
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("user/322");
