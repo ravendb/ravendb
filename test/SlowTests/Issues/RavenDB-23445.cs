@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ public class RavenDB_23445 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void TestIndexingOfNulls(Options options)
     {
@@ -75,6 +76,48 @@ public class RavenDB_23445 : RavenTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TestIndexingOfNullsInNumericalData(Options options)
+    {
+        options.ModifyDatabaseRecord += record =>
+        {
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeDocumentScore)] = true.ToString();
+        };
+        
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var d1 = new Document() { Id = "docs/1", Vectors = [ null, [0.1f, 0.2f, 0.3f, 0.4f], null ] };
+                var d2 = new Document() { Id = "docs/2", Vectors = [ null, [1.1f, 1.2f, 1.3f] ] };
+                var d3 = new Document() { Id = "docs/3", Vectors = [ null, [-0.5f, -0.6f, -0.7f, -0.8f] ] };
+                
+                session.Store(d1);
+                session.Store(d2);
+                session.Store(d3);
+                
+                session.SaveChanges();
+                
+                var queriedEmbedding1 = new float[] { 0.1f, 0.2f, 0.3f, 0.4f };
+                
+                var res = session.Query<Document>().VectorSearch(x => x.WithEmbedding("Vectors"), factory => factory.ByEmbedding(queriedEmbedding1), minimumSimilarity: 0.9f).ToList();
+                
+                WaitForUserToContinueTheTest(store);
+                
+                Assert.Single(res);
+                Assert.Equal("docs/1", res[0].Id);
+                
+                var queriedEmbedding2 = new float[] { -0.5f, -0.6f, -0.7f, -0.8f };
+                
+                res = session.Query<Document>().VectorSearch(x => x.WithEmbedding("Vectors"), factory => factory.ByEmbedding(queriedEmbedding2), minimumSimilarity: 0.9f).ToList();
+
+                Assert.Single(res);
+                Assert.Equal("docs/3", res[0].Id);
+            }
+        }
+    }
+
     private class TextVectorIndex : AbstractIndexCreationTask<Document>
     {
         public TextVectorIndex()
@@ -103,6 +146,7 @@ public class RavenDB_23445 : RavenTestBase
         public string Text2 { get; set; }
         public string[] TextArr { get; set; }
         public float[] Vector { get; set; }
+        public float?[][] Vectors { get; set; }
     }
 
     private class Dto

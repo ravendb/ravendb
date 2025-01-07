@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private static object VectorFromEmbedding(IndexField currentIndexingField, object value)
         {
             if (value is null)
-                return null;
+                return VectorValue.Null;
             
             var vectorOptions = currentIndexingField.Vector;
             var allocator = CurrentIndexingScope.Current.IndexContext.Allocator;
@@ -507,10 +507,12 @@ namespace Raven.Server.Documents.Indexes.Static
             object HandleBlittableJsonReaderArray(BlittableJsonReaderArray data)
             {
                 var dataLength = data.Length;
-                var first = data[0];
+                
+                if (TryGetFirstNonNullElement(data, out var firstNonNull) == false)
+                    return VectorValue.Null;
                 
                 //Array of base64s
-                if (IsBase64(first))
+                if (IsBase64(firstNonNull))
                 {
                     var values = new object[dataLength];
                     for (var i = 0; i < dataLength; i++)
@@ -520,11 +522,16 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 
                 //Array of arrays
-                if (first is BlittableJsonReaderArray)
+                if (firstNonNull is BlittableJsonReaderArray)
                 {
                     var values = new object[dataLength];
                     for (var i = 0; i < dataLength; i++)
-                        values[i] = HandleBlittableJsonReaderArray((BlittableJsonReaderArray)data[i]);
+                    {
+                        if (data[i] == null)
+                            values[i] = VectorValue.Null;
+                        else
+                            values[i] = HandleBlittableJsonReaderArray((BlittableJsonReaderArray)data[i]);
+                    }
 
                     return values;
                 }
@@ -644,6 +651,21 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             
             bool IsBase64(object val) => val is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject or JsString;
+            
+            bool TryGetFirstNonNullElement(BlittableJsonReaderArray data, out object first)
+            {
+                first = data[0];
+                
+                var i = 0;
+                
+                while (first is null && i < data.Length)
+                    first = data[i++];
+                
+                if (first == null)
+                    return false;
+
+                return true;
+            }
         }
 
         private static object VectorFromText(IndexField indexField, object value)
