@@ -27,8 +27,17 @@ public struct VectorSearchMatch : IQueryMatch
     private GrowableBuffer<long, Constant<long>> _matches;
     private GrowableBuffer<float, Constant<float>> _distances;
     private readonly bool _isEmpty;
-    public VectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, VectorValue vectorToSearch, in float minimumMatch, in int numberOfCandidates, in bool isExact)
+    
+    /// <summary>
+    /// When VectorSearch is the only condition in the WHERE statement,
+    /// do not sort to fulfill the Fill guarantees.
+    /// Otherwise, sorting is necessary as it may produce incorrect results in the upper AST statements.
+    /// </summary>
+    private readonly bool _singleVectorSearchDoNotSort;
+
+    public VectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, VectorValue vectorToSearch, in float minimumMatch, in int numberOfCandidates, in bool isExact, in bool singleVectorSearchDoNotSort)
     {
+        _singleVectorSearchDoNotSort = singleVectorSearchDoNotSort;
         _metadata = metadata;
         _indexSearcher = searcher;
         _nearestSearch = isExact == false
@@ -49,7 +58,9 @@ public struct VectorSearchMatch : IQueryMatch
 
     public SkipSortingResult AttemptToSkipSorting()
     {
-        return SkipSortingResult.SortingIsRequired;
+        return _singleVectorSearchDoNotSort 
+            ? SkipSortingResult.ResultsNativelySorted 
+            : SkipSortingResult.SortingIsRequired;
     }
 
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
@@ -122,13 +133,17 @@ public struct VectorSearchMatch : IQueryMatch
             matches.AddUsage(currentRead);
             distances.AddUsage(currentRead);
         } while (currentRead != 0);
-            
-        matches.Results.Sort(distances.Results);
+
+        if (_singleVectorSearchDoNotSort == false)
+        {
+            matches.Results.Sort(distances.Results);
         
-        //Truncate the buffer to the actual size
-        var matchesCount = RemoveDuplicates(matches.Results, distances.Results);
-        distances.Truncate(matchesCount);
-        matches.Truncate(matchesCount);
+            //Truncate the buffer to the actual size
+            var matchesCount = RemoveDuplicates(matches.Results, distances.Results);
+            distances.Truncate(matchesCount);
+            matches.Truncate(matchesCount);
+        }
+        
         _nearestSearch.Dispose();
         _resultsNotPersisted = false;
     }
@@ -203,23 +218,32 @@ public struct VectorSearchMatch : IQueryMatch
     {
         if (_isEmpty)
             return;
-        
-        ref var matchesRef = ref MemoryMarshal.GetReference(matches);
-        ref var scoresRef = ref MemoryMarshal.GetReference(scores);
-        ref var distanceRef = ref MemoryMarshal.GetReference(_distances.Results);
-        
-        for (var i = 0; i < matches.Length; ++i)
+
+        if (_singleVectorSearchDoNotSort == false)
         {
-            var match = Unsafe.Add(ref matchesRef, i);
-            var pos = _matches.Results.BinarySearch(match);
-            if (pos < 0)
-                continue;
-           
-            Unsafe.Add(ref scoresRef, i) = _nearestSearch.DistanceToScore(Unsafe.Add(ref distanceRef, pos));
+            ref var matchesRef = ref MemoryMarshal.GetReference(matches);
+            ref var scoresRef = ref MemoryMarshal.GetReference(scores);
+            ref var distanceRef = ref MemoryMarshal.GetReference(_distances.Results);
+
+            for (var i = 0; i < matches.Length; ++i)
+            {
+                var match = Unsafe.Add(ref matchesRef, i);
+                var pos = _matches.Results.BinarySearch(match);
+                if (pos < 0)
+                    continue;
+
+                Unsafe.Add(ref scoresRef, i) = _nearestSearch.DistanceToScore(Unsafe.Add(ref distanceRef, pos));
+            }
+        }
+        else
+        {
+            _distances.Results[..scores.Length].CopyTo(scores);
+            _nearestSearch.DistancesToScores(scores);
         }
         
         _matches.Dispose();
         _distances.Dispose();
+        
     }
 
     public QueryInspectionNode Inspect()

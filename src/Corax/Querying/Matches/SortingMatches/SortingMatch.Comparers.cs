@@ -96,7 +96,7 @@ unsafe partial struct SortingMatch<TInner>
                 // We get the boosting tree and go to check every document. 
                 BoostDocuments(match, batchResults, readScores);
             }
-
+            
             // Note! readScores & indexes are aliased and same as batchTermIds
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;

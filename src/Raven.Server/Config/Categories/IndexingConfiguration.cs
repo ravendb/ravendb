@@ -614,6 +614,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int CoraxVectorDefaultNumberOfCandidatesForQuerying { get; protected set; }
         
+        [Description("Order by score automatically when vector.search is inside query.")]
+        [DefaultValue(true)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Corax.OrderByScoreAutomaticallyWhenVectorSearchIsUsed", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool OrderByScoreAutomaticallyWhenVectorSearchIsUsed { get; set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

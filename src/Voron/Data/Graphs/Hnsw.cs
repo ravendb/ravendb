@@ -296,6 +296,7 @@ public unsafe partial class Hnsw
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float DistanceToScore(float score)
         {
             switch (Options.SimilarityMethod)
@@ -305,6 +306,23 @@ public unsafe partial class Hnsw
                     return 1 - score;
                 case SimilarityMethod.HammingDistance:
                     return ((Options.VectorSizeBytes * 8) - score) / (8f * Options.VectorSizeBytes);  // number_of_bits * minimum_similarity
+                default:
+                    throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void DistancesToScores(Span<float> distances)
+        {
+            switch (Options.SimilarityMethod)
+            {
+                case SimilarityMethod.CosineSimilaritySingles:
+                case SimilarityMethod.CosineSimilarityI8:
+                    DistanceToScoreCosineSimilarity(distances);
+                    break;
+                case SimilarityMethod.HammingDistance:
+                    DistanceToScoreHammingSimilarity(distances, Options.VectorSizeBytes);
+                    break;
                 default:
                     throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
             }
@@ -1255,11 +1273,11 @@ public unsafe partial class Hnsw
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float MinimumSimilarityToMaximumDistance(float min) => _searchState.MinimumSimilarityToDistance(min);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float DistanceToScore(float distance) => _searchState.DistanceToScore(distance);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void DistancesToScores(Span<float> distances) => _searchState.DistancesToScores(distances);
+        
         public int Fill(Span<long> matches, Span<float> distances)
         {
             int index = 0;

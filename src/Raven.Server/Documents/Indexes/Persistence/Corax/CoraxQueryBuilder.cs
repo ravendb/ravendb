@@ -66,7 +66,8 @@ public static class CoraxQueryBuilder
         public readonly bool HasBoost;
         public readonly IndexReadOperationBase IndexReadOperation;
         public StreamingOptimization StreamingDisabled;
-
+        public readonly bool IsVectorSingleClause;
+        
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
             FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, CancellationToken token = default)
@@ -87,14 +88,18 @@ public static class CoraxQueryBuilder
             AllEntries = IndexSearcher.Memoize(IndexSearcher.AllEntries());
             Metadata = query.Metadata;
             HasDynamics = index.Definition.HasDynamicFields;
+            IsVectorSingleClause = Metadata.Query.Where is MethodExpression me && QueryMethod.GetMethodType(me.Name.Value) == MethodType.Vector_Search;
             DynamicFields = HasDynamics
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
 
-            // in case when we've implicit boosting we've build primitives with scoring enabled
-            HasBoost = index.HasBoostedFields || query.Metadata.HasBoost ||
-                       (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved &&
-                        HasBoostingAsOrderingType(query.Metadata.OrderBy));
+            // in case when we've implicit boosting we've built primitives with scoring enabled
+            HasBoost = index.HasBoostedFields 
+                       || query.Metadata.HasBoost 
+                       || IsVectorSingleClause
+                       || (query.Metadata.HasVectorSearch && index.Configuration.OrderByScoreAutomaticallyWhenVectorSearchIsUsed)
+                       || (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved &&
+                                                      HasBoostingAsOrderingType(query.Metadata.OrderBy));
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
         }
@@ -726,7 +731,7 @@ public static class CoraxQueryBuilder
             };
         }
 
-        return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, transformedEmbedding, minimumMatch, numberOfCandidates, exact);
+        return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, transformedEmbedding, minimumMatch, numberOfCandidates, exact, builderParameters.IsVectorSingleClause);
 
         VectorOptions GetOptions(IndexField field)
         {
@@ -1489,9 +1494,16 @@ public static class CoraxQueryBuilder
 
         if (orderByFields == null)
         {
-            if (builderParameters.HasBoost && index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved)
+            if (builderParameters.HasBoost && (
+                    index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved 
+                    || index.Configuration.OrderByScoreAutomaticallyWhenVectorSearchIsUsed))
             {
-                builderParameters.IndexReadOperation?.AssertCanOrderByScoreAutomaticallyWhenBoostingIsInvolved();
+                // in case when we've single vector clause and we exose the score, we have to go through 
+                // order by primitive to retrieve them; however scores are detected as natively sorted
+                if (builderParameters.IsVectorSingleClause && index.Configuration.CoraxIncludeDocumentScore == false)
+                    return null;
+                
+                builderParameters.IndexReadOperation?.AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved();
                 return new[] { new OrderMetadata(true, MatchCompareFieldType.Score) };
             }
 

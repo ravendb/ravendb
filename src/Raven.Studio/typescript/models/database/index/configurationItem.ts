@@ -48,7 +48,8 @@ class configurationItem {
         "Indexing.Corax.VectorSearch.DefaultMinimumSimilarity",
         "Indexing.Corax.VectorSearch.DefaultNumberOfEdges",
         "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForIndexing",
-        "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying"
+        "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying",
+        "Indexing.Corax.OrderByScoreAutomaticallyWhenVectorSearchIsUsed"
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:
