@@ -108,14 +108,14 @@ namespace Voron.Platform.Win32
                     if (PhysicalDrivePerMountCache.TryGetValue(drive, out UniquePhysicalDriveId) == false)
                         UniquePhysicalDriveId = GetPhysicalDriveId(drive);
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Physical drive '{drive}' unique id = '{UniquePhysicalDriveId}' for file '{file}'");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Physical drive '{drive}' unique id = '{UniquePhysicalDriveId}' for file '{file}'");
                 }
                 catch (Exception ex)
                 {
                     UniquePhysicalDriveId = 0;
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to determine physical drive Id for drive letter '{drive}', file='{file}'", ex);
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Failed to determine physical drive Id for drive letter '{drive}', file='{file}'", ex);
                 }
 
                 var streamAccessType = _access == Win32NativeFileAccess.GenericRead

@@ -58,9 +58,9 @@ namespace Voron.Impl.Journal
                 if (result != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4Kb * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4Kb}");
 
-                if (error == ERROR_WORKING_SET_QUOTA && _log.IsInfoEnabled && _workingSetQuotaLogged == false)
+                if (error == ERROR_WORKING_SET_QUOTA && _log.IsDebugEnabled && _workingSetQuotaLogged == false)
                 {
-                    _log.Info(
+                    _log.Debug(
                         $"We managed to accomplish journal write although we got {nameof(ERROR_WORKING_SET_QUOTA)} under the covers and wrote data in 4KB chunks");
 
                     _workingSetQuotaLogged = true;

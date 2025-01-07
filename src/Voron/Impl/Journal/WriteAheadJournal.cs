@@ -878,8 +878,8 @@ namespace Voron.Impl.Journal
                         {
                             UpdateJournalStateUnderWriteTransactionLock(txw, journalSnapshots, lastProcessedJournal, lastFlushedTransactionId);
 
-                            if (_waj._logger.IsInfoEnabled)
-                                _waj._logger.Info($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
+                            if (_waj._logger.IsDebugEnabled)
+                                _waj._logger.Debug($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
                         }
                         catch (Exception e)
                         {
@@ -1014,9 +1014,9 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(journalSnapshots, lastProcessedJournal, lastFlushedTransactionIdThatWontReadFromJournal);
 
-                    if (_waj._logger.IsInfoEnabled)
+                    if (_waj._logger.IsDebugEnabled)
                     {
-                        _waj._logger.Info($"Detected {unusedJournals.Count} unused journals after flush ({nameof(lastFlushedTransactionId)} - {lastFlushedTransactionId}, {nameof(lastFlushedTransactionIdThatWontReadFromJournal)} - {lastFlushedTransactionIdThatWontReadFromJournal}). " +
+                        _waj._logger.Debug($"Detected {unusedJournals.Count} unused journals after flush ({nameof(lastFlushedTransactionId)} - {lastFlushedTransactionId}, {nameof(lastFlushedTransactionIdThatWontReadFromJournal)} - {lastFlushedTransactionIdThatWontReadFromJournal}). " +
                                           $"Journals to delete: {string.Join(',', unusedJournals.Select(x => x.Number.ToString()))}");
                     }
 
@@ -1259,10 +1259,10 @@ namespace Voron.Impl.Journal
                     // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
                     var sp = Stopwatch.StartNew();
                     _parent._waj._dataPager.Sync(Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes));
-                    if (_parent._waj._logger.IsInfoEnabled)
+                    if (_parent._waj._logger.IsDebugEnabled)
                     {
                         var sizeInKb = (_parent._waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
-                        _parent._waj._logger.Info(
+                        _parent._waj._logger.Debug(
                             $"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}");
                     }
                 }
@@ -1494,8 +1494,8 @@ namespace Voron.Impl.Journal
                         meter.IncrementSize(written);
                     }
 
-                    if (_waj._logger.IsInfoEnabled)
-                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages to {_waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
+                    if (_waj._logger.IsDebugEnabled)
+                        _waj._logger.Debug($"Flushed {pagesToWrite.Count:#,#} pages to {_waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
                     else if (_waj._logger.IsWarnEnabled && sp.Elapsed > _waj._dataPager.Options.LongRunningFlushingWarning)
                         _waj._logger.Warn($"Very long data flushing. It took {sp.Elapsed} to flush {pagesToWrite.Count:#,#} pages to {_waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
 
@@ -1718,9 +1718,9 @@ namespace Voron.Impl.Journal
                 using (tempEncCompressionPagerTxState)
                 {
                     var journalEntry = PrepareToWriteToJournal(tx, tempEncCompressionPagerTxState);
-                    if (_logger.IsInfoEnabled)
+                    if (_logger.IsDebugEnabled)
                     {
-                        _logger.Info(
+                        _logger.Debug(
                             $"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({new Size(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize, SizeUnit.Bytes)}) in {sp.Elapsed} with {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} compressed.");
                     }
 
@@ -1728,8 +1728,8 @@ namespace Voron.Impl.Journal
                     if (CurrentFile == null || CurrentFile.Available4Kbs < journalEntry.NumberOf4Kbs)
                     {
                         CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"New journal file created {CurrentFile.Number:D19}");
+                        if (_logger.IsDebugEnabled)
+                            _logger.Debug($"New journal file created {CurrentFile.Number:D19}");
                     }
 
                     tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
@@ -1740,8 +1740,8 @@ namespace Voron.Impl.Journal
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
 
                     if (CurrentFile.Available4Kbs == 0)
                     {
