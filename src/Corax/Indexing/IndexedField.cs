@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Corax.Analyzers;
 using Corax.Mappings;
 using Sparrow.Collections;
+using Sparrow.Server;
 using Voron;
 using Voron.Util;
 
@@ -127,8 +128,8 @@ internal sealed class IndexedField
                 break;
         }
         
-        return new IndexedField(Constants.IndexWriter.DynamicField, dynamicField.FieldName, dynamicField.FieldNameLong, dynamicField.FieldNameDouble,
-            dynamicField.FieldTermTotalSumField, analyzer, fieldIndexingMode, dynamicField.HasSuggestions, dynamicField.ShouldStore,
+        return new IndexedField(Constants.IndexWriter.DynamicField, Name, NameLong, NameDouble,
+            NameTotalLengthOfTerms, analyzer, fieldIndexingMode, dynamicField.HasSuggestions, dynamicField.ShouldStore,
             SupportedFeatures, dynamicField.FieldNameForStatistics, FieldRootPage, TermsVectorFieldRootPage, Storage, Textual, Longs, Doubles, this);
     }
 
