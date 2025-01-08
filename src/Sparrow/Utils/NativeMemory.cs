@@ -38,10 +38,12 @@ namespace Sparrow.Utils
 
         internal static long _totalAllocatedMemory;
         private static long _totalLuceneManagedAllocationsForTermCache;
+        private static long _totalLuceneUnmanagedAllocationsForTermCache;
         private static long _totalLuceneUnmanagedAllocationsForSorting;
 
         public static long TotalAllocatedMemory => _totalAllocatedMemory;
         public static long TotalLuceneManagedAllocationsForTermCache => _totalLuceneManagedAllocationsForTermCache;
+        public static long TotalLuceneUnmanagedAllocationsForTermCache => _totalLuceneUnmanagedAllocationsForTermCache;
         public static long TotalLuceneUnmanagedAllocationsForSorting => _totalLuceneUnmanagedAllocationsForSorting;
 
         public static ConcurrentDictionary<string, Lazy<FileMappingInfo>> FileMapping = new ConcurrentDictionary<string, Lazy<FileMappingInfo>>();
@@ -167,14 +169,25 @@ namespace Sparrow.Utils
             Interlocked.Add(ref _totalLuceneManagedAllocationsForTermCache, -size);
         }
 
-        public static byte* AllocateMemoryByLucene(long size)
+        public static byte* AllocateMemoryForLuceneTermCache(long size)
         {
-            ThreadStats _;
+            Interlocked.Add(ref _totalLuceneUnmanagedAllocationsForTermCache, size);
+            return AllocateMemory(size, out _);
+        }
+
+        public static byte* AllocateMemoryForLuceneSorting(long size)
+        {
             Interlocked.Add(ref _totalLuceneUnmanagedAllocationsForSorting, size);
             return AllocateMemory(size, out _);
         }
 
-        public static void FreeMemoryByLucene(byte* ptr, long size)
+        public static void FreeMemoryByLuceneTermCache(byte* ptr, long size)
+        {
+            Interlocked.Add(ref _totalLuceneUnmanagedAllocationsForTermCache, -size);
+            Free(ptr, size, ThreadAllocations.Value);
+        }
+
+        public static void FreeMemoryByLuceneSorting(byte* ptr, long size)
         {
             Interlocked.Add(ref _totalLuceneUnmanagedAllocationsForSorting, -size);
             Free(ptr, size, ThreadAllocations.Value);
