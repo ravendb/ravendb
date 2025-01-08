@@ -1350,15 +1350,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             int read;
             long i = Skip();
             Page page = default;
-
+            var alreadySeenDocuments = new HashSet<long>();
+            
             while (true)
             {
                 token.ThrowIfCancellationRequested();
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
+                    var coraxInternalEntryId = ids[i];
+                    if (alreadySeenDocuments.Add(coraxInternalEntryId) == false)
+                        continue;
+                    
                     token.ThrowIfCancellationRequested();
-                    var reader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
-                    var id = _documentIdReader.GetTermFor(ids[i]);
+                    var reader = IndexSearcher.GetEntryTermsReader(coraxInternalEntryId, ref page);
+                    var id = _documentIdReader.GetTermFor(coraxInternalEntryId);
                     yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
                 }
 

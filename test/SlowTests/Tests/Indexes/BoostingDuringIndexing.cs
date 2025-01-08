@@ -155,8 +155,7 @@ namespace SlowTests.Tests.Indexes
             Indexes.WaitForIndexing(store);
 
             var ex = Assert.Throws<NotSupportedInShardingException>(() => session.Query<User, UsersByName>().ToList());
-            Assert.Contains(
-                $"Ordering by score is not supported in sharding. You received this exception because your index has boosting, and we attempted to sort the results since the configuration `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)}` is enabled.",
+            Assert.Contains($"Ordering by score is not supported in sharding. You received this exception because your index has boosting, and we attempted to sort the results since the configuration `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)}` is enabled or, when you used `vector.search` method in the query when having `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenVectorSearchIsUsed)}` enabled.",
                 ex.Message);
         }
     }
