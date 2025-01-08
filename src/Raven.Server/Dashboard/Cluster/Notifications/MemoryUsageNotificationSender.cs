@@ -62,7 +62,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
                 AvailableMemoryForProcessing = memoryInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes),
                 TotalSwapUsage = memoryInfo.TotalSwapUsage.GetValue(SizeUnit.Bytes),
                 LuceneManagedTermCacheAllocations = NativeMemory.TotalLuceneManagedAllocationsForTermCache,
-                LuceneUnmanagedAllocationsForTermCache = NativeMemory.TotalLuceneUnmanagedAllocationsForTermCache,
+                LuceneUnmanagedTermCacheAllocations = NativeMemory.TotalLuceneUnmanagedAllocationsForTermCache,
                 LuceneUnmanagedAllocations = NativeMemory.TotalLuceneUnmanagedAllocationsForSorting
             };
         }
