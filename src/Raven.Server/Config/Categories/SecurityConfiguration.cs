@@ -24,27 +24,32 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.DisableHsts", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableHsts { get; set; }
 
-        [Description("The folder path where RavenDB stores audit log files. Setting the path enables writing to the audit log.")]
+        [Description("The path to a folder in which RavenDB stores audit log files. " +
+                     "Setting the path enables writing to the audit log.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.AuditLog.FolderPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting AuditLogPath { get; set; }
 
+        [Description("The largest size (in megabytes) that an audit log file may reach " +
+                     "before it is archived and logging is directed to a new file.")]
         [DefaultValue(128)]
         [MinValue(16)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Security.AuditLog.ArchiveAboveSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size AuditLogArchiveAboveSize { get; set; }
 
+        [Description("The maximum number of days that an archived audit log file is kept.")]
         [DefaultValue(3)]
         [ConfigurationEntry("Security.AuditLog.MaxArchiveDays", ConfigurationEntryScope.ServerWideOnly)]
         public int? AuditLogMaxArchiveDays { get; set; }
 
+        [Description("The maximum number of archived audit log files to keep.")]
         [DefaultValue(null)]
         [MinValue(0)]
         [ConfigurationEntry("Security.AuditLog.MaxArchiveFiles", ConfigurationEntryScope.ServerWideOnly)]
         public int? AuditLogMaxArchiveFiles { get; set; }
 
-        [Description("Will determine whether to compress the audit log files.")]
+        [Description("Determines whether to compress the audit log files.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Security.AuditLog.EnableArchiveFileCompression", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Security.AuditLog.Compress", ConfigurationEntryScope.ServerWideOnly)]
