@@ -62,7 +62,7 @@ namespace FastTests
                 RavenCommand<OperationState> command = null;
                 await WaitForValueAsync(async () =>
                 {
-                    command = await ExecuteGetOperationStateCommand(store, opId);
+                    command = await ExecuteGetOperationStateCommand(store, opId, server.ServerStore.NodeTag);
                     return command.Result != null &&
                            command.Result.Status == opStatus &&
                            command.StatusCode == HttpStatusCode.OK;
