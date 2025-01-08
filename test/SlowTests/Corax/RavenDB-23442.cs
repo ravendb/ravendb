@@ -78,7 +78,7 @@ public class RavenDB_23442(ITestOutputHelper output) : RavenTestBase(output)
         var sourceOptions = Options.ForSearchEngine(RavenSearchEngineMode.Corax);
         sourceOptions.ModifyDatabaseRecord += record =>
         {
-            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.OrderByScoreAutomaticallyWhenVectorSearchIsUsed)] = sortVectorSearchByScoreAutomatically.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxVectorSearchOrderByScoreAutomatically)] = sortVectorSearchByScoreAutomatically.ToString();
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeDocumentScore)] = coraxIncludeDocumentScore.ToString();
         };
 

@@ -617,8 +617,8 @@ namespace Raven.Server.Config.Categories
         [Description("Order by score automatically when vector.search is inside query.")]
         [DefaultValue(true)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.Corax.OrderByScoreAutomaticallyWhenVectorSearchIsUsed", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public bool OrderByScoreAutomaticallyWhenVectorSearchIsUsed { get; set; }
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.OrderByScoreAutomatically", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool CoraxVectorSearchOrderByScoreAutomatically { get; set; }
         
         protected override void ValidateProperty(PropertyInfo property)
         {

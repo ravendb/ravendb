@@ -97,7 +97,7 @@ public static class CoraxQueryBuilder
             HasBoost = index.HasBoostedFields 
                        || query.Metadata.HasBoost 
                        || IsVectorSingleClause
-                       || (query.Metadata.HasVectorSearch && index.Configuration.OrderByScoreAutomaticallyWhenVectorSearchIsUsed)
+                       || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
                        || (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved &&
                                                       HasBoostingAsOrderingType(query.Metadata.OrderBy));
             Allocator = allocator;
@@ -1496,7 +1496,7 @@ public static class CoraxQueryBuilder
         {
             if (builderParameters.HasBoost && (
                     index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved 
-                    || index.Configuration.OrderByScoreAutomaticallyWhenVectorSearchIsUsed))
+                    || index.Configuration.CoraxVectorSearchOrderByScoreAutomatically))
             {
                 // in case when we've single vector clause and we exose the score, we have to go through 
                 // order by primitive to retrieve them; however scores are detected as natively sorted
