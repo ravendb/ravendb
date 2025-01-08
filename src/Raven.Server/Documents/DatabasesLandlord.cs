@@ -1348,10 +1348,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void LogUnloadFailureReason(StringSegment databaseName, string reason)
+        private static void LogUnloadFailureReason(StringSegment databaseName, string reason)
         {
-            if (_logger.IsErrorEnabled)
-                _logger.Error($"Could not unload database '{databaseName}', reason: {reason}");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Could not unload database '{databaseName}', reason: {reason}");
         }
 
         public void RescheduleNextIdleDatabaseActivity(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
