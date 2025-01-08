@@ -22,6 +22,8 @@ interface analyzerName {
     serverName: string;
 }
 
+type databaseIndexConfigurationType = Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>
+
 class indexFieldOptions {
     analyzersNamesDictionary = ko.observableArray<analyzerName>([
         // default analyzer for Indexing.Exact
@@ -144,7 +146,7 @@ class indexFieldOptions {
     searchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
 
     indexLocalConfiguration: Raven.Client.Documents.Indexes.IndexConfiguration;
-    databaseIndexConfiguration: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>;
+    databaseIndexConfiguration: databaseIndexConfigurationType;
 
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
@@ -155,7 +157,7 @@ class indexFieldOptions {
                 engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>,
                 parentFields?: indexFieldOptions,
                 indexLocalConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
-                databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>
+                databaseIndexConfiguration?: databaseIndexConfigurationType
     ) {
         this.name(name);
         this.parent(parentFields);
@@ -444,13 +446,10 @@ class indexFieldOptions {
 
         const hasDatabaseDefaultChanged =
             databaseAnalyzerSetting?.effectiveValue() !== databaseAnalyzerSetting?.serverOrDefaultValue();
-        const isAnalyzerNameInDictionary = localAnalyzerConfiguration
-            ? this.analyzersNamesDictionary().some(
-                (analyzerItem) => analyzerItem.serverName === localAnalyzerConfiguration
-            )
-            : this.analyzersNamesDictionary().some(
-                (analyzerItem) => analyzerItem.serverName === databaseAnalyzerSetting?.effectiveValue()
-            );
+        
+        const configuration = localAnalyzerConfiguration ?? databaseAnalyzerSetting?.effectiveValue();
+        
+        const isAnalyzerNameInDictionary = this.analyzersNamesDictionary().some((analyzerItem) => analyzerItem.serverName === configuration);
 
 
         const currentAnalyzerStudioName = localAnalyzerConfiguration
@@ -460,6 +459,7 @@ class indexFieldOptions {
             databaseAnalyzerSetting?.effectiveValue();
         
         const parentAnalyzerStudioName = this.analyzersNamesDictionary().find((item) => item.serverName === parentAnalyzer)?.studioName ?? parentAnalyzer;
+        
         const defaultFieldAnalyzer = !thisIndexing && parentAnalyzer != null ? parentAnalyzerStudioName : currentAnalyzerStudioName;
         
         if (thisIndexing === "No" || (!thisIndexing && parentIndexing === "No")) {
@@ -575,19 +575,19 @@ class indexFieldOptions {
     }
     
     static defaultFieldOptions(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>, indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
-                          databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+                          databaseIndexConfiguration?: databaseIndexConfigurationType) {
         return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(indexConfiguration, databaseIndexConfiguration), indexHasReduce, engineType,
           indexFieldOptions.globalDefaults(indexHasReduce, engineType, indexConfiguration, databaseIndexConfiguration), indexConfiguration, databaseIndexConfiguration);
     }
 
     static empty(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>, indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
-                          databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+                          databaseIndexConfiguration?: databaseIndexConfigurationType) {
         return new indexFieldOptions("", indexFieldOptions.getDefaultDto(indexConfiguration, databaseIndexConfiguration), indexHasReduce, engineType,
           indexFieldOptions.globalDefaults(indexHasReduce, engineType, indexConfiguration, databaseIndexConfiguration), indexConfiguration, databaseIndexConfiguration);
     }
     
     static globalDefaults(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>, indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
-                          databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+                          databaseIndexConfiguration?: databaseIndexConfigurationType) {
         const defaultDto: Raven.Client.Documents.Indexes.IndexFieldOptions = {
             Storage: "No",
             Indexing: "Default",
@@ -614,7 +614,7 @@ class indexFieldOptions {
     }
 
     private static getDefaultDto(indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
-                          databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+                          databaseIndexConfiguration?: databaseIndexConfigurationType) {
         const defaultDto: Raven.Client.Documents.Indexes.IndexFieldOptions = {
             Storage: null,
             Indexing: null,
