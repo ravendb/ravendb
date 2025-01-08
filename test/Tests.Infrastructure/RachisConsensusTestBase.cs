@@ -52,8 +52,8 @@ namespace Tests.Infrastructure
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
             RachisStateMachine.EnableDebugLongCommit = true;
-            Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
-            Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
+            Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = (size, _) => NativeMemory.AllocateMemory(size);
+            Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = (ptr, size, _) => NativeMemory.Free(ptr, size);
             JsonDeserializationCluster.Commands.Add(nameof(TestCommand), JsonDeserializationBase.GenerateJsonDeserializationRoutine<TestCommand>());
         }
 
