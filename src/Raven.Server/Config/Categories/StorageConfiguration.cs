@@ -41,12 +41,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.IO.Metrics.Enabled", ConfigurationEntryScope.ServerWideOnly)]
         public bool EnableIoMetrics { get; set; }
 
-        [Description("How long transaction mode (Danger/Lazy) last before returning to Safe mode. Value in Minutes. Default one day. Zero for infinite time")]
-        [DefaultValue(1440)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Storage.TransactionsModeDurationInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting TransactionsModeDuration { get; set; }
-
         [Description("Maximum concurrent flushes")]
         [DefaultValue(10)]
         [ConfigurationEntry("Storage.MaxConcurrentFlushes", ConfigurationEntryScope.ServerWideOrPerDatabase)]
