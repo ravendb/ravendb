@@ -636,25 +636,9 @@ public static class CoraxQueryBuilder
 
         VectorOptions vectorOptions = null;
         if (builderParameters.FieldsToFetch != null && builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
-        {
-            // VectorOptions can be null when a user does not specify the configuration.
-            // In such cases, we will choose the input depending on the value type (similar to how we handle it during indexing).
-            vectorOptions = indexField?.Vector;
-            if (vectorOptions == null)
-            {
-                builderParameters.Index.IndexFieldsPersistence.TryReadVectorSourceEmbeddingType(fieldName, out var vectorSourceEmbeddingType);
-                vectorOptions = vectorSourceEmbeddingType switch
-                {
-                    VectorEmbeddingType.Single => VectorOptions.Default,
-                    VectorEmbeddingType.Text => VectorOptions.DefaultText,
-                    _ => throw new InvalidDataException(
-                        $"Unknown vector source embedding type: {vectorSourceEmbeddingType}. Implicit configuration support only single and text vector source embedding types.")
-                };
-            }
-
-        }
+            vectorOptions = GetOptions(indexField);
         else if (builderParameters.Index.Definition.IndexFields.TryGetValue(fieldName, out indexField))
-            vectorOptions = indexField.Vector;
+            vectorOptions = GetOptions(indexField);
         else
             PortableExceptions.Throw<InvalidDataException>($"Cannot find `{fieldName}` field in the index.");
 
@@ -743,6 +727,23 @@ public static class CoraxQueryBuilder
         }
 
         return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, transformedEmbedding, minimumMatch, numberOfCandidates, exact);
+
+        VectorOptions GetOptions(IndexField field)
+        {
+            // VectorOptions can be null when a user does not specify the configuration.
+            // In such cases, we will choose the input depending on the value type (similar to how we handle it during indexing).
+            if (field.Vector != null)
+                return field.Vector;
+            
+            builderParameters.Index.IndexFieldsPersistence.TryReadVectorSourceEmbeddingType(fieldName, out var vectorSourceEmbeddingType);
+            return vectorSourceEmbeddingType switch
+            {
+                VectorEmbeddingType.Single => VectorOptions.Default,
+                VectorEmbeddingType.Text => VectorOptions.DefaultText,
+                _ => throw new InvalidDataException(
+                    $"Unknown vector source embedding type: {vectorSourceEmbeddingType}. Implicit configuration support only single and text vector source embedding types.")
+            };
+        }
     }
 
     private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)
