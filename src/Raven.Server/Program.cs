@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Util;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Connections;
 using Raven.Client.Http;
@@ -51,8 +52,36 @@ namespace Raven.Server
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 
-            Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemoryByLucene;
-            Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.FreeMemoryByLucene;
+            UnmanagedStringArray.Segment.AllocateMemory = (size, type) =>
+            {
+                switch (type)
+                {
+                    case UnmanagedStringArray.Type.TermCache:
+                        return NativeMemory.AllocateMemoryForLuceneTermCache(size);
+
+                    case UnmanagedStringArray.Type.Sorting:
+                        return NativeMemory.AllocateMemoryForLuceneSorting(size);
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                }
+            };
+            UnmanagedStringArray.Segment.FreeMemory = (ptr, size, type) =>
+            {
+                switch (type)
+                {
+                    case UnmanagedStringArray.Type.TermCache:
+                        NativeMemory.FreeMemoryByLuceneTermCache(ptr, size);
+                        break;
+
+                    case UnmanagedStringArray.Type.Sorting:
+                        NativeMemory.FreeMemoryByLuceneSorting(ptr, size);
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                }
+            };
 
             UseOnlyInvariantCultureInRavenDB();
 
