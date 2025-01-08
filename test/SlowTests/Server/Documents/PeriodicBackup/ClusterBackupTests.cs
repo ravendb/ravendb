@@ -9,16 +9,15 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
-using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
@@ -46,11 +45,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var nextBackup = GetTimeUntilBackupNextOccurence("0 0 * * *", DateTime.UtcNow);
-                if (nextBackup < TimeSpan.FromSeconds(5))
+                if (nextBackup < TimeSpan.FromSeconds(10))
                     await Task.Delay(nextBackup);
 
                 // put backup config
-                var config = new ServerWideBackupConfiguration
+                var config = new PeriodicBackupConfiguration()
                 {
                     Disabled = false,
                     FullBackupFrequency = "0 0 1 1 *",
@@ -60,13 +59,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     }
                 };
-                var taskId = await Backup.UpdateServerWideConfigAsync(leader, config, store);
+                var taskId = await Backup.UpdateConfigAsync(leader, config, store);
                 var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, store.Database);
                 var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
                 await Backup.RunBackupAsync(originalNodeServer, taskId, store, isFullBackup: false);
-
+                
                 var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
-
+                
                 // check the backup status
                 var backupStatus = await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId));
                 Assert.NotNull(backupStatus.Status);
@@ -76,25 +75,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(1, dirs.Length);
                 var nodesBackupDir = dirs[0];
-                var innerDirs = Directory.GetDirectories(nodesBackupDir);
+
+                var innerDirs = Directory.GetFiles(nodesBackupDir);
                 Assert.Equal(1, innerDirs.Length);
                 Assert.True(innerDirs[0].Contains(originalNode));
-
+                
                 // change responsible node to other node
-                var command = new UpdateResponsibleNodeForTasksCommand(
-                    new UpdateResponsibleNodeForTasksCommand.Parameters
-                    {
-                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
-                        {
-                            { store.Database, new List<ResponsibleNodeInfo>() { new() { TaskId = taskId, ResponsibleNode = otherNodeServer.ServerStore.NodeTag } } }
-                        }
-                    }, RaftIdGenerator.NewId());
-                await leader.ServerStore.Engine.SendToLeaderAsync(command);
-
+                config.TaskId = taskId;
+                config.MentorNode = otherNodeServer.ServerStore.NodeTag;
+                config.PinToMentorNode = true;
+                await Backup.UpdateConfigAsync(leader, config, store);
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, differentThan: originalNode);
 
                 // run full backup on new node
-                await Backup.RunBackupAsync(otherNodeServer, taskId, store, isFullBackup: false); // is full false is to not force the backup
+                await Backup.RunBackupAsync(otherNodeServer, taskId, store, isFullBackup: false);
 
                 // wait until status is updated with new node
                 PeriodicBackupStatus status = null;
@@ -109,21 +103,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(status.LastFullBackup);
 
                 // assert number of directories grew
-                var otherNodeDir = Directory.GetDirectories(nodesBackupDir).Except(innerDirs).ToArray();
+                var otherNodeDir = Directory.GetDirectories(backupPath).Except(dirs).ToArray();
                 Assert.Equal(1, otherNodeDir.Length);
                 Assert.True(otherNodeDir[0].Contains(otherNodeServer.ServerStore.NodeTag));
 
-                //change responsible node back to original node
-                command = new UpdateResponsibleNodeForTasksCommand(
-                    new UpdateResponsibleNodeForTasksCommand.Parameters
-                    {
-                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
-                        {
-                            { store.Database, new List<ResponsibleNodeInfo>() { new() { TaskId = taskId, ResponsibleNode = originalNode } } }
-                        }
-                    }, RaftIdGenerator.NewId());
-                await leader.ServerStore.Engine.SendToLeaderAsync(command);
-
+                // change responsible node back to original
+                config.TaskId = taskId;
+                config.MentorNode = originalNode;
+                config.PinToMentorNode = true;
+                await Backup.UpdateConfigAsync(leader, config, store);
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, differentThan: otherNodeServer.ServerStore.NodeTag);
 
                 // run the backup again - should be running incremental this time
@@ -141,9 +129,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.False(status.IsFull, "Backup should be incremental but is full");
                 Assert.NotNull(status.LastIncrementalBackup);
 
-                // assert no new dirs of full backup
-                var dirsAfterSwitchBack = Directory.GetDirectories(nodesBackupDir);
+                // assert no new dirs of full backup - original node directory should have a file for full and a file for incremental
+                var dirsAfterSwitchBack = Directory.GetFiles(nodesBackupDir);
                 Assert.Equal(2, dirsAfterSwitchBack.Length);
+
+                // other node directory should only have a file for full
+                dirsAfterSwitchBack = Directory.GetFiles(otherNodeDir[0]);
+                Assert.Equal(1, dirsAfterSwitchBack.Length);
             }
         }
 
@@ -183,7 +175,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(3, stats.CountOfCompareExchange);
 
                 // node backs up compare exchanges
-                var config = new ServerWideBackupConfiguration
+                var config = new PeriodicBackupConfiguration()
                 {
                     Disabled = false,
                     FullBackupFrequency = "0 0 1 1 *",
@@ -193,7 +185,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         FolderPath = backupPath
                     }
                 };
-                var taskId = await Backup.UpdateServerWideConfigAsync(leader, config, store);
+                var taskId = await Backup.UpdateConfigAsync(leader, config, store);
                 var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, store.Database);
                 var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
                 var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
@@ -210,22 +202,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // assert number of directories
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(1, dirs.Length);
+
                 var nodesBackupDir = dirs[0];
-                var innerDirs = Directory.GetDirectories(nodesBackupDir);
-                Assert.Equal(1, innerDirs.Length);
-                Assert.True(innerDirs[0].Contains(originalNode));
+                var originalNodeFiles = Directory.GetFiles(nodesBackupDir);
+                Assert.Equal(1, originalNodeFiles.Length);
+                Assert.True(originalNodeFiles[0].Contains(originalNode));
 
                 // change responsible node to other node
-                var command = new UpdateResponsibleNodeForTasksCommand(
-                    new UpdateResponsibleNodeForTasksCommand.Parameters
-                    {
-                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
-                        {
-                            { store.Database, new List<ResponsibleNodeInfo>() { new() { TaskId = taskId, ResponsibleNode = otherNodeServer.ServerStore.NodeTag } } }
-                        }
-                    }, RaftIdGenerator.NewId());
-                await leader.ServerStore.Engine.SendToLeaderAsync(command);
-
+                config.TaskId = taskId;
+                config.MentorNode = otherNodeServer.ServerStore.NodeTag;
+                await Backup.UpdateConfigAsync(leader, config, store);
+                
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, differentThan: originalNode);
 
                 // delete compare exchanges -> tombstones created
@@ -252,9 +239,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(status.LastRaftIndex.LastEtag >= delRes3.Index, "tombstones raft index is not included in the backup");
 
                 // assert number of directories grew
-                var otherNodeDir = Directory.GetDirectories(nodesBackupDir).Except(innerDirs).ToArray();
+                var otherNodeDir = Directory.GetDirectories(backupPath).Except(dirs).ToArray();
                 Assert.Equal(1, otherNodeDir.Length);
                 Assert.True(otherNodeDir[0].Contains(otherNodeServer.ServerStore.NodeTag));
+                var otherNodeFiles = Directory.GetFiles(otherNodeDir[0]);
+                Assert.Equal(1, otherNodeFiles.Length);
 
                 // run cx tombstone cleaner
                 await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
@@ -265,7 +254,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(0, stats.CountOfCompareExchange);
             }
         }
-        //TODO stav: change in all tests to change mentor node instead of cluster command directly
+        
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeTombstonesShouldNotGatherIndefinitelyAndShouldBeDeletedAfterNextFull()
         {
@@ -315,16 +304,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var delRes1 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("users/1", cmpxchngRes1.Index));
                 Assert.True(delRes1.Successful);
 
-                // move backup to another node and wait to finish
-                var command = new UpdateResponsibleNodeForTasksCommand(
-                    new UpdateResponsibleNodeForTasksCommand.Parameters
-                    {
-                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
-                        {
-                            { store.Database, new List<ResponsibleNodeInfo>() { new() { TaskId = taskId, ResponsibleNode = otherNodeServer.ServerStore.NodeTag } } }
-                        }
-                    }, RaftIdGenerator.NewId());
-                await leader.ServerStore.Engine.SendToLeaderAsync(command);
+                config.TaskId = taskId;
+                config.MentorNode = otherNodeServer.ServerStore.NodeTag;
+                await Backup.UpdateConfigAsync(leader, config, store);
 
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, differentThan: originalNode);
                 await Backup.RunBackupAsync(otherNodeServer, taskId, store, isFullBackup: false); // don't force full. should happen by itself
@@ -451,17 +433,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // move backup to another node and wait to finish
-                var command = new UpdateResponsibleNodeForTasksCommand(
-                    new UpdateResponsibleNodeForTasksCommand.Parameters
-                    {
-                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
-                        {
-                            {
-                                store.Database, new List<ResponsibleNodeInfo>() { new() { TaskId = taskId, ResponsibleNode = otherNodeServer.ServerStore.NodeTag } }
-                            }
-                        }
-                    }, RaftIdGenerator.NewId());
-                await leader.ServerStore.Engine.SendToLeaderAsync(command);
+                config.TaskId = taskId;
+                config.MentorNode = otherNodeServer.ServerStore.NodeTag;
+                await Backup.UpdateConfigAsync(leader, config, store);
 
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, differentThan: originalNode);
                 await Backup.RunBackupAsync(otherNodeServer, taskId, store, isFullBackup: false); // don't force full. should happen by itself

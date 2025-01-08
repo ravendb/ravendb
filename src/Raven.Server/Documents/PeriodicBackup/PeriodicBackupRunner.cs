@@ -672,9 +672,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
 
                     var config = record.GetPeriodicBackupConfiguration(taskId);
-
-                    // if we are not the responsible node, we want to avoid gathering tombstones indefinitely since our local status will not be updated
-                    var responsibleNode = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, taskId);
                     if (responsibleNode != null && responsibleNode != _serverStore.NodeTag && config.FullBackupFrequency != null)
                     {
                         var nextFullBackup = BackupUtils.GetNextBackupOccurrence(new BackupUtils.NextBackupOccurrenceParameters()
