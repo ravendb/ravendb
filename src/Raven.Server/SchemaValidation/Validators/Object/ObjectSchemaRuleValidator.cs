@@ -83,14 +83,14 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         return validators;
     }
 
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
     {
         var isValid = true;
         if (_namedPropertySchemaRuleValidators != null)
         {
             foreach (var (prop, validator) in _namedPropertySchemaRuleValidators)
             {
-                isValid&= ValidateProperty(validator, value, prop, path, errorBuilder);
+                isValid&= ValidateProperty(validator, value, prop, errorBuilder);
             }
         }
 
@@ -105,7 +105,7 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
                         continue;
                 
                     hasValidator = true;
-                    isValid &= ValidateProperty(validator,value, prop, path, errorBuilder);
+                    isValid &= ValidateProperty(validator,value, prop, errorBuilder);
                 }
             }
 
@@ -115,24 +115,24 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
             var (allowed, additionalPropertiesValidator) = _additionalPropertiesSchemaRuleValidator;
             if (allowed == false)
             {
-                errorBuilder?.AddError($"The property '{prop}' at '{path}' is not defined and additional properties are not allowed.");
+                errorBuilder?.AddError($"The property '{prop}' at '{errorBuilder.Path}' is not defined and additional properties are not allowed.");
                 isValid = false;
             }
             else if (additionalPropertiesValidator != null)
             {
-                isValid &= ValidateProperty(additionalPropertiesValidator, value, prop, path, errorBuilder);
+                isValid &= ValidateProperty(additionalPropertiesValidator, value, prop, errorBuilder);
             }
         }
         return isValid;
     }
 
-    private static bool ValidateProperty(PropertySchemaRuleValidator validator, BlittableJsonReaderObject value, string prop, SchemaValidatorPath path,
+    private static bool ValidateProperty(PropertySchemaRuleValidator validator, BlittableJsonReaderObject value, string prop,
         IErrorBuilder errorBuilder)
     {
         
-        path.StepIn(prop);
-        var isValid = validator.Validate(value, prop, path, errorBuilder);
-        path.StepOut();
+        errorBuilder?.Path.StepIn(prop);
+        var isValid = validator.Validate(value, prop, errorBuilder);
+        errorBuilder?.Path.StepOut();
         return isValid;
     }
 }

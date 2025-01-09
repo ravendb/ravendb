@@ -14,12 +14,12 @@ public class PatternSchemaRuleValidator : StringSchemaRuleValidator
         _pattern = new Regex(pattern, RegexOptions.Compiled);
     }
 
-    protected override bool ValidateInternal(string value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(string value, IErrorBuilder errorBuilder)
     {
         if (_pattern.IsMatch(value)) 
             return true;
         
-        errorBuilder?.AddError($"The pattern of the {Target} '{value}' at '{path}' does not match the required pattern '{_pattern}'.");
+        errorBuilder?.AddError($"The pattern of the {Target} '{value}' at '{errorBuilder.Path}' does not match the required pattern '{_pattern}'.");
         return false;
     }
 }

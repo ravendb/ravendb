@@ -8,7 +8,7 @@ namespace Raven.Server.SchemaValidation.Validators.Array;
 public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected override bool ValidateInternal(BlittableJsonReaderArray value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderArray value, IErrorBuilder errorBuilder)
     {
         HashSet<object> duplicates = null;
         var hashSet = new HashSet<object>();
@@ -21,7 +21,7 @@ public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         if (duplicates == null)
             return true;
         
-        errorBuilder?.AddError($"The array at '{path}' contains duplicate value{(duplicates.Count == 1?"":'s')}: '{string.Join("', '", duplicates)}'. Each item must be unique.");
+        errorBuilder?.AddError($"The array at '{errorBuilder.Path}' contains duplicate value{(duplicates.Count == 1?"":'s')}: '{string.Join("', '", duplicates)}'. Each item must be unique.");
         return false;
     }
 }

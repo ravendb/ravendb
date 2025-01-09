@@ -52,23 +52,23 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
         _publicTypesRestriction = _typesRestriction.Select(SchemaValidationHelper.GetPublicType).Distinct().ToArray();
     }
     
-    public bool Validate(TParent parent, TAccessor accessor, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    public bool Validate(TParent parent, TAccessor accessor, IErrorBuilder errorBuilder)
     {
         if (TryGetElement(parent, accessor, out var element) == false)
             return true;
 
         if (IsOfRequiredType(element.Type) == false)
         {
-            errorBuilder?.AddError($"'{path}' should be of type '{string.Join("' or '", _publicTypesRestriction)}' but actual type is '{SchemaValidationHelper.GetPublicType(element.Type)}'.");
+            errorBuilder?.AddError($"'{errorBuilder.Path}' should be of type '{string.Join("' or '", _publicTypesRestriction)}' but actual type is '{SchemaValidationHelper.GetPublicType(element.Type)}'.");
             return false;
         }
         
-        return CheckAllValidators(element.Value, path, errorBuilder);
+        return CheckAllValidators(element.Value, errorBuilder);
     }
 
     protected abstract bool TryGetElement(TParent parent, TAccessor accessor, out (BlittableJsonToken Type, object Value) element);
 
-    private bool CheckAllValidators(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    private bool CheckAllValidators(object value, IErrorBuilder errorBuilder)
     {
         if (_ruleValidators == null)
             return true;
@@ -77,7 +77,7 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
         //TODO Maybe to filter _ruleValidators by afgument type and avoid cast and checking inside ruleValidator.Validate
         foreach (var ruleValidator in _ruleValidators)
         {
-            isValid &= ruleValidator.Validate(value, path, errorBuilder);
+            isValid &= ruleValidator.Validate(value, errorBuilder);
         }
         return isValid;
     }
