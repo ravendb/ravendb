@@ -17,7 +17,7 @@ public class AmazonSqsEtlTestBase : QueueEtlTestBase
     {
     }
 
-    protected string OrdersQueueName => "orders";
+    protected string OrdersQueueName => "Orders";
 
     protected readonly string[] DefaultCollections = { "orders" };
 

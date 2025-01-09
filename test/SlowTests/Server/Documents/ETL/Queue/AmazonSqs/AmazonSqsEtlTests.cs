@@ -455,7 +455,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
             await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             IAmazonSQS queueClient = CreateQueueClient();
-            var queueUrl = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync("users")).QueueUrl;
+            var queueUrl = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync("Users")).QueueUrl;
             var messagesReadResult = AsyncHelpers.RunSync(() => queueClient.ReceiveMessageAsync(queueUrl));
             var user = JsonConvert.DeserializeObject<CloudEventUserData>(messagesReadResult.Messages.First().Body).Data;
 
