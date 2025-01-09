@@ -13,31 +13,27 @@ public sealed class VectorSearchToken : WhereToken
     private readonly float? _similarityThreshold;
     private readonly VectorEmbeddingType _sourceQuantizationType;
     private readonly VectorEmbeddingType _targetQuantizationType;
-    private bool _isSourceBase64Encoded;
-    private bool _isVectorBase64Encoded;
     private readonly int? _numberOfCandidatesForQuerying;
-    private bool _isExact;
-    
-    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float? similarityThreshold, int? numberOfCandidatesForQuerying, bool isExact)
+    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? similarityThreshold, int? numberOfCandidatesForQuerying, bool isExact)
     {
         FieldName = fieldName;
         ParameterName = parameterName;
         
         _sourceQuantizationType = sourceQuantizationType;
         _targetQuantizationType = targetQuantizationType;
-                
-        _isSourceBase64Encoded = isSourceBase64Encoded;
-        _isVectorBase64Encoded = isVectorBase64Encoded;
-                
+
         _similarityThreshold = similarityThreshold;
 
         _numberOfCandidatesForQuerying = numberOfCandidatesForQuerying;
-        _isExact = isExact;
+        Options = new(isExact);
     }
     
     public override void WriteTo(StringBuilder writer)
     {
-        if (_isExact)
+        if (Options.Boost.HasValue)
+            writer.Append("boost(");
+            
+        if (Options.Exact)
             writer.Append("exact(");
         
         writer.Append("vector.search(");
@@ -63,7 +59,10 @@ public sealed class VectorSearchToken : WhereToken
         
         writer.Append(')');
 
-        if (_isExact)
+        if (Options.Exact)
             writer.Append(')');
+        
+        if (Options.Boost.HasValue)
+            writer.Append($", {Options.Boost.Value.ToInvariantString()})");
     }
 }

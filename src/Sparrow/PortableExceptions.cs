@@ -684,7 +684,9 @@ namespace Sparrow
                 throw new EndOfStreamException(message);
             if (typeof(T) == typeof(InvalidDataException))
                 throw new InvalidDataException(message);
-
+            if (typeof(T) == typeof(NotSupportedException))
+                throw new NotSupportedException(message);
+            
             // We will still throw but in a way that we can look
             throw new NotSupportedException($"Exception type '{typeof(T).Name}' is not supported by this {nameof(Throw)} statement.");
         }
@@ -718,7 +720,9 @@ namespace Sparrow
                 throw new ObjectDisposedException(message);
             if (typeof(T) == typeof(InvalidDataException))
                 throw new InvalidDataException(message);
-
+            if (typeof(T) == typeof(NotSupportedException))
+                throw new NotSupportedException(message);
+            
             // We will still throw but in a way that we can look
             throw new NotSupportedException($"Exception type '{typeof(T).Name}' is not supported by this {nameof(Throw)} statement.");
         }

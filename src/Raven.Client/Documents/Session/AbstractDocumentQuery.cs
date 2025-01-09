@@ -1521,11 +1521,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var fieldName = embeddingFieldFactory.FieldName;
             var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
             var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
-            var isSourceBase64Encoded = embeddingFieldFactory.IsBase64Encoded;
-            
+
             string queryParameterName;
-            var isVectorBase64Encoded = false;
-            
+
             if (embeddingValueFactory.Text != null)
             {
                 queryParameterName = AddQueryParameter(embeddingValueFactory.Text);
@@ -1553,10 +1551,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             else
             {
                 queryParameterName = AddQueryParameter(embeddingValueFactory.Base64Embedding);
-                isVectorBase64Encoded = true;
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity, numberOfCandidates, isExact);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact);
 
             WhereTokens.AddLast(vectorSearchToken);
         }

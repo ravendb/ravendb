@@ -232,7 +232,7 @@ public struct VectorSearchMatch : IQueryMatch
                 if (pos < 0)
                     continue;
 
-                Unsafe.Add(ref scoresRef, i) = _nearestSearch.DistanceToScore(Unsafe.Add(ref distanceRef, pos));
+                Unsafe.Add(ref scoresRef, i) += _nearestSearch.DistanceToScore(Unsafe.Add(ref distanceRef, pos));
             }
         }
         else
