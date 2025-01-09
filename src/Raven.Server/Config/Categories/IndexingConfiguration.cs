@@ -620,6 +620,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.VectorSearch.OrderByScoreAutomatically", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool CoraxVectorSearchOrderByScoreAutomatically { get; set; }
         
+        [Description("MaxPercentageOfThreadsForEmbeddings")]
+        [DefaultValue(25)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.MaxPercentageOfThreadsForEmbeddings", ConfigurationEntryScope.ServerWideOnly)]
+        public int MaxPercentageOfThreadsForEmbeddings { get; set; }
+
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

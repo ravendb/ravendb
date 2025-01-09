@@ -15,6 +15,7 @@ using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Config;
 using Sparrow;
 using Sparrow.Server;
+using InvalidOperationException = System.InvalidOperationException;
 using VectorValue = Corax.Utils.VectorValue;
 
 namespace Raven.Server.Documents.Indexes.VectorSearch;
@@ -34,15 +35,26 @@ public static class GenerateEmbeddings
     {
         BertOnnxTextEmbeddingGenerationServiceCtor = typeof(BertOnnxTextEmbeddingGenerationService).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, [typeof(InferenceSession), typeof(BertTokenizer), typeof(int), typeof(BertOnnxOptions)]);
         if (BertOnnxTextEmbeddingGenerationServiceCtor == null)
-            throw new InvalidOperationException("TODO");
+            throw new InvalidOperationException($"Could not find constructor for {typeof(BertOnnxTextEmbeddingGenerationService)}.");
     }
 
     public static void Configure(RavenConfiguration configuration)
     {
         if (Embedder.IsValueCreated)
-            throw new InvalidOperationException("TODO");
+            throw new InvalidOperationException("Embedder has already been initialized.");
+        
+        var numberOfCoresToUse = CalculateNumberOfCoresForOnnx(configuration);
 
-        OnnxSessionOptions = new SessionOptions();
+        OnnxSessionOptions = new SessionOptions() { IntraOpNumThreads = numberOfCoresToUse };
+    }
+    
+    private static int CalculateNumberOfCoresForOnnx(RavenConfiguration configuration)
+    {
+        var cores = (int)MathF.Floor(Environment.ProcessorCount * ((float)configuration.Indexing.MaxPercentageOfThreadsForEmbeddings / 100));
+            
+        var numberOfCoresToUse = int.Max(1, cores);
+        
+        return numberOfCoresToUse;
     }
 
     [ThreadStatic]
@@ -143,6 +155,8 @@ public static class GenerateEmbeddings
             var embedding = embeddings[0];
 
             var memoryScope = allocator.Allocate(dimensions, out System.Memory<byte> memory);
+            
+            MemoryMarshal.AsBytes(embedding.Span).CopyTo(memory.Span);
 
             return (memoryScope, memory, dimensions);
         }

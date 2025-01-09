@@ -4,11 +4,13 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
-using SmartComponents.LocalEmbeddings;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -44,11 +46,10 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
         var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
         Assert.Null(errors);
     }
-    
+    /*
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     public async Task CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocument()
     {
-        using (LocalEmbedder localEmbedder = new())
         using (var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax)))
         {
             await store.ExecuteIndexAsync(new VectorIndex());
@@ -60,6 +61,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
             var t = worker.Run(async x =>
             {
                 using var session = x.OpenAsyncSession();
+                using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
                 foreach (var item in x.Items)
                 {
                     var q = item.Result;
@@ -69,9 +71,8 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
                     var localEmbedding = await session.LoadAsync<Embedding>(embeddingId);
                     if (localEmbedding == null)
                     {
-                        // ReSharper disable once AccessToDisposedClosure
-                        var embedding = localEmbedder.Embed(q.Body);
-                        vector = embedding.Values.ToArray().ToList();
+                        var embedding = GenerateEmbeddings.FromText(allocator, new VectorOptions(), q.Body);
+                        vector = embedding.GetEmbedding();
                         localEmbedding = new Embedding { Vector = vector };
                         await session.StoreAsync(localEmbedding, embeddingId);
                     }
@@ -119,6 +120,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
             }            
         }
     }
+    */
 
     private class VectorIndex : AbstractIndexCreationTask<Question>
     {

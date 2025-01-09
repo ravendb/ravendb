@@ -14,6 +14,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Static.NuGet;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.EventListener;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
@@ -126,6 +127,7 @@ namespace Raven.Server
                 configuration.AddCommandLine(configurationArgs);
 
             configuration.Initialize();
+            GenerateEmbeddings.Configure(configuration);
 
             GlobalFlushingBehavior.NumberOfConcurrentSyncsPerPhysicalDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
 
