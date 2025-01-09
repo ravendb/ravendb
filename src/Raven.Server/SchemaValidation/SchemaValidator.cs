@@ -17,7 +17,7 @@ public class SchemaValidator
     public bool Validate(BlittableJsonReaderObject obj, out string errors)
     {
         var errorBuilder = new ErrorBuilder();
-        var isValid = _root.Validate(obj, string.Empty, new SchemaValidatorPath(), errorBuilder);
+        var isValid = _root.Validate(obj, string.Empty, errorBuilder);
         errors = errorBuilder.GetErrors();
         return isValid;
     }

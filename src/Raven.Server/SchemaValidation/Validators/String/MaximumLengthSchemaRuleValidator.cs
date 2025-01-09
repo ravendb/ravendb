@@ -14,12 +14,12 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
         _maxLength = maxLength;
     }
 
-    protected override bool ValidateInternal(string value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(string value, IErrorBuilder errorBuilder)
     {
         if (value.Length <= _maxLength) 
             return true;
         
-        errorBuilder?.AddError($"The length of the {Target} '{value}' at '{path}' should not exceed {_maxLength}, but its actual length is {value.Length}.");
+        errorBuilder?.AddError($"The length of the {Target} '{value}' at '{errorBuilder.Path}' should not exceed {_maxLength}, but its actual length is {value.Length}.");
         return false;
     }
 }

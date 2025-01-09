@@ -8,7 +8,7 @@ namespace Raven.Server.SchemaValidation.Validators.Number;
 public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _minimum;
-    private readonly Func<decimal, SchemaValidatorPath, IErrorBuilder, bool> _validatePredicate;
+    private readonly Func<decimal, IErrorBuilder, bool> _validatePredicate;
 
     // ReSharper disable once IntroduceOptionalParameters.Global
     public MinimumSchemaRuleValidator(decimal minimum, bool exclusiveMinimum)
@@ -17,23 +17,23 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
         _validatePredicate = exclusiveMinimum ? ExclusiveValidate : NonExclusiveValidate;
     }
 
-    protected override bool ValidateInternal(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder) => _validatePredicate(value, path, errorBuilder);
+    protected override bool ValidateInternal(decimal value, IErrorBuilder errorBuilder) => _validatePredicate(value, errorBuilder);
 
-    private bool NonExclusiveValidate(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    private bool NonExclusiveValidate(decimal value, IErrorBuilder errorBuilder)
     {
         if (value.CompareTo(_minimum) >= 0) 
             return true;
         
-        errorBuilder?.AddError($"The value '{value}' at '{path}' should be greater than or equal to {_minimum}.");
+        errorBuilder?.AddError($"The value '{value}' at '{errorBuilder.Path}' should be greater than or equal to {_minimum}.");
         return false;
     }
 
-    private bool ExclusiveValidate(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    private bool ExclusiveValidate(decimal value, IErrorBuilder errorBuilder)
     {
         if (value.CompareTo(_minimum) > 0) 
             return true;
         
-        errorBuilder?.AddError($"The value '{value}' at '{path}' should be greater than {_minimum}.");
+        errorBuilder?.AddError($"The value '{value}' at '{errorBuilder.Path}' should be greater than {_minimum}.");
         return false;
     }
 }

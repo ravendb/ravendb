@@ -74,7 +74,7 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         }
     }
 
-    protected override bool ValidateInternal(BlittableJsonReaderArray value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderArray value, IErrorBuilder errorBuilder)
     {
         var isValid = true;
         int i = 0;
@@ -86,9 +86,9 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
             {
                 for (; i < length; i++)
                 {
-                    path.StepIn(i);
-                    isValid &= _prefixValidators[i].Validate(value, i, path, errorBuilder);
-                    path.StepOut();
+                    errorBuilder?.Path.StepIn(i);
+                    isValid &= _prefixValidators[i].Validate(value, i, errorBuilder);
+                    errorBuilder?.Path.StepOut();
                 }
             }
             
@@ -106,9 +106,9 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         {
             for (; i < value.Length; i++)
             {
-                path.StepIn(i);
-                isValid &=_itemsValidator.validator.Validate(value, i, path, errorBuilder);
-                path.StepOut();
+                errorBuilder?.Path.StepIn(i);
+                isValid &=_itemsValidator.validator.Validate(value, i, errorBuilder);
+                errorBuilder?.Path.StepOut();
             }
         }
         return isValid;

@@ -14,14 +14,14 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
     {
         _requiredHashSet = required.Select(x => x.ToString()).ToHashSet();
     }
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
     {
         var isValid = true;
         foreach (var required in _requiredHashSet)
         {
             if(value.Contains(required))
                 continue;
-            errorBuilder?.AddError($"The required property '{required}' is missing at '{path}'.");
+            errorBuilder?.AddError($"The required property '{required}' is missing at '{errorBuilder.Path}'.");
             isValid = false;
         }
         return isValid;

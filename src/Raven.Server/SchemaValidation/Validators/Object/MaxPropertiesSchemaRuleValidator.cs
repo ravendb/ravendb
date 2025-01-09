@@ -13,11 +13,11 @@ public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     {
         _maxProperties = maxProperties;
     }
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
     {
         if(value.Count <= _maxProperties)
             return true;
-        errorBuilder?.AddError($"The object at '{path}' must have no more than {_maxProperties} properties, but it has {value.Count}.");
+        errorBuilder?.AddError($"The object at '{errorBuilder.Path}' must have no more than {_maxProperties} properties, but it has {value.Count}.");
         return false;
     }
 }
