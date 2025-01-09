@@ -13,11 +13,14 @@ public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
         _constantValue = ConvertTypeForComparison(constantValue);
     }
 
-    protected override void ValidateInternal(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        if(_constantValue.Equals(value) == false)
-            //TODO Clear error to differentiate between number and string (15 or "15")
-            errorBuilder.AddError($"The value at '{path}' must be '{_constantValue}', but it is '{value}'.");
+        if (_constantValue.Equals(value)) 
+            return true;
+        
+        //TODO Clear error to differentiate between number and string (15 or "15")
+        errorBuilder?.AddError($"The value at '{path}' must be '{_constantValue}', but it is '{value}'.");
+        return false;
     }
 
     protected override bool CheckTypeAndGetValue(object value, out object tValue)

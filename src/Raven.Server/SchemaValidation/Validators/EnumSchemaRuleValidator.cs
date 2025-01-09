@@ -37,11 +37,14 @@ public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
         throw new InvalidOperationException($"The type {x.GetType()} is not supported.");
     }
 
-    protected override void ValidateInternal(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        if(_enums.Any(x => x.Equals(value)) == false)
-            //TODO Clear error to differentiate between number and string (15 or "15")
-            errorBuilder.AddError($"The value '{value}' at '{path}' is not an allowed value. Expected one of: {string.Join(", ", _enums)}.");
+        if (_enums.Any(x => x.Equals(value))) 
+            return true;
+        
+        //TODO Clear error to differentiate between number and string (15 or "15")
+        errorBuilder?.AddError($"The value '{value}' at '{path}' is not an allowed value. Expected one of: {string.Join(", ", _enums)}.");
+        return false;
     }
     
     protected override bool CheckTypeAndGetValue(object value, out object tValue)
