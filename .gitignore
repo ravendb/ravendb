@@ -147,3 +147,4 @@ src/Sparrow.Server/Utils/VxSort/codegen/__pycache__/
 /UpgradeLog.htm
 
 /bench/Vector.Benchmark/vectors
+/.cache
