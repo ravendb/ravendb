@@ -59,7 +59,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
         foreach (QueueWithItems<AmazonSqsItem> queue in itemsPerQueue)
         {
-            string queueName = queue.Name.ToLower();
+            string queueName = queue.Name;
             bool isFifoQueue = queueName.EndsWith(FifoQueueIdentifier);
 
             if (_queueClient == null)
@@ -206,7 +206,8 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
                 {
                     MessageGroupId = message.MessageGroupId,
                     QueueUrl = GetQueueUrl(_queueClient, queueName),
-                    MessageBody = message.MessageBody
+                    MessageBody = message.MessageBody,
+                    MessageDeduplicationId = message.MessageDeduplicationId
                 };
 
                 AsyncHelpers.RunSync(() => _queueClient.SendMessageAsync(sendMessageRequest));
