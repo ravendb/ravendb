@@ -256,7 +256,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     }
 
                     var indexField = GetFieldObjectForProcessing(field.Name, indexingScope);
-                    object objectForIndexing = AbstractStaticIndexBase.CreateVector(indexField, valueJsv.IsString() ? valueJsv.AsString() : (object)valueJsv);
+                    object objectForIndexing = AbstractStaticIndexBase.CreateVector(indexField, valueJsv.IsString() ? valueJsv.AsString() : (object)valueJsv, isAutoIndex: false);
 
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
                     shouldProcessAsBlittable = false;

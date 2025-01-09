@@ -407,12 +407,12 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         /// <summary>
-        /// Create vector field object. This method is used by AutoIndexes.
+        /// Create vector field object. This method is used by AutoIndexes and JavaScript indexes.
         /// </summary>
         /// <param name="indexField">IndexField from IndexDefinition</param>
         /// <param name="value">Data source to create vector field.</param>
         /// <returns></returns>
-        internal static object CreateVector(IndexField indexField, object value)
+        internal static object CreateVector(IndexField indexField, object value, bool isAutoIndex)
         {
             if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current))
                 return null;
@@ -420,11 +420,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return indexField!.Vector!.SourceEmbeddingType switch
             {
                 VectorEmbeddingType.Text => VectorFromText(indexField, value),
-                _ => VectorFromEmbedding(indexField, value)
+                _ => VectorFromEmbedding(indexField, value, isAutoIndex)
             };
         }
 
-        private static object VectorFromEmbedding(IndexField currentIndexingField, object value)
+        private static object VectorFromEmbedding(IndexField currentIndexingField, object value, bool isAutoIndex = false)
         {
             if (value is null)
                 return VectorValue.Null;
@@ -462,7 +462,7 @@ namespace Raven.Server.Documents.Indexes.Static
             object Base64ToVector(object base64)
             {
                 var str = base64.ToString();
-                return GenerateEmbeddings.FromBase64Array(vectorOptions, allocator, str);
+                return GenerateEmbeddings.FromBase64Array(vectorOptions, allocator, str, isAutoIndex);
             }
 
             object HandleEnumerable(IEnumerable enumerable)
