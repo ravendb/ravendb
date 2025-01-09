@@ -46,7 +46,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
         var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
         Assert.Null(errors);
     }
-    /*
+    
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     public async Task CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocument()
     {
@@ -61,7 +61,6 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
             var t = worker.Run(async x =>
             {
                 using var session = x.OpenAsyncSession();
-                using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
                 foreach (var item in x.Items)
                 {
                     var q = item.Result;
@@ -71,8 +70,10 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
                     var localEmbedding = await session.LoadAsync<Embedding>(embeddingId);
                     if (localEmbedding == null)
                     {
-                        var embedding = GenerateEmbeddings.FromText(allocator, new VectorOptions(), q.Body);
-                        vector = embedding.GetEmbedding();
+#pragma warning disable SKEXP0070
+                        var embedding = await GenerateEmbeddings.Embedder.Value.GenerateEmbeddingsAsync(new List<string> {q.Body });
+#pragma warning restore SKEXP0070
+                        vector = embedding[0].ToArray().ToList();
                         localEmbedding = new Embedding { Vector = vector };
                         await session.StoreAsync(localEmbedding, embeddingId);
                     }
@@ -120,7 +121,6 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
             }            
         }
     }
-    */
 
     private class VectorIndex : AbstractIndexCreationTask<Question>
     {

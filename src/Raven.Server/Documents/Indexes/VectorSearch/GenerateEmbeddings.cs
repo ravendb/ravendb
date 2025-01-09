@@ -146,7 +146,7 @@ public static class GenerateEmbeddings
     private static (IDisposable MemoryScope, Memory<byte> Memory, int UsedBytes) CreateEmbeddingViaSmartComponentsLocalEmbedding(ByteStringContext allocator, in string text, in int dimensions)
     {
         List ??= new List<string>(1);
-        List.Insert(0, text);
+        List.Add(text);
 
         try
         {
@@ -162,7 +162,7 @@ public static class GenerateEmbeddings
         }
         finally
         {
-            List[0] = null;
+            List.Clear();
         }
     }
 
