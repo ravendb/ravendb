@@ -25,7 +25,11 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
 
     protected static async Task AssertMultipleParallel(params Action[] checks)
     {
-        await Task.WhenAll(checks.Select(Task.Run));
+        var tasks = checks.Select(Task.Run).ToArray();
+        await Task.WhenAll(tasks.Select(x => x.ContinueWith(_ => { })));
+        var whenAll = Task.WhenAll(tasks);
+        if (whenAll.IsFaulted)
+            throw whenAll.Exception;
     }
     
     protected static JsonOperationContext ReadObjectOnNewCtx(DynamicJsonValue obj, out BlittableJsonReaderObject readObj) 

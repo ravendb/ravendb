@@ -6,10 +6,10 @@ namespace Raven.Server.SchemaValidation.Validators.Object;
 [SchemaRule(SchemaValidatorConstants.minProperties)]
 public class MinPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    private readonly int _minProperties;
+    private readonly long _minProperties;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public MinPropertiesSchemaRuleValidator(int minProperties)
+    public MinPropertiesSchemaRuleValidator(long minProperties)
     {
         _minProperties = minProperties;
     }
@@ -26,16 +26,8 @@ public class MinPropertiesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
 {
     public override MinPropertiesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
-            return null;
-
-        const BlittableJsonToken expectedType = BlittableJsonToken.Integer;
-        if (type != expectedType)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], expectedType, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out int maximinProperties) == false)
-            throw new InvalidOperationException($"'{Rule}' must to be convertable to decimal here. Should not happen");
-
-        return new MinPropertiesSchemaRuleValidator(maximinProperties);
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath, out var minProperties) 
+            ? new MinPropertiesSchemaRuleValidator(minProperties)
+            : null;
     }
 }

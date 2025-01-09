@@ -1,25 +1,25 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Server.SchemaValidation.Validators.Array;
+using Raven.Server.SchemaValidation.Validators.Object;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators.Object;
+namespace Raven.Server.SchemaValidation.Validators;
 
 [DebuggerDisplay("'{_schemaPath}' property validator")]
-public class PropertySchemaRuleValidator
+public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
 {
     private readonly string _schemaPath;
     private ISchemaRuleValidator[] _ruleValidators;
     private BlittableJsonToken[] _typesRestriction;
     private string[] _publicTypesRestriction;
 
-    public string PropertySpecifier { get; }
     
     // ReSharper disable once ConvertToPrimaryConstructor
-    public PropertySchemaRuleValidator(string propertySpecifier, string schemaPath)
+    protected ElementSchemaRuleValidator(string schemaPath)
     {
-        PropertySpecifier = propertySpecifier;
-        _schemaPath = string.IsNullOrEmpty(schemaPath) ? propertySpecifier : $"{schemaPath}.{propertySpecifier}";
+        _schemaPath = schemaPath;
     }
     
     public void Init(BlittableJsonReaderObject schemaDefinition)
@@ -52,29 +52,23 @@ public class PropertySchemaRuleValidator
         _publicTypesRestriction = _typesRestriction.Select(SchemaValidationHelper.GetPublicType).Distinct().ToArray();
     }
     
-    public virtual void Validate(BlittableJsonReaderObject parent, string property, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    public void Validate(TParent parent, TAccessor accessor, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        if (TryGetPropertyType(parent, property, out BlittableJsonToken token) == false)
-        {
-            //TODO Maybe to check _isRequired also here
-            // if (_isRequired)
-                // TODO To improve the error message
-                // errorBuilder.AddError($"The required property '{property}' is missing at '{path}'.");
-
+        if (TryGetElement(parent, accessor, out var element) == false)
             return;
-        }
 
-        if (IsOfRequiredType(token) == false)
+        if (IsOfRequiredType(element.Type) == false)
         {
-            errorBuilder.AddError($"'{path}' should be of type '{string.Join("' or '", _publicTypesRestriction)}' but actual type is '{SchemaValidationHelper.GetPublicType(token)}'.");
+            errorBuilder.AddError($"'{path}' should be of type '{string.Join("' or '", _publicTypesRestriction)}' but actual type is '{SchemaValidationHelper.GetPublicType(element.Type)}'.");
             return;
         }
         
-        var value = parent[property];
-        CheckAllValidators(value, path, errorBuilder);
+        CheckAllValidators(element.Value, path, errorBuilder);
     }
 
-    protected void CheckAllValidators(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected abstract bool TryGetElement(TParent parent, TAccessor accessor, out (BlittableJsonToken Type, object Value) element);
+
+    private void CheckAllValidators(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if (_ruleValidators == null)
             return;
@@ -86,47 +80,50 @@ public class PropertySchemaRuleValidator
         }
     }
 
-    private static bool TryGetPropertyType(BlittableJsonReaderObject parent, string property, out BlittableJsonToken token)
-    {
-        if (parent.TryGetPropertyType(property, out var internalToken))
-        {
-            token = internalToken & BlittableJsonReaderBase.TypesMask;
-            return true;
-        }
-
-        token = 0;
-        return false;
-    }
-    
     private bool IsOfRequiredType(BlittableJsonToken jsonToken) => _typesRestriction == null || _typesRestriction.Length == 0 || _typesRestriction.Contains(jsonToken);
 
     private void ReadValueSchemaRuleValidators(BlittableJsonReaderObject propertySchemaDefinition)
     {
         List<ISchemaRuleValidator> ruleValidators = null;
         var hasObjectRestrictions = false;
+        var hasArrayRestrictions = false;
         foreach (var rule in propertySchemaDefinition.GetPropertyNames())
         {
             if (rule is SchemaValidatorConstants.type or SchemaValidatorConstants.description)
                 continue;
 
-            if (rule is SchemaValidatorConstants.properties or SchemaValidatorConstants.patternProperties or SchemaValidatorConstants.additionalProperties)
+            ISchemaRuleValidator validator;
+            switch (rule)
             {
-                hasObjectRestrictions = true;
-                continue;
+                case SchemaValidatorConstants.properties or SchemaValidatorConstants.patternProperties or SchemaValidatorConstants.additionalProperties:
+                {
+                    if (hasObjectRestrictions)
+                        continue;
+                    var objValidator = new ObjectSchemaRuleValidator(_schemaPath);
+                    objValidator.Init(propertySchemaDefinition);
+                    validator = objValidator;
+                    hasObjectRestrictions = true;
+                    break;
+                }
+                case SchemaValidatorConstants.prefixItems or SchemaValidatorConstants.items:
+                {
+                    if (hasArrayRestrictions)
+                        continue;
+                    var arrayValidator = new ArraySchemaRuleValidator(_schemaPath);
+                    arrayValidator.Init(propertySchemaDefinition);
+                    validator = arrayValidator;
+                    hasArrayRestrictions = true;
+                    break;
+                }
+                default:
+                {
+                    if (SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertySchemaDefinition, _schemaPath, out validator) == false)
+                        continue;
+                    break;
+                }
             }
-            
-            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertySchemaDefinition, _schemaPath, out var validator) == false)
-                continue;
 
-            //TODO To check if we want to collect all the errors and return a full report. Also some time we need to ignore a rule like if "maximum" defined "maximumExclusive" handled as part of it.
-            (ruleValidators??=new List<ISchemaRuleValidator>()).Add(validator);
-        }
-
-        if (hasObjectRestrictions)
-        {
-            var objValidator = new ObjectSchemaRuleValidator(_schemaPath);
-            objValidator.Init(propertySchemaDefinition);
-            (ruleValidators??=new List<ISchemaRuleValidator>()).Add(objValidator);
+            (ruleValidators??= []).Add(validator);
         }
         _ruleValidators = ruleValidators?.ToArray();
     }

@@ -56,16 +56,8 @@ public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<EnumSch
 {
     public override EnumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
-            return null;
-
-        if (type != BlittableJsonToken.StartArray)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], BlittableJsonToken.StartArray, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out BlittableJsonReaderArray enums) == false)
-            throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
-        
-        
-        return new EnumSchemaRuleValidator(enums);
+        return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath, out var enums) 
+            ? new EnumSchemaRuleValidator(enums)
+            : null;
     }
 }

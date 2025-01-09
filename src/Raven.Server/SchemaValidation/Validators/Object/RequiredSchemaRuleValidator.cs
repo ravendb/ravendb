@@ -30,16 +30,8 @@ public class RequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Req
 {
     public override RequiredSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
-            return null;
-
-        const BlittableJsonToken expectedType = BlittableJsonToken.StartArray;
-        if (type != expectedType)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], expectedType, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out BlittableJsonReaderArray required) == false)
-            throw new InvalidOperationException($"'{Rule}' must to be convertable to decimal here. Should not happen");
-        
-        return new RequiredSchemaRuleValidator(required);
+        return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath, out var required)
+            ? new RequiredSchemaRuleValidator(required)
+            : null;
     }
 }
