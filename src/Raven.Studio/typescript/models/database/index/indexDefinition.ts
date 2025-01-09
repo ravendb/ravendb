@@ -30,7 +30,6 @@ class mapItem {
     }
 }
 
-
 class indexDefinition {
    
     name = ko.observable<string>();

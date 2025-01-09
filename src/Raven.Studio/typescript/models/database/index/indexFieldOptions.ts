@@ -452,11 +452,7 @@ class indexFieldOptions {
         const isAnalyzerNameInDictionary = this.analyzersNamesDictionary().some((analyzerItem) => analyzerItem.serverName === configuration);
 
 
-        const currentAnalyzerStudioName = localAnalyzerConfiguration
-            ? this.analyzersNamesDictionary().find((item) => item.serverName === localAnalyzerConfiguration)?.studioName ??
-            localAnalyzerConfiguration
-            : this.analyzersNamesDictionary().find((item) => item.serverName === databaseAnalyzerSetting?.effectiveValue())?.studioName ??
-            databaseAnalyzerSetting?.effectiveValue();
+        const currentAnalyzerStudioName = this.analyzersNamesDictionary().find((item) => item.serverName === configuration)?.studioName ?? configuration;
         
         const parentAnalyzerStudioName = this.analyzersNamesDictionary().find((item) => item.serverName === parentAnalyzer)?.studioName ?? parentAnalyzer;
         
