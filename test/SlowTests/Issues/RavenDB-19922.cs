@@ -393,9 +393,7 @@ namespace SlowTests.Issues
             var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
             Assert.NotNull(database);
 
-            var mentorServer = config.MentorNode != null ? nodes.Single(x => x.ServerStore.NodeTag == config.MentorNode) : leaderServer;
-
-            var taskId = await Backup.UpdateConfigAndRunBackupAsync(mentorServer, config, store, opStatus: OperationStatus.InProgress);
+            var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, store, opStatus: OperationStatus.InProgress);
 
             Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId);
 

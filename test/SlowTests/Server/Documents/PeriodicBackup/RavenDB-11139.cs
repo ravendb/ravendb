@@ -1275,11 +1275,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
                 
-                // clean tombstones
-                await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: false);
-                
-                await WaitForAssertionAsync(() =>
+                await WaitForAssertionAsync(async () =>
                 {
+                    // clean tombstones
+                    await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: false);
+
                     using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -1289,7 +1289,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(0, numOfCompareExchangeTombstones);
                         Assert.Equal(allCount, numOfCompareExchanges);
                     }
-                    return Task.CompletedTask;
                 });
             }
         }
