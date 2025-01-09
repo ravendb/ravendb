@@ -26,17 +26,9 @@ public class MinimumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
 {
     public override MinimumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
-            return null;
-
-        const BlittableJsonToken expectedType = BlittableJsonToken.Integer;
-        if (type != expectedType)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], expectedType, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out long minimumLength) == false)
-            throw new InvalidOperationException($"'{Rule}' must to be convertable to decimal here. Should not happen");
-        
-        return new MinimumLengthSchemaRuleValidator(minimumLength);
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath, out var minimumLength) 
+            ? new MinimumLengthSchemaRuleValidator(minimumLength)
+            : null;
     }
 }
 

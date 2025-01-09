@@ -6,6 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
+[DebuggerDisplay("'{_schemaPath}' object validator")]
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly string _schemaPath;
@@ -23,9 +24,9 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
     {
         //TODO To create an informative error when fails to read
         _namedPropertySchemaRuleValidators = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.properties)?
-            .ToDictionary(x => x.PropertySpecifier);
+            .ToDictionary(x => x.Accessor);
         _patternPropertiesSchemaRuleValidators = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.patternProperties)?
-            .Select(x => (new Regex(x.PropertySpecifier), x)).ToArray();
+            .Select(x => (new Regex(x.Accessor), x)).ToArray();
 
         ReadAdditionalProperties(schemaDefinition);
     }
@@ -72,16 +73,8 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         List<PropertySchemaRuleValidator> validators = null;
         foreach (var propertySpecifier in propertySpecifiers.GetPropertyNames())
         {
-            if (propertySpecifiers.TryGet(propertySpecifier, out BlittableJsonReaderObject propertySchemaDefinition) == false)
-            {
-                //TODO To put better message
-                Debug.Assert(false, "Should not happen");
-                // ReSharper disable once HeuristicUnreachableCode
-                continue;
-            }
+            SchemaValidationHelper.TryGetObject(propertySpecifiers, propertySpecifier, _schemaPath, out var propertySchemaDefinition);
 
-            // var path = $"{Path}.{propertyName}"; TODO To add path for errors
-            //TODO To remove isRequired if not needed
             var validator = new PropertySchemaRuleValidator(propertySpecifier, _schemaPath);
             validator.Init(propertySchemaDefinition);
             (validators ??= new List<PropertySchemaRuleValidator>()).Add(validator);

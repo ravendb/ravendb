@@ -55,7 +55,7 @@ public abstract class SchemaRuleValidatorFactoryHelper
         if (SchemaRuleValidatorFactories.TryGetValue(rule, out ISchemaRuleValidatorFactory factory))
         {
             validator = factory.Create(schemaDefinition, schemaPath);
-            return true;
+            return validator != null;
         }
         validator = null;
         return false;

@@ -57,9 +57,8 @@ public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
 {
     public override PropertyNamesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var propertyNamesType) == false)
+        if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var propertyNames) == false)
             return null;
-        var propertyNames = GetObjOrThrow(Rule, schemaDefinition, schemaPath, propertyNamesType);
         
         var validator = new PropertyNamesSchemaRuleValidator(schemaPath);
         validator.Init(propertyNames);

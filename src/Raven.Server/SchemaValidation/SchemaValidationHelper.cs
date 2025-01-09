@@ -72,13 +72,13 @@ public static class SchemaValidationHelper
             return true;
         }
 
-        tokens = default;
+        tokens = null;
         return false;
     }
 
     public static string GetPublicTypeOfObj(object obj) => GetPublicType(obj?.GetType());
 
-    public static string GetPublicType(Type type)
+    private static string GetPublicType(Type type)
     {
         if (type == null)
             return Null;
@@ -111,5 +111,120 @@ public static class SchemaValidationHelper
             BlittableJsonToken.StartArray => Array,
             _ => throw new NotImplementedException($"The type '{type}' is not supported.")
         };
+    }
+   
+
+    private static string GetIndefiniteArticle(string word)
+    {
+        if (string.IsNullOrEmpty(word))
+            throw new ArgumentException("Input word cannot be null or empty.");
+
+        return "aeiouAEIOU".Contains(word[0]) ? "an" : "a";
+    }
+    
+    public static bool TryGetBoolean(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out bool ret)
+    {
+        return TryGetProperty(schemaDefinition, rule, BlittableJsonToken.Boolean, schemaPath, out ret);
+    }
+    
+    private static readonly BlittableJsonToken[] StringTypes = [BlittableJsonToken.String, BlittableJsonToken.CompressedString];
+    public static bool TryGetString(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out string ret)
+    {
+        return TryGetProperty(schemaDefinition, rule, StringTypes, schemaPath, out ret);
+    }
+    public static bool TryGetInteger(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out long ret)
+    {
+        return TryGetProperty(schemaDefinition, rule, BlittableJsonToken.Integer, schemaPath, out ret);
+    }
+    
+    public static bool TryGetObject(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out BlittableJsonReaderObject ret)
+    {
+        return TryGetProperty(schemaDefinition, rule, BlittableJsonToken.StartObject, schemaPath, out ret);
+    }
+    
+    public static bool TryGetArray(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out BlittableJsonReaderArray ret)
+    {
+        return TryGetProperty(schemaDefinition, rule, BlittableJsonToken.StartArray, schemaPath, out ret);
+    }
+    
+    private static readonly BlittableJsonToken[] NumberTypes = [BlittableJsonToken.LazyNumber, BlittableJsonToken.Integer];
+    public static bool TryGetNumber(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out decimal ret)
+    {
+        return TryGetProperty(schemaDefinition, rule, NumberTypes, schemaPath, out ret);
+    }
+    
+    public static void TrowRuleTypeError(string rule, object ruleValue, BlittableJsonToken expectedType, BlittableJsonToken actualType, string schemaPath)
+    {
+        var publicType = GetPublicType(expectedType);
+        ThrowRuleTypeError(rule, ruleValue, actualType, schemaPath, publicType);
+    }
+
+    private static void ThrowRuleTypeError(string rule, object ruleValue, BlittableJsonToken actualType, string schemaPath, string publicType)
+    {
+        var type = GetPublicType(actualType);
+        ThrowRuleTypeError(rule, ruleValue, publicType, type, schemaPath);
+    }
+
+    private static void ThrowRuleTypeError(string rule, object ruleValue, string expectedPublicType, string actualPublicType, string schemaPath)
+    {
+        throw new InvalidSchemaValidationDefinitionException(
+            $"The value of '{rule}' at '{schemaPath}' must be {GetIndefiniteArticle(expectedPublicType)} {expectedPublicType}, but received '{ruleValue}' of type '{actualPublicType}'.");
+    }
+
+    private static void TrowRuleTypeError(string rule, object ruleValue, BlittableJsonToken[] expectedTypes, BlittableJsonToken actualType, string schemaPath)
+    {
+        TrowRuleTypeError(rule, ruleValue, expectedTypes, GetPublicType(actualType), schemaPath);
+    }
+    public static void TrowRuleTypeError(string rule, object ruleValue, BlittableJsonToken[] expectedTypes, string actualPublicType, string schemaPath)
+    {
+        var publicTypes = expectedTypes.Select(GetPublicType).Distinct().ToArray();
+        if (publicTypes.Length == 1)
+            ThrowRuleTypeError(rule, ruleValue, publicTypes[0], actualPublicType, schemaPath);
+        
+        throw new InvalidSchemaValidationDefinitionException(
+            $"The value of '{rule}' at '{schemaPath}' must be {string.Join(" or ", publicTypes.Select(x => $"{GetIndefiniteArticle(x)} {x}"))} but received '{ruleValue}' of type '{actualPublicType}'.");
+    }
+
+    private static bool TryGetProperty<T>(BlittableJsonReaderObject schemaDefinition,  string rule, BlittableJsonToken expectedType, string schemaPath, out T prefixItems)
+    {
+        if (TryGetPropertyType(schemaDefinition, rule, out var type) == false)
+        {
+            prefixItems = default;
+            return false;
+        }
+
+        if (type != expectedType)
+            TrowRuleTypeError(rule, schemaDefinition[rule], expectedType, type, schemaPath);
+
+        if (schemaDefinition.TryGet(rule, out prefixItems) == false)
+            throw new InvalidOperationException($"'{rule}' must to convertable to {nameof(BlittableJsonReaderArray)} here. Should not happen");
+        
+        return true;
+    }
+
+    private static bool TryGetProperty<T>(BlittableJsonReaderObject schemaDefinition,  string rule, BlittableJsonToken[] expectedTypes, string schemaPath, out T prefixItems)
+    {
+        if (TryGetPropertyType(schemaDefinition, rule, out var type) == false)
+        {
+            prefixItems = default;
+            return false;
+        }
+
+        if (expectedTypes.Contains(type) == false)
+            TrowRuleTypeError(rule, schemaDefinition[rule], expectedTypes, type, schemaPath);
+
+        if (schemaDefinition.TryGet(rule, out prefixItems) == false)
+            throw new InvalidOperationException($"'{rule}' must to convertable to {nameof(BlittableJsonReaderArray)} here. Should not happen");
+        
+        return true;
+    }
+
+    private static bool TryGetPropertyType(BlittableJsonReaderObject obj, string prop, out BlittableJsonToken type)
+    {
+        if(obj.TryGetPropertyType(prop, out type) == false)
+            return false;
+
+        type &= BlittableJsonReaderBase.TypesMask;
+        return true;
     }
 }

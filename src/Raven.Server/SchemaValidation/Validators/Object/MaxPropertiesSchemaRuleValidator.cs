@@ -6,10 +6,10 @@ namespace Raven.Server.SchemaValidation.Validators.Object;
 [SchemaRule(SchemaValidatorConstants.maxProperties)]
 public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    private readonly int _maxProperties;
+    private readonly long _maxProperties;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public MaxPropertiesSchemaRuleValidator(int maxProperties)
+    public MaxPropertiesSchemaRuleValidator(long maxProperties)
     {
         _maxProperties = maxProperties;
     }
@@ -26,16 +26,8 @@ public class MaxPropertiesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
 {
     public override MaxPropertiesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
-            return null;
-
-        const BlittableJsonToken expectedType = BlittableJsonToken.Integer;
-        if (type != expectedType)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], expectedType, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out int maxProperties) == false)
-            throw new InvalidOperationException($"'{Rule}' must to be convertable to decimal here. Should not happen");
-
-        return new MaxPropertiesSchemaRuleValidator(maxProperties);
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath, out var maxProperties) 
+            ? new MaxPropertiesSchemaRuleValidator(maxProperties)
+            : null;
     }
 }

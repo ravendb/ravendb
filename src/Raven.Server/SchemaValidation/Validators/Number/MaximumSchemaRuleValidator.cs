@@ -39,23 +39,10 @@ public class MaximumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Maxi
 {
     public override MaximumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
+        if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var maximum) == false)
             return null;
 
-        if (NumberTypes.Contains(type) == false)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], NumberTypes, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out decimal maximum) == false)
-            throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
-
-        const string emRuleName = SchemaValidatorConstants.exclusiveMaximum;
-        if (TryGetPropertyType(schemaDefinition, emRuleName, out type))
-        {
-            if (type != BlittableJsonToken.Boolean)
-                TrowRuleTypeError(emRuleName, schemaDefinition[emRuleName], BlittableJsonToken.Boolean, type, schemaPath);
-            //TODO Maybe also to handle old version of exclusiveMaximum and add test
-        }
-        schemaDefinition.TryGet(emRuleName, out bool exclusiveMaximum);
+        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.exclusiveMaximum, schemaPath, out bool exclusiveMaximum);
         
         return new MaximumSchemaRuleValidator(maximum, exclusiveMaximum);
     }

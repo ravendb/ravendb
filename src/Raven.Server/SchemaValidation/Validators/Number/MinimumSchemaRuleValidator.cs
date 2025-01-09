@@ -34,27 +34,13 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 // ReSharper disable once UnusedType.Global
 public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumSchemaRuleValidator>
 {
-
     public override MinimumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
+        if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var minimum) == false)
             return null;
-
-        if (NumberTypes.Contains(type) == false)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], NumberTypes, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out decimal minimum) == false)
-            throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
-
-        const string emRuleName = SchemaValidatorConstants.exclusiveMinimum;
-        if (TryGetPropertyType(schemaDefinition, emRuleName, out type))
-        {
-            if (type != BlittableJsonToken.Boolean)
-                TrowRuleTypeError(emRuleName, schemaDefinition[emRuleName], BlittableJsonToken.Boolean, type, schemaPath);
-            //TODO Maybe also to handle old version of exclusiveMaximum
-        }
-        schemaDefinition.TryGet(emRuleName, out bool exclusiveMaximum);
         
-        return new MinimumSchemaRuleValidator(minimum, exclusiveMaximum);
+        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.exclusiveMinimum, schemaPath, out bool exclusiveMinimum);
+
+        return new MinimumSchemaRuleValidator(minimum, exclusiveMinimum);
     }
 }

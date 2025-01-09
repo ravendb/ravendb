@@ -27,15 +27,8 @@ public class MultipleOfSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<M
 {
     public override MultipleOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
-            return null;
-
-        if (NumberTypes.Contains(type) == false)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], NumberTypes, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out decimal multipleOf) == false)
-            throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
-        
-        return new MultipleOfSchemaRuleValidator(multipleOf);
+        return SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var multipleOf)
+            ? new MultipleOfSchemaRuleValidator(multipleOf) 
+            : null;
     }
 }

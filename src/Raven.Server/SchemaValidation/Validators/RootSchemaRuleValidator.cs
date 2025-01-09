@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators.Object;
+namespace Raven.Server.SchemaValidation.Validators;
 
 [DebuggerDisplay("root validator")]
 public class RootSchemaRuleValidator : PropertySchemaRuleValidator
@@ -11,8 +11,9 @@ public class RootSchemaRuleValidator : PropertySchemaRuleValidator
     {
     }
 
-    public override void Validate(BlittableJsonReaderObject parent, string property, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool TryGetElement(BlittableJsonReaderObject parent, string accessor, out (BlittableJsonToken Type, object Value) element)
     {
-        CheckAllValidators(parent, path, errorBuilder);
+        element = (BlittableJsonToken.StartObject, parent);
+        return true;
     }
 }

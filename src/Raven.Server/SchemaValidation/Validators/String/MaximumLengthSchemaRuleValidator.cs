@@ -26,16 +26,8 @@ public class MaximumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
 {
     public override MaximumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
-        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
-            return null;
-
-        const BlittableJsonToken expectedType = BlittableJsonToken.Integer;
-        if (type != expectedType)
-            TrowRuleTypeError(Rule, schemaDefinition[Rule], expectedType, type, schemaPath);
-
-        if (schemaDefinition.TryGet(Rule, out long maximumLength) == false)
-            throw new InvalidOperationException($"'{Rule}' must to be convertable to decimal here. Should not happen");
-        
-        return new MaximumLengthSchemaRuleValidator(maximumLength);
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath, out var maximumLength) 
+            ? new MaximumLengthSchemaRuleValidator(maximumLength)
+            : null;
     }
 }

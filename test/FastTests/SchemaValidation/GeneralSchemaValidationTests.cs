@@ -242,4 +242,198 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                 AssertError("The array at 'prop1' contains duplicate value: '1'. Each item must be unique.", errors);
             });
     }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnArrayPrefixItems()
+    {
+        const string prop = "somepropname";
+        
+        var schemaValidator = new SchemaValidator();
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.properties] = new DynamicJsonValue
+            {
+                [prop] = new DynamicJsonValue
+                {
+                    [SVC.prefixItems] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["type"] = "integer"
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["type"] = "string"
+                        },
+                    }
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1},
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1, "somestring"},
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1},
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1, "somestring", "additional"},
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{""}
+                }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("'somepropname[0]' should be of type 'integer' but actual type is 'string'.", errors);
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1, 2}
+                }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("'somepropname[1]' should be of type 'string' but actual type is 'integer'.", errors);
+            });
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnArrayItemsFalse_ShouldNotAllowAdditionalItems()
+    {
+        const string prop = "somepropname";
+        
+        var schemaValidator = new SchemaValidator();
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.properties] = new DynamicJsonValue
+            {
+                [prop] = new DynamicJsonValue
+                {
+                    [SVC.prefixItems] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["type"] = "integer"
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["type"] = "string"
+                        },
+                    },
+                    [SVC.items] = false
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1, ""},
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1, "", 2}
+                }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The array at 'somepropname' contains additional items, which are not allowed.", errors);
+            });
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnArrayItems()
+    {
+        const string prop = "somepropname";
+        
+        var schemaValidator = new SchemaValidator();
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.properties] = new DynamicJsonValue
+            {
+                [prop] = new DynamicJsonValue
+                {
+                    [SVC.items] = new DynamicJsonValue
+                    {
+                        ["type"] = "string"
+                    }
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{"somestring", "somestring2"},
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1, "", 2}
+                }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError(@"'somepropname[0]' should be of type 'string' but actual type is 'integer'.
+'somepropname[2]' should be of type 'string' but actual type is 'integer'", errors);
+            });
+    }
 }
