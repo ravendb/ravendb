@@ -37,18 +37,21 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
             _propertyNameValidators = propertyNameValidators.ToArray();
     }
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected override void ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if (_propertyNameValidators == null)
-            return;
+            return true;
 
+        var isValid = true;
         foreach (var propertyName in value.GetPropertyNames())
         {
             foreach (var validator in _propertyNameValidators)
             {
-                validator.Validate(propertyName, path, errorBuilder);
+                isValid &= validator.Validate(propertyName, path, errorBuilder);
             }
         }
+
+        return isValid;
     }
 }
 

@@ -259,11 +259,11 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                     {
                         new DynamicJsonValue
                         {
-                            ["type"] = "integer"
+                            [SVC.type] = "integer"
                         },
                         new DynamicJsonValue
                         {
-                            ["type"] = "string"
+                            [SVC.type] = "string"
                         },
                     }
                 }
@@ -352,11 +352,11 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                     {
                         new DynamicJsonValue
                         {
-                            ["type"] = "integer"
+                            [SVC.type] = "integer"
                         },
                         new DynamicJsonValue
                         {
-                            ["type"] = "string"
+                            [SVC.type] = "string"
                         },
                     },
                     [SVC.items] = false
@@ -404,7 +404,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                 {
                     [SVC.items] = new DynamicJsonValue
                     {
-                        ["type"] = "string"
+                        [SVC.type] = "string"
                     }
                 }
             }

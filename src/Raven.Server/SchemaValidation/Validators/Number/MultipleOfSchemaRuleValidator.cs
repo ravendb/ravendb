@@ -15,10 +15,13 @@ public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
         _multipleOf = multipleOf;
     }
 
-    protected override void ValidateInternal(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        if(value % _multipleOf != 0)
-            errorBuilder.AddError($"The value '{value}' at '{path}' should be a multiple of {_multipleOf}.");
+        if (value % _multipleOf == 0) 
+            return true;
+        
+        errorBuilder?.AddError($"The value '{value}' at '{path}' should be a multiple of {_multipleOf}.");
+        return false;
     }
 }
 

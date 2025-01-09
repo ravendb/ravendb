@@ -8,7 +8,7 @@ namespace Raven.Server.SchemaValidation.Validators.Number;
 public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _maximum;
-    private readonly Action<decimal, SchemaValidatorPath, IErrorBuilder> _validatePredicate;
+    private readonly Func<decimal, SchemaValidatorPath, IErrorBuilder, bool> _validatePredicate;
 
     // ReSharper disable once IntroduceOptionalParameters.Global
     public MaximumSchemaRuleValidator(decimal maximum, bool exclusiveMinimum)
@@ -17,20 +17,27 @@ public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
         _validatePredicate = exclusiveMinimum ? ExclusiveValidate : NonExclusiveValidate;
     }
 
-    protected override void ValidateInternal(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        _validatePredicate(value, path, errorBuilder);
+        return _validatePredicate(value, path, errorBuilder);
     }
 
-    private void NonExclusiveValidate(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    private bool NonExclusiveValidate(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        if (value.CompareTo(_maximum) > 0) 
-            errorBuilder.AddError($"The value '{value}' at '{path}' should be less than or equal to {_maximum}.");
+        if (value.CompareTo(_maximum) <= 0) 
+            return true;
+        
+        errorBuilder?.AddError($"The value '{value}' at '{path}' should be less than or equal to {_maximum}.");
+        return false;
     }
-    private void ExclusiveValidate(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+
+    private bool ExclusiveValidate(decimal value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        if (value.CompareTo(_maximum) >= 0)
-            errorBuilder.AddError($"The value '{value}' at '{path}' should be less than {_maximum}.");
+        if (value.CompareTo(_maximum) < 0) 
+            return true;
+        
+        errorBuilder?.AddError($"The value '{value}' at '{path}' should be less than {_maximum}.");
+        return false;
     }
 }
 

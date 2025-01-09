@@ -74,8 +74,9 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         }
     }
 
-    protected override void ValidateInternal(BlittableJsonReaderArray value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderArray value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
+        var isValid = true;
         int i = 0;
 
         if (_prefixValidators != null)
@@ -86,19 +87,19 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
                 for (; i < length; i++)
                 {
                     path.StepIn(i);
-                    _prefixValidators[i].Validate(value, i, path, errorBuilder);
+                    isValid &= _prefixValidators[i].Validate(value, i, path, errorBuilder);
                     path.StepOut();
                 }
             }
             
             if (value.Length <= _prefixValidators.Length)
-                return;
+                return isValid;
         }
         
         if (_itemsValidator.Allowed == false)
         {
-            errorBuilder.AddError($"The array at '{_schemaPath}' contains additional items, which are not allowed.");
-            return;
+            errorBuilder?.AddError($"The array at '{_schemaPath}' contains additional items, which are not allowed.");
+            return false;
         }
         
         if (_itemsValidator.validator != null)
@@ -106,9 +107,10 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
             for (; i < value.Length; i++)
             {
                 path.StepIn(i);
-                _itemsValidator.validator.Validate(value, i, path, errorBuilder);
+                isValid &=_itemsValidator.validator.Validate(value, i, path, errorBuilder);
                 path.StepOut();
             }
         }
+        return isValid;
     }
 }

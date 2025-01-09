@@ -13,11 +13,12 @@ public class MinPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     {
         _minProperties = minProperties;
     }
-    protected override void ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if(value.Count >= _minProperties)
-            return;
-        errorBuilder.AddError($"The object at '{path}' must have at least {_minProperties} properties, but it has only {value.Count}.");
+            return true;
+        errorBuilder?.AddError($"The object at '{path}' must have at least {_minProperties} properties, but it has only {value.Count}.");
+        return false;
     }
 }
 

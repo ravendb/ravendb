@@ -52,32 +52,34 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
         _publicTypesRestriction = _typesRestriction.Select(SchemaValidationHelper.GetPublicType).Distinct().ToArray();
     }
     
-    public void Validate(TParent parent, TAccessor accessor, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    public bool Validate(TParent parent, TAccessor accessor, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if (TryGetElement(parent, accessor, out var element) == false)
-            return;
+            return true;
 
         if (IsOfRequiredType(element.Type) == false)
         {
-            errorBuilder.AddError($"'{path}' should be of type '{string.Join("' or '", _publicTypesRestriction)}' but actual type is '{SchemaValidationHelper.GetPublicType(element.Type)}'.");
-            return;
+            errorBuilder?.AddError($"'{path}' should be of type '{string.Join("' or '", _publicTypesRestriction)}' but actual type is '{SchemaValidationHelper.GetPublicType(element.Type)}'.");
+            return false;
         }
         
-        CheckAllValidators(element.Value, path, errorBuilder);
+        return CheckAllValidators(element.Value, path, errorBuilder);
     }
 
     protected abstract bool TryGetElement(TParent parent, TAccessor accessor, out (BlittableJsonToken Type, object Value) element);
 
-    private void CheckAllValidators(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    private bool CheckAllValidators(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if (_ruleValidators == null)
-            return;
+            return true;
 
+        var isValid = true;
         //TODO Maybe to filter _ruleValidators by afgument type and avoid cast and checking inside ruleValidator.Validate
         foreach (var ruleValidator in _ruleValidators)
         {
-            ruleValidator.Validate(value, path, errorBuilder);
+            isValid &= ruleValidator.Validate(value, path, errorBuilder);
         }
+        return isValid;
     }
 
     private bool IsOfRequiredType(BlittableJsonToken jsonToken) => _typesRestriction == null || _typesRestriction.Length == 0 || _typesRestriction.Contains(jsonToken);

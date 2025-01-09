@@ -5,18 +5,18 @@ namespace Raven.Server.SchemaValidation;
 
 public interface ISchemaRuleValidator
 {
-    void Validate(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder);
+    bool Validate(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder);
 }
 
 public abstract class SchemaRuleValidator<T> : ISchemaRuleValidator
 {
-    protected abstract void ValidateInternal(T value, SchemaValidatorPath path, IErrorBuilder errorBuilder);
+    protected abstract bool ValidateInternal(T value, SchemaValidatorPath path, IErrorBuilder errorBuilder);
     
-    public void Validate(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    public bool Validate(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if (CheckTypeAndGetValue(value, out T tValue) == false) 
-            return;
-        ValidateInternal(tValue, path, errorBuilder);
+            return true;
+        return ValidateInternal(tValue, path, errorBuilder);
     }
 
     protected virtual bool CheckTypeAndGetValue(object value, out T tValue)

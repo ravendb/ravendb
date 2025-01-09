@@ -13,17 +13,7 @@ public class ErrorBuilder : IErrorBuilder
     
     public void AddError(DefaultInterpolatedStringHandler message) => _errorBuilder.AppendLine(message.ToStringAndClear());
 
-    public bool TryGetErrors(out string message)
-    {
-        if (_errorBuilder.Length != 0)
-        {
-            message = _errorBuilder.ToString();
-            return true;
-        }
-        
-        message = string.Empty;
-        return false;
-    }
+    public string GetErrors() => _errorBuilder.Length != 0 ? _errorBuilder.ToString() : null;
     
     public override string ToString() => _errorBuilder?.ToString();
 }

@@ -14,10 +14,13 @@ public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
         _minLength = minLength;
     }
 
-    protected override void ValidateInternal(string value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(string value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        if(value.Length < _minLength)
-            errorBuilder.AddError($"The length of the {Target} '{value}' at '{path}' should be at least {_minLength}, but its actual length is {value.Length}.");
+        if (value.Length >= _minLength) 
+            return true;
+        
+        errorBuilder?.AddError($"The length of the {Target} '{value}' at '{path}' should be at least {_minLength}, but its actual length is {value.Length}.");
+        return false;
     }
 }
 
