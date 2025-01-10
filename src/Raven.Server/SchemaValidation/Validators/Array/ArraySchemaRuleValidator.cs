@@ -11,7 +11,6 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
 {
     private readonly string _schemaPath;
     private ArrayItemSchemaRuleValidator[] _prefixValidators;
-    private ArrayItemSchemaRuleValidator _containsValidator;
     private (bool Allowed, ArrayItemSchemaRuleValidator validator) _itemsValidator;
     
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -24,16 +23,6 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
     {
         ReadPrefixItemsSchema(schemaDefinition);
         ReadItemsSchema(schemaDefinition);
-        ReadContainsSchema(schemaDefinition);
-    }
-
-    private void ReadContainsSchema(BlittableJsonReaderObject schemaDefinition)
-    {
-        if(SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.contains, _schemaPath, out var containsSchema) == false)
-            return;
-
-        _containsValidator = new ArrayItemSchemaRuleValidator(_schemaPath);
-        _containsValidator.Init(containsSchema);
     }
 
     private void ReadPrefixItemsSchema(BlittableJsonReaderObject schemaDefinition)
@@ -57,7 +46,7 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         _prefixValidators = validators?.ToArray();
     }
 
-    private BlittableJsonToken[] prefixItemsSchemaTypes = [BlittableJsonToken.Boolean, BlittableJsonToken.StartObject];
+    private readonly BlittableJsonToken[] _prefixItemsSchemaTypes = [BlittableJsonToken.Boolean, BlittableJsonToken.StartObject];
     private void ReadItemsSchema(BlittableJsonReaderObject schemaDefinition)
     {
         const string rule = SchemaValidatorConstants.items;
@@ -80,7 +69,7 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
                 break;
             }
             default:
-                SchemaValidationHelper.TrowRuleTypeError(rule, prefixItemsSchema, prefixItemsSchemaTypes, SchemaValidationHelper.GetPublicTypeOfObj(prefixItemsSchema),
+                SchemaValidationHelper.TrowRuleTypeError(rule, prefixItemsSchema, _prefixItemsSchemaTypes, SchemaValidationHelper.GetPublicTypeOfObj(prefixItemsSchema),
                     _schemaPath);
                 break;
         }
@@ -118,21 +107,6 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
                 errorBuilder?.Path.StepIn(i);
                 isValid &=_itemsValidator.validator.Validate(value, i, errorBuilder);
                 errorBuilder?.Path.StepOut();
-            }
-        }
-
-        if (_containsValidator != null)
-        {
-            var contains = false;
-            for (int j = 0; j < value.Length; j++)
-            {
-                //TODO Maybe to make sure the validation here return immediately after the first failure.
-                contains |= _containsValidator.Validate(value, j, null);
-            }
-            if (contains == false)
-            {
-                errorBuilder?.AddError($"The array at '{_schemaPath}' must contain at least one item that matches the required schema, but no such item was found. Schema : {_containsValidator.SchemaDefinition}");
-                isValid = false;
             }
         }
         
