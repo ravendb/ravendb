@@ -1114,7 +1114,9 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                     op = field;
                     return fieldOption == OperatorField.Desired;
                 }
-                ThrowInvalidQueryException($"Expected operator after '{field?.FieldValue ?? "<failed to fetch field name>"}' field, but found '{Scanner.Input[Scanner.Position]}'. Valid operators are: 'in', 'between', =, <, >, <=, >=, !=");
+                
+                var foundInput = Scanner.Input.Length <= Scanner.Position ? "nothing" : $"'{Scanner.Input[Scanner.Position]}'";
+                ThrowInvalidQueryException($"Expected operator after '{field?.FieldValue ?? "<failed to fetch field name>"}' field, but found {foundInput}. Valid operators are: 'in', 'between', =, <, >, <=, >=, !=");
             }
 
 
