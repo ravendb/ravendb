@@ -43,18 +43,7 @@ public static class GenerateEmbeddings
         if (Embedder.IsValueCreated)
             throw new InvalidOperationException("Embedder has already been initialized.");
         
-        var numberOfCoresToUse = CalculateNumberOfCoresForOnnx(configuration);
-
-        OnnxSessionOptions = new SessionOptions() { IntraOpNumThreads = numberOfCoresToUse };
-    }
-    
-    private static int CalculateNumberOfCoresForOnnx(RavenConfiguration configuration)
-    {
-        var cores = (int)MathF.Floor(Environment.ProcessorCount * ((float)configuration.Indexing.MaxPercentageOfThreadsForEmbeddings / 100));
-            
-        var numberOfCoresToUse = int.Max(1, cores);
-        
-        return numberOfCoresToUse;
+        OnnxSessionOptions = new SessionOptions() { IntraOpNumThreads = configuration.Indexing.MaxNumberOfCoresForLocalEmbeddingsGeneration };
     }
 
     [ThreadStatic]
