@@ -11,7 +11,9 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
 {
     private readonly string _schemaPath;
     private ArrayItemSchemaRuleValidator[] _prefixValidators;
+    private ArrayItemSchemaRuleValidator _containsValidator;
     private (bool Allowed, ArrayItemSchemaRuleValidator validator) _itemsValidator;
+    
     // ReSharper disable once ConvertToPrimaryConstructor
     public ArraySchemaRuleValidator(string schemaPath)
     {
@@ -20,11 +22,21 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
     
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
-        ReadPrefixItemsValidators(schemaDefinition);
-        ReadItemsValidator(schemaDefinition);
+        ReadPrefixItemsSchema(schemaDefinition);
+        ReadItemsSchema(schemaDefinition);
+        ReadContainsSchema(schemaDefinition);
     }
 
-    private void ReadPrefixItemsValidators(BlittableJsonReaderObject schemaDefinition)
+    private void ReadContainsSchema(BlittableJsonReaderObject schemaDefinition)
+    {
+        if(SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.contains, _schemaPath, out var containsSchema) == false)
+            return;
+
+        _containsValidator = new ArrayItemSchemaRuleValidator(_schemaPath);
+        _containsValidator.Init(containsSchema);
+    }
+
+    private void ReadPrefixItemsSchema(BlittableJsonReaderObject schemaDefinition)
     {
         if(SchemaValidationHelper.TryGetArray(schemaDefinition, SchemaValidatorConstants.prefixItems, _schemaPath, out var prefixItemsSchema) == false)
             return;
@@ -46,7 +58,7 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
     }
 
     private BlittableJsonToken[] prefixItemsSchemaTypes = [BlittableJsonToken.Boolean, BlittableJsonToken.StartObject];
-    private void ReadItemsValidator(BlittableJsonReaderObject schemaDefinition)
+    private void ReadItemsSchema(BlittableJsonReaderObject schemaDefinition)
     {
         const string rule = SchemaValidatorConstants.items;
         if (schemaDefinition.TryGet(rule, out object prefixItemsSchema) == false)
@@ -91,15 +103,12 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
                     errorBuilder?.Path.StepOut();
                 }
             }
-            
-            if (value.Length <= _prefixValidators.Length)
-                return isValid;
         }
         
-        if (_itemsValidator.Allowed == false)
+        if (value.Length > i && _itemsValidator.Allowed == false)
         {
             errorBuilder?.AddError($"The array at '{_schemaPath}' contains additional items, which are not allowed.");
-            return false;
+            isValid = false;
         }
         
         if (_itemsValidator.validator != null)
@@ -111,6 +120,22 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
                 errorBuilder?.Path.StepOut();
             }
         }
+
+        if (_containsValidator != null)
+        {
+            var contains = false;
+            for (int j = 0; j < value.Length; j++)
+            {
+                //TODO Maybe to make sure the validation here return immediately after the first failure.
+                contains |= _containsValidator.Validate(value, j, null);
+            }
+            if (contains == false)
+            {
+                errorBuilder?.AddError($"The array at '{_schemaPath}' must contain at least one item that matches the required schema, but no such item was found. Schema : {_containsValidator.SchemaDefinition}");
+                isValid = false;
+            }
+        }
+        
         return isValid;
     }
 }

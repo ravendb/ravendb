@@ -22,7 +22,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "prop";
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue { [SVC.@type] = "object", ["required"] = new DynamicJsonArray { prop } };
         if (withAdditionalRestriction)
         {
@@ -55,7 +55,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "prop";
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.properties] = new DynamicJsonValue
@@ -96,7 +96,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnMinProperties()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.minProperties] = 2
@@ -144,7 +144,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnMaxProperties()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.maxProperties] = 3
@@ -195,7 +195,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnUniqueItems()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.properties] = new DynamicJsonValue
@@ -248,7 +248,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
         
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.properties] = new DynamicJsonValue
@@ -341,7 +341,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
         
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.properties] = new DynamicJsonValue
@@ -395,7 +395,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
         
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.properties] = new DynamicJsonValue
@@ -434,6 +434,52 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError(@"'somepropname[0]' should be of type 'string' but actual type is 'integer'.
 'somepropname[2]' should be of type 'string' but actual type is 'integer'", errors);
+            });
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnArrayContains()
+    {
+        const string prop = "somepropname";
+        
+        var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.properties] = new DynamicJsonValue
+            {
+                [prop] = new DynamicJsonValue
+                {
+                    [SVC.contains] = new DynamicJsonValue
+                    {
+                        [SVC.type] = "string"
+                    }
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1, "somestring2"},
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [prop] = new DynamicJsonArray{1, 2}
+                }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The array at 'somepropname' must contain at least one item that matches the required schema, but no such item was found. Schema : {\"type\":\"string\"}", errors);
             });
     }
 }

@@ -46,7 +46,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
     [MemberData(nameof(TestCases))]
     public void InvalidSchema_WhenDefineRuleWithWrongValue(string rule, object ruleValue, string error)
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -71,7 +71,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
     [InlineData(SVC.additionalProperties, "invalidvalue", "The value of 'additionalProperties' at '' must be a boolean or an object, but received a value of type 'string'.")]
     public void InvalidSchema_WhenDefineWithWrongValue(string key, object value, string error)
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {

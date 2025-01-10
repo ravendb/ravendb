@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators;
+namespace Raven.Server.SchemaValidation.Validators.Array;
 
 [DebuggerDisplay("'{_schemaPath}' array item validator")]
 public class ArrayItemSchemaRuleValidator : ElementSchemaRuleValidator<BlittableJsonReaderArray, int>

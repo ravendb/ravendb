@@ -36,6 +36,7 @@ internal static class SchemaValidatorConstants
     public const string uniqueItems = "uniqueItems";
     public const string items = "items";
     public const string prefixItems = "prefixItems";
+    public const string contains = "contains";
     #endregion
     // ReSharper restore InconsistentNaming
 }

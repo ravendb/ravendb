@@ -20,7 +20,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.@type] = "object",
@@ -55,7 +55,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.@type] = "object",
@@ -90,7 +90,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.@type] = "object",
@@ -125,7 +125,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.@type] = "object",

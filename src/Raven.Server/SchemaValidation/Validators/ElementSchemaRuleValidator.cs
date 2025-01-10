@@ -14,7 +14,8 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
     private ISchemaRuleValidator[] _ruleValidators;
     private BlittableJsonToken[] _typesRestriction;
     private string[] _publicTypesRestriction;
-
+    
+    public BlittableJsonReaderObject SchemaDefinition { get; private set; }
     
     // ReSharper disable once ConvertToPrimaryConstructor
     protected ElementSchemaRuleValidator(string schemaPath)
@@ -26,6 +27,7 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
     {
         if(schemaDefinition == null)
             return;
+        SchemaDefinition = schemaDefinition;
         ReadTypeRestrictionsRule(schemaDefinition);
         ReadValueSchemaRuleValidators(schemaDefinition);
     }
@@ -107,7 +109,7 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
                     hasObjectRestrictions = true;
                     break;
                 }
-                case SchemaValidatorConstants.prefixItems or SchemaValidatorConstants.items:
+                case SchemaValidatorConstants.prefixItems or SchemaValidatorConstants.items or SchemaValidatorConstants.contains:
                 {
                     if (hasArrayRestrictions)
                         continue;
