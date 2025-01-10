@@ -109,7 +109,7 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
                     hasObjectRestrictions = true;
                     break;
                 }
-                case SchemaValidatorConstants.prefixItems or SchemaValidatorConstants.items or SchemaValidatorConstants.contains:
+                case SchemaValidatorConstants.prefixItems or SchemaValidatorConstants.items:
                 {
                     if (hasArrayRestrictions)
                         continue;
