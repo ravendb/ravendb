@@ -1638,57 +1638,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         throw new NotSupportedException($"{nameof(isExact)} has to be boolean.");
                     
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var fieldFactoryObject);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var fieldValueFactoryObject);
+
+                    var fieldFactoryAccessor = fieldFactoryObject as IVectorEmbeddingFieldFactoryAccessor;
+                    var fieldValueFactoryAccessor = fieldValueFactoryObject as IVectorFieldValueFactoryAccessor;
                     
-                    var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
-                    var valueBuilder = new VectorFieldValueFactory();
-
-                    switch (fieldFactoryObject)
-                    {
-                        case Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory:
-                        {
-                            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var textFieldValueFactoryObject);
-                        
-                            textFieldFactory.Invoke(fieldBuilder);
-
-                            if (textFieldValueFactoryObject is not Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory)
-                                throw new InvalidOperationException($"Excepted {nameof(Action<IVectorEmbeddingTextFieldValueFactory>)} object as the embedding field value factory, however it was '{textFieldFactory.GetType().FullName}'. ");
-                            
-                            textValueFactory.Invoke(valueBuilder);
-                            
-                            break;
-                        }
-                        case Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory:
-                        {
-                            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var embeddingFieldValueFactoryObject);
-
-                            embeddingFieldFactory.Invoke(fieldBuilder);
-
-                            if (embeddingFieldValueFactoryObject is not Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory)
-                                throw new InvalidOperationException($"Excepted {nameof(Action<IVectorEmbeddingFieldValueFactory>)} object as the embedding field value factory, however it was '{embeddingFieldValueFactoryObject.GetType().FullName}'. ");
-
-                            embeddingValueFactory.Invoke(valueBuilder);
-                            
-                            break;
-                        }
-                        case Func<IVectorFieldFactory<T>, IVectorField> fieldFactory:
-                        {
-                            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var embeddingFieldValueFactoryObject);
-
-                            fieldFactory.Invoke(fieldBuilder);
-
-                            if (embeddingFieldValueFactoryObject is not Action<IVectorFieldValueFactory> fieldValueFactory)
-                                throw new InvalidOperationException($"Excepted {nameof(Action<IVectorFieldValueFactory>)} object as the embedding field value factory, however it was '{embeddingFieldValueFactoryObject.GetType().FullName}'. ");
-
-                            fieldValueFactory.Invoke(valueBuilder);
-                            
-                            break;
-                        }
-                        default:
-                            throw new InvalidOperationException($"Unknown field factory type: {fieldFactoryObject.GetType().FullName}.");
-                    }
-                    
-                    
-                    DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarityObject as float?, numberOfCandidatesObject as int?, isExact);
+                    ((IAbstractDocumentQueryAccessor)DocumentQuery).VectorSearch(fieldFactoryAccessor, fieldValueFactoryAccessor, minimumSimilarityObject as float?, numberOfCandidatesObject as int?, isExact);
                     
                     if (_chainedWhere == false && _insideWhereOrSearchCounter > 1)
                         DocumentQuery.CloseSubclause();

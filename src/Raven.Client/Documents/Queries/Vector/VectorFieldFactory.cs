@@ -77,14 +77,21 @@ public interface IVectorField
     
 }
 
-internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, IVectorField, IVectorEmbeddingField, IVectorEmbeddingTextField
+public interface IVectorEmbeddingFieldFactoryAccessor
+{
+    internal string FieldName { get; set; }
+    internal VectorEmbeddingType SourceQuantizationType { get; set; }
+    internal VectorEmbeddingType DestinationQuantizationType { get; set; } 
+    internal bool IsBase64Encoded { get; set; }
+}
+
+internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, IVectorField, IVectorEmbeddingField, IVectorEmbeddingTextField, IVectorEmbeddingFieldFactoryAccessor
 {
     private bool _byFieldMethodUsed;
-
-    internal string FieldName { get; set; }
-    internal VectorEmbeddingType SourceQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
-    internal VectorEmbeddingType DestinationQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
-    internal bool IsBase64Encoded { get; set; }
+    public string FieldName { get; set; }
+    public VectorEmbeddingType SourceQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
+    public VectorEmbeddingType DestinationQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
+    public bool IsBase64Encoded { get; set; }
     
     IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector)
     {
@@ -235,7 +242,14 @@ public interface IVectorFieldValueFactory : IVectorEmbeddingTextFieldValueFactor
     
 }
 
-internal class VectorFieldValueFactory : IVectorFieldValueFactory
+public interface IVectorFieldValueFactoryAccessor
+{
+    internal object Embedding { get; set; }
+    internal string Text { get; set; }
+    internal string Base64Embedding { get; set; }
+}
+
+internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldValueFactoryAccessor
 {
     public object Embedding { get; set; }
     public string Text { get; set; }

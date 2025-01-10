@@ -1241,14 +1241,13 @@ namespace Raven.Client.Documents
         /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
         public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact)
         {
-            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-            
-            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
-            var expression = ConvertExpressionIfNecessary(source);
-            
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(textFieldFactory), Expression.Constant(textValueFactory), Expression.Constant(minimumSimilarity, typeof(float?)), Expression.Constant(numberOfCandidates, typeof(int?)), Expression.Constant(isExact)));
-            
-            return (IRavenQueryable<T>)queryable;
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            textFieldFactory.Invoke(fieldBuilder);
+            textValueFactory.Invoke(valueBuilder);
+
+            return VectorSearch(source, fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
         }
         
         /// <summary>
@@ -1261,14 +1260,13 @@ namespace Raven.Client.Documents
         /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
         public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact)
         {
-            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-            
-            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
-            var expression = ConvertExpressionIfNecessary(source);
-            
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(embeddingFieldFactory), Expression.Constant(embeddingValueFactory), Expression.Constant(minimumSimilarity, typeof(float?)), Expression.Constant(numberOfCandidates, typeof(int?)), Expression.Constant(isExact)));
-            
-            return (IRavenQueryable<T>)queryable;
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            embeddingFieldFactory.Invoke(fieldBuilder);
+            embeddingValueFactory.Invoke(valueBuilder);
+
+            return VectorSearch(source, fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
         }
         
         /// <summary>
@@ -1281,14 +1279,24 @@ namespace Raven.Client.Documents
         /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
         public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorField> embeddingFieldFactory, Action<IVectorFieldValueFactory> embeddingValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact)
         {
-            PortableExceptions.ThrowIfNot<InvalidDataException>(minimumSimilarity is null or > 0 and <= 1f, $"Minimum similarity must be a value in the range of (0; 1].");
-            
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            embeddingFieldFactory.Invoke(fieldBuilder);
+            embeddingValueFactory.Invoke(valueBuilder);
+
+            return VectorSearch(source, fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
+        }
+        
+        private static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, IVectorEmbeddingFieldFactoryAccessor embeddingFieldFactory, IVectorFieldValueFactoryAccessor embeddingValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact)
+        {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-            
+
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
+
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(embeddingFieldFactory), Expression.Constant(embeddingValueFactory), Expression.Constant(minimumSimilarity, typeof(float?)), Expression.Constant(numberOfCandidates, typeof(int?)), Expression.Constant(isExact)));
-            
+
             return (IRavenQueryable<T>)queryable;
         }
 

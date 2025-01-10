@@ -16,6 +16,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -35,7 +36,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///   A query against a Raven index
     /// </summary>
-    public abstract partial class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>
+    public abstract partial class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>, IAbstractDocumentQueryAccessor
                                                             where TSelf : AbstractDocumentQuery<T, TSelf>
     {
         private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
@@ -1514,25 +1515,50 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 : _conventions.FindPropertyNameForIndex(typeof(T), IndexName, "", result.Path);
             return propertyName;
         }
+        
+        
+        public void VectorSearch(IVectorEmbeddingFieldFactoryAccessor fieldFactoryAccessor, IVectorFieldValueFactoryAccessor fieldValueFactoryAccessor, float? minimumSimilarity, int? numberOfCandidates, bool isExact)
+        {
+            var fieldName = fieldFactoryAccessor.FieldName;
+            var sourceQuantizationType = fieldFactoryAccessor.SourceQuantizationType;
+            var targetQuantizationType = fieldFactoryAccessor.DestinationQuantizationType;
+            var isSourceBase64Encoded = fieldFactoryAccessor.IsBase64Encoded;
 
+            var text = fieldValueFactoryAccessor.Text;
+            var embedding = fieldValueFactoryAccessor.Embedding;
+            var base64Embedding = fieldValueFactoryAccessor.Base64Embedding;
+
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, minimumSimilarity, numberOfCandidates, isExact, text, embedding, base64Embedding);
+        }
+        
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
             float? minimumSimilarity, int? numberOfCandidates, bool isExact)
         {
             var fieldName = embeddingFieldFactory.FieldName;
             var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
             var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
-
+            var isSourceBase64Encoded = embeddingFieldFactory.IsBase64Encoded;
+            
+            var text = embeddingValueFactory.Text;
+            var embedding = embeddingValueFactory.Embedding;
+            var base64Embedding = embeddingValueFactory.Base64Embedding;
+            
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, minimumSimilarity, numberOfCandidates, isExact, text, embedding, base64Embedding);
+        }
+        
+        private void VectorSearch(string fieldName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, bool isSourceBase64Encoded, float? minimumSimilarity,
+            int? numberOfCandidates, bool isExact, string text, object embedding, string base64Embedding)
+        {
             string queryParameterName;
-
-            if (embeddingValueFactory.Text != null)
-            {
-                queryParameterName = AddQueryParameter(embeddingValueFactory.Text);
-            }
-
-            else if (embeddingValueFactory.Embedding != null)
+            var isVectorBase64Encoded = false;
+            
+            if (text != null)
+                queryParameterName = AddQueryParameter(text);
+            
+            else if (embedding != null)
             {
                 // for well-known types we can convert the array into Base64
-                queryParameterName = AddQueryParameter(embeddingValueFactory.Embedding switch
+                queryParameterName = AddQueryParameter(embedding switch
                 {
                     float[] fa => Convert.ToBase64String(MemoryMarshal.Cast<float, byte>(fa)
 #if !NETCOREAPP3_1_OR_GREATER
@@ -1545,15 +1571,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                         .ToArray()
 #endif
                     ),
-                    _  => embeddingValueFactory.Embedding,
+                    _  => embedding
                 });
             }
             else
             {
-                queryParameterName = AddQueryParameter(embeddingValueFactory.Base64Embedding);
+                queryParameterName = AddQueryParameter(base64Embedding);
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity, numberOfCandidates, isExact);
 
             WhereTokens.AddLast(vectorSearchToken);
         }
