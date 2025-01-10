@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators;
+namespace Raven.Server.SchemaValidation.Validators.Object;
 
 [DebuggerDisplay("'{_schemaPath}' property validator")]
 public class PropertySchemaRuleValidator : ElementSchemaRuleValidator<BlittableJsonReaderObject, string>

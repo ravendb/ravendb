@@ -18,7 +18,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictPropertyNamesPattern()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.propertyNames] = new DynamicJsonValue
@@ -56,7 +56,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictPropertyNamesMinLength()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.propertyNames] = new DynamicJsonValue
@@ -104,7 +104,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictPropertyNamesMaxLength()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.propertyNames] = new DynamicJsonValue

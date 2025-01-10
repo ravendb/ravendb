@@ -21,7 +21,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -111,7 +111,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -185,7 +185,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -274,7 +274,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -366,7 +366,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {

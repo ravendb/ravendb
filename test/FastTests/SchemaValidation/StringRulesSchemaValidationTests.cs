@@ -18,7 +18,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateMinStringLength()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.@type] = "object", 
@@ -60,7 +60,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateMaxStringLength()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.@type] = "object", 
@@ -101,7 +101,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateForRegexPattern()
     {
-        var schemaValidator = new SchemaValidator();
+        var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.@type] = "object", 
