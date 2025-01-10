@@ -37,6 +37,8 @@ internal static class SchemaValidatorConstants
     public const string items = "items";
     public const string prefixItems = "prefixItems";
     public const string contains = "contains";
+    public const string minContains = "minContains";
+    public const string maxContains = "maxContains";
     #endregion
     // ReSharper restore InconsistentNaming
 }
