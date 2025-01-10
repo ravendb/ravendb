@@ -59,13 +59,13 @@ namespace Sparrow.LowMemory
                 {
                     var now = DateTime.UtcNow;
 
-                    if (((isLowMemory && _logger.IsInfoEnabled) || _logger.IsDebugEnabled)
-                        && now - _lastLoggedLowMemory > _logLowMemoryInterval)
+                    var logInInfo = isLowMemory && _logger.IsInfoEnabled;
+                    if ((logInInfo || _logger.IsDebugEnabled) && now - _lastLoggedLowMemory > _logLowMemoryInterval)
                     {
                         _lastLoggedLowMemory = now;
                         var message = $"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. {MemoryUtils.GetExtendedMemoryInfo(memoryInfo, _lowMemoryMonitor.GetDirtyMemoryState())}";
 
-                        if (_logger.IsInfoEnabled)
+                        if (logInInfo)
                             _logger.Info(message);
                         else if (_logger.IsDebugEnabled)
                             _logger.Debug(message);

@@ -961,9 +961,9 @@ namespace Raven.Server.Documents.Subscriptions
                 await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length, CancellationTokenSource.Token);
                 await TcpConnection.Stream.FlushAsync();
 
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
-                    _logger.Info($"Subscription {Options.SubscriptionName} is sending a Heartbeat message to the client. Reason: {reason}");
+                    _logger.Debug($"Subscription {Options.SubscriptionName} is sending a Heartbeat message to the client. Reason: {reason}");
                 }
             }
             catch (Exception ex)
