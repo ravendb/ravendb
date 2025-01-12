@@ -147,13 +147,8 @@ public class RavenDB_19278 : StorageTest
         StartDatabase();
     }
 
-    [NightlyBuildFact]
-    public void PartialRecoveryMustUpdateEnvironmentHeaderAndEraseCorruptedDataInJournal_Nightly()
-    {
-        PartialRecoveryMustUpdateEnvironmentHeaderAndEraseCorruptedDataInJournal(true, false, false);
-    }
-
-    [Theory]
+    [NightlyBuildTheory]
+    [InlineData(true, false, false)]
     [InlineData(false, true, false)]
     [InlineData(false, false, false)]
     [InlineData(true, true, false)]

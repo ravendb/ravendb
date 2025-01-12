@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        [RavenFact(RavenTestCategory.Etl)]
+        [RavenFact(RavenTestCategory.Etl, NightlyBuildRequired = true)]
         public async Task OlapTaskShouldBeHighlyAvailable()
         {
             var cluster = await CreateRaftCluster(3);
