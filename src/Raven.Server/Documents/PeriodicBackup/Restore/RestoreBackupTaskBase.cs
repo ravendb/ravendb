@@ -555,10 +555,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // at this point we restored a large portion of the database or all of it	
             // we'll retry saving the database record since a failure here will cause us to abort the entire restore operation	
 
+            var raftId = RaftIdGenerator.NewId();
+
             var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
                 {
                     var result = await _serverStore.WriteDatabaseRecordAsync(
-                        databaseName, databaseRecord, null, RaftIdGenerator.NewId(), databaseValues, isRestore: true);
+                        databaseName, databaseRecord, null, raftId, databaseValues, isRestore: true);
                     return result.Index;
                 },
                 infoMessage: "Saving the database record",
