@@ -536,12 +536,13 @@ internal static class BackupUtils
     {
         try
         {
-            var command = new UpdatePeriodicBackupStatusCommand(databaseName, RaftIdGenerator.NewId()) { PeriodicBackupStatus = status };
+            var raftId = RaftIdGenerator.NewId();
 
             AsyncHelpers.RunSync(async () =>
             {
                 var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
                     {
+                        var command = new UpdatePeriodicBackupStatusCommand(databaseName, raftId) { PeriodicBackupStatus = status };
                         var result = await serverStore.SendToLeaderAsync(command);
                         return result.Index;
                     },
