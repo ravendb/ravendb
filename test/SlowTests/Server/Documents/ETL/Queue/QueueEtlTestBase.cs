@@ -14,7 +14,7 @@ public abstract class QueueEtlTestBase : RavenTestBase
     {
     }
 
-    protected async Task AssertEtlDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, QueueEtlConfiguration config)
+    protected async Task AssertEtlDoneAsync(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, QueueEtlConfiguration config)
     {
         if (etlDone.Wait(timeout) == false)
         {

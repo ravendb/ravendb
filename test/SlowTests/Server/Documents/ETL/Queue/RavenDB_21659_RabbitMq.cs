@@ -37,7 +37,7 @@ public class RavenDB_21659_RabbitMq : RabbitMqEtlTestBase
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);

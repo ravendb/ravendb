@@ -73,7 +73,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(DefaultTopics.Select(x => x.Name));
 
@@ -126,7 +126,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(DefaultTopics.Select(x => x.Name));
 
@@ -173,7 +173,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
             }
         }
 
-        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(DefaultTopics.Select(x => x.Name));
 
@@ -213,7 +213,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
             await session.SaveChangesAsync();
         }
 
-        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new List<string> { $"Users{TopicSuffix}" });
 
@@ -385,7 +385,7 @@ output('test output')"
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new[] { $"Users{TopicSuffix}" });
 
@@ -438,7 +438,7 @@ output('test output')"
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new[] { $"Users{TopicSuffix}" });
 
@@ -521,7 +521,7 @@ output('test output')"
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), srcStore.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), srcStore.Database, config);
 
             var record = await srcStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(srcStore.Database));
 

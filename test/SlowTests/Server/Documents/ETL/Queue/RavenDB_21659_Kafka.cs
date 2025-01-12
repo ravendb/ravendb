@@ -39,7 +39,7 @@ public class RavenDB_21659_Kafka : KafkaEtlTestBase
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new[] { $"Users{TopicSuffix}" });
 

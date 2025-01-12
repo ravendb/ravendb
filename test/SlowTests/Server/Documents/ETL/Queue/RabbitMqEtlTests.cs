@@ -48,7 +48,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
@@ -102,7 +102,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             await session.SaveChangesAsync();
         }
         
-        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
@@ -163,7 +163,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             await session.SaveChangesAsync();
         }
 
-        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         channel.BasicConsume(queue: queueName, autoAck: true, consumer: consumer);
 
@@ -208,7 +208,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             await session.SaveChangesAsync();
         }
 
-        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
@@ -249,7 +249,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using var channel = CreateRabbitMqChannel();
 
@@ -299,7 +299,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             }
         }
 
-        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
         
         using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
@@ -339,7 +339,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             await session.SaveChangesAsync();
         }
 
-        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
         
         using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
@@ -533,7 +533,7 @@ output('test output')"
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
             
             using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
@@ -576,7 +576,7 @@ output('test output')"
                 await session.SaveChangesAsync();
             }
 
-            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
             
             using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
