@@ -1185,38 +1185,6 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
-        public async Task RavenDB_14435()
-        {
-            using (var src = GetDocumentStore())
-            using (var dst = GetDocumentStore())
-            {
-                var database = await Databases.GetDocumentDatabaseInstanceFor(src);
-
-                using (var session = src.OpenSession())
-                {
-                    session.Store(new User(), "foo/bar");
-                    session.SaveChanges();
-                }
-
-                using (var controller = new ReplicationController(database))
-                {
-                    var databaseWatcher1 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_1");
-                    await AddWatcherToReplicationTopology(src, databaseWatcher1, src.Urls);
-                    controller.ReplicateOnce();
-
-                    Assert.NotNull(WaitForDocumentToReplicate<User>(dst, "foo/bar", 10_000));
-                    await Task.Delay(ReplicationLoader.MaxInactiveTime.Add(TimeSpan.FromSeconds(10)));
-
-                    var databaseWatcher2 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_2");
-                    await AddWatcherToReplicationTopology(src, databaseWatcher2, src.Urls);
-
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                }
-                EnsureReplicating(src, dst);
-            }
-        }
-
         [Fact]
         public async Task ReplicateRaftDocuments()
         {

@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using FastTests.Voron;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Impl.Journal;
 using Xunit;
@@ -22,7 +23,7 @@ namespace SlowTests.Voron
         }
 
 
-        [Fact]
+        [NightlyBuildFact]
         public void ValidPagesShouldNotChangeOnPageOrChecksumInvalidException()
         {
             var options = StorageEnvironmentOptions.ForPath(DataDir);

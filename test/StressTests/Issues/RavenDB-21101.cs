@@ -7,14 +7,15 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace StressTests.Issues;
+
 public class RavenDB_21101 : ReplicationTestBase
 {
     public RavenDB_21101(ITestOutputHelper output) : base(output)
     {
     }
 
-    [NightlyBuildFact]
+    [RavenFact(RavenTestCategory.Revisions)]
     public async Task RevisionsConflictConfiguration_Default_Value_Is_1024()
     {
         using var src = GetDocumentStore();
