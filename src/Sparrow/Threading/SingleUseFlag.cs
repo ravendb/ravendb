@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -56,7 +57,9 @@ namespace Sparrow.Threading
         /// </summary>
         private static void ThrowException()
         {
-            throw new InvalidOperationException($"Repeated Raise for a {nameof(SingleUseFlag)} instance");
+            const string message = $"Repeated Raise for a {nameof(SingleUseFlag)} instance";
+            Debug.Assert(false, message);
+            throw new InvalidOperationException(message);
         }
 
         /// <summary>
