@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -23,14 +23,16 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
         private static unsafe UnmanagedStringArray.UnmanagedString GetNullValueUnmanagedString()
         {
-            var size = sizeof(short) + Encoding.UTF8.GetByteCount(Constants.Documents.Indexing.Fields.NullValue);
-            byte* bytes = NativeMemory.AllocateMemory(size); // single allocation, we never free it
+            var byteCount = Encoding.UTF8.GetByteCount(Constants.Documents.Indexing.Fields.NullValue);
+            byte* bytes = NativeMemory.AllocateMemory(byteCount + sizeof(int)); // single allocation, we never free it
             fixed (char* chars = Constants.Documents.Indexing.Fields.NullValue)
             {
-                *(short*)bytes = (short)Encoding.UTF8.GetBytes(chars, Constants.Documents.Indexing.Fields.NullValue.Length,
-                    bytes + sizeof(short), size - sizeof(short));
+                *(int*)bytes = Encoding.UTF8.GetBytes(chars, Constants.Documents.Indexing.Fields.NullValue.Length,
+                    bytes + sizeof(int), byteCount);
+
+                *(int*)bytes = *(int*)bytes << 1 | 1;
             }
-            
+
             return new UnmanagedStringArray.UnmanagedString
             {
                 Start = bytes
@@ -281,8 +283,8 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     if (char.IsSurrogate(OriginalString[offset]) && offset + 1 < OriginalString.Length 
                                                                  && char.IsSurrogatePair(OriginalString, offset))
                     {
-                            charactersBuffer[1] = OriginalString[offset + 1];
-                            return (2, 2);
+                        charactersBuffer[1] = OriginalString[offset + 1];
+                        return (2, 2);
                     }
 
                     return (1, 1);
@@ -324,14 +326,12 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             }
 
-            private sealed class AlphanumericUnmanagedStringComparisonState : AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString>
+            private sealed class AlphanumericUnmanagedStringAsBytesComparisonState : AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString>
             {
-                [ThreadStatic]
-                private static Decoder Decoder;
-
-                public AlphanumericUnmanagedStringComparisonState(UnmanagedStringArray.UnmanagedString originalString)
-                    : base(originalString, Encoding.UTF8.GetCharCount(originalString.StringAsBytes))
+                public AlphanumericUnmanagedStringAsBytesComparisonState(UnmanagedStringArray.UnmanagedString originalString)
+                    : base(originalString, originalString.StringAsBytes.Length)
                 {
+                    Debug.Assert(OriginalString.StoredAsAscii);
                 }
 
                 protected override int GetStartPosition()
@@ -341,28 +341,11 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
                 protected override (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer)
                 {
-                    var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
-                    var str = OriginalString.StringAsBytes;
-
-                    //Numbers and ASCII are always 1 so we will pay the price only in case of UTF-8 characters.
-                    //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54
-                    var (byteLengthOfCharacter, charNeededToEncodeCharacters) = str[offset] switch
-                    {
-                        <= 0b0111_1111 => (1,1), /* 1 byte sequence: 0b0xxxxxxxx */
-                        <= 0b1101_1111 => (2, Encoding.UTF8.GetCharCount(str.Slice(offset, 2))), /* 2 byte sequence: 0b110xxxxxx */
-                        <= 0b1110_1111 => (3, Encoding.UTF8.GetCharCount(str.Slice(offset, 3))), /* 0b1110xxxx: 3 bytes sequence */
-                        <= 0b1111_0111 => (4, Encoding.UTF8.GetCharCount(str.Slice(offset, 4))), /* 0b11110xxx: 4 bytes sequence */
-                        _ => throw new InvalidDataException($"Characters should be between 1 and 4 bytes long and cannot match the specified sequence. This is invalid code.")
-                    };
-                    
-                    Debug.Assert(charactersBuffer.Length >= charNeededToEncodeCharacters, $"Character requires more than {charactersBuffer.Length} space to be decoded.");
-                    
-                    //In case of surrogate we could've to use two characters to convert it.
-                    decoder.Convert(str.Slice(offset, byteLengthOfCharacter), charactersBuffer, flush: true, out int bytesUsed,out int charUsed, out _);
-                    
-                    return (bytesUsed, charUsed);
+                    var spanByte = OriginalString.StringAsBytes.Slice(offset, 1);
+                    charactersBuffer[0] = (char)spanByte[0];
+                    return (1, 1);
                 }
-                
+
                 protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
                 {
                     return OriginalString.StringAsBytes.Slice(StringBufferOffset - NumberLength, NumberLength)
@@ -371,35 +354,81 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 }
             }
 
+            private sealed class AlphanumericUnmanagedStringAsCharsComparisonState : AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString>
+            {
+                public AlphanumericUnmanagedStringAsCharsComparisonState(UnmanagedStringArray.UnmanagedString originalString)
+                    : base(originalString, originalString.StringAsChars.Length)
+                {
+                    Debug.Assert(OriginalString.StoredAsAscii == false);
+                }
+
+                protected override int GetStartPosition()
+                {
+                    return StringBufferOffset;
+                }
+
+                protected override (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer)
+                {
+                    var ch0 = charactersBuffer[0] = OriginalString.StringAsChars[offset];
+
+                    if (char.IsSurrogate(ch0) 
+                        && offset + 1 < OriginalString.StringAsChars.Length
+                        && char.IsSurrogatePair(ch0, OriginalString.StringAsChars[offset + 1]))
+                    {
+                        Debug.Assert(charactersBuffer.Length >= 2, "charactersBuffer must have at least 2 slots for potential surrogate pairs.");
+                        charactersBuffer[1] = OriginalString.StringAsChars[offset + 1];
+                        return (2, 2);
+                    }
+
+                    return (1, 1);
+                }
+                
+                protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
+                {
+                    return OriginalString.StringAsChars.Slice(StringBufferOffset - NumberLength, NumberLength)
+                        .SequenceCompareTo(other.OriginalString.StringAsChars.Slice(other.StringBufferOffset - other.NumberLength, other.NumberLength));
+                }
+            }
+
             // Used for testing only
             public unsafe int Compare(string string1, string string2)
             {
-                var length1 = (short)Encoding.UTF8.GetByteCount(string1);
-                var buffer1 = new byte[length1 + sizeof(short)];
-                Encoding.UTF8.GetBytes(string1, new Span<byte>(buffer1, sizeof(short), length1));
-
-                var length2 = (short)Encoding.UTF8.GetByteCount(string2);
-                var buffer2 = new byte[length2 + sizeof(short)];
-                Encoding.UTF8.GetBytes(string2, new Span<byte>(buffer2, sizeof(short), length2));
-
-                fixed (byte* b1 = buffer1)
-                fixed (byte* b2 = buffer2)
+                var us1 = new UnmanagedStringArray.UnmanagedString
                 {
-                    *(short*)b1 = length1;
-                    *(short*)b2 = length2;
+                    Start = Allocate(string1)
+                };
 
-                    var us1 = new UnmanagedStringArray.UnmanagedString
-                    {
-                        Start = b1
-                    };
+                var us2 = new UnmanagedStringArray.UnmanagedString
+                {
+                    Start = Allocate(string2)
+                };
 
-                    var us2 = new UnmanagedStringArray.UnmanagedString
-                    {
-                        Start = b2
-                    };
+                return Compare(us1, us2);
+            }
 
-                    return Compare(us1, us2);
+            // Used for testing only
+            private static unsafe byte* Allocate(string str)
+            {
+                var sizeForBytes = str.Length + sizeof(int);  // assume 1 byte per char for ascii
+                var buffer = (byte*)Marshal.AllocHGlobal((IntPtr)sizeForBytes);
+                var outputByteBuffer = new Span<byte>(buffer + sizeof(int), str.Length);
+                if (Encoding.UTF8.TryGetBytes(str, outputByteBuffer, out var bytesWritten))
+                {
+                    *((int*)buffer) = bytesWritten;
+                    *((int*)buffer) = bytesWritten << 1 | 1;
                 }
+                else
+                {
+                    var sizeForChars = str.Length * sizeof(char) + sizeof(int);
+                    buffer = (byte*)Marshal.AllocHGlobal((IntPtr)sizeForChars);
+                    var outputCharBuffer = new Span<char>(buffer + sizeof(int), str.Length);
+                    str.CopyTo(outputCharBuffer);
+
+                    *((int*)buffer) = str.Length;
+                    *((int*)buffer) = str.Length << 1 | 0;
+                }
+
+                return buffer;
             }
 
             public int Compare(UnmanagedStringArray.UnmanagedString string1, UnmanagedStringArray.UnmanagedString string2)
@@ -407,8 +436,8 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 Debug.Assert(string1.IsNull == false);
                 Debug.Assert(string2.IsNull == false);
 
-                var string1State = new AlphanumericUnmanagedStringComparisonState(string1);
-                var string2State = new AlphanumericUnmanagedStringComparisonState(string2);
+                var string1State = string1.StoredAsAscii ? (AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString>)new AlphanumericUnmanagedStringAsBytesComparisonState(string1) : new AlphanumericUnmanagedStringAsCharsComparisonState(string1);
+                var string2State = string2.StoredAsAscii ? (AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString>)new AlphanumericUnmanagedStringAsBytesComparisonState(string2) : new AlphanumericUnmanagedStringAsCharsComparisonState(string2);
 
                 return string1State.CompareTo(string2State);
             }
