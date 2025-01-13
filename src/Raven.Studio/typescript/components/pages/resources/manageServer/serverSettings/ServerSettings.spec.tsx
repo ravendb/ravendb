@@ -10,8 +10,8 @@ describe("ServerSettings", () => {
     it(`user have access to server settings and can see the view when clearance is ClusterAdmin or above`, () => {
         const { screen } = rtlRender(<ServerSettingsStory securityClearance="ClusterAdmin" />);
 
-        const ServerSettingsView = screen.queryByText("Server Settings");
-        expect(ServerSettingsView).toBeInTheDocument();
+        const serverSettingsElements = screen.queryAllByText("Server Settings");
+        expect(serverSettingsElements).toHaveLength(2);
     });
 
     it(`user doesn't have access to server settings and can see insufficient access when clearance is below ClusterAdmin`, () => {

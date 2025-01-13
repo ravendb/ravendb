@@ -18,7 +18,7 @@ export function ServerSettingsInfoHub() {
                 <p>
                     The <strong>Server Settings</strong> view displays all configuration keys for the server.
                 </p>
-                <p className="mb-4">
+                <div className="mb-4">
                     <ul>
                         <li className="mb-1">
                             <strong>Configuration Key</strong>:
@@ -35,11 +35,11 @@ export function ServerSettingsInfoHub() {
                             <br /> &quot;Default&quot; - indicates no customized value has been set.
                         </li>
                     </ul>
-                </p>
+                </div>
                 <p>
                     This view is read-only.
-                    <br /> Configuration keys with a <strong>server-wide scope</strong> can be customized either via
-                    environment variables, the <i>settings.json</i> file, or command-line arguments, as explained in the{" "}
+                    <br /> Server-wide scope values can be customized via environment variables, the{" "}
+                    <i>settings.json</i> file, or command-line arguments, as explained in the{" "}
                     <a href={configurationOverviewDocsLink} target="_blank">
                         configuration overview
                     </a>
