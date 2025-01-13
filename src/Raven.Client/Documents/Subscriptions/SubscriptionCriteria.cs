@@ -2,8 +2,6 @@ using System;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Subscriptions
@@ -15,7 +13,40 @@ namespace Raven.Client.Documents.Subscriptions
         public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
     }
 
-    public class SubscriptionCreationOptions
+    internal interface ISubscriptionCreationOptions
+    {
+        public string Name { get; set; }
+        public string ChangeVector { get; set; }
+        public string MentorNode { get; set; }
+        public  bool Disabled { get; set; }
+        public  bool PinToMentorNode { get; set; }
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
+    }
+
+    public sealed class PredicateSubscriptionCreationOptions : ISubscriptionCreationOptions
+    {
+        public string Name { get; set; }
+        public string ChangeVector { get; set; }
+        public string MentorNode { get; set; }
+        public bool Disabled { get; set; }
+        public bool PinToMentorNode { get; set; }
+        public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
+
+        internal SubscriptionCreationOptions ToSubscriptionCreationOptions()
+        {
+            return new SubscriptionCreationOptions
+            {
+                Name = Name,
+                ChangeVector = ChangeVector,
+                MentorNode = MentorNode,
+                PinToMentorNode = PinToMentorNode,
+                Disabled = Disabled,
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
+            };
+        }
+    }
+
+    public class SubscriptionCreationOptions : ISubscriptionCreationOptions
     {
         public string Name { get; set; }
         public string Query { get; set; }
@@ -47,7 +78,8 @@ namespace Raven.Client.Documents.Subscriptions
                 ChangeVector = ChangeVector,
                 MentorNode = MentorNode,
                 PinToMentorNode = PinToMentorNode,
-                Disabled = Disabled
+                Disabled = Disabled,
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior
             };
             return DocumentSubscriptions.CreateSubscriptionOptionsFromGeneric(conventions, 
                 subscriptionCreationOptions, Filter, Projection, Includes);

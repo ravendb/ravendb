@@ -58,11 +58,23 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <typeparam name="T">Type of the collection to be processed by the subscription</typeparam>
         /// <returns>Created subscription</returns>
-        public string Create<T>(Expression<Func<T, bool>> predicate = null,
+        public string Create<T>(
             SubscriptionCreationOptions options = null,
             string database = null)
         {
-            return Create(CreateSubscriptionOptionsFromGeneric(_store.Conventions, options, predicate, null, includes: null), database);
+            return Create(CreateSubscriptionOptionsFromGeneric<T>(_store.Conventions, options, null, null, includes: null), database);
+        }
+
+        /// <summary>
+        /// Creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
+        /// </summary>
+        /// <typeparam name="T">Type of the collection to be processed by the subscription</typeparam>
+        /// <returns>Created subscription</returns>
+        public string Create<T>(Expression<Func<T, bool>> predicate,
+            PredicateSubscriptionCreationOptions options = null,
+            string database = null)
+        {
+            return Create(CreateSubscriptionOptionsFromGeneric(_store.Conventions, options?.ToSubscriptionCreationOptions(), predicate, null, includes: null), database);
         }
 
         /// <summary>
@@ -86,12 +98,24 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <returns>Created subscription name.</returns>
         public Task<string> CreateAsync<T>(
-            Expression<Func<T, bool>> predicate = null,
             SubscriptionCreationOptions options = null,
             string database = null,
             CancellationToken token = default)
         {
-            return CreateAsync(CreateSubscriptionOptionsFromGeneric(_store.Conventions, options, predicate, null, includes: null), database, token);
+            return CreateAsync(CreateSubscriptionOptionsFromGeneric<T>(_store.Conventions, options, null, null, includes: null), database, token);
+        }
+
+        /// <summary>
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
+        /// </summary>
+        /// <returns>Created subscription name.</returns>
+        public Task<string> CreateAsync<T>(
+            Expression<Func<T, bool>> predicate,
+            PredicateSubscriptionCreationOptions options = null,
+            string database = null,
+            CancellationToken token = default)
+        {
+            return CreateAsync(CreateSubscriptionOptionsFromGeneric(_store.Conventions, options?.ToSubscriptionCreationOptions(), predicate, null, includes: null), database, token);
         }
 
         internal static SubscriptionCreationOptions CreateSubscriptionOptionsFromGeneric<T>(
