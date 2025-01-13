@@ -457,8 +457,11 @@ public unsafe partial class Hnsw
         {
             var smallPostingList = Container.Get(Llt, rawPostingListId);
             var count = VariableSizeEncoding.Read<int>(smallPostingList.Address, out var offset);
-            listBuffer.EnsureCapacityFor(Math.Max(256, count + listBuffer.Count));
+            
+            var requiredSize = Math.Max(256, 256 * (int)Math.Ceiling((count + listBuffer.Count) / 256f));
+            listBuffer.EnsureCapacityFor(requiredSize);
             Debug.Assert(listBuffer.Capacity > 0 && listBuffer.Capacity % 256 ==0, "The buffer must be multiple of 256 for PForDecoder.Read");
+            
             pforDecoder.Init(smallPostingList.Address + offset, smallPostingList.Length - offset);
             listBuffer.Count += pforDecoder.Read(listBuffer.RawItems + listBuffer.Count, listBuffer.Capacity - listBuffer.Count);
             postingListSize = smallPostingList.Length;
