@@ -300,11 +300,11 @@ class databaseSettings extends shardViewModelBase {
                         title: (x) => {
                             switch (x.effectiveValueOrigin()) {
                                 case "Database":
-                                    return "Value is configured in the database record, overriding the server & default settings";
+                                    return "Value has been customized for the database, overriding the server & default settings";
                                 case "Server":
-                                    return "Value is configured in the settings.json file, overriding the default settings";
+                                    return "Value has been customized for the server, overriding the default settings";
                                 case "Default":
-                                    return "No customized value is set";
+                                    return "No customized value has been set";
                             }
                         },
                         extraClass: (x) => {

@@ -78,8 +78,8 @@ function CellEffectiveValueWrapper({
 }
 
 const titleValueField: Record<ServerSettingsColumns["origin"], string> = {
-    Server: "Value is configured in the settings.json file, overriding the default settings",
-    Default: "No customized value is set",
+    Server: "Value has been customized, overriding the default settings",
+    Default: "No customized value has been set",
     Database: "",
 };
 
