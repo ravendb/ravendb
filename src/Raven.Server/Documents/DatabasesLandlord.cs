@@ -1056,14 +1056,7 @@ namespace Raven.Server.Documents
                 // DateTime should be only null in tests
                 if (idleDatabaseActivity is { DateTime: not null })
                 {
-                    // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
-                    _wakeupTimers.AddOrUpdate(databaseName.Value,
-                        _ => new Timer(_ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity), state: null, dueTime: idleDatabaseActivity.DueTime, period: Timeout.Infinite),
-                        (_, timer) =>
-                        {
-                            timer.Change(idleDatabaseActivity.DueTime, Timeout.Infinite);
-                            return timer;
-                        });
+                    AddOrUpdateWakeupTimer(databaseName.Value, idleDatabaseActivity);
                 }
 
                 if (_logger.IsOperationsEnabled)
@@ -1096,6 +1089,18 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void AddOrUpdateWakeupTimer(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
+        {
+            // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
+            _wakeupTimers.AddOrUpdate(databaseName,
+                _ => new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), state: null, dueTime: idleDatabaseActivity.DueTime, period: Timeout.Infinite),
+                (_, timer) =>
+                {
+                    timer.Change(idleDatabaseActivity.DueTime, Timeout.Infinite);
+                    return timer;
+                });
+        }
+
         private void LogUnloadFailureReason(StringSegment databaseName, string reason)
         {
             if (_logger.IsOperationsEnabled)
@@ -1112,13 +1117,7 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            _wakeupTimers.AddOrUpdate(databaseName,
-                _ => new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite),
-                (_, timer) =>
-                {
-                    timer.Change(idleDatabaseActivity.DueTime, Timeout.Infinite);
-                    return timer;
-                });
+            AddOrUpdateWakeupTimer(databaseName, idleDatabaseActivity);
         }
 
         private void NextScheduledActivityCallback(string databaseName, IdleDatabaseActivity nextIdleDatabaseActivity)
