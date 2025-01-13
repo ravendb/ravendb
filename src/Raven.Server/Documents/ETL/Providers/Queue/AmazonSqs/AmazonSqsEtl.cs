@@ -281,7 +281,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
     
     private static string CreateMessageDeduplicationId(string changeVector)
     {
-        return CreateMessageId(changeVector, 128, false);
+        return CreateMessageId(changeVector, 128, true);
     }
 
     protected override void OnProcessStopped()
