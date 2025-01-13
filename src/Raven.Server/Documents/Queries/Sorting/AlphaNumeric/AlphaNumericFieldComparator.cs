@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             protected abstract int GetStartPosition();
 
-            protected abstract (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer);
+            protected abstract int ReadCharacter(int offset, Span<char> charactersBuffer);
             
             protected abstract int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<T> string2State);
 
@@ -151,8 +151,8 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             {
                 CurrentSequenceStartPosition = GetStartPosition();
                 Span<char> characters = stackalloc char[4];
-                var (usedBytes, usedChars) = ReadCharacter(StringBufferOffset, characters);
-                _currentSequenceIsNumber =  usedChars == 1 && char.IsDigit(characters[0]);
+                var used = ReadCharacter(StringBufferOffset, characters);
+                _currentSequenceIsNumber =  used == 1 && char.IsDigit(characters[0]);
                 NumberLength = 0;
 
                 bool currentCharacterIsDigit;
@@ -176,13 +176,13 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                         }
                     }
 
-                    CurrentPositionInString += usedChars;
-                    StringBufferOffset += usedBytes;
+                    CurrentPositionInString += used;
+                    StringBufferOffset += used;
 
                     if (CurrentPositionInString < _stringLength)
                     {
-                        (usedBytes, usedChars) = ReadCharacter(StringBufferOffset, characters);
-                        currentCharacterIsDigit = usedChars == 1 && char.IsDigit(characters[0]);
+                        used = ReadCharacter(StringBufferOffset, characters);
+                        currentCharacterIsDigit = used == 1 && char.IsDigit(characters[0]);
                     }
                     else
                     {
@@ -227,11 +227,11 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
                 while (length1 > 0 && length2 > 0)
                 {
-                    var (read1Bytes, read1Chars) = ReadCharacter(offset1, ch1);
-                    var (read2Bytes, read2Chars) = other.ReadCharacter(offset2, ch2);
+                    var read1Chars = ReadCharacter(offset1, ch1);
+                    var read2Chars = other.ReadCharacter(offset2, ch2);
 
-                    length1 -= read1Bytes;
-                    length2 -= read2Bytes;
+                    length1 -= read1Chars;
+                    length2 -= read2Chars;
                     
                     int result = read1Chars switch
                     {
@@ -243,8 +243,8 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
                     if (result == 0)
                     {
-                        offset1 += read1Bytes;
-                        offset2 += read2Bytes;
+                        offset1 += read1Chars;
+                        offset2 += read2Chars;
                         continue;
                     }
                     
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return CurrentPositionInString;
                 }
 
-                protected override (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer)
+                protected override int ReadCharacter(int offset, Span<char> charactersBuffer)
                 {
                     //in this overload we don't have bytearray so we've to treat bytes as chars
                     charactersBuffer[0] = OriginalString[offset];
@@ -284,10 +284,10 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                                                                  && char.IsSurrogatePair(OriginalString, offset))
                     {
                         charactersBuffer[1] = OriginalString[offset + 1];
-                        return (2, 2);
+                        return 2;
                     }
 
-                    return (1, 1);
+                    return 1;
                 }
                 
                 protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<string> other)
@@ -339,11 +339,11 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return StringBufferOffset;
                 }
 
-                protected override (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer)
+                protected override int ReadCharacter(int offset, Span<char> charactersBuffer)
                 {
                     var spanByte = OriginalString.StringAsBytes.Slice(offset, 1);
                     charactersBuffer[0] = (char)spanByte[0];
-                    return (1, 1);
+                    return 1;
                 }
 
                 protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
@@ -367,7 +367,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return StringBufferOffset;
                 }
 
-                protected override (int BytesUsed, int CharUsed) ReadCharacter(int offset, Span<char> charactersBuffer)
+                protected override int ReadCharacter(int offset, Span<char> charactersBuffer)
                 {
                     var ch0 = charactersBuffer[0] = OriginalString.StringAsChars[offset];
 
@@ -377,10 +377,10 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     {
                         Debug.Assert(charactersBuffer.Length >= 2, "charactersBuffer must have at least 2 slots for potential surrogate pairs.");
                         charactersBuffer[1] = OriginalString.StringAsChars[offset + 1];
-                        return (2, 2);
+                        return 2;
                     }
 
-                    return (1, 1);
+                    return 1;
                 }
                 
                 protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
