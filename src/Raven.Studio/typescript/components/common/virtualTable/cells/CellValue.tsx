@@ -5,20 +5,21 @@ interface CellValueProps {
     value: unknown;
     title?: string;
     className?: string;
+    id?: string;
 }
 
-export default function CellValue({ value, title, className }: CellValueProps) {
+export default function CellValue({ value, title, id, className }: CellValueProps) {
     if (value === undefined) {
         return null;
     }
 
     if (value === null) {
-        return <span className="cell-value value-null">null</span>;
+        return <span id={id} className="cell-value value-null">null</span>;
     }
 
     if (typeof value === "object") {
         return (
-            <span className={classNames("cell-value", className)}>
+            <span id={id} className={classNames("cell-value", className)}>
                 {Array.isArray(value) ? (
                     <>
                         <span className="value-object">[...]</span>
@@ -36,19 +37,19 @@ export default function CellValue({ value, title, className }: CellValueProps) {
 
     if (typeof value === "number") {
         return (
-            <span title={title} className={classNames("cell-value value-number", className)}>
+            <span title={title} id={id} className={classNames("cell-value value-number", className)}>
                 {value.toLocaleString()}
             </span>
         );
     }
 
     return (
-        <span title={title} className={classNames("cell-value", `value-${typeof value}`, className)}>
+        <span title={title} id={id} className={classNames("cell-value", `value-${typeof value}`, className)}>
             {String(value)}
         </span>
     );
 }
 
-export function CellValueWrapper({ getValue }: { getValue: Getter<unknown> }) {
-    return <CellValue value={getValue()} />;
+export function CellValueWrapper({ getValue, ...props }: { getValue: Getter<unknown>, id?: string, className?: string }) {
+    return <CellValue value={getValue()} {...props} />;
 }

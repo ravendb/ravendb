@@ -1,11 +1,11 @@
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
-import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import { ComponentPropsWithoutRef, useMemo } from "react";
+import React, { useMemo } from "react";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
 import genUtils from "common/generalUtils";
 import { configurationOrigin } from "models/database/settings/databaseSettingsModels";
+import { CellWithDescription, CellWithDescriptionProps } from "components/common/virtualTable/cells/CellWithCopy";
 
 export interface ServerSettingsColumns {
     configurationKey: string;
@@ -45,36 +45,29 @@ export function useServerSettingsColumns(availableWidth: number) {
     return serverSettingsColumns;
 }
 
-type CellValueWrapperProps = Partial<
-    CellContext<ServerSettingsColumns, ServerSettingsColumns[keyof ServerSettingsColumns]>
-> &
-    ComponentPropsWithoutRef<typeof CellValue>;
+function CellValueWrapper(props: CellWithDescriptionProps<ServerSettingsColumns, ServerSettingsColumns[keyof ServerSettingsColumns]>) {
+  const { origin } = props.cell.row.original;
+  const cellClass = origin === "Server" ? "text-warning" : "";
 
-function CellValueWrapper({ cell, value, ...props }: CellValueWrapperProps) {
-    const { origin } = cell.row.original;
-    const cellClass = origin === "Server" ? "text-warning" : "";
-
-    return <CellValue className={cellClass} value={value} {...props} />;
+  return <CellWithDescription<ServerSettingsColumns, ServerSettingsColumns[keyof ServerSettingsColumns]>
+    cellClassName={cellClass} {...props} />;
 }
+
 
 function CellConfigurationKeyValueWrapper({
     getValue,
     ...props
 }: CellContext<ServerSettingsColumns, ServerSettingsColumns["configurationKey"]>) {
-    return <CellValueWrapper value={getValue()} title={props.cell.row.original.configurationKeyTooltip} {...props} />;
+  return <CellValueWrapper getValue={getValue}
+                           description={genUtils.unescapeHtml(props.cell.row.original.configurationKeyTooltip)} {...props} />;
 }
 
 function CellEffectiveValueWrapper({
     getValue,
     ...props
 }: CellContext<ServerSettingsColumns, ServerSettingsColumns["effectiveValue"]>) {
-    return (
-        <CellValueWrapper
-            value={genUtils.unescapeHtml(getValue())}
-            title={genUtils.unescapeHtml(getValue())}
-            {...props}
-        />
-    );
+  return <CellValueWrapper getValue={getValue}
+                           {...props} />;
 }
 
 const titleValueField: Record<ServerSettingsColumns["origin"], string> = {
@@ -87,12 +80,14 @@ function CellOriginValueWrapper({
     getValue,
     ...props
 }: CellContext<ServerSettingsColumns, ServerSettingsColumns["origin"]>) {
-    const conditionalIconName: IconName = getValue() === "Server" ? "server" : "default";
-
-    return (
-        <>
-            <Icon icon={conditionalIconName} />
-            <CellValueWrapper value={getValue()} title={titleValueField[getValue()]} {...props} />
-        </>
-    );
+  const conditionalIconName: IconName = getValue() === "Server" ? "server" : "default";
+  return (
+    <>
+      <Icon icon={conditionalIconName} />
+      <CellValueWrapper getValue={getValue}
+                        showActionsMenu={false}
+                        description={titleValueField[getValue()]}
+                        {...props} />
+    </>
+  );
 }

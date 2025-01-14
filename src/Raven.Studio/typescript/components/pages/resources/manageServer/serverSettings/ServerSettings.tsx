@@ -76,7 +76,7 @@ function useFetchServerSettings() {
         return sortedSettings.map(
             (setting): ServerSettingsColumns => ({
                 configurationKey: setting.keyName(),
-                configurationKeyTooltip: setting.descriptionText(),
+                configurationKeyTooltip: setting.descriptionHtml(),
                 effectiveValue: setting.effectiveValue(),
                 origin: setting.effectiveValueOrigin(),
             })
