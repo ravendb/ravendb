@@ -81,11 +81,15 @@ namespace Voron.Data.BTrees
 
             if (backward)
             {
-                _currentPage.LastSearchPosition = -1; // force next MoveNext to move to the next _page_.
+                // We know that the exact value isn't there, but it is possible that the previous page has values 
+                // that is actually less than the key, so we need to check it as well.
+                _currentPage.LastSearchPosition = -1; // force next MovePrev to move to the previous _page_.
                 return MovePrev();
             }
             else
             {
+                // We know that the exact value isn't there, but it is possible that the next page has values 
+                // that is actually greater than the key, so we need to check it as well.
                 _currentPage.LastSearchPosition = _currentPage.NumberOfEntries; // force next MoveNext to move to the next _page_.
                 return MoveNext();
             }

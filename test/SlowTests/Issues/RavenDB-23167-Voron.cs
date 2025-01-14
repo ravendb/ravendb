@@ -14,7 +14,9 @@ using static Voron.Data.Tables.TableSchema;
 using Sparrow.Binary;
 using Sparrow.Threading;
 using FastTests.Voron;
+using FastTests.Voron.FixedSize;
 using Sparrow.Json;
+using System.Collections.Generic;
 
 namespace SlowTests.Issues
 {
@@ -24,7 +26,7 @@ namespace SlowTests.Issues
         {
         }
         
-        [RavenFact(RavenTestCategory.Revisions)]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SeekBackwardFrom_VoronOverloads()
         {
             RequireFileBasedPager();
@@ -79,6 +81,127 @@ namespace SlowTests.Issues
 
                     AssertSeekBackwardAfterAllKeys(tx.Allocator, table, idAndEtagIndex, "foo/bar", empty: false, expectedEtag: 6);
                     AssertSeekBackwardAfterAllKeys(tx.Allocator, table, idAndEtagIndex, "foo/ba", empty: true);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineDataWithRandomSeed(10)]
+        [InlineDataWithRandomSeed(100)]
+        public void SeekBackwardFrom_VoronOverloads_Random(int numberOfEntities, int seed)
+        {
+            RequireFileBasedPager();
+
+            var r = new Random(seed);
+
+            using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+            using (Slice.From(allocator, "PK", out var pk))
+            using (Slice.From(allocator, "Etags", out var etagsSlice))
+            using (Slice.From(allocator, "RevisionsIdAndEtag", out var idAndEtagSlice))
+            using (Slice.From(allocator, "Table", out var tableName))
+            {
+                var etagsIndex = new FixedSizeSchemaIndexDef { Name = etagsSlice, IsGlobal = false, StartIndex = 0 };
+                var idAndEtagIndex = new SchemaIndexDef { StartIndex = 1, Count = 3, Name = idAndEtagSlice };
+                var schema = new TableSchema()
+                    .DefineKey(new SchemaIndexDef { Name = pk, IsGlobal = false, StartIndex = 0, Count = 1 })
+                    .DefineFixedSizeIndex(etagsIndex)
+                    .DefineIndex(idAndEtagIndex);
+
+                using (var tx = Env.WriteTransaction())
+                {
+                    schema.Create(tx, tableName, null);
+                    tx.Commit();
+                }
+
+                List<(string Id, long Etag)> entities;
+                List<(string Id, long Etag)> users;
+                List<(string Id, long Etag)> companies;
+
+                using (var tx = Env.WriteTransaction())
+                {
+                    entities = new List<(string Id, long Etag)>();
+                    var usedEtags = new HashSet<long>();
+
+                    using var table = tx.OpenTable(schema, tableName);
+
+                    for (int i = 1; i < numberOfEntities; i++)
+                    {
+                        string id;
+                        long etag;
+                        do
+                        {
+                            etag = r.NextInt64(numberOfEntities * 10);
+                        } while (usedEtags.Contains(etag)); // Keep generating until a unique etag is found
+                        usedEtags.Add(etag); // Add the unique etag to the HashSet
+
+                        if (i % 2 == 0)
+                            id = $"users/{i}";
+                        else
+                            id = $"companies/{i}";
+
+                        InsertToTable(tx, table, etag, id);
+
+                        entities.Add((id, etag));
+                    }
+
+                    tx.Commit();
+
+                    entities = entities
+                        .OrderBy(entity => entity.Etag)
+                        .ToList();
+
+                    users = entities.Where(x => x.Id.StartsWith("users/")).ToList();
+                    companies = entities.Where(x => x.Id.StartsWith("companies/")).ToList();
+                }
+
+                using (var tx = Env.ReadTransaction())
+                {
+                    using var table = tx.OpenTable(schema, tableName);
+
+                    // Entities:
+                    var entity = entities.First();
+                    AssertSeekBackwardForFixedSizeTrees(table, etagsIndex, endEtag: entity.Etag - 1, empty: true);
+                    AssertSeekBackwardForFixedSizeTrees(table, etagsIndex, endEtag: entity.Etag, empty: false, entity.Etag);
+
+                    int mid = entities.Count / 2;
+                    entity = entities[mid];
+                    AssertSeekBackwardForFixedSizeTrees(table, etagsIndex, endEtag: entity.Etag, empty: false, expectedEtag: entity.Etag);
+                    var expectedEtag = entities[mid + 1].Etag == entities[mid].Etag + 1 ? entities[mid].Etag + 1 : entities[mid].Etag;
+                    AssertSeekBackwardForFixedSizeTrees(table, etagsIndex, endEtag: entity.Etag + 1, empty: false, expectedEtag: expectedEtag);
+
+                    entity = entities.Last();
+                    AssertSeekBackwardForFixedSizeTrees(table, etagsIndex, endEtag: entity.Etag, empty: false, expectedEtag: entity.Etag);
+                    AssertSeekBackwardForFixedSizeTrees(table, etagsIndex, endEtag: entity.Etag + 1, empty: false, expectedEtag: entity.Etag);
+
+                    // Users:
+                    var user = users.First();
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag - 1, empty: true);
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag, empty: false, expectedEtag: user.Etag);
+
+                    mid = users.Count / 2;
+                    user = users[mid];
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag, empty: false, expectedEtag: user.Etag);
+                    var userExpectedEtag = users[mid + 1].Etag == users[mid].Etag + 1 ? users[mid].Etag + 1 : users[mid].Etag;
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag + 1, empty: false, expectedEtag: userExpectedEtag);
+
+                    user = users.Last();
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag, empty: false, expectedEtag: user.Etag);
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag + 1, empty: false, expectedEtag: user.Etag);
+
+                    // Companies:
+                    var company = companies.First();
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, company.Id, endEtag: company.Etag - 1, empty: true);
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, company.Id, endEtag: company.Etag, empty: false, expectedEtag: company.Etag);
+
+                    mid = companies.Count / 2;
+                    company = companies[mid];
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, company.Id, endEtag: company.Etag, empty: false, expectedEtag: company.Etag);
+                    var companyExpectedEtag = companies[mid + 1].Etag == companies[mid].Etag + 1 ? companies[mid].Etag + 1 : companies[mid].Etag;
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, company.Id, endEtag: company.Etag + 1, empty: false, expectedEtag: companyExpectedEtag);
+
+                    company = companies.Last();
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, company.Id, endEtag: company.Etag, empty: false, expectedEtag: company.Etag);
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, company.Id, endEtag: company.Etag + 1, empty: false, expectedEtag: company.Etag);
                 }
             }
         }
