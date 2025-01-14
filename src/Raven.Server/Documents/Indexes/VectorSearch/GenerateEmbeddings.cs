@@ -43,7 +43,7 @@ public static class GenerateEmbeddings
         if (Embedder.IsValueCreated)
             throw new InvalidOperationException("Embedder has already been initialized.");
         
-        OnnxSessionOptions = new SessionOptions() { IntraOpNumThreads = configuration.Indexing.MaxNumberOfCoresForLocalEmbeddingsGeneration };
+        OnnxSessionOptions = new SessionOptions() { IntraOpNumThreads = configuration.Indexing.MaxNumberOfThreadsForLocalEmbeddingsGeneration };
     }
 
     [ThreadStatic]
