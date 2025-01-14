@@ -161,6 +161,10 @@ public sealed partial class ClusterStateMachine
             case nameof(AddElasticSearchEtlCommand):
                 AssertElasticSearchEtlLicenseLimits(serverStore, databaseRecord, context);
                 break;
+            case nameof(AddSnowflakeEtlCommand):
+            case nameof(UpdateSnowflakeEtlCommand):
+                AssertSnowflakeEtl(databaseRecord, serverStore.LicenseManager.LicenseStatus);
+                break;
             case nameof(EditTimeSeriesConfigurationCommand):
                 AssertTimeSeriesConfigurationLicenseLimits(serverStore, databaseRecord, context);
                 break;
@@ -180,6 +184,7 @@ public sealed partial class ClusterStateMachine
         var command = (PutLicenseCommand)CommandBase.CreateFrom(bjro);
         if (command.SkipLicenseAssertion)
             return;
+
         try
         {
             newLicenseLimits = LicenseManager.GetLicenseStatus(command.Value);
@@ -203,6 +208,8 @@ public sealed partial class ClusterStateMachine
             AssertRefreshFrequency(databaseRecord, newLicenseLimits, context);
             AssertSorters(databaseRecord, newLicenseLimits, context, items, type);
             AssertAnalyzers(databaseRecord, newLicenseLimits, context, items, type);
+            AssertSnowflakeEtl(databaseRecord, newLicenseLimits);
+
             if (AssertPeriodicBackup(newLicenseLimits, context) == false && databaseRecord.PeriodicBackups.Count > 0)
                 throw new LicenseLimitException(LimitType.PeriodicBackup, $"Your license doesn't support periodic backup.");
             AssertDatabaseClientConfiguration(databaseRecord, newLicenseLimits, context);
@@ -902,6 +909,17 @@ public sealed partial class ClusterStateMachine
             return;
 
         throw new LicenseLimitException(LimitType.QueueEtl, "Your license doesn't support adding Elastic Search ETL feature.");
+    }
+
+    private static void AssertSnowflakeEtl(DatabaseRecord databaseRecord, LicenseStatus licenseStatus)
+    {
+        if (licenseStatus.HasSnowflakeEtl)
+            return;
+
+        if (databaseRecord.SnowflakeEtls.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.SnowflakeEtl, "Your license doesn't support using the Snowflake ETL feature.");
     }
 
     private void AssertTimeSeriesConfigurationLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
