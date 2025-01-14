@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -37,27 +38,29 @@ public class RavenDB_21050 : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
-            var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+            await WaitAndAssertForBackup(source, options.DatabaseMode, backupTaskId);
 
             using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 session.Delete(id);
                 await session.SaveChangesAsync();
             }
-            
-            var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-            var path = Directory.GetDirectories(backupPath).First();
+            var backup2Id = await WaitAndAssertForBackup(source, options.DatabaseMode, backupTaskId);
+
+            string path;
             int? shardNumber = null;
             if (options.DatabaseMode == RavenDatabaseMode.Sharded)
             {
                 shardNumber = await Sharding.GetShardNumberForAsync(source, id);
                 path = Directory.GetDirectories(backupPath).First(p => p.Contains($"${shardNumber}"));
             }
+            else
+            {
+                path = Directory.GetDirectories(backupPath).First();
+            }
 
-            await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, backupStatus2.Id, source.Database, shardNumber);
+            await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, backup2Id, source.Database, shardNumber);
             
             var restoreConfig = new RestoreBackupConfiguration { BackupLocation = path, DatabaseName = destination.Database };
             using (Backup.RestoreDatabase(destination, restoreConfig))
@@ -70,6 +73,23 @@ public class RavenDB_21050 : RavenTestBase
             }
 
         }
+    }
+
+    private async Task<long> WaitAndAssertForBackup(DocumentStore source, RavenDatabaseMode databaseMode, long backupTaskId, TimeSpan? timeout = null)
+    {
+        timeout ??= TimeSpan.FromMinutes(5);
+
+        WaitHandle[] backupsDone = null;
+        if (databaseMode == RavenDatabaseMode.Sharded)
+            backupsDone = await Sharding.Backup.WaitForBackupToComplete(source);
+        else
+            backupsDone = await Backup.WaitForBackupToComplete(source);
+
+        var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+
+        Assert.True(WaitHandle.WaitAll(backupsDone, timeout.Value));
+
+        return backupStatus.Id;
     }
 
 
@@ -93,8 +113,7 @@ public class RavenDB_21050 : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
-            var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+            await WaitAndAssertForBackup(source, RavenDatabaseMode.Sharded, backupTaskId);
 
             if (delete)
             {
@@ -104,8 +123,7 @@ public class RavenDB_21050 : RavenTestBase
                     await session.SaveChangesAsync();
                 }
 
-                var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                await WaitAndAssertForBackup(source, RavenDatabaseMode.Sharded, backupTaskId);
             }
 
             var paths = Directory.GetDirectories(backupPath);
