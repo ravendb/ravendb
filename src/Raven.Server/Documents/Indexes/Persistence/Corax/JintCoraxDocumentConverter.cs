@@ -255,8 +255,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                         PortableExceptions.Throw<InvalidDataException>("Name field doesn't exist but is required.");
                     }
 
-                    var indexField = GetFieldObjectForProcessing(field.Name, indexingScope);
-                    object objectForIndexing = AbstractStaticIndexBase.CreateVector(indexField, valueJsv.IsString() ? valueJsv.AsString() : (object)valueJsv, isAutoIndex: false);
+                    var underlyingValue = valueJsv.IsString() ? valueJsv.AsString() : (object)valueJsv;
+                    var indexField = GetFieldObjectForProcessingVectorField(field.Name, indexingScope, underlyingValue);
+                    object objectForIndexing = AbstractStaticIndexBase.CreateVector(indexField, underlyingValue, isAutoIndex: false);
 
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
                     shouldProcessAsBlittable = false;
@@ -312,8 +313,18 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             }
         }
     }
+
+    private IndexField GetFieldObjectForProcessingVectorField(in string propertyAsString, CurrentIndexingScope indexingScope, object value)
+    {
+        if (_fields.TryGetValue(propertyAsString, out var field) == false || field.Vector == null)
+        {
+            field = _fields[propertyAsString] = AbstractStaticIndexBase.RetrieveVectorField(propertyAsString, value);
+        }
+
+        return field;
+    }
     
-    private IndexField GetFieldObjectForProcessing(in string propertyAsString, CurrentIndexingScope indexingScope)
+    private IndexField GetFieldObjectForProcessing(in string propertyAsString, CurrentIndexingScope indexingScope, bool isVector = false)
     {
         if (_fields.TryGetValue(propertyAsString, out var field) == false)
         {

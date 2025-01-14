@@ -352,29 +352,26 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             return currentIndexingScope != null && currentIndexingScope.Index.IsOnBeforeExecuteIndexing;
         }
-        
-        public object CreateVector(string fieldName, object value)
-        {
-            if (value is null or DynamicNullObject)
-                return null;
 
+        internal static IndexField RetrieveVectorField(string fieldName, object value)
+        {
             var currentIndexingScope = CurrentIndexingScope.Current;
-            if (IsDictionaryTrainingPhase(currentIndexingScope))
-                return null;
-            
-            // We're supporting two defaults:
-            // when Options are not set, we'll decide what is configuration in following manner:
-            // - value is textual or array of textual we're treating them as text input
-            // - otherwise, we will write as array of numerical values
             var fieldExists = currentIndexingScope.Index.Definition.IndexFields.TryGetValue(fieldName, out var indexField);
             if (fieldExists == false || indexField?.Vector is null)
             {
-                var isText = value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject;
+                // We're supporting two defaults:
+                // when Options are not set, we'll decide what is configuration in following manner:
+                // - value is textual or array of textual we're treating them as text input
+                // - otherwise, we will write as array of numerical values
+                var isText = IsText(value);
                 if (isText == false && value is IEnumerable enumerable)
                 {
                     foreach (var item in enumerable)
                     {
-                        isText = item is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject;
+                        if (item is null or DynamicNullObject)
+                            continue;
+                        
+                        isText = item is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject or JsString;
                         break;
                     }
                 }
@@ -387,6 +384,25 @@ namespace Raven.Server.Documents.Indexes.Static
 
             indexField!.Vector!.ValidateDebug();
 
+            return indexField;
+            
+            bool IsText(object item)
+            {
+                return item is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject or JsString;
+            }
+        }
+        
+        public object CreateVector(string fieldName, object value)
+        {
+            if (value is null or DynamicNullObject)
+                return null;
+
+            var currentIndexingScope = CurrentIndexingScope.Current;
+            if (IsDictionaryTrainingPhase(currentIndexingScope))
+                return null;
+            
+
+            var indexField = RetrieveVectorField(fieldName, value);
             var vector = indexField!.Vector!.SourceEmbeddingType switch
             { 
                 VectorEmbeddingType.Text => VectorFromText(indexField, value),
@@ -451,6 +467,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new ArgumentException($"Expected BlittableJsonReaderVector, but got {value.GetType().FullName}");
             }
 
+            if (value is Stream stream)
+                return HandleStream(stream);
+            
             if (value is JsArray js)
                 return HandleJsArray(js);
 
@@ -468,52 +487,65 @@ namespace Raven.Server.Documents.Indexes.Static
             object HandleEnumerable(IEnumerable enumerable)
             {
                 var enumerator = enumerable.GetEnumerator();
-                using var _ = enumerator as IDisposable;;
+                
+                using var _ = enumerator as IDisposable;
                 if (enumerator.MoveNext() == false)
                     return null;
 
                 var isBase = IsBase64(enumerator.Current);
-                enumerator.Reset();
-                
+                var isStream = enumerator.Current is Stream;
                 List<object> values = new();
-                while (enumerator.MoveNext())
+                
+                do
+                {
+                    ProcessItem(enumerator.Current);
+                }
+                while (enumerator.MoveNext());
+                
+                return values;
+
+                void ProcessItem(object item)
                 {
                     if (isBase)
                     {
-                        values.Add(Base64ToVector(enumerator.Current));
-                        continue;
+                        values.Add(Base64ToVector(item));
+                        return;
                     }
 
+                    if (isStream)
+                    {
+                        values.Add(HandleStream((Stream)item));
+                        return;
+                    }
+                    
                     switch (vectorOptions.SourceEmbeddingType)
                     {
                         case VectorEmbeddingType.Single:
                         {
-                            var memScope = allocator.Allocate((((float[])enumerator.Current)!).Length * sizeof(float), out Memory<byte> mem);
-                            MemoryMarshal.Cast<float, byte>((float[])enumerator.Current).CopyTo(mem.Span);
+                            var memScope = allocator.Allocate((((float[])item)!).Length * sizeof(float), out Memory<byte> mem);
+                            MemoryMarshal.Cast<float, byte>((float[])item).CopyTo(mem.Span);
                             var vector = GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length);
                             values.Add(vector);
-                            continue;
+                            return;
                         }
                         case VectorEmbeddingType.Int8:
                         {
-                            var memScope = allocator.Allocate((((sbyte[])enumerator.Current)!).Length, out Memory<byte> mem);
-                            MemoryMarshal.Cast<sbyte, byte>((sbyte[])enumerator.Current).CopyTo(mem.Span);
+                            var memScope = allocator.Allocate((((sbyte[])item)!).Length, out Memory<byte> mem);
+                            MemoryMarshal.Cast<sbyte, byte>((sbyte[])item).CopyTo(mem.Span);
                             var vector = GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length);
                             values.Add(vector);
-                            continue;
+                            return;
                         }
                         default:
                         {
-                            var memScope = allocator.Allocate((((byte[])enumerator.Current)!).Length, out Memory<byte> mem);
-                            ((byte[])enumerator.Current).CopyTo(mem.Span);
+                            var memScope = allocator.Allocate((((byte[])item)!).Length, out Memory<byte> mem);
+                            ((byte[])item).CopyTo(mem.Span);
                             var vector = GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length);
                             values.Add(vector);
                             break;
                         }
                     }
                 }
-
-                return values;
             }
             
             object HandleBlittableJsonReaderArray(BlittableJsonReaderArray data)
@@ -660,6 +692,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 
                 return GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, bufferSize);
+            }
+            
+            object HandleStream(Stream stream)
+            {
+                var len = (int)stream.Length;
+                var memScope = allocator.Allocate((int)stream.Length, out Memory<byte> mem);
+                stream.ReadExactly(mem.Span);
+                return GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, len);
             }
             
             bool IsBase64(object val) => val is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject or JsString;

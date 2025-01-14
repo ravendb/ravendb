@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -217,6 +218,18 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         /// <param name="value">Source of embedding</param>
         public object CreateVector(IEnumerable<float> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <summary>
+        /// Creates a vector field in the index from the provided value
+        /// </summary>
+        /// <param name="value">Source of embedding</param>
+        public object CreateVector(Stream value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <summary>
+        /// Creates a vector field in the index from the provided values
+        /// </summary>
+        /// <param name="value">Source of embedding</param>
+        public object CreateVector(IEnumerable<Stream> values) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
         /// <summary>
         /// Creates a vector field in the index from the provided values
