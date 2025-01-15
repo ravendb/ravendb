@@ -49,7 +49,16 @@ public class RavenDB_23445 : RavenTestBase
     [InlineData(VectorEmbeddingType.Binary, 0.65f)]
     [InlineData(VectorEmbeddingType.Int8, 0.80f)]
     [InlineData(VectorEmbeddingType.Single, 0.80f)]
-    public void CanCreateVectorIndexFromCSharp(VectorEmbeddingType vectorEmbeddingType, float similarity)
+    public void CanCreateVectorIndexFromCSharp(VectorEmbeddingType vectorEmbeddingType, float similarity) => CanCreateVectorIndexFromBase<TextVectorIndex>(vectorEmbeddingType, similarity);
+    
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [InlineData(VectorEmbeddingType.Binary, 0.65f)]
+    [InlineData(VectorEmbeddingType.Int8, 0.80f)]
+    [InlineData(VectorEmbeddingType.Single, 0.80f)]
+    public void CanCreateVectorIndexFromJs(VectorEmbeddingType vectorEmbeddingType, float similarity) => CanCreateVectorIndexFromBase<TextVectorIndexJs>(vectorEmbeddingType, similarity);
+    
+    private void CanCreateVectorIndexFromBase<TIndex>(VectorEmbeddingType vectorEmbeddingType, float similarity)
+    where TIndex : AbstractIndexCreationTask, new()
     {
         var options = Options.ForSearchEngine(RavenSearchEngineMode.Corax);
         
@@ -62,11 +71,16 @@ public class RavenDB_23445 : RavenTestBase
                 
                 session.SaveChanges();
                 
-                new TextVectorIndex(vectorEmbeddingType).Execute(store);
+                if (typeof(TIndex) == typeof(TextVectorIndexJs))
+                    new TextVectorIndexJs(vectorEmbeddingType).Execute(store);
+                else
+                    new TextVectorIndex(vectorEmbeddingType).Execute(store);
                 
                 Indexes.WaitForIndexing(store);
+                var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
+                Assert.Null(errors);
                 
-                var res = session.Query<Document, TextVectorIndex>().VectorSearch(x => x.WithField(f => f.Vector), f => f.ByText("animal color"), similarity);
+                var res = session.Query<Document, TIndex>().VectorSearch(x => x.WithField(f => f.Vector), f => f.ByText("animal color"), similarity);
                 
                 var results = res.ToList();
 
@@ -136,6 +150,37 @@ public class RavenDB_23445 : RavenTestBase
                     SourceEmbeddingType = VectorEmbeddingType.Text,
                     DestinationEmbeddingType = vectorEmbeddingType
                 });
+        }
+    }
+    
+    private class TextVectorIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public TextVectorIndexJs()
+        {
+            //querying
+        }
+
+        public TextVectorIndexJs(VectorEmbeddingType vectorEmbeddingType)
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Documents', function (doc) {{
+                return {{
+                    Id: id(doc),
+                    Vector: createVector([doc.Text, doc.Text2])
+                }};
+            }})"
+            };
+
+            Fields = new Dictionary<string, IndexFieldOptions>();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Text,
+                    DestinationEmbeddingType = vectorEmbeddingType
+                }
+            });
         }
     }
 

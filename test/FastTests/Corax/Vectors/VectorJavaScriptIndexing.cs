@@ -92,6 +92,8 @@ public class VectorJavaScriptIndexing : RavenTestBase
 
         new VectorIndex(fieldName, src, dest).Execute(store);
         Indexes.WaitForIndexing(store);
+        var errors = Indexes.WaitForIndexingErrors(store);
+        Assert.Null(errors);
         
         //WaitForUserToContinueTheTest(store);
         var baseQuery = session.Query<VecDoc, VectorIndex>().Statistics(out var stats).Customize(x => x.WaitForNonStaleResults());

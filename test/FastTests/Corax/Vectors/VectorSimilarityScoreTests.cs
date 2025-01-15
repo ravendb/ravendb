@@ -31,18 +31,34 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
-    public void TestSinglesSimilarity(int seed)
+    public void TestSinglesSimilarity(int seed) => TestSinglesSimilarityBase<Index>(seed);
+    
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void TestSinglesSimilarityJs(int seed) => TestSinglesSimilarityBase<IndexJs>(seed);
+    
+    private void TestSinglesSimilarityBase<TIndex>(int seed)
+        where TIndex : AbstractIndexCreationTask, new()
     {
         var random = new Random(seed);
         var dimensions = random.Next(7, 1600);
-        using var store = GetDocumentStoreWithDocument(random, dimensions);
+        using var store = GetDocumentStoreWithDocument<TIndex>(random, dimensions);
 
         using var session = store.OpenSession();
         var doc = session.Advanced.DocumentQuery<Dto>().NoTracking().NoCaching().First();
 
         var queryVector = Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray();
 
-        var query = session.Query<Dto, Index>()
+        var query = session.Query<Dto, TIndex>()
             .VectorSearch(f => f.WithField(d => d.Singles), v => v.ByEmbedding(queryVector), 0.1f)
             .OrderByScore();
 
@@ -58,6 +74,21 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         
         Assert.Equal(expectedSimilarity, similarity, 0.0001f);
     }
+
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineData(1253422244)]
+    [InlineData(1351777189)]
+    public void TestInt8Similarity(int seed) => TestInt8SimilarityBase<Index>(seed);
     
     [RavenTheory(RavenTestCategory.Vector)]
     [InlineDataWithRandomSeed]
@@ -72,18 +103,21 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
     [InlineDataWithRandomSeed]
     [InlineData(1253422244)]
     [InlineData(1351777189)]
-    public void TestInt8Similarity(int seed)
+    public void TestInt8SimilarityJs(int seed) => TestInt8SimilarityBase<IndexJs>(seed);
+    
+    private void TestInt8SimilarityBase<TIndex>(int seed)
+        where TIndex : AbstractIndexCreationTask, new()
     {
         var random = new Random(seed);
         var dimensions = random.Next(7, 1600);
-        using var store = GetDocumentStoreWithDocument(random, dimensions);
+        using var store = GetDocumentStoreWithDocument<TIndex>(random, dimensions);
 
         using var session = store.OpenSession();
         var doc = session.Advanced.DocumentQuery<Dto>().NoTracking().NoCaching().First();
 
         var queryVector = VectorQuantizer.ToInt8(Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray());
 
-        var query = session.Query<Dto, Index>()
+        var query = session.Query<Dto, TIndex>()
             .VectorSearch(f => f.WithField(d => d.Int8), v => v.ByEmbedding(queryVector), 0.1f)
             .OrderByScore();
 
@@ -110,11 +144,27 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
-    public void TestBinarySimilarity(int seed)
+    public void TestBinarySimilarity(int seed) => TestBinarySimilarityBase<Index>(seed);
+    
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void TestBinarySimilarityJs(int seed) => TestBinarySimilarityBase<IndexJs>(seed);
+    
+    private void TestBinarySimilarityBase<TIndex>(int seed)
+    where TIndex : AbstractIndexCreationTask, new()
     {
         var random = new Random(seed);
         var dimensions = random.Next(7, 1600);
-        using var store = GetDocumentStoreWithDocument(random, dimensions);
+        using var store = GetDocumentStoreWithDocument<TIndex>(random, dimensions);
 
         using var session = store.OpenSession();
         var doc = session.Advanced.DocumentQuery<Dto>().NoTracking().NoCaching().First();
@@ -126,7 +176,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
             commonsBits = TensorPrimitives.HammingBitDistance<byte>(queryVector, doc.Binary);
         } while (commonsBits <= 0);
 
-        var query = session.Query<Dto, Index>()
+        var query = session.Query<Dto, TIndex>()
             .VectorSearch(f => f.WithField(d => d.Binary), v => v.ByEmbedding(queryVector), 0.01f)
             .OrderByScore();
         
@@ -142,7 +192,8 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         Assert.Equal(hammingBitDistance, similarity, 0.0001f);
     }
 
-    private IDocumentStore GetDocumentStoreWithDocument(Random random, int dimension)
+    private IDocumentStore GetDocumentStoreWithDocument<TIndex>(Random random, int dimension)
+    where TIndex : AbstractIndexCreationTask, new()
     {
         var options = Options.ForSearchEngine(RavenSearchEngineMode.Corax);
         options.ModifyDatabaseRecord += record =>
@@ -160,7 +211,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         session.Store(new Dto(singles, int8, binary));
         session.SaveChanges();
         
-        new Index().Execute(store);
+        new TIndex().Execute(store);
         Indexes.WaitForIndexing(store);
         
         return store;
@@ -177,6 +228,35 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
 
             Vector(f => f.Int8, i => i.SourceEmbedding(VectorEmbeddingType.Int8));
             Vector(f => f.Binary, i => i.SourceEmbedding(VectorEmbeddingType.Binary));
+        }
+    }
+    
+    private class IndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public IndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (dto) {{
+                return {{
+                    Singles: createVector(dto.Singles),
+                    Int8: createVector(dto.Int8),
+                    Binary: createVector(dto.Binary)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Int8", new IndexFieldOptions(){Vector = new()
+            {
+                SourceEmbeddingType = VectorEmbeddingType.Int8,
+                DestinationEmbeddingType = VectorEmbeddingType.Int8
+            }});
+            Fields.Add("Binary", new IndexFieldOptions(){Vector = new()
+            {
+                SourceEmbeddingType = VectorEmbeddingType.Binary,
+                DestinationEmbeddingType = VectorEmbeddingType.Binary
+            }});
         }
     }
 }

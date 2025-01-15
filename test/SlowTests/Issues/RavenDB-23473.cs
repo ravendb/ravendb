@@ -21,6 +21,14 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     public void CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfiguration()
+    => CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfigurationBase<DtoIndex>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfigurationJs()
+        => CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfigurationBase<DtoIndexJs>();
+    
+    private void CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfigurationBase<TIndex>()
+    where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         string id;
@@ -32,7 +40,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
             id = dto.Id;
         }
 
-        new DtoIndex().Execute(store);
+        new TIndex().Execute(store);
         Indexes.WaitForIndexing(store);
 
         using (var session = store.OpenSession())
@@ -49,10 +57,18 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     public async Task CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocument()
+    => await CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocumentBase<VectorIndex>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public async Task CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocumentJs()
+        => await CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocumentBase<VectorIndexJs>();
+    
+    private async Task CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocumentBase<TIndex>()
+    where TIndex : AbstractIndexCreationTask, new()
     {
         using (var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax)))
         {
-            await store.ExecuteIndexAsync(new VectorIndex());
+            await store.ExecuteIndexAsync(new TIndex());
 
             var sub = await store.Subscriptions.CreateAsync<Question>(new SubscriptionCreationOptions<Question>());
             var worker = store.Subscriptions.GetSubscriptionWorker<Question>(sub);
@@ -99,10 +115,9 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
             await Indexes.WaitForIndexingAsync(store);
             var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
             Assert.Null(errors);
-
             using (var session = store.OpenAsyncSession())
             {
-                var results = await session.Query<Question, VectorIndex>()
+                var results = await session.Query<Question, TIndex>()
                     .VectorSearch(
                         f => f.WithField("Vector"),
                         v => v.ByEmbedding(vector))
@@ -116,7 +131,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
 
             using (var session = store.OpenAsyncSession())
             {
-                var result = await session.Advanced.AsyncDocumentQuery<Question, VectorIndex>().WhereEquals("Vector", null).ToListAsync();
+                var result = await session.Advanced.AsyncDocumentQuery<Question, TIndex>().WhereEquals("Vector", null).ToListAsync();
                 Assert.Equal(5, result.Count);
             }            
         }
@@ -135,11 +150,42 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
     
+    private class VectorIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public VectorIndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Questions', function (question) {{
+                let embedding = load(question.EmbeddingId, 'embeddings');
+                return {{
+                    Vector: createVector(embedding.Vector)
+                }};
+            }})"
+            };
+        }
+    }
+    
     private class DtoIndex : AbstractIndexCreationTask<Embedding>
     {
         public DtoIndex()
         {
             Map = dtos => from dto in dtos select new { Vector = CreateVector(dto.Vector) };
+        }
+    }
+    
+    private class DtoIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public DtoIndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (dto) {{
+                return {{
+                    Singles: createVector(dto.Vector)
+                }};
+            }})"
+            };
         }
     }
     

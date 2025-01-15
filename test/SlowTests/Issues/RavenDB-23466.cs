@@ -13,7 +13,13 @@ namespace SlowTests.Issues;
 public class RavenDB_23466(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
-    public void ProjectionOfVectorFieldWillAlwaysResultInValueNotFound()
+    public void ProjectionOfVectorFieldWillAlwaysResultInValueNotFound() => ProjectionOfVectorFieldWillAlwaysResultInValueNotFoundBase<Index>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    private void ProjectionOfVectorFieldWillAlwaysResultInValueNotFoundJs() => ProjectionOfVectorFieldWillAlwaysResultInValueNotFoundBase<IndexJs>();
+    
+    private void ProjectionOfVectorFieldWillAlwaysResultInValueNotFoundBase<TIndex>()
+    where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         string id;
@@ -25,22 +31,26 @@ public class RavenDB_23466(ITestOutputHelper output) : RavenTestBase(output)
             id = dto.Id;
         }
         
-        new Index().Execute(store);
+        var index = new TIndex();
+        index.Execute(store);
         Indexes.WaitForIndexing(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
+        Assert.Null(errors);
+        
         using (var session = store.OpenSession())
         {
-            var projection = session.Query<ProjectionDto, Index>().Select(x => new {x.Id, x.VectorStored}).ToList();
+            var projection = session.Query<ProjectionDto, TIndex>().Select(x => new {x.Id, x.VectorStored}).ToList();
             Assert.Equal(1, projection.Count);
             Assert.Equal(id, projection[0].Id);
             Assert.Equal(null, projection[0].VectorStored);
 
-            var exception = Assert.Throws<InvalidQueryException>(() => session.Query<ProjectionDto, Index>()
+            var exception = Assert.Throws<InvalidQueryException>(() => session.Query<ProjectionDto, TIndex>()
                 .Customize(c => c.Projection(ProjectionBehavior.FromIndexOrThrow))
                 .Select(x => new { Id = RavenQuery.Id(x), Test = x.VectorStored })
                 .ToList());
             
-            Assert.Contains("Could not extract field 'VectorStored' from index 'Index', because index does not contain such", exception.Message);
-            var result = session.Query<ProjectionDto, Index>()
+            Assert.Contains($"Could not extract field 'VectorStored' from index '{index.IndexName}', because index does not contain such", exception.Message);
+            var result = session.Query<ProjectionDto, TIndex>()
                 .Select(x => new { Id = RavenQuery.Id(x), Test = x.VectorStored })
                 .ToList();
             Assert.Equal(1, result.Count);
@@ -67,6 +77,21 @@ public class RavenDB_23466(ITestOutputHelper output) : RavenTestBase(output)
         {
             Map = dtos => from dto in dtos
                 select new { VectorStored = CreateVector((IEnumerable<float>)dto.Vector) };
+        }
+    }
+    
+    private class IndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public IndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (dto) {{
+                return {{
+                    VectorStored: createVector(dto.Vector)
+                }};
+            }})"
+            };
         }
     }
 }

@@ -62,6 +62,17 @@ select new
     [InlineData(VectorEmbeddingType.Int8, 0.82f)]
     [InlineData(VectorEmbeddingType.Single, 0.75f)]
     public async Task CanCreateVectorIndexFromCSharp(VectorEmbeddingType vectorEmbeddingType, float similarity)
+    => await CanCreateVectorIndexBase<TextVectorIndex>(vectorEmbeddingType, similarity);
+    
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [InlineData(VectorEmbeddingType.Binary, 0.7f)]
+    [InlineData(VectorEmbeddingType.Int8, 0.82f)]
+    [InlineData(VectorEmbeddingType.Single, 0.75f)]
+    public async Task CanCreateVectorIndexFromJs(VectorEmbeddingType vectorEmbeddingType, float similarity)
+        => await CanCreateVectorIndexBase<TextVectorIndexJs>(vectorEmbeddingType, similarity);
+
+    private async Task CanCreateVectorIndexBase<TIndex>(VectorEmbeddingType vectorEmbeddingType, float similarity)
+        where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = CreateDocumentStore();
         
@@ -72,12 +83,16 @@ select new
             await session.SaveChangesAsync();
         }
 
-        await new TextVectorIndex(vectorEmbeddingType).ExecuteAsync(store);
+        if (typeof(TIndex) == typeof(TextVectorIndexJs))
+            await new TextVectorIndexJs(vectorEmbeddingType).ExecuteAsync(store);
+        else
+            await new TextVectorIndex(vectorEmbeddingType).ExecuteAsync(store);
         await Indexes.WaitForIndexingAsync(store);
+        Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
 
         {
             using var session = store.OpenAsyncSession();
-            var res = session.Query<Document, TextVectorIndex>().VectorSearch(x => x.WithField(f => f.Vector), f => f.ByText("animal"), similarity);
+            var res = session.Query<Document, TIndex>().VectorSearch(x => x.WithField(f => f.Vector), f => f.ByText("animal"), similarity);
             var results = await res.ToListAsync();
 
             Assert.Equal(1, results.Count);
@@ -87,20 +102,33 @@ select new
 
 
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public async Task CreateVectorIndexFromFloatEmbeddings()
+    public async Task CreateVectorIndexFromFloatEmbeddings() => await CreateVectorIndexFromFloatEmbeddingsBase<NumericalVectorIndex>();
+    public async Task CreateVectorIndexFromFloatEmbeddingsJs() => await CreateVectorIndexFromFloatEmbeddingsBase<NumericalVectorIndexJs>();
+    
+    private async Task CreateVectorIndexFromFloatEmbeddingsBase<TIndex>()
+        where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = CreateDocumentStore();
+        
+        using (var session = store.OpenAsyncSession())
         {
-            using var session = store.OpenAsyncSession();
             await session.StoreAsync(new Document() { Embeddings = [0.5f, 0.4f] });
-            await session.StoreAsync(new Document() { Embeddings = [0.1f, 0.1f] });
+            await session.StoreAsync(new Document() { Embeddings = [0.1f, -0.1f] });
             await session.StoreAsync(new Document() { Embeddings = [-0.1f, -0.1f] });
             await session.SaveChangesAsync();
-            await new NumericalVectorIndex(VectorEmbeddingType.Single).ExecuteAsync(store);
+            await new TIndex().ExecuteAsync(store);
         }
 
         await Indexes.WaitForIndexingAsync(store);
-        WaitForUserToContinueTheTest(store);
+        Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var res = session.Query<Document, TIndex>().VectorSearch(x => x.WithField(f => f.Vector), f => f.ByEmbedding([0.5f, 0.4f]), 0.99f);
+            var results = await res.ToListAsync();
+            Assert.Equal(1, results.Count);
+            Assert.Contains(0.5f, results[0].Embeddings);
+        }
     }
 
     private IDocumentStore CreateDocumentStore() => GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
@@ -125,16 +153,71 @@ select new
                 });
         }
     }
+    
+    private class TextVectorIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public TextVectorIndexJs()
+        {
+            //querying
+        }
+
+        public TextVectorIndexJs(VectorEmbeddingType vectorEmbeddingType)
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Documents', function (dto) {{
+                return {{
+                    Vector: createVector(dto.Text)
+                }};
+            }})"
+            };
+            
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Text, 
+                    DestinationEmbeddingType = vectorEmbeddingType
+                }
+            });
+        }
+    }
 
     private class NumericalVectorIndex : AbstractIndexCreationTask<Document>
     {
-        public NumericalVectorIndex(VectorEmbeddingType vectorEmbeddingType)
+        public NumericalVectorIndex()
         {
             Map = docs => from doc in docs
                 select new { Id = doc.Id, Vector = CreateVector(doc.Embeddings) };
 
 
             VectorIndexes.Add(x => x.Vector, new VectorOptions() { SourceEmbeddingType = VectorEmbeddingType.Single });
+        }
+    }
+    
+    private class NumericalVectorIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public NumericalVectorIndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Documents', function (dto) {{
+                return {{
+                    Vector: createVector(dto.Embeddings)
+                }};
+            }})"
+            };
+            
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Single, 
+                    DestinationEmbeddingType = VectorEmbeddingType.Single
+                }
+            });
         }
     }
 
@@ -148,21 +231,39 @@ select new
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void EmbeddingTextSourceTest() => StaticIndexApi<EmbeddingTextSource>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void EmbeddingTextSourceTestJs() => StaticIndexApi<EmbeddingTextSourceJs>();
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void MultiEmbeddingTextIndexTest() => StaticIndexApi<MultiEmbeddingTextIndex>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void MultiEmbeddingTextIndexTestJs() => StaticIndexApi<MultiEmbeddingTextIndexJs>();
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void EmbeddingSingleIndexTest() => StaticIndexApi<EmbeddingSingleIndex>();
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void EmbeddingSingleIndexTestJs() => StaticIndexApi<EmbeddingSingleIndexJs>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void MultiEmbeddingSingleIndexTest() => StaticIndexApi<MultiEmbeddingSingleIndex>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void MultiEmbeddingSingleIndexTestJs() => StaticIndexApi<MultiEmbeddingSingleIndexJs>();
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void EmbeddingSingleAsBase64IndexTest() => StaticIndexApi<EmbeddingSingleAsBase64Index>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void EmbeddingSingleAsBase64IndexTestJs() => StaticIndexApi<EmbeddingSingleAsBase64IndexJs>();
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void MultiEmbeddingSingleAsBase64IndexTest() => StaticIndexApi<MultiEmbeddingSingleAsBase64Index>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void MultiEmbeddingSingleAsBase64IndexTestJs() => StaticIndexApi<MultiEmbeddingSingleAsBase64IndexJs>();
 
     private void StaticIndexApi<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
@@ -222,6 +323,31 @@ select new
                 });
         }
     }
+    
+    private class EmbeddingTextSourceJs : AbstractJavaScriptIndexCreationTask
+    {
+        public EmbeddingTextSourceJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('DataSources', function (dto) {{
+                return {{
+                    Vector: createVector(dto.Text)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Text, 
+                    DestinationEmbeddingType = VectorEmbeddingType.Single
+                }
+            });
+        }
+    }
 
     private class MultiEmbeddingTextIndex : AbstractIndexCreationTask<DataSource>
     {
@@ -234,6 +360,31 @@ select new
                 {
                     SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
+        }
+    }
+    
+    private class MultiEmbeddingTextIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MultiEmbeddingTextIndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('DataSources', function (dto) {{
+                return {{
+                    Vector: createVector(dto.MultiText)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Text, 
+                    DestinationEmbeddingType = VectorEmbeddingType.Single
+                }
+            });
         }
     }
 
@@ -250,6 +401,31 @@ select new
                 });
         }
     }
+    
+    private class EmbeddingSingleIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public EmbeddingSingleIndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('DataSources', function (dto) {{
+                return {{
+                    Vector: createVector(dto.Embeddings)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Single, 
+                    DestinationEmbeddingType = VectorEmbeddingType.Single
+                }
+            });
+        }
+    }
 
     private class MultiEmbeddingSingleIndex : AbstractIndexCreationTask<DataSource>
     {
@@ -262,6 +438,31 @@ select new
                 {
                     SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
+        }
+    }
+    
+    private class MultiEmbeddingSingleIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MultiEmbeddingSingleIndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('DataSources', function (dto) {{
+                return {{
+                    Vector: createVector(dto.MultipleEmbeddings)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Single, 
+                    DestinationEmbeddingType = VectorEmbeddingType.Single
+                }
+            });
         }
     }
 
@@ -278,6 +479,31 @@ select new
                 });
         }
     }
+    
+    private class EmbeddingSingleAsBase64IndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public EmbeddingSingleAsBase64IndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('DataSources', function (dto) {{
+                return {{
+                    Vector: createVector(dto.EmbeddingAsBase64)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Single, 
+                    DestinationEmbeddingType = VectorEmbeddingType.Single
+                }
+            });
+        }
+    }
 
     private class MultiEmbeddingSingleAsBase64Index : AbstractIndexCreationTask<DataSource>
     {
@@ -290,6 +516,31 @@ select new
                 {
                     SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
+        }
+    }
+    
+    private class MultiEmbeddingSingleAsBase64IndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MultiEmbeddingSingleAsBase64IndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('DataSources', function (dto) {{
+                return {{
+                    Vector: createVector(dto.EmbeddingsAsBase64)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions()
+            {
+                Vector = new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorEmbeddingType.Single, 
+                    DestinationEmbeddingType = VectorEmbeddingType.Single
+                }
+            });
         }
     }
 }

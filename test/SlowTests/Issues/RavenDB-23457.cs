@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
@@ -20,6 +21,15 @@ public class RavenDB_23457 : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClause(Options options)
+    => CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClauseBase<DummyIndex>(options);
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClauseJs(Options options)
+        => CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClauseBase<DummyIndexJs>(options);
+    
+    private void CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClauseBase<TIndex>(Options options)
+    where TIndex : AbstractIndexCreationTask, new()
     {
         using (var store = GetDocumentStore(options))
         {
@@ -54,15 +64,18 @@ public class RavenDB_23457 : RavenTestBase
                 
                 session.SaveChanges();
                 
-                var index = new DummyIndex();
+                var index = new TIndex();
                 
                 index.Execute(store);
                 
                 Indexes.WaitForIndexing(store);
+                var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
+                Assert.Null(errors);
+                
                 
                 QueryCommand queryCommand = new QueryCommand((InMemoryDocumentSessionOperations)session, new IndexQuery
                 {
-                    Query = "from index 'DummyIndex' where vector.search(Vector, 'ddd', 0.1)"
+                    Query = $"from index '{index.IndexName}' where vector.search(Vector, 'ddd', 0.1)"
                 }, metadataOnly: false, indexEntriesOnly: true);
                 
                 session.Advanced.RequestExecutor.Execute(queryCommand, session.Advanced.Context, session.Advanced.SessionInfo);
@@ -96,6 +109,24 @@ public class RavenDB_23457 : RavenTestBase
                     Vector2 = CreateVector(dto.TextArr.Append(dto.Text2)),
                     Vector3 = CreateVector(dto.TextArr)
                 };
+        }
+    }
+    
+    private class DummyIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public DummyIndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (dto) {{
+                return {{
+                    Id: id(dto),         
+                    Vector: createVector([dto.Text, dto.Text2].concat(dto.TextArr)),
+                    Vector2: createVector(dto.TextArr.concat([dto.Text2])),
+                    Vector3: createVector(dto.TextArr)
+                }};
+            }})"
+            };
         }
     }
 }

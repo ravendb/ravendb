@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics.Tensors;
@@ -25,7 +26,7 @@ public class RavenDB_22076 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestRqlGeneration(Options options)
     {
@@ -182,9 +183,15 @@ public class RavenDB_22076 : RavenTestBase
         Assert.Equal([217, 217, 128], int1Embedding);
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestEmbeddingDimensionsCheck(Options options)
+    public void TestEmbeddingDimensionsCheck(Options options) => TestEmbeddingDimensionsCheckBase<DummyIndex>(options);
+    
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestEmbeddingDimensionsCheckJs(Options options) => TestEmbeddingDimensionsCheckBase<DummyIndexJs>(options);
+    
+    private void TestEmbeddingDimensionsCheckBase<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
     {
         options.RunInMemory = false;
         
@@ -200,7 +207,7 @@ public class RavenDB_22076 : RavenTestBase
                 
                 session.SaveChanges();
 
-                var index = new DummyIndex();
+                var index = new TIndex();
                 
                 index.Execute(store);
                 
@@ -240,9 +247,15 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestInt8EmbeddingDimensionsMismatchException(Options options)
+    public void TestInt8EmbeddingDimensionsMismatchException(Options options) => TestInt8EmbeddingDimensionsMismatchExceptionBase<DummyIndex>(options);
+    
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestInt8EmbeddingDimensionsMismatchExceptionJs(Options options) => TestInt8EmbeddingDimensionsMismatchExceptionBase<DummyIndexJs>(options);
+    
+    private void TestInt8EmbeddingDimensionsMismatchExceptionBase<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
     {
         using (var store = GetDocumentStore(options))
         {
@@ -259,7 +272,7 @@ public class RavenDB_22076 : RavenTestBase
                 
                 session.SaveChanges();
 
-                var index = new DummyIndex();
+                var index = new TIndex();
                 
                 index.Execute(store);
                 
@@ -280,9 +293,15 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestInt1EmbeddingDimensionsMismatchException(Options options)
+    public void TestInt1EmbeddingDimensionsMismatchException(Options options) => TestInt1EmbeddingDimensionsMismatchExceptionBase<DummyIndex>(options);
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestInt1EmbeddingDimensionsMismatchExceptionJs(Options options) => TestInt1EmbeddingDimensionsMismatchExceptionBase<DummyIndexJs>(options);
+    
+    private void TestInt1EmbeddingDimensionsMismatchExceptionBase<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
     {
         using (var store = GetDocumentStore(options))
         {
@@ -299,7 +318,7 @@ public class RavenDB_22076 : RavenTestBase
                 
                 session.SaveChanges();
 
-                var index = new DummyIndex();
+                var index = new TIndex();
                 
                 index.Execute(store);
                 
@@ -320,9 +339,15 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensions(Options options)
+    public void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensions(Options options) => TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsBase<IndexWithSetDimensions>(options);
+    
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsJs(Options options) => TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsBase<IndexWithSetDimensionsJs>(options);
+    
+    private void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsBase<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
     {
         using (var store = GetDocumentStore(options))
         {
@@ -335,7 +360,7 @@ public class RavenDB_22076 : RavenTestBase
                 
                 session.SaveChanges();
 
-                var index = new IndexWithSetDimensions();
+                var index = new TIndex();
                 
                 index.Execute(store);
                 
@@ -347,9 +372,16 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsForInt8(Options options)
+    public void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsForInt8(Options options) => TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsForInt8Base<IndexWithSetDimensionsInt8>(options);
+    
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsForInt8Js(Options options) => TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsForInt8Base<IndexWithSetDimensionsInt8Js>(options);
+    
+    private void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsForInt8Base<TIndex>(Options options)
+    where TIndex : AbstractIndexCreationTask, new()
     {
         using (var store = GetDocumentStore(options))
         {
@@ -362,7 +394,7 @@ public class RavenDB_22076 : RavenTestBase
                 
                 session.SaveChanges();
 
-                var index = new IndexWithSetDimensionsInt8();
+                var index = new TIndex();
                 
                 index.Execute(store);
                 
@@ -374,7 +406,7 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestAutoIndexCreationWithExactSearch(Options options)
     {
@@ -413,6 +445,39 @@ public class RavenDB_22076 : RavenTestBase
         public byte[] EmbeddingBinary { get; set; }
     }
 
+    private class DummyIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public DummyIndexJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (dto) {{
+                return {{
+                    Singles: createVector(dto.EmbeddingSingles),
+                    Integers: createVector(dto.EmbeddingSBytes),
+                    Binary: createVector(dto.EmbeddingBinary)
+                }};
+            }})"
+            };
+
+            Fields = new Dictionary<string, IndexFieldOptions>()
+            {
+                {
+                    "Integers",
+                    new IndexFieldOptions() { Vector = new() { SourceEmbeddingType = VectorEmbeddingType.Int8, DestinationEmbeddingType = VectorEmbeddingType.Int8 } }
+                },
+                {
+                    "Singles",
+                    new IndexFieldOptions() { Vector = new() { SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single } }
+                },
+                {
+                    "Binary",
+                    new IndexFieldOptions() { Vector = new() { SourceEmbeddingType = VectorEmbeddingType.Binary, DestinationEmbeddingType = VectorEmbeddingType.Binary } }
+                }
+            };
+        }
+    }
+    
     private class DummyIndex : AbstractIndexCreationTask<Dto>
     {
         public DummyIndex()
@@ -436,6 +501,23 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
     
+    private class IndexWithSetDimensionsJs : AbstractJavaScriptIndexCreationTask
+    {
+        public IndexWithSetDimensionsJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (dto) {{
+                return {{
+                    Singles: createVector(dto.EmbeddingSingles)
+                }};
+            }})"
+            };
+
+            Fields = new Dictionary<string, IndexFieldOptions>() { {"Singles", new IndexFieldOptions(){Vector = new() {Dimensions = 256, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single}}}};
+        }
+    }
+    
     private class IndexWithSetDimensionsInt8 : AbstractIndexCreationTask<Dto>
     {
         public IndexWithSetDimensionsInt8()
@@ -444,6 +526,23 @@ public class RavenDB_22076 : RavenTestBase
                 select new { Sbytes = CreateVector(dto.EmbeddingSingles) };
             
             Vector("Sbytes", factory => factory.Dimensions(22).DestinationEmbedding(VectorEmbeddingType.Int8));
+        }
+    }
+    
+    private class IndexWithSetDimensionsInt8Js : AbstractJavaScriptIndexCreationTask
+    {
+        public IndexWithSetDimensionsInt8Js()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (dto) {{
+                return {{
+                    Sbytes: createVector(dto.EmbeddingSingles)
+                }};
+            }})"
+            };
+
+            Fields = new Dictionary<string, IndexFieldOptions>() { {"Sbytes", new IndexFieldOptions(){Vector = new(){Dimensions = 22, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Int8}}}};
         }
     }
 }

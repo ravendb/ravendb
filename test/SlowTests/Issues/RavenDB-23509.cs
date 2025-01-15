@@ -17,16 +17,22 @@ public class RavenDB_23509 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void CanCreateVectorFieldFromTextInMapReducePart()
+    public void CanCreateVectorFieldFromTextInMapReducePart() => CanCreateVectorFieldFromTextInMapReducePartBase<MapReduceTextual>();
+
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void CanCreateVectorFieldFromTextInMapReducePartJs() => CanCreateVectorFieldFromTextInMapReducePartBase<MapReduceTextualJs>();
+    
+    private void CanCreateVectorFieldFromTextInMapReducePartBase<TIndex>() 
+        where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStoreWithDocuments(out var ids);
-        new MapReduceTextual().Execute(store);
+        new TIndex().Execute(store);
         Indexes.WaitForIndexing(store);
         var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
         Assert.Null(errors);
         
         using var session = store.OpenSession();
-        var results = session.Query<Result, MapReduceTextual>()
+        var results = session.Query<Result, TIndex>()
             .VectorSearch(f => f.WithField(s => s.Vector),
                 v => v.ByText("dog"))
             .ToList();
@@ -36,16 +42,22 @@ public class RavenDB_23509 : RavenTestBase
     }
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void CanCreateVectorFieldFromNumericalInMapReducePart()
+    public void CanCreateVectorFieldFromNumericalInMapReducePart() => CanCreateVectorFieldFromNumericalInMapReducePartBase<MapReduceNumerical>();
+
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void CanCreateVectorFieldFromNumericalInMapReducePartJs() => CanCreateVectorFieldFromNumericalInMapReducePartBase<MapReduceNumericalJs>();
+    
+    private void CanCreateVectorFieldFromNumericalInMapReducePartBase<TIndex>()
+        where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStoreWithDocuments(out var ids);
-        new MapReduceNumerical().Execute(store);
+        new TIndex().Execute(store);
         Indexes.WaitForIndexing(store);
         var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
         Assert.Null(errors);
         
         using var session = store.OpenSession();
-        var results = session.Query<Result, MapReduceNumerical>()
+        var results = session.Query<Result, TIndex>()
             .VectorSearch(f => f.WithField(s => s.Vector),
                 v => v.ByEmbedding([-0.1f, -0.2f]))
             .ToList();
@@ -84,6 +96,27 @@ public class RavenDB_23509 : RavenTestBase
         public object Vector { get; set; }
     }
 
+    private class MapReduceTextualJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MapReduceTextualJs()
+        {
+            Maps = [$@"map('Dtos', function (dto) {{
+                return {{
+                    Id: id(dto),
+                    Vector: dto.Text
+                }};
+            }})"];
+            
+            Reduce = @"groupBy(x => ({ Id: x.Id }))
+.aggregate(g => { 
+    return {
+        Id: g.key.Id,
+        Vector: createVector(g.values.map(x => x.Vector))
+    };
+})";
+        }
+    }
+    
     private class MapReduceTextual : AbstractIndexCreationTask<Dto, Result>
     {
         public MapReduceTextual()
@@ -114,6 +147,34 @@ public class RavenDB_23509 : RavenTestBase
                     Id = g.Key, Vector = CreateVector(g.Select(x => (float[])x.Vector).ToArray()) 
                 };
             Vector(p => p.Vector, f => f.SourceEmbedding(VectorEmbeddingType.Single).DestinationEmbedding(VectorEmbeddingType.Int8));
+        }
+    }
+    
+    private class MapReduceNumericalJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MapReduceNumericalJs()
+        {
+            Maps = [$@"map('Dtos', function (dto) {{
+                return {{
+                    Id: id(dto),
+                    Vector: dto.VectorSingles
+                }};
+            }})"];
+            
+            Reduce = @"groupBy(x => ({ Id: x.Id }))
+.aggregate(g => { 
+    return {
+        Id: g.key.Id,
+        Vector: createVector(g.values.map(x => x.Vector))
+    };
+})";
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions(){Vector = new()
+            {
+                SourceEmbeddingType = VectorEmbeddingType.Single,
+                DestinationEmbeddingType = VectorEmbeddingType.Int8
+            }});
         }
     }
 }

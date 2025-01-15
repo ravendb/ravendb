@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -50,39 +51,54 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
     }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndTextualValues()
+    public void CannotMixVectorAndTextualValues() => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedField>();
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void CannotMixVectorAndTextualValuesJs() => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedFieldJs>();
+    
+    private void CannotMixVectorAndTextualValuesBase<TIndex>()
+    where  TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc("test", [.1f, .2f], null, null, 0f, 0f));
         session.SaveChanges();
-        new TextualWithVectorMixedField().Execute(store);
+        new TIndex().Execute(store);
         var errors = Indexes.WaitForIndexingErrors(store);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index textual value instead", errors[0].Errors[0].Error);
     }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndNumericalValues()
+    public void CannotMixVectorAndNumericalValues() => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedField>();
+    public void CannotMixVectorAndNumericalValuesJs() => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedFieldJs>();
+    private void CannotMixVectorAndNumericalValuesBase<TIndex>()
+    where  TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(null, [.1f, .2f], [2, -3], null, 0f, 0f));
         session.SaveChanges();
-        new NumericalWithVectorMixedField().Execute(store);
+        new TIndex().Execute(store);
         var errors = Indexes.WaitForIndexingErrors(store);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index numerical value instead", errors[0].Errors[0].Error);
     }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndSpatialValues()
+    public void CannotMixVectorAndSpatialValues() => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedField>();
+
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void CannotMixVectorAndSpatialValuesJs() => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedFieldJs>();
+    
+    private void CannotMixVectorAndSpatialValuesBase<TIndex>()
+    where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(null, null, [2, -3], null, 0f, 0f));
         session.SaveChanges();
-        new SpatialWithVectorMixedField().Execute(store);
+        new TIndex().Execute(store);
         var errors = Indexes.WaitForIndexingErrors(store);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index spatial value instead", errors[0].Errors[0].Error);
@@ -100,6 +116,24 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
             Vector("Vector", factory => factory.SourceEmbedding(VectorEmbeddingType.Single).DestinationEmbedding(VectorEmbeddingType.Single));
         }
     }
+    
+    private class TextualWithVectorMixedFieldJs : AbstractJavaScriptIndexCreationTask
+    {
+        public TextualWithVectorMixedFieldJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('AutoVecDocs', function (doc) {{
+                return {{
+                    Vector: doc.Text == null ? createVector(doc.Singles) : doc.Text
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions { Vector = new VectorOptions() { SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single } });
+        }
+    }
 
     private class NumericalWithVectorMixedField : AbstractIndexCreationTask<AutoVecDoc>
     {
@@ -111,6 +145,24 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
             Vector("Vector", factory => factory.SourceEmbedding(VectorEmbeddingType.Single).DestinationEmbedding(VectorEmbeddingType.Single));
         }
     }
+    
+    private class NumericalWithVectorMixedFieldJs : AbstractJavaScriptIndexCreationTask
+    {
+        public NumericalWithVectorMixedFieldJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('AutoVecDocs', function (dto) {{
+                return {{
+                    Vector: dto.Int8 ?? createVector(dto.Singles)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions { Vector = new VectorOptions() { SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single } });
+        }
+    }
 
     private class SpatialWithVectorMixedField : AbstractIndexCreationTask<AutoVecDoc>
     {
@@ -120,6 +172,23 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
                 select new { Vector = doc.Singles == null ? CreateSpatialField(doc.lat, doc.lon) : CreateVector(doc.Singles) };
 
             Vector("Vector", factory => factory.SourceEmbedding(VectorEmbeddingType.Single).DestinationEmbedding(VectorEmbeddingType.Single));
+        }
+    }
+    
+    private class SpatialWithVectorMixedFieldJs : AbstractJavaScriptIndexCreationTask
+    {
+        public SpatialWithVectorMixedFieldJs()
+        {
+            Maps = new HashSet<string>()
+            { $@"map('AutoVecDocs', function (doc) {{
+                return {{
+                    Vector: doc.Singles == null ? createSpatialField(doc.lat, doc.lon) : createVector(doc.Singles)
+                }};
+            }})"
+            };
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions { Vector = new VectorOptions() { SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single } });
         }
     }
 }
