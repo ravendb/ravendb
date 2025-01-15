@@ -71,6 +71,7 @@ class icomoonHelpers {
         "corax-backward": 0xf14F,
         "corax-sort-az": 0xf150,
         "corax-sort-za": 0xf151,
+        "vector-search": 0xf154,
         "close": 0xf162,
     } as const;
     

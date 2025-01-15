@@ -91,6 +91,8 @@ class executionInfo {
             return "corax-unary-match";
         } else if (operationName.startsWith("PhraseMatch")) {
             return "corax-phrase-query";
+        } else if (operationName.startsWith("VectorSearchMatch")) {
+            return "vector-search";
         } else {
             return "corax-fallback"; 
         }
