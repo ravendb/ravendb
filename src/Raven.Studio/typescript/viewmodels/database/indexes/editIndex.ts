@@ -356,7 +356,8 @@ class editIndex extends shardViewModelBase {
         this.fetchDatabaseSettings();
         
         return $.when<any>(super.canActivate(indexToEditName))
-            .then(() => {
+            .then(async () => {
+                await this.fetchDatabaseSettings();
                 const db = this.db;
 
                 if (indexToEditName) {

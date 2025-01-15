@@ -613,7 +613,7 @@ class indexFieldOptions {
                           databaseIndexConfiguration?: databaseIndexConfigurationType) {
         const defaultDto: Raven.Client.Documents.Indexes.IndexFieldOptions = {
             Storage: null,
-            Indexing: null,
+            Indexing: "Default",
             Analyzer: null,
             Suggestions: null,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
