@@ -14,7 +14,11 @@ export default function CellValue({ value, title, id, className }: CellValueProp
     }
 
     if (value === null) {
-        return <span id={id} className="cell-value value-null">null</span>;
+        return (
+            <span id={id} className="cell-value value-null">
+                null
+            </span>
+        );
     }
 
     if (typeof value === "object") {
@@ -50,6 +54,13 @@ export default function CellValue({ value, title, id, className }: CellValueProp
     );
 }
 
-export function CellValueWrapper({ getValue, ...props }: { getValue: Getter<unknown>, id?: string, className?: string }) {
+export function CellValueWrapper({
+    getValue,
+    ...props
+}: {
+    getValue: Getter<unknown>;
+    id?: string;
+    className?: string;
+}) {
     return <CellValue value={getValue()} {...props} />;
 }
