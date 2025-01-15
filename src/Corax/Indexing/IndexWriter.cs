@@ -94,7 +94,7 @@ namespace Corax.Indexing
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
-            _dynamicFieldsTerms = []; // avoids NRE in cases where the index does not contain a dynamic field
+            _dynamicFieldsTerms = new Dictionary<Slice, IndexedField>(SliceComparer.Instance); // avoids NRE in cases where the index does not contain a dynamic field
             
             var bufferSize = fieldsMapping!.Count;
             _knownFieldsTerms = new IndexedField[bufferSize];

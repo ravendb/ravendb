@@ -10,12 +10,10 @@ using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
-using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Utils;
 using Sparrow;
@@ -256,9 +254,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     }
 
                     var underlyingValue = valueJsv.IsString() ? valueJsv.AsString() : (object)valueJsv;
-                    var indexField = GetFieldObjectForProcessingVectorField(field.Name, indexingScope, underlyingValue);
+    
+                    var indexField = AbstractStaticIndexBase.RetrieveVectorField(field.Name, underlyingValue);
                     object objectForIndexing = AbstractStaticIndexBase.CreateVector(indexField, underlyingValue, isAutoIndex: false);
-
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
                     shouldProcessAsBlittable = false;
                     return;
@@ -268,6 +266,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
             shouldProcessAsBlittable = true;
         }
+
         
         void HandleCompoundFields()
         {
@@ -312,16 +311,6 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 _compoundFieldsBuffer = null;
             }
         }
-    }
-
-    private IndexField GetFieldObjectForProcessingVectorField(in string propertyAsString, CurrentIndexingScope indexingScope, object value)
-    {
-        if (_fields.TryGetValue(propertyAsString, out var field) == false || field.Vector == null)
-        {
-            field = _fields[propertyAsString] = AbstractStaticIndexBase.RetrieveVectorField(propertyAsString, value);
-        }
-
-        return field;
     }
     
     private IndexField GetFieldObjectForProcessing(in string propertyAsString, CurrentIndexingScope indexingScope, bool isVector = false)

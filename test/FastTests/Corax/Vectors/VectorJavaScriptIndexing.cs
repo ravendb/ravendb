@@ -92,7 +92,7 @@ public class VectorJavaScriptIndexing : RavenTestBase
 
         new VectorIndex(fieldName, src, dest).Execute(store);
         Indexes.WaitForIndexing(store);
-        var errors = Indexes.WaitForIndexingErrors(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
         Assert.Null(errors);
         
         //WaitForUserToContinueTheTest(store);
