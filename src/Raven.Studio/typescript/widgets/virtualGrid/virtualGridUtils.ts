@@ -19,7 +19,7 @@ function deselect() {
 
 function widthToPixels(column: virtualColumn) {
     if (!column.width.endsWith("px")) {
-        throw new Error("Excepted column width in pixels (px)");
+        throw new Error("Expected column width in pixels (px)");
     }
     return parseInt(column.width.slice(0, -2));
 }

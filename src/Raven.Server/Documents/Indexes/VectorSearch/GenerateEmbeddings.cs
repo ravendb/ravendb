@@ -79,7 +79,7 @@ public static class GenerateEmbeddings
         var bytesRequired = (int)Math.Ceiling((base64.Length * 3) / 4.0); //this is approximation
         var memScope = allocator.Allocate(bytesRequired, out Memory<byte> mem);
         var result = Convert.TryFromBase64String(base64, mem.Span, out var bytesWritten);
-        PortableExceptions.ThrowIf<InvalidDataException>(result == false, $"Excepted array encoded with base64, however got: '{base64}'. {(isAutoIndex == false ? string.Empty : $"{Environment.NewLine}If you want to create an embedding from a text, please wrap the field name in the method 'embedding.text(FieldName)'.")}");
+        PortableExceptions.ThrowIf<InvalidDataException>(result == false, $"Expected array encoded with base64, however got: '{base64}'. {(isAutoIndex == false ? string.Empty : $"{Environment.NewLine}If you want to create an embedding from a text, please wrap the field name in the method 'embedding.text(FieldName)'.")}");
         return FromArray(allocator, memScope, mem, options, bytesWritten);
     }
 
