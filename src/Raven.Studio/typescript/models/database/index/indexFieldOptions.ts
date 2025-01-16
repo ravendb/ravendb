@@ -467,7 +467,7 @@ class indexFieldOptions {
         
         if (thisIndexing === "Exact" || (!thisIndexing && parentIndexing === "Exact")) {
             if ((localAnalyzerConfiguration || hasDatabaseDefaultChanged) && isAnalyzerNameInDictionary) {
-                this.analyzer(defaultFieldAnalyzer);
+                this.analyzer(null);
                 placeHolder = defaultFieldAnalyzer;
                 this.disabledAnalyzerText(`${defaultFieldAnalyzer} is used when selecting Indexing.Exact. ` + helpMsg);
             } else {
@@ -480,7 +480,7 @@ class indexFieldOptions {
         if (thisIndexing === "Default" || (!thisIndexing && (parentIndexing === "Default" || !parentIndexing))) {
             if ((localAnalyzerConfiguration || hasDatabaseDefaultChanged) && isAnalyzerNameInDictionary) {
                 placeHolder = defaultFieldAnalyzer;
-                this.analyzer(defaultFieldAnalyzer);
+                this.analyzer(null);
                 this.disabledAnalyzerText(`${defaultFieldAnalyzer} is used when selecting Indexing.Default. ` + helpMsg);
             } else {
                 this.analyzer(null);
@@ -495,7 +495,7 @@ class indexFieldOptions {
 
         if (!thisIndexing && parentIndexing === "Search") {
             if ((localAnalyzerConfiguration || hasDatabaseDefaultChanged) && isAnalyzerNameInDictionary) {
-                this.analyzer(defaultFieldAnalyzer);
+                this.analyzer(null);
                 placeHolder = defaultFieldAnalyzer;
             } else {
                 this.analyzer(null);
@@ -505,7 +505,7 @@ class indexFieldOptions {
 
         if (thisIndexing === "Search") {
             if ((localAnalyzerConfiguration || hasDatabaseDefaultChanged) && isAnalyzerNameInDictionary) {
-                this.analyzer(defaultFieldAnalyzer);
+                this.analyzer(null);
                 placeHolder = defaultFieldAnalyzer;
             } else {
                 placeHolder = "Raven Standard Analyzer";
