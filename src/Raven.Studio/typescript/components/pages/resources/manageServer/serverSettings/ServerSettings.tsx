@@ -15,7 +15,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import { ServerSettingsColumns } from "components/pages/resources/manageServer/serverSettings/useServerSettingsColumns";
 
-export function ServerSettings() {
+export default function ServerSettings() {
     const asyncFetchServerSettings = useFetchServerSettings();
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 

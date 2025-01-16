@@ -1,7 +1,6 @@
 import { Meta, StoryObj } from "@storybook/react";
-import React from "react";
 import { securityClearanceArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { ServerSettings } from "./ServerSettings";
+import ServerSettings from "./ServerSettings";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
