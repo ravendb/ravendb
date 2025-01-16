@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
                 {
-                    if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false)
+                    if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
                     {
                         MismatchedReferencesWarningHandler ??= new MismatchedReferencesWarningHandler();
 
