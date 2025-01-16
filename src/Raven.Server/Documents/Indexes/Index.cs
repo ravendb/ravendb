@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Indexes
         private string _lastPendingStatus;
         public MultipleUseFlag ForceReplace = new MultipleUseFlag();
 
-        protected readonly bool HandleAllDocs;
+        protected bool HandleAllDocs;
 
         protected internal MeterMetric MapsPerSec;
         protected internal MeterMetric ReducesPerSec;

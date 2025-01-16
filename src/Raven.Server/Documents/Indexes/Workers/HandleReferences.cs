@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence;
@@ -475,6 +476,19 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected virtual IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
+            if (referencedCollection.Name == Constants.Documents.Collections.AllDocumentsCollection)
+            {
+                return _documentsStorage
+                    .GetDocumentsFrom(queryContext.Documents, lastEtag + 1, 0, pageSize, DocumentFields.Id)
+                    .Select(document =>
+                    {
+                        _reference.Key = document.Id;
+                        _reference.Etag = document.Etag;
+
+                        return _reference;
+                    });
+            }
+
             return _documentsStorage
                 .GetDocumentsFrom(queryContext.Documents, referencedCollection.Name, lastEtag + 1, 0, pageSize, DocumentFields.Id)
                 .Select(document =>
@@ -488,6 +502,19 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected virtual IEnumerable<Reference> GetTombstoneReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
+            if (referencedCollection.Name == Constants.Documents.Collections.AllDocumentsCollection)
+            {
+                return _documentsStorage
+                    .GetTombstonesFrom(queryContext.Documents, lastEtag + 1, 0, pageSize)
+                    .Select(tombstone =>
+                    {
+                        _reference.Key = tombstone.LowerId;
+                        _reference.Etag = tombstone.Etag;
+
+                        return _reference;
+                    });
+            }
+
             return _documentsStorage
                 .GetTombstonesFrom(queryContext.Documents, referencedCollection.Name, lastEtag + 1, 0, pageSize)
                 .Select(tombstone =>
