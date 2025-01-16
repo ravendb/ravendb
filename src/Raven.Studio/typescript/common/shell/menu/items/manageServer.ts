@@ -230,7 +230,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/storageReport',
-            moduleId: require('viewmodels/manage/storageReport'),
+            moduleId: require('viewmodels/manage/storageReport').storageReport,
             title: 'Storage Report',
             tooltip: "Storage Report",
             nav: true,

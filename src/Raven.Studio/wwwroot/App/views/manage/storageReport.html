@@ -7,7 +7,7 @@
 
     <div class="current-path">
         <span data-bind="foreach: currentPath">
-            <a href="#" data-bind="click: _.partial($root.onClick, $data, false), attr: { class: type }">
+            <a href="#" data-bind="click: _.partial($root.onClick, null, $data, false), attr: { class: type }">
                 <small data-bind="text: type"></small>
                 <span data-bind="text: name"></span>
             </a>
@@ -31,7 +31,7 @@
                 <td data-bind="text: _.upperFirst(type)"></td>
                 <td class="position-relative">
                     <div class="table-items">
-                        <a href="#" class="table-item-name text-elipsis" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren(), attr: { title: name }"></a>
+                        <a href="#" class="table-item-name text-elipsis" data-bind="text: name, click: _.partial($root.onClick, null, $data, true), visible: hasChildren(), attr: { title: name }"></a>
                         <span href="#" class="table-item-name text-elipsis" data-bind="text: name, visible: !hasChildren(), attr: { title: name }"></span>
                         <span data-bind="visible: recyclableJournal"><small data-toggle="tooltip" title="Stored in Journals directory"><i class="icon-info text-info"></i></small></span>
                     </div>

@@ -35,7 +35,8 @@
         "@testing-library/react": "^16.0.0",
         "@types/ace": "^0.0.52",
         "@types/bootstrap": "3.3.33",
-        "@types/d3": "3.5.34",
+        "@types/d3": "^3.5.34",
+        "@types/d3v7": "npm:@types/d3@^7.4.3",
         "@types/diff": "^5.2.1",
         "@types/durandal": "^2.1.45",
         "@types/google.analytics": "^0.0.46",
@@ -120,6 +121,7 @@
         "bootstrap-select": "^1.13.18",
         "classnames": "^2.5.1",
         "cronstrue": "^2.50.0",
+        "d3": "^7.9.0",
         "diff": "^5.2.0",
         "draggabilly": "^3.0.0",
         "durandal": "^2.2.0",
@@ -162,7 +164,6 @@
         "style-loader": "^4.0.0",
         "toastr": "^2.1.4",
         "util": "^0.12.5",
-        "webcola": "^3.4.0",
         "yup": "^1.4.0"
     }
 }
