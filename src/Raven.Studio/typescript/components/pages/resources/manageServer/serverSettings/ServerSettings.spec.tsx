@@ -9,16 +9,16 @@ describe("ServerSettings", () => {
     it(`user have access to server settings and can see the view when clearance is ClusterAdmin or above`, async () => {
         const { screen } = await rtlRender_WithWaitForLoad(<ServerSettingsStory securityClearance="ClusterAdmin" />);
 
-        const serverSettingsElements = await screen.findAllByText("Server Settings");
-        expect(serverSettingsElements).toHaveLength(2);
+        const serverSettingsHeadingText = await screen.findByRole("heading", { name: /Server Settings/ });
+        expect(serverSettingsHeadingText).toBeInTheDocument();
     });
 
     it(`user doesn't have access to server settings and can see insufficient access when clearance is below ClusterAdmin`, async () => {
         const { screen } = rtlRender(<ServerSettingsStory securityClearance="ValidUser" />);
 
-        const ServerSettingsView = screen.queryByText("Server Settings");
-        const insufficientAccessView = await screen.findByText("You are not authorized to view this page");
-        expect(ServerSettingsView).not.toBeInTheDocument();
-        expect(insufficientAccessView).toBeInTheDocument();
+        const serverSettingsHeadingText = screen.queryByText("Server Settings");
+        const insufficientAccessText = await screen.findByText("You are not authorized to view this page");
+        expect(serverSettingsHeadingText).not.toBeInTheDocument();
+        expect(insufficientAccessText).toBeInTheDocument();
     });
 });

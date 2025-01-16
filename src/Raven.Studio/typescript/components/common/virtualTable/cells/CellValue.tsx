@@ -57,10 +57,6 @@ export default function CellValue({ value, title, id, className }: CellValueProp
 export function CellValueWrapper({
     getValue,
     ...props
-}: {
-    getValue: Getter<unknown>;
-    id?: string;
-    className?: string;
-}) {
+}: { getValue: Getter<unknown> } & Omit<CellValueProps, "value">) {
     return <CellValue value={getValue()} {...props} />;
 }

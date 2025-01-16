@@ -5,7 +5,7 @@ import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
 import genUtils from "common/generalUtils";
 import { configurationOrigin } from "models/database/settings/databaseSettingsModels";
-import { CellWithDescription, CellWithDescriptionProps } from "components/common/virtualTable/cells/CellWithCopy";
+import { CellWithDescription, CellWithDescriptionProps, } from "components/common/virtualTable/cells/CellWithDescription";
 
 export interface ServerSettingsColumns {
     configurationKey: string;
@@ -95,7 +95,7 @@ function CellOriginValueWrapper({
             <Icon icon={conditionalIconName} />
             <CellValueWrapper
                 getValue={getValue}
-                showActionsMenu={false}
+                isActionsMenuVisible={false}
                 description={titleValueField[getValue()]}
                 {...props}
             />

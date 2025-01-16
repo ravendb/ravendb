@@ -8,7 +8,7 @@ import {
 import { AsyncStateStatus } from "react-async-hook";
 import { LoadError } from "components/common/LoadError";
 
-interface ServerSettingsVirtualGridProps {
+interface ServerSettingsVirtualTableProps {
     height: number;
     width: number;
     data: ServerSettingsColumns[];
@@ -24,7 +24,7 @@ export function ServerSettingsVirtualTable({
     reload,
     width,
     status,
-}: ServerSettingsVirtualGridProps) {
+}: ServerSettingsVirtualTableProps) {
     const serverSettingsColumns = useServerSettingsColumns(width);
 
     const serverSettingsTable = useReactTable({
@@ -45,7 +45,7 @@ export function ServerSettingsVirtualTable({
     });
 
     if (status === "error") {
-        return <LoadError error="Error during loading server settings" refresh={() => reload()} />;
+        return <LoadError error="Error during loading server settings" refresh={reload} />;
     }
 
     return <VirtualTable className="mt-4" isLoading={isLoading} heightInPx={height} table={serverSettingsTable} />;
