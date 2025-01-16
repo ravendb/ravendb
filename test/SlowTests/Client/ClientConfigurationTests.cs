@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Configuration;
@@ -121,6 +122,75 @@ namespace SlowTests.Client
                 Assert.Equal(ReadBalanceBehavior.None, store.Conventions.ReadBalanceBehavior);
                 Assert.Equal(ReadBalanceBehavior.RoundRobin, requestExecutor.Conventions.ReadBalanceBehavior);
             }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ShouldSwitchToTestPhase_OnClientConfigurationChange_WithReadBalanceBehavior_FastestNode(Options options, bool isServerWide)
+        {
+            const int numberOfNodes = 3;
+
+            var (_, leader) = await CreateRaftCluster(numberOfNodes, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = numberOfNodes, ModifyDocumentStore = documentStore => { documentStore.Conventions.ReadBalanceBehavior = ReadBalanceBehavior.None; }}))
+            {
+                var requestExecutor = store.GetRequestExecutor();
+
+                // Check if we are not in speed test phase and read balance behavior is not fastest node
+                var isNotReadBalanceBehaviorFastestNode = await WaitForValueAsync(async () =>
+                {
+                    using var session = store.OpenAsyncSession();
+                    await session.LoadAsync<dynamic>("users/1");
+                    return requestExecutor.Conventions.ReadBalanceBehavior != ReadBalanceBehavior.FastestNode;
+                }, expectedVal: true,
+                    interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
+                    timeout: (int)TimeSpan.FromSeconds(5).TotalMilliseconds);
+
+                Assert.True(isNotReadBalanceBehaviorFastestNode, "ReadBalanceBehavior should not be FastestNode, but it is");
+                Assert.False(requestExecutor._nodeSelector.InSpeedTestPhase, "InSpeedTestPhase should be `false`, but it is `true`");
+                Assert.False(requestExecutor.ForTestingPurposesOnly().HasUpdateFastestNodeTimer, "HasUpdateFastestNodeTimer should be `false`, but it is `true`");
+
+                var configuration = new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.FastestNode, Disabled = false };
+
+                if (isServerWide)
+                    await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(configuration));
+                else
+                    await store.Maintenance.SendAsync(new PutClientConfigurationOperation(configuration));
+
+                // Now we should be in speed test phase and read balance behavior should be `FastestNode`
+                var isReadBalanceBehaviorFastestNode = await WaitForValueAsync(async () =>
+                    {
+                        using var session = store.OpenAsyncSession();
+                        await session.LoadAsync<dynamic>("users/1");
+                        return requestExecutor.Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode;
+                    }, expectedVal: true,
+                    interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
+                    timeout: (int)TimeSpan.FromSeconds(5).TotalMilliseconds);
+
+                Assert.True(isReadBalanceBehaviorFastestNode, "ReadBalanceBehavior should be FastestNode, but it is not");
+                Assert.True(requestExecutor._nodeSelector.InSpeedTestPhase, "InSpeedTestPhase should be `true`, but it is `false`");
+                Assert.True(requestExecutor.ForTestingPurposesOnly().HasUpdateFastestNodeTimer, "HasUpdateFastestNodeTimer should be `true`, but it is `false`");
+
+                if (isServerWide)
+                    await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(new ClientConfiguration { Disabled = true }));
+                else
+                    await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration { Disabled = true }));
+
+
+                // Now we should not be in speed test phase and read balance behavior should be `None`
+                isNotReadBalanceBehaviorFastestNode = await WaitForValueAsync(async () =>
+                {
+                    using var session = store.OpenAsyncSession();
+                    await session.LoadAsync<dynamic>("users/1");
+                    return requestExecutor.Conventions.ReadBalanceBehavior == ReadBalanceBehavior.None;
+                }, expectedVal: true,
+                    interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
+                    timeout: (int)TimeSpan.FromSeconds(5).TotalMilliseconds);
+
+                Assert.True(isNotReadBalanceBehaviorFastestNode, "ReadBalanceBehavior should not be FastestNode, but it is");
+                Assert.False(requestExecutor._nodeSelector.InSpeedTestPhase, "InSpeedTestPhase should be `false`, but it is `true`");
+                Assert.False(requestExecutor.ForTestingPurposesOnly().HasUpdateFastestNodeTimer, "HasUpdateFastestNodeTimer should be `false`, but it is `true`");
+            };
         }
 
         [Fact]

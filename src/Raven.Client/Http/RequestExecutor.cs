@@ -319,6 +319,14 @@ namespace Raven.Client.Http
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
 
             UpdateConnectionLimit(initialUrls);
+
+            ClientConfigurationChanged += (_, args) =>
+            {
+                if (args.Configuration.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                    _nodeSelector?.ScheduleSpeedTest();
+                else
+                    _nodeSelector?.DisableFastestNodeReadBalance();
+            };
         }
 
         ~RequestExecutor()
@@ -2289,8 +2297,12 @@ namespace Raven.Client.Http
             }
 
             internal int[] NodeSelectorFailures => _requestExecutor._nodeSelector.NodeSelectorFailures;
+
             internal ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> FailedNodesTimers => _requestExecutor._failedNodesTimers;
+
             internal (int Index, ServerNode Node) PreferredNode => _requestExecutor._nodeSelector.GetPreferredNode();
+
+            internal bool HasUpdateFastestNodeTimer => _requestExecutor._nodeSelector._updateFastestNodeTimer != null;
 
             public Action<Task> ExecuteOnAllToFigureOutTheFastestOnTaskCompletion;
 
