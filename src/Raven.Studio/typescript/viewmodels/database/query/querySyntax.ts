@@ -82,7 +82,7 @@ select {
     OrderedAt: i.OrderedAt
 }`,
             html:
-`<span class="token keyword">from index</span> <span class="token string">'Orders/Totals'</span> <span class="token keyword">as</span> i
+`<span class="token keyword">from index</span> <span class="token string">&quot;Orders/Totals&quot;</span> <span class="token keyword">as</span> i
 <span class="token keyword">where</span> i.Total <span class="token operator">></span> <span class="token number">10000</span>
 <span class="token keyword">load</span> i.Company <span class="token keyword">as</span> c
 <span class="token keyword">select</span> <span class="token punctuation">{</span>
@@ -90,6 +90,16 @@ select {
     Region: c.Address.Region,
     OrderedAt: i.OrderedAt
 <span class="token punctuation">}</span>`
+        },
+        {
+            title: "Vector search",
+            text:
+`from Products
+where vector.search(embedding.text(Name), "italian", 0.8)`,
+            html:
+`<span class="token keyword">from</span> <span class="token string">Products</span>
+// Search for Products with a 'Name' that is semantically close to "italian".
+<span class="token keyword">where vector.search</span><span class="token punctuation">(</span>embedding.text<span class="token punctuation">(</span>Name<span class="token punctuation">)</span>, <span class="token string">&quot;italian&quot;</span>, <span class="token number">0.8</span><span class="token punctuation">)</span>`
         }
     ];
 }
