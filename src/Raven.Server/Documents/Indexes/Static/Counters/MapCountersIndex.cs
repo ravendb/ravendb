@@ -260,14 +260,14 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             progressStats.TotalNumberOfItems += totalNumberOfItems;
         }
 
-        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
             if (tombstoneType == ITombstoneAware.TombstoneType.Documents)
             {
                 using (CurrentlyInUse())
                 {
                     return StaticIndexHelper.GetLastProcessedDocumentTombstonesPerCollection(
-                        this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
+                        this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage, lastProcessedTombstonesInfo);
                 }
             }
 
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             {
                 using (CurrentlyInUse())
                 {
-                    return StaticIndexHelper.GetLastProcessedEtagsPerCollection(this, Collections, _indexStorage);
+                    return StaticIndexHelper.GetLastProcessedEtagsPerCollection(this, Collections, _indexStorage, lastProcessedTombstonesInfo);
                 }
             }
 

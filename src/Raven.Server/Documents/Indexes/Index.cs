@@ -4164,7 +4164,7 @@ namespace Raven.Server.Documents.Indexes
 
         public string BlockingSourceName => TombstoneCleanerIdentifier;
 
-        public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
                 return null;
@@ -4175,7 +4175,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     using (var tx = context.OpenReadTransaction())
                     {
-                        return GetLastProcessedDocumentTombstonesPerCollection(tx);
+                        return GetLastProcessedDocumentTombstonesPerCollection(tx, lastProcessedTombstonesInfo);
                     }
                 }
             }
@@ -4194,12 +4194,14 @@ namespace Raven.Server.Documents.Indexes
             return dict;
         }
 
-        internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
+        internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
             var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             foreach (var collection in Collections)
             {
-                etags[collection] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
+                var lastEtag = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
+                etags[collection] = lastEtag;
+                lastProcessedTombstonesInfo?.Add($"{Name}/{collection}", new LastTombstoneInfo(Name, collection, lastEtag, ITombstoneAware.TombstoneDeletionBlockerType.Index));
             }
 
             return etags;

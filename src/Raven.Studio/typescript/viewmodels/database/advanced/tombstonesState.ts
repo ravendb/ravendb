@@ -4,7 +4,8 @@ import appUrl = require("common/appUrl");
 import getTombstonesStateCommand = require("commands/database/debug/getTombstonesStateCommand");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import SubscriptionInfo = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfo;
+import subscriptionInfoExtended = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfoExtended;
+import tombstoneTypes = Raven.Server.Documents.TombstoneCleaner.TombstonesState.TombstoneTypes;
 import forceTombstonesCleanup = require("commands/database/debug/forceTombstonesCleanupCommand");
 
 class tombstonesState extends viewModelBase {
@@ -12,7 +13,7 @@ class tombstonesState extends viewModelBase {
     view = require("views/database/advanced/tombstonesState.html");
 
     private collectionsStateController = ko.observable<virtualGridController<TombstoneItem>>();
-    private subscriptionsStateController = ko.observable<virtualGridController<SubscriptionInfo>>();
+    private subscriptionsStateController = ko.observable<virtualGridController<subscriptionInfoExtended>>();
     
     isForbidden = ko.observable<boolean>(false);
     
@@ -84,19 +85,28 @@ class tombstonesState extends viewModelBase {
 
         subscriptionsGrid.init(() => this.subscriptionsFetcher(), () => {
             return [
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Identifier, "Process", "30%", {
+                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.Process, "Process", "15%", {
                     sortable: "string"
                 }),
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Type, "Type", "20%", {
+                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.Identifier, "Name", "15%", {
                     sortable: "string"
                 }),
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Collection, "Collection", "25%", {
+                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.NumberOfTombstoneLeft, "Number of tombstones left", "10%", {
+                    sortable: "number"
+                }),
+                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => this.formatTombstoneTypes(x.Types), "Tombstone Types", "25%", {
                     sortable: "string"
                 }),
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => this.formatEtag(x.Etag), "Etag", "25%", {
-                    sortable: "string", title: (x) => this.getEtagTitle(x.Etag)
+                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.Collection, "Collection", "10%", {
+                    sortable: "string"
                 }),
-            ]
+                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => this.formatEtag(x.Etag), "Etag", "10%", {
+                    sortable: "number", title: (x) => this.getEtagTitle(x.Etag)
+                }),
+                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.CleanupStatus, "CleanupStatus", "15%", {
+                    sortable: "string"
+                }),
+            ];
         });
     }
 
@@ -109,8 +119,8 @@ class tombstonesState extends viewModelBase {
             });
     }
 
-    private subscriptionsFetcher(): JQueryPromise<pagedResult<SubscriptionInfo>> {
-        const info = this.state().PerSubscriptionInfo;
+    private subscriptionsFetcher(): JQueryPromise<pagedResult<subscriptionInfoExtended>> {
+        const info = this.state().PerSubscriptionInfoExtended;
         return $.Deferred<pagedResult<any>>()
             .resolve({
                 items: info,
@@ -182,6 +192,14 @@ class tombstonesState extends viewModelBase {
         }
         
         return "Can remove any tombstone";
+    }
+
+    private formatTombstoneTypes(types: tombstoneTypes) {
+        if (!types) {
+            return '';
+        }
+
+        return `Documents: ${types.Documents}, TimeSeries: ${types.TimeSeries}, Counters: ${types.Counters}`;
     }
 }
 

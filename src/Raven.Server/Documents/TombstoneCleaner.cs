@@ -4,13 +4,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IdentityModel.Tokens;
 using Raven.Client;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -218,7 +219,11 @@ namespace Raven.Server.Documents
                 {
                     foreach (var tombstoneType in _tombstoneTypes)
                     {
-                        var subscriptionTombstones = subscription.GetLastProcessedTombstonesPerCollection(tombstoneType);
+                        Dictionary<string, LastTombstoneInfo> lastTombstoneInfo = null;
+                        if (addInfoForDebug)
+                            lastTombstoneInfo = new Dictionary<string, LastTombstoneInfo>();
+
+                        var subscriptionTombstones = subscription.GetLastProcessedTombstonesPerCollection(tombstoneType, lastTombstoneInfo);
                         if (subscriptionTombstones == null)
                             continue;
 
@@ -254,6 +259,9 @@ namespace Raven.Server.Documents
                                 state.Etag = tombstone.Value;
                             }
                         }
+
+                        if (addInfoForDebug)
+                            result.AddPerSubscriptionInfoExtended(subscription, lastTombstoneInfo, tombstoneType, _documentDatabase);
                     }
                 }
 
@@ -350,16 +358,97 @@ namespace Raven.Server.Documents
 
             public List<SubscriptionInfo> PerSubscriptionInfo;
 
+            public readonly Dictionary<string, SubscriptionInfoExtended> PerSubscriptionInfoExtended = new(StringComparer.OrdinalIgnoreCase);
+
             public void AddPerSubscriptionInfo(string identifier, ITombstoneAware.TombstoneType type, string collection, long etag)
             {
                 PerSubscriptionInfo ??= new List<SubscriptionInfo>();
-                PerSubscriptionInfo.Add(new SubscriptionInfo
+                PerSubscriptionInfo.Add(new SubscriptionInfo { Identifier = identifier, Type = type, Collection = collection, Etag = etag });
+
+            }
+
+            internal void AddPerSubscriptionInfoExtended(ITombstoneAware subscription, Dictionary<string, LastTombstoneInfo> lastTombstoneInfo, ITombstoneAware.TombstoneType type,
+                DocumentDatabase documentDatabase)
+            {
+                foreach (var tombstoneInfo in lastTombstoneInfo)
                 {
-                    Identifier = identifier,
-                    Type = type,
-                    Collection = collection,
-                    Etag = etag
-                });
+                    var collection = tombstoneInfo.Value.Collection;
+
+                    if (tombstoneInfo.Value.Collection == Constants.TimeSeries.All ||
+                        tombstoneInfo.Value.Collection == Constants.Documents.Collections.AllDocumentsCollection ||
+                        tombstoneInfo.Value.Collection == Constants.Counters.All)
+                    {
+                        collection = string.Empty;
+                    }
+
+                    long numberOfTombstonesLeft = CalculateRemainingTombstones(tombstoneInfo.Value, type, documentDatabase, collection);
+
+                    var key = $"{subscription.TombstoneCleanerIdentifier}/{tombstoneInfo.Value.Name}/{collection}";
+
+                    if (PerSubscriptionInfoExtended.TryGetValue(key, out SubscriptionInfoExtended existingSubscriptionInfo))
+                    {
+                        UpdateSubscriptionInfo(existingSubscriptionInfo, type, numberOfTombstonesLeft);
+                    }
+                    else
+                    {
+                        var newSubscriptionInfo = CreateSubscriptionInfo(subscription, type, tombstoneInfo.Value, collection, numberOfTombstonesLeft);
+                        PerSubscriptionInfoExtended[key] = newSubscriptionInfo;
+                    }
+                }
+            }
+
+            private long CalculateRemainingTombstones(LastTombstoneInfo tombstoneInfo, ITombstoneAware.TombstoneType type, DocumentDatabase documentDatabase,
+                string collection)
+            {
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    return type switch
+                    {
+                        ITombstoneAware.TombstoneType.Documents => collection.IsNullOrEmpty()
+                            ? documentDatabase.DocumentsStorage.GetTombstonesFrom(context, tombstoneInfo.Etag + 1, 0, long.MaxValue).Count()
+                            : documentDatabase.DocumentsStorage.GetTombstonesFrom(context, collection, tombstoneInfo.Etag + 1, 0, long.MaxValue).Count(),
+                        ITombstoneAware.TombstoneType.Counters => collection.IsNullOrEmpty()
+                            ? documentDatabase.DocumentsStorage.CountersStorage.GetCounterTombstonesFrom(context, tombstoneInfo.Etag + 1).Count()
+                            : documentDatabase.DocumentsStorage.CountersStorage.GetCounterWithCollectionTombstonesFrom(context, collection, tombstoneInfo.Etag + 1)
+                                .Count(),
+                        ITombstoneAware.TombstoneType.TimeSeries => collection.IsNullOrEmpty()
+                            ? documentDatabase.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, tombstoneInfo.Etag + 1).Count()
+                            : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, collection, tombstoneInfo.Etag + 1).Count(), 
+                        _ => throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported tombstone type: {type}"),
+                    };
+                }
+
+            }
+
+            private void UpdateSubscriptionInfo(SubscriptionInfoExtended subscriptionInfo, ITombstoneAware.TombstoneType type, long remainingTombstones)
+            {
+                SetTombstoneTypes(type, subscriptionInfo, remainingTombstones);
+                subscriptionInfo.NumberOfTombstoneLeft += remainingTombstones;
+                if (subscriptionInfo.CleanupStatus == CleanupStatus.NotBlocking)
+                {
+                    subscriptionInfo.CleanupStatus = subscriptionInfo.NumberOfTombstoneLeft > 0 ? CleanupStatus.Blocking : CleanupStatus.NotBlocking;
+                }
+            }
+
+            private void SetTombstoneTypes(ITombstoneAware.TombstoneType type, SubscriptionInfoExtended subscriptionInfo, long numberOfTombstoneLeft)
+            {
+                subscriptionInfo.Types ??= new TombstoneTypes();
+
+                switch (type)
+                {
+                    case ITombstoneAware.TombstoneType.Documents:
+                        subscriptionInfo.Types.Documents = numberOfTombstoneLeft;
+                        break;
+                    case ITombstoneAware.TombstoneType.TimeSeries:
+                        subscriptionInfo.Types.TimeSeries = numberOfTombstoneLeft;
+                        break;
+                    case ITombstoneAware.TombstoneType.Counters:
+                        subscriptionInfo.Types.Counters = numberOfTombstoneLeft;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported tombstone type: {type}");
+                }
             }
 
             public class SubscriptionInfo
@@ -371,6 +460,54 @@ namespace Raven.Server.Documents
                 public string Collection { get; set; }
 
                 public long Etag { get; set; }
+            }
+
+            public class SubscriptionInfoExtended : SubscriptionInfo
+            {
+                public ITombstoneAware.TombstoneDeletionBlockerType Process { get; set; }
+
+                public long NumberOfTombstoneLeft { get; set; }
+
+                public CleanupStatus CleanupStatus { get; set; }
+
+                public TombstoneTypes Types { get; set; }
+            }
+
+            public class TombstoneTypes : IDynamicJson
+            {
+                public long Documents;
+
+                public long TimeSeries;
+
+                public long Counters;
+
+                public DynamicJsonValue ToJson()
+                {
+                    return new DynamicJsonValue { [nameof(Documents)] = Documents, [nameof(TimeSeries)] = TimeSeries, [nameof(Counters)] = Counters };
+                }
+            }
+
+            private SubscriptionInfoExtended CreateSubscriptionInfo(ITombstoneAware subscription, ITombstoneAware.TombstoneType type, LastTombstoneInfo tombstoneInfo, string collection,
+                long remainingTombstones)
+            {
+                var newSubscriptionInfo = new SubscriptionInfoExtended
+                {
+                    Process = tombstoneInfo.Type,
+                    Identifier = tombstoneInfo.Name,
+                    Collection = collection,
+                    Etag = tombstoneInfo.Etag,
+                    NumberOfTombstoneLeft = remainingTombstones,
+                    CleanupStatus = remainingTombstones > 0 ? CleanupStatus.Blocking : CleanupStatus.NotBlocking,
+                    Types = new TombstoneTypes()
+                };
+                SetTombstoneTypes(type, newSubscriptionInfo, remainingTombstones);
+                return newSubscriptionInfo;
+            }
+
+            internal enum CleanupStatus
+            {
+                Blocking,
+                NotBlocking
             }
         }
 
@@ -512,7 +649,7 @@ namespace Raven.Server.Documents
     {
         string TombstoneCleanerIdentifier { get; }
 
-        Dictionary<string, long> GetLastProcessedTombstonesPerCollection(TombstoneType type);
+        Dictionary<string, long> GetLastProcessedTombstonesPerCollection(TombstoneType type, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null);
 
         Dictionary<TombstoneDeletionBlockageSource, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections);
 
@@ -537,5 +674,13 @@ namespace Raven.Server.Documents
             PullReplicationAsSink,
             Index
         }
+    }
+
+    public class LastTombstoneInfo(string name, string collection, long etag, ITombstoneAware.TombstoneDeletionBlockerType type)
+    {
+        public string Name { get; set; } = name;
+        public string Collection { get; set; } = collection;
+        public long Etag { get; set; } = etag;
+        public ITombstoneAware.TombstoneDeletionBlockerType Type { get; set; } = type;
     }
 }

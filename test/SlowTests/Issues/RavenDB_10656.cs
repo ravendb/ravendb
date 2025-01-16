@@ -136,7 +136,7 @@ namespace SlowTests.Issues
 
         public string TombstoneCleanerIdentifier => nameof(RavenDB_10656);
 
-        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
             return new Dictionary<string, long>
             {

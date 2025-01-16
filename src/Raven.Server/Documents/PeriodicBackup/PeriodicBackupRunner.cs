@@ -621,7 +621,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private long GetMinLastEtag()
+        private long GetMinLastEtag(Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null, string collection = null)
         {
             var min = long.MaxValue;
 
@@ -641,9 +641,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (status == null)
                     {
                         // if there is no status for this, we don't need to take into account tombstones
+                        lastProcessedTombstonesInfo?.Add($"{config.Name}/{collection}", new LastTombstoneInfo(config.Name, collection, 0, ITombstoneAware.TombstoneDeletionBlockerType.Backup));
                         return 0; // cannot delete the tombstones until we've done a full backup
                     }
                     var etag = ChangeVectorUtils.GetEtagById(status.LastDatabaseChangeVector, _database.DbBase64Id);
+                    lastProcessedTombstonesInfo?.Add($"{config.Name}/{collection}", new LastTombstoneInfo(config.Name, collection, etag, ITombstoneAware.TombstoneDeletionBlockerType.Backup));
                     min = Math.Min(etag, min);
                 }
 
@@ -999,28 +1001,22 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public string TombstoneCleanerIdentifier => "Periodic Backup";
 
-        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
-            var minLastEtag = GetMinLastEtag();
+            string collection = tombstoneType switch
+            {
+                ITombstoneAware.TombstoneType.Documents => Constants.Documents.Collections.AllDocumentsCollection,
+                ITombstoneAware.TombstoneType.TimeSeries => Constants.TimeSeries.All,
+                ITombstoneAware.TombstoneType.Counters => Constants.Counters.All,
+                _ => throw new NotSupportedException($"Tombstone type '{tombstoneType}' is not supported.")
+            };
+
+            var minLastEtag = GetMinLastEtag(lastProcessedTombstonesInfo, collection);
 
             if (minLastEtag == long.MaxValue)
                 return null;
 
-            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-            switch (tombstoneType)
-            {
-                case ITombstoneAware.TombstoneType.Documents:
-                    result.Add(Constants.Documents.Collections.AllDocumentsCollection, minLastEtag);
-                    break;
-                case ITombstoneAware.TombstoneType.TimeSeries:
-                    result.Add(Constants.TimeSeries.All, minLastEtag);
-                    break;
-                case ITombstoneAware.TombstoneType.Counters:
-                    result.Add(Constants.Counters.All, minLastEtag);
-                    break;
-                default:
-                    throw new NotSupportedException($"Tombstone type '{tombstoneType}' is not supported.");
-            }
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase) { { collection, minLastEtag } };
 
             return result;
         }

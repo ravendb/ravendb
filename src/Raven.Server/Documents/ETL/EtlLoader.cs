@@ -875,7 +875,7 @@ namespace Raven.Server.Documents.ETL
 
         public string TombstoneCleanerIdentifier => $"ETL loader for {_database.Name}";
 
-        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
             var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
@@ -883,12 +883,12 @@ namespace Raven.Server.Documents.ETL
             if (tombstoneType == ITombstoneAware.TombstoneType.TimeSeries)
             {
                 foreach (var config in ravenEtls)
-                    MarkTimeSeriesTombstonesForDeletion(config, lastProcessedTombstones);
+                    MarkTimeSeriesTombstonesForDeletion(config, lastProcessedTombstones, lastProcessedTombstonesInfo, ITombstoneAware.TombstoneDeletionBlockerType.RavenEtl);
             }
             else if (tombstoneType == ITombstoneAware.TombstoneType.Counters)
             {
                 foreach (var config in ravenEtls)
-                    MarkCounterTombstonesForDeletion(config, lastProcessedTombstones);
+                    MarkCounterTombstonesForDeletion(config, lastProcessedTombstones, lastProcessedTombstonesInfo, ITombstoneAware.TombstoneDeletionBlockerType.RavenEtl);
             }
             else
             {
@@ -896,13 +896,13 @@ namespace Raven.Server.Documents.ETL
                 var elasticSearchEtls = _databaseRecord.ElasticSearchEtls;
 
                 foreach (var config in ravenEtls)
-                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
+                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones, lastProcessedTombstonesInfo, ITombstoneAware.TombstoneDeletionBlockerType.RavenEtl);
 
                 foreach (var config in sqlEtls)
-                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
+                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones, lastProcessedTombstonesInfo, ITombstoneAware.TombstoneDeletionBlockerType.SqlEtl);
 
                 foreach (var config in elasticSearchEtls)
-                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
+                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones, lastProcessedTombstonesInfo, ITombstoneAware.TombstoneDeletionBlockerType.ElasticSearchEtl);
             }
             return lastProcessedTombstones;
         }
@@ -944,7 +944,8 @@ namespace Raven.Server.Documents.ETL
             return dict;
         }
 
-        private void MarkDocumentTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        private void MarkDocumentTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones,
+            Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo, ITombstoneAware.TombstoneDeletionBlockerType type) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)
             {
@@ -955,21 +956,29 @@ namespace Raven.Server.Documents.ETL
                 if (transform.ApplyToAllDocuments)
                 {
                     AddOrUpdate(lastProcessedTombstones, Constants.Documents.Collections.AllDocumentsCollection, etag);
+                    AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, Constants.Documents.Collections.AllDocumentsCollection, etag, type);
                     continue;
                 }
 
                 foreach (var collection in transform.Collections)
+                {
                     AddOrUpdate(lastProcessedTombstones, collection, etag);
+                    AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, collection, etag, type);
+                }
 
                 if (typeof(T) == typeof(RavenConnectionString))
                 {
                     if (RavenEtl.ShouldTrackAttachmentTombstones(transform))
+                    {
                         AddOrUpdate(lastProcessedTombstones, AttachmentsStorage.AttachmentsTombstones, etag);
+                        AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, AttachmentsStorage.AttachmentsTombstones, etag, type);
+                    }
                 }
             }
         }
 
-        private void MarkTimeSeriesTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        private void MarkTimeSeriesTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones,
+            Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo, ITombstoneAware.TombstoneDeletionBlockerType type) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)
             {
@@ -977,10 +986,12 @@ namespace Raven.Server.Documents.ETL
                 var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
 
                 AddOrUpdate(lastProcessedTombstones, Constants.TimeSeries.All, etag);
+                AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, Constants.TimeSeries.All, etag, type);
             }
         }
 
-        private void MarkCounterTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        private void MarkCounterTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones,
+            Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo, ITombstoneAware.TombstoneDeletionBlockerType type) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)
             {
@@ -988,6 +999,7 @@ namespace Raven.Server.Documents.ETL
                 var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
 
                 AddOrUpdate(lastProcessedTombstones, Constants.Counters.All, etag);
+                AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, Constants.Counters.All, etag, type);
             }
         }
 
@@ -1001,6 +1013,21 @@ namespace Raven.Server.Documents.ETL
 
             var min = Math.Min(value, old);
             dic[key] = min;
+        }
+        private void AddOrUpdateInfo(Dictionary<string, LastTombstoneInfo> dic, string name, string collection, long value, ITombstoneAware.TombstoneDeletionBlockerType type)
+        {
+            if (dic == null)
+                return;
+            var key = $"{name}/{collection}";
+            if (dic.TryGetValue(key, out var old) == false)
+            {
+                dic[key] = new LastTombstoneInfo(name, collection, value, type);
+            }
+            else if (value < old.Etag)
+            {
+                old.Etag = value;
+                dic[key] = old;
+            }
         }
     }
 }

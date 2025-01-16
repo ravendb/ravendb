@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return new StaticIndexItemEnumerator<DynamicBlittableJson>(items, filter: null, _compiled.Maps[collection], collection, stats, type);
         }
 
-        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
                 return null;
@@ -385,7 +385,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             using (CurrentlyInUse())
             {
                 return StaticIndexHelper.GetLastProcessedDocumentTombstonesPerCollection(
-                    this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
+                    this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage, lastProcessedTombstonesInfo);
             }
         }
 
