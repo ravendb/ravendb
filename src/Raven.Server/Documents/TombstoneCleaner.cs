@@ -182,10 +182,15 @@ namespace Raven.Server.Documents
 
         private void UpdateNotifications(List<BlockingTombstoneDetails> detailsSet)
         {
+            var key = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+
+            if (detailsSet.Count == 0 && _documentDatabase.NotificationCenter.Exists(key) == false)
+                return;
+
             if (detailsSet.Count > 0)
                 _documentDatabase.NotificationCenter.TombstoneNotifications.Add(detailsSet);
             else
-                _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones)));
+                _documentDatabase.NotificationCenter.Dismiss(key);
         }
 
         internal TombstonesState GetState(bool addInfoForDebug = false)
