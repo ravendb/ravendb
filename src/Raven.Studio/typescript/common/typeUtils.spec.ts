@@ -56,18 +56,20 @@ describe("typeUtils", () => {
         it("should return true for empty values", () => {
             expect(isEmpty(undefined)).toBe(true);
             expect(isEmpty(null)).toBe(true);
-            expect(isEmpty('')).toBe(true);
-            expect(isEmpty(' ')).toBe(true);
+            expect(isEmpty("")).toBe(true);
             expect(isEmpty([])).toBe(true);
             expect(isEmpty({})).toBe(true);
+            expect(isEmpty(0)).toBe(true);
+            expect(isEmpty(false)).toBe(true);
+            expect(isEmpty(true)).toBe(true);
         });
         
         it("should return false for non-empty values", () => {
-            expect(isEmpty('hello')).toBe(false);
-            expect(isEmpty(0)).toBe(false);
-            expect(isEmpty(false)).toBe(false);
-            expect(isEmpty([0, false])).toBe(false);
-            expect(isEmpty({ key: 'value' })).toBe(false);
+            expect(isEmpty("hello")).toBe(false);
+            expect(isEmpty(" ")).toBe(false);
+            expect(isEmpty(15)).toBe(false);
+            expect(isEmpty([0, false, "test"])).toBe(false);
+            expect(isEmpty({ key: "value" })).toBe(false);
         });
-    })
+    });
 });

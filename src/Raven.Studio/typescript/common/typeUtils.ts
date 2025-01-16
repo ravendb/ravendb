@@ -66,22 +66,19 @@ export function compareSets<T extends string | number>(set1: T[], set2: T[]): bo
     return true;
 }
 
-export const isEmpty = <T>(value: T | undefined): value is undefined => {
-    if (value === undefined || value === null) {
+export function isEmpty<T>(value: T | undefined) {
+    const type = typeof value;
+    
+    if ((value !== null && type === "object") || type === "function") {
+        const propsKeys = Object.keys(value);
+        if (propsKeys.length === 0) {
+            return true;
+        }
+    }
+    
+    if (type === "boolean") {
         return true;
     }
     
-    if (typeof value === 'string' && value.trim() === '') {
-        return true;
-    }
-    
-    if (Array.isArray(value)) {
-        return value.length === 0;
-    }
-    
-    if (value instanceof Object) {
-        return Object.keys(value).length === 0;
-    }
-    
-    return false;
-};
+    return !value;
+}
