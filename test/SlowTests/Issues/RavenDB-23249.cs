@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Counters;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -58,12 +59,13 @@ public class RavenDB_23249 : RavenTestBase
 
             using (var session = store.OpenAsyncSession())
             {
-                company.Name = CompanyName2;
                 session.Advanced.WaitForIndexesAfterSaveChanges();
+
+                company.Name = CompanyName2;
                 await session.StoreAsync(company, company.Id);
                 await session.SaveChangesAsync();
             }
-            await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(3));
+
             using (var session = store.OpenAsyncSession())
             {
                 var count = await session.Query<MapIndex.Result, MapIndex>()
@@ -111,12 +113,13 @@ public class RavenDB_23249 : RavenTestBase
 
                 Assert.Equal(1, result.Count);
                 Assert.Equal(CompanyName1, result[0].CompanyName);
-                Assert.Equal(10, result[0].Count);
+                Assert.Equal(EmployeesCount, result[0].Count);
             }
             using (var session = store.OpenAsyncSession())
             {
-                company.Name = CompanyName2;
                 session.Advanced.WaitForIndexesAfterSaveChanges();
+                
+                company.Name = CompanyName2;
                 await session.StoreAsync(company, company.Id);
                 await session.SaveChangesAsync();
             }
@@ -127,7 +130,130 @@ public class RavenDB_23249 : RavenTestBase
 
                 Assert.Equal(1, result.Count);
                 Assert.Equal(CompanyName2, result[0].CompanyName);
-                Assert.Equal(10, result[0].Count);
+                Assert.Equal(EmployeesCount, result[0].Count);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public async Task CanIndexAllDocumentsReferencesMapCountersIndex()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var company = new Company
+            {
+                Id = CommonName,
+                Name = CompanyName1
+            };
+
+            await new MapCountersIndex().ExecuteAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                await session.SaveChangesAsync();
+
+                for (var i = 0; i < EmployeesCount; i++)
+                {
+                    var employee = new Employee();
+                    await session.StoreAsync(employee);
+                    session.CountersFor(employee.Id).Increment(CommonName);
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(3));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count = await session.Query<MapCountersIndex.Result, MapCountersIndex>()
+                    .Where(x => x.CompanyName == CompanyName1).CountAsync();
+
+                Assert.Equal(EmployeesCount, count);
+            }
+
+            WaitForUserToContinueTheTest(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.WaitForIndexesAfterSaveChanges();
+
+                company.Name = CompanyName2;
+                await session.StoreAsync(company, company.Id);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count = await session.Query<MapCountersIndex.Result, MapCountersIndex>()
+                    .Where(x => x.CompanyName == CompanyName1).CountAsync();
+
+                Assert.Equal(0, count);
+
+                count = await session.Query<MapCountersIndex.Result, MapCountersIndex>()
+                    .Where(x => x.CompanyName == CompanyName2).CountAsync();
+
+                Assert.Equal(EmployeesCount, count);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public async Task CanIndexAllDocumentsReferencesMapReduceCountersIndex()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var company = new Company
+            {
+                Id = CommonName,
+                Name = CompanyName1
+            };
+
+            await new MapReduceCountersIndex().ExecuteAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                await session.SaveChangesAsync();
+
+                for (var i = 0; i < EmployeesCount; i++)
+                {
+                    var employee = new Employee();
+                    await session.StoreAsync(employee);
+                    session.CountersFor(employee.Id).Increment(CommonName);
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(3));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var result = await session.Query<MapReduceCountersIndex.Result, MapReduceCountersIndex>().ToListAsync();
+
+                Assert.Equal(1, result.Count);
+                Assert.Equal(CompanyName1, result[0].CompanyName);
+                Assert.Equal(EmployeesCount, result[0].Count);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.WaitForIndexesAfterSaveChanges();
+
+                company.Name = CompanyName2;
+                await session.StoreAsync(company, company.Id);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var result = await session.Query<MapReduceCountersIndex.Result, MapReduceCountersIndex>().ToListAsync();
+
+                Assert.Equal(1, result.Count);
+                Assert.Equal(CompanyName2, result[0].CompanyName);
+                Assert.Equal(EmployeesCount, result[0].Count);
             }
         }
     }
@@ -164,7 +290,6 @@ public class RavenDB_23249 : RavenTestBase
         }
     }
 
-
     private class MapReduceIndex : AbstractIndexCreationTask<Employee, MapReduceIndex.Result>
     {
         public class Result
@@ -190,6 +315,53 @@ public class RavenDB_23249 : RavenTestBase
                 select new Result
                 {
                     CompanyName = g.Key,
+                    Count = g.Sum(x => x.Count)
+                };
+        }
+    }
+
+    private class MapCountersIndex : AbstractCountersIndexCreationTask<Employee>
+    {
+        public class Result
+        {
+            public string CompanyName { get; set; }
+        }
+
+        public MapCountersIndex()
+        {
+            AddMap(CommonName,
+                counters => from counter in counters
+                    select new Result
+                    {
+                        CompanyName = LoadDocument<Company>(counter.Name, Constants.Documents.Collections.AllDocumentsCollection).Name
+                    });
+        }
+    }
+
+    private class MapReduceCountersIndex : AbstractCountersIndexCreationTask<Employee, MapReduceCountersIndex.Result>
+    {
+        public class Result
+        {
+            public string CompanyName { get; set; }
+
+            public int Count { get; set; }
+        }
+
+        public MapReduceCountersIndex()
+        {
+            AddMap(CommonName,
+                counters => from counter in counters
+                    select new Result
+                    {
+                        CompanyName = LoadDocument<Company>(counter.Name, Constants.Documents.Collections.AllDocumentsCollection).Name,
+                        Count = 1
+                    });
+
+            Reduce = results => from r in results
+                group r by r.CompanyName into g
+                select new Result
+                {
+                    CompanyName = g.Select(x => x.CompanyName).FirstOrDefault(),
                     Count = g.Sum(x => x.Count)
                 };
         }
