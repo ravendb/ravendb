@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <RuntimeFrameworkVersion>9.0.0</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>9.0.1</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
