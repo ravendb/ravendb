@@ -19,6 +19,7 @@ import DatabaseRecord = require("components/pages/database/settings/databaseReco
 import ConflictResolution = require("components/pages/database/settings/conflictResolution/ConflictResolution");
 import Integrations = require("components/pages/database/settings/integrations/Integrations");
 import UnusedDatabaseIds = require("components/pages/database/settings/unusedDatabaseIds/UnusedDatabaseIds");
+import RevisionsBinCleaner = require("components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleaner");
 
 export = getSettingsMenuItem;
 
@@ -182,6 +183,22 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     { name: "Compress revisions for all collections" },
+                ],
+            },
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/revisionsBinCleaner',
+            moduleId: reactUtils.bridgeToReact(RevisionsBinCleaner.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Revisions Bin Cleaner',
+            nav: true,
+            css: 'icon-revisions-bin',
+            dynamicHash: appUrls.revisionsBinCleaner,
+            search: {
+                innerActions: [
+                    { name: "Set automatic revision bin configuration" },
+                    { name: "Configure retention policies" },
+                    { name: "View current revisions bin configuration" },
                 ],
             },
         }),

@@ -13,6 +13,7 @@ import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import document from "models/database/documents/document";
+import { TimeTypes } from "common/constants/timeTypes";
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -962,5 +963,13 @@ return docs[0];`,
             Object.assign(object, identity);
         }
         return object;
+    }
+
+    static revisionsBinCleaner(): Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration {
+        return {
+            Disabled: false,
+            MinimumEntriesAgeToKeepInMin: 1,
+            RefreshFrequencyInSec: 5 * TimeTypes.Minute,
+        };
     }
 }

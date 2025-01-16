@@ -65,7 +65,8 @@ import getDocumentsPreviewCommand = require("commands/database/documents/getDocu
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import getIdentitiesCommand from "commands/database/identities/getIdentitiesCommand";
 import seedIdentityCommand from "commands/database/identities/seedIdentityCommand";
-import RevisionsBinConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration;
+import getRevisionsBinCleanerConfigurationCommand from "commands/database/settings/getRevisionsBinCleanerConfigurationCommand";
+import saveRevisionsBinCleanerConfigurationCommand from "commands/database/settings/saveRevisionsBinCleanerConfigurationCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -180,12 +181,16 @@ export default class DatabasesService {
         return new saveRevisionsConfigurationCommand(databaseName, dto).execute();
     }
 
-    async getRevisionsBinCleanerConfiguration(databaseName: string) {
-        // return new getRevisionsBinCleanerConfigurationCommand(databaseName).execute();
+    async getRevisionsBinCleanerConfiguration(
+        ...args: ConstructorParameters<typeof getRevisionsBinCleanerConfigurationCommand>
+    ) {
+        return new getRevisionsBinCleanerConfigurationCommand(...args).execute();
     }
 
-    async saveRevisionsBinCleanerConfiguration(databaseName: string, dto: RevisionsBinConfiguration) {
-        // return new saveRevisionsBinCleanerConfigurationCommand(databaseName, dto).execute();
+    async saveRevisionsBinCleanerConfiguration(
+        ...args: ConstructorParameters<typeof saveRevisionsBinCleanerConfigurationCommand>
+    ) {
+        return new saveRevisionsBinCleanerConfigurationCommand(...args).execute();
     }
 
     async enforceRevisionsConfiguration(

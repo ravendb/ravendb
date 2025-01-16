@@ -182,4 +182,14 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
     withIdentities(dto?: MockedValue<Record<string, number>>) {
         return this.mockResolvedValue(this.mocks.getIdentities, dto, DatabasesStubs.getIdentities(5));
     }
+
+    withRevisionsBinCleanerConfiguration(
+        dto?: MockedValue<Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration>
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getRevisionsBinCleanerConfiguration,
+            dto,
+            DatabasesStubs.revisionsBinCleaner()
+        );
+    }
 }

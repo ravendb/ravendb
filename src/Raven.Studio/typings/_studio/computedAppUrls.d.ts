@@ -84,6 +84,7 @@ interface computedAppUrls {
     integrations: KnockoutComputed<string>;
     connectionStrings: KnockoutComputed<string>;
     conflictResolution: KnockoutComputed<string>;
+    revisionsBinCleaner: KnockoutComputed<string>;
 
     about: KnockoutComputed<string>;
     whatsNew: KnockoutComputed<string>;
