@@ -890,12 +890,16 @@
             <div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right margin-bottom">
                 <div class="js-add-vector-field-btn" style="display: inline-block;">
                     <button class="btn btn-default"
-                            data-bind="css: { 'active': hasVectorOptions() },visible: !isDefaultOptions(), click: toggleVectorFields, enable: $parent.canUseCoraxSearchEngine() && !isDefaultOptions()">
+                            data-bind="css: { 'active': hasVectorOptions() },
+                                       visible: !isDefaultOptions(),
+                                       click: toggleVectorFields,
+                                       enable: $parent.canUseCoraxSearchEngine() && !isDefaultOptions(),
+                                       attr: { title: hasVectorOptions() ? 'Click to switch back to regular field configuration' : 'Click to set properties for a vector field' }">
                         Configure Vector Field
                     </button>
 
                 </div>
-                <button class="btn btn-default" data-bind="css: { 'active': showAdvancedOptions() }, click: toggleAdvancedOptions">
+                <button class="btn btn-default" data-bind="css: { 'active': showAdvancedOptions() }, visible: !hasVectorOptions(), click: toggleAdvancedOptions">
                     <i class="icon-settings"></i><span>Advanced</span>
                 </button>
                 <button class="btn btn-danger" title="Remove this field from the index" data-bind="click: _.partial($root.removeField, $data)">
