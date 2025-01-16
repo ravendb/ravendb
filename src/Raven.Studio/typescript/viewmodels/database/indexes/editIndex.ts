@@ -1311,10 +1311,10 @@ class editIndex extends shardViewModelBase {
         });
 
         popoverUtils.longWithHover($(".js-add-vector-field-btn"), {
-            content: () => this.canUseCoraxSearchEngine() ? "" : `Vector search are only available for Corax Search Engine. 
+            content: () => this.canUseCoraxSearchEngine() ? "" : `Vector search is only available for Corax Search Engine. 
                     <a class="btn btn-primary js-change-to-corax" href="#">Change to Corax</a>`,
             html: true,
-            placement: "right"
+            placement: "bottom"
         });
 
         popoverUtils.longWithHover($(".js-store-field-info"), 
