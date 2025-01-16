@@ -18,11 +18,11 @@ namespace Sparrow.Utils
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGet(Type type, out T result)
         {
-            int typeHash = type.GetHashCode();
+            int bucket = GetBucket(type);
 
             // We get the data and after that we always work from there to avoid
             // harmful race conditions.
-            var storage = _buckets[typeHash % _size];
+            var storage = _buckets[bucket];
             if (storage == null)
                 goto NotFound;
 
@@ -62,8 +62,7 @@ namespace Sparrow.Utils
 
         public void Put(Type type, T value)
         {
-            int typeHash = type.GetHashCode();
-            int bucket = typeHash % _size;
+            int bucket = GetBucket(type);
 
             // The idea is that this TypeCache<T> is thread safe. It is better to lose some Put
             // that to allow side effects to happen. The tradeoff is having to recompute in case
@@ -82,6 +81,15 @@ namespace Sparrow.Utils
 
             newBucket.Add(new Tuple<Type, T>(type, value));
             _buckets[bucket] = newBucket;
+        }
+
+        private int GetBucket(Type type)
+        {
+            var hashCode = type.GetHashCode();
+            if (hashCode < 0)
+                hashCode = -hashCode;
+
+            return hashCode % _size;
         }
     }
 }
