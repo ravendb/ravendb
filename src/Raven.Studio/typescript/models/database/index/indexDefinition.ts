@@ -6,7 +6,7 @@ import configurationItem = require("models/database/index/configurationItem");
 import validateNameCommand = require("commands/resources/validateNameCommand");
 import generalUtils = require("common/generalUtils");
 import compoundField = require("models/database/index/compoundField");
-import { IndexingDatabaseSettingsType } from "models/database/index/types";
+import indexingDatabaseSettingsTypes = require("models/database/index/types")
 
 class mapItem {
     map = ko.observable<string>();
@@ -73,9 +73,9 @@ class indexDefinition {
     searchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
 
     validationGroup: KnockoutValidationGroup;
-    indexingDatabaseSettings = ko.observable<IndexingDatabaseSettingsType>();
+    indexingDatabaseSettings = ko.observable<indexingDatabaseSettingsTypes.IndexingDatabaseSettingsType>();
 
-    constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition, indexingDatabaseSettings?: IndexingDatabaseSettingsType) {
+    constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition, indexingDatabaseSettings?: indexingDatabaseSettingsTypes.IndexingDatabaseSettingsType) {
         this.isAutoIndex(dto.Type.startsWith("Auto"));
 
         this.name(dto.Name);
@@ -400,7 +400,7 @@ class indexDefinition {
         }
     }
     
-    static createDefaultIndexDefinition(indexingDatabaseSettings?: IndexingDatabaseSettingsType): indexDefinition {
+    static createDefaultIndexDefinition(indexingDatabaseSettings?: indexingDatabaseSettingsTypes.IndexingDatabaseSettingsType): indexDefinition {
         return new indexDefinition({
             Fields: {},
             Maps: [""],

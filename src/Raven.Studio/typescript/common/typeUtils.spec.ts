@@ -1,4 +1,4 @@
-import { compareSets, isBoolean, range } from "./typeUtils";
+import { compareSets, isBoolean, range, isEmpty } from "./typeUtils";
 
 describe("typeUtils", () => {
     describe("isBoolean", () => {
@@ -51,4 +51,23 @@ describe("typeUtils", () => {
             expect(compareSets([1, 2, 3], [1, 2])).toBe(false);
         });
     });
+    
+    describe("isEmpty", () => {
+        it("should return true for empty values", () => {
+            expect(isEmpty(undefined)).toBe(true);
+            expect(isEmpty(null)).toBe(true);
+            expect(isEmpty('')).toBe(true);
+            expect(isEmpty(' ')).toBe(true);
+            expect(isEmpty([])).toBe(true);
+            expect(isEmpty({})).toBe(true);
+        });
+        
+        it("should return false for non-empty values", () => {
+            expect(isEmpty('hello')).toBe(false);
+            expect(isEmpty(0)).toBe(false);
+            expect(isEmpty(false)).toBe(false);
+            expect(isEmpty([0, false])).toBe(false);
+            expect(isEmpty({ key: 'value' })).toBe(false);
+        });
+    })
 });

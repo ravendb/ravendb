@@ -59,13 +59,10 @@ import licenseLimitsUtils = require("components/utils/licenseLimitsUtils");
 import getClusterLicenseLimitsUsage = require("commands/licensing/getClusterLicenseLimitsUsage");
 import convertToStaticDialog = require("viewmodels/database/indexes/convertToStaticDialog");
 import convertedIndexesToStaticStorage = require("common/storage/convertedIndexesToStaticStorage");
-import getDatabaseSettingsCommand from "commands/database/settings/getDatabaseSettingsCommand";
+import getDatabaseSettingsCommand = require("commands/database/settings/getDatabaseSettingsCommand");
 import models = require("models/database/settings/databaseSettingsModels");
-import {
-    IndexingDatabaseSetting,
-    IndexingDatabaseSettingsType
-} from "models/database/index/types";
-import genUtils from "common/generalUtils";
+import indexingDatabaseSettingsTypes = require("models/database/index/types")
+import genUtils = require("common/generalUtils");
 
 class editIndex extends shardViewModelBase {
     
@@ -149,7 +146,7 @@ class editIndex extends shardViewModelBase {
 
     infoHubView: ReactInKnockout<typeof EditIndexInfoHub.EditIndexInfoHub>;
     isAddingNewIndex = ko.observable<boolean>(true);
-    indexingAnalyzerSettings = ko.observable<IndexingDatabaseSettingsType>();
+    indexingAnalyzerSettings = ko.observable<indexingDatabaseSettingsTypes.IndexingDatabaseSettingsType>();
 
     constructor(db: database) {
         super(db);
@@ -353,7 +350,6 @@ class editIndex extends shardViewModelBase {
     
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
         const indexToEditName = indexToEdit || undefined;
-        this.fetchDatabaseSettings();
         
         return $.when<any>(super.canActivate(indexToEditName))
             .then(async () => {
@@ -555,12 +551,10 @@ class editIndex extends shardViewModelBase {
     }
 
     private fetchDatabaseSettings() {
-        eventsCollector.default.reportEvent("database-settings", "get");
-        
         return new getDatabaseSettingsCommand(this.db)
           .execute()
           .done((result: Raven.Server.Config.SettingsResult) => {
-              const indexingAnalyzersDefaultsDatabaseSettingsKeys = genUtils.exhaustiveStringTuple<IndexingDatabaseSetting>()(
+              const indexingAnalyzersDefaultsDatabaseSettingsKeys = genUtils.exhaustiveStringTuple<indexingDatabaseSettingsTypes.IndexingDatabaseSetting>()(
                   "Indexing.Analyzers.Default", "Indexing.Analyzers.Exact.Default", "Indexing.Analyzers.Search.Default"
               )
               const settingsEntries = result.Settings.map(x => {
@@ -574,7 +568,7 @@ class editIndex extends shardViewModelBase {
                       key,
                       settingsEntries.find(entry => entry.keyName() === key)
                   ])
-              ) as IndexingDatabaseSettingsType
+              ) as indexingDatabaseSettingsTypes.IndexingDatabaseSettingsType
               this.indexingAnalyzerSettings(indexingAnalyzerSettings);
           });
     }

@@ -2,7 +2,7 @@
 import spatialOptions = require("models/database/index/spatialOptions");
 import jsonUtil = require("common/jsonUtil");
 import models = require("models/database/settings/databaseSettingsModels");
-import { isEmpty } from "lodash";
+import typeUtils = require("common/typeUtils")
 
 function labelMatcher<T>(labels: Array<valueAndLabelItem<T, string>>): (arg: T) => string {
     return(arg) => labels.find(x => x.value === arg).label;
@@ -22,7 +22,7 @@ interface analyzerName {
     serverName: string;
 }
 
-type databaseIndexConfigurationType = Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>
+type databaseIndexConfigurationType = Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>;
 
 class indexFieldOptions {
     analyzersNamesDictionary = ko.observableArray<analyzerName>([
@@ -166,7 +166,7 @@ class indexFieldOptions {
         this.indexLocalConfiguration = indexLocalConfiguration;
         this.databaseIndexConfiguration = databaseIndexConfiguration;
         
-        if (!isEmpty(databaseIndexConfiguration)) {
+        if (!typeUtils.isEmpty(databaseIndexConfiguration)) {
             Object.values(databaseIndexConfiguration).forEach((databaseIndexConfigurationElement) => {
                 if (!this.analyzersNamesDictionary().some(x => x.serverName === databaseIndexConfigurationElement.effectiveValue())) {
                     this.analyzersNamesDictionary.push({
@@ -177,7 +177,7 @@ class indexFieldOptions {
             });
         }
         
-        if (!isEmpty(indexLocalConfiguration)) {
+        if (!typeUtils.isEmpty(indexLocalConfiguration)) {
             Object.values(indexLocalConfiguration).forEach((indexConfigurationElement) => {
                 if (!this.analyzersNamesDictionary().some(x => x.serverName === indexConfigurationElement)) {
                     this.analyzersNamesDictionary.push({
@@ -593,11 +593,11 @@ class indexFieldOptions {
             TermVector: "No"
         };
         
-        if (databaseIndexConfiguration && isEmpty(indexConfiguration)) {
+        if (databaseIndexConfiguration && typeUtils.isEmpty(indexConfiguration)) {
             defaultDto.Analyzer = databaseIndexConfiguration?.[`Indexing.Analyzers.Default`]?.effectiveValue();
         }
         
-        if (!isEmpty(indexConfiguration)) {
+        if (!typeUtils.isEmpty(indexConfiguration)) {
             defaultDto.Analyzer = indexConfiguration?.[`Indexing.Analyzers.Default`];
         }
         
@@ -620,11 +620,11 @@ class indexFieldOptions {
             TermVector: null
         }
         
-        if (databaseIndexConfiguration && isEmpty(indexConfiguration)) {
+        if (databaseIndexConfiguration && typeUtils.isEmpty(indexConfiguration)) {
             defaultDto.Analyzer = databaseIndexConfiguration?.[`Indexing.Analyzers.Default`]?.effectiveValue();
         }
         
-        if (!isEmpty(indexConfiguration)) {
+        if (!typeUtils.isEmpty(indexConfiguration)) {
             defaultDto.Analyzer = indexConfiguration?.[`Indexing.Analyzers.Default`];
         }
         
