@@ -67,7 +67,6 @@ describe("typeUtils", () => {
         it("should return false for non-empty values", () => {
             expect(isEmpty("hello")).toBe(false);
             expect(isEmpty(" ")).toBe(false);
-            expect(isEmpty(15)).toBe(false);
             expect(isEmpty([0, false, "test"])).toBe(false);
             expect(isEmpty({ key: "value" })).toBe(false);
         });

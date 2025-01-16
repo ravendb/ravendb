@@ -66,19 +66,18 @@ export function compareSets<T extends string | number>(set1: T[], set2: T[]): bo
     return true;
 }
 
-export function isEmpty<T>(value: T | undefined) {
-    const type = typeof value;
-    
-    if ((value !== null && type === "object") || type === "function") {
-        const propsKeys = Object.keys(value);
-        if (propsKeys.length === 0) {
-            return true;
-        }
+export function isEmpty(obj: any): boolean {
+    if (obj?.length || obj?.size) {
+        return false;
     }
-    
-    if (type === "boolean") {
+    if (typeof obj !== "object") {
         return true;
     }
-    
-    return !value;
-}
+    for (const key in obj) {
+        // eslint-disable-next-line no-prototype-builtins
+        if (obj.hasOwnProperty(key)) {
+            return false;
+        }
+    }
+    return true;
+};

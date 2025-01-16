@@ -438,7 +438,8 @@ class indexFieldOptions {
         const parentIndexing = this.parent() ? this.parent().indexing() : null;
         const parentAnalyzer = this.parent() ? this.parent()?.analyzer() : null;
 
-        const analyzerConfigurationKey = `Indexing.Analyzers.${thisIndexing === "Default" || thisIndexing === null ? `Default` : `${thisIndexing}.Default`}`;
+        const indexingAnalyzerKey = !thisIndexing && parentIndexing ? parentIndexing : thisIndexing
+        const analyzerConfigurationKey = `Indexing.Analyzers.${indexingAnalyzerKey === "Default" || indexingAnalyzerKey === null ? `Default` : `${indexingAnalyzerKey}.Default`}`;
         
         const databaseAnalyzerSetting = this.databaseIndexConfiguration?.[analyzerConfigurationKey];
         
