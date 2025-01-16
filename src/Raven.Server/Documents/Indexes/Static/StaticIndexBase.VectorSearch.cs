@@ -412,6 +412,7 @@ public partial class AbstractStaticIndexBase
                 LazyCompressedStringValue lcsv => lcsv,
                 string s => s,
                 LazyJsString ljs => ljs.ToString(),
+                JsString js => js.ToString(),
                 _ => throw new NotSupportedException("Only strings are supported, but got: " + valueToProcess.GetType().FullName)
             };
 
