@@ -47,7 +47,12 @@ namespace Raven.Server.Documents.Indexes.Static
             foreach (var collection in _compiled.ReferencedCollections)
             {
                 foreach (var referencedCollection in collection.Value)
+                {
                     _referencedCollections.Add(referencedCollection.Name);
+
+                    if (referencedCollection.Name == Constants.Documents.Collections.AllDocumentsCollection)
+                        HandleAllDocs = true;
+                }
             }
         }
 
@@ -171,6 +176,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (_referencedCollections == null)
                 return false;
+
+            if (HandleAllDocs)
+                return true;
 
             return _referencedCollections.Overlaps(collections);
         }
