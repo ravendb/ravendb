@@ -151,6 +151,11 @@ namespace Sparrow.Json
             {
                 switch (currentState.State)
                 {
+                    case ContinuationState.ReadValue:
+                        ReadJsonValue<TWriteStrategy>();
+                        currentState = _continuationState.Pop();
+                        continue;
+
                     case ContinuationState.ReadObjectDocument:
                         if (reader.Read() == false)
                         {
@@ -234,7 +239,6 @@ namespace Sparrow.Json
 
                         currentState.State = ContinuationState.CompleteArrayValue;
                         continuationState.Push(currentState);
-                        currentState = new BuildingState(ContinuationState.ReadValue);
                         goto case ContinuationState.ReadValue;
 
                     case ContinuationState.CompleteArrayValue:
@@ -293,7 +297,7 @@ namespace Sparrow.Json
                         }
                         currentState.State = ContinuationState.CompleteReadingPropertyValue;
                         continuationState.Push(currentState);
-                        currentState = new BuildingState(ContinuationState.ReadValue);
+
                         goto case ContinuationState.ReadValue;
                         
                     case ContinuationState.CompleteReadingPropertyValue:
@@ -425,10 +429,10 @@ namespace Sparrow.Json
 
                         // The change of the current state must happen before as ReadJsonValue may return a new instance.
                         currentState.State = ContinuationState.CompleteArrayValue;
-                        ReadJsonValue<TWriteStrategy>();
+                        continuationState.Push(currentState);
 
                         // Allow the loop to continue to the next iteration
-                        goto case ContinuationState.CompleteArrayValue;
+                        goto case ContinuationState.ReadValue;
 
                     case ContinuationState.CompleteBufferedArray:
                         int startPos = WriteBufferedVector();
@@ -437,15 +441,8 @@ namespace Sparrow.Json
                         state.ClearBuffered();
                         currentState = _continuationState.Pop();
                         continue;
-
-                    case ContinuationState.ReadValue:
-                        ReadJsonValue<TWriteStrategy>();
-                        currentState = _continuationState.Pop();
-                        break;
                 }
             }
-
-            return false; // Will never execute.
         }
 
         private struct VectorProcessor<T> where T : unmanaged
