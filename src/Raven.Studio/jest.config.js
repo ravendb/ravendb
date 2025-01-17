@@ -27,6 +27,7 @@ module.exports = {
         "<rootDir>/typescript"
     ],
     moduleNameMapper: {
+        "^d3-(.+)$": "<rootDir>/node_modules/d3-$1/dist/d3-$1.js",
         "^common/(.*)$": "<rootDir>/typescript/common/$1",
         "^components/(.*)$": "<rootDir>/typescript/components/$1",
         "^views/(.*)$": "<rootDir>/wwwroot/App/views/$1",

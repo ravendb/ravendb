@@ -235,7 +235,7 @@ export function StorageReportGraph(props: StorageReportGraphProps) {
     return (
         <div id="storage-report-container">
             <div className="chart-tooltip" ref={tooltipRef} style={{ opacity: 0 }}></div>
-            <div className="chart" ref={chartRef}></div>
+            <div className="chart" ref={chartRef} data-testid="chart"></div>
         </div>
     );
 }
