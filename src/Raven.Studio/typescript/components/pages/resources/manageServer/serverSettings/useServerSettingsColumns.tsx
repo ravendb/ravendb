@@ -1,11 +1,14 @@
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
 import genUtils from "common/generalUtils";
 import { configurationOrigin } from "models/database/settings/databaseSettingsModels";
-import { CellWithDescription, CellWithDescriptionProps, } from "components/common/virtualTable/cells/CellWithDescription";
+import {
+    CellWithDescription,
+    CellWithDescriptionProps,
+} from "components/common/virtualTable/cells/CellWithDescription";
 
 export interface ServerSettingsColumns {
     configurationKey: string;
