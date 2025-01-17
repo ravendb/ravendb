@@ -119,6 +119,11 @@ namespace Sparrow.Json
             public CachedProperties.PropertyName Property;
             public byte Type;
 
+            public PropertyTag(CachedProperties.PropertyName property)
+            {
+                Property = property;
+            }
+
             public PropertyTag(byte type, CachedProperties.PropertyName property, int position)
             {
                 Type = type;

@@ -212,11 +212,7 @@ namespace Sparrow.Json
                 _position += positionSize + propertyIdSize + sizeof(byte);
             }
 
-            return new WriteToken
-            {
-                ValuePos = objectMetadataStart,
-                WrittenToken = objectToken
-            };
+            return new WriteToken(objectMetadataStart, objectToken);
         }
 
         public int WriteArrayMetadata(FastList<int> positions, FastList<BlittableJsonToken> types, ref BlittableJsonToken listToken)
