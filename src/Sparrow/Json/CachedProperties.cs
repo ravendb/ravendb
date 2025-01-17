@@ -93,6 +93,7 @@ namespace Sparrow.Json
             public LazyStringValue Comparer;
             public int GlobalSortOrder;
             public int PropertyId;
+            public bool IsVectorProperty;
 
             public PropertyName(int hash, LazyStringValue comparer, int globalSortOrder, int propertyId)
             {
@@ -100,6 +101,7 @@ namespace Sparrow.Json
                 Comparer = comparer;
                 GlobalSortOrder = globalSortOrder;
                 PropertyId = propertyId;
+                IsVectorProperty = Comparer.AsReadOnlySpan().SequenceEqual(Global.Constants.Naming.VectorPropertyNameAsSpan);
             }
 
             public int CompareTo(PropertyName other)
