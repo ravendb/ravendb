@@ -69,6 +69,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         Olap,
         ElasticSearch,
         Queue,
-        Snowflake
+        Snowflake,
+        Ai
     }
 }

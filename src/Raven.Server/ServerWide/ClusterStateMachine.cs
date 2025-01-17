@@ -1756,7 +1756,8 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.ElasticSearchEtls),
             nameof(DatabaseRecord.QueueEtls),
             nameof(DatabaseRecord.SnowflakeEtls),
-            nameof(DatabaseRecord.QueueSinks)
+            nameof(DatabaseRecord.QueueSinks),
+            nameof(DatabaseRecord.AiEtls)
         };
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)

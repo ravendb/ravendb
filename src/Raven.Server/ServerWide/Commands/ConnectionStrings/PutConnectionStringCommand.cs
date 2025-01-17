@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -144,6 +145,24 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.SnowflakeConnectionStrings[ConnectionString.Name] = ConnectionString;
+        }
+    }
+
+    public sealed class PutAiConnectionStringCommand : PutConnectionStringCommand<AiConnectionString>
+    {
+        public PutAiConnectionStringCommand()
+        {
+            // for deserialization
+        }
+
+        public PutAiConnectionStringCommand(AiConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.AiConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
 }

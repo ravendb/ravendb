@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.ETL
 
                     stats.RecordLastExtractedEtag(item.Etag, item.Type);
 
-                    CancellationToken.ThrowIfCancellationRequested();
+                    //CancellationToken.ThrowIfCancellationRequested();
 
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {

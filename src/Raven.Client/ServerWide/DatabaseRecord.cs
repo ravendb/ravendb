@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -123,6 +124,8 @@ namespace Raven.Client.ServerWide
         public Dictionary<string, QueueConnectionString> QueueConnectionStrings = new Dictionary<string, QueueConnectionString>();
         
         public Dictionary<string, SnowflakeConnectionString> SnowflakeConnectionStrings = new Dictionary<string, SnowflakeConnectionString>();
+        
+        public Dictionary<string, AiConnectionString> AiConnectionStrings = new Dictionary<string, AiConnectionString>();
 
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 
@@ -137,6 +140,8 @@ namespace Raven.Client.ServerWide
         public List<QueueSinkConfiguration> QueueSinks = new List<QueueSinkConfiguration>();
         
         public List<SnowflakeEtlConfiguration> SnowflakeEtls = new List<SnowflakeEtlConfiguration>();
+        
+        public List<AiEtlConfiguration> AiEtls = new List<AiEtlConfiguration>();
 
         public ClientConfiguration Client;
 

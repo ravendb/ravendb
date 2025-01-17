@@ -59,6 +59,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     return JsonDeserializationCluster.QueueConnectionString(readerObject);
                 case ConnectionStringType.Snowflake:
                     return JsonDeserializationCluster.SnowflakeConnectionString(readerObject);
+                case ConnectionStringType.Ai:
+                    return JsonDeserializationCluster.AiConnectionString(readerObject);
                 case ConnectionStringType.None:
                 default:
                     throw new ArgumentOutOfRangeException(nameof(connectionStringType), connectionStringType, "Unexpected connection string type.");

@@ -7,6 +7,7 @@
         Olap,
         ElasticSearch,
         Queue,
-        Snowflake
+        Snowflake,
+        OpenAi
     }
 }
