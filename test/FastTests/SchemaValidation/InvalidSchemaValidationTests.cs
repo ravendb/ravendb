@@ -33,6 +33,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
             new object[] { SVC.uniqueItems, 1, "The value of 'uniqueItems' at 'prop' must be a boolean, but received '1' of type 'integer'." },
             new object[] { SVC.prefixItems, 1, "The value of 'prefixItems' at 'prop' must be an array, but received '1' of type 'integer'." },
             new object[] { SVC.contains, 1, "The value of 'contains' at 'prop' must be an object, but received '1' of type 'integer'." },
+            new object[] { SVC.dependentRequired, 1, "The value of 'dependentRequired' at 'prop' must be an object, but received '1' of type 'integer'." },
         };
 
     [RavenFact(RavenTestCategory.JavaScript)]

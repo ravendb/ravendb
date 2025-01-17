@@ -165,10 +165,20 @@ public static class SchemaValidationHelper
         ThrowRuleTypeError(rule, ruleValue, publicType, type, schemaPath);
     }
 
-    private static void ThrowRuleTypeError(string rule, object ruleValue, string expectedPublicType, string actualPublicType, string schemaPath)
+    public static void ThrowRuleTypeError(string rule, object ruleValue, string expectedPublicType, string actualPublicType, string schemaPath)
     {
+        
         throw new InvalidSchemaValidationDefinitionException(
             $"The value of '{rule}' at '{schemaPath}' must be {GetIndefiniteArticle(expectedPublicType)} {expectedPublicType}, but received '{ruleValue}' of type '{actualPublicType}'.");
+    }
+    
+    public static void ThrowRuleTypeError(string rule, object ruleValue, BlittableJsonToken expectedType, string schemaPath, int index)
+    {
+        //TODO To maybe merge with other functions
+        var actualPublicType = GetPublicType(ruleValue.GetType());
+        var expectedPublicType = GetPublicType(expectedType);
+        throw new InvalidSchemaValidationDefinitionException(
+            $"The value of '{rule}' items at '{schemaPath}' must be {GetIndefiniteArticle(expectedPublicType)} {expectedPublicType}, but received '{ruleValue}' of type '{actualPublicType}' at index '{index}'.");
     }
 
     private static void TrowRuleTypeError(string rule, object ruleValue, BlittableJsonToken[] expectedTypes, BlittableJsonToken actualType, string schemaPath)

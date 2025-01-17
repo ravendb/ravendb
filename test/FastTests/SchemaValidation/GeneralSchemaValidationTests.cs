@@ -23,7 +23,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         const string prop = "prop";
 
         var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue { [SVC.@type] = "object", ["required"] = new DynamicJsonArray { prop } };
+        var schemaDefinition = new DynamicJsonValue { [SVC.@type] = "object", [SVC.required] = new DynamicJsonArray { prop } };
         if (withAdditionalRestriction)
         {
             schemaDefinition[SVC.properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.@type] = "string" } };
@@ -189,6 +189,67 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The object at '' must have no more than 3 properties, but it has 4.", errors);
+            });
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnDependentRequired()
+    {
+        var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.dependentRequired] = new DynamicJsonValue
+            {
+                ["prop1"] = new []{"prop2", "prop3"}
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["anotherPropName"] = "somevalue"
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["prop1"] = "somevalue1",
+                    ["prop2"] = "somevalue2",
+                    ["prop3"] = "somevalue3",
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["prop1"] = "somevalue1",
+                }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The object at '' is missing properties 'prop2' & 'prop3' which are required when property 'prop1' is present.", errors);
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["prop1"] = "somevalue1",
+                    ["prop2"] = "somevalue1",
+                }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The object at '' is missing property 'prop3' which is required when property 'prop1' is present.", errors);
             });
     }
     }

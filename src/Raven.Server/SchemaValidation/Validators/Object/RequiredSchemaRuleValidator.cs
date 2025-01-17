@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule("required")]
+[SchemaRule(SchemaValidatorConstants.required)]
 public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly HashSet<string> _requiredHashSet;

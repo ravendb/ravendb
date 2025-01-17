@@ -30,6 +30,7 @@ internal static class SchemaValidatorConstants
     public const string minProperties = "minProperties";
     public const string propertyNames = "propertyNames";
     public const string required = "required";
+    public const string dependentRequired = "dependentRequired";
     #endregion
     
     #region Array
