@@ -59,7 +59,7 @@ export default class ManageServerService {
         return new saveServerWideCustomSorterCommand(...args).execute();
     }
 
-    async getSystemStorageReportCommand() {
+    async getSystemStorageReport() {
         return new getSystemStorageReportCommand().execute();
     }
 

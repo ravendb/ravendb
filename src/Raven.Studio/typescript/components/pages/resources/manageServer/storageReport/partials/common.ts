@@ -15,6 +15,10 @@ export interface StorageReportItem {
     recyclableJournal?: boolean;
 }
 
+export function hasChildren(node: StorageReportItem): boolean {
+    return node.internalChildren && node.internalChildren.length > 0;
+}
+
 export function mapReport(reportItem: detailedSystemStorageReportItemDto): StorageReportItem {
     const dataFile = mapDataFile(reportItem.Report);
     const journals = mapJournals(reportItem.Report);

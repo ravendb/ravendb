@@ -3,6 +3,8 @@ import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import ConfigurationEntryServerValue = Raven.Server.Config.ConfigurationEntryServerValue;
 
+const systemStorageReportFixture: detailedSystemStorageReportItemDto = require("../fixtures/admin_debug_storage_environment_report.json");
+
 export class ManageServerStubs {
     static getSampleClientGlobalConfiguration(): ClientConfiguration {
         return {
@@ -262,5 +264,9 @@ export class ManageServerStubs {
                 },
             ],
         };
+    }
+
+    static serverStorageReport(): detailedSystemStorageReportItemDto {
+        return systemStorageReportFixture;
     }
 }

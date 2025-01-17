@@ -20,14 +20,10 @@ export default function StorageReport() {
     return (
         <div className="bs3">
             <div id="storage-report" className="content-margin">
-                <StorageReportGraph node={node} rootHierarchy={rootHierarchy} />
-                <StorageReportPath
-                    node={node}
-                    rootHierarchy={rootHierarchy}
-                    onNodeSelected={(node) => onClick(node, false)}
-                />
+                <StorageReportGraph node={node} rootHierarchy={rootHierarchy} onNodeSelected={onClick} />
+                <StorageReportPath node={node} rootHierarchy={rootHierarchy} onNodeSelected={onClick} />
                 <hr />
-                <StorageReportTable onNodeSelected={(node) => onClick(node, true)} node={node} root={rootData} />
+                <StorageReportTable onNodeSelected={onClick} node={node} root={rootData} />
             </div>
         </div>
     );
