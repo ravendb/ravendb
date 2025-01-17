@@ -235,7 +235,7 @@ namespace Sparrow.Json
                         currentState.State = ContinuationState.CompleteArrayValue;
                         continuationState.Push(currentState);
                         currentState = new BuildingState(ContinuationState.ReadValue);
-                        continue;
+                        goto case ContinuationState.ReadValue;
 
                     case ContinuationState.CompleteArrayValue:
                         currentState.Types.Add(_writeToken.WrittenToken);
@@ -294,7 +294,8 @@ namespace Sparrow.Json
                         currentState.State = ContinuationState.CompleteReadingPropertyValue;
                         continuationState.Push(currentState);
                         currentState = new BuildingState(ContinuationState.ReadValue);
-                        continue;
+                        goto case ContinuationState.ReadValue;
+                        
                     case ContinuationState.CompleteReadingPropertyValue:
                         // Register property position, name id (PropertyId) and type (object type and metadata)
                         currentState.Properties.Add(new PropertyTag(
@@ -427,7 +428,7 @@ namespace Sparrow.Json
                         ReadJsonValue<TWriteStrategy>();
 
                         // Allow the loop to continue to the next iteration
-                        continue;
+                        goto case ContinuationState.CompleteArrayValue;
 
                     case ContinuationState.CompleteBufferedArray:
                         int startPos = WriteBufferedVector();
