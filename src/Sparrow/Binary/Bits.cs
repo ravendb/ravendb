@@ -358,6 +358,23 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort SwapBytes(ushort value)
+        {
+#if NET6_0_OR_GREATER
+            return BinaryPrimitives.ReverseEndianness(value);
+#else
+            // Manually swap the bytes of the ushort value
+            return (ushort)((value >> 8) | (value << 8));
+#endif
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short SwapBytes(short value)
+        {
+            return (short)SwapBytes((ushort)value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint SwapBytes(uint value)
         {
 #if NET6_0_OR_GREATER
@@ -373,7 +390,7 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int SwapBytes(int value)
         {
-            return (int) SwapBytes((uint) value);
+            return (int)SwapBytes((uint)value);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
