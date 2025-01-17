@@ -95,11 +95,11 @@ select {
             title: "Vector search",
             text:
 `from Products
-where vector.search(embedding.text(Name), "italian", 0.8)`,
+where vector.search(embedding.text(Name), "italian food", 0.8)`,
             html:
 `<span class="token keyword">from</span> <span class="token string">Products</span>
-// Search for Products with a 'Name' that is semantically close to "italian".
-<span class="token keyword">where vector.search</span><span class="token punctuation">(</span>embedding.text<span class="token punctuation">(</span>Name<span class="token punctuation">)</span>, <span class="token string">&quot;italian&quot;</span>, <span class="token number">0.8</span><span class="token punctuation">)</span>`
+// Search for Products with a 'Name' that is semantically close to "italian food".
+<span class="token keyword">where vector.search</span><span class="token punctuation">(</span>embedding.text<span class="token punctuation">(</span>Name<span class="token punctuation">)</span>, <span class="token string">&quot;italian food&quot;</span>, <span class="token number">0.8</span><span class="token punctuation">)</span>`
         }
     ];
 }
