@@ -195,7 +195,7 @@ public unsafe partial class Hnsw
         
         var options = new Options
         {
-            Version = 1,
+            Version = Constants.Graphs.HnswVersion.CurrentVersion,
             VectorSizeBytes = vectorSizeBytes,
             CountOfVectors = 0,
             Container = storage,

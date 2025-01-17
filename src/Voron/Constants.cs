@@ -101,6 +101,13 @@ namespace Voron.Global
             {
                 public const long VectorContainerInternalIndexer = 1;
             }
+
+            internal static class HnswVersion
+            {
+                public const ushort InitialVersion = 7_000;
+                
+                public const ushort CurrentVersion = InitialVersion;
+            }
         }
         
         public static class Tree
