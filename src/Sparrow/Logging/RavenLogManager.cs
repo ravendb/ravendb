@@ -4,6 +4,8 @@ namespace Sparrow.Logging;
 
 public sealed class RavenLogManager
 {
+    internal static bool GlobalIsAuditEnabled;
+
     private static IRavenLogManager LogManager = RavenNullLogManager.Instance;
 
     internal static readonly RavenLogManager Instance = new();
@@ -29,7 +31,12 @@ public sealed class RavenLogManager
         var innerLogger = LogManager.GetLogger("Audit");
         IsAuditEnabled = innerLogger.IsInfoEnabled;
 
-        LogManager.ConfigurationChanged += (_, _) => IsAuditEnabled = innerLogger.IsInfoEnabled;
+        LogManager.ConfigurationChanged += (_, _) => IsAuditEnabled = GlobalIsAuditEnabled && innerLogger.IsInfoEnabled;
+    }
+
+    internal static void SetAudit(bool isEnabled)
+    {
+        GlobalIsAuditEnabled = isEnabled;
     }
 
     public static void Set(IRavenLogManager logManager)

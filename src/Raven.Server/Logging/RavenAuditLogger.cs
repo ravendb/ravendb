@@ -1,6 +1,7 @@
 ﻿using System;
 using JetBrains.Annotations;
 using NLog;
+using Sparrow.Logging;
 
 namespace Raven.Server.Logging;
 
@@ -13,7 +14,7 @@ public sealed class RavenAuditLogger
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public bool IsAuditEnabled => _logger.IsInfoEnabled;
+    public bool IsAuditEnabled => RavenLogManager.GlobalIsAuditEnabled && _logger.IsInfoEnabled;
 
     public void Audit(string message)
     {

@@ -417,6 +417,8 @@ internal static class RavenLogManagerServerExtensions
             if (MicrosoftRule == null)
                 ThrowNoRule(Constants.Logging.Names.MicrosoftRuleName);
 
+            RavenLogManager.SetAudit(DefaultAuditRule.Targets.Count > 0 && DefaultAuditRule.Targets.Any(t => t.GetType() != typeof(NullTarget)));
+
             LogManager.Setup(x => x.LoadConfiguration(c));
             LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
 
@@ -445,24 +447,34 @@ internal static class RavenLogManagerServerExtensions
             InternalLogger.LogToConsoleError = configuration.Logs.NLogInternalLogToStandardError;
         }
 
+        [System.Diagnostics.CodeAnalysis.DoesNotReturn]
         static void ThrowNoRule(string ruleName)
         {
             throw new InvalidOperationException($"Could not find '{ruleName}' rule in the configuration file.");
         }
     }
 
+
 #if !RVN
     public static void ConfigureAuditLog(this RavenLogManager logManager, RavenServer server, RavenLogger logger)
     {
         var configuration = server.Configuration;
 
-        if (configuration.Security.AuditLogPath == null)
+        if (configuration.Logs.ConfigPath != null)
             return;
+
+        if (configuration.Security.AuditLogPath == null)
+        {
+            RavenLogManager.SetAudit(false);
+            return;
+        }
 
         if (configuration.Security.AuthenticationEnabled == false)
         {
             if (logger.IsErrorEnabled)
                 logger.Error($"The audit log configuration '{RavenConfiguration.GetKey(x => x.Security.AuditLogPath)}' was specified, but the server is not running in a secured mode. Audit log disabled!");
+
+            RavenLogManager.SetAudit(false);
             return;
         }
 
@@ -498,6 +510,8 @@ internal static class RavenLogManagerServerExtensions
 
         DefaultAuditRule.Targets.Clear();
         DefaultAuditRule.Targets.Add(fileTargetAsyncWrapper);
+
+        RavenLogManager.SetAudit(true);
 
         LogManager.Setup(x => x.LoadConfiguration(config));
         LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
