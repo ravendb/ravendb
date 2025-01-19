@@ -1056,7 +1056,13 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
-            var minLastEtag = GetMinLastEtag();
+            var minLastEtag = GetMinLastEtag(out var taskIdsStatusesToDelete);
+
+            if (taskIdsStatusesToDelete != null && taskIdsStatusesToDelete.Count > 0)
+            {
+                if (_serverStore.DatabaseInfoCache.DeleteBackupStatusesByTaskIds(_database.Name, _serverStore._env.Base64Id, taskIdsStatusesToDelete) == false)
+                    minLastEtag = 0; // deleting the local status did not succeed. we can't remove any tombstones because it is not guaranteed next backup will be full.
+            }
 
             if (minLastEtag == long.MaxValue)
                 return null;

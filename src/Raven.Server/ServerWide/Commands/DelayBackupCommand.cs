@@ -63,7 +63,7 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
         var status = BackupUtils.GetLocalBackupStatusBlittable(serverStore, context, DatabaseName, TaskId);
         var updatedStatus =
             GetUpdatedValue(index, record, context, status);
-        serverStore.DatabaseInfoCache.InsertBackupStatusBlittable(context, updatedStatus.Value, DatabaseName, serverStore._env.Base64Id, TaskId);
+        serverStore.DatabaseInfoCache.BackupStatusStorage.InsertBackupStatusBlittable(context, updatedStatus.Value, DatabaseName, serverStore._env.Base64Id, TaskId);
     }
 
     public override object GetState()

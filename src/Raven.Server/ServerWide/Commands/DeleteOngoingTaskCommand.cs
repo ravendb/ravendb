@@ -48,7 +48,7 @@ namespace Raven.Server.ServerWide.Commands
                     Delete(backupStatusKey);
 
                     // delete locally
-                    serverStore.DatabaseInfoCache.DeleteBackupStatus(ctx, DatabaseName, serverStore._env.Base64Id, TaskId);
+                    serverStore.DatabaseInfoCache.BackupStatusStorage.DeleteBackupStatus(ctx, DatabaseName, serverStore._env.Base64Id, TaskId);
 
                     void Delete(string key)
                     {

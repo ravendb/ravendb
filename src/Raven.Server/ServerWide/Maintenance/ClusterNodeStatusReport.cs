@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -170,6 +171,24 @@ namespace Raven.Server.ServerWide.Maintenance
                     [nameof(Error)] = Error
                 };
             }
+
+            public override string ToString()
+            {
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    return ctx.ReadObject(ToJson(), "backup-status").ToString();
+                }
+            }
+        }
+        public long GetBackupStatusReportHash()
+        {
+            long hash = 0;
+            foreach (var (_, status) in BackupStatuses)
+            {
+                hash = Hashing.Combine(hash, status?.LastRaftIndex?.LastEtag ?? 0);
+            }
+
+            return hash;
         }
 
         public long LastEtag;

@@ -571,7 +571,7 @@ internal static class BackupUtils
 
     public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
     {
-        var localStatus = serverStore.DatabaseInfoCache.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
+        var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
         if (localStatus != null)
             return localStatus;
 
@@ -586,7 +586,7 @@ internal static class BackupUtils
 
     public static BlittableJsonReaderObject GetLocalBackupStatusBlittable<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
     {
-        var localStatus = serverStore.DatabaseInfoCache.GetBackupStatusBlittable(context, databaseName, serverStore._env.Base64Id, taskId);
+        var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatusBlittable(context, databaseName, serverStore._env.Base64Id, taskId);
         if (localStatus != null)
             return localStatus;
 

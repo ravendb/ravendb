@@ -2,26 +2,21 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client;
-using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
+using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
-using Index = Raven.Server.Documents.Indexes.Index;
 using Sparrow.LowMemory;
-using Sparrow.Server.Json.Sync;
-using Sparrow.Server.LowMemory;
 using Sparrow.Server.Utils;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -213,6 +208,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 
                 report.UpTime = SystemTime.UtcNow - details.InCacheSince;
 
+                FillBackupStatusInfo(ctx, _server, dbName, backupTaskIds, report);
+
                 if (dbTask.IsFaulted)
                 {
                     if (DatabasesLandlord.IsLockedDatabase(dbTask.Exception))
@@ -240,10 +237,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 var dbInstance = dbTask.Result;
                 var currentHash = dbInstance.GetEnvironmentsHash();
+                currentHash = Hashing.Combine(currentHash, report.GetBackupStatusReportHash());
                 report.EnvironmentsHash = currentHash;
 
-                
-                FillBackupStatusInfo(ctx, _server, dbName, backupTaskIds, report);
 
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
