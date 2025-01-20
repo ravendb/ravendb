@@ -206,7 +206,7 @@ namespace Raven.Server.NotificationCenter
 
         public void Dismiss(string id, RavenTransaction existingTransaction = null, bool sendNotificationEvenIfDoesntExist = true)
         {
-            var deleted = _notificationsStorage.Delete(id, existingTransaction);
+            var deleted = Exists(id) && _notificationsStorage.Delete(id, existingTransaction);
             if (deleted == false && sendNotificationEvenIfDoesntExist == false)
                 return;
 
