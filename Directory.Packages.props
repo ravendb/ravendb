@@ -27,8 +27,8 @@
     <PackageVersion Include="Lambda2Js.Signed" Version="3.1.4" />
     <PackageVersion Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
     <PackageVersion Include="librdkafka.redist" Version="2.8.0" />
-    <PackageVersion Include="Lucene.Net" Version="3.0.54011" />
-    <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54011" />
+    <PackageVersion Include="Lucene.Net" Version="3.0.54013" />
+    <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54013" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.12" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
