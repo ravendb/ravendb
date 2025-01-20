@@ -12,7 +12,6 @@ import { useAsyncCallback } from "react-async-hook";
 import { useDirtyFlag } from "hooks/useDirtyFlag";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
-import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormInput, FormSwitch } from "components/common/Form";
@@ -174,7 +173,7 @@ export default function RevisionsBinCleaner() {
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        <RevisionsBinCleanerInfoHub />
+                        {false && <RevisionsBinCleanerInfoHub />}
                     </Col>
                 </Row>
             </Col>
