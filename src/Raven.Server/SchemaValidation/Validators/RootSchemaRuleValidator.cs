@@ -1,20 +1,14 @@
 ﻿using System.Diagnostics;
-using Raven.Server.SchemaValidation.Validators.Object;
-using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators;
 
 [DebuggerDisplay("root validator")]
-public class RootSchemaRuleValidator : PropertySchemaRuleValidator
+public class RootSchemaRuleValidator : SelfElementSchemaRuleValidator
 {
     // ReSharper disable once ConvertToPrimaryConstructor
-    public RootSchemaRuleValidator() : base(string.Empty, string.Empty)
+    public RootSchemaRuleValidator() : base(string.Empty)
     {
-    }
-
-    protected override bool TryGetElement(BlittableJsonReaderObject parent, string accessor, out (BlittableJsonToken Type, object Value) element)
-    {
-        element = (BlittableJsonToken.StartObject, parent);
-        return true;
     }
 }
+
+//TODO Think about how to remove the accessor type here in a clean way.

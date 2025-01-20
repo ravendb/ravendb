@@ -9,7 +9,7 @@ public class PropertySchemaRuleValidator : ElementSchemaRuleValidator<BlittableJ
     public string Accessor { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public PropertySchemaRuleValidator(string accessor, string schemaPath) : base(string.IsNullOrEmpty(schemaPath) ? accessor : $"{schemaPath}.{accessor}")
+    public PropertySchemaRuleValidator(string accessor, string schemaPath) : base($"{schemaPath}.{accessor}")
     {
         Accessor = accessor;
     }
