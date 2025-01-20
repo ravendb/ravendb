@@ -10,15 +10,16 @@ using Sparrow.Threading;
 
 namespace Sparrow.Json
 {
-    public sealed class BlittableJsonDocumentBuilder : AbstractBlittableJsonDocumentBuilder
+    public sealed unsafe class BlittableJsonDocumentBuilder : AbstractBlittableJsonDocumentBuilder
     {
         private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
 
         private readonly JsonOperationContext _context;
         private UsageMode _mode;
         private readonly IJsonParser _reader;
-
         public IBlittableDocumentModifier _modifier;
+        private Func<bool> _readInternalFunc;
+
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
         private LazyStringValue _fakeFieldName;
@@ -39,6 +40,8 @@ namespace Sparrow.Json
             _reader = reader;
             _modifier = modifier;
             _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
+
+            _readInternalFunc = GetReadInternalFunction(_reader, _mode);
         }
 
         public BlittableJsonDocumentBuilder(
@@ -56,12 +59,32 @@ namespace Sparrow.Json
             Renew(debugTag, mode);
         }
 
+        private Func<bool> GetReadInternalFunction(IJsonParser reader, UsageMode mode)
+        {
+            return mode switch
+            {
+                UsageMode.None => reader switch
+                {
+                    ObjectJsonParser => ReadInternal<WriteNone, ObjectJsonParser>,
+                    UnmanagedJsonParser => ReadInternal<WriteNone, UnmanagedJsonParser>,
+                    _ => ReadInternal<WriteNone, IJsonParser>
+                },
+                _ => reader switch
+                {
+                    ObjectJsonParser => ReadInternal<WriteFull, ObjectJsonParser>,
+                    UnmanagedJsonParser => ReadInternal<WriteFull, UnmanagedJsonParser>,
+                    _ => ReadInternal<WriteFull, IJsonParser>
+                }
+            };
+        }
+
         public void Reset()
         {
             AssertNotDisposed();
 
             _debugTag = null;
             _mode = UsageMode.None;
+            _readInternalFunc = GetReadInternalFunction(_reader, _mode);
 
             ClearState();
 
@@ -76,6 +99,7 @@ namespace Sparrow.Json
             _writeToken = default;
             _debugTag = debugTag;
             _mode = mode;
+            _readInternalFunc = GetReadInternalFunction(_reader, mode);
 
             ClearState();
 
@@ -89,35 +113,34 @@ namespace Sparrow.Json
         {
             AssertNotDisposed();
 
-            _continuationState.Push(new BuildingState(ContinuationState.ReadArrayDocument));
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadArrayDocument);
         }
 
         public void ReadObjectDocument()
         {
             AssertNotDisposed();
 
-            _continuationState.Push(new BuildingState(ContinuationState.ReadObjectDocument));
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObjectDocument);
         }
 
         public void ReadNestedObject()
         {
             AssertNotDisposed();
 
-            _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObject);
         }
 
         public void ReadProperty()
         {
             AssertNotDisposed();
 
-            var state = new BuildingState(ContinuationState.ReadPropertyName)
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadPropertyName)
             {
                 State = ContinuationState.ReadPropertyName,
                 Properties = _propertiesCache.Allocate(),
                 FirstWrite = _writer.Position,
                 PartialRead = true
             };
-            _continuationState.Push(state);
         }
 
         public int SizeInBytes
@@ -139,80 +162,57 @@ namespace Sparrow.Json
             base.Dispose();
         }
 
-        private unsafe bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy
+        private unsafe bool ReadInternal<TWriteStrategy, TJsonParser>() 
+            where TWriteStrategy : IWriteStrategy
+            where TJsonParser : IJsonParser
         {
             CachedProperties.PropertyName fakeProperty = null;
 
             var continuationState = _continuationState;
             var currentState = continuationState.Pop();
-            var reader = _reader;
+            var reader = (TJsonParser) _reader;
             var state = _state;
             while (true)
             {
                 switch (currentState.State)
                 {
+                    case ContinuationState.ReadPropertyValue:
+                        if (reader.Read() == false)
+                        {
+                            continuationState.PushByRef() = currentState;
+                            return false;
+                        }
+                        currentState.State = ContinuationState.CompleteReadingPropertyValue;
+                        continuationState.PushByRef() = currentState;
+
+                        goto case ContinuationState.ReadValue;
+
                     case ContinuationState.ReadValue:
-                        ReadJsonValue<TWriteStrategy>();
+                        ReadJsonValue<TWriteStrategy, TJsonParser>();
                         currentState = _continuationState.Pop();
                         continue;
 
-                    case ContinuationState.ReadObjectDocument:
-                        if (reader.Read() == false)
-                        {
-                            continuationState.Push(currentState);
-                            return false;
-                        }
-                        currentState.State = ContinuationState.ReadObject;
-                        goto case ContinuationState.ReadObject;
-
-                    case ContinuationState.ReadArrayDocument:
-                        if (reader.Read() == false)
-                        {
-                            continuationState.Push(currentState);
-                            return false;
-                        }
-
-                        fakeProperty ??= _context.CachedProperties.GetProperty(_fakeFieldName);
-                        currentState.CurrentProperty = fakeProperty;
-                        currentState.MaxPropertyId = fakeProperty.PropertyId;
-                        currentState.FirstWrite = _writer.Position;
-                        currentState.Properties = _propertiesCache.Allocate();
-                        currentState.Properties.Add(new PropertyTag ( fakeProperty ));
-                        currentState.State = ContinuationState.CompleteDocumentArray;
-                        continuationState.Push(currentState);
-                        currentState = new BuildingState(ContinuationState.ReadArray);
-                        goto case ContinuationState.ReadArray;
-
-                    case ContinuationState.CompleteDocumentArray:
-                        currentState.Properties[0] = new PropertyTag(
-                            type: (byte)_writeToken.WrittenToken,
-                            property: currentState.Properties[0].Property,
-                            position: _writeToken.ValuePos
-                        );
-
-                        // Register property position, name id (PropertyId) and type (object type and metadata)
-                        _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
-                        _propertiesCache.Return(ref currentState.Properties);
-                        return true;
-
-                    case ContinuationState.ReadObject:
-                        if (state.CurrentTokenType != JsonParserToken.StartObject)
-                            ThrowExpectedStartOfObject();
-
-                        currentState.State = ContinuationState.ReadPropertyName;
-                        currentState.Properties = _propertiesCache.Allocate();
-                        currentState.FirstWrite = _writer.Position;
-                        goto case ContinuationState.ReadPropertyName;
-
                     case ContinuationState.ReadPropertyName:
-                        if (ReadMaybeModifiedPropertyName() == false)
+                        if (ReadMaybeModifiedPropertyName(reader))
                         {
-                            continuationState.Push(currentState);
-                            return false;
-                        }
+                            if (state.CurrentTokenType != JsonParserToken.EndObject)
+                            {
+                                if (state.CurrentTokenType == JsonParserToken.String)
+                                {
+                                    var property = CreateLazyStringValueFromParserState();
+                                    currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
+                                    currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
+                                    currentState.State = ContinuationState.ReadPropertyValue;
 
-                        if (state.CurrentTokenType == JsonParserToken.EndObject)
-                        {
+                                    if (currentState.CurrentProperty.EqualsPropertyNameToBytes(Global.Constants.Naming.VectorPropertyNameAsSpan))
+                                        _isVectorProperty = true;
+
+                                    goto case ContinuationState.ReadPropertyValue;
+                                }
+                                
+                                ThrowExpectedProperty();
+                            }
+
                             _modifier?.EndObject();
                             _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
                             _propertiesCache.Return(ref currentState.Properties);
@@ -224,27 +224,26 @@ namespace Sparrow.Json
                             continue;
                         }
 
-                        if (state.CurrentTokenType != JsonParserToken.String)
-                            ThrowExpectedProperty();
+                        continuationState.PushByRef() = currentState;
+                        return false;
 
-                        var property = CreateLazyStringValueFromParserState();
-                        currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
-                        _isVectorProperty = currentState.CurrentProperty.IsVectorProperty;
-
-                        currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
-                        currentState.State = ContinuationState.ReadPropertyValue;
-                        goto case ContinuationState.ReadPropertyValue;
-
-                    case ContinuationState.ReadPropertyValue:
+                    case ContinuationState.ReadObjectDocument:
                         if (reader.Read() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
-                        currentState.State = ContinuationState.CompleteReadingPropertyValue;
-                        continuationState.Push(currentState);
+                        currentState.State = ContinuationState.ReadObject;
+                        goto case ContinuationState.ReadObject;
 
-                        goto case ContinuationState.ReadValue;
+                    case ContinuationState.ReadObject:
+                        if (state.CurrentTokenType != JsonParserToken.StartObject)
+                            ThrowExpectedStartOfObject();
+
+                        currentState.State = ContinuationState.ReadPropertyName;
+                        currentState.Properties = _propertiesCache.Allocate();
+                        currentState.FirstWrite = _writer.Position;
+                        goto case ContinuationState.ReadPropertyName;
 
                     case ContinuationState.CompleteReadingPropertyValue:
                         // Register property position, name id (PropertyId) and type (object type and metadata)
@@ -263,6 +262,36 @@ namespace Sparrow.Json
 
                         currentState.State = ContinuationState.ReadPropertyName;
                         goto case ContinuationState.ReadPropertyName;
+
+                    case ContinuationState.ReadArrayDocument:
+                        if (reader.Read() == false)
+                        {
+                            continuationState.PushByRef() = currentState;
+                            return false;
+                        }
+
+                        fakeProperty ??= _context.CachedProperties.GetProperty(_fakeFieldName);
+                        currentState.CurrentProperty = fakeProperty;
+                        currentState.MaxPropertyId = fakeProperty.PropertyId;
+                        currentState.FirstWrite = _writer.Position;
+                        currentState.Properties = _propertiesCache.Allocate();
+                        currentState.Properties.Add(new PropertyTag(fakeProperty));
+                        currentState.State = ContinuationState.CompleteDocumentArray;
+                        continuationState.PushByRef() = currentState;
+                        currentState = new BuildingState(ContinuationState.ReadArray);
+                        goto case ContinuationState.ReadArray;
+
+                    case ContinuationState.CompleteDocumentArray:
+                        currentState.Properties[0] = new PropertyTag(
+                            type: (byte)_writeToken.WrittenToken,
+                            property: currentState.Properties[0].Property,
+                            position: _writeToken.ValuePos
+                        );
+
+                        // Register property position, name id (PropertyId) and type (object type and metadata)
+                        _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
+                        _propertiesCache.Return(ref currentState.Properties);
+                        return true;
 
                     case ContinuationState.ReadArray:
                         if (state.CurrentTokenType != JsonParserToken.StartArray)
@@ -284,7 +313,7 @@ namespace Sparrow.Json
                     case ContinuationState.ReadArrayValue:
                         if (reader.Read() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
 
@@ -295,7 +324,7 @@ namespace Sparrow.Json
                         }
 
                         currentState.State = ContinuationState.CompleteArrayValue;
-                        continuationState.Push(currentState);
+                        continuationState.PushByRef() = currentState;
                         goto case ContinuationState.ReadValue;
 
                     case ContinuationState.CompleteArrayValue:
@@ -317,7 +346,7 @@ namespace Sparrow.Json
 
                         if (reader.Read() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
 
@@ -371,7 +400,7 @@ namespace Sparrow.Json
                                 else
                                 {
                                     if ((_mode & UsageMode.ValidateDouble) == UsageMode.ValidateDouble)
-                                        _reader.ValidateFloat();
+                                        reader.ValidateFloat();
 
                                     _state.AddBuffered(decimal.ToDouble(value));
                                 }
@@ -422,7 +451,7 @@ namespace Sparrow.Json
 
                         // The change of the current state must happen before as ReadJsonValue may return a new instance.
                         currentState.State = ContinuationState.CompleteArrayValue;
-                        continuationState.Push(currentState);
+                        continuationState.PushByRef() = currentState;
 
                         // Allow the loop to continue to the next iteration
                         goto case ContinuationState.ReadValue;
@@ -503,21 +532,16 @@ namespace Sparrow.Json
             if (_continuationState.Count == 0)
                 return false; //nothing to do
 
-            if (_mode == UsageMode.None)
-            {
-                return ReadInternal<WriteNone>();
-            }
-
-            return ReadInternal<WriteFull>();
+            return _readInternalFunc();
         }
 
-        private bool ReadMaybeModifiedPropertyName()
+        private bool ReadMaybeModifiedPropertyName<TJsonParser>(TJsonParser reader)
+            where TJsonParser : IJsonParser
         {
-            if (_modifier != null)
-            {
-                return _modifier.AboutToReadPropertyName(_reader, _state);
-            }
-            return _reader.Read();
+            if (_modifier == null) 
+                return reader.Read();
+
+            return _modifier.AboutToReadPropertyName(reader, _state);
         }
 
 #if NET6_0_OR_GREATER
@@ -551,7 +575,9 @@ namespace Sparrow.Json
         private struct WriteNone : IWriteStrategy { }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void ReadJsonValue<TWriteStrategy>() where TWriteStrategy : IWriteStrategy
+        private void ReadJsonValue<TWriteStrategy, TJsonParser>() 
+            where TWriteStrategy : IWriteStrategy
+            where TJsonParser : IJsonParser
         {
             int start;
             JsonParserToken current = _state.CurrentTokenType;
@@ -585,26 +611,27 @@ namespace Sparrow.Json
             else if (current == JsonParserToken.StartObject)
             {
                 _modifier?.StartObject();
-                _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
+                _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObject);
             }
             else if (current != JsonParserToken.EndObject)
             {
-                ReadJsonValueUnlikely<TWriteStrategy>(current);
+                ReadJsonValueUnlikely<TJsonParser>(current);
             }
         }
 
-        private unsafe void ReadJsonValueUnlikely<TWriteStrategy>(JsonParserToken current) where TWriteStrategy : IWriteStrategy
+        private void ReadJsonValueUnlikely<TJsonParser>(JsonParserToken current) 
+            where TJsonParser : IJsonParser
         {
             int start;
             switch (current)
             {
                 case JsonParserToken.StartArray:
-                    _continuationState.Push(new BuildingState(ContinuationState.ReadArray));
+                    _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadArray);
                     return;
 
                 case JsonParserToken.Float:
                     if ((_mode & UsageMode.ValidateDouble) == UsageMode.ValidateDouble)
-                        _reader.ValidateFloat();
+                        ((TJsonParser)_reader).ValidateFloat();
 
                     start = _writer.WriteValue(_state.StringBuffer, _state.StringSize);
 
@@ -633,6 +660,9 @@ namespace Sparrow.Json
             ThrowExpectedValue(current);
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private void ThrowExpectedValue(JsonParserToken token)
         {
             throw new InvalidDataException("Expected a value, but got " + token);

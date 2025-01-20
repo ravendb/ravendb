@@ -67,9 +67,9 @@ namespace Sparrow.Json
                 throw new ObjectDisposedException(GetType().Name);
         }
 
-        protected struct BuildingState(ContinuationState state, bool partialRead = false)
+        protected struct BuildingState()
         {
-            public ContinuationState State = state;
+            public ContinuationState State;
             public int MaxPropertyId;
             public CachedProperties.PropertyName CurrentProperty;
             public FastList<PropertyTag> Properties;
@@ -77,58 +77,70 @@ namespace Sparrow.Json
             public FastList<int> Positions;
             public long FirstWrite;
 
-            internal bool PartialRead = partialRead;
+            internal bool PartialRead;
+
+            public BuildingState(ContinuationState state) : this()
+            {
+                State = state;
+            }
+            public BuildingState(ContinuationState state, bool partialRead = false) : this()
+            {
+                State = state;
+                PartialRead = partialRead;
+            }
+
+            public BuildingState(ContinuationState state, FastList<BlittableJsonToken> types, FastList<int> positions) : this()
+            {
+                State = state;
+                Types = types;
+                Positions = positions;
+            }
+
+            public BuildingState(ContinuationState state, FastList<PropertyTag> properties = null, long firstWrite = -1) : this()
+            {
+                State = state;
+                Properties = properties;
+                FirstWrite = firstWrite;
+            }
         }
 
-        protected const int AllowedAllStates = 0xFF;
-        protected const int DisallowBufferedStates = 0x7F;
-        protected const int Buffered = 0x80;
-
-        protected enum ContinuationState : int
+        // PERF: The numbers for continuation states have been changed to improve the chance of the
+        // JIT to emit a jump-table instead of complex switch.
+        protected enum ContinuationState 
         {
-            ReadObject = 0x01,
-            ReadArray = 0x02,
-            ReadObjectDocument = 0x03,
-            ReadArrayDocument = 0x04,
-            ReadPropertyName = 0x05,
-            ReadPropertyValue = 0x06,
-            CompleteDocumentArray = 0x07,
-            CompleteReadingPropertyValue = 0x08,
+            // PERF: Code size optimizations for read method.
+            None = 0,
 
-            ReadArrayValue = 0x09,
-            ReadValue = 0x0A,
-            CompleteArray = 0x0B,
-            CompleteArrayValue = 0x0C,
+            ReadValue = 1,  
+            ReadObjectDocument = 2, 
+            ReadArrayDocument = 3,  
+            ReadObject = 4, 
+            ReadPropertyName = 5, 
+            ReadPropertyValue = 6,  
+            CompleteDocumentArray = 7,  
+            CompleteReadingPropertyValue = 8,  
+            ReadArray = 9, 
+            ReadArrayValue = 10, 
+            CompleteArray = 11,
+            CompleteArrayValue = 12, 
 
             // Support for vector type.
-            ReadBufferedArrayValue = ReadArrayValue | Buffered,
-            ReadBufferedValue = ReadValue | Buffered,
-            CompleteBufferedArray = CompleteArray | Buffered,
-            CompleteBufferedArrayValue = CompleteArrayValue | Buffered,
+            ReadBufferedArrayValue = 13, 
+            ReadBufferedValue = 14, 
+            CompleteBufferedArray = 15, 
+            CompleteBufferedArrayValue = 16, 
         }
 
-        public struct PropertyTag
+        public struct PropertyTag(byte type, CachedProperties.PropertyName property, int position)
         {
-            public int Position;
+            public int Position = position;
+            public CachedProperties.PropertyName Property = property;
+            public byte Type = type;
 
+            public PropertyTag(CachedProperties.PropertyName property) : this(0, property, 0) {}
             public override string ToString()
             {
                 return $"{nameof(Position)}: {Position}, {nameof(Property)}: {Property.Comparer} {Property.PropertyId}, {nameof(Type)}: {(BlittableJsonToken)Type}";
-            }
-
-            public CachedProperties.PropertyName Property;
-            public byte Type;
-
-            public PropertyTag(CachedProperties.PropertyName property)
-            {
-                Property = property;
-            }
-
-            public PropertyTag(byte type, CachedProperties.PropertyName property, int position)
-            {
-                Type = type;
-                Property = property;
-                Position = position;
             }
         }
 
@@ -162,9 +174,9 @@ namespace Sparrow.Json
 
         private sealed class GlobalPoolItem
         {
-            public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>();
-            public readonly ListCache<int> PositionsCache = new ListCache<int>();
-            public readonly ListCache<BlittableJsonToken> TokensCache = new ListCache<BlittableJsonToken>();
+            public readonly ListCache<PropertyTag> PropertyCache = new();
+            public readonly ListCache<int> PositionsCache = new();
+            public readonly ListCache<BlittableJsonToken> TokensCache = new();
         }
     }
 }
