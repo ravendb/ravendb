@@ -34,6 +34,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
             new object[] { SVC.prefixItems, 1, "The value of 'prefixItems' at 'prop' must be an array, but received '1' of type 'integer'." },
             new object[] { SVC.contains, 1, "The value of 'contains' at 'prop' must be an object, but received '1' of type 'integer'." },
             new object[] { SVC.dependentRequired, 1, "The value of 'dependentRequired' at 'prop' must be an object, but received '1' of type 'integer'." },
+            new object[] { SVC.@if, 1, "The value of 'if' at 'prop' must be an object, but received '1' of type 'integer'." },
         };
 
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -48,8 +49,6 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
     [MemberData(nameof(TestCases))]
     public void InvalidSchema_WhenDefineRuleWithWrongValue(string rule, object ruleValue, string error)
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
-
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.properties] = new DynamicJsonValue
@@ -60,11 +59,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
-        {
-            var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
-            AssertError(error, exception.Message);
-        }
+        AssertInvalidSchemaThrow(schemaDefinition, error);
     }
     
     [RavenTheory(RavenTestCategory.JavaScript)]
@@ -73,17 +68,35 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
     [InlineData(SVC.additionalProperties, "invalidvalue", "The value of 'additionalProperties' at '' must be a boolean or an object, but received a value of type 'string'.")]
     public void InvalidSchema_WhenDefineWithWrongValue(string key, object value, string error)
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
-
         var schemaDefinition = new DynamicJsonValue
         {
             [key] = value
         };
+        AssertInvalidSchemaThrow(schemaDefinition, error);
+    }
+
+    private void AssertInvalidSchemaThrow(DynamicJsonValue schemaDefinition, string error)
+    {
+        var schemaValidator = new SchemaValidator(ContextPool);
 
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
             AssertError(error, exception.Message);
         }
+    }
+    
+    [RavenTheory(RavenTestCategory.JavaScript)]
+    [InlineData(SVC.then, "The value of 'then' at '' must be an object, but received '1' of type 'integer'.")]
+    [InlineData(SVC.@else, "The value of 'else' at '' must be an object, but received '1' of type 'integer'.")]
+
+    public void InvalidSchema_WhenDefineConditionalSchemaWithWrongValue(string rule, string error)
+    {
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.@if] = new DynamicJsonValue{},
+            [rule] = 1,
+        };
+        AssertInvalidSchemaThrow(schemaDefinition, error);
     }
 }
