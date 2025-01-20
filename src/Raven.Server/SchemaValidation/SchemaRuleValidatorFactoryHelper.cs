@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Raven.Server.SchemaValidation.Validators.Array;
+using Raven.Server.SchemaValidation.Validators.Object;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation;
@@ -9,7 +11,9 @@ namespace Raven.Server.SchemaValidation;
 //TODO Find better name
 public abstract class SchemaRuleValidatorFactoryHelper
 {
-    private static readonly Dictionary<string, ISchemaRuleValidatorFactory> SchemaRuleValidatorFactories;
+    private static  Dictionary<string, ISchemaRuleValidatorFactory> SchemaRuleValidatorFactories;
+    private static readonly ObjectSchemaRuleValidatorFactory ObjectSchemaRuleValidatorFactory = new ObjectSchemaRuleValidatorFactory();
+    private static readonly ArraySchemaRuleValidatorFactory ArraySchemaRuleValidatorFactory = new ArraySchemaRuleValidatorFactory();
 
     static SchemaRuleValidatorFactoryHelper()
     {
@@ -19,37 +23,22 @@ public abstract class SchemaRuleValidatorFactoryHelper
                 if (t.IsClass == false || t.IsAbstract)
                     return null;
 
-                if (!typeof(ISchemaRuleValidatorFactory).IsAssignableFrom(t))
+                if (typeof(ISchemaRuleValidatorFactory).IsAssignableFrom(t) == false)
                     return null;
 
-                var baseType = t;
-                while (baseType != null && (baseType.IsGenericType == false || baseType.GetGenericTypeDefinition() != typeof(SchemaRuleValidatorFactory<>)))
-                    baseType = baseType.BaseType;
-
-                if (baseType == null)
-                    return null;
-
-                var validatorType = baseType.GetGenericArguments()[0];
-                if (!typeof(ISchemaRuleValidator).IsAssignableFrom(validatorType))
-                    return null;
-
-                var schemaRuleAttribute = CustomAttributeExtensions.GetCustomAttribute<SchemaRuleAttribute>((MemberInfo)validatorType);
-                if (schemaRuleAttribute == null)
+                var rule = t.GetCustomAttribute<SchemaRuleAttribute>()?.Rule;
+                if (rule == null)
                     return null;
 
                 if (Activator.CreateInstance(t) is not ISchemaRuleValidatorFactory factoryInstance)
                     throw new InvalidOperationException($"Unable to create an instance of factory type '{t.Name}'.");
 
-                return new
-                {
-                    schemaRuleAttribute.Rule,
-                    FactoryInstance = factoryInstance
-                };
+                return new { Rule = rule, FactoryInstance = factoryInstance };
             })
             .Where(x => x != null) // Filter out nulls
-            .ToDictionary(x => x!.Rule, x => x!.FactoryInstance);;
+            .ToDictionary(x => x.Rule, x => x!.FactoryInstance);
     }
-    
+
     public static bool TryCreateValidator(string rule, BlittableJsonReaderObject schemaDefinition, string schemaPath, out ISchemaRuleValidator validator)
     {
         if (SchemaRuleValidatorFactories.TryGetValue(rule, out ISchemaRuleValidatorFactory factory))
@@ -59,6 +48,15 @@ public abstract class SchemaRuleValidatorFactoryHelper
         }
         validator = null;
         return false;
+    }
+
+    public static ObjectSchemaRuleValidator CreateObjectValidator(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        return ObjectSchemaRuleValidatorFactory.Create(schemaDefinition, schemaPath);
+    }
+    public static ArraySchemaRuleValidator CreateArrayValidator(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        return ArraySchemaRuleValidatorFactory.Create(schemaDefinition, schemaPath);
     }
     
     internal static string[] ForTestGetRuleNames() => SchemaRuleValidatorFactories.Keys.ToArray();

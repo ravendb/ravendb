@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Sparrow.Json;
 
@@ -164,7 +165,8 @@ public static class SchemaValidationHelper
         var type = GetPublicType(actualType);
         ThrowRuleTypeError(rule, ruleValue, publicType, type, schemaPath);
     }
-
+    
+    [DoesNotReturn]
     public static void ThrowRuleTypeError(string rule, object ruleValue, string expectedPublicType, string actualPublicType, string schemaPath)
     {
         
@@ -185,6 +187,8 @@ public static class SchemaValidationHelper
     {
         TrowRuleTypeError(rule, ruleValue, expectedTypes, GetPublicType(actualType), schemaPath);
     }
+    
+    [DoesNotReturn]
     public static void TrowRuleTypeError(string rule, object ruleValue, BlittableJsonToken[] expectedTypes, string actualPublicType, string schemaPath)
     {
         var publicTypes = expectedTypes.Select(GetPublicType).Distinct().ToArray();

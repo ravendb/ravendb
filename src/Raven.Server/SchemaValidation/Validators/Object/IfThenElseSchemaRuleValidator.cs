@@ -2,7 +2,6 @@
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule(SchemaValidatorConstants.@if)]
 public class IfThenElseSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     //TODO To change RootSchemaRuleValidator name or implement new class
@@ -26,7 +25,7 @@ public class IfThenElseSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRe
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.@if)]
 public class IfThenElseSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<IfThenElseSchemaRuleValidator>
 {
     public override IfThenElseSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

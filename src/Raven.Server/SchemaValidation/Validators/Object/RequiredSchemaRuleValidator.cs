@@ -4,7 +4,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule(SchemaValidatorConstants.required)]
 public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly HashSet<string> _requiredHashSet;
@@ -27,7 +26,7 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.required)]
 public class RequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<RequiredSchemaRuleValidator>
 {
     public override RequiredSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

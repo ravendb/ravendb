@@ -4,7 +4,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Number;
 
-[SchemaRule(SchemaValidatorConstants.multipleOf)]
 public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _multipleOf;
@@ -25,7 +24,7 @@ public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.multipleOf)]
 public class MultipleOfSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MultipleOfSchemaRuleValidator>
 {
     public override MultipleOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

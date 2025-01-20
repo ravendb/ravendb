@@ -3,7 +3,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.String;
 
-[SchemaRule(SchemaValidatorConstants.pattern)]
 public class PatternSchemaRuleValidator : StringSchemaRuleValidator
 {
     private readonly Regex _pattern;
@@ -24,7 +23,7 @@ public class PatternSchemaRuleValidator : StringSchemaRuleValidator
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.pattern)]
 public class PatternSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PatternSchemaRuleValidator>
 {
     public override PatternSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

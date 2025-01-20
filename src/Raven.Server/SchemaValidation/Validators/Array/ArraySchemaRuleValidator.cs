@@ -10,71 +10,17 @@ namespace Raven.Server.SchemaValidation.Validators.Array;
 public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
     private readonly string _schemaPath;
-    private ArrayItemSchemaRuleValidator[] _prefixValidators;
-    private (bool Allowed, ArrayItemSchemaRuleValidator validator) _itemsValidator;
+    private readonly ArrayItemSchemaRuleValidator[] _prefixValidators;
+    private readonly (bool Allowed, ArrayItemSchemaRuleValidator validator) _itemsValidator;
     
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ArraySchemaRuleValidator(string schemaPath)
+    public ArraySchemaRuleValidator(ArrayItemSchemaRuleValidator[] prefixValidators, (bool Allowed, ArrayItemSchemaRuleValidator validator) itemsValidator, string schemaPath)
     {
+        _prefixValidators = prefixValidators;
+        _itemsValidator = itemsValidator;
         _schemaPath = schemaPath;
     }
     
-    public void Init(BlittableJsonReaderObject schemaDefinition)
-    {
-        ReadPrefixItemsSchema(schemaDefinition);
-        ReadItemsSchema(schemaDefinition);
-    }
-
-    private void ReadPrefixItemsSchema(BlittableJsonReaderObject schemaDefinition)
-    {
-        if(SchemaValidationHelper.TryGetArray(schemaDefinition, SchemaValidatorConstants.prefixItems, _schemaPath, out var prefixItemsSchema) == false)
-            return;
-        
-        List<ArrayItemSchemaRuleValidator> validators = null;
-        for (int i = 0; i < prefixItemsSchema.Length; i++)
-        {
-            var (value, token) = prefixItemsSchema.GetValueTokenTupleByIndex(i);
-            
-            const BlittableJsonToken expectedType = BlittableJsonToken.StartObject;
-            if (token != expectedType)
-                SchemaValidationHelper.TrowRuleTypeError($"{SchemaValidatorConstants.prefixItems}", value, expectedType, token, _schemaPath);
-                    
-            var validator = new ArrayItemSchemaRuleValidator(i, _schemaPath);
-            validator.Init((BlittableJsonReaderObject)prefixItemsSchema[i]);
-            (validators ??= new List<ArrayItemSchemaRuleValidator>()).Add(validator);
-        }
-        _prefixValidators = validators?.ToArray();
-    }
-
-    private readonly BlittableJsonToken[] _prefixItemsSchemaTypes = [BlittableJsonToken.Boolean, BlittableJsonToken.StartObject];
-    private void ReadItemsSchema(BlittableJsonReaderObject schemaDefinition)
-    {
-        const string rule = SchemaValidatorConstants.items;
-        if (schemaDefinition.TryGet(rule, out object prefixItemsSchema) == false)
-        {
-            _itemsValidator = (true, null);
-            return;
-        }
-        
-        switch (prefixItemsSchema)
-        {
-            case bool isAdditionalPropertiesAllowed:
-                _itemsValidator = (isAdditionalPropertiesAllowed, null);
-                break;
-            case BlittableJsonReaderObject additionalPropertiesSchema:
-            {
-                var validator = new ArrayItemSchemaRuleValidator(_schemaPath);
-                validator.Init(additionalPropertiesSchema);
-                _itemsValidator = (true, validator);
-                break;
-            }
-            default:
-                SchemaValidationHelper.TrowRuleTypeError(rule, prefixItemsSchema, _prefixItemsSchemaTypes, SchemaValidationHelper.GetPublicTypeOfObj(prefixItemsSchema),
-                    _schemaPath);
-                break;
-        }
-    }
-
     protected override bool ValidateInternal(BlittableJsonReaderArray value, IErrorBuilder errorBuilder)
     {
         var isValid = true;
@@ -111,5 +57,58 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         }
         
         return isValid;
+    }
+}
+
+public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArraySchemaRuleValidator>
+{
+    public override ArraySchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        var prefixValidators = ReadPrefixItemsSchema(schemaDefinition, schemaPath);
+        var itemsValidators = ReadItemsSchema(schemaDefinition, schemaPath);
+        return new ArraySchemaRuleValidator(prefixValidators, itemsValidators, schemaPath);
+    }
+    
+    private static ArrayItemSchemaRuleValidator[] ReadPrefixItemsSchema(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        if(SchemaValidationHelper.TryGetArray(schemaDefinition, SchemaValidatorConstants.prefixItems, schemaPath, out var prefixItemsSchema) == false)
+            return null;
+        
+        List<ArrayItemSchemaRuleValidator> validators = null;
+        for (int i = 0; i < prefixItemsSchema.Length; i++)
+        {
+            var (value, token) = prefixItemsSchema.GetValueTokenTupleByIndex(i);
+            
+            const BlittableJsonToken expectedType = BlittableJsonToken.StartObject;
+            if (token != expectedType)
+                SchemaValidationHelper.TrowRuleTypeError($"{SchemaValidatorConstants.prefixItems}", value, expectedType, token, schemaPath);
+                    
+            var validator = new ArrayItemSchemaRuleValidator(i, schemaPath);
+            validator.Init((BlittableJsonReaderObject)prefixItemsSchema[i]);
+            (validators ??= new List<ArrayItemSchemaRuleValidator>()).Add(validator);
+        }
+        return validators?.ToArray();
+    }
+    
+    private readonly BlittableJsonToken[] _prefixItemsSchemaTypes = [BlittableJsonToken.Boolean, BlittableJsonToken.StartObject];
+    private (bool Allowed, ArrayItemSchemaRuleValidator Validator) ReadItemsSchema(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        const string rule = SchemaValidatorConstants.items;
+        if (schemaDefinition.TryGet(rule, out object prefixItemsSchema) == false)
+            return (true, null);
+        
+        switch (prefixItemsSchema)
+        {
+            case bool isAdditionalPropertiesAllowed:
+                return (isAdditionalPropertiesAllowed, null);
+            case BlittableJsonReaderObject additionalPropertiesSchema:
+                var validator = new ArrayItemSchemaRuleValidator(schemaPath);
+                validator.Init(additionalPropertiesSchema);
+                return (true, validator);
+            default:
+                SchemaValidationHelper.TrowRuleTypeError(
+                    rule, prefixItemsSchema, _prefixItemsSchemaTypes, SchemaValidationHelper.GetPublicTypeOfObj(prefixItemsSchema), schemaPath);
+                return (false, null);
+        }
     }
 }
