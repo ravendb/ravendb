@@ -326,6 +326,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.ManagedAllocations)] = Size.Humane(managedMemoryInBytes),
                 [nameof(MemoryInfo.UnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
                 [nameof(MemoryInfo.LuceneManagedAllocationsForTermCache)] = Size.Humane(NativeMemory.TotalLuceneManagedAllocationsForTermCache),
+                [nameof(MemoryInfo.LuceneUnmanagedAllocationsForTermCache)] = Size.Humane(NativeMemory.TotalLuceneUnmanagedAllocationsForTermCache),
                 [nameof(MemoryInfo.LuceneUnmanagedAllocationsForSorting)] = Size.Humane(NativeMemory.TotalLuceneUnmanagedAllocationsForSorting),
                 [nameof(MemoryInfo.EncryptionBuffersInUse)] = Size.Humane(encryptionBuffers.CurrentlyInUseSize),
                 [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
@@ -532,6 +533,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string ManagedAllocations { get; set; }
             public string UnmanagedAllocations { get; set; }
             public string LuceneManagedAllocationsForTermCache { get; set; }
+            public string LuceneUnmanagedAllocationsForTermCache { get; set; }
             public string LuceneUnmanagedAllocationsForSorting { get; set; }
             public string EncryptionBuffersInUse { get; set; }
             public string EncryptionBuffersPool { get; set; }
