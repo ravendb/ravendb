@@ -89,35 +89,34 @@ namespace Sparrow.Json
         {
             AssertNotDisposed();
 
-            _continuationState.Push(new BuildingState(ContinuationState.ReadArrayDocument));
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadArrayDocument);
         }
 
         public void ReadObjectDocument()
         {
             AssertNotDisposed();
 
-            _continuationState.Push(new BuildingState(ContinuationState.ReadObjectDocument));
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObjectDocument);
         }
 
         public void ReadNestedObject()
         {
             AssertNotDisposed();
 
-            _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObject);
         }
 
         public void ReadProperty()
         {
             AssertNotDisposed();
 
-            var state = new BuildingState(ContinuationState.ReadPropertyName)
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadPropertyName)
             {
                 State = ContinuationState.ReadPropertyName,
                 Properties = _propertiesCache.Allocate(),
                 FirstWrite = _writer.Position,
                 PartialRead = true
             };
-            _continuationState.Push(state);
         }
 
         public int SizeInBytes
@@ -159,7 +158,7 @@ namespace Sparrow.Json
                     case ContinuationState.ReadObjectDocument:
                         if (reader.Read() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
                         currentState.State = ContinuationState.ReadObject;
@@ -168,7 +167,7 @@ namespace Sparrow.Json
                     case ContinuationState.ReadArrayDocument:
                         if (reader.Read() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
 
@@ -179,7 +178,7 @@ namespace Sparrow.Json
                         currentState.Properties = _propertiesCache.Allocate();
                         currentState.Properties.Add(new PropertyTag ( fakeProperty ));
                         currentState.State = ContinuationState.CompleteDocumentArray;
-                        continuationState.Push(currentState);
+                        continuationState.PushByRef() = currentState;
                         currentState = new BuildingState(ContinuationState.ReadArray);
                         goto case ContinuationState.ReadArray;
 
@@ -207,7 +206,7 @@ namespace Sparrow.Json
                     case ContinuationState.ReadPropertyName:
                         if (ReadMaybeModifiedPropertyName() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
 
@@ -240,11 +239,11 @@ namespace Sparrow.Json
                     case ContinuationState.ReadPropertyValue:
                         if (reader.Read() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
                         currentState.State = ContinuationState.CompleteReadingPropertyValue;
-                        continuationState.Push(currentState);
+                        continuationState.PushByRef() = currentState;
 
                         goto case ContinuationState.ReadValue;
 
@@ -286,7 +285,7 @@ namespace Sparrow.Json
                     case ContinuationState.ReadArrayValue:
                         if (reader.Read() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
 
@@ -297,7 +296,7 @@ namespace Sparrow.Json
                         }
 
                         currentState.State = ContinuationState.CompleteArrayValue;
-                        continuationState.Push(currentState);
+                        continuationState.PushByRef() = currentState;
                         goto case ContinuationState.ReadValue;
 
                     case ContinuationState.CompleteArrayValue:
@@ -319,7 +318,7 @@ namespace Sparrow.Json
 
                         if (reader.Read() == false)
                         {
-                            continuationState.Push(currentState);
+                            continuationState.PushByRef() = currentState;
                             return false;
                         }
 
@@ -424,7 +423,7 @@ namespace Sparrow.Json
 
                         // The change of the current state must happen before as ReadJsonValue may return a new instance.
                         currentState.State = ContinuationState.CompleteArrayValue;
-                        continuationState.Push(currentState);
+                        continuationState.PushByRef() = currentState;
 
                         // Allow the loop to continue to the next iteration
                         goto case ContinuationState.ReadValue;
@@ -587,7 +586,7 @@ namespace Sparrow.Json
             else if (current == JsonParserToken.StartObject)
             {
                 _modifier?.StartObject();
-                _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
+                _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObject);
             }
             else if (current != JsonParserToken.EndObject)
             {
@@ -601,7 +600,7 @@ namespace Sparrow.Json
             switch (current)
             {
                 case JsonParserToken.StartArray:
-                    _continuationState.Push(new BuildingState(ContinuationState.ReadArray));
+                    _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadArray);
                     return;
 
                 case JsonParserToken.Float:
@@ -635,6 +634,9 @@ namespace Sparrow.Json
             ThrowExpectedValue(current);
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private void ThrowExpectedValue(JsonParserToken token)
         {
             throw new InvalidDataException("Expected a value, but got " + token);
