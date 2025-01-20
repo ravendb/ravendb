@@ -3,6 +3,7 @@ import Certificates from "components/pages/resources/manageServer/certificates/C
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
     title: "Pages/ManageServer/Certificates",
@@ -17,11 +18,16 @@ export const CertificatesStory: StoryObj<CertificatesStoryArgs> = {
     name: "Certificates",
     render: (args) => {
         const { manageServerService } = mockServices;
-        const { accessManager } = mockStore;
+        const { accessManager, databases, cluster } = mockStore;
 
         accessManager.with_isServerSecure(args.isSecureServer);
+        accessManager.with_clientCertificateThumbprint(ManageServerStubs.certificates().Certificates[1].Thumbprint);
+        databases.with_Single();
+        cluster.with_Single();
 
         manageServerService.withAdminStats();
+        manageServerService.withServerCertificateRenewalDate();
+        manageServerService.withServerCertificateSetupMode();
         manageServerService.withCertificates();
 
         return <Certificates />;

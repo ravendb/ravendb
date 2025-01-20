@@ -14,4 +14,8 @@ export class MockAccessManager {
     with_isServerSecure(isSecureServer: boolean) {
         globalDispatch(accessManagerActions.onIsSecureServerSet(isSecureServer));
     }
+
+    with_clientCertificateThumbprint(thumbprint: string) {
+        globalDispatch(accessManagerActions.clientCertificateThumbprintSet(thumbprint));
+    }
 }

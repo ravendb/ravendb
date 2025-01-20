@@ -17,6 +17,8 @@ import getClusterLogEntryCommand from "commands/database/cluster/getClusterLogEn
 import removeEntryFromLogCommand from "commands/database/cluster/removeEntryFromLogCommand";
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import getAdminStatsCommand = require("commands/resources/getAdminStatsCommand");
+import getServerCertificateRenewalDateCommand = require("commands/auth/getServerCertificateRenewalDateCommand");
+import getServerCertificateSetupModeCommand = require("commands/auth/getServerCertificateSetupModeCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -92,5 +94,13 @@ export default class ManageServerService {
 
     async getAdminStats(...args: ConstructorParameters<typeof getAdminStatsCommand>) {
         return new getAdminStatsCommand(...args).execute();
+    }
+
+    async getServerCertificateRenewalDate() {
+        return new getServerCertificateRenewalDateCommand().execute();
+    }
+
+    async getServerCertificateSetupMode() {
+        return new getServerCertificateSetupModeCommand().execute();
     }
 }

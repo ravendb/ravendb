@@ -171,4 +171,5 @@ export const accessManagerSelectors = {
     getHasDatabaseWriteAccess: selectGetHasDatabaseAccessWrite,
     getEffectiveDatabaseAccessLevel: selectGetEffectiveDatabaseAccessLevel,
     getCanHandleOperation: selectGetCanHandleOperation,
+    clientCertificateThumbprint: (state: RootState) => state.accessManager.clientCertificateThumbprint,
 };

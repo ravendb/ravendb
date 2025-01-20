@@ -12,7 +12,9 @@ import { RootState } from "components/store";
 interface InitialState {
     certificates: CertificateItem[];
     certificatesLoadStatus: loadStatus;
-    loadedServerCert: string;
+    serverCertificateThumbprint: string;
+    serverCertificateRenewalDate: string;
+    serverCertificateSetupMode: Raven.Server.Commercial.SetupMode;
     wellKnownAdminCerts: string[];
     wellKnownIssuers: string[];
     nameOrThumbprintFilter: string;
@@ -25,7 +27,9 @@ interface InitialState {
 const initialState: InitialState = {
     certificates: [],
     certificatesLoadStatus: "idle",
-    loadedServerCert: null,
+    serverCertificateThumbprint: null,
+    serverCertificateRenewalDate: null,
+    serverCertificateSetupMode: null,
     wellKnownAdminCerts: [],
     wellKnownIssuers: [],
     nameOrThumbprintFilter: "",
@@ -56,34 +60,34 @@ export const certificatesSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
-        builder.addCase(
-            fetchData.fulfilled,
-            (state, { payload: { lastUsed, certificatesDto } }: PayloadAction<FetchDataLastUsedResult>) => {
-                state.certificates = certificatesDto.Certificates.filter((x) => !x.CollectionPrimaryKey).map(
-                    (cert) => ({
-                        ...cert,
-                        Thumbprints: [cert.Thumbprint],
-                        LastUsedDate: lastUsed[cert.Thumbprint] ?? null,
-                    })
-                );
+        builder.addCase(fetchData.fulfilled, (state, action: PayloadAction<FetchDataLastUsedResult>) => {
+            const { lastUsed, certificatesDto, serverCertificateSetupMode, serverCertificateRenewalDate } =
+                action.payload;
 
-                // secondary certs
-                certificatesDto.Certificates.filter((x) => x.CollectionPrimaryKey).forEach((cert) => {
-                    const thumbprint = cert.CollectionPrimaryKey;
-                    const primaryCert = state.certificates.find((x) => x.Thumbprint === thumbprint);
+            state.certificates = certificatesDto.Certificates.filter((x) => !x.CollectionPrimaryKey).map((cert) => ({
+                ...cert,
+                Thumbprints: [cert.Thumbprint],
+                LastUsedDate: lastUsed[cert.Thumbprint] ?? null,
+            }));
 
-                    if (primaryCert) {
-                        primaryCert.Thumbprints.push(cert.Thumbprint);
-                    }
-                });
+            // secondary certs
+            certificatesDto.Certificates.filter((x) => x.CollectionPrimaryKey).forEach((cert) => {
+                const thumbprint = cert.CollectionPrimaryKey;
+                const primaryCert = state.certificates.find((x) => x.Thumbprint === thumbprint);
 
-                state.loadedServerCert = certificatesDto.LoadedServerCert;
-                state.wellKnownAdminCerts = certificatesDto.WellKnownAdminCerts ?? [];
-                state.wellKnownIssuers = certificatesDto.WellKnownIssuers ?? [];
+                if (primaryCert) {
+                    primaryCert.Thumbprints.push(cert.Thumbprint);
+                }
+            });
 
-                state.certificatesLoadStatus = "success";
-            }
-        );
+            state.serverCertificateRenewalDate = serverCertificateRenewalDate;
+            state.serverCertificateSetupMode = serverCertificateSetupMode;
+            state.serverCertificateThumbprint = certificatesDto.LoadedServerCert;
+            state.wellKnownAdminCerts = certificatesDto.WellKnownAdminCerts ?? [];
+            state.wellKnownIssuers = certificatesDto.WellKnownIssuers ?? [];
+
+            state.certificatesLoadStatus = "success";
+        });
         builder.addCase(fetchData.rejected, (state) => {
             state.certificatesLoadStatus = "failure";
         });
@@ -96,6 +100,8 @@ export const certificatesSlice = createSlice({
 interface FetchDataLastUsedResult {
     certificatesDto: CertificatesResponseDto;
     lastUsed: Record<string, string>;
+    serverCertificateSetupMode: Raven.Server.Commercial.SetupMode;
+    serverCertificateRenewalDate: string;
 }
 
 const fetchData = createAsyncThunk<
@@ -108,6 +114,9 @@ const fetchData = createAsyncThunk<
     const nodeTags = getState().cluster.nodes.ids;
 
     const certificatesDto = await services.manageServerService.getCertificates(true);
+
+    const serverCertificateRenewalDate = await services.manageServerService.getServerCertificateRenewalDate();
+    const serverCertificateSetupMode = await services.manageServerService.getServerCertificateSetupMode();
 
     const statsTasks = nodeTags.map(async (tag) => {
         try {
@@ -135,9 +144,12 @@ const fetchData = createAsyncThunk<
     return {
         certificatesDto,
         lastUsed: lastUsedResult,
+        serverCertificateRenewalDate,
+        serverCertificateSetupMode,
     };
 });
 
 export const certificatesActions = {
     ...certificatesSlice.actions,
+    fetchData,
 };

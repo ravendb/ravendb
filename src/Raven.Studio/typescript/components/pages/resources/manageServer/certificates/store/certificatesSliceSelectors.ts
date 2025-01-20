@@ -1,11 +1,16 @@
 import { createSelector } from "@reduxjs/toolkit";
 import { orderBy } from "common/typeUtils";
+import { InputItem } from "components/models/common";
+import {
+    CertificatesClearance,
+    CertificatesState,
+} from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { certificateUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { RootState } from "components/store";
 
 const selectClearanceFilterOptions = createSelector(
     (state: RootState) => state.certificates.certificates,
-    (certificates) => {
+    (certificates): InputItem<CertificatesClearance>[] => {
         let userCount = 0,
             operatorCount = 0,
             adminCount = 0;
@@ -30,7 +35,7 @@ const selectClearanceFilterOptions = createSelector(
 
 const selectStateFilterOptions = createSelector(
     (state: RootState) => state.certificates.certificates,
-    (certificates) => {
+    (certificates): InputItem<CertificatesState>[] => {
         let validCount = 0,
             aboutToExpireCount = 0,
             expiredCount = 0;
@@ -78,11 +83,14 @@ const selectFilteredCertificates = createSelector(
                 return false;
             }
 
-            if (clearanceFilter && !clearanceFilter.includes(certificateUtils.getClearance(cert.SecurityClearance))) {
+            if (
+                clearanceFilter.length > 0 &&
+                !clearanceFilter.includes(certificateUtils.getClearance(cert.SecurityClearance))
+            ) {
                 return false;
             }
 
-            if (stateFilter && !stateFilter.includes(certificateUtils.getState(cert.NotAfter))) {
+            if (stateFilter.length > 0 && !stateFilter.includes(certificateUtils.getState(cert.NotAfter))) {
                 return false;
             }
 
@@ -112,8 +120,16 @@ const selectFilteredCertificates = createSelector(
     }
 );
 
-export const certificatesSelector = {
-    clearanceFilterOptions: selectClearanceFilterOptions,
-    stateFilterOptions: selectStateFilterOptions,
+export const certificatesSelectors = {
+    certificates: (state: RootState) => state.certificates.certificates,
     filteredCertificates: selectFilteredCertificates,
+    serverCertificateThumbprint: (state: RootState) => state.certificates.serverCertificateThumbprint,
+    serverCertificateSetupMode: (state: RootState) => state.certificates.serverCertificateSetupMode,
+    serverCertificateRenewalDate: (state: RootState) => state.certificates.serverCertificateRenewalDate,
+    databaseFilter: (state: RootState) => state.certificates.databaseFilter,
+    clearanceFilter: (state: RootState) => state.certificates.clearanceFilter,
+    clearanceFilterOptions: selectClearanceFilterOptions,
+    stateFilter: (state: RootState) => state.certificates.stateFilter,
+    stateFilterOptions: selectStateFilterOptions,
+    sortMode: (state: RootState) => state.certificates.sortMode,
 };
