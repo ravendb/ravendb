@@ -609,7 +609,7 @@ internal static class BackupUtils
         {
             var raftId = RaftIdGenerator.NewId();
             // update backup status locally
-            serverStore.DatabaseInfoCache.InsertBackupStatus(status, databaseName, serverStore._env.Base64Id, status.TaskId);
+            serverStore.DatabaseInfoCache.BackupStatusStorage.InsertBackupStatus(status, databaseName, serverStore._env.Base64Id, status.TaskId);
 
 
             AsyncHelpers.RunSync(async () =>
