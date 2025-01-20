@@ -2011,11 +2011,9 @@ namespace Raven.Server.Documents
             if (tombstonesTable == null || tombstonesTable.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
                 return 0;
 
-            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
-            if (table == null || table.NumberOfEntries == 0)
-                return 0;
-
+            Dictionary<string, HashSet<string>> countersToDelete = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             var deleted = 0L;
+            var toDelete = 0L;
 
             foreach (var item in GetCounterTombstonesFrom(context, 0, upto))
             {
@@ -2023,100 +2021,125 @@ namespace Raven.Server.Documents
                 // then, we extract the data from the counters table, by the counter group key
                 // and remove the deleted counter (change the data)
                 // at the end, we'll write the new data to disk and update the document
+                if (item.Etag > upto || numberOfEntriesToDelete <= toDelete)
+                    break;
 
-                if (item.Etag > upto || numberOfEntriesToDelete <= deleted)
-                    return deleted;
-
-                using (DocumentIdWorker.GetSliceFromId(context, item.DocumentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
-                using (DocumentIdWorker.GetLower(context.Allocator, context.GetLazyString(item.Name), out Slice counterNameSlice))
-                using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
-                using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
+                if (countersToDelete.TryGetValue(item.DocumentId, out var counterNames) == false)
                 {
-                    if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
-                        return deleted;
+                    countersToDelete[item.DocumentId] = counterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                }
 
-                    BlittableJsonReaderObject data;
-                    using (data = GetCounterValuesData(context, ref existing))
+                counterNames.Add(item.Name);
+                toDelete++;
+
+            }
+
+            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
+            if (table == null || table.NumberOfEntries == 0)
+                return 0;
+
+            foreach (var kvp in countersToDelete)
+            {
+                var docId = kvp.Key;
+                var counterNames = kvp.Value;
+
+                foreach (var name in counterNames)
+                {
+                    using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLower(context.Allocator, context.GetLazyString(name), out Slice counterNameSlice))
+                    using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
+                    using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
                     {
-                        data = data.Clone(context);
-                    }
-                    if (data.TryGet(CounterNames, out BlittableJsonReaderObject names) == false)
-                        ThrowMissingProperty(counterKeySlice, CounterNames);
+                        if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
+                            return deleted;
 
-                    if (data.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
-                        ThrowMissingProperty(counterKeySlice, Values);
-
-                    var lowered = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length); // lowered cased name
-                    if (counterValues.TryGetMember(lowered, out var existingCounter) == false ||
-                        existingCounter is LazyStringValue lsv == false)
-                        continue;
-
-                    deleted++;
-
-                    if (counterValues.Count == 1)
-                    {
-                        // we are removing the only existing counter
-                        // so we should remove the entire entry from counters table
-                        using (Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey))
+                        BlittableJsonReaderObject data;
+                        using (data = GetCounterValuesData(context, ref existing))
                         {
-                            table.DeleteByKey(counterGroupKey);
-                        }
-                    }
-                    else
-                    {
-                        using var scope = Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey);
-
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        names.GetPropertyByIndex(0, ref prop);
-                        if (prop.Name.Equals(item.Name) && counterGroupKey.Size == counterKeySlice.Size)
-                        {
-                            // we need to change the counter group key and delete the old one
-                            table.DeleteByKey(counterGroupKey);
-
-                            names.GetPropertyByIndex(1, ref prop);
-                            using var newScope = context.Allocator.Allocate(documentKeyPrefix.Size /* it includes the separator already */ + prop.Name.Size /* replace the current name with next one in counters group */, out ByteString newCounterKey);
-                            documentKeyPrefix.CopyTo(newCounterKey.Ptr);
-
-                            Debug.Assert(documentKeyPrefix.Size + prop.Name.Size < newCounterKey.Size,
-                                $"documentKeyPrefix.Size ({documentKeyPrefix.Size}) + prop.Name.Size ({prop.Name.Size}) < newCounterKey.Size ({newCounterKey.Size})");
-
-                            Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, prop.Name.Buffer, prop.Name.Size);
-                            Slice.From(context.Allocator, newCounterKey.Ptr, documentKeyPrefix.Size + prop.Name.Size, out counterGroupKey);
+                            data = data.Clone(context);
                         }
 
-                        counterValues.Modifications ??= new DynamicJsonValue(counterValues);
-                        counterValues.Modifications.Remove(item.Name);
+                        if (data.TryGet(CounterNames, out BlittableJsonReaderObject names) == false)
+                            ThrowMissingProperty(counterKeySlice, CounterNames);
 
-                        names.Modifications ??= new DynamicJsonValue(names);
-                        names.Modifications.Remove(item.Name);
+                        if (data.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
+                            ThrowMissingProperty(counterKeySlice, Values);
 
-                        data.Modifications = new DynamicJsonValue(data);
-                        using (var old = data)
+                        var lowered = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length); // lowered cased name
+                        if (counterValues.TryGetMember(lowered, out var existingCounter) == false ||
+                            existingCounter is LazyStringValue lsv == false)
+                            continue;
+
+                        deleted++;
+
+                        if (counterValues.Count == 1)
                         {
-                            data = context.ReadObject(data, item.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            // we are removing the only existing counter
+                            // so we should remove the entire entry from counters table
+                            using (Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey))
+                            {
+                                table.DeleteByKey(counterGroupKey);
+                            }
                         }
-
-                        var newEtag = _documentsStorage.GenerateNextEtag();
-                        var newChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-
-                        using (Slice.From(context.Allocator, newChangeVector, out var cv))
-                        using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                        using (table.Allocate(out TableValueBuilder tvb))
+                        else
                         {
-                            tvb.Add(counterGroupKey);
-                            tvb.Add(Bits.SwapBytes(newEtag));
-                            tvb.Add(cv);
-                            tvb.Add(data.BasePointer, data.Size);
-                            tvb.Add(collectionSlice);
-                            tvb.Add(context.GetTransactionMarker());
+                            using var scope = Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey);
 
-                            table.Set(tvb);
+                            var prop = new BlittableJsonReaderObject.PropertyDetails();
+                            names.GetPropertyByIndex(0, ref prop);
+                            if (prop.Name.Equals(name) && counterGroupKey.Size == counterKeySlice.Size)
+                            {
+                                // we need to change the counter group key and delete the old one
+                                table.DeleteByKey(counterGroupKey);
+
+                                names.GetPropertyByIndex(1, ref prop);
+                                using var newScope =
+                                    context.Allocator.Allocate(
+                                        documentKeyPrefix.Size /* it includes the separator already */ +
+                                        prop.Name.Size /* replace the current name with next one in counters group */, out ByteString newCounterKey);
+                                documentKeyPrefix.CopyTo(newCounterKey.Ptr);
+
+                                Debug.Assert(documentKeyPrefix.Size + prop.Name.Size < newCounterKey.Size,
+                                    $"documentKeyPrefix.Size ({documentKeyPrefix.Size}) + prop.Name.Size ({prop.Name.Size}) < newCounterKey.Size ({newCounterKey.Size})");
+
+                                Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, prop.Name.Buffer, prop.Name.Size);
+                                Slice.From(context.Allocator, newCounterKey.Ptr, documentKeyPrefix.Size + prop.Name.Size, out counterGroupKey);
+                            }
+
+                            counterValues.Modifications ??= new DynamicJsonValue(counterValues);
+                            counterValues.Modifications.Remove(name);
+
+                            names.Modifications ??= new DynamicJsonValue(names);
+                            names.Modifications.Remove(name);
+
+                            data.Modifications = new DynamicJsonValue(data);
+                            using (var old = data)
+                            {
+                                data = context.ReadObject(data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            }
+
+                            var newEtag = _documentsStorage.GenerateNextEtag();
+                            var newChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+
+                            using (Slice.From(context.Allocator, newChangeVector, out var cv))
+                            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                            using (table.Allocate(out TableValueBuilder tvb))
+                            {
+                                tvb.Add(counterGroupKey);
+                                tvb.Add(Bits.SwapBytes(newEtag));
+                                tvb.Add(cv);
+                                tvb.Add(data.BasePointer, data.Size);
+                                tvb.Add(collectionSlice);
+                                tvb.Add(context.GetTransactionMarker());
+
+                                table.Set(tvb);
+                            }
                         }
                     }
 
                     try
                     {
-                        var document = _documentsStorage.Get(context, item.DocumentId,
+                        var document = _documentsStorage.Get(context, docId,
                             throwOnConflict: true);
 
                         if (document == null)
@@ -2125,12 +2148,13 @@ namespace Raven.Server.Documents
                         using (var old = document)
                         using (document.Data = document.Data.Clone(context))
                         {
-                            _documentDatabase.DocumentsStorage.Put(context, item.DocumentId, expectedChangeVector: null, document.Data, flags: document.Flags, nonPersistentFlags: document.NonPersistentFlags);
+                            _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, document.Data, flags: document.Flags,
+                                nonPersistentFlags: document.NonPersistentFlags);
                         }
                     }
                     catch (InvalidOperationException e)
                     {
-                        throw new InvalidOperationException($"Failed to update document '{item.DocumentId}'," +
+                        throw new InvalidOperationException($"{_documentDatabase.ServerStore.NodeTag} : Failed to update document '{docId}'," +
                                                             $"Exception: {e}");
                     }
                 }

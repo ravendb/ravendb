@@ -95,6 +95,8 @@
     <EmbeddedResource Include="Data\RavenDB_19449\RavenDB_19449.zip" />
     <None Remove="Data\RavenDB_21957\js_index_with_dates_54112.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_21957\js_index_with_dates_54112.ravendb-snapshot" />
+    <None Remove="Data\RavenDB-23409.rec" />
+    <EmbeddedResource Include="Data\RavenDB-23409.rec" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
