@@ -4,6 +4,8 @@ import footer = require("common/shell/footer");
 import reactUtils = require("common/reactUtils");
 import IndexesPage = require("components/pages/database/indexes/list/IndexesPage");
 import IndexCleanup = require("components/pages/database/indexes/cleanup/IndexCleanup");
+import IndexErrors = require("components/pages/database/indexes/errors/IndexErrors");
+// import { bridgeToReact } from "common/reactUtils";
 export = getIndexesMenuItem;
 
 function getIndexesMenuItem(appUrls: computedAppUrls) {
@@ -95,7 +97,8 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/indexes/indexErrors',
             shardingMode: "allShards",
-            moduleId: require('viewmodels/database/indexes/indexErrors'),
+            // moduleId: require('viewmodels/database/indexes/indexErrors'),
+            moduleId: reactUtils.bridgeToReact(IndexErrors.default, "nonShardedView"),
             title: 'Index Errors',
             nav: true,
             css: 'icon-index-errors',

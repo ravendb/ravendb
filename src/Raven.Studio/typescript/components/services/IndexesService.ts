@@ -19,6 +19,9 @@ import getIndexMergeSuggestionsCommand = require("commands/database/index/getInd
 import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionsCommand");
+import getIndexesErrorCountCommand from "commands/database/index/getIndexesErrorCountCommand";
+import getIndexesErrorCommand from "commands/database/index/getIndexesErrorCommand";
+import clearIndexErrorsCommand from "commands/database/index/clearIndexErrorsCommand";
 
 export default class IndexesService {
     async getProgress(databaseName: string, location: databaseLocationSpecifier) {
@@ -95,5 +98,17 @@ export default class IndexesService {
 
     async deleteIndex(indexName: string, databaseName: string) {
         await new deleteIndexCommand(indexName, databaseName).execute();
+    }
+
+    async getIndexesErrorCount(...args: ConstructorParameters<typeof getIndexesErrorCountCommand>) {
+        return new getIndexesErrorCountCommand(...args).execute();
+    }
+
+    async getIndexErrorDetails(...args: ConstructorParameters<typeof getIndexesErrorCommand>) {
+        return new getIndexesErrorCommand(...args).execute();
+    }
+
+    async clearIndexErrors(...args: ConstructorParameters<typeof clearIndexErrorsCommand>) {
+        return new clearIndexErrorsCommand(...args).execute();
     }
 }

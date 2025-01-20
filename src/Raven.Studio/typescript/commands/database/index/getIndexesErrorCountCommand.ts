@@ -15,7 +15,7 @@ class getIndexesErrorCountCommand extends commandBase {
 
         const locationText = genUtils.formatLocation(this.location);
             
-        return this.query<any>(url, args, this.db)
+        return this.query<{Results: indexErrorsCount[]}>(url, args, this.db)
             .fail((result: JQueryXHR) => this.reportError(`Failed to get index errors count for ${locationText}`,
                 result.responseText, result.statusText));
     }

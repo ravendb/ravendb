@@ -1,34 +1,62 @@
-import { Meta, StoryFn } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react";
 import React from "react";
-import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { IndexErrors } from "./IndexErrors";
+import { databaseAccessArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
+import IndexErrors from "components/pages/database/indexes/errors/IndexErrors";
+import { IndexesStubs } from "test/stubs/IndexesStubs";
 
 export default {
     title: "Pages/Indexes/Index Errors",
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof IndexErrors>;
+} satisfies Meta;
 
-function commonInit() {
-    const { databases } = mockStore;
-    databases.withActiveDatabase_NonSharded_SingleNode();
+interface IndexErrorsStoryArgs {
+    databaseAccess: databaseAccessLevel;
+    isSharded: boolean;
+    hasErrors: boolean;
 }
 
-export const ErroredView: StoryFn = () => {
-    commonInit();
+const indexErrorsCountMock: { Results: indexErrorsCount[] } = {
+    Results: [
+        {
+            Name: "Orders/ByShipment/Location",
+            Errors: [],
+        },
+    ],
+};
 
-    const { license } = mockStore;
-    license.with_License();
+export const IndexErrorsStory: StoryObj<IndexErrorsStoryArgs> = {
+    name: "Index Errors",
+    render: (args) => {
+        const { databases, accessManager } = mockStore;
+        const { indexesService } = mockServices;
 
-    const { indexesService } = mockServices;
+        let db;
 
-    indexesService.withGetStats([]);
-    indexesService.withGetIndexMergeSuggestions({
-        Suggestions: [],
-        Unmergables: {},
-        Errors: [],
-    });
+        if (args.isSharded) {
+            db = databases.withActiveDatabase_Sharded();
+        } else {
+            db = databases.withActiveDatabase_NonSharded_SingleNode();
+        }
 
-    return <IndexErrors />;
+        accessManager.with_databaseAccess({
+            [db.name]: args.databaseAccess,
+        });
+
+        indexesService.withGetIndexErrorsCount(
+            args.hasErrors ? IndexesStubs.getIndexesErrorCount() : indexErrorsCountMock
+        );
+        indexesService.withGetIndexesErrorDetails(args.hasErrors ? IndexesStubs.getIndexErrorDetails() : []);
+
+        return <IndexErrors />;
+    },
+    argTypes: {
+        databaseAccess: databaseAccessArgType,
+    },
+    args: {
+        databaseAccess: "DatabaseAdmin",
+        isSharded: true,
+        hasErrors: true,
+    },
 };

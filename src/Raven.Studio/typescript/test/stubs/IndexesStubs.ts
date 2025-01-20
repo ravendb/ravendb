@@ -224,4 +224,114 @@ export class IndexesStubs {
             ],
         };
     }
+
+    static getIndexesErrorCount() {
+        return {
+            Results: [
+                {
+                    Name: "Orders/ByShipment/Location",
+                    Errors: [],
+                },
+                {
+                    Name: "Orders/Totals",
+                    Errors: [],
+                },
+                {
+                    Name: "Orders/ByCompany",
+                    Errors: [
+                        {
+                            Action: "Map",
+                            NumberOfErrors: 500,
+                        },
+                    ],
+                },
+                {
+                    Name: "Product/Rating",
+                    Errors: [],
+                },
+                {
+                    Name: "Companies/StockPrices/TradeVolumeByMonth",
+                    Errors: [],
+                },
+                {
+                    Name: "Products/ByUnitOnStock",
+                    Errors: [],
+                },
+                {
+                    Name: "Product/Search",
+                    Errors: [],
+                },
+            ],
+        };
+    }
+
+    static getIndexErrorDetails() {
+        return [
+            {
+                Name: "Orders/ByShipment/Location",
+                Errors: [],
+            },
+            {
+                Name: "Orders/Totals",
+                Errors: [],
+            },
+            {
+                Name: "Orders/ByCompany",
+                Errors: [
+                    {
+                        Timestamp: "2025-01-28T10:24:20.6681287Z",
+                        Document: "orders/13-A",
+                        Action: "Map",
+                        Error: "Failed to execute mapping function on orders/13-A. Exception: System.DivideByZeroException: Attempted to divide by zero.\r\n   at CallSite.Target(Closure, CallSite, Object, Object)\r\n   at Raven.Server.Documents.Indexes.Static.Generated.Index_Orders_ByCompany.Map_0(IEnumerable`1 docs)+MoveNext()\r\n   at Raven.Server.Documents.Indexes.Static.TimeCountingEnumerable.Enumerator.MoveNext() in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Static\\TimeCountingEnumerable.cs:line 47\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 157\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 59\r\n   at Raven.Server.Documents.Indexes.Workers.MapItems.Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy`1 writeOperation, IndexingStatsScope stats, CancellationToken token) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Workers\\MapItems.cs:line 143",
+                    },
+                    {
+                        Timestamp: "2025-01-28T10:24:20.6681652Z",
+                        Document: "orders/14-A",
+                        Action: "Map",
+                        Error: "Failed to execute mapping function on orders/14-A. Exception: System.DivideByZeroException: Attempted to divide by zero.\r\n   at CallSite.Target(Closure, CallSite, Object, Object)\r\n   at Raven.Server.Documents.Indexes.Static.Generated.Index_Orders_ByCompany.Map_0(IEnumerable`1 docs)+MoveNext()\r\n   at Raven.Server.Documents.Indexes.Static.TimeCountingEnumerable.Enumerator.MoveNext() in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Static\\TimeCountingEnumerable.cs:line 47\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 157\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 59\r\n   at Raven.Server.Documents.Indexes.Workers.MapItems.Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy`1 writeOperation, IndexingStatsScope stats, CancellationToken token) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Workers\\MapItems.cs:line 143",
+                    },
+                    {
+                        Timestamp: "2025-01-28T10:24:20.6681991Z",
+                        Document: "orders/15-A",
+                        Action: "Map",
+                        Error: "Failed to execute mapping function on orders/15-A. Exception: System.DivideByZeroException: Attempted to divide by zero.\r\n   at CallSite.Target(Closure, CallSite, Object, Object)\r\n   at Raven.Server.Documents.Indexes.Static.Generated.Index_Orders_ByCompany.Map_0(IEnumerable`1 docs)+MoveNext()\r\n   at Raven.Server.Documents.Indexes.Static.TimeCountingEnumerable.Enumerator.MoveNext() in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Static\\TimeCountingEnumerable.cs:line 47\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 157\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 59\r\n   at Raven.Server.Documents.Indexes.Workers.MapItems.Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy`1 writeOperation, IndexingStatsScope stats, CancellationToken token) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Workers\\MapItems.cs:line 143",
+                    },
+                    {
+                        Timestamp: "2025-01-28T10:24:20.6682324Z",
+                        Document: "orders/16-A",
+                        Action: "Map",
+                        Error: "Failed to execute mapping function on orders/16-A. Exception: System.DivideByZeroException: Attempted to divide by zero.\r\n   at CallSite.Target(Closure, CallSite, Object, Object)\r\n   at Raven.Server.Documents.Indexes.Static.Generated.Index_Orders_ByCompany.Map_0(IEnumerable`1 docs)+MoveNext()\r\n   at Raven.Server.Documents.Indexes.Static.TimeCountingEnumerable.Enumerator.MoveNext() in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Static\\TimeCountingEnumerable.cs:line 47\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 157\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 59\r\n   at Raven.Server.Documents.Indexes.Workers.MapItems.Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy`1 writeOperation, IndexingStatsScope stats, CancellationToken token) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Workers\\MapItems.cs:line 143",
+                    },
+                    {
+                        Timestamp: "2025-01-28T10:24:20.6682674Z",
+                        Document: "orders/17-A",
+                        Action: "Map",
+                        Error: "Failed to execute mapping function on orders/17-A. Exception: System.DivideByZeroException: Attempted to divide by zero.\r\n   at CallSite.Target(Closure, CallSite, Object, Object)\r\n   at Raven.Server.Documents.Indexes.Static.Generated.Index_Orders_ByCompany.Map_0(IEnumerable`1 docs)+MoveNext()\r\n   at Raven.Server.Documents.Indexes.Static.TimeCountingEnumerable.Enumerator.MoveNext() in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Static\\TimeCountingEnumerable.cs:line 47\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 157\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 59\r\n   at Raven.Server.Documents.Indexes.Workers.MapItems.Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy`1 writeOperation, IndexingStatsScope stats, CancellationToken token) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Workers\\MapItems.cs:line 143",
+                    },
+                    {
+                        Timestamp: "2025-01-28T10:24:20.6683017Z",
+                        Document: "orders/18-A",
+                        Action: "Map",
+                        Error: "Failed to execute mapping function on orders/18-A. Exception: System.DivideByZeroException: Attempted to divide by zero.\r\n   at CallSite.Target(Closure, CallSite, Object, Object)\r\n   at Raven.Server.Documents.Indexes.Static.Generated.Index_Orders_ByCompany.Map_0(IEnumerable`1 docs)+MoveNext()\r\n   at Raven.Server.Documents.Indexes.Static.TimeCountingEnumerable.Enumerator.MoveNext() in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Static\\TimeCountingEnumerable.cs:line 47\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 157\r\n   at Raven.Server.Documents.Indexes.MapIndexBase`2.HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy`1 writer, TransactionOperationContext indexContext, IndexingStatsScope stats) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\MapIndexBase.cs:line 59\r\n   at Raven.Server.Documents.Indexes.Workers.MapItems.Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy`1 writeOperation, IndexingStatsScope stats, CancellationToken token) in C:\\Users\\maksym.smolinski\\WebstormProjects\\ravendb-v6.2\\src\\Raven.Server\\Documents\\Indexes\\Workers\\MapItems.cs:line 143",
+                    },
+                ],
+            },
+            {
+                Name: "Product/Rating",
+                Errors: [],
+            },
+            {
+                Name: "Companies/StockPrices/TradeVolumeByMonth",
+                Errors: [],
+            },
+            {
+                Name: "Products/ByUnitOnStock",
+                Errors: [],
+            },
+            {
+                Name: "Product/Search",
+                Errors: [],
+            },
+        ];
+    }
 }
