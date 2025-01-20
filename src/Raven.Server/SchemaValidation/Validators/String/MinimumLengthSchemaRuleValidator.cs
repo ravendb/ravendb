@@ -3,7 +3,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.String;
 
-[SchemaRule(SchemaValidatorConstants.minLength)]
 public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
 {
     private readonly long _minLength;
@@ -24,7 +23,7 @@ public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.minLength)]
 public class MinimumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumLengthSchemaRuleValidator>
 {
     public override MinimumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

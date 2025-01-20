@@ -7,8 +7,8 @@ namespace Raven.Server.SchemaValidation;
 
 public class SchemaValidator : IDisposable
 {
-    private PropertySchemaRuleValidator _root;
-    private (IDisposable Return, JsonOperationContext Value) _context;
+    private RootSchemaRuleValidator _root;
+    private readonly (IDisposable Return, JsonOperationContext Value) _context;
     
     public SchemaValidator(JsonContextPool contextPool)
     {

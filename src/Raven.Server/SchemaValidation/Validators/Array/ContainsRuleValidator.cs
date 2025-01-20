@@ -2,7 +2,6 @@
 
 namespace Raven.Server.SchemaValidation.Validators.Array;
 
-[SchemaRule(SchemaValidatorConstants.contains)]
 public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
     private readonly ArrayItemSchemaRuleValidator _containsValidator;
@@ -48,7 +47,7 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.contains)]
 public class ContainsRuleValidatorRuleValidatorFactory : SchemaRuleValidatorFactory<ContainsRuleValidator>
 {
     public override ContainsRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

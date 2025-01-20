@@ -2,7 +2,6 @@
 
 namespace Raven.Server.SchemaValidation.Validators;
 
-[SchemaRule(SchemaValidatorConstants.@const)]
 public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
 {
     private readonly object _constantValue;
@@ -30,7 +29,7 @@ public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.@const)]
 public class ConstantSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ConstantSchemaRuleValidator>
 {
     public override ConstantSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

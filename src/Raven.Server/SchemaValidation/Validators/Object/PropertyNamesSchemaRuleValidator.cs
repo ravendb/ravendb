@@ -4,7 +4,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule(SchemaValidatorConstants.propertyNames)]
 public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     SchemaRuleValidator<string>[] _propertyNameValidators;
@@ -55,7 +54,7 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.propertyNames)]
 public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PropertyNamesSchemaRuleValidator>
 {
     public override PropertyNamesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

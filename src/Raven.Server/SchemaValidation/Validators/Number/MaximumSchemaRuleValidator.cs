@@ -4,7 +4,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Number;
 
-[SchemaRule(SchemaValidatorConstants.maximum)]
 public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _maximum;
@@ -41,7 +40,7 @@ public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.maximum)]
 public class MaximumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaximumSchemaRuleValidator>
 {
     public override MaximumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

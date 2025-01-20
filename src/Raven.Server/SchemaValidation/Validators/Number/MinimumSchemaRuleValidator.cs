@@ -4,7 +4,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Number;
 
-[SchemaRule(SchemaValidatorConstants.minimum)]
 public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _minimum;
@@ -38,7 +37,7 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.minimum)]
 public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumSchemaRuleValidator>
 {
     public override MinimumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

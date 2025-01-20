@@ -3,7 +3,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.String;
 
-[SchemaRule(SchemaValidatorConstants.maxLength)]
 public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
 {
     private readonly long _maxLength;
@@ -24,7 +23,7 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.maxLength)]
 public class MaximumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaximumLengthSchemaRuleValidator>
 {
     public override MaximumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

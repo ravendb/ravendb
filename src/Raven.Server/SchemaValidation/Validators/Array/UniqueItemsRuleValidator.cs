@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Array;
 
-[SchemaRule(SchemaValidatorConstants.uniqueItems)]
 public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
     // ReSharper disable once ConvertToPrimaryConstructor
@@ -26,7 +24,7 @@ public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.uniqueItems)]
 public class UniqueItemsRuleValidatorFactory : SchemaRuleValidatorFactory<UniqueItemsRuleValidator>
 {
     public override UniqueItemsRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

@@ -5,7 +5,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators;
 
-[SchemaRule(SchemaValidatorConstants.@enum)]
 public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
 {
     private readonly object[] _enums;
@@ -54,7 +53,7 @@ public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.@enum)]
 public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<EnumSchemaRuleValidator>
 {
     public override EnumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

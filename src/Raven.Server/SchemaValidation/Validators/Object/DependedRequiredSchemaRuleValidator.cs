@@ -4,7 +4,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule(SchemaValidatorConstants.dependentRequired)]
 public class DependentRequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly Dictionary<string, LazyStringValue[]> _dependentRequired;
@@ -60,7 +59,7 @@ public class DependentRequiredSchemaRuleValidator : SchemaRuleValidator<Blittabl
     }
 }
 
-// ReSharper disable once UnusedType.Global
+[SchemaRule(SchemaValidatorConstants.dependentRequired)]
 public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<DependentRequiredSchemaRuleValidator>
 {
     public override DependentRequiredSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)

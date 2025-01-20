@@ -12,8 +12,12 @@ public interface ISchemaRuleValidatorFactory
 
 public abstract class SchemaRuleValidatorFactory<T> : ISchemaRuleValidatorFactory where T : ISchemaRuleValidator
 {
-    protected readonly string Rule = typeof(T).GetCustomAttribute<SchemaRuleAttribute>()?.Rule 
-                                     ?? throw new InvalidOperationException($"The type '{typeof(T).Name}' must have a SchemaRuleAttribute defined with a Rule property.");
+    protected readonly string Rule;
 
+    protected SchemaRuleValidatorFactory()
+    {
+        Rule = GetType().GetCustomAttribute<SchemaRuleAttribute>()?.Rule;
+    }    
+    
     public abstract ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath);
 }

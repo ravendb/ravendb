@@ -76,7 +76,7 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
             return true;
 
         var isValid = true;
-        //TODO Maybe to filter _ruleValidators by afgument type and avoid cast and checking inside ruleValidator.Validate
+        //TODO Maybe to filter _ruleValidators by argument type and avoid cast and checking inside ruleValidator.Validate
         foreach (var ruleValidator in _ruleValidators)
         {
             isValid &= ruleValidator.Validate(value, errorBuilder);
@@ -103,9 +103,7 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
                 {
                     if (hasObjectRestrictions)
                         continue;
-                    var objValidator = new ObjectSchemaRuleValidator(_schemaPath);
-                    objValidator.Init(propertySchemaDefinition);
-                    validator = objValidator;
+                    validator = SchemaRuleValidatorFactoryHelper.CreateObjectValidator(propertySchemaDefinition, _schemaPath);
                     hasObjectRestrictions = true;
                     break;
                 }
@@ -113,9 +111,7 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
                 {
                     if (hasArrayRestrictions)
                         continue;
-                    var arrayValidator = new ArraySchemaRuleValidator(_schemaPath);
-                    arrayValidator.Init(propertySchemaDefinition);
-                    validator = arrayValidator;
+                    validator = SchemaRuleValidatorFactoryHelper.CreateArrayValidator(propertySchemaDefinition, _schemaPath);
                     hasArrayRestrictions = true;
                     break;
                 }
