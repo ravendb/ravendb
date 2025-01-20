@@ -367,12 +367,14 @@ namespace Corax.Querying.Matches
             using var _ = _context.Allocate(3 * sizeof(long) * buffer.Length, out var bufferHolder);
             var longBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan());
             _termReader.Reset(ref this);
+            
             Span<long> results = longBuffer.Slice(0, buffer.Length);
             Span<long> incomingMatches = longBuffer.Slice(buffer.Length, buffer.Length);
             Span<long> localMatches = longBuffer.Slice(2 * buffer.Length, buffer.Length);
 
             var actualMatches = buffer.Slice(0, matches);
             actualMatches.CopyTo(incomingMatches);
+            
             var currentMatchCount = 0;
             _totalResults = 0;
             
@@ -385,7 +387,11 @@ namespace Corax.Querying.Matches
                 fillCounter++;
                 _token.ThrowIfCancellationRequested();
                 _totalResults += read;
-                var common = MergeHelper.And(results, localMatches.Slice(0, read), incomingMatches.Slice(0, matches));
+                var common = MergeHelper.And(
+                    dst: results, 
+                    left: localMatches.Slice(0, read),
+                    right: incomingMatches.Slice(0, matches));
+                
                 results = results.Slice(common);
                 currentMatchCount += common;
             }
@@ -393,7 +399,7 @@ namespace Corax.Querying.Matches
             longBuffer.Slice(0, currentMatchCount).CopyTo(buffer);
             
             if (fillCounter > 1)
-                Sort.Run(buffer.Slice(0, currentMatchCount));
+                currentMatchCount = Sorting.SortAndRemoveDuplicates(buffer[..currentMatchCount]);
             
             return currentMatchCount;
         }
