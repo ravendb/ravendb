@@ -3,7 +3,6 @@ import { composeStories } from "@storybook/react";
 import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as stories from "./RevisionsBinCleaner.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import { TimeTypes } from "common/constants/timeTypes";
 import userEvent from "@testing-library/user-event";
 
 const { DefaultRevisionsBinCleaner } = composeStories(stories);
@@ -32,7 +31,7 @@ describe("RevisionsBinCleaner", () => {
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
         const minimumEntriesAgeToKeepAfter = await screen.findByName("minimumEntriesAgeToKeepInMin");
-        
+
         expect(minimumEntriesAgeToKeepAfter).toBeDisabled();
         expect(minimumEntriesAgeToKeepAfter).toHaveValue(null);
     });
@@ -44,14 +43,14 @@ describe("RevisionsBinCleaner", () => {
         const refreshFrequencyBefore = await screen.findByName("refreshFrequencyInSec");
 
         await user.click(screen.getByRole("checkbox", { name: "Set custom refresh frequency" }));
-        
+
         expect(refreshFrequencyBefore).toBeEnabled();
         expect(refreshFrequencyBefore).toHaveValue(DatabasesStubs.revisionsBinCleaner().RefreshFrequencyInSec);
 
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
         const refreshFrequencyAfter = await screen.findByName("refreshFrequencyInSec");
-        
+
         expect(refreshFrequencyAfter).toBeDisabled();
         expect(refreshFrequencyAfter).toHaveValue(null);
     });

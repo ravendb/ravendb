@@ -653,9 +653,9 @@ $filtering-input-bg: $toggle-bg !default;
 // Lower opacity for disabled inputs and text addons
 .form-control {
     &:disabled {
-        opacity: .5;
+        opacity: 0.5;
         + .input-group-text {
-            opacity: .5;
+            opacity: 0.5;
         }
     }
 }

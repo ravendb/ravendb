@@ -4,9 +4,7 @@ import RevisionsBinConfiguration = Raven.Client.Documents.Operations.Revisions.R
 export function mapToDto(dto: RevisionsBinCleanerFormData): RevisionsBinConfiguration {
     return {
         Disabled: !dto.isRevisionsBinCleanerEnabled,
-        MinimumEntriesAgeToKeepInMin: dto.isMinimumEntriesAgeToKeepEnabled
-            ? dto.minimumEntriesAgeToKeepInMin
-            : null,
+        MinimumEntriesAgeToKeepInMin: dto.isMinimumEntriesAgeToKeepEnabled ? dto.minimumEntriesAgeToKeepInMin : null,
         RefreshFrequencyInSec: dto.isRefreshFrequencyEnabled ? dto.refreshFrequencyInSec : 300,
     };
 }
