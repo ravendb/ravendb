@@ -32,10 +32,7 @@ namespace Sparrow.Json
 
         public void StartWriteObjectDocument()
         {
-            _continuationState.Push(new BuildingState
-            {
-                State = ContinuationState.ReadObjectDocument
-            });
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObjectDocument);
         }
 
         public void StartArrayDocument()
@@ -52,7 +49,7 @@ namespace Sparrow.Json
             currentState.FirstWrite = _writer.Position;
             currentState.Properties = _propertiesCache.Allocate();
             currentState.Properties.Add(new PropertyTag { Property = prop });
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WritePropertyName(string propertyName)
@@ -74,7 +71,7 @@ namespace Sparrow.Json
             currentState.CurrentProperty = newPropertyId;
             currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
             currentState.State = ContinuationState.ReadPropertyValue;
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void StartWriteObject()
@@ -87,14 +84,9 @@ namespace Sparrow.Json
                 ThrowIllegalStateException(previousState.State, "WriteObject");
 
             previousState.State = previousState.State == ContinuationState.ReadPropertyValue ? ContinuationState.ReadPropertyName : previousState.State;
-            _continuationState.Push(previousState);
+            _continuationState.PushByRef() = previousState;
 
-            _continuationState.Push(new BuildingState()
-            {
-                State = ContinuationState.ReadPropertyName,
-                Properties = _propertiesCache.Allocate(),
-                FirstWrite = -1
-            });
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadPropertyName, _propertiesCache.Allocate());
         }
 
         public void WriteObjectEnd()
@@ -132,7 +124,7 @@ namespace Sparrow.Json
 
                             if (outerState.FirstWrite == -1)
                                 outerState.FirstWrite = start;
-                            _continuationState.Push(outerState);
+                            _continuationState.PushByRef() = outerState;
                         }
                     }
                     break;
@@ -149,12 +141,12 @@ namespace Sparrow.Json
                             var outerState = _continuationState.Count > 0 ? _continuationState.Pop() : currentState;
                             if (outerState.FirstWrite == -1)
                                 outerState.FirstWrite = start;
-                            _continuationState.Push(outerState);
+                            _continuationState.PushByRef() = outerState;
                         }
 
                         currentState.Types.Add(_writeToken.WrittenToken);
                         currentState.Positions.Add(_writeToken.ValuePos);
-                        _continuationState.Push(currentState);
+                        _continuationState.PushByRef() = currentState;
                     }
                     break;
 
@@ -183,12 +175,7 @@ namespace Sparrow.Json
 
         public void StartWriteArray()
         {
-            _continuationState.Push(new BuildingState
-            {
-                State = ContinuationState.ReadArray,
-                Types = _tokensCache.Allocate(),
-                Positions = _positionsCache.Allocate()
-            });
+            _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadArray, _tokensCache.Allocate(), _positionsCache.Allocate());
         }
 
         public void WriteArrayEnd()
@@ -207,7 +194,7 @@ namespace Sparrow.Json
 
                     // Register property position, name id (PropertyId) and type (object type and metadata)
                     _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
-                    _continuationState.Push(currentState);
+                    _continuationState.PushByRef() = currentState;
                     break;
 
                 case ContinuationState.ReadArray:
@@ -260,7 +247,7 @@ namespace Sparrow.Json
                             ThrowIllegalStateException(outerState.State, "ReadEndArray");
                         }
 
-                        _continuationState.Push(outerState);
+                        _continuationState.PushByRef() = outerState;
                     }
 
                     break;
@@ -285,7 +272,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(BlittableJsonToken token, object value)
@@ -400,7 +387,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(long value)
@@ -417,7 +404,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(float value)
@@ -434,7 +421,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(ulong value)
@@ -451,7 +438,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(double value)
@@ -468,7 +455,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(decimal value)
@@ -485,7 +472,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(LazyNumberValue value)
@@ -502,7 +489,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(string value)
@@ -519,7 +506,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(LazyStringValue value)
@@ -537,7 +524,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteValue(LazyCompressedStringValue value)
@@ -557,7 +544,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public unsafe void WriteEmbeddedBlittableDocument(BlittableJsonReaderObject document)
@@ -579,7 +566,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public unsafe void WriteEmbeddedBlittableDocument(byte* ptr, int size)
@@ -596,7 +583,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         public void WriteVector<T>(ReadOnlySpan<T> array) where T : unmanaged
@@ -610,7 +597,7 @@ namespace Sparrow.Json
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
-            _continuationState.Push(currentState);
+            _continuationState.PushByRef() = currentState;
         }
 
         private void FinishWritingScalarValue(ref BuildingState currentState)

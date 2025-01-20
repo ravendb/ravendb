@@ -239,14 +239,13 @@ namespace Sparrow.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref T PushByRef()
         {
-            if (_size == _array.Length)
-                goto Grow;
+            if (_size != _array.Length)
+            {
+                ref var item = ref _array[_size++];
+                _version++;
+                return ref item;
+            }
 
-            ref var item = ref _array[_size++];
-            _version++;
-            return ref item;
-
-        Grow:
             return ref PushUnlikelyByRef();
         }
 
