@@ -1,7 +1,7 @@
 import { RevisionsBinCleanerFormData } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerValidation";
 import RevisionsBinConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration;
 
-export function mapToDto(dto: RevisionsBinCleanerFormData): RevisionsBinConfiguration {
+function mapToDto(dto: RevisionsBinCleanerFormData): RevisionsBinConfiguration {
     return {
         Disabled: !dto.isRevisionsBinCleanerEnabled,
         MinimumEntriesAgeToKeepInMin: dto.isMinimumEntriesAgeToKeepEnabled ? dto.minimumEntriesAgeToKeepInMin : null,
@@ -9,7 +9,7 @@ export function mapToDto(dto: RevisionsBinCleanerFormData): RevisionsBinConfigur
     };
 }
 
-export function mapToFormData(dto: RevisionsBinConfiguration): RevisionsBinCleanerFormData {
+function mapToFormData(dto: RevisionsBinConfiguration): RevisionsBinCleanerFormData {
     if (!dto) {
         return {
             isRevisionsBinCleanerEnabled: false,
@@ -25,6 +25,11 @@ export function mapToFormData(dto: RevisionsBinConfiguration): RevisionsBinClean
         isMinimumEntriesAgeToKeepEnabled: dto.MinimumEntriesAgeToKeepInMin != null,
         minimumEntriesAgeToKeepInMin: dto.MinimumEntriesAgeToKeepInMin,
         isRefreshFrequencyEnabled: dto.RefreshFrequencyInSec !== 300,
-        refreshFrequencyInSec: dto.RefreshFrequencyInSec,
+        refreshFrequencyInSec: dto.RefreshFrequencyInSec !== 300 ? dto.RefreshFrequencyInSec : null,
     };
 }
+
+export const revisionsBinCleanerUtils = {
+    mapToDto,
+    mapToFormData,
+};

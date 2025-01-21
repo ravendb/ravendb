@@ -8,28 +8,22 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/Database/Settings/Revisions Bin Cleaner",
-    component: RevisionsBinCleaner,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof RevisionsBinCleaner>;
+} satisfies Meta;
 
 interface RevisionsBinCleanerStoryArgs {
     databaseAccess: databaseAccessLevel;
     revisionsBinCleanerDto: Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration;
 }
 
-function commonInit(dto: Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration) {
-    const { databasesService } = mockServices;
-
-    databasesService.withRevisionsBinCleanerConfiguration(dto);
-}
-
 export const DefaultRevisionsBinCleaner: StoryObj<RevisionsBinCleanerStoryArgs> = {
     name: "Revisions Bin Cleaner",
     render: (args) => {
         const { accessManager, databases } = mockStore;
-
-        commonInit(args.revisionsBinCleanerDto);
+        const { databasesService } = mockServices;
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
+
+        databasesService.withRevisionsBinCleanerConfiguration(args.revisionsBinCleanerDto);
 
         accessManager.with_databaseAccess({
             [db.name]: args.databaseAccess,

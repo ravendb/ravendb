@@ -417,7 +417,7 @@ class appUrl {
         return "#databases/settings/integrations?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forRevisionsBinCleaner(db: database): string {
+    static forRevisionsBinCleaner(db: database | string): string {
         return "#databases/settings/revisionsBinCleaner?" + appUrl.getEncodedDbPart(db);
     }
 

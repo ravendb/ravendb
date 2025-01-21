@@ -1,9 +1,6 @@
 import { UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { RevisionsBinCleanerFormData } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerValidation";
 import { useEffect } from "react";
-import { TimeTypes } from "common/constants/timeTypes";
-
-const defaultRefreshFrequency = 5 * TimeTypes.Minute;
 
 export default function useRevisionsBinCleanerFormSideEffects(
     watch: UseFormWatch<RevisionsBinCleanerFormData>,
@@ -26,9 +23,7 @@ export default function useRevisionsBinCleanerFormSideEffects(
                     break;
                 }
                 case "isRefreshFrequencyEnabled": {
-                    if (values.isRefreshFrequencyEnabled) {
-                        setValue("refreshFrequencyInSec", defaultRefreshFrequency, { shouldValidate: true });
-                    } else {
+                    if (!values.isRefreshFrequencyEnabled) {
                         setValue("refreshFrequencyInSec", null, { shouldValidate: true });
                     }
                 }

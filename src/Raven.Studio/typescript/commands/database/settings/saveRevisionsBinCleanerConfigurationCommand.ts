@@ -13,7 +13,7 @@ class saveRevisionsBinCleanerConfigurationCommand extends commandBase {
     const url = endpoints.databases.revisionsBinCleaner.adminRevisionsBinCleanerConfig;
     
     return this.post<void>(url, JSON.stringify(this.revisionsBinCleanerDto), this.db)
-      .fail((response: JQueryXHR) => this.reportError("Failed to get Revisions bin cleaner", response.responseText, response.statusText))
+      .fail((response: JQueryXHR) => this.reportError("Failed to save Revisions bin cleaner configuration", response.responseText, response.statusText))
       .done(() => this.reportSuccess(`Revisions bin cleaner configuration saved successfully`))
   }
 }
