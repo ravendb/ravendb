@@ -95,7 +95,7 @@ namespace Raven.Server.ServerWide.Maintenance
         }
 
         public bool Suspended = false; // don't really care about concurrency here
-        private long _iteration;
+        internal long _iteration;
         private readonly long _term;
         private long _lastIndexCleanupTimeInTicks;
         internal long _lastTombstonesCleanupTimeInTicks;
@@ -652,6 +652,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName, MergedDatabaseObservationState mergedState, out long maxEtag) where TRavenTransaction : RavenTransaction
         {
             maxEtag = -1;
+            long minClusterWideTransactionIndex = -1;
 
             ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Starting {nameof(GetMaxCompareExchangeTombstonesEtagToDelete)}...");
             var periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
@@ -785,6 +786,10 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
             }
+
+            // there are cluster transactions that haven't happened on some of the nodes yet, only delete up to the ones that happened on all
+            if (maxEtag == -1 || minClusterWideTransactionIndex < maxEtag)
+                maxEtag = minClusterWideTransactionIndex;
 
             if (maxEtag == 0)
             {

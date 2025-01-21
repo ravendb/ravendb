@@ -96,7 +96,7 @@ namespace SlowTests.Issues
                 {
                     try
                     {
-                        await Databases.GetDocumentDatabaseInstanceFor(removedServer, leaderStore);
+                        await Databases.GetDocumentDatabaseInstanceFor(removedServer, leaderStore.Database);
                     }
                     catch (DatabaseNotRelevantException)
                     {

@@ -46,7 +46,7 @@ namespace SlowTests.Issues
             {
                 server.ServerStore.Configuration.Databases.FrequencyToCheckForIdle = new TimeSetting(1000, TimeUnit.Seconds);
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(server, store.Database);
                 var dbIdEtagDictionary = new Dictionary<string, long>();
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                 using (documentsContext.OpenReadTransaction())

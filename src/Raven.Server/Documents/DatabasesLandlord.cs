@@ -1383,11 +1383,8 @@ namespace Raven.Server.Documents
                     switch (nextIdleDatabaseActivity.Type)
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
-                            PeriodicBackupStatus backupStatus;
 
-                            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                            using (context.OpenReadTransaction())
-                                backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, databaseName, nextIdleDatabaseActivity.TaskId);
+                            PeriodicBackupStatus backupStatus = BackupUtils.GetLocalBackupStatus(_serverStore, databaseName, nextIdleDatabaseActivity.TaskId);
 
                             backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
                             backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
@@ -1395,9 +1392,10 @@ namespace Raven.Server.Documents
 
                             var backupResult = new BackupResult();
                             backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
-
+                            
                             BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
 
+                            // choose the next backup that will arrive the earliest
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
                             {
                                 DatabaseName = databaseName,

@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.ServerWide;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -100,6 +101,19 @@ namespace Raven.Client.Documents.Operations.Backups
         public static string GenerateItemName(string databaseName, long taskId)
         {
             return $"values/{databaseName}/{Prefix}{taskId}";
+        }
+
+        public static string GenerateItemName(string databaseName, string base64DbId, long taskId)
+        {
+            return $"{GenerateItemName(databaseName, taskId)}/{base64DbId}";
+        }
+
+        public override string ToString()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                return ctx.ReadObject(ToJson(), "backup-status").ToString();
+            }
         }
     }
 

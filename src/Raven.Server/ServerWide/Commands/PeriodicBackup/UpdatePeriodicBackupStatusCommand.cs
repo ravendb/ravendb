@@ -5,6 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {
+    // This command is for updating the cluster backup status only. We do not want this to touch the local backup status
     public sealed class UpdatePeriodicBackupStatusCommand : UpdateValueForDatabaseCommand
     {
         public PeriodicBackupStatus PeriodicBackupStatus;

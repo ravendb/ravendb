@@ -1547,7 +1547,7 @@ namespace SlowTests.Client.Subscriptions
 
             await store.Subscriptions.DeleteAsync(name);
 
-            var db = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+            var db = await Databases.GetDocumentDatabaseInstanceFor(server, store.Database);
             await AssertWaitForExceptionAsync<KeyNotFoundException>(async () => await Task.Run(() => db.SubscriptionStorage.GetSubscriptionStateById(state.SubscriptionId)), interval: 1000);
         }
 

@@ -62,7 +62,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             record.PeriodicBackups.Add(Configuration);
         }
 
-        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, ServerStore serverStore, Logger clusterAuditLog)
         {
             if (_shouldRemoveBackupStatus == false)
                 return;
@@ -74,6 +74,9 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             {
                 items.DeleteByKey(keyNameLowered);
             }
+            
+            // also delete the local backup status
+            serverStore.DatabaseInfoCache.BackupStatusStorage.DeleteBackupStatus(ctx, DatabaseName, serverStore._env.Base64Id, Configuration.TaskId);
         }
 
         public override void FillJson(DynamicJsonValue json)

@@ -19,6 +19,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.NotificationCenter;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -101,6 +102,7 @@ internal static class BackupUtils
 
         foreach (var periodicBackup in parameters.PeriodicBackups)
         {
+            // status is saved locally before it's saved to cluster, so it's guaranteed to be most up to date status for this node
             var status = ComparePeriodicBackupStatus(periodicBackup.Configuration.TaskId,
                 backupStatus: GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, periodicBackup.Configuration.TaskId),
                 inMemoryBackupStatus: periodicBackup.BackupStatus);
@@ -143,13 +145,18 @@ internal static class BackupUtils
 
     internal static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
     {
-        var statusBlittable = serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
+        using var statusBlittable = GetBackupStatusFromClusterBlittable(serverStore, context, databaseName, taskId);
 
         if (statusBlittable == null)
             return null;
 
         var periodicBackupStatusJson = JsonDeserializationClient.PeriodicBackupStatus(statusBlittable);
         return periodicBackupStatusJson;
+    }
+
+    internal static BlittableJsonReaderObject GetBackupStatusFromClusterBlittable<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
+    {
+        return serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
     }
 
     internal static BlittableJsonReaderObject GetResponsibleNodeInfoFromCluster(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
@@ -371,14 +378,14 @@ internal static class BackupUtils
         PeriodicBackupConfiguration configuration,
         DateTime? nextFullBackup, DateTime? nextIncrementalBackup, string responsibleNodeTag)
     {
-        if (backupStatus?.LastFullBackup == null ||
-            backupStatus.NodeTag != responsibleNodeTag ||
+        if (backupStatus == null ||
+            backupStatus?.LastFullBackup == null ||
             backupStatus.BackupType != configuration.BackupType ||
             backupStatus.LastEtag == null)
         {
             // Reasons to start a new full backup:
-            // 1. there is no previous full backup, we are going to create one now
-            // 2. the node which is responsible for the backup was replaced
+            // 1. we never ran a backup on this node before
+            // 2. there is no previous full backup, we are going to create one now
             // 3. the backup type changed (e.g. from backup to snapshot)
             // 4. last etag wasn't updated
 
@@ -474,19 +481,8 @@ internal static class BackupUtils
             parameters.Configuration.HasBackup() == false)
             return null;
 
-        var backupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
-
-        if (backupStatus == null && parameters.IsIdle == false)
-        {
-            // we might reach here from periodic backup runner that check whether due time is far enough in the future to justify unloading the db
-            // if we never backed up the db then we want to do it now. returning the time now will prevent the unloading
-            
-            if (parameters.Logger.IsOperationsEnabled)
-                parameters.Logger.Operations($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' is never backed up yet.");
-
-            return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
-        }
-
+        // we can't start the backup until we know the responsible node, if it is not set now we should do nothing
+        // when responsible node is set this triggers a rescheduling for the wakeup timer
         var responsibleNodeTag = GetResponsibleNodeTag(parameters.ServerStore, parameters.DatabaseName, parameters.Configuration.TaskId);
         if (responsibleNodeTag == null)
         {
@@ -494,9 +490,16 @@ internal static class BackupUtils
             if (parameters.Logger.IsOperationsEnabled)
                 parameters.Logger.Operations($"Could not find the responsible node for backup task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}'.");
 
+            if (parameters.IsIdle == false)
+            {
+                // the db is awake and we probably reached here from a place planning to unload it,
+                // since the responsible node is supposed to be chosen quickly, we prevent the db from unloading for now
+                return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
+            }
+
             return null;
         }
-
+        
         if (responsibleNodeTag != parameters.ServerStore.NodeTag)
         {
             // not responsible for this backup task
@@ -505,7 +508,24 @@ internal static class BackupUtils
 
             return null;
         }
+        
+        // local node is responsible for the backup
+        PeriodicBackupStatus backupStatus = GetLocalBackupStatus(parameters.ServerStore, parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
+        if (parameters.IsIdle == false)
+        {
+            if (backupStatus == null)
+            {
+                // we might reach here from periodic backup runner that check whether due time is far enough in the future to justify unloading the db
+                // if we never backed up the db then we want to do it now. returning the time now will prevent the unloading
 
+                if (parameters.Logger.IsOperationsEnabled)
+                    parameters.Logger.Operations($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' is never backed up yet.");
+
+                return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
+            }
+        }
+        
+        // The database is awake and a backup status exists, calculate the next backup occurence so we know when it should wake up
         var nextBackup = GetNextBackupDetails(new NextBackupDetailsParameters
         {
             OnParsingError = parameters.OnParsingError,
@@ -522,15 +542,6 @@ internal static class BackupUtils
             if (parameters.Logger.IsOperationsEnabled)
                 parameters.Logger.Operations($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' doesn't have next backup. Should not happen and likely a bug.");
             return null;
-        }
-
-        if (backupStatus == null)
-        {
-            // we want to wait for the backup occurrence
-            if (parameters.Logger.IsOperationsEnabled)
-                parameters.Logger.Operations($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' is never backed up yet.");
-            
-            return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, nextBackup.DateTime);
         }
 
         var nowUtc = DateTime.UtcNow;
@@ -582,12 +593,57 @@ internal static class BackupUtils
         return new IdleDatabaseActivity(IdleDatabaseActivityType.UpdateBackupStatusOnly, nextBackup.DateTime, parameters.Configuration.TaskId, parameters.LastEtag);
     }
 
+    public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, string databaseName, long taskId)
+    {
+        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            return GetLocalBackupStatus(serverStore, context, databaseName, taskId);
+        }
+    }
+
+    public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
+    {
+        var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
+        if (localStatus != null)
+            return localStatus;
+
+        // backwards compatibility - fallback to cluster status - only if node tag matches
+        var clusterStatus = GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
+
+        if (clusterStatus == null || clusterStatus.NodeTag != serverStore.NodeTag)
+            return null;
+
+        return clusterStatus;
+    }
+
+    public static BlittableJsonReaderObject GetLocalBackupStatusBlittable<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
+    {
+        var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatusBlittable(context, databaseName, serverStore._env.Base64Id, taskId);
+        if (localStatus != null)
+            return localStatus;
+
+        // backwards compatibility - fallback to cluster status - only if node tag matches
+        var clusterStatus = GetBackupStatusFromClusterBlittable(serverStore, context, databaseName, taskId);
+
+        if (clusterStatus == null || clusterStatus.TryGet(nameof(PeriodicBackupStatus.NodeTag), out string nodeTag) == false || string.IsNullOrEmpty(nodeTag))
+            return null;
+
+        if (nodeTag == serverStore.NodeTag)
+            return clusterStatus;
+
+        return null;
+    }
+
     public static void SaveBackupStatus(PeriodicBackupStatus status, string databaseName, ServerStore serverStore, Logger logger,
         BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
     {
         try
         {
             var raftId = RaftIdGenerator.NewId();
+            // update backup status locally
+            serverStore.DatabaseInfoCache.BackupStatusStorage.InsertBackupStatus(status, databaseName, serverStore._env.Base64Id, status.TaskId);
+
 
             AsyncHelpers.RunSync(async () =>
             {

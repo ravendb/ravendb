@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -12,13 +13,13 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
-using Sparrow.Json;
+using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
-using Index = Raven.Server.Documents.Indexes.Index;
 using Sparrow.LowMemory;
 using Sparrow.Server.Utils;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -412,6 +413,20 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (node != null)
                 {
                     report.LastSentEtag.Add(node, outgoing.LastSentDocumentEtag);
+                }
+            }
+        }
+
+        private static void FillBackupStatusInfo(TransactionOperationContext context, ServerStore serverStore, string dbName, List<long> backupTaskIds,
+            DatabaseStatusReport report)
+        {
+            foreach (var taskId in backupTaskIds)
+            {
+                var statusBlittable = BackupUtils.GetLocalBackupStatusBlittable(serverStore, context, dbName, taskId);
+                if (statusBlittable != null)
+                {
+                    var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
+                    report.BackupStatuses[taskId] = backupStatusReport;
                 }
             }
         }

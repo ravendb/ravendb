@@ -3767,6 +3767,8 @@ namespace Raven.Server.ServerWide
             internal Action RestoreDatabaseAfterSavingDatabaseRecord;
             internal Action AfterCommitInClusterTransaction;
             internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
+            internal Action<ClusterObserver.CompareExchangeTombstonesCleanupState> AfterCompareExchangeTombstonesResult;
+            internal bool IgnoreClusterTransactionIndexInCompareExchangeCleaner;
         }
 
 #if DEBUG

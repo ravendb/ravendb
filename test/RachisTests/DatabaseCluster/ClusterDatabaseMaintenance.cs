@@ -1376,7 +1376,7 @@ namespace RachisTests.DatabaseCluster
                 Servers.Add(nodes[1]);
 
                 //make sure leader and follower [2] disconnected
-                var db = await Databases.GetDocumentDatabaseInstanceFor(nodes[0], store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(nodes[0], store.Database);
                 await WaitAndAssertForValueAsync(() =>
                 {
                     var record = db.ReadDatabaseRecord();

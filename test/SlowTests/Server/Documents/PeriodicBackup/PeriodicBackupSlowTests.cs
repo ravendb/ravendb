@@ -3412,7 +3412,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             PeriodicBackupStatus inMemoryStatus = null;
                             WaitForValue(() =>
                             {
-                                inMemoryStatus = documentDatabase.PeriodicBackupRunner.GetBackupStatus(taskId);
+                                inMemoryStatus = documentDatabase.PeriodicBackupRunner.GetMostUpdatedClusterBackupStatus(taskId);
                                 return inMemoryStatus != null;
                             }, true);
 

@@ -41,9 +41,9 @@ public partial class RavenTestBase
             return server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
         }
 
-        public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(RavenServer server, IDocumentStore store, string database = null)
+        public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(RavenServer server, string database)
         {
-            return server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
+            return server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
         }
 
         public async Task SetDatabaseId(DocumentStore store, Guid dbId)
