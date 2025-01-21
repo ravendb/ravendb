@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.TransactionsRecording;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Voron)]
         public async Task CanCleanCounterTombstones()
         {
             await using var replayStream = typeof(RavenDB_23409).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB-23409.rec");

@@ -2011,6 +2011,10 @@ namespace Raven.Server.Documents
             if (tombstonesTable == null || tombstonesTable.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
                 return 0;
 
+            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
+            if (table == null || table.NumberOfEntries == 0)
+                return 0;
+
             Dictionary<string, HashSet<string>> countersToDelete = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             var deleted = 0L;
             var toDelete = 0L;
@@ -2021,22 +2025,20 @@ namespace Raven.Server.Documents
                 // then, we extract the data from the counters table, by the counter group key
                 // and remove the deleted counter (change the data)
                 // at the end, we'll write the new data to disk and update the document
-                if (item.Etag > upto || numberOfEntriesToDelete <= toDelete)
-                    break;
-
-                if (countersToDelete.TryGetValue(item.DocumentId, out var counterNames) == false)
+                using (item)
                 {
-                    countersToDelete[item.DocumentId] = counterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    if (item.Etag > upto || numberOfEntriesToDelete <= toDelete)
+                        break;
+
+                    if (countersToDelete.TryGetValue(item.DocumentId, out var counterNames) == false)
+                    {
+                        countersToDelete[item.DocumentId] = counterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    }
+
+                    if (counterNames.Add(item.Name))
+                        toDelete++;
                 }
-
-                counterNames.Add(item.Name);
-                toDelete++;
-
             }
-
-            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
-            if (table == null || table.NumberOfEntries == 0)
-                return 0;
 
             foreach (var kvp in countersToDelete)
             {
