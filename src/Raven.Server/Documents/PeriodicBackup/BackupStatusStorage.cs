@@ -168,14 +168,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private static long GetBackupStatusEntriesNumber(TransactionOperationContext context) //TODO stav: add by prefix
-        {
-            using var tx = context.OpenReadTransaction();
-            var table = tx.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
-
-            return table.NumberOfEntries;
-        }
-
         private static class BackupStatusSchema
         {
             public const string TableName = "BackupStatusTable";
