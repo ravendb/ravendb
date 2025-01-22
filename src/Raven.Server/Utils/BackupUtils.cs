@@ -19,7 +19,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.NotificationCenter;
-using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -154,7 +153,7 @@ internal static class BackupUtils
         return periodicBackupStatusJson;
     }
 
-    internal static BlittableJsonReaderObject GetBackupStatusFromClusterBlittable<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
+    internal static BlittableJsonReaderObject GetBackupStatusFromClusterBlittable(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
     {
         return serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
     }
@@ -595,14 +594,14 @@ internal static class BackupUtils
 
     public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, string databaseName, long taskId)
     {
-        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             return GetLocalBackupStatus(serverStore, context, databaseName, taskId);
         }
     }
 
-    public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
+    public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
     {
         var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
         if (localStatus != null)
@@ -617,7 +616,7 @@ internal static class BackupUtils
         return clusterStatus;
     }
 
-    public static BlittableJsonReaderObject GetLocalBackupStatusBlittable<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
+    public static BlittableJsonReaderObject GetLocalBackupStatusBlittable(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
     {
         var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatusBlittable(context, databaseName, serverStore._env.Base64Id, taskId);
         if (localStatus != null)

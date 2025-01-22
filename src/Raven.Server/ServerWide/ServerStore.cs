@@ -204,7 +204,7 @@ namespace Raven.Server.ServerWide
 
             ServerLimitsMonitor = new ServerLimitsMonitor(this, NotificationCenter, _notificationsStorage);
 
-            DatabaseInfoCache = new DatabaseInfoCache();
+            DatabaseInfoCache = new DatabaseInfoCache(this);
 
             Secrets = new SecretProtection(configuration.Security);
 

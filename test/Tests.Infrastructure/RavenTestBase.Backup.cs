@@ -271,7 +271,7 @@ namespace FastTests
                 return backupTaskId;
             }
 
-            public void WaitForResponsibleNodeUpdateInCluster(DocumentStore store, List<RavenServer> nodes, long backupTaskId, string differentThan = null)
+            public void WaitForResponsibleNodeUpdateInCluster(IDocumentStore store, List<RavenServer> nodes, long backupTaskId, string differentThan = null)
             {
                 foreach (var server in nodes)
                 {

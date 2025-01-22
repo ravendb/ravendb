@@ -14,6 +14,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
@@ -203,7 +204,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         var dbName = tuple.Name;
                         var topology = tuple.Topology;
 
-                        var report = new DatabaseStatusReport { Name = dbName, NodeName = _server.NodeTag };
+                        var report = new DatabaseStatusReport { Name = dbName, NodeName = _server.NodeTag, BackupStatuses = new () };
 
                         if (topology == null)
                         {
@@ -214,6 +215,8 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             continue;
                         }
+
+                        FillBackupStatusInfo(ctx, _server, dbName, rawRecord.PeriodicBackupsTaskIds, report);
 
                         if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask, out var details) == false)
                         {
@@ -416,8 +419,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
         }
-
-        private static void FillBackupStatusInfo(TransactionOperationContext context, ServerStore serverStore, string dbName, List<long> backupTaskIds,
+        
+        private static void FillBackupStatusInfo(ClusterOperationContext context, ServerStore serverStore, string dbName, List<long> backupTaskIds,
             DatabaseStatusReport report)
         {
             foreach (var taskId in backupTaskIds)

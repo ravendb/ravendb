@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -28,7 +24,7 @@ namespace Raven.Server.Documents
 
         public BackupStatusStorage BackupStatusStorage { get; }
 
-        public DatabaseInfoCache()
+        public DatabaseInfoCache(ServerStore serverStore)
         {
             _databaseInfoSchema.DefineKey(new TableSchema.IndexDef
             {
@@ -36,7 +32,7 @@ namespace Raven.Server.Documents
                 Count = 1
             });
 
-            BackupStatusStorage = new BackupStatusStorage();
+            BackupStatusStorage = new BackupStatusStorage(serverStore);
         }
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
