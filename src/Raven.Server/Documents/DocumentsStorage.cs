@@ -2755,8 +2755,11 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope GetEtagAsSlice(DocumentsOperationContext context, long etag, out Slice slice)
         {
-            Span<long> swapped = [Bits.SwapBytes(etag)];
-            return Slice.From(context.Allocator, MemoryMarshal.AsBytes(swapped), out slice);
+            var scope = context.Allocator.Allocate(sizeof(long), out var keyMem);
+            var swapped = Bits.SwapBytes(etag);
+            Memory.Copy(keyMem.Ptr, (byte*)&swapped, sizeof(long));
+            slice = new Slice(SliceOptions.Key, keyMem);
+            return scope;
         }
 
         [DoesNotReturn]
