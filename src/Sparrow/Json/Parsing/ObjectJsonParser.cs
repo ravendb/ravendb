@@ -262,47 +262,64 @@ namespace Sparrow.Json.Parsing
 
         private enum KnownJsonObjectType : byte
         {
-            Unknown,                  
-            IDynamicJson,             
-            DynamicJsonValue,         
-            DynamicJsonArray,         
-            ValueTuple,               
-            BlittableJsonReaderObject,
-            BlittableJsonReaderArray, 
-            BlittableJsonReaderVector,
-            IBlittableJsonContainer,  
-            IEnumerableObject,        
-            LazyStringValue,          
-            RawBlob,                  
-            LazyCompressedStringValue,
-            LazyNumberValue,          
-            String,                   
-            Char,                     
+            // Simple numeric / boolean
+            // (all are quite common and return immediately)
             Int32,                    // (covers int, short, byte, sbyte, ushort)
             Int64,                    // (covers long, uint)
             UInt64,                   // (covers ulong)
-            Boolean,                  
-            Float,                    
-            Double,                   
-#if NET6_0_OR_GREATER
-            Half,                     
-#endif
-            DateTime,                 
-            DateTimeOffset,           
-            TimeSpan,                 
-#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
-            TimeOnly,                 
-            DateOnly,                 
-#endif
-            Decimal,                  
-            ListOfLong,               
-            ListOfDouble,             
-            DictionaryStringLong,     
-            EnumType,                 
-            IDynamicJsonValueConvertible,
+            Boolean,
 
+            // Primary object flows                        
+            IDynamicJson, // IDynamicJson => goto DynamicJsonValue             
+            BlittableJsonReaderObject, // BlittableJsonReaderObject => goto DynamicJsonValue
+            DynamicJsonValue, // DynamicJsonValue => goto ValueTuple
+            ValueTuple,
+
+            // Lazy string forms
+            LazyStringValue,
+            LazyCompressedStringValue,
+            LazyNumberValue,
+
+            // Character-like => goto handle string
+            Char,
+            EnumType,
+            String,
+
+            // Special handle cases for string / number
             HandleSetStringBufferOptimization,
-            HandleSetStringBufferNumberOptimization
+            HandleSetStringBufferNumberOptimization,
+
+            Float, // Float => goto handle number
+            Double, // Double => goto handle number
+            Decimal, // Decimal => can become long or string
+
+#if NET6_0_OR_GREATER
+            Half, // Half => goto handle number
+#endif
+
+            // All datetime based => goto handle string
+            DateTime,
+            DateTimeOffset,
+            TimeSpan,
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            TimeOnly,
+            DateOnly,
+#endif
+
+            // Collections => goto DynamicJsonArray
+            ListOfLong,
+            ListOfDouble,
+            DictionaryStringLong,
+
+            IEnumerableObject, // IEnumerableObject => goto DynamicJsonArray
+
+            BlittableJsonReaderArray, // BlittableJsonReaderArray => goto DynamicJsonArray
+            DynamicJsonArray, // DynamicJsonArray => base array type
+            BlittableJsonReaderVector, // BlittableJsonReaderVector => goto DynamicJsonArray
+
+            IBlittableJsonContainer, // IBlittableJsonContainer => goto BlittableJsonReaderObject
+            IDynamicJsonValueConvertible,  // Convertible => goto DynamicJsonValue
+            RawBlob,
         }
 
         private static readonly TypeCache<KnownJsonObjectType> TypeCache = new(4096);
@@ -548,11 +565,69 @@ namespace Sparrow.Json.Parsing
 
                 switch (knownType)
                 {
+                    case KnownJsonObjectType.Int32:
+                    {
+                        state.Long = Convert.ToInt64(current);
+                        state.CurrentTokenType = JsonParserToken.Integer;
+                        return true;
+                    }
+                    case KnownJsonObjectType.Int64:
+                    {
+                        state.Long = Convert.ToInt64(current);
+                        state.CurrentTokenType = JsonParserToken.Integer;
+                        return true;
+                    }
+                    case KnownJsonObjectType.UInt64:
+                    {
+                        state.Long = (long)(ulong)current;
+                        state.CurrentTokenType = JsonParserToken.Integer;
+                        return true;
+                    }
+                    case KnownJsonObjectType.Boolean:
+                    {
+                        state.CurrentTokenType = (bool)current ? JsonParserToken.True : JsonParserToken.False;
+                        return true;
+                    }
                     case KnownJsonObjectType.IDynamicJson:
                     {
                         var idj = (IDynamicJson)current;
                         current = idj.ToJson();
                         goto case KnownJsonObjectType.DynamicJsonValue; // We know where it must go.
+                    }
+                    case KnownJsonObjectType.BlittableJsonReaderObject:
+                    {
+                        var bjro = (BlittableJsonReaderObject)current;
+                        bjro.Modifications ??= new DynamicJsonValue(bjro);
+
+                        var modifications = bjro.Modifications;
+
+                        if (_seenValues.Add(modifications))
+                        {
+                            _elements.Push(bjro);
+                            modifications.SourceIndex = -1;
+                            modifications.ModificationsIndex = 0;
+                            modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
+                            state.CurrentTokenType = JsonParserToken.StartObject;
+                            return true;
+                        }
+
+                        modifications.SourceIndex++;
+                        var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        if (modifications.SourceIndex < modifications.SourceProperties.Size)
+                        {
+                            var propIndex = modifications.SourceProperties.Properties[modifications.SourceIndex];
+                            if (modifications.Removals != null && modifications.Removals.Contains(propIndex))
+                                continue;
+
+                            bjro.GetPropertyByIndex(propIndex, ref propDetails);
+                            _elements.Push(bjro);
+                            _elements.Push(propDetails.Value);
+                            current = propDetails.Name;
+                            continue;
+                        }
+                        modifications.SourceProperties.Dispose();
+                        current = modifications;
+                        goto case KnownJsonObjectType.DynamicJsonValue;
                     }
                     case KnownJsonObjectType.DynamicJsonValue:
                     {
@@ -577,30 +652,10 @@ namespace Sparrow.Json.Parsing
                         }
                         _elements.Push(value);
                         current = value.Properties[value.ModificationsIndex++];
-                        if (current != null)
-                            goto case KnownJsonObjectType.ValueTuple;
-                        continue;
-                    }
-                    case KnownJsonObjectType.DynamicJsonArray:
-                    {
-                        var array = (DynamicJsonArray)current;
-                        if (_seenValues.Add(array))
-                        {
-                            array.SourceIndex = -1;
-                            array.ModificationsIndex = 0;
-                            state.CurrentTokenType = JsonParserToken.StartArray;
-                            _elements.Push(array);
-                            return true;
-                        }
-                        if (array.ModificationsIndex >= array.Items.Count)
-                        {
-                            _seenValues.Remove(array);
-                            state.CurrentTokenType = JsonParserToken.EndArray;
-                            return true;
-                        }
-                        _elements.Push(array);
-                        current = array.Items[array.ModificationsIndex++];
-                        continue;
+                        if (current == null)
+                            continue;
+
+                        goto case KnownJsonObjectType.ValueTuple;
                     }
                     case KnownJsonObjectType.ValueTuple:
                     {
@@ -609,117 +664,7 @@ namespace Sparrow.Json.Parsing
                         current = vt.Item1;
                         continue;
                     }
-                    case KnownJsonObjectType.BlittableJsonReaderObject:
-                    {
-                        var bjro = (BlittableJsonReaderObject)current;
-                        bjro.Modifications ??= new DynamicJsonValue(bjro);
 
-                        var modifications = bjro.Modifications;
-                        
-                        if (_seenValues.Add(modifications))
-                        {
-                            _elements.Push(bjro);
-                            modifications.SourceIndex = -1;
-                            modifications.ModificationsIndex = 0;
-                            modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
-                            state.CurrentTokenType = JsonParserToken.StartObject;
-                            return true;
-                        }
-
-                        modifications.SourceIndex++;
-                        var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                        if (modifications.SourceIndex < modifications.SourceProperties.Size)
-                        {
-                            var propIndex = modifications.SourceProperties.Properties[modifications.SourceIndex];
-                            if (modifications.Removals != null && modifications.Removals.Contains(propIndex))
-                            {
-                                continue;
-                            }
-                            bjro.GetPropertyByIndex(propIndex, ref propDetails);
-                            _elements.Push(bjro);
-                            _elements.Push(propDetails.Value);
-                            current = propDetails.Name;
-                            continue;
-                        }
-                        modifications.SourceProperties.Dispose();
-                        current = modifications;
-                        goto case KnownJsonObjectType.DynamicJsonValue;
-                        }
-                    case KnownJsonObjectType.BlittableJsonReaderArray:
-                    {
-                        var bjra = (BlittableJsonReaderArray)current;
-                        bjra.Modifications ??= new DynamicJsonArray();
-
-                        var modifications = bjra.Modifications;
-
-                        if (_seenValues.Add(bjra.Modifications))
-                        {
-                            _elements.Push(bjra);
-                            modifications.SourceIndex = modifications.SkipOriginalArray ? bjra.Length : -1;
-                            modifications.ModificationsIndex = 0;
-                            state.CurrentTokenType = JsonParserToken.StartArray;
-                            return true;
-                        }
-
-                        modifications.SourceIndex++;
-                        if (modifications.SourceIndex < bjra.Length)
-                        {
-                            if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
-                                continue;
-
-                            current = bjra[modifications.SourceIndex];
-                            _elements.Push(bjra);
-                            continue;
-                        }
-                        current = modifications;
-                        goto case KnownJsonObjectType.DynamicJsonArray;
-                    }
-                    case KnownJsonObjectType.BlittableJsonReaderVector:
-                    {
-                        var bjrv = (BlittableJsonReaderVector)current;
-                        bjrv.Modifications ??= new DynamicJsonArray();
-
-                        var modifications = bjrv.Modifications;
-
-                        if (_seenValues.Add(modifications))
-                        {
-                            _elements.Push(bjrv);
-                            modifications.SourceIndex = modifications.SkipOriginalArray ? bjrv.Length : -1;
-                            modifications.ModificationsIndex = 0;
-                            state.CurrentTokenType = JsonParserToken.StartArray;
-                            return true;
-                        }
-
-                        modifications.SourceIndex++;
-                        if (modifications.SourceIndex < bjrv.Length)
-                        {
-                            if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
-                            {
-                                continue;
-                            }
-
-                            current = bjrv[modifications.SourceIndex];
-                            _elements.Push(bjrv);
-                            continue;
-                        }
-
-                        current = modifications;
-                        goto case KnownJsonObjectType.DynamicJsonArray;
-                    }
-                    case KnownJsonObjectType.IBlittableJsonContainer:
-                    {
-                        var dbj = (IBlittableJsonContainer)current;
-                        current = dbj.BlittableJson;
-                        if (current != null)
-                            goto case KnownJsonObjectType.BlittableJsonReaderObject;
-                        continue;
-                    }
-                    case KnownJsonObjectType.IEnumerableObject:
-                    {
-                        var enumerable = (IEnumerable<object>)current;
-                        current = new DynamicJsonArray(enumerable);
-                        continue;
-                    }
                     case KnownJsonObjectType.LazyStringValue:
                     {
                         var lsv = (LazyStringValue)current;
@@ -728,15 +673,6 @@ namespace Sparrow.Json.Parsing
                         state.CompressedSize = null;// don't even try
                         state.CurrentTokenType = JsonParserToken.String;
                         ReadEscapePositions(lsv.Buffer, lsv.Size);
-                        return true;
-                    }
-                    case KnownJsonObjectType.RawBlob:
-                    {
-                        var bs = (BlittableJsonReaderObject.RawBlob)current;
-                        state.StringBuffer = bs.Address;
-                        state.StringSize = bs.Length;
-                        state.CompressedSize = null;// don't even try
-                        state.CurrentTokenType = JsonParserToken.Blob;
                         return true;
                     }
                     case KnownJsonObjectType.LazyCompressedStringValue:
@@ -762,6 +698,7 @@ namespace Sparrow.Json.Parsing
                         ReadEscapePositions(ldv.Inner.Buffer, ldv.Inner.Size);
                         return true;
                     }
+
                     case KnownJsonObjectType.Char:
                     {
                         auxiliaryString = new string((char)current, 1);
@@ -786,29 +723,6 @@ namespace Sparrow.Json.Parsing
                         state.CurrentTokenType = auxiliaryToken;
                         return true;
                     }
-                    case KnownJsonObjectType.Int32:
-                    {
-                        state.Long = Convert.ToInt64(current);
-                        state.CurrentTokenType = JsonParserToken.Integer;
-                        return true;
-                    }
-                    case KnownJsonObjectType.Int64:
-                    {
-                        state.Long = Convert.ToInt64(current);
-                        state.CurrentTokenType = JsonParserToken.Integer;
-                        return true;
-                    }
-                    case KnownJsonObjectType.UInt64:
-                    {
-                        state.Long = (long)(ulong)current;
-                        state.CurrentTokenType = JsonParserToken.Integer;
-                        return true;
-                    }
-                    case KnownJsonObjectType.Boolean:
-                    {
-                        state.CurrentTokenType = (bool)current ? JsonParserToken.True : JsonParserToken.False;
-                        return true;
-                    }
                     case KnownJsonObjectType.HandleSetStringBufferNumberOptimization:
                     {
                         auxiliaryString = EnsureDecimalPlace(auxiliaryDouble, auxiliaryDouble.ToString("R", CultureInfo.InvariantCulture));
@@ -825,13 +739,6 @@ namespace Sparrow.Json.Parsing
                         auxiliaryDouble = (double)current;
                         goto case KnownJsonObjectType.HandleSetStringBufferNumberOptimization;
                     }
-#if NET6_0_OR_GREATER
-                    case KnownJsonObjectType.Half:
-                    {
-                        auxiliaryDouble = (double)(Half)(current);
-                        goto case KnownJsonObjectType.HandleSetStringBufferNumberOptimization;
-                    }
-#endif
                     case KnownJsonObjectType.Decimal:
                     {
                         var d = (decimal)current;
@@ -846,6 +753,13 @@ namespace Sparrow.Json.Parsing
                         current = (long)d;
                         goto case KnownJsonObjectType.Int64;
                     }
+#if NET6_0_OR_GREATER
+                    case KnownJsonObjectType.Half:
+                    {
+                        auxiliaryDouble = (double)(Half)(current);
+                        goto case KnownJsonObjectType.HandleSetStringBufferNumberOptimization;
+                    }
+#endif
                     case KnownJsonObjectType.DateTime:
                     {
                         auxiliaryString = ((DateTime)current).GetDefaultRavenFormat();
@@ -879,25 +793,137 @@ namespace Sparrow.Json.Parsing
                         goto case KnownJsonObjectType.HandleSetStringBufferOptimization;
                     }
 #endif
+
                     case KnownJsonObjectType.ListOfLong:
                     {
                         current = HandleLongsList((List<long>)current);
-                        continue;
+                        goto case KnownJsonObjectType.DynamicJsonArray;
                     }
                     case KnownJsonObjectType.ListOfDouble:
                     {
                         current = HandleDoublesList((List<double>)current);
-                        continue;
+                        goto case KnownJsonObjectType.DynamicJsonArray;
                     }
                     case KnownJsonObjectType.DictionaryStringLong:
                     {
                         current = HandleDictionaryType((Dictionary<string, long>)current);
+                        goto case KnownJsonObjectType.DynamicJsonArray;
+                    }
+
+                    case KnownJsonObjectType.IEnumerableObject:
+                    {
+                        var enumerable = (IEnumerable<object>)current;
+                        current = new DynamicJsonArray(enumerable);
+                        goto case KnownJsonObjectType.DynamicJsonArray;
+                    }
+
+                    case KnownJsonObjectType.BlittableJsonReaderArray:
+                    {
+                        var bjra = (BlittableJsonReaderArray)current;
+                        bjra.Modifications ??= new DynamicJsonArray();
+
+                        var modifications = bjra.Modifications;
+
+                        if (_seenValues.Add(bjra.Modifications))
+                        {
+                            _elements.Push(bjra);
+                            modifications.SourceIndex = modifications.SkipOriginalArray ? bjra.Length : -1;
+                            modifications.ModificationsIndex = 0;
+                            state.CurrentTokenType = JsonParserToken.StartArray;
+                            return true;
+                        }
+
+                        modifications.SourceIndex++;
+                        if (modifications.SourceIndex < bjra.Length)
+                        {
+                            if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
+                                continue;
+
+                            current = bjra[modifications.SourceIndex];
+                            _elements.Push(bjra);
+                            continue;
+                        }
+                        current = modifications;
+                        goto case KnownJsonObjectType.DynamicJsonArray;
+                    }
+
+                    case KnownJsonObjectType.DynamicJsonArray:
+                    {
+                        var array = (DynamicJsonArray)current;
+                        if (_seenValues.Add(array))
+                        {
+                            array.SourceIndex = -1;
+                            array.ModificationsIndex = 0;
+                            state.CurrentTokenType = JsonParserToken.StartArray;
+                            _elements.Push(array);
+                            return true;
+                        }
+                        if (array.ModificationsIndex >= array.Items.Count)
+                        {
+                            _seenValues.Remove(array);
+                            state.CurrentTokenType = JsonParserToken.EndArray;
+                            return true;
+                        }
+                        _elements.Push(array);
+                        current = array.Items[array.ModificationsIndex++];
                         continue;
                     }
+
+                    case KnownJsonObjectType.BlittableJsonReaderVector:
+                    {
+                        var bjrv = (BlittableJsonReaderVector)current;
+                        bjrv.Modifications ??= new DynamicJsonArray();
+
+                        var modifications = bjrv.Modifications;
+
+                        if (_seenValues.Add(modifications))
+                        {
+                            _elements.Push(bjrv);
+                            modifications.SourceIndex = modifications.SkipOriginalArray ? bjrv.Length : -1;
+                            modifications.ModificationsIndex = 0;
+                            state.CurrentTokenType = JsonParserToken.StartArray;
+                            return true;
+                        }
+
+                        modifications.SourceIndex++;
+                        if (modifications.SourceIndex < bjrv.Length)
+                        {
+                            if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
+                                continue;
+
+                            current = bjrv[modifications.SourceIndex];
+                            _elements.Push(bjrv);
+                            continue;
+                        }
+
+                        current = modifications;
+                        goto case KnownJsonObjectType.DynamicJsonArray;
+                    }
+
+                    case KnownJsonObjectType.IBlittableJsonContainer:
+                    {
+                        var dbj = (IBlittableJsonContainer)current;
+                        current = dbj.BlittableJson;
+                        if (current == null)
+                            continue;
+
+                        goto case KnownJsonObjectType.BlittableJsonReaderObject;
+                    }
+
                     case KnownJsonObjectType.IDynamicJsonValueConvertible:
                     {
                         current = ((IDynamicJsonValueConvertible)current).ToJson();
-                        continue;
+                        goto case KnownJsonObjectType.DynamicJsonValue;
+                    }
+
+                    case KnownJsonObjectType.RawBlob:
+                    {
+                        var bs = (BlittableJsonReaderObject.RawBlob)current;
+                        state.StringBuffer = bs.Address;
+                        state.StringSize = bs.Length;
+                        state.CompressedSize = null;// don't even try
+                        state.CurrentTokenType = JsonParserToken.Blob;
+                        return true;
                     }
                 }
             }
