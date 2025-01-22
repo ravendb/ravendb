@@ -517,7 +517,7 @@ namespace Raven.Server.Web.System
 
                                     using (Database.PreventFromUnloadingByIdleOperations())
                                     {
-                                        var runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupConfiguration.BackupType };//TODO stav: backup status once with taskId 0 should also not be saved in cluster?
+                                        var runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupConfiguration.BackupType };
                                         var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
                                         BackupUtils.SaveBackupStatus(runningBackupStatus, Database.Name, Database.ServerStore, Logger, backupResult, operationCancelToken: cancelToken);
                                         tcs.SetResult(backupResult);

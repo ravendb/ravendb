@@ -168,7 +168,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 var report = new DatabaseStatusReport
                 {
                     Name = dbName,
-                    NodeName = _server.NodeTag
+                    NodeName = _server.NodeTag,
+                    BackupStatuses = new()
                 };
 
                 prevReport.TryGetValue(dbName, out var prevDatabaseReport);

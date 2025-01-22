@@ -602,6 +602,12 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (hasReport == false)
                     return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
+                if (report.BackupStatuses == null)
+                {
+                    // the node wasn't updated to a version that supports it
+                    return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                }
+
                 foreach (var (taskId, status) in report.BackupStatuses)
                 {
                     if (status == null)

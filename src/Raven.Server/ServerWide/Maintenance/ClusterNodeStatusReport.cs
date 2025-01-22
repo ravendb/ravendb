@@ -64,7 +64,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
         public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
-        public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses = new ();
+        public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses;
 
         public long LastCompareExchangeIndex { get; set; }
         public long LastClusterWideTransactionRaftIndex { get; set; }
