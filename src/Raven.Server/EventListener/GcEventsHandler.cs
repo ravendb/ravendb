@@ -244,29 +244,38 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
             return output;
         }
 
+        // https://github.com/dotnet/runtime/blob/a78ec96f3f474615d4c850482134bd291f1b1384/src/coreclr/inc/eventtrace.h#L215
         private static string GetGcReason(uint valueReason)
         {
             switch (valueReason)
             {
                 case 0x0:
-                    return "Small object heap allocation";
+                    return "Small object heap allocation"; // SOH Allocation
                 case 0x1:
-                    return "Induced";
+                    return "Induced"; // Manually triggered GC (GC.Collect)
                 case 0x2:
-                    return "Low memory";
+                    return "Low memory"; // GC triggered by low system memory
                 case 0x3:
-                    return "Empty";
+                    return "Empty"; // No specific reason, sometimes used internally
                 case 0x4:
-                    return "Large object heap allocation";
+                    return "Large object heap allocation"; // LOH Allocation
                 case 0x5:
-                    return "Out of space (for small object heap)";
+                    return "Out of space (for small object heap)"; // SOH OOM
                 case 0x6:
-                    return "Out of space (for large object heap)";
+                    return "Out of space (for large object heap)"; // LOH OOM
                 case 0x7:
-                    return "Induced but not forced as blocking";
+                    return "Induced but not forced as blocking"; // Non-blocking induced GC
+                case 0x8:
+                    return "GC stress testing mode"; // GC triggered by GCStress testing mode
+                case 0x9:
+                    return "Low memory blocking"; // Low memory situation requiring a blocking collection
+                case 0xA:
+                    return "Induced GC with forced compacting"; // Induced GC that must be compacting
+                case 0xB:
+                    return "Low memory reported by the host"; // Low memory reported by host
 
                 default:
-                    return null;
+                    return $"Unknown reason: {valueReason}";
             }
         }
     }
