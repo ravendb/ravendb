@@ -307,7 +307,8 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
             return $"{str}, index: {Index}, reason: {Reason}";
         }
 
-        private static string GetSuspendReason(uint? suspendReason)
+        //https://github.com/dotnet/runtime/blob/a78ec96f3f474615d4c850482134bd291f1b1384/src/coreclr/vm/threadsuspend.h#L169
+        private static string GetSuspendReason(uint suspendReason)
         {
             switch (suspendReason)
             {
@@ -327,9 +328,11 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                     return "Suspend for GC Prep";
                 case 0x7:
                     return "Suspend for debugger sweep";
+                case 0x8:
+                    return "Suspend for profiler";
 
                 default:
-                    return null;
+                    return $"Unknown reason: {suspendReason}";
             }
         }
     }
