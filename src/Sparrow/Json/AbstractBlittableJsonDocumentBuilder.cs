@@ -166,7 +166,7 @@ namespace Sparrow.Json
                     n = null;
                     return;
                 }
-                n.WeakClear();
+                n.Clear();
                 _cache.Add(n);
                 n = null;
             }
