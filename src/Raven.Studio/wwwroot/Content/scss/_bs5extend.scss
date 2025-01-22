@@ -399,11 +399,12 @@ select {
 //Override bootstrap 5.3 CSS custom properties theming errors
 .accordion-button {
     &::after {
-        content: "\f117" !important;
+        content: "chevron-down" !important;
         font-family: "icomoon" !important;
         text-align: center;
     }
 }
+
 .btn-close {
     &::after {
         content: "\f117" !important;
