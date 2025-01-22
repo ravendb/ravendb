@@ -1894,7 +1894,7 @@ namespace Corax.Indexing
                 if (localEntry.HasChanges == false)
                     continue;
                   
-                UpdateEntriesForTerm(entries, term);
+                UpdateEntriesForTerm(localEntry, term);
                 
                 long termId;
                 var hasTerm = fieldTree.TryGetValue(term, out var existing);
@@ -1970,7 +1970,7 @@ namespace Corax.Indexing
                 if (localEntry.HasChanges == false)
                     continue;
 
-                UpdateEntriesForTerm(entries, BitConverter.DoubleToInt64Bits(term));
+                UpdateEntriesForTerm(localEntry, BitConverter.DoubleToInt64Bits(term));
                 
                 var hasTerm = fieldTree.TryGetValue(term, out var existing);
 
