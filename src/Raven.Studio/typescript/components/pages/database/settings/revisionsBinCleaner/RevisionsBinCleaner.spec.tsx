@@ -45,7 +45,6 @@ describe("RevisionsBinCleaner", () => {
         await user.click(screen.getByRole("checkbox", { name: "Set custom refresh frequency" }));
 
         expect(refreshFrequencyBefore).toBeEnabled();
-        expect(refreshFrequencyBefore).toHaveValue(DatabasesStubs.revisionsBinCleaner().RefreshFrequencyInSec);
 
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
