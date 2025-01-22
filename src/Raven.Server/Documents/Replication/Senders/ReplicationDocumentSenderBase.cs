@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         if (skippedReplicationItemsInfo.SkippedItems > 0)
                         {
                             var message = skippedReplicationItemsInfo.GetInfoForDebug(_parent.LastAcceptedChangeVector);
-                            Log.Info(message);
+                            Log.Debug(message);
                         }
 
                         var msg = $"Found {_orderedReplicaItems.Count:#,#;;0} documents " +
