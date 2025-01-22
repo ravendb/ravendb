@@ -294,6 +294,7 @@ class indexPerformance extends viewModelBase {
             "Corax/Commit": undefined as string,
             "Corax/Convert": undefined as string,
             "Corax/AddDocument": undefined as string,
+            "DocumentsCleanup": undefined as string,
             "UnknownOperation": undefined as string
         }
     };
