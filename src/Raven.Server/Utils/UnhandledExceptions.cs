@@ -32,13 +32,13 @@ namespace Raven.Server.Utils
 
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
-                if (logger.IsInfoEnabled == false)
+                if (logger.IsDebugEnabled == false)
                     return;
 
                 if (args.Observed)
                     return;
 
-                logger.Info("UnobservedTaskException occurred.", args.Exception);
+                logger.Debug("UnobservedTaskException occurred.", args.Exception);
             };
         }
     }
