@@ -602,10 +602,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (hasReport == false)
                     return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
-                if (state.RawDatabase.PeriodicBackupsTaskIds != null && state.RawDatabase.PeriodicBackupsTaskIds.Count != 0 &&
-                    report.BackupStatuses.Count == 0)
+                if (report.BackupStatuses == null)
                 {
-                    // we got a report from an old version that doesn't populate BackupStatuses (we add BackupStatuses taskIds keys even if its values are null)
+                    // the node wasn't updated to a version that supports it
                     return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
                 }
 

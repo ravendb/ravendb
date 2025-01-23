@@ -64,7 +64,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
         public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
-        public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses = new ();
+        public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses;
 
         public long LastCompareExchangeIndex { get; set; }
         public long LastClusterWideTransactionRaftIndex { get; set; }
@@ -183,8 +183,16 @@ namespace Raven.Server.ServerWide.Maintenance
         public long GetBackupStatusReportHash()
         {
             long hash = 0;
-            foreach (var (_, status) in BackupStatuses)
+
+            if (BackupStatuses == null)
             {
+                Debug.Fail($"{nameof(BackupStatuses)} should not be null");
+                return hash;
+            }
+
+            foreach (var (taskId, status) in BackupStatuses)
+            {
+                hash = Hashing.Combine(hash, taskId);
                 hash = Hashing.Combine(hash, status?.LastRaftIndex?.LastEtag ?? 0);
             }
 
@@ -240,12 +248,18 @@ namespace Raven.Server.ServerWide.Maintenance
 
             dynamicJsonValue[nameof(LastIndexStats)] = indexStats;
 
-            var backupStatuses = new DynamicJsonValue();
-            foreach (var status in BackupStatuses)
+            if (BackupStatuses == null)
+                dynamicJsonValue[nameof(BackupStatuses)] = null;
+            else
             {
-                backupStatuses[status.Key.ToString()] = status.Value?.ToJson();
+                var backupStatuses = new DynamicJsonValue();
+                foreach (var status in BackupStatuses)
+                {
+                    backupStatuses[status.Key.ToString()] = status.Value?.ToJson();
+                }
+
+                dynamicJsonValue[nameof(BackupStatuses)] = backupStatuses;
             }
-            dynamicJsonValue[nameof(BackupStatuses)] = backupStatuses;
 
             return dynamicJsonValue;
         }
