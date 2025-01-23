@@ -1,4 +1,5 @@
 import { sortBy } from "common/typeUtils";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import useConfirm from "components/common/ConfirmDialog";
 import { Icon } from "components/common/Icon";
 import {
@@ -14,14 +15,16 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { TextColor } from "components/models/common";
+import CertificatesEditModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import CertificatesRegenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { CertificateItem } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
-import { certificateUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
+import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { useAppDispatch, useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
 import moment from "moment";
+import { useAsyncCallback } from "react-async-hook";
 import { Badge, Button } from "reactstrap";
 import IconName from "typings/server/icons";
 
@@ -37,13 +40,15 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     const serverCertificateThumbprint = useAppSelector(certificatesSelectors.serverCertificateThumbprint);
     const serverCertificateSetupMode = useAppSelector(certificatesSelectors.serverCertificateSetupMode);
-    const regenerateModalData = useAppSelector(certificatesSelectors.regenerateModalData);
     const serverCertificateRenewalDate = useAppSelector(certificatesSelectors.serverCertificateRenewalDate);
     const clientCertificateThumbprint = useAppSelector(accessManagerSelectors.clientCertificateThumbprint);
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
-    const state = certificateUtils.getState(certificate.NotAfter);
-    const clearance = certificateUtils.getClearance(certificate.SecurityClearance);
+    const certificateToRegenerate = useAppSelector(certificatesSelectors.certificateToRegenerate);
+    const certificateToEdit = useAppSelector(certificatesSelectors.certificateToEdit);
+
+    const state = certificatesUtils.getState(certificate.NotAfter);
+    const clearance = certificatesUtils.getClearance(certificate.SecurityClearance);
     const isServerCert = certificate.Thumbprints.includes(serverCertificateThumbprint);
     const isCurrentBrowserCert = certificate.Thumbprints.includes(clientCertificateThumbprint);
     const has2fa = certificate.HasTwoFactor ?? false;
@@ -61,6 +66,12 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
         return true;
     })();
 
+    const asyncRenewServerCertificate = useAsyncCallback(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await manageServerService.forceRenewServerCertificate();
+        await dispatch(certificatesActions.fetchData(null));
+    });
+
     const handleRenewServerCertificate = async () => {
         const isConfirmed = await confirm({
             icon: "refresh",
@@ -70,10 +81,15 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
         });
 
         if (isConfirmed) {
-            await manageServerService.forceRenewServerCertificate();
-            await dispatch(certificatesActions.fetchData(null));
+            asyncRenewServerCertificate.execute();
         }
     };
+
+    const asyncDeleteCertificate = useAsyncCallback(async () => {
+        reportEvent("certificates", "delete");
+        await manageServerService.deleteCertificate(certificate.Thumbprint);
+        await dispatch(certificatesActions.fetchData(null));
+    });
 
     const handleDeleteCertificate = async () => {
         const isConfirmed = await confirm({
@@ -89,15 +105,13 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
         });
 
         if (isConfirmed) {
-            reportEvent("certificates", "delete");
-            await manageServerService.deleteCertificate(certificate.Thumbprint);
-            await dispatch(certificatesActions.fetchData(null));
+            asyncDeleteCertificate.execute();
         }
     };
 
     return (
         <RichPanel className="flex-row with-status">
-            <RichPanelStatus color={certificateUtils.getStateColor(state)}>{state}</RichPanelStatus>
+            <RichPanelStatus color={certificatesUtils.getStateColor(state)}>{state}</RichPanelStatus>
 
             <div className="flex-grow">
                 <RichPanelHeader>
@@ -105,7 +119,6 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         <RichPanelName className="d-flex align-items-center">
                             <Icon icon="certificate" color="primary" />
                             {certificate.Name ?? "<empty name>"}
-                            {/* // TODO clickable name - edit */}
                             {isServerCert && (
                                 <Badge
                                     color="info"
@@ -150,18 +163,28 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     <Icon icon="refresh" />
                                     Regenerate
                                 </Button>
-                                {regenerateModalData && <CertificatesRegenerateModal />}
+                                {certificateToRegenerate && <CertificatesRegenerateModal />}
                             </>
                         )}
                         {canEdit && (
-                            <Button title="Edit certificate">
-                                <Icon icon="edit" margin="m-0" />
-                            </Button>
+                            <>
+                                <Button
+                                    title="Edit certificate"
+                                    onClick={() => dispatch(certificatesActions.editModalOpen(certificate))}
+                                >
+                                    <Icon icon="edit" margin="m-0" />
+                                </Button>
+                                {certificateToEdit && <CertificatesEditModal />}
+                            </>
                         )}
                         {canDelete && (
-                            <Button title="Delete certificate" color="danger" onClick={handleDeleteCertificate}>
-                                <Icon icon="trash" margin="m-0" />
-                            </Button>
+                            <ButtonWithSpinner
+                                title="Delete certificate"
+                                color="danger"
+                                onClick={handleDeleteCertificate}
+                                icon="trash"
+                                isSpinning={asyncDeleteCertificate.loading}
+                            />
                         )}
                     </RichPanelActions>
                 </RichPanelHeader>
@@ -194,7 +217,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             </>
                         }
                     >
-                        <span className={`text-${certificateUtils.getStateDateColor(state)}`}>
+                        <span className={`text-${certificatesUtils.getStateDateColor(state)}`}>
                             {moment.utc(certificate.NotAfter).format("YYYY-MM-DD")}
                         </span>
                     </RichPanelDetailItem>
@@ -220,16 +243,17 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             }
                         >
                             {moment.utc(serverCertificateRenewalDate).format("YYYY-MM-DD")}
-                            <Button
+                            <ButtonWithSpinner
                                 color="link"
                                 size="sm"
                                 className="fs-6"
                                 title="Renew this server certificate"
                                 onClick={handleRenewServerCertificate}
+                                icon="refresh"
+                                isSpinning={asyncRenewServerCertificate.loading}
                             >
-                                <Icon icon="refresh" />
                                 Renew now
-                            </Button>
+                            </ButtonWithSpinner>
                         </RichPanelDetailItem>
                     )}
                     <RichPanelDetailItem
@@ -265,11 +289,11 @@ function PermissionsBadge({ certificate }: { certificate: CertificateItem }) {
     }
 
     const dbAccessArray = sortBy(
-        Object.entries(Permissions ?? []).map(([dbName, accessLevel]) => ({
-            dbName,
+        Object.entries(Permissions ?? []).map(([databaseName, accessLevel]) => ({
+            databaseName,
             accessLevel,
         })),
-        (x) => x.dbName.toLowerCase()
+        (x) => x.databaseName.toLowerCase()
     );
 
     if (dbAccessArray.length === 0) {
@@ -278,10 +302,10 @@ function PermissionsBadge({ certificate }: { certificate: CertificateItem }) {
 
     return (
         <div className="hstack gap-1">
-            {dbAccessArray.map(({ dbName, accessLevel }) => (
-                <Badge key={dbName} color={getAccessColor(accessLevel)} pill>
+            {dbAccessArray.map(({ databaseName, accessLevel }) => (
+                <Badge key={databaseName} color={getAccessColor(accessLevel)} pill>
                     <Icon icon={getAccessIcon(accessLevel)} />
-                    {dbName}
+                    {databaseName}
                 </Badge>
             ))}
         </div>

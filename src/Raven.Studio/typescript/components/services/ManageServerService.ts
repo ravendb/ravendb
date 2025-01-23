@@ -22,6 +22,7 @@ import getServerCertificateSetupModeCommand = require("commands/auth/getServerCe
 import generateTwoFactorSecretCommand = require("commands/auth/generateTwoFactorSecretCommand");
 import forceRenewServerCertificateCommand = require("commands/auth/forceRenewServerCertificateCommand");
 import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
+import updateCertificateCommand = require("commands/auth/updateCertificateCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -116,6 +117,10 @@ export default class ManageServerService {
     }
 
     async deleteCertificate(...args: ConstructorParameters<typeof deleteCertificateCommand>) {
-        return new deleteCertificateCommand(...args);
+        return new deleteCertificateCommand(...args).execute();
+    }
+
+    async updateCertificate(...args: ConstructorParameters<typeof updateCertificateCommand>) {
+        return new updateCertificateCommand(...args).execute();
     }
 }

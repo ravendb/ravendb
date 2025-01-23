@@ -1,5 +1,4 @@
 import { Meta, StoryObj } from "@storybook/react/*";
-import { userEvent, within } from "@storybook/test";
 import Certificates from "components/pages/resources/manageServer/certificates/Certificates";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";

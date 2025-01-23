@@ -5,7 +5,7 @@ import {
     CertificatesClearance,
     CertificatesState,
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
-import { certificateUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
+import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { RootState } from "components/store";
 
 const selectClearanceFilterOptions = createSelector(
@@ -41,7 +41,7 @@ const selectStateFilterOptions = createSelector(
             expiredCount = 0;
 
         certificates.forEach(({ NotAfter }) => {
-            const state = certificateUtils.getState(NotAfter);
+            const state = certificatesUtils.getState(NotAfter);
 
             if (state === "Valid") {
                 validCount++;
@@ -85,12 +85,12 @@ const selectFilteredCertificates = createSelector(
 
             if (
                 clearanceFilter.length > 0 &&
-                !clearanceFilter.includes(certificateUtils.getClearance(cert.SecurityClearance))
+                !clearanceFilter.includes(certificatesUtils.getClearance(cert.SecurityClearance))
             ) {
                 return false;
             }
 
-            if (stateFilter.length > 0 && !stateFilter.includes(certificateUtils.getState(cert.NotAfter))) {
+            if (stateFilter.length > 0 && !stateFilter.includes(certificatesUtils.getState(cert.NotAfter))) {
                 return false;
             }
 
@@ -142,5 +142,6 @@ export const certificatesSelectors = {
     stateFilterOptions: selectStateFilterOptions,
     sortMode: (state: RootState) => state.certificates.sortMode,
     isGenerateModalOpen: (state: RootState) => state.certificates.isGenerateModalOpen,
-    regenerateModalData: (state: RootState) => state.certificates.regenerateModalData,
+    certificateToRegenerate: (state: RootState) => state.certificates.certificateToRegenerate,
+    certificateToEdit: (state: RootState) => state.certificates.certificateToEdit,
 };

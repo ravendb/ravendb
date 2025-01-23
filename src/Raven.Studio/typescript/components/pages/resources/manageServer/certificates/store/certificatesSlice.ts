@@ -23,9 +23,8 @@ interface InitialState {
     stateFilter: CertificatesState[];
     sortMode: CertificatesSortMode;
     isGenerateModalOpen: boolean;
-    regenerateModalData: {
-        certificate: CertificateItem;
-    };
+    certificateToRegenerate: CertificateItem;
+    certificateToEdit: CertificateItem;
 }
 
 const initialState: InitialState = {
@@ -42,7 +41,8 @@ const initialState: InitialState = {
     stateFilter: [],
     sortMode: "Default",
     isGenerateModalOpen: false,
-    regenerateModalData: null,
+    certificateToRegenerate: null,
+    certificateToEdit: null,
 };
 
 export const certificatesSlice = createSlice({
@@ -68,12 +68,16 @@ export const certificatesSlice = createSlice({
             state.isGenerateModalOpen = !state.isGenerateModalOpen;
         },
         regenerateModalOpen: (state, action: PayloadAction<CertificateItem>) => {
-            state.regenerateModalData = {
-                certificate: action.payload,
-            };
+            state.certificateToRegenerate = action.payload;
         },
         regenerateModalClosed: (state) => {
-            state.regenerateModalData = null;
+            state.certificateToRegenerate = null;
+        },
+        editModalOpen: (state, action: PayloadAction<CertificateItem>) => {
+            state.certificateToEdit = action.payload;
+        },
+        editModalClosed: (state) => {
+            state.certificateToEdit = null;
         },
     },
     extraReducers: (builder) => {
