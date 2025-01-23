@@ -204,8 +204,7 @@ namespace Sparrow.Json
                                     currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
                                     currentState.State = ContinuationState.ReadPropertyValue;
 
-                                    if (currentState.CurrentProperty.EqualsPropertyNameToBytes(Global.Constants.Naming.VectorPropertyNameAsSpan))
-                                        _isVectorProperty = true;
+                                    _isVectorProperty = currentState.CurrentProperty.IsVectorProperty;
 
                                     goto case ContinuationState.ReadPropertyValue;
                                 }
@@ -226,7 +225,7 @@ namespace Sparrow.Json
 
                         continuationState.PushByRef() = currentState;
                         return false;
-
+                        
                     case ContinuationState.ReadObjectDocument:
                         if (reader.Read() == false)
                         {
