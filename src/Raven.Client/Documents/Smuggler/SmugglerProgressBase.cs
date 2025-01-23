@@ -84,6 +84,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public bool SqlEtlsUpdated { get; set; }
         
         public bool SnowflakeEtlsUpdated { get; set; }
+        
+        public bool VectorEmbeddingEnrichmentEtlsUpdated { get; set; }
 
         public bool ExternalReplicationsUpdated { get; set; }
 
@@ -108,6 +110,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public bool SqlConnectionStringsUpdated { get; set; }
         
         public bool SnowflakeConnectionStringsUpdated { get; set; }
+        
+        public bool AiConnectionStringsUpdated { get; set; }
 
         public bool ClientConfigurationUpdated { get; set; }
 
@@ -164,6 +168,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
             if (SnowflakeConnectionStringsUpdated)
                 json[nameof(SnowflakeConnectionStringsUpdated)] = SnowflakeConnectionStringsUpdated;
 
+            if (AiConnectionStringsUpdated)
+                json[nameof(AiConnectionStringsUpdated)] = AiConnectionStringsUpdated;
+
             if (ClientConfigurationUpdated)
                 json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
 
@@ -181,6 +188,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
             
             if (SnowflakeEtlsUpdated)
                 json[nameof(SnowflakeEtlsUpdated)] = SnowflakeEtlsUpdated;
+
+            if (VectorEmbeddingEnrichmentEtlsUpdated)
+                json[nameof(VectorEmbeddingEnrichmentEtlsUpdated)] = VectorEmbeddingEnrichmentEtlsUpdated;
 
             if (RavenEtlsUpdated)
                 json[nameof(RavenEtlsUpdated)] = RavenEtlsUpdated;
@@ -257,6 +267,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
             if (SnowflakeConnectionStringsUpdated)
                 sb.AppendLine("- Snowflake Connection Strings");
 
+            if (AiConnectionStringsUpdated)
+                sb.AppendLine("- AI Connection Strings");
+
             if (ConflictSolverConfigUpdated)
                 sb.AppendLine("- Conflicts Solvers");
 
@@ -274,6 +287,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
             
             if (SnowflakeEtlsUpdated)
                 sb.AppendLine("- Snowflake ETLs");
+
+            if (VectorEmbeddingEnrichmentEtlsUpdated)
+                sb.AppendLine("- Vector Embedding Enrichment ETLs");
 
             if (SortersUpdated)
                 sb.AppendLine("- Sorters");

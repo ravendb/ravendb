@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.IO;
 using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
@@ -16,25 +16,44 @@ public class RavenDB_23556 : RavenTestBase
     [RavenFact(RavenTestCategory.Etl)]
     public void Test()
     {
+        const string connectionStringName = "someConnectionStringName";
+
         using (var store = GetDocumentStore())
         {
             using (var session = store.OpenSession())
             {
-                var dto = new Dto() { Name = "very cool name" };
-                
+                var dto = new Dto { Name = "very cool name" };
                 session.Store(dto);
-                
                 session.SaveChanges();
             }
-            
-            Etl.AddEtl(store,
-                new AiEtlConfiguration()
+
+            var configuration = new VectorEmbeddingEnrichmentEtlConfiguration
+            {
+                Name = "someETLConfigurationName",
+                ConnectionStringName = connectionStringName,
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }],
+                FieldsToInclude = ["Name"],
+                LlmProviderType = LlmProviderType.Onnx
+            };
+
+            // var connectionString = new AiConnectionString
+            // {
+            //     Name = connectionStringName,
+            //     OllamaSettings = new OllamaSettings { Model = "mistral-nemo", Uri = "http://127.0.0.1:11434" }
+            // };
+
+            var connectionString = new AiConnectionString
+            {
+                Name = connectionStringName,
+                OnnxSettings = new OnnxSettings
                 {
-                    Name = "Cool Test",
-                    ConnectionStringName = "abc",
-                    Transforms = new List<Transformation>() { new Transformation() { Collections = new List<string>() { "Dtos" }, Name = "CoolName2", Script = "loadToWhatever(){}" } },
-                    FieldsToInclude = new List<string>() { "Name" }
-                }, new AiConnectionString() { Name = "ddd" });
+                    ModelPath = Path.Combine("LocalEmbeddings", "bge-micro-v2", "model.onnx"),
+                    VocabularyPath = Path.Combine("LocalEmbeddings", "bge-micro-v2", "vocab.txt"),
+                    CaseSensitive = false
+                }
+            };
+
+            Etl.AddEtl(store, configuration, connectionString);
             
             WaitForUserToContinueTheTest(store);
         }

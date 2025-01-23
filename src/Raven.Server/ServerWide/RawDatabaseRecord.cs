@@ -8,8 +8,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -910,6 +912,29 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private List<VectorEmbeddingEnrichmentEtlConfiguration> _vectorEmbeddingEnrichmentEtls;
+
+        public List<VectorEmbeddingEnrichmentEtlConfiguration> VectorEmbeddingEnrichmentEtls
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.VectorEmbeddingEnrichmentEtls;
+
+                if (_vectorEmbeddingEnrichmentEtls == null)
+                {
+                    _vectorEmbeddingEnrichmentEtls = [];
+                    if (_record.TryGet(nameof(DatabaseRecord.VectorEmbeddingEnrichmentEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _vectorEmbeddingEnrichmentEtls.Add(JsonDeserializationCluster.VectorEmbeddingEnrichmentEtlConfiguration(element));
+                    }
+                }
+
+                return _vectorEmbeddingEnrichmentEtls;
+            }
+        }
+
         private Dictionary<string, string> _settings;
 
         public Dictionary<string, string> Settings
@@ -1491,6 +1516,92 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _snowflakeConnectionStrings;
+            }
+        }
+
+        private Dictionary<string, AiConnectionString> _aiConnectionStrings;
+
+        public Dictionary<string, AiConnectionString> AiConnectionStrings
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.AiConnectionStrings;
+                if (_aiConnectionStrings == null)
+                {
+                    _aiConnectionStrings = new Dictionary<string, AiConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.AiConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+                            if (propertyDetails.Value == null)
+                                continue;
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _aiConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.AiConnectionString(bjro);
+                        }
+                    }
+                }
+                return _aiConnectionStrings;
+            }
+        }
+
+        public GetConnectionStringsResult GetConnectionStrings() =>
+            new()
+            {
+                RavenConnectionStrings = RavenConnectionStrings, 
+                SqlConnectionStrings = SqlConnectionStrings, 
+                OlapConnectionStrings = OlapConnectionString,
+                ElasticSearchConnectionStrings = ElasticSearchConnectionStrings,
+                QueueConnectionStrings = QueueConnectionStrings,
+                SnowflakeConnectionStrings = SnowflakeConnectionStrings,
+                AiConnectionStrings = AiConnectionStrings
+            };
+
+        public GetConnectionStringsResult GetConnectionString(string connectionStringName, ConnectionStringType connectionStringType)
+        {
+            var result = new GetConnectionStringsResult();
+
+            switch (connectionStringType)
+            {
+                case ConnectionStringType.Raven:
+                    result.RavenConnectionStrings = Filter(RavenConnectionStrings);
+                    break;
+                case ConnectionStringType.Sql:
+                    result.SqlConnectionStrings = Filter(SqlConnectionStrings);
+                    break;
+                case ConnectionStringType.Olap:
+                    result.OlapConnectionStrings = Filter(OlapConnectionString);
+                    break;
+                case ConnectionStringType.ElasticSearch:
+                    result.ElasticSearchConnectionStrings = Filter(ElasticSearchConnectionStrings);
+                    break;
+                case ConnectionStringType.Queue:
+                    result.QueueConnectionStrings = Filter(QueueConnectionStrings);
+                    break;
+                case ConnectionStringType.Snowflake:
+                    result.SnowflakeConnectionStrings = Filter(SnowflakeConnectionStrings);
+                    break;
+                case ConnectionStringType.Ai:
+                    result.AiConnectionStrings = Filter(AiConnectionStrings);
+                    break;
+                case ConnectionStringType.None:
+                    result = GetConnectionStrings();
+                    break;
+
+                default:
+                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+            }
+
+            return result;
+
+            Dictionary<string, T> Filter<T>(Dictionary<string, T> dictionary)
+            {
+                if (dictionary.TryGetValue(connectionStringName, out T value) && value != null)
+                    return new Dictionary<string, T> { { connectionStringName, value } };
+
+                return null;
             }
         }
 

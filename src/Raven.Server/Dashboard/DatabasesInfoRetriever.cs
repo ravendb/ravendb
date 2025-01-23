@@ -363,8 +363,8 @@ namespace Raven.Server.Dashboard
             long amazonSqsEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.AmazonSqs);
 
-            var openAiEtlCount = database.EtlLoader.OpenAiDestinations.Count;
-            long openAiEtlCountOnNode = GetTaskCountOnNode<AiEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.OpenAiDestinations,
+            var vectorEmbeddingEnrichmentEtlCount = database.EtlLoader.VectorEmbeddingEnrichmentDestinations.Count;
+            long vectorEmbeddingEnrichmentEtlCountOnNode = GetTaskCountOnNode<VectorEmbeddingEnrichmentEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.VectorEmbeddingEnrichmentDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
             
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
@@ -384,7 +384,7 @@ namespace Raven.Server.Dashboard
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
                                 ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount +
                                 rabbitMqEtlCount + azureQueueStorageEtlCount + amazonSqsEtlCount + periodicBackupCount +
-                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + snowflakeEtlCount;
+                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + snowflakeEtlCount  + vectorEmbeddingEnrichmentEtlCount;
 
             return new DatabaseOngoingTasksInfoItem
             {
@@ -405,6 +405,7 @@ namespace Raven.Server.Dashboard
                 KafkaSinkCount = kafkaSinkCountOnNode,
                 RabbitMqSinkCount = rabbitMqSinkCountOnNode,
                 SnowflakeEtlCount = snowflakeEtlCountOnNode,
+                VectorEmbeddingEnrichmentEtlCount = vectorEmbeddingEnrichmentEtlCountOnNode,
             };
         }
 

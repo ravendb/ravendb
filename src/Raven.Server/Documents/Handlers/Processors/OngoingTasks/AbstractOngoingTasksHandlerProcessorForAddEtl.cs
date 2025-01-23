@@ -84,6 +84,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 case EtlType.Snowflake:
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl();
                     break;
+                case EtlType.VectorEmbeddingEnrichment:
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddVectorEmbeddingEnrichmentEtl();
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }

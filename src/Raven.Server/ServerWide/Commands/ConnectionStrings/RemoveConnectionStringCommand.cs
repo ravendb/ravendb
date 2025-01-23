@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -132,6 +133,22 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.SnowflakeConnectionStrings.Remove(ConnectionStringName);
+        }
+    }
+
+    public sealed class RemoveAiConnectionStringCommand : RemoveConnectionStringCommand<AiConnectionString>
+    {
+        public RemoveAiConnectionStringCommand()
+        {
+            // for deserialization
+        }
+        public RemoveAiConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
+        {
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.AiConnectionStrings.Remove(ConnectionStringName);
         }
     }
 }

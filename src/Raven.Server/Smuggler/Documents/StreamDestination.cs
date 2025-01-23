@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -479,16 +480,14 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WritePropertyName(nameof(databaseRecord.QueueEtls));
                             WriteQueueEtls(databaseRecord.QueueEtls);
                         }
-                        
-                        
+
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.SnowflakeConnectionStrings))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.SnowflakeConnectionStrings));
                             WriteSnowflakeConnectionStrings(databaseRecord.SnowflakeConnectionStrings);
                         }
-                        
-                        
+
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.SnowflakeEtls))
                         {
                             _writer.WriteComma();
@@ -501,6 +500,20 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.QueueSinks));
                             WriteQueueSinks(databaseRecord.QueueSinks);
+                        }
+
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.VectorEmbeddingEnrichmentEtls))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.VectorEmbeddingEnrichmentEtls));
+                            WriteVectorEmbeddingEnrichmentEtls(databaseRecord.VectorEmbeddingEnrichmentEtls);
+                        }
+
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiConnectionStrings))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.AiConnectionStrings));
+                            WriteAiConnectionStrings(databaseRecord.AiConnectionStrings);
                         }
 
                         if (databaseRecord.Integrations != null)
@@ -858,7 +871,6 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
             
-            
             private void WriteSnowflakeEtls(List<SnowflakeEtlConfiguration> snowflakeEtlConfiguration)
             {
                 if (snowflakeEtlConfiguration == null)
@@ -878,6 +890,44 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _writer.WriteEndArray();
+            }
+
+            private void WriteVectorEmbeddingEnrichmentEtls(List<VectorEmbeddingEnrichmentEtlConfiguration> vectorEmbeddingEnrichmentEtlConfiguration)
+            {
+                if (vectorEmbeddingEnrichmentEtlConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _writer.WriteStartArray();
+                var first = true;
+                foreach (var etl in vectorEmbeddingEnrichmentEtlConfiguration)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+                    _context.Write(_writer, etl.ToJson());
+                }
+                _writer.WriteEndArray();
+            }
+
+            private void WriteAiConnectionStrings(Dictionary<string, AiConnectionString> connections)
+            {
+                _writer.WriteStartObject();
+
+                var first = true;
+                foreach (var aiConnectionString in connections)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+
+                    _writer.WritePropertyName(aiConnectionString.Key);
+
+                    _context.Write(_writer, aiConnectionString.Value.ToJson());
+                }
+
+                _writer.WriteEndObject();
             }
 
             private void WriteExternalReplications(List<ExternalReplication> externalReplication)
@@ -1119,7 +1169,6 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WriteEndObject();
             }
-
 
             private void WritePostgreSqlConfiguration(PostgreSqlConfiguration postgreSqlConfig)
             {

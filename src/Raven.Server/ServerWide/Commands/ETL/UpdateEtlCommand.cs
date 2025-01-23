@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -154,6 +155,20 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SnowflakeEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddSnowflakeEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+        }
+    }
+
+    public sealed class UpdateVectorEmbeddingEnrichmentEtlCommand : UpdateEtlCommand<VectorEmbeddingEnrichmentEtlConfiguration, AiConnectionString>
+    {
+        public UpdateVectorEmbeddingEnrichmentEtlCommand()
+        {
+            // for deserialization
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.VectorEmbeddingEnrichmentEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddVectorEmbeddingEnrichmentEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
     }
 }

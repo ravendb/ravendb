@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Server.Config.Categories;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -61,79 +64,40 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         private IDatabaseTask GetMatchingConfiguration(RawDatabaseRecord record)
         {
-            var ravenEtls = record.RavenEtls;
-            if (ravenEtls != null)
-            {
-                for (var i = 0; i < ravenEtls.Count; i++)
-                {
-                    if (ravenEtls[i].Name == ConfigurationName)
-                    {
-                        return ravenEtls[i];
-                    }
-                }
-            }
+            if (TryGetMatchingConfiguration(record.RavenEtls, out var ravenEtlConfiguration))
+                return ravenEtlConfiguration;
 
-            var sqlEtls = record.SqlEtls;
-            if (sqlEtls != null)
-            {
-                for (var i = 0; i < sqlEtls.Count; i++)
-                {
-                    if (sqlEtls[i].Name == ConfigurationName)
-                    {
-                        return sqlEtls[i];
-                    }
-                }
-            }
+            if (TryGetMatchingConfiguration(record.SqlEtls, out var sqlEtlConfiguration))
+                return sqlEtlConfiguration;
 
-            var olapEtls = record.OlapEtls;
-            if (olapEtls != null)
-            {
-                for (var i = 0; i < olapEtls.Count; i++)
-                {
-                    if (olapEtls[i].Name == ConfigurationName)
-                    {
-                        return olapEtls[i];
-                    }
-                }
-            }
+            if (TryGetMatchingConfiguration(record.OlapEtls, out var olapEtlConfiguration))
+                return olapEtlConfiguration;
 
-            var elasticEtls = record.ElasticSearchEtls;
-            if (elasticEtls != null)
-            {
-                for (var i = 0; i < elasticEtls.Count; i++)
-                {
-                    if (elasticEtls[i].Name == ConfigurationName)
-                    {
-                        return elasticEtls[i];
-                    }
-                }
-            }
+            if (TryGetMatchingConfiguration(record.ElasticSearchEtls, out var elasticEtlConfiguration))
+                return elasticEtlConfiguration;
 
-            var queueEtls = record.QueueEtls;
-            if (queueEtls != null)
-            {
-                for (var i = 0; i < queueEtls.Count; i++)
-                {
-                    if (queueEtls[i].Name == ConfigurationName)
-                    {
-                        return queueEtls[i];
-                    }
-                }
-            }
-            
-            var snowflakeEtls = record.SnowflakeEtls;
-            if (snowflakeEtls != null)
-            {
-                for (var i = 0; i < snowflakeEtls.Count; i++)
-                {
-                    if (snowflakeEtls[i].Name == ConfigurationName)
-                    {
-                        return snowflakeEtls[i];
-                    }
-                }
-            }
+            if (TryGetMatchingConfiguration(record.QueueEtls, out var queueEtlConfiguration))
+                return queueEtlConfiguration;
+
+            if (TryGetMatchingConfiguration(record.SnowflakeEtls, out var snowflakeEtlConfiguration))
+                return snowflakeEtlConfiguration;
+
+            if (TryGetMatchingConfiguration(record.VectorEmbeddingEnrichmentEtls, out var vectorEmbeddingEnrichmentEtlConfiguration))
+                return vectorEmbeddingEnrichmentEtlConfiguration;
 
             return null;
+
+            bool TryGetMatchingConfiguration<T>(List<T> tasks, out T matched) where T : IDatabaseTask
+            {
+                foreach (var task in tasks.Where(t => t.GetTaskName() == ConfigurationName))
+                {
+                    matched = task;
+                    return true;
+                }
+
+                matched = default;
+                return false;
+            }
         }
 
         protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)

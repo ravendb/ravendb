@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -468,6 +469,24 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (_log.IsInfoEnabled)
                                 _log.Info("Wasn't able to import the Raven queue sinks configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.VectorEmbeddingEnrichmentEtls), out BlittableJsonReaderArray vectorEmbeddingEnrichmentEtls) &&
+                    vectorEmbeddingEnrichmentEtls != null)
+                {
+                    databaseRecord.VectorEmbeddingEnrichmentEtls = new List<VectorEmbeddingEnrichmentEtlConfiguration>();
+                    foreach (BlittableJsonReaderObject etl in vectorEmbeddingEnrichmentEtls)
+                    {
+                        try
+                        {
+                            databaseRecord.VectorEmbeddingEnrichmentEtls.Add(JsonDeserializationCluster.VectorEmbeddingEnrichmentEtlConfiguration(etl));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the Vector Embedding Enrichment ETLs configuration from smuggler file. Skipping.", e);
                         }
                     }
                 }

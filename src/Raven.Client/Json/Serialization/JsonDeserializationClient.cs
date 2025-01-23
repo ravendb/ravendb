@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -308,6 +309,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, SqlEtlConfiguration> SqlEtlConfiguration = GenerateJsonDeserializationRoutine<SqlEtlConfiguration>();
         
         public static readonly Func<BlittableJsonReaderObject, SnowflakeEtlConfiguration> SnowflakeEtlConfiguration = GenerateJsonDeserializationRoutine<SnowflakeEtlConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, VectorEmbeddingEnrichmentEtlConfiguration> VectorEmbeddingEnrichmentEtlConfiguration = GenerateJsonDeserializationRoutine<VectorEmbeddingEnrichmentEtlConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ElasticSearchConnectionString> ElasticSearchConnectionString = GenerateJsonDeserializationRoutine<ElasticSearchConnectionString>();
 
@@ -320,6 +323,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, OlapConnectionString> OlapConnectionString = GenerateJsonDeserializationRoutine<OlapConnectionString>();
         
         public static readonly Func<BlittableJsonReaderObject, SnowflakeConnectionString> SnowflakeConnectionString = GenerateJsonDeserializationRoutine<SnowflakeConnectionString>();
+        
+        public static readonly Func<BlittableJsonReaderObject, AiConnectionString> AiConnectionString = GenerateJsonDeserializationRoutine<AiConnectionString>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskQueueSink> GetOngoingTaskQueueSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskQueueSink>();
 

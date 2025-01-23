@@ -225,6 +225,8 @@ namespace Raven.Server.Commercial
         
         public bool HasSnowflakeEtl => Enabled(LicenseAttribute.SnowflakeEtl);
 
+        public bool HasVectorEmbeddingEnrichmentEtl => Enabled(LicenseAttribute.VectorEmbeddingEnrichmentEtl);
+
         public bool HasPowerBI => Enabled(LicenseAttribute.PowerBI);
 
         public bool HasPostgreSqlIntegration => Enabled(LicenseAttribute.PostgreSqlIntegration);
@@ -334,6 +336,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
                 [nameof(HasQueueEtl)] = HasQueueEtl,
                 [nameof(HasSnowflakeEtl)] = HasSnowflakeEtl,
+                [nameof(HasVectorEmbeddingEnrichmentEtl)] = HasVectorEmbeddingEnrichmentEtl,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
                 [nameof(HasServerWideBackups)] = HasServerWideBackups,

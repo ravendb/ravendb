@@ -877,6 +877,9 @@ namespace Raven.Server.Web
 
                 case EtlType.Olap:
                     return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToAuditJson();
+
+                case EtlType.VectorEmbeddingEnrichment:
+                    return JsonDeserializationClient.VectorEmbeddingEnrichmentEtlConfiguration(configuration).ToAuditJson();
             }
 
             return null;
@@ -904,6 +907,9 @@ namespace Raven.Server.Web
                 
                 case ConnectionStringType.Snowflake:
                     return JsonDeserializationClient.SnowflakeConnectionString(configuration).ToAuditJson();
+
+                case ConnectionStringType.Ai:
+                    return JsonDeserializationClient.AiConnectionString(configuration).ToAuditJson();
             }
 
             return null;

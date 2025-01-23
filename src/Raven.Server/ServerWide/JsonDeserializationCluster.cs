@@ -126,6 +126,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, QueueEtlConfiguration> QueueEtlConfiguration = GenerateJsonDeserializationRoutine<QueueEtlConfiguration>();
         
         public static readonly Func<BlittableJsonReaderObject, SnowflakeEtlConfiguration> SnowflakeEtlConfiguration = GenerateJsonDeserializationRoutine<SnowflakeEtlConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, VectorEmbeddingEnrichmentEtlConfiguration> VectorEmbeddingEnrichmentEtlConfiguration = GenerateJsonDeserializationRoutine<VectorEmbeddingEnrichmentEtlConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, AddOrUpdateCompareExchangeCommand.CompareExchangeResult> CompareExchangeResult = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeCommand.CompareExchangeResult>();
 
@@ -241,12 +243,14 @@ namespace Raven.Server.ServerWide
             [nameof(AddQueueEtlCommand)] = GenerateJsonDeserializationRoutine<AddQueueEtlCommand>(),
             [nameof(AddQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
             [nameof(AddSnowflakeEtlCommand)] = GenerateJsonDeserializationRoutine<AddSnowflakeEtlCommand>(),
+            [nameof(AddVectorEmbeddingEnrichmentEtlCommand)] = GenerateJsonDeserializationRoutine<AddVectorEmbeddingEnrichmentEtlCommand>(),
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(UpdateOlapEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateOlapEtlCommand>(),
             [nameof(UpdateElasticSearchEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateElasticSearchEtlCommand>(),
             [nameof(UpdateQueueEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueEtlCommand>(),
             [nameof(UpdateSnowflakeEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSnowflakeEtlCommand>(),
+            [nameof(UpdateVectorEmbeddingEnrichmentEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateVectorEmbeddingEnrichmentEtlCommand>(),
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
             [nameof(UpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationStateCommand>(),
             [nameof(ShardedUpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<ShardedUpdateExternalReplicationStateCommand>(),
@@ -264,6 +268,7 @@ namespace Raven.Server.ServerWide
             [nameof(RemoveElasticSearchConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveElasticSearchConnectionStringCommand>(),
             [nameof(RemoveQueueConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveQueueConnectionStringCommand>(),
             [nameof(RemoveSnowflakeConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveSnowflakeConnectionStringCommand>(),
+            [nameof(RemoveAiConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveAiConnectionStringCommand>(),
             [nameof(RemoveNodeFromClusterCommand)] = GenerateJsonDeserializationRoutine<RemoveNodeFromClusterCommand>(),
             [nameof(UpdateSubscriptionClientConnectionTime)] = GenerateJsonDeserializationRoutine<UpdateSubscriptionClientConnectionTime>(),
             [nameof(UpdateSnmpDatabasesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabasesMappingCommand>(),

@@ -8,6 +8,6 @@
         ElasticSearch,
         Queue,
         Snowflake,
-        OpenAi
+        VectorEmbeddingEnrichment
     }
 }

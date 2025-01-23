@@ -34,6 +34,7 @@
     <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="System.Text.Encodings.Web" />
     <PackageReference Include="System.Text.Json" />

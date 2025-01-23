@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -136,6 +137,15 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
     }
 
+    private IEnumerable<OngoingTaskVectorEmbeddingEnrichmentEtl> GetVectorEmbeddingEnrichmentEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.VectorEmbeddingEnrichmentEtls == null || databaseRecord.VectorEmbeddingEnrichmentEtls.Count == 0)
+            yield break;
+
+        foreach (var vectorEmbeddingEnrichmentEtl in databaseRecord.VectorEmbeddingEnrichmentEtls)
+            yield return CreateVectorEmbeddingEnrichmentEtlTaskInfo(clusterTopology, databaseRecord, vectorEmbeddingEnrichmentEtl);
+    }
+
     public IEnumerable<OngoingTask> GetAllTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         foreach (var task in CollectSubscriptionTasks(context, clusterTopology))
@@ -172,6 +182,9 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return task;
         
         foreach (var task in GetQueueSinkTasks(clusterTopology, databaseRecord))
+            yield return task;
+
+        foreach (var task in GetVectorEmbeddingEnrichmentEtlTasks(clusterTopology, databaseRecord))
             yield return task;
     }
 
@@ -295,6 +308,13 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                     return null;
 
                 return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
+            case OngoingTaskType.VectorEmbeddingEnrichmentEtl:
+
+                var vectorEmbeddingEnrichmentEtl = taskName != null
+                    ? databaseRecord.VectorEmbeddingEnrichmentEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.VectorEmbeddingEnrichmentEtls?.Find(x => x.TaskId == taskId);
+
+                return CreateVectorEmbeddingEnrichmentEtlTaskInfo(clusterTopology, databaseRecord, vectorEmbeddingEnrichmentEtl);
             default:
                 return null;
         }
@@ -612,5 +632,28 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             ConnectionStringName = queueSink.ConnectionStringName,
             Url = connection?.GetUrl()
         };
+    }
+
+    private OngoingTaskVectorEmbeddingEnrichmentEtl CreateVectorEmbeddingEnrichmentEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
+        VectorEmbeddingEnrichmentEtlConfiguration configuration)
+    {
+        databaseRecord.AiConnectionStrings.TryGetValue(configuration.ConnectionStringName, out var connection);
+        var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, configuration, out var tag, out var error);
+        var taskState = OngoingTasksHandler.GetEtlTaskState(configuration);
+
+        return new OngoingTaskVectorEmbeddingEnrichmentEtl
+        {
+            TaskId = configuration.TaskId,
+            TaskName = configuration.Name,
+            TaskState = taskState,
+            TaskConnectionStatus = connectionStatus,
+            MentorNode = configuration.MentorNode,
+            PinToMentorNode = configuration.PinToMentorNode,
+            ConnectionStringName = configuration.ConnectionStringName,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            Error = error,
+            Configuration = configuration
+        };
+
     }
 }

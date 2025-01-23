@@ -47,11 +47,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new BasicGraphs(testOutputHelper))
+                using (var test = new RavenDB_23556(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
 
-                    //test.BasicSearch();
+                    test.Test();
                 }
             }
             catch (Exception e)

@@ -224,13 +224,13 @@ public sealed class DatabaseRecordBuilder :
         return this;
     }
 
-    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddAiEtl(AiEtlConfiguration configuration)
+    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddVectorEmbeddingEnrichmentEtl(VectorEmbeddingEnrichmentEtlConfiguration configuration)
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        _databaseRecord.AiEtls ??= new List<AiEtlConfiguration>();
-        _databaseRecord.AiEtls.Add(configuration);
+        _databaseRecord.VectorEmbeddingEnrichmentEtls ??= [];
+        _databaseRecord.VectorEmbeddingEnrichmentEtls.Add(configuration);
 
         return this;
     }
@@ -742,5 +742,5 @@ public interface IEtlConfigurationBuilder
     
     IEtlConfigurationBuilder AddSnowflakeEtl(SnowflakeEtlConfiguration configuration);
 
-    IEtlConfigurationBuilder AddAiEtl(AiEtlConfiguration configuration);
+    IEtlConfigurationBuilder AddVectorEmbeddingEnrichmentEtl(VectorEmbeddingEnrichmentEtlConfiguration configuration);
 }

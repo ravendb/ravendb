@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -154,6 +155,24 @@ namespace Raven.Server.ServerWide.Commands.ETL
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Add(ref record.SnowflakeEtls, record, etag);
+        }
+    }
+
+    public sealed class AddVectorEmbeddingEnrichmentEtlCommand : AddEtlCommand<VectorEmbeddingEnrichmentEtlConfiguration, AiConnectionString>
+    {
+        public AddVectorEmbeddingEnrichmentEtlCommand()
+        {
+            // for deserialization
+        }
+
+        public AddVectorEmbeddingEnrichmentEtlCommand(VectorEmbeddingEnrichmentEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base (configuration, databaseName, uniqueRequestId)
+        {
+            
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            Add(ref record.VectorEmbeddingEnrichmentEtls, record, etag);
         }
     }
 }

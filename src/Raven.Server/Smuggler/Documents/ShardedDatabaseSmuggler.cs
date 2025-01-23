@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -149,6 +150,15 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     AddMentorNodeWarning(DatabaseRecordItemType.SnowflakeEtls, snowflakeEtl.Name);
                     snowflakeEtl.MentorNode = null;
+                }
+            }
+
+            foreach (var vectorEmbeddingEnrichmentEtl in databaseRecord.VectorEmbeddingEnrichmentEtls)
+            {
+                if (string.IsNullOrEmpty(vectorEmbeddingEnrichmentEtl.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.VectorEmbeddingEnrichmentEtls, vectorEmbeddingEnrichmentEtl.Name);
+                    vectorEmbeddingEnrichmentEtl.MentorNode = null;
                 }
             }
 

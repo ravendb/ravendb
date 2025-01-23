@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -34,7 +35,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         Subscription,
         PullReplicationAsHub,
         PullReplicationAsSink,
-        QueueSink
+        QueueSink,
+        VectorEmbeddingEnrichmentEtl,
     }
 
     public enum OngoingTaskState
@@ -409,6 +411,25 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(ConnectionString)] = ConnectionString;
             json[nameof(Configuration)] = Configuration?.ToJson();
 
+            return json;
+        }
+    }
+
+    public sealed class OngoingTaskVectorEmbeddingEnrichmentEtl : OngoingTask
+    {
+        public OngoingTaskVectorEmbeddingEnrichmentEtl()
+        {
+            TaskType = OngoingTaskType.VectorEmbeddingEnrichmentEtl;
+        }
+
+        public string ConnectionStringName { get; set; }
+
+        public VectorEmbeddingEnrichmentEtlConfiguration Configuration { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Configuration)] = Configuration?.ToJson();
             return json;
         }
     }
