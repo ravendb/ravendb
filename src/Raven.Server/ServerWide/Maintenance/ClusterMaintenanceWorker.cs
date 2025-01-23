@@ -168,8 +168,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var report = new DatabaseStatusReport
                 {
                     Name = dbName,
-                    NodeName = _server.NodeTag,
-                    BackupStatuses = new()
+                    NodeName = _server.NodeTag
                 };
 
                 prevReport.TryGetValue(dbName, out var prevDatabaseReport);
@@ -381,11 +380,8 @@ namespace Raven.Server.ServerWide.Maintenance
             foreach (var taskId in backupTaskIds)
             {
                 var statusBlittable = BackupUtils.GetLocalBackupStatusBlittable(serverStore, context, dbName, taskId);
-                if (statusBlittable != null)
-                {
-                    var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
-                    report.BackupStatuses[taskId] = backupStatusReport;
-                }
+                var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
+                report.BackupStatuses[taskId] = backupStatusReport;
             }
         }
 
