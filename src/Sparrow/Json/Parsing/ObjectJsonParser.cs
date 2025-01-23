@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -565,6 +565,42 @@ namespace Sparrow.Json.Parsing
 
                 switch (knownType)
                 {
+                    case KnownJsonObjectType.DynamicJsonValue:
+                    {
+                        var value = (DynamicJsonValue)current;
+                        if (_seenValues.Add(value))
+                        {
+#if DEBUG
+                            if (value._source != null)
+                                throw new InvalidOperationException("Trying to directly modify a DynamicJsonValue with a source, but you need to place the source (blittable), not the json value in the parent.");
+#endif
+                            state.CurrentTokenType = JsonParserToken.StartObject;
+                            value.SourceIndex = -1;
+                            value.ModificationsIndex = 0;
+                            _elements.Push(value);
+                            return true;
+                        }
+                        if (value.ModificationsIndex >= value.Properties.Count)
+                        {
+                            _seenValues.Remove(value);
+                            state.CurrentTokenType = JsonParserToken.EndObject;
+                            return true;
+                        }
+                        _elements.Push(value);
+                        current = value.Properties[value.ModificationsIndex++];
+                        if (current == null)
+                            continue;
+
+                        goto case KnownJsonObjectType.ValueTuple;
+                    }
+                    case KnownJsonObjectType.ValueTuple:
+                    {
+                        var vt = (ValueTuple<string, object>)current;
+                        _elements.Push(vt.Item2);
+                        current = vt.Item1;
+                        continue;
+                    }
+
                     case KnownJsonObjectType.Int32:
                     {
                         state.Long = Convert.ToInt64(current);
@@ -629,41 +665,7 @@ namespace Sparrow.Json.Parsing
                         current = modifications;
                         goto case KnownJsonObjectType.DynamicJsonValue;
                     }
-                    case KnownJsonObjectType.DynamicJsonValue:
-                    {
-                        var value = (DynamicJsonValue)current;
-                        if (_seenValues.Add(value))
-                        {
-#if DEBUG
-                            if (value._source != null)
-                                throw new InvalidOperationException("Trying to directly modify a DynamicJsonValue with a source, but you need to place the source (blittable), not the json value in the parent.");
-#endif
-                            state.CurrentTokenType = JsonParserToken.StartObject;
-                            value.SourceIndex = -1;
-                            value.ModificationsIndex = 0;
-                            _elements.Push(value);
-                            return true;
-                        }
-                        if (value.ModificationsIndex >= value.Properties.Count)
-                        {
-                            _seenValues.Remove(value);
-                            state.CurrentTokenType = JsonParserToken.EndObject;
-                            return true;
-                        }
-                        _elements.Push(value);
-                        current = value.Properties[value.ModificationsIndex++];
-                        if (current == null)
-                            continue;
 
-                        goto case KnownJsonObjectType.ValueTuple;
-                    }
-                    case KnownJsonObjectType.ValueTuple:
-                    {
-                        var vt = (ValueTuple<string, object>)current;
-                        _elements.Push(vt.Item2);
-                        current = vt.Item1;
-                        continue;
-                    }
 
                     case KnownJsonObjectType.LazyStringValue:
                     {
