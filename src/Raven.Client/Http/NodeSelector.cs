@@ -250,15 +250,21 @@ namespace Raven.Client.Http
 
         internal void DisableFastestNodeReadBalance()
         {
-            if (_updateFastestNodeTimer != null)
+            if (_updateFastestNodeTimer == null)
+                return;
+
+            lock (_timerCreationLocker)
             {
+                if (_updateFastestNodeTimer == null)
+                    return;
+
                 _updateFastestNodeTimer.Dispose();
                 _updateFastestNodeTimer = null;
-            }
 
-            var state = _state;
-            Interlocked.Exchange(ref state.SpeedTestMode, 0);
-            Array.Clear(state.FastestRecords, index: 0, state.FastestRecords.Length);
+                var state = _state;
+                Interlocked.Exchange(ref state.SpeedTestMode, 0);
+                Array.Clear(state.FastestRecords, index: 0, state.FastestRecords.Length);
+            }
         }
 
         public bool InSpeedTestPhase => _state.SpeedTestMode > 1;
