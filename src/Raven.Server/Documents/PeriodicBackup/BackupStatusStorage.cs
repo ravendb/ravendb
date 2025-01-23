@@ -53,38 +53,21 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void InsertBackupStatus(PeriodicBackupStatus backupStatus, string databaseName, string dbId, long taskId)
+        public static PeriodicBackupStatus GetBackupStatus(string databaseName, string dbId, long taskId, TransactionOperationContext context)
         {
-            var status = backupStatus.ToJson();
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction(TimeSpan.FromMinutes(1)))
+            PeriodicBackupStatus periodicBackup = null;
+            using (var backupStatusBlittable = GetBackupStatusBlittable(context, databaseName, dbId, taskId))
             {
-                var statusBlittable = context.ReadObject(status, JsonDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                InsertBackupStatusBlittable(context, statusBlittable, databaseName, dbId, taskId);
-                tx.Commit();
+                if (backupStatusBlittable == null)
+                    return null;
+
+                periodicBackup = JsonDeserializationClient.PeriodicBackupStatus(backupStatusBlittable);
             }
+
+            return periodicBackup;
         }
 
-        public unsafe void InsertBackupStatusBlittable<T>(TransactionOperationContext<T> context, BlittableJsonReaderObject backupStatus, string databaseName,
-            string dbId, long taskId)
-            where T : RavenTransaction
-        {
-            var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
-            using (var id = context.GetLazyString(key.ToLowerInvariant()))
-            using (backupStatus)
-            {
-                var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(id.Buffer, id.Size);
-                    tvb.Add(backupStatus.BasePointer, backupStatus.Size);
-
-                    table.Set(tvb);
-                }
-            }
-        }
-
-        public unsafe BlittableJsonReaderObject GetBackupStatusBlittable<T>(TransactionOperationContext<T> context, string databaseName, string dbId, long taskId)
+        public static unsafe BlittableJsonReaderObject GetBackupStatusBlittable<T>(TransactionOperationContext<T> context, string databaseName, string dbId, long taskId)
             where T : RavenTransaction
         {
             var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
@@ -107,18 +90,35 @@ namespace Raven.Server.Documents.PeriodicBackup
             return statusBlittable;
         }
 
-        public PeriodicBackupStatus GetBackupStatus(string databaseName, string dbId, long taskId, TransactionOperationContext context)
+        public void InsertBackupStatus(PeriodicBackupStatus backupStatus, string databaseName, string dbId, long taskId)
         {
-            PeriodicBackupStatus periodicBackup = null;
-            using (var backupStatusBlittable = GetBackupStatusBlittable(context, databaseName, dbId, taskId))
+            var status = backupStatus.ToJson();
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction(TimeSpan.FromMinutes(1)))
             {
-                if (backupStatusBlittable == null)
-                    return null;
-
-                periodicBackup = JsonDeserializationClient.PeriodicBackupStatus(backupStatusBlittable);
+                var statusBlittable = context.ReadObject(status, JsonDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                InsertBackupStatusBlittable(context, statusBlittable, databaseName, dbId, taskId);
+                tx.Commit();
             }
+        }
 
-            return periodicBackup;
+        public static unsafe void InsertBackupStatusBlittable<T>(TransactionOperationContext<T> context, BlittableJsonReaderObject backupStatus, string databaseName,
+            string dbId, long taskId)
+            where T : RavenTransaction
+        {
+            var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+            using (var id = context.GetLazyString(key.ToLowerInvariant()))
+            using (backupStatus)
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(id.Buffer, id.Size);
+                    tvb.Add(backupStatus.BasePointer, backupStatus.Size);
+
+                    table.Set(tvb);
+                }
+            }
         }
 
         public bool DeleteBackupStatusesByTaskIds(string databaseName, string dbId, HashSet<long> taskIds)
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return true;
         }
 
-        public void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)
+        public static void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)
         {
             // this is called from csm, so commiting will be done outside
             Debug.Assert(context.Transaction?.InnerTransaction?.IsWriteTransaction == true);

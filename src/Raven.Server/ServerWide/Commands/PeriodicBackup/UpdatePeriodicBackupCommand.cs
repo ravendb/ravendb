@@ -76,7 +76,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             }
             
             // also delete the local backup status
-            serverStore.DatabaseInfoCache.BackupStatusStorage.DeleteBackupStatus(ctx, DatabaseName, serverStore._env.Base64Id, Configuration.TaskId);
+            BackupStatusStorage.DeleteBackupStatus(ctx, DatabaseName, serverStore._env.Base64Id, Configuration.TaskId);
         }
 
         public override void FillJson(DynamicJsonValue json)
