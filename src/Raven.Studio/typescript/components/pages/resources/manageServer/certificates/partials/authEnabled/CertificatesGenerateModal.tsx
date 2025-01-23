@@ -120,9 +120,16 @@ export default function CertificatesGenerateModal() {
                     </ModalFooter>
                 </Form>
             </FormProvider>
+
             {/* This form is used to download certificate */}
             <form ref={downloadCertFormRef} className="d-none" method="post">
-                <input name="Options" value={JSON.stringify(certificatesUtils.mapGenerateToDto(formValues))} />
+                <input
+                    name="Options"
+                    value={JSON.stringify(certificatesUtils.mapGenerateToDto(formValues))}
+                    onChange={() => {
+                        // empty by design
+                    }}
+                />
             </form>
         </Modal>
     );
