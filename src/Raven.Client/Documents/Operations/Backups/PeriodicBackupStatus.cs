@@ -103,7 +103,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return $"values/{databaseName}/{Prefix}{taskId}";
         }
 
-        public static string GenerateItemName(string databaseName, string base64DbId, long taskId)
+        internal static string GenerateItemName(string databaseName, string base64DbId, long taskId)
         {
             return $"{GenerateItemName(databaseName, taskId)}/{base64DbId}";
         }

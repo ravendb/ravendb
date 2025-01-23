@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             var status = backupStatus.ToJson();
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
+            using (var tx = context.OpenWriteTransaction(TimeSpan.FromMinutes(1)))
             {
                 var statusBlittable = context.ReadObject(status, JsonDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 InsertBackupStatusBlittable(context, statusBlittable, databaseName, dbId, taskId);
@@ -125,7 +126,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             try
             {
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
+                using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromMinutes(1)))
                 {
                     foreach (var taskId in taskIds)
                     {
@@ -160,6 +161,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         public void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)
         {
             // this is called from csm, so commiting will be done outside
+            Debug.Assert(context.Transaction?.InnerTransaction?.IsWriteTransaction == true);
+
             var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
             using (Slice.From(context.Allocator, backupKey.ToLowerInvariant(), out Slice key))
             {
