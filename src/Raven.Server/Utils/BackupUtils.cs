@@ -603,7 +603,7 @@ internal static class BackupUtils
 
     public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
     {
-        var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
+        var localStatus = BackupStatusStorage.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
         if (localStatus != null)
             return localStatus;
 
@@ -618,7 +618,7 @@ internal static class BackupUtils
 
     public static BlittableJsonReaderObject GetLocalBackupStatusBlittable(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
     {
-        var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatusBlittable(context, databaseName, serverStore._env.Base64Id, taskId);
+        var localStatus = BackupStatusStorage.GetBackupStatusBlittable(context, databaseName, serverStore._env.Base64Id, taskId);
         if (localStatus != null)
             return localStatus;
 

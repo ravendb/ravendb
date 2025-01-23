@@ -194,7 +194,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             Status = DatabaseStatus.Loaded,
                             Name = databaseName,
                             NodeName = _server.NodeTag,
-                            UpTime = _server.Server.Statistics.UpTime
+                            UpTime = _server.Server.Statistics.UpTime,
+                            BackupStatuses = new ()
                         };
                         result[databaseName] = report;
                     }
@@ -204,7 +205,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         var dbName = tuple.Name;
                         var topology = tuple.Topology;
 
-                        var report = new DatabaseStatusReport { Name = dbName, NodeName = _server.NodeTag, BackupStatuses = new () };
+                        var report = new DatabaseStatusReport { Name = dbName, NodeName = _server.NodeTag, BackupStatuses = new ()};
 
                         if (topology == null)
                         {
@@ -254,6 +255,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         var dbInstance = dbTask.Result;
                         var currentHash = dbInstance.GetEnvironmentsHash();
+                        currentHash = Hashing.Combine(currentHash, report.GetBackupStatusReportHash());
                         report.EnvironmentsHash = currentHash;
 
                         var documentsStorage = dbInstance.DocumentsStorage;
@@ -426,11 +428,8 @@ namespace Raven.Server.ServerWide.Maintenance
             foreach (var taskId in backupTaskIds)
             {
                 var statusBlittable = BackupUtils.GetLocalBackupStatusBlittable(serverStore, context, dbName, taskId);
-                if (statusBlittable != null)
-                {
-                    var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
-                    report.BackupStatuses[taskId] = backupStatusReport;
-                }
+                var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
+                report.BackupStatuses[taskId] = backupStatusReport;
             }
         }
 

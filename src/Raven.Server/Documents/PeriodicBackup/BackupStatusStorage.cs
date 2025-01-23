@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public PeriodicBackupStatus GetBackupStatus(string databaseName, string dbId, long taskId, ClusterOperationContext context)
+        public static PeriodicBackupStatus GetBackupStatus(string databaseName, string dbId, long taskId, ClusterOperationContext context)
         {
             PeriodicBackupStatus periodicBackup = null;
             using (var backupStatusBlittable = GetBackupStatusBlittable(context, databaseName, dbId, taskId))
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return periodicBackup;
         }
 
-        public unsafe BlittableJsonReaderObject GetBackupStatusBlittable<T>(TransactionOperationContext<T> context, string databaseName, string dbId, long taskId)
+        public static unsafe BlittableJsonReaderObject GetBackupStatusBlittable<T>(TransactionOperationContext<T> context, string databaseName, string dbId, long taskId)
             where T : RavenTransaction
         {
             var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
@@ -103,6 +103,25 @@ namespace Raven.Server.Documents.PeriodicBackup
             _serverStore.Engine.TxMerger.EnqueueSync(new UpdateLocalBackupStatusCommand(backupStatus, databaseName, dbId, taskId));
         }
 
+        public static unsafe void InsertBackupStatusBlittable<T>(TransactionOperationContext<T> context, BlittableJsonReaderObject backupStatus, string databaseName,
+            string dbId, long taskId)
+            where T : RavenTransaction
+        {
+            var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+            using (var id = context.GetLazyString(key.ToLowerInvariant()))
+            using (backupStatus)
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(id.Buffer, id.Size);
+                    tvb.Add(backupStatus.BasePointer, backupStatus.Size);
+
+                    table.Set(tvb);
+                }
+            }
+        }
+
         public bool DeleteBackupStatusesByTaskIds(string databaseName, string dbId, HashSet<long> taskIds)
         {
             try
@@ -125,26 +144,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             return true;
         }
-
-        public static unsafe void InsertBackupStatusBlittable<T>(TransactionOperationContext<T> context, BlittableJsonReaderObject backupStatus, string databaseName,
-            string dbId, long taskId)
-            where T : RavenTransaction
-        {
-            var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
-            using (var id = context.GetLazyString(key.ToLowerInvariant()))
-            using (backupStatus)
-            {
-                var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(id.Buffer, id.Size);
-                    tvb.Add(backupStatus.BasePointer, backupStatus.Size);
-
-                    table.Set(tvb);
-                }
-            }
-        }
-
 
         public static void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)
         {

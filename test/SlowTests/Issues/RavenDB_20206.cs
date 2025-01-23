@@ -37,10 +37,6 @@ public class RavenDB_20206 : RavenTestBase
                 indexesList2.Add($"{i}", res2.Index);
             }
 
-            // incremental backup on store2 db so observer ob store2 won't delete its tombstones
-            var config = Backup.CreateBackupConfiguration("backupFolder", incrementalBackupFrequency: "0 0 1 * *");
-            var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store2, isFullBackup: false);
-
             // delete 1 unique value
             var del1 = await store1.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>("2", indexesList1["2"]));
             Assert.NotNull(del1.Value);
