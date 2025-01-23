@@ -139,7 +139,6 @@ bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
 /src/Raven.Pal/Debug/*
 /src/Raven.Pal/build.log
 
-
 # ANTLR generated files (via Rider plugin)
 gen/*.java
 gen/*.tokens
@@ -149,5 +148,6 @@ test/Tryouts/enron_mail_20150507.tar*
 test/Tryouts/69M_reddit_accounts.csv*
 
 src/Sparrow.Server/Utils/VxSort/codegen/.idea/
-
 src/Sparrow.Server/Utils/VxSort/codegen/__pycache__/
+
+/.cache
