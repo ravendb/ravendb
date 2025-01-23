@@ -127,7 +127,7 @@ interface FetchDataLastUsedResult {
 
 const fetchData = createAsyncThunk<
     FetchDataLastUsedResult,
-    unknown,
+    undefined,
     {
         state: RootState;
     }

@@ -44,7 +44,7 @@ export default function CertificatesRegenerateModal() {
                 formValues.twoFactorAction === "delete"
             );
             reset(formData);
-            dispatch(certificatesActions.fetchData(null));
+            dispatch(certificatesActions.fetchData());
             dispatch(certificatesActions.regenerateModalClosed());
         });
     };

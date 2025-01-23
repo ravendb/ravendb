@@ -67,7 +67,7 @@ export default function CertificatesGenerateModal() {
             try {
                 await notificationCenter.instance.monitorOperation(null, operationId);
                 reset(formData);
-                dispatch(certificatesActions.fetchData(null));
+                dispatch(certificatesActions.fetchData());
                 dispatch(certificatesActions.isGenerateModalOpenToggled());
             } catch {
                 notificationCenter.instance.openDetailsForOperationById(null, operationId);

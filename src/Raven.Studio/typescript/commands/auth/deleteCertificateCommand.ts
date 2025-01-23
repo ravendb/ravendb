@@ -13,11 +13,6 @@ class deleteCertificateCommand extends commandBase {
         };
         const url = endpoints.global.adminCertificates.adminCertificates + this.urlEncodeArgs(args);
         
-        console.log('kalczur isConfirmed', {
-            url,
-            args,
-        });
-
         return this.del<LicenseStatus>(url, null, null)
             .fail((response: JQueryXHR) => this.reportError("Unable to delete certificate: " + this.certificateThumbprint, response.responseText, response.statusText));
     }

@@ -42,8 +42,7 @@ export default function CertificatesAuthEnabled() {
 
     // Initial load
     useEffect(() => {
-        // TODO without args
-        dispatch(certificatesActions.fetchData(null));
+        dispatch(certificatesActions.fetchData());
     }, [dispatch]);
 
     const debouncedUpdateNameOrThumbprintFilter = useMemo(

@@ -69,7 +69,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const asyncRenewServerCertificate = useAsyncCallback(async () => {
         await new Promise((resolve) => setTimeout(resolve, 3000));
         await manageServerService.forceRenewServerCertificate();
-        await dispatch(certificatesActions.fetchData(null));
+        await dispatch(certificatesActions.fetchData());
     });
 
     const handleRenewServerCertificate = async () => {
@@ -88,7 +88,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const asyncDeleteCertificate = useAsyncCallback(async () => {
         reportEvent("certificates", "delete");
         await manageServerService.deleteCertificate(certificate.Thumbprint);
-        await dispatch(certificatesActions.fetchData(null));
+        await dispatch(certificatesActions.fetchData());
     });
 
     const handleDeleteCertificate = async () => {
