@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -325,7 +325,7 @@ namespace Sparrow.Json.Parsing
             RawBlob,
         }
 
-        private static readonly TypeCache<KnownJsonObjectType> TypeCache = new(4096);
+        private static readonly ReplacementTypeCache<KnownJsonObjectType> TypeCache = new(4096);
 
         private KnownJsonObjectType GetKnownJsonObjectTypeUnlikely(object current)
         {
