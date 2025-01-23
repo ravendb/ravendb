@@ -116,6 +116,9 @@ namespace Raven.Server.Commercial
                 if (Type != LicenseType.Community)
                     return false;
 
+                if (IsCloud)
+                    return false;
+
                 if (Version == null)
                     return false;
 
