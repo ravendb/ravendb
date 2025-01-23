@@ -19,6 +19,7 @@ import { Button, DropdownItem, DropdownMenu, DropdownToggle, Input, Uncontrolled
 import endpoints from "endpoints";
 import CertificatesGenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import useDebouncedInput from "components/hooks/useDebouncedInput";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -45,10 +46,11 @@ export default function CertificatesAuthEnabled() {
         dispatch(certificatesActions.fetchData());
     }, [dispatch]);
 
-    const debouncedUpdateNameOrThumbprintFilter = useMemo(
-        () => debounce((value: string) => dispatch(certificatesActions.nameOrThumbprintFilterSet(value)), 300),
-        [dispatch]
-    );
+    const { localValue: nameOrThumbprintFilterInputValue, handleChange: nameOrThumbprintFilterInputHandleChange } =
+        useDebouncedInput({
+            value: nameOrThumbprintFilter,
+            onDebouncedUpdate: (value: string) => dispatch(certificatesActions.nameOrThumbprintFilterSet(value)),
+        });
 
     return (
         <div className="vstack gap-2">
@@ -76,7 +78,7 @@ export default function CertificatesAuthEnabled() {
                         }}
                     >
                         <DropdownItem
-                            onClick={exportServerCertFormRef.current?.submit}
+                            onClick={() => exportServerCertFormRef.current?.submit()}
                             disabled={!hasClusterNodeCertificate}
                         >
                             <Icon icon="download" />
@@ -102,7 +104,8 @@ export default function CertificatesAuthEnabled() {
 
                     <div className="clearable-input">
                         <Input
-                            onChange={(x) => debouncedUpdateNameOrThumbprintFilter(x.target.value)}
+                            onChange={(x) => nameOrThumbprintFilterInputHandleChange(x.target.value)}
+                            value={nameOrThumbprintFilterInputValue}
                             placeholder="e.g. johndoe.certificate"
                             className="rounded-pill pe-4"
                         />
@@ -111,7 +114,7 @@ export default function CertificatesAuthEnabled() {
                                 <Button
                                     color="secondary"
                                     size="sm"
-                                    onClick={() => dispatch(certificatesActions.nameOrThumbprintFilterSet(""))}
+                                    onClick={() => nameOrThumbprintFilterInputHandleChange("")}
                                 >
                                     <Icon icon="clear" margin="m-0" />
                                 </Button>
