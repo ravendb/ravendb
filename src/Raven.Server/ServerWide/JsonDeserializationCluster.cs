@@ -141,7 +141,7 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, ElasticSearchConnectionString> ElasticSearchConnectionString = GenerateJsonDeserializationRoutine<ElasticSearchConnectionString>();
         public static readonly Func<BlittableJsonReaderObject, QueueConnectionString> QueueConnectionString = GenerateJsonDeserializationRoutine<QueueConnectionString>();
         public static readonly Func<BlittableJsonReaderObject, SnowflakeConnectionString> SnowflakeConnectionString = GenerateJsonDeserializationRoutine<SnowflakeConnectionString>();
-        public static readonly Func<BlittableJsonReaderObject, AiConnectionString> AiConnectionString = GenerateJsonDeserializationRoutine<AiConnectionString>();
+        public static readonly Func<BlittableJsonReaderObject, AiEtlConnectionString> AiConnectionString = GenerateJsonDeserializationRoutine<AiEtlConnectionString>();
         
         public static readonly Func<BlittableJsonReaderObject, QueueSinkConfiguration> QueueSinkConfiguration = GenerateJsonDeserializationRoutine<QueueSinkConfiguration>();
 

@@ -125,13 +125,13 @@ public sealed class DatabaseRecordBuilder :
         return this;
     }
     
-    IConnectionStringConfigurationBuilder IConnectionStringConfigurationBuilder.AddAiConnectionString(AiConnectionString connectionString)
+    IConnectionStringConfigurationBuilder IConnectionStringConfigurationBuilder.AddAiConnectionString(AiEtlConnectionString etlConnectionString)
     {
-        if (connectionString == null)
-            throw new ArgumentNullException(nameof(connectionString));
+        if (etlConnectionString == null)
+            throw new ArgumentNullException(nameof(etlConnectionString));
 
-        _databaseRecord.AiConnectionStrings ??= new Dictionary<string, AiConnectionString>();
-        _databaseRecord.AiConnectionStrings.Add(connectionString.Name, connectionString);
+        _databaseRecord.AiConnectionStrings ??= new Dictionary<string, AiEtlConnectionString>();
+        _databaseRecord.AiConnectionStrings.Add(etlConnectionString.Name, etlConnectionString);
 
         return this;
     }
@@ -711,7 +711,7 @@ public interface IConnectionStringConfigurationBuilder
     
     IConnectionStringConfigurationBuilder AddSnowflakeConnectionString(SnowflakeConnectionString connectionString);
     
-    IConnectionStringConfigurationBuilder AddAiConnectionString(AiConnectionString connectionString);
+    IConnectionStringConfigurationBuilder AddAiConnectionString(AiEtlConnectionString etlConnectionString);
 }
 
 public interface IReplicationConfigurationBuilder

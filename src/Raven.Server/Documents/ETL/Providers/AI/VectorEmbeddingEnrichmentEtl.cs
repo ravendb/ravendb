@@ -40,7 +40,7 @@ using Version = System.Version;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, KeyValuePair<string, Dictionary<string, List<string>>>, VectorEmbeddingEnrichmentEtlConfiguration, AiConnectionString, EtlStatsScope, EtlPerformanceOperation>
+public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString, EtlStatsScope, EtlPerformanceOperation>
 {
     private readonly VectorEmbeddingEnrichmentEtlConfiguration _configuration;
     private readonly ServerStore _serverStore;
@@ -93,66 +93,121 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, KeyValu
         return false;
     }
     
-    protected override EtlTransformer<AiEtlItem, KeyValuePair<string, Dictionary<string, List<string>>>, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<AiEtlItem, EmbeddingRepresentation, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
         return new AiEtlDocumentTransformer(Database, context, null, null, _configuration);
     }
-
-    protected override int LoadInternal(IEnumerable<KeyValuePair<string, Dictionary<string, List<string>>>> items, DocumentsOperationContext context, EtlStatsScope scope)
+    
+    protected override int LoadInternal(IEnumerable<EmbeddingRepresentation> items, DocumentsOperationContext context, EtlStatsScope scope)
     {
         _service ??= CreateService(Configuration);
+        
+        // todo do we need dict?
+        var aiEtlScriptRun = items as AiEtlScriptRun;
 
         int processed = 0;
-
-        foreach (var documentData in items)
+        
+        foreach (var embeddingRepresentation in aiEtlScriptRun.CurrentRun)
         {
-            var originalDocumentId = documentData.Key;
-            var newDocumentId = GetNewDocumentId(originalDocumentId);
+            var textValueHash = $"hash({embeddingRepresentation.Value})";
+            embeddingRepresentation.ValueHash = textValueHash;
+            
+            var idToSearchFor = GetPrivateDocumentId(textValueHash);
+            
+            var privateDocument = Database.DocumentsStorage.Get(context, idToSearchFor);
+            
+            if (privateDocument != null && privateDocument.Data.TryGet(embeddingRepresentation.Value, out string attachmentGuid))
+                embeddingRepresentation.AttachmentName = attachmentGuid;
+        }
 
-            var documentDjv = new DynamicJsonValue { ["Id"] = newDocumentId };
-            var embeddingsObjectDjv = new DynamicJsonValue();
+        var missingEmbeddings = aiEtlScriptRun.CurrentRun.Where(x => x.EmbeddingValue == null).ToList();
+        var missingValues = missingEmbeddings.Select(x => x.Value).ToList();
+        
+        var generatedValues = _service.GenerateEmbeddingsAsync(missingValues).GetAwaiter().GetResult();
+        
+        Debug.Assert(generatedValues.Count == missingEmbeddings.Count);
 
-            foreach ((string fieldName, List<string> fieldValues) in documentData.Value)
+        for (var i = 0; i < generatedValues.Count; ++i)
+        {
+            // todo do we need to pass this?
+            missingEmbeddings[i].EmbeddingValue = generatedValues[i].ToArray();
+            
+            CreateNewPrivateDocument(missingEmbeddings[i].Value, missingEmbeddings[i].EmbeddingValue, context, out var attachmentGuid);
+            
+            missingEmbeddings[i].AttachmentName = attachmentGuid;
+
+            var publicDocument = Database.DocumentsStorage.Get(context, GetPublicDocumentId(missingEmbeddings[i].OriginDocumentId));
+
+            if (publicDocument == null || publicDocument.Data.TryGet(_configuration.Name, out object o) == false)
             {
-                var dja = new DynamicJsonArray();
-
-                var embeddings = AsyncHelpers.RunSync(() => _service.GenerateEmbeddingsAsync(fieldValues));
-
-                foreach (var embedding in embeddings)
-                {
-                    var embeddingDja = new DynamicJsonArray();
-
-                    foreach (var value in embedding.Span)
-                    {
-                        embeddingDja.Add(value);
-                    }
-
-                    dja.Add(embeddingDja);
-                }
-
-                embeddingsObjectDjv[fieldName] = dja;
+                // todo handle existing doc
+                CreateNewPublicDocument(missingEmbeddings[i].OriginDocumentId, missingEmbeddings[i].OriginPropertyName, missingEmbeddings[i].AttachmentName, null, context);
             }
-
-            documentDjv[_configuration.Name] = embeddingsObjectDjv;
-
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            {
-                var bjro = ctx.ReadObject(documentDjv, "doc");
-
-                var cmd = new MergedPutCommand(bjro, newDocumentId, null, Database);
-
-                Database.TxMerger.EnqueueSync(cmd);
-            }
-
-            processed++;
         }
 
         return processed;
     }
 
-    private static string GetNewDocumentId(string originalDocumentId)
+    private void CreateNewPublicDocument(string originDocumentId, string fieldName, string attachmentGuid, string changeVector, DocumentsOperationContext context)
+    {
+        var newDocumentId = GetPublicDocumentId(originDocumentId);
+
+        // Root object
+        var documentDjv = new DynamicJsonValue { ["Id"] = newDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "testembeddings" } };
+
+        // ConfigurationName -> (fieldName, attachmentsGuids[])[]
+        var embeddingsObjectDjv = new DynamicJsonValue();
+
+        var dja = new DynamicJsonArray();
+        
+        dja.Add(attachmentGuid);
+        
+        // todo handle existing array
+        embeddingsObjectDjv[fieldName] = dja;
+            
+        documentDjv[_configuration.Name] = embeddingsObjectDjv;
+
+        using (var ctx = JsonOperationContext.ShortTermSingleUse())
+        {
+            var bjro = ctx.ReadObject(documentDjv, "doc");
+
+            var cmd = new MergedPutCommand(bjro, newDocumentId, null, Database);
+
+            Database.TxMerger.EnqueueSync(cmd);
+        }
+    }
+
+    private void CreateNewPrivateDocument(string textValue, float[] embeddingValue, DocumentsOperationContext context, out string attachmentGuid)
+    {
+        var hash = $"hash({textValue})";
+        var newDocumentId = GetPrivateDocumentId(hash);
+        
+        var documentDjv = new DynamicJsonValue { ["Id"] = newDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "@embeddings" } };
+        
+        attachmentGuid = Guid.NewGuid().ToString();
+
+        documentDjv[textValue] = attachmentGuid;
+        
+        var embedding = GenerateEmbeddings.FromText(context.Allocator, VectorOptions.DefaultText, textValue).GetEmbedding().ToArray();
+        
+        using (var ctx = JsonOperationContext.ShortTermSingleUse())
+        {
+            var bjro = ctx.ReadObject(documentDjv, "doc");
+
+            var cmd = new MergedPutEmbeddingCommand(bjro, newDocumentId, null, new Dictionary<string, byte[]>() { { attachmentGuid, embedding } }, Database);
+
+            Database.TxMerger.EnqueueSync(cmd);
+        }
+    }
+
+    private static string GetPublicDocumentId(string originalDocumentId)
     {
         return $"{originalDocumentId}/embeddings";
+    }
+    
+    private string GetPrivateDocumentId(string hash)
+    {
+        return $"embeddings/{_configuration.Name}/{hash}";
     }
 
     protected override EtlStatsScope CreateScope(EtlRunStats stats)

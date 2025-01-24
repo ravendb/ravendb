@@ -136,7 +136,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public sealed class RemoveAiConnectionStringCommand : RemoveConnectionStringCommand<AiConnectionString>
+    public sealed class RemoveAiConnectionStringCommand : RemoveConnectionStringCommand<AiEtlConnectionString>
     {
         public RemoveAiConnectionStringCommand()
         {

@@ -1,18 +1,26 @@
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public class AiEtlScriptRun
+public class AiEtlScriptRun : IEnumerable<EmbeddingRepresentation>
 {
-    public Dictionary<string, Dictionary<string, List<string>>> CurrentRun { get; set; }
-
+    public List<EmbeddingRepresentation> CurrentRun { get; set; }
+    public Dictionary<string, Dictionary<string, List<string>>> Runs { get; set; }
+    
     public AiEtlScriptRun()
     {
-        CurrentRun = new Dictionary<string, Dictionary<string, List<string>>>();
+        CurrentRun = new List<EmbeddingRepresentation>();
+        Runs = new Dictionary<string, Dictionary<string, List<string>>>();
+    }
+    
+    public IEnumerator<EmbeddingRepresentation> GetEnumerator()
+    {
+        throw new System.NotImplementedException();
     }
 
-    public void Add(string documentId, Dictionary<string, List<string>> textValues)
+    IEnumerator IEnumerable.GetEnumerator()
     {
-        CurrentRun.Add(documentId, textValues);
+        throw new System.NotImplementedException();
     }
 }

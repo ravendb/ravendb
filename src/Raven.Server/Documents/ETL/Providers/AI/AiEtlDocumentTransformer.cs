@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, KeyValuePair<string, Dictionary<string, List<string>>>, EtlStatsScope, EtlPerformanceOperation>
+public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, EmbeddingRepresentation, EtlStatsScope, EtlPerformanceOperation>
 {
     private readonly Transformation _transformation;
     private readonly VectorEmbeddingEnrichmentEtlConfiguration _configuration;
@@ -56,9 +56,9 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, KeyValu
     }
 
     /// docId -> <fieldName, <fieldValues>>
-    public override IEnumerable<KeyValuePair<string, Dictionary<string, List<string>>>> GetTransformedResults()
+    public override IEnumerable<EmbeddingRepresentation> GetTransformedResults()
     {
-        return _currentRun?.CurrentRun ?? Enumerable.Empty<KeyValuePair<string, Dictionary<string, List<string>>>>();
+        return _currentRun ?? Enumerable.Empty<EmbeddingRepresentation>();
     }
 
     public override void Transform(AiEtlItem item, EtlStatsScope stats, EtlProcessState state)
@@ -72,16 +72,24 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, KeyValu
         {
             if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, item.Document, fieldName, out var fieldValue) == false)
                 continue;
-            
+
             if (fieldValue is LazyStringValue lsv)
+            {
                 result.Add(fieldName, new List<string>() { lsv });
+                _currentRun.CurrentRun.Add(new EmbeddingRepresentation() { Value = lsv, OriginDocumentId = item.DocumentId, OriginPropertyName = fieldName });
+            }
             // todo lazy
             else if (fieldValue is List<string> list)
+            {
                 result.Add(fieldName, list);
+
+                foreach (var value in list)
+                    _currentRun.CurrentRun.Add(new EmbeddingRepresentation() { Value = value, OriginDocumentId = item.DocumentId, OriginPropertyName = fieldName });
+            }
             else
                 throw new Exception();
         }
-
-        _currentRun.Add(item.DocumentId, result);
+        
+        _currentRun.Runs.Add(item.Document.Id, result);
     }
 }

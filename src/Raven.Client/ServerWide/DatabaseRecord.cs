@@ -125,7 +125,7 @@ namespace Raven.Client.ServerWide
         
         public Dictionary<string, SnowflakeConnectionString> SnowflakeConnectionStrings = new Dictionary<string, SnowflakeConnectionString>();
         
-        public Dictionary<string, AiConnectionString> AiConnectionStrings = new();
+        public Dictionary<string, AiEtlConnectionString> AiConnectionStrings = new();
 
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 

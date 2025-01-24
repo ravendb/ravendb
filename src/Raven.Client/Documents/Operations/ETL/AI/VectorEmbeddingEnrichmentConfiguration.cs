@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
-public sealed class VectorEmbeddingEnrichmentEtlConfiguration : EtlConfiguration<AiConnectionString>
+public sealed class VectorEmbeddingEnrichmentEtlConfiguration : EtlConfiguration<AiEtlConnectionString>
 {
     private string _name;
     private string Identifier => _name ??= Connection?.Name;

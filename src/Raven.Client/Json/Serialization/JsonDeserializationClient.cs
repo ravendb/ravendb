@@ -324,7 +324,7 @@ namespace Raven.Client.Json.Serialization
         
         public static readonly Func<BlittableJsonReaderObject, SnowflakeConnectionString> SnowflakeConnectionString = GenerateJsonDeserializationRoutine<SnowflakeConnectionString>();
         
-        public static readonly Func<BlittableJsonReaderObject, AiConnectionString> AiConnectionString = GenerateJsonDeserializationRoutine<AiConnectionString>();
+        public static readonly Func<BlittableJsonReaderObject, AiEtlConnectionString> AiConnectionString = GenerateJsonDeserializationRoutine<AiEtlConnectionString>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskQueueSink> GetOngoingTaskQueueSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskQueueSink>();
 

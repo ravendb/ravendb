@@ -158,7 +158,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public sealed class UpdateVectorEmbeddingEnrichmentEtlCommand : UpdateEtlCommand<VectorEmbeddingEnrichmentEtlConfiguration, AiConnectionString>
+    public sealed class UpdateVectorEmbeddingEnrichmentEtlCommand : UpdateEtlCommand<VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString>
     {
         public UpdateVectorEmbeddingEnrichmentEtlCommand()
         {

@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
@@ -173,6 +175,67 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        public void Dispose()
+        {
+            _document?.Dispose();
+        }
+
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        {
+            return new MergedPutCommandDto
+            {
+                Id = _id,
+                ExpectedChangeVector = _expectedChangeVector,
+                Document = _document
+            };
+        }
+
+        public sealed class MergedPutCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedPutCommand>
+        {
+            public string Id { get; set; }
+            public LazyStringValue ExpectedChangeVector { get; set; }
+            public BlittableJsonReaderObject Document { get; set; }
+
+            public MergedPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                return new MergedPutCommand(Document, Id, ExpectedChangeVector, database);
+            }
+        }
+    }
+    
+    public sealed class MergedPutEmbeddingCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+    {
+        private string _id;
+        private readonly BlittableJsonReaderObject _document;
+        private readonly LazyStringValue _expectedChangeVector;
+        private readonly Dictionary<string, byte[]> _attachmentsData;
+        private readonly DocumentDatabase _database;
+        public DocumentsStorage.PutOperationResults PutResult;
+        
+        public MergedPutEmbeddingCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, Dictionary<string, byte[]> attachmentsData, DocumentDatabase database)
+        {
+            _document = doc;
+            _id = id;
+            _expectedChangeVector = changeVector;
+            _attachmentsData = attachmentsData;
+            _database = database;
+        }
+
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
+
+            foreach (var attachmentData in _attachmentsData)
+            {
+                using (var stream = new MemoryStream(attachmentData.Value))
+                {
+                    _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, _id, attachmentData.Key, "dd", "YWJjZDIxMzdkYXdhZWF3ZXdxMjMzMTIzMjEzMjFkZA==", _expectedChangeVector, stream);
+                }
+            }
+            
+            return 1;
+        }
+        
         public void Dispose()
         {
             _document?.Dispose();

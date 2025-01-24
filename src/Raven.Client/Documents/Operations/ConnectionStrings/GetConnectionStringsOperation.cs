@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings { get; set; }
         public Dictionary<string, QueueConnectionString> QueueConnectionStrings { get; set; }
         public Dictionary<string, SnowflakeConnectionString> SnowflakeConnectionStrings { get; set; }
-        public Dictionary<string, AiConnectionString> AiConnectionStrings { get; set; }
+        public Dictionary<string, AiEtlConnectionString> AiConnectionStrings { get; set; }
         
         public DynamicJsonValue ToJson()
         {

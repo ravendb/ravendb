@@ -911,7 +911,7 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteAiConnectionStrings(Dictionary<string, AiConnectionString> connections)
+            private void WriteAiConnectionStrings(Dictionary<string, AiEtlConnectionString> connections)
             {
                 _writer.WriteStartObject();
 

@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.ETL
                     newProcesses.AddRange(GetRelevantProcesses<SnowflakeEtlConfiguration, SnowflakeConnectionString>(newSnowflakeDestinations, ensureUniqueConfigurationNames));
                 
                 if (newOpenAiDestinations != null && newOpenAiDestinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<VectorEmbeddingEnrichmentEtlConfiguration, AiConnectionString>(newOpenAiDestinations, ensureUniqueConfigurationNames));
+                    newProcesses.AddRange(GetRelevantProcesses<VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString>(newOpenAiDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -588,7 +588,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.VectorEmbeddingEnrichmentEtls)
             {
-                if (IsMyEtlTask<VectorEmbeddingEnrichmentEtlConfiguration, AiConnectionString>(record, config, ref responsibleNodes, out explanations))
+                if (IsMyEtlTask<VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
                     myVectorEmbeddingEnrichmentEtl.Add(config);
                 }

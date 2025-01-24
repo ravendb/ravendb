@@ -42,7 +42,7 @@ public class RavenDB_23556 : RavenTestBase
             //     OllamaSettings = new OllamaSettings { Model = "mistral-nemo", Uri = "http://127.0.0.1:11434" }
             // };
 
-            var connectionString = new AiConnectionString
+            var connectionString = new AiEtlConnectionString
             {
                 Name = connectionStringName,
                 OnnxSettings = new OnnxSettings
