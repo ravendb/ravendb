@@ -6,7 +6,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
-    title: "Pages/Database/Settings/Conflict Resolution",
+    title: "Pages/Settings/Conflict Resolution",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof ConflictResolution>;
 

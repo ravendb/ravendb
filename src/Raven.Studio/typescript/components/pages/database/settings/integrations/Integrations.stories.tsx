@@ -13,7 +13,7 @@ import { DatabaseSharedInfo } from "components/models/databases";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
-    title: "Pages/Database/Settings/Integrations",
+    title: "Pages/Settings/Integrations",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 

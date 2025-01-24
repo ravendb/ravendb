@@ -10,7 +10,7 @@ import { BackupsPage } from "./BackupsPage";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Backups",
+    title: "Pages/Tasks/Backups",
     component: BackupsPage,
     decorators: [withStorybookContexts, withForceRerender, withBootstrap5],
     excludeStories: /Template$/,

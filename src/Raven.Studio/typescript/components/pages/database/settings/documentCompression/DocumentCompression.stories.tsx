@@ -6,7 +6,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Settings",
+    title: "Pages/Settings/Document Compression",
     decorators: [withStorybookContexts, withBootstrap5],
     argTypes: {
         licenseType: licenseArgType,

@@ -8,7 +8,7 @@ import { IndexesStubs } from "test/stubs/IndexesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Indexes/List of indexes",
+    title: "Pages/Indexes/List of Indexes",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 

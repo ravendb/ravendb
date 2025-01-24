@@ -6,7 +6,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Settings/Data Archival",
+    title: "Pages/Settings/Data Archival",
     component: DataArchival,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DataArchival>;
@@ -16,8 +16,7 @@ function commonInit() {
     databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
-export const DefaultDataArchival: StoryObj<typeof DataArchival> = {
-    name: "Data Archival",
+export const LicenseAllowed: StoryObj<typeof DataArchival> = {
     render: () => {
         commonInit();
 

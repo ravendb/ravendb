@@ -7,7 +7,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
-    title: "Pages/ManageServer/Server-Wide Sorters",
+    title: "Pages/Manage Server/Server-Wide Sorters",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 

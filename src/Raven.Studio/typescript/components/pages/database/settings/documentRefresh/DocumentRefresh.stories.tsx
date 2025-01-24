@@ -6,7 +6,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Settings/Document Refresh",
+    title: "Pages/Settings/Document Refresh",
     component: DocumentRefresh,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentRefresh>;

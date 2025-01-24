@@ -9,7 +9,7 @@ import { DatabaseSharedInfo } from "components/models/databases";
 import generateMenuItems from "common/shell/menu/generateMenuItems";
 
 export default {
-    title: "Shell/StudioSearchWithDatabaseSwitcher",
+    title: "Shell/Studio Search With Database Switcher",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 

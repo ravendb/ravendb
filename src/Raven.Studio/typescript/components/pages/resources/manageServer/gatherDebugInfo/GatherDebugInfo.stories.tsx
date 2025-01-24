@@ -6,7 +6,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
-    title: "Pages/ManageServer",
+    title: "Pages/Manage Server/Gather Debug Info",
     component: GatherDebugInfo,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof GatherDebugInfo>;

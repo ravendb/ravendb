@@ -7,7 +7,7 @@ import React from "react";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
-    title: "Pages/Database/Settings/Revisions Bin Cleaner",
+    title: "Pages/Settings/Revisions Bin Cleaner",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 

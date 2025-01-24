@@ -5,7 +5,7 @@ import { withStorybookContexts, withBootstrap5, databaseAccessArgType } from "te
 import RevertRevisions from "./RevertRevisions";
 
 export default {
-    title: "Pages/Database/Settings/DocumentRevisions/RevertRevisions",
+    title: "Pages/Settings/Document Revisions/RevertRevisions",
     decorators: [withStorybookContexts, withBootstrap5],
     argTypes: {
         databaseAccess: databaseAccessArgType,

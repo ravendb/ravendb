@@ -6,7 +6,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Settings/DocumentRevisions",
+    title: "Pages/Settings/Document Revisions",
     component: DocumentRevisions,
     decorators: [withStorybookContexts, withBootstrap5],
     argTypes: {

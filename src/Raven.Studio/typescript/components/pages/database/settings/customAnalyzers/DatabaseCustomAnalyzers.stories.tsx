@@ -13,7 +13,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
-    title: "Pages/Database/Settings/Custom Analyzers",
+    title: "Pages/Settings/Custom Analyzers",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 

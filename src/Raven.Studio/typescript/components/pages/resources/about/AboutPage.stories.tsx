@@ -13,7 +13,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
 
 export default {
-    title: "Pages/About Page",
+    title: "Pages/About",
     decorators: [withStorybookContexts, withBootstrap5],
     argTypes: {
         securityClearance: securityClearanceArgType,

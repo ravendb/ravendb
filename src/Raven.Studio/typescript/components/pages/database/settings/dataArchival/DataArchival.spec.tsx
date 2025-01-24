@@ -4,17 +4,17 @@ import { rtlRender } from "test/rtlTestUtils";
 import * as stories from "./DataArchival.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
-const { DefaultDataArchival, LicenseRestricted } = composeStories(stories);
+const { LicenseAllowed, LicenseRestricted } = composeStories(stories);
 
 describe("DataArchival", () => {
     it("can render", async () => {
-        const { screen } = rtlRender(<DefaultDataArchival />);
+        const { screen } = rtlRender(<LicenseAllowed />);
 
         expect(await screen.findByText("Enable Data Archival")).toBeInTheDocument();
     });
 
     it("can disable and set to null expiration frequency after disabling 'Enable Data Archival'", async () => {
-        const { screen, fireClick } = rtlRender(<DefaultDataArchival />);
+        const { screen, fireClick } = rtlRender(<LicenseAllowed />);
 
         const archiveFrequencyBefore = await screen.findByName("archiveFrequency");
         expect(archiveFrequencyBefore).toBeEnabled();

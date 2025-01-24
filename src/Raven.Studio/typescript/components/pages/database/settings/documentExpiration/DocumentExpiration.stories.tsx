@@ -6,7 +6,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Settings/Document Expiration",
+    title: "Pages/Settings/Document Expiration",
     component: DocumentExpiration,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentExpiration>;

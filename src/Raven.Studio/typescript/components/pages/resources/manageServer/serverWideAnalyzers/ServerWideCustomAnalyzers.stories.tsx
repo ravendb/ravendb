@@ -7,7 +7,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import ServerWideCustomAnalyzers from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers";
 
 export default {
-    title: "Pages/ManageServer/Server-Wide Analyzers",
+    title: "Pages/Manage Server/Server-Wide Analyzers",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 

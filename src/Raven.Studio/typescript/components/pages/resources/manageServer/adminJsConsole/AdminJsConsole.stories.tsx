@@ -6,7 +6,7 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/ManageServer",
+    title: "Pages/Manage Server/Admin Js Console",
     component: AdminJsConsole,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof AdminJsConsole>;

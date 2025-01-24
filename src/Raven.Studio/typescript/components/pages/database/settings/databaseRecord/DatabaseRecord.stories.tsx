@@ -6,7 +6,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
-    title: "Pages/Database/Settings",
+    title: "Pages/Settings/Database Record",
     decorators: [withStorybookContexts, withBootstrap5],
     argTypes: {
         securityClearance: securityClearanceArgType,

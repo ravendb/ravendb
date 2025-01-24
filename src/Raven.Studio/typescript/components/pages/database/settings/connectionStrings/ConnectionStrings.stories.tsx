@@ -8,7 +8,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { SharedStubs } from "test/stubs/SharedStubs";
 
 export default {
-    title: "Pages/Database/Settings",
+    title: "Pages/Settings/Connection Strings",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 

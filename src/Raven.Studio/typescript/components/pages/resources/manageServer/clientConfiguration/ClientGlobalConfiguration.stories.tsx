@@ -6,7 +6,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/ManageServer/Client Configuration",
+    title: "Pages/Manage Server/Client Configuration",
     component: ClientGlobalConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof ClientGlobalConfiguration>;

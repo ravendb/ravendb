@@ -5,7 +5,7 @@ import StudioDatabaseConfiguration from "./StudioDatabaseConfiguration";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Settings/Studio Configuration",
+    title: "Pages/Settings/Studio Configuration",
     component: StudioDatabaseConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof StudioDatabaseConfiguration>;
@@ -15,7 +15,7 @@ function commonInit() {
     databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
-export const StudioConfiguration: StoryFn<typeof StudioDatabaseConfiguration> = () => {
+export const LicenseAllowed: StoryFn<typeof StudioDatabaseConfiguration> = () => {
     commonInit();
 
     const { license } = mockStore;

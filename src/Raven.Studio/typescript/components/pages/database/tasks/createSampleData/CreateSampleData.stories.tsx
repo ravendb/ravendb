@@ -10,7 +10,7 @@ import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
-    title: "Pages/Database/Tasks/CreateSampleData",
+    title: "Pages/Tasks/Create Sample Data",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 

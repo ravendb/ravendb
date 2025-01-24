@@ -6,7 +6,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
-    title: "Pages/Documents/Document Identities",
+    title: "Pages/Documents/Identities",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentIdentities>;
 
@@ -16,7 +16,7 @@ interface DocumentIdentitiesStoryArgs {
 }
 
 export const DocumentIdentitiesStory: StoryObj<DocumentIdentitiesStoryArgs> = {
-    name: "DocumentIdentities",
+    name: "Identities",
     render: (args) => {
         const { accessManager, databases } = mockStore;
 

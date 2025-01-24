@@ -5,7 +5,7 @@ import StudioGlobalConfiguration from "./StudioGlobalConfiguration";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/ManageServer/Studio Configuration",
+    title: "Pages/Manage Server/Studio Configuration",
     component: StudioGlobalConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof StudioGlobalConfiguration>;

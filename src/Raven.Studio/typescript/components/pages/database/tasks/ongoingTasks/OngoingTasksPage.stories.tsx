@@ -21,7 +21,7 @@ import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Tasks/Ongoing tasks",
+    title: "Pages/Tasks/Ongoing Tasks",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
     excludeStories: /Template$/,
 } satisfies Meta;

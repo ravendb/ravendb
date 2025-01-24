@@ -11,7 +11,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { DatabaseSharedInfo } from "components/models/databases";
 
 export default {
-    title: "Pages/Statistics page",
+    title: "Pages/Stats/Stats",
     component: StatisticsPage,
     decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,

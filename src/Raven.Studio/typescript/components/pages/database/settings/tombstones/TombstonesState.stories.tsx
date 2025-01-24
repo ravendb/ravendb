@@ -5,7 +5,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Settings",
+    title: "Pages/Settings/Tombstones",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 

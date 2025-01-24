@@ -8,7 +8,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
-    title: "Pages/Manage Database Group",
+    title: "Pages/Settings/Manage Database Group",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
