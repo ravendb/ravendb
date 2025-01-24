@@ -96,12 +96,12 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     public override async ValueTask ExecuteAsync()
     {
+        using (AllocateContextForQueryOperation(out var queryContext, out var context))
         using (var tracker = CreateRequestTimeTracker())
         {
             try
             {
                 using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
-                using (AllocateContextForQueryOperation(out var queryContext, out var context))
                 {
                     var parameters = QueryStringParameters.Create(HttpContext.Request);
                     var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, parameters.AddSpatialProperties);
