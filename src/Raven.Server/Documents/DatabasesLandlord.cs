@@ -14,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -1404,6 +1405,28 @@ namespace Raven.Server.Documents
                             break;
 
                         case IdleDatabaseActivityType.WakeUpDatabase:
+                            if (_serverStore.ConcurrentBackupsCounter.CanRunBackup == false)
+                            {
+                                // reached max concurrent backups, retry after 1 min
+
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent backups, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
+
+                                RescheduleDatabaseWakeup();
+                                break;
+                            }
+
+                            if (CanServerRunBackup() == false)
+                            {
+                                // the server cannot run the backup anyway (low memory, low cpu credits or high dirty memory state)
+
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we are in a low memory state, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
+
+                                RescheduleDatabaseWakeup();
+                                break;
+                            }
+
                             var startDatabaseForBackup = _serverStore.ConcurrentBackupsCounter.TryStartDatabaseForBackup();
                             if (startDatabaseForBackup == null)
                             {
@@ -1411,15 +1434,6 @@ namespace Raven.Server.Documents
 
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent loading of databases for backup, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
-
-                                RescheduleDatabaseWakeup();
-                            }
-                            else if (_serverStore.ConcurrentBackupsCounter.CanRunBackup == false)
-                            {
-                                // reached max concurrent backups, retry after 1 min
-
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent backups, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
 
                                 RescheduleDatabaseWakeup();
                             }
@@ -1435,7 +1449,7 @@ namespace Raven.Server.Documents
                                         // database failed to load, retry after 1 min
 
                                         if (_logger.IsInfoEnabled)
-                                            _logger.Info($"Failed to start database '{databaseName}' for running a backup, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
+                                            _logger.Info($"Failed to start database '{databaseName}' for running a backup, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms", e);
 
                                         RescheduleDatabaseWakeup();
                                     }
@@ -1464,6 +1478,19 @@ namespace Raven.Server.Documents
                     _logger.Operations($"Failed to schedule the next activity for the idle database '{databaseName}'.", e);
 
                 ForTestingPurposes?.OnFailedRescheduleNextScheduledActivity?.Invoke(e, databaseName);
+            }
+        }
+
+        private bool CanServerRunBackup()
+        {
+            try
+            {
+                BackupUtils.CheckServerHealthBeforeBackup(_serverStore, name: null);
+                return true;
+            }
+            catch (BackupDelayException)
+            {
+                return false;
             }
         }
 
