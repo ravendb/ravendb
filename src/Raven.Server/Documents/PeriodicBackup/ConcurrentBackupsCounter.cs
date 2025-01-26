@@ -155,6 +155,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             var utilizedCores = _licenseManager.GetCoresLimitForNode(out _);
             var newMaxConcurrentBackups = GetNumberOfCoresToUseForBackup(utilizedCores);
 
+            if (_maxConcurrentBackups == newMaxConcurrentBackups)
+                return;
+
             lock (_locker)
             {
                 var diff = newMaxConcurrentBackups - _maxConcurrentBackups;
