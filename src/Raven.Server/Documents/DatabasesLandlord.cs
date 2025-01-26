@@ -1407,10 +1407,19 @@ namespace Raven.Server.Documents
                             var startDatabaseForBackup = _serverStore.ConcurrentBackupsCounter.TryStartDatabaseForBackup();
                             if (startDatabaseForBackup == null)
                             {
+                                // reached max concurrent loading of databases for backup, retry after 1 min
+
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent loading of databases for backup, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
+
+                                RescheduleDatabaseWakeup();
+                            }
+                            else if (_serverStore.ConcurrentBackupsCounter.CanRunBackup == false)
+                            {
                                 // reached max concurrent backups, retry after 1 min
 
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent backups, will retry the wakeup in '{_dueTimeOnRetry}' ms");
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent backups, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
 
                                 RescheduleDatabaseWakeup();
                             }
