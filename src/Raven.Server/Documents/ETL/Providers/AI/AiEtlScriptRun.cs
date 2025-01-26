@@ -3,18 +3,18 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public class AiEtlScriptRun : IEnumerable<EmbeddingRepresentation>
+public class AiEtlScriptRun : IEnumerable<AiEtlEmbeddingItem>
 {
-    public List<EmbeddingRepresentation> CurrentRun { get; set; }
+    public List<AiEtlEmbeddingItem> CurrentRun { get; set; }
     public Dictionary<string, Dictionary<string, List<string>>> Runs { get; set; }
     
     public AiEtlScriptRun()
     {
-        CurrentRun = new List<EmbeddingRepresentation>();
+        CurrentRun = new List<AiEtlEmbeddingItem>();
         Runs = new Dictionary<string, Dictionary<string, List<string>>>();
     }
     
-    public IEnumerator<EmbeddingRepresentation> GetEnumerator()
+    public IEnumerator<AiEtlEmbeddingItem> GetEnumerator()
     {
         throw new System.NotImplementedException();
     }

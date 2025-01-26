@@ -15,13 +15,11 @@ public class AiStorage
         _documentsStorage = documentsStorage ?? throw new ArgumentNullException(nameof(documentsStorage));
     }
 
-    public ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlConfiguration configuration, string value, out string hash)
+    public ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlConfiguration configuration, string value, out string valueEmbeddingsDocumentId)
     {
-        hash = AiHelper.CalculateValueHash(value);
+        valueEmbeddingsDocumentId = AiHelper.ValueEmbeddingsDocumentId(configuration.Name, AiHelper.CalculateValueHash(value));
 
-        var valueCacheDocumentId = AiHelper.ValueEmbeddingsDocumentId(configuration.Name, hash);
-
-        var document = _documentsStorage.Get(context, valueCacheDocumentId);
+        var document = _documentsStorage.Get(context, valueEmbeddingsDocumentId);
         if (document == null)
             return null;
 

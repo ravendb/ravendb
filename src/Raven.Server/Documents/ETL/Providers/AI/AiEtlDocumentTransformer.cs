@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, EmbeddingRepresentation, EtlStatsScope, EtlPerformanceOperation>
+public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEmbeddingItem, EtlStatsScope, EtlPerformanceOperation>
 {
     private readonly AiEtlConfiguration _configuration;
     private AiEtlScriptRun _currentRun;
@@ -53,9 +53,9 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, Embeddi
     }
 
     /// docId -> <fieldName, <fieldValues>>
-    public override IEnumerable<EmbeddingRepresentation> GetTransformedResults()
+    public override IEnumerable<AiEtlEmbeddingItem> GetTransformedResults()
     {
-        return _currentRun ?? Enumerable.Empty<EmbeddingRepresentation>();
+        return _currentRun ?? Enumerable.Empty<AiEtlEmbeddingItem>();
     }
 
     public override void Transform(AiEtlItem item, EtlStatsScope stats, EtlProcessState state)
@@ -73,7 +73,7 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, Embeddi
             if (fieldValue is LazyStringValue lsv)
             {
                 result.Add(fieldName, new List<string>() { lsv });
-                _currentRun.CurrentRun.Add(new EmbeddingRepresentation() { Value = lsv, OriginDocumentId = item.DocumentId, OriginPropertyName = fieldName });
+                _currentRun.CurrentRun.Add(new AiEtlEmbeddingItem() { Value = lsv, DocumentId = item.DocumentId, ValuePath = fieldName });
             }
             // todo lazy
             else if (fieldValue is List<string> list)
@@ -81,7 +81,7 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, Embeddi
                 result.Add(fieldName, list);
 
                 foreach (var value in list)
-                    _currentRun.CurrentRun.Add(new EmbeddingRepresentation() { Value = value, OriginDocumentId = item.DocumentId, OriginPropertyName = fieldName });
+                    _currentRun.CurrentRun.Add(new AiEtlEmbeddingItem() { Value = value, DocumentId = item.DocumentId, ValuePath = fieldName });
             }
             else
                 throw new Exception();

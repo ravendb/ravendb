@@ -20,7 +20,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtlConfiguration, AiConnectionString, EtlStatsScope, EtlPerformanceOperation>
+public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfiguration, AiConnectionString, EtlStatsScope, EtlPerformanceOperation>
 {
     private ITextEmbeddingGenerationService _service;
 
@@ -72,12 +72,12 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
         return false;
     }
 
-    protected override EtlTransformer<AiEtlItem, EmbeddingRepresentation, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<AiEtlItem, AiEtlEmbeddingItem, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
         return new AiEtlDocumentTransformer(Database, context, null, null, Configuration);
     }
 
-    protected override int LoadInternal(IEnumerable<EmbeddingRepresentation> items, DocumentsOperationContext context, EtlStatsScope scope)
+    protected override int LoadInternal(IEnumerable<AiEtlEmbeddingItem> items, DocumentsOperationContext context, EtlStatsScope scope)
     {
         _service ??= AiHelper.CreateService(Configuration);
 
@@ -87,14 +87,14 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
 
         using (_missingEmbeddingsHolder)
         {
-            foreach (var embeddingRepresentation in aiEtlScriptRun)
+            foreach (var aiEtlEmbeddingItem in aiEtlScriptRun)
             {
-                var valueEmbeddings = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, embeddingRepresentation.Value, out var hash);
-                embeddingRepresentation.ValueHash = hash;
-                embeddingRepresentation.AttachmentName = valueEmbeddings?.GetAttachmentNameForValue(embeddingRepresentation.Value);
+                var valueEmbeddings = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, aiEtlEmbeddingItem.Value, out var valueEmbeddingsDocumentId);
+                aiEtlEmbeddingItem.ValueEmbeddingsDocumentId = valueEmbeddingsDocumentId;
+                aiEtlEmbeddingItem.ValueEmbeddingsAttachmentName = valueEmbeddings?.GetAttachmentNameForValue(aiEtlEmbeddingItem.Value);
 
-                if (embeddingRepresentation.AttachmentName == null)
-                    _missingEmbeddingsHolder.Add(embeddingRepresentation.Value, embeddingRepresentation);
+                if (aiEtlEmbeddingItem.ValueEmbeddingsAttachmentName == null)
+                    _missingEmbeddingsHolder.Add(aiEtlEmbeddingItem.Value, aiEtlEmbeddingItem);
             }
 
             var missingValues = _missingEmbeddingsHolder.GetValuesForMissingEmbeddings();
@@ -118,12 +118,12 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
 
                     //missingEmbeddings[i].AttachmentName = attachmentGuid;
 
-                    //var publicDocument = Database.DocumentsStorage.Get(context, AiHelper.GetDocumentEmbeddingsId(missingEmbeddings[i].OriginDocumentId));
+                    //var publicDocument = Database.DocumentsStorage.Get(context, AiHelper.GetDocumentEmbeddingsId(missingEmbeddings[i].DocumentId));
 
                     //if (publicDocument == null || publicDocument.Data.TryGet(Configuration.Name, out object o) == false)
                     //{
                     //    // todo handle existing doc
-                    //    CreateNewPublicDocument(missingEmbeddings[i].OriginDocumentId, missingEmbeddings[i].OriginPropertyName, missingEmbeddings[i].AttachmentName, null,
+                    //    CreateNewPublicDocument(missingEmbeddings[i].DocumentId, missingEmbeddings[i].ValuePath, missingEmbeddings[i].AttachmentName, null,
                     //        context);
                     //}
                 }
@@ -205,17 +205,17 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
 
         private readonly List<string> _missingValues = new();
 
-        private readonly List<EmbeddingRepresentation> _embeddingsMap = new();
+        private readonly List<AiEtlEmbeddingItem> _embeddingsMap = new();
 
-        public void Add(string value, EmbeddingRepresentation embedding)
+        public void Add(string value, AiEtlEmbeddingItem aiEtlEmbedding)
         {
             _missingValues.Add(value);
-            _embeddingsMap.Add(embedding);
+            _embeddingsMap.Add(aiEtlEmbedding);
         }
 
         public List<string> GetValuesForMissingEmbeddings() => _missingValues;
 
-        public IReadOnlyList<EmbeddingRepresentation> GetEmbeddingsMap() => _embeddingsMap;
+        public IReadOnlyList<AiEtlEmbeddingItem> GetEmbeddingsMap() => _embeddingsMap;
 
         public void Dispose()
         {
