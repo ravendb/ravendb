@@ -70,6 +70,7 @@ using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Server.Documents.AI;
 using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Sparrow.Server.Logging;
@@ -179,6 +180,7 @@ namespace Raven.Server.Documents
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
+                AiStorage = new AiStorage(DocumentsStorage);
                 IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
@@ -356,6 +358,8 @@ namespace Raven.Server.Documents
         public CountersRepairTask CountersRepairTask { get; private set; }
 
         public CompareExchangeStorage CompareExchangeStorage { get; private set; }
+
+        public AiStorage AiStorage { get; private set; }
 
         public OngoingTasks.OngoingTasks OngoingTasks { get; private set; }
 

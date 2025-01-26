@@ -1,6 +1,15 @@
 ﻿using System;
+using System.ClientModel;
 using System.Data.HashFunction;
 using System.Data.HashFunction.Blake2;
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.SemanticKernel.Embeddings;
+using Microsoft.SemanticKernel;
+using OllamaSharp;
+using OpenAI;
+using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Extensions;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
@@ -26,8 +35,61 @@ public static class AiHelper
         return $"{documentId}/embeddings";
     }
 
-    public static string GetCacheDocumentId(string configurationKey, string hash)
+    public static string ValueEmbeddingsDocumentId(string configurationKey, string hash)
     {
         return $"embeddings/{configurationKey}/{hash}";
+    }
+
+    [Experimental("SKEXP0001")]
+    public static ITextEmbeddingGenerationService CreateService(AiEtlConfiguration configuration)
+    {
+        var kernelBuilder = Kernel.CreateBuilder();
+
+        switch (configuration.AiConnectorType)
+        {
+            case AiConnectorType.OpenAi:
+                var openAiSettings = configuration.Connection.OpenAiSettings;
+
+                var apiKey = new ApiKeyCredential(openAiSettings.ApiKey);
+                var openAiOptions = new OpenAIClientOptions
+                {
+                    Endpoint = new Uri(openAiSettings.Endpoint),
+                    OrganizationId = openAiSettings.OrganizationId,
+                    ProjectId = openAiSettings.ProjectId,
+                    UserAgentApplicationId = $"RavenDB/{ServerVersion.FullVersion}/{nameof(AiEtl)}"
+                };
+                var openAIClient = new OpenAIClient(apiKey, openAiOptions);
+                kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient);
+
+                break;
+
+            case AiConnectorType.Ollama:
+                var ollamaSettings = configuration.Connection.OllamaSettings;
+                var ollamaApiConfig = new OllamaApiClient.Configuration
+                {
+                    Uri = new Uri(ollamaSettings.Uri),
+                    Model = ollamaSettings.Model
+                };
+
+                var ollamaApiClient = new OllamaApiClient(ollamaApiConfig);
+
+                kernelBuilder.AddOllamaTextEmbeddingGeneration(ollamaApiClient);
+
+                // var modelInfo = AsyncHelpers.RunSync(() => ollamaApiClient.ShowModelAsync(ollamaSettings.Model));
+
+                break;
+
+            case AiConnectorType.Onnx:
+                var onnxSettings = configuration.Connection.OnnxSettings;
+                kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions());
+
+                break;
+
+            default:
+                throw new NotSupportedException($"'{configuration.AiConnectorType}' provider is not supported");
+        }
+
+        var kernel = kernelBuilder.Build();
+        return kernel.GetRequiredService<ITextEmbeddingGenerationService>();
     }
 }

@@ -1,19 +1,12 @@
-#pragma warning disable SKEXP0001, SKEXP0010
 using System;
-using System.ClientModel;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
-using OllamaSharp;
-using OpenAI;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
-using Raven.Server.Documents.ETL.Providers.AI.Extensions;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.VectorSearch;
@@ -23,18 +16,19 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-
-#pragma warning disable SKEXP0070
+#pragma warning disable SKEXP0001
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
 public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtlConfiguration, AiConnectionString, EtlStatsScope, EtlPerformanceOperation>
 {
     private ITextEmbeddingGenerationService _service;
-    
+
+    private readonly MissingEmbeddingsHolder _missingEmbeddingsHolder = new();
+
     public const string AiEtlTag = "AI ETL";
-    
-    public AiEtl(Transformation transformation, AiEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) 
+
+    public AiEtl(Transformation transformation, AiEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, AiEtlTag)
     {
     }
@@ -77,60 +71,68 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
     {
         return false;
     }
-    
+
     protected override EtlTransformer<AiEtlItem, EmbeddingRepresentation, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
         return new AiEtlDocumentTransformer(Database, context, null, null, Configuration);
     }
-    
+
     protected override int LoadInternal(IEnumerable<EmbeddingRepresentation> items, DocumentsOperationContext context, EtlStatsScope scope)
     {
-        _service ??= CreateService(Configuration);
-        
-        // todo do we need dict?
-        var aiEtlScriptRun = items as AiEtlScriptRun;
+        _service ??= AiHelper.CreateService(Configuration);
+
+        var aiEtlScriptRun = (AiEtlScriptRun)items;
 
         int processed = 0;
-        
-        foreach (var embeddingRepresentation in aiEtlScriptRun.CurrentRun)
+
+        using (_missingEmbeddingsHolder)
         {
-            var hash = AiHelper.CalculateValueHash(embeddingRepresentation.Value);
-            embeddingRepresentation.ValueHash = hash;
-            
-            var idToSearchFor = AiHelper.GetCacheDocumentId(Configuration.Name, hash);
-            
-            var privateDocument = Database.DocumentsStorage.Get(context, idToSearchFor);
-            
-            if (privateDocument != null && privateDocument.Data.TryGet(embeddingRepresentation.Value, out string attachmentGuid))
-                embeddingRepresentation.AttachmentName = attachmentGuid;
-        }
-
-        var missingEmbeddings = aiEtlScriptRun.CurrentRun.Where(x => x.EmbeddingValue == null).ToList();
-        var missingValues = missingEmbeddings.Select(x => x.Value).ToList();
-        
-        var generatedValues = _service.GenerateEmbeddingsAsync(missingValues).GetAwaiter().GetResult();
-        
-        Debug.Assert(generatedValues.Count == missingEmbeddings.Count);
-
-        for (var i = 0; i < generatedValues.Count; ++i)
-        {
-            // todo do we need to pass this?
-            missingEmbeddings[i].EmbeddingValue = generatedValues[i].ToArray();
-            
-            CreateNewPrivateDocument(missingEmbeddings[i].Value, missingEmbeddings[i].EmbeddingValue, context, out var attachmentGuid);
-            
-            missingEmbeddings[i].AttachmentName = attachmentGuid;
-
-            var publicDocument = Database.DocumentsStorage.Get(context, AiHelper.GetDocumentEmbeddingsId(missingEmbeddings[i].OriginDocumentId));
-
-            if (publicDocument == null || publicDocument.Data.TryGet(Configuration.Name, out object o) == false)
+            foreach (var embeddingRepresentation in aiEtlScriptRun)
             {
-                // todo handle existing doc
-                CreateNewPublicDocument(missingEmbeddings[i].OriginDocumentId, missingEmbeddings[i].OriginPropertyName, missingEmbeddings[i].AttachmentName, null, context);
-            }
-        }
+                var valueEmbeddings = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, embeddingRepresentation.Value, out var hash);
+                embeddingRepresentation.ValueHash = hash;
+                embeddingRepresentation.AttachmentName = valueEmbeddings?.GetAttachmentNameForValue(embeddingRepresentation.Value);
 
-        return processed;
+                if (embeddingRepresentation.AttachmentName == null)
+                    _missingEmbeddingsHolder.Add(embeddingRepresentation.Value, embeddingRepresentation);
+            }
+
+            var missingValues = _missingEmbeddingsHolder.GetValuesForMissingEmbeddings();
+            if (missingValues.Count > 0)
+            {
+                var generatedValues = AsyncHelpers.RunSync(() => _service.GenerateEmbeddingsAsync(missingValues));
+
+                if (generatedValues.Count != missingValues.Count)
+                    throw new InvalidOperationException("Generated embeddings count does not match missing values count");
+
+                var embeddingsMap = _missingEmbeddingsHolder.GetEmbeddingsMap();
+
+                for (var i = 0; i < embeddingsMap.Count; ++i)
+                {
+                    var embeddingHolder = embeddingsMap[i];
+                    var embedding = generatedValues[i];
+
+                    embeddingHolder.EmbeddingValue = embedding.ToArray();
+
+                    //CreateNewPrivateDocument(missingEmbeddings[i].Value, missingEmbeddings[i].EmbeddingValue, context, out var attachmentGuid);
+
+                    //missingEmbeddings[i].AttachmentName = attachmentGuid;
+
+                    //var publicDocument = Database.DocumentsStorage.Get(context, AiHelper.GetDocumentEmbeddingsId(missingEmbeddings[i].OriginDocumentId));
+
+                    //if (publicDocument == null || publicDocument.Data.TryGet(Configuration.Name, out object o) == false)
+                    //{
+                    //    // todo handle existing doc
+                    //    CreateNewPublicDocument(missingEmbeddings[i].OriginDocumentId, missingEmbeddings[i].OriginPropertyName, missingEmbeddings[i].AttachmentName, null,
+                    //        context);
+                    //}
+                }
+            }
+
+            // process the aiEtlScriptRun here via TxMerger
+
+            return processed;
+        }
     }
 
     private void CreateNewPublicDocument(string originDocumentId, string fieldName, string attachmentGuid, string changeVector, DocumentsOperationContext context)
@@ -144,12 +146,12 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
         var embeddingsObjectDjv = new DynamicJsonValue();
 
         var dja = new DynamicJsonArray();
-        
+
         dja.Add(attachmentGuid);
-        
+
         // todo handle existing array
         embeddingsObjectDjv[fieldName] = dja;
-            
+
         documentDjv[Configuration.Name] = embeddingsObjectDjv;
 
         using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -165,16 +167,16 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
     private void CreateNewPrivateDocument(string textValue, float[] embeddingValue, DocumentsOperationContext context, out string attachmentGuid)
     {
         var hash = AiHelper.CalculateValueHash(textValue);
-        var newDocumentId = AiHelper.GetCacheDocumentId(Configuration.Name, hash);
-        
+        var newDocumentId = AiHelper.ValueEmbeddingsDocumentId(Configuration.Name, hash);
+
         var documentDjv = new DynamicJsonValue { ["Id"] = newDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "@embeddings" } };
-        
+
         attachmentGuid = Guid.NewGuid().ToString();
 
         documentDjv[textValue] = attachmentGuid;
-        
+
         var embedding = GenerateEmbeddings.FromText(context.Allocator, VectorOptions.DefaultText, textValue).GetEmbedding().ToArray();
-        
+
         using (var ctx = JsonOperationContext.ShortTermSingleUse())
         {
             var bjro = ctx.ReadObject(documentDjv, "doc");
@@ -194,60 +196,41 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
 
     protected override bool ShouldFilterOutHiLoDocument()
     {
-        throw new System.NotImplementedException();
+        return true;
     }
 
-    private ITextEmbeddingGenerationService CreateService(AiEtlConfiguration configuration)
+    private class MissingEmbeddingsHolder : IDisposable
     {
-        var kernelBuilder = Kernel.CreateBuilder();
+        private const int MaxCapacity = 1024;
 
-        switch (configuration.AiConnectorType)
+        private readonly List<string> _missingValues = new();
+
+        private readonly List<EmbeddingRepresentation> _embeddingsMap = new();
+
+        public void Add(string value, EmbeddingRepresentation embedding)
         {
-            case AiConnectorType.OpenAi:
-                var openAiSettings = configuration.Connection.OpenAiSettings;
-
-                var apiKey = new ApiKeyCredential(openAiSettings.ApiKey);
-                var openAiOptions = new OpenAIClientOptions
-                {
-                    Endpoint = new Uri(openAiSettings.Endpoint),
-                    OrganizationId = openAiSettings.OrganizationId,
-                    ProjectId = openAiSettings.ProjectId,
-                    UserAgentApplicationId = $"RavenDB/{ServerVersion.FullVersion}/{nameof(AiEtl)}"
-                };
-                var openAIClient = new OpenAIClient(apiKey, openAiOptions);
-                kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient);
-
-                break;
-
-            case AiConnectorType.Ollama:
-                var ollamaSettings = configuration.Connection.OllamaSettings;
-                var ollamaApiConfig = new OllamaApiClient.Configuration
-                {
-                    Uri = new Uri(ollamaSettings.Uri),
-                    Model = ollamaSettings.Model
-                };
-
-                var ollamaApiClient = new OllamaApiClient(ollamaApiConfig);
-
-                kernelBuilder.AddOllamaTextEmbeddingGeneration(ollamaApiClient);
-
-                // var modelInfo = AsyncHelpers.RunSync(() => ollamaApiClient.ShowModelAsync(ollamaSettings.Model));
-
-                break;
-
-            case AiConnectorType.Onnx:
-                var onnxSettings = configuration.Connection.OnnxSettings;
-                kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions());
-
-                break;
-
-            default:
-                throw new NotSupportedException($"'{configuration.AiConnectorType}' provider is not supported");
+            _missingValues.Add(value);
+            _embeddingsMap.Add(embedding);
         }
 
-        var kernel = kernelBuilder.Build();
-        return kernel.GetRequiredService<ITextEmbeddingGenerationService>();
-    }
+        public List<string> GetValuesForMissingEmbeddings() => _missingValues;
 
+        public IReadOnlyList<EmbeddingRepresentation> GetEmbeddingsMap() => _embeddingsMap;
+
+        public void Dispose()
+        {
+            _missingValues.Clear();
+            _embeddingsMap.Clear();
+
+            SetCapacityIfNeeded(_missingValues);
+            SetCapacityIfNeeded(_embeddingsMap);
+            return;
+
+            static void SetCapacityIfNeeded<T>(List<T> list)
+            {
+                if (list.Capacity > MaxCapacity)
+                    list.Capacity = MaxCapacity;
+            }
+        }
+    }
 }
-#pragma warning restore SKEXP0001, SKEXP0010, SKEXP0070
