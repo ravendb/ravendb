@@ -18,10 +18,10 @@ namespace Raven.Server.Documents.ETL.Providers.AI;
 public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, EmbeddingRepresentation, EtlStatsScope, EtlPerformanceOperation>
 {
     private readonly Transformation _transformation;
-    private readonly VectorEmbeddingEnrichmentEtlConfiguration _configuration;
+    private readonly AiEtlConfiguration _configuration;
     private AiEtlScriptRun _currentRun;
     
-    public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, PatchRequest mainScript, PatchRequest behaviorFunctions, VectorEmbeddingEnrichmentEtlConfiguration configuration) : base(database, context, mainScript, behaviorFunctions)
+    public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, PatchRequest mainScript, PatchRequest behaviorFunctions, AiEtlConfiguration configuration) : base(database, context, mainScript, behaviorFunctions)
     {
         _configuration = configuration;
     }

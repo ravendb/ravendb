@@ -3,31 +3,18 @@ using System;
 using System.ClientModel;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
-using Microsoft.SemanticKernel.Connectors.Ollama;
-using Microsoft.SemanticKernel.Connectors.Onnx;
 using Microsoft.SemanticKernel.Embeddings;
-using Microsoft.SemanticKernel.Services;
-using Microsoft.SemanticKernel.TextGeneration;
 using OllamaSharp;
 using OpenAI;
-using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
-using Raven.Client.Http;
-using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
@@ -35,26 +22,23 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Version = System.Version;
+
 #pragma warning disable SKEXP0070
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString, EtlStatsScope, EtlPerformanceOperation>
+public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtlConfiguration, AiConnectionString, EtlStatsScope, EtlPerformanceOperation>
 {
-    private readonly VectorEmbeddingEnrichmentEtlConfiguration _configuration;
-    private readonly ServerStore _serverStore;
     private ITextEmbeddingGenerationService _service;
     
     public const string AiEtlTag = "AI ETL";
     
-    public VectorEmbeddingEnrichmentEtl(Transformation transformation, VectorEmbeddingEnrichmentEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore, AiEtlTag)
+    public AiEtl(Transformation transformation, AiEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) 
+        : base(transformation, configuration, database, serverStore, AiEtlTag)
     {
-        _configuration = configuration;
-        _serverStore = serverStore;
     }
 
-    public override EtlType EtlType => EtlType.VectorEmbeddingEnrichment;
+    public override EtlType EtlType => EtlType.Ai;
     public override bool ShouldTrackCounters() => false;
     public override bool ShouldTrackTimeSeries() => false;
 
@@ -95,7 +79,7 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, Embeddi
     
     protected override EtlTransformer<AiEtlItem, EmbeddingRepresentation, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
-        return new AiEtlDocumentTransformer(Database, context, null, null, _configuration);
+        return new AiEtlDocumentTransformer(Database, context, null, null, Configuration);
     }
     
     protected override int LoadInternal(IEnumerable<EmbeddingRepresentation> items, DocumentsOperationContext context, EtlStatsScope scope)
@@ -138,7 +122,7 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, Embeddi
 
             var publicDocument = Database.DocumentsStorage.Get(context, GetPublicDocumentId(missingEmbeddings[i].OriginDocumentId));
 
-            if (publicDocument == null || publicDocument.Data.TryGet(_configuration.Name, out object o) == false)
+            if (publicDocument == null || publicDocument.Data.TryGet(Configuration.Name, out object o) == false)
             {
                 // todo handle existing doc
                 CreateNewPublicDocument(missingEmbeddings[i].OriginDocumentId, missingEmbeddings[i].OriginPropertyName, missingEmbeddings[i].AttachmentName, null, context);
@@ -165,7 +149,7 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, Embeddi
         // todo handle existing array
         embeddingsObjectDjv[fieldName] = dja;
             
-        documentDjv[_configuration.Name] = embeddingsObjectDjv;
+        documentDjv[Configuration.Name] = embeddingsObjectDjv;
 
         using (var ctx = JsonOperationContext.ShortTermSingleUse())
         {
@@ -207,7 +191,7 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, Embeddi
     
     private string GetPrivateDocumentId(string hash)
     {
-        return $"embeddings/{_configuration.Name}/{hash}";
+        return $"embeddings/{Configuration.Name}/{hash}";
     }
 
     protected override EtlStatsScope CreateScope(EtlRunStats stats)
@@ -220,13 +204,13 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, Embeddi
         throw new System.NotImplementedException();
     }
 
-    private ITextEmbeddingGenerationService CreateService(VectorEmbeddingEnrichmentEtlConfiguration configuration)
+    private ITextEmbeddingGenerationService CreateService(AiEtlConfiguration configuration)
     {
         var kernelBuilder = Kernel.CreateBuilder();
 
-        switch (configuration.LlmProviderType)
+        switch (configuration.AiConnectorType)
         {
-            case LlmProviderType.OpenAI:
+            case AiConnectorType.OpenAi:
                 var openAiSettings = configuration.Connection.OpenAiSettings;
 
                 var apiKey = new ApiKeyCredential(openAiSettings.ApiKey);
@@ -235,14 +219,14 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, Embeddi
                     Endpoint = new Uri(openAiSettings.Endpoint),
                     OrganizationId = openAiSettings.OrganizationId,
                     ProjectId = openAiSettings.ProjectId,
-                    UserAgentApplicationId = $"RavenDB/{ServerVersion.FullVersion}/{nameof(VectorEmbeddingEnrichmentEtl)}"
+                    UserAgentApplicationId = $"RavenDB/{ServerVersion.FullVersion}/{nameof(AiEtl)}"
                 };
                 var openAIClient = new OpenAIClient(apiKey, openAiOptions);
                 kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient);
 
                 break;
 
-            case LlmProviderType.Ollama:
+            case AiConnectorType.Ollama:
                 var ollamaSettings = configuration.Connection.OllamaSettings;
                 var ollamaApiConfig = new OllamaApiClient.Configuration
                 {
@@ -258,14 +242,14 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, Embeddi
 
                 break;
 
-            case LlmProviderType.Onnx:
+            case AiConnectorType.Onnx:
                 var onnxSettings = configuration.Connection.OnnxSettings;
                 kernelBuilder.AddBertOnnxTextEmbeddingGeneration(onnxSettings.ModelPath, onnxSettings.VocabularyPath, onnxSettings.ToBertOnnxOptions());
 
                 break;
 
             default:
-                throw new NotSupportedException($"'{configuration.LlmProviderType}' provider is not supported");
+                throw new NotSupportedException($"'{configuration.AiConnectorType}' provider is not supported");
         }
 
         var kernel = kernelBuilder.Build();

@@ -664,27 +664,27 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             result.DatabaseRecord.SnowflakeEtlsUpdated = true;
         }
 
-        if (databaseRecord.VectorEmbeddingEnrichmentEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.VectorEmbeddingEnrichmentEtls))
+        if (databaseRecord.AiEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.AiEtls))
         {
             if (_log.IsInfoEnabled)
-                _log.Info("Configuring Vector Embedding Enrichment ETL configuration from smuggler");
+                _log.Info("Configuring AI ETL configuration from smuggler");
 
-            foreach (var etl in databaseRecord.VectorEmbeddingEnrichmentEtls)
+            foreach (var etl in databaseRecord.AiEtls)
             {
-                _currentDatabaseRecord?.VectorEmbeddingEnrichmentEtls.ForEach(x =>
+                _currentDatabaseRecord?.AiEtls.ForEach(x =>
                 {
                     if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
                     {
-                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.VectorEmbeddingEnrichmentEtl, _name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.AiEtl, _name, RaftIdGenerator.DontCareId)));
                     }
                 });
 
                 etl.TaskId = 0;
                 etl.Disabled = true;
-                tasks.Add(_server.SendToLeaderAsync(new AddVectorEmbeddingEnrichmentEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
+                tasks.Add(_server.SendToLeaderAsync(new AddAiEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
             }
 
-            result.DatabaseRecord.VectorEmbeddingEnrichmentEtlsUpdated = true;
+            result.DatabaseRecord.AiEtlsUpdated = true;
         }
 
         if (tasks.Count == 0)

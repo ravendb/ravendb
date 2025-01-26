@@ -158,17 +158,17 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public sealed class UpdateVectorEmbeddingEnrichmentEtlCommand : UpdateEtlCommand<VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString>
+    public sealed class UpdateAiEtlCommand : UpdateEtlCommand<AiEtlConfiguration, AiConnectionString>
     {
-        public UpdateVectorEmbeddingEnrichmentEtlCommand()
+        public UpdateAiEtlCommand()
         {
             // for deserialization
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.VectorEmbeddingEnrichmentEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-            new AddVectorEmbeddingEnrichmentEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.AiEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddAiEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
     }
 }

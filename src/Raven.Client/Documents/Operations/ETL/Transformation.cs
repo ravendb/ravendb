@@ -394,7 +394,7 @@ namespace Raven.Client.Documents.Operations.ETL
                             case EtlType.Queue:
                                 targetName = "Queue";
                                 break;
-                            case EtlType.VectorEmbeddingEnrichment:
+                            case EtlType.Ai:
                                 targetName = "Vector";
                                 break;
                             default:

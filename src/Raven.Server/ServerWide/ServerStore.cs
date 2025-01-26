@@ -2206,13 +2206,13 @@ namespace Raven.Server.ServerWide
                         command = new AddSnowflakeEtlCommand(snowflakeEtl, databaseName, raftRequestId);
                         break;
 
-                    case EtlType.VectorEmbeddingEnrichment:
-                        var vectorEtl = JsonDeserializationCluster.VectorEmbeddingEnrichmentEtlConfiguration(etlConfiguration);
-                        vectorEtl.Validate(out var vectorEtlErr, validateName: false, validateConnection: false);
-                        if (ValidateConnectionString(rawRecord, vectorEtl.ConnectionStringName, vectorEtl.EtlType) == false)
-                            vectorEtlErr.Add($"Could not find connection string named '{vectorEtl.ConnectionStringName}'. Please supply an existing connection string.");
-                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, vectorEtlErr);
-                        command = new AddVectorEmbeddingEnrichmentEtlCommand(vectorEtl, databaseName, raftRequestId);
+                    case EtlType.Ai:
+                        var aiEtl = JsonDeserializationCluster.AiEtlConfiguration(etlConfiguration);
+                        aiEtl.Validate(out var aiEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, aiEtl.ConnectionStringName, aiEtl.EtlType) == false)
+                            aiEtlErr.Add($"Could not find connection string named '{aiEtl.ConnectionStringName}'. Please supply an existing connection string.");
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiEtlErr);
+                        command = new AddAiEtlCommand(aiEtl, databaseName, raftRequestId);
                         break;
 
                     default:
@@ -2342,7 +2342,7 @@ namespace Raven.Server.ServerWide
                 case EtlType.Snowflake:
                     var snowflakeConnectionString = databaseRecord.SnowflakeConnectionStrings;
                     return snowflakeConnectionString != null && snowflakeConnectionString.TryGetValue(connectionStringName, out _);
-                case EtlType.VectorEmbeddingEnrichment:
+                case EtlType.Ai:
                     var aiConnectionStrings = databaseRecord.AiConnectionStrings;
                     return aiConnectionStrings != null && aiConnectionStrings.TryGetValue(connectionStringName, out _);
                 default:
@@ -2632,11 +2632,11 @@ namespace Raven.Server.ServerWide
                         // Don't delete the connection string if used by tasks types: Snowflake Etl
                         if (snowflakeEtls != null)
                         {
-                            foreach (var snowflakeETlTask in snowflakeEtls)
+                            foreach (var snowflakeEtlTask in snowflakeEtls)
                             {
-                                if (snowflakeETlTask.ConnectionStringName == connectionStringName)
+                                if (snowflakeEtlTask.ConnectionStringName == connectionStringName)
                                 {
-                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {snowflakeETlTask.Name}");
+                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {snowflakeEtlTask.Name}");
                                 }
                             }
                         }
@@ -2646,16 +2646,16 @@ namespace Raven.Server.ServerWide
 
                     case ConnectionStringType.Ai:
 
-                        var vectorEmbeddingEnrichmentEtls = rawRecord.VectorEmbeddingEnrichmentEtls;
+                        var aiEtls = rawRecord.AiEtls;
 
-                        // Don't delete the connection string if used by tasks types: Vector Embedding Enrichment ETL
-                        if (vectorEmbeddingEnrichmentEtls != null)
+                        // Don't delete the connection string if used by tasks types: AI ETL
+                        if (aiEtls != null)
                         {
-                            foreach (var vectorEmbeddingEnrichmentEtlTask in vectorEmbeddingEnrichmentEtls)
+                            foreach (var aiEtlTask in aiEtls)
                             {
-                                if (vectorEmbeddingEnrichmentEtlTask.ConnectionStringName == connectionStringName)
+                                if (aiEtlTask.ConnectionStringName == connectionStringName)
                                 {
-                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {vectorEmbeddingEnrichmentEtlTask.Name}");
+                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {aiEtlTask.Name}");
                                 }
                             }
                         }

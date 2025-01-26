@@ -164,11 +164,11 @@ namespace Raven.Server.ServerWide.Commands
                         record.QueueSinks.Remove(queueSink);
                     }
                     break;
-                case OngoingTaskType.VectorEmbeddingEnrichmentEtl:
-                    var vectorEmbeddingEnrichmentEtl = record.VectorEmbeddingEnrichmentEtls?.Find(x => x.TaskId == TaskId);
-                    if (vectorEmbeddingEnrichmentEtl != null)
+                case OngoingTaskType.AiEtl:
+                    var aiEtl = record.AiEtls?.Find(x => x.TaskId == TaskId);
+                    if (aiEtl != null)
                     {
-                        record.VectorEmbeddingEnrichmentEtls.Remove(vectorEmbeddingEnrichmentEtl);
+                        record.AiEtls.Remove(aiEtl);
                     }
                     break;
             }

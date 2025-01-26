@@ -137,12 +137,12 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
 
-                case OngoingTaskType.VectorEmbeddingEnrichmentEtl:
+                case OngoingTaskType.AiEtl:
 
-                    var vectorEmbeddingEnrichmentEtl = record?.VectorEmbeddingEnrichmentEtls?.Find(x => x.TaskId == TaskId);
-                    if (vectorEmbeddingEnrichmentEtl != null)
+                    var aiEtl = record?.AiEtls?.Find(x => x.TaskId == TaskId);
+                    if (aiEtl != null)
                     {
-                        vectorEmbeddingEnrichmentEtl.Disabled = Disable;
+                        aiEtl.Disabled = Disable;
                     }
                     break;
             }

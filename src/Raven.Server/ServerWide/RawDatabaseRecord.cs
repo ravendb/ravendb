@@ -912,26 +912,26 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<VectorEmbeddingEnrichmentEtlConfiguration> _vectorEmbeddingEnrichmentEtls;
+        private List<AiEtlConfiguration> _aiEtls;
 
-        public List<VectorEmbeddingEnrichmentEtlConfiguration> VectorEmbeddingEnrichmentEtls
+        public List<AiEtlConfiguration> AiEtls
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.VectorEmbeddingEnrichmentEtls;
+                    return _materializedRecord.AiEtls;
 
-                if (_vectorEmbeddingEnrichmentEtls == null)
+                if (_aiEtls == null)
                 {
-                    _vectorEmbeddingEnrichmentEtls = [];
-                    if (_record.TryGet(nameof(DatabaseRecord.VectorEmbeddingEnrichmentEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    _aiEtls = [];
+                    if (_record.TryGet(nameof(DatabaseRecord.AiEtls), out BlittableJsonReaderArray bjra) && bjra != null)
                     {
                         foreach (BlittableJsonReaderObject element in bjra)
-                            _vectorEmbeddingEnrichmentEtls.Add(JsonDeserializationCluster.VectorEmbeddingEnrichmentEtlConfiguration(element));
+                            _aiEtls.Add(JsonDeserializationCluster.AiEtlConfiguration(element));
                     }
                 }
 
-                return _vectorEmbeddingEnrichmentEtls;
+                return _aiEtls;
             }
         }
 
@@ -1519,9 +1519,9 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        private Dictionary<string, AiEtlConnectionString> _aiConnectionStrings;
+        private Dictionary<string, AiConnectionString> _aiConnectionStrings;
 
-        public Dictionary<string, AiEtlConnectionString> AiConnectionStrings
+        public Dictionary<string, AiConnectionString> AiConnectionStrings
         {
             get
             {
@@ -1530,7 +1530,7 @@ namespace Raven.Server.ServerWide
 
                 if (_aiConnectionStrings == null)
                 {
-                    _aiConnectionStrings = new Dictionary<string, AiEtlConnectionString>();
+                    _aiConnectionStrings = new Dictionary<string, AiConnectionString>();
                     if (_record.TryGet(nameof(DatabaseRecord.AiConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();

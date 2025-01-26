@@ -27,13 +27,13 @@ public class RavenDB_23556 : RavenTestBase
                 session.SaveChanges();
             }
 
-            var configuration = new VectorEmbeddingEnrichmentEtlConfiguration
+            var configuration = new AiEtlConfiguration
             {
                 Name = "someETLConfigurationName",
                 ConnectionStringName = connectionStringName,
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }],
                 FieldsToInclude = ["Name"],
-                LlmProviderType = LlmProviderType.Onnx
+                AiConnectorType = AiConnectorType.Onnx
             };
 
             // var connectionString = new AiConnectionString
@@ -42,7 +42,7 @@ public class RavenDB_23556 : RavenTestBase
             //     OllamaSettings = new OllamaSettings { Model = "mistral-nemo", Uri = "http://127.0.0.1:11434" }
             // };
 
-            var connectionString = new AiEtlConnectionString
+            var connectionString = new AiConnectionString
             {
                 Name = connectionStringName,
                 OnnxSettings = new OnnxSettings

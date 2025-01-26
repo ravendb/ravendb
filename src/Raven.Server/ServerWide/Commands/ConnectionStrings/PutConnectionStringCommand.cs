@@ -148,14 +148,14 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public sealed class PutAiConnectionStringCommand : PutConnectionStringCommand<AiEtlConnectionString>
+    public sealed class PutAiConnectionStringCommand : PutConnectionStringCommand<AiConnectionString>
     {
         public PutAiConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public PutAiConnectionStringCommand(AiEtlConnectionString etlConnectionString, string databaseName, string uniqueRequestId) : base(etlConnectionString, databaseName, uniqueRequestId)
+        public PutAiConnectionStringCommand(AiConnectionString etlConnectionString, string databaseName, string uniqueRequestId) : base(etlConnectionString, databaseName, uniqueRequestId)
         {
 
         }

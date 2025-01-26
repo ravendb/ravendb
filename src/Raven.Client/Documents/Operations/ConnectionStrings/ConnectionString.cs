@@ -27,12 +27,18 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue { [nameof(Name)] = Name };
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name
+            };
         }
 
         public virtual DynamicJsonValue ToAuditJson()
         {
-            return new DynamicJsonValue { [nameof(Name)] = Name };
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name
+            };
         }
 
         public virtual bool IsEqual(ConnectionString connectionString)
@@ -64,6 +70,6 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         ElasticSearch,
         Queue,
         Snowflake,
-        Ai,
+        Ai
     }
 }

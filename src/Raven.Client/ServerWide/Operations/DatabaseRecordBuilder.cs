@@ -125,12 +125,12 @@ public sealed class DatabaseRecordBuilder :
         return this;
     }
     
-    IConnectionStringConfigurationBuilder IConnectionStringConfigurationBuilder.AddAiConnectionString(AiEtlConnectionString etlConnectionString)
+    IConnectionStringConfigurationBuilder IConnectionStringConfigurationBuilder.AddAiConnectionString(AiConnectionString etlConnectionString)
     {
         if (etlConnectionString == null)
             throw new ArgumentNullException(nameof(etlConnectionString));
 
-        _databaseRecord.AiConnectionStrings ??= new Dictionary<string, AiEtlConnectionString>();
+        _databaseRecord.AiConnectionStrings ??= new Dictionary<string, AiConnectionString>();
         _databaseRecord.AiConnectionStrings.Add(etlConnectionString.Name, etlConnectionString);
 
         return this;
@@ -224,13 +224,13 @@ public sealed class DatabaseRecordBuilder :
         return this;
     }
 
-    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddVectorEmbeddingEnrichmentEtl(VectorEmbeddingEnrichmentEtlConfiguration configuration)
+    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddAiEtl(AiEtlConfiguration configuration)
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        _databaseRecord.VectorEmbeddingEnrichmentEtls ??= [];
-        _databaseRecord.VectorEmbeddingEnrichmentEtls.Add(configuration);
+        _databaseRecord.AiEtls ??= [];
+        _databaseRecord.AiEtls.Add(configuration);
 
         return this;
     }
@@ -711,7 +711,7 @@ public interface IConnectionStringConfigurationBuilder
     
     IConnectionStringConfigurationBuilder AddSnowflakeConnectionString(SnowflakeConnectionString connectionString);
     
-    IConnectionStringConfigurationBuilder AddAiConnectionString(AiEtlConnectionString etlConnectionString);
+    IConnectionStringConfigurationBuilder AddAiConnectionString(AiConnectionString etlConnectionString);
 }
 
 public interface IReplicationConfigurationBuilder
@@ -742,5 +742,5 @@ public interface IEtlConfigurationBuilder
     
     IEtlConfigurationBuilder AddSnowflakeEtl(SnowflakeEtlConfiguration configuration);
 
-    IEtlConfigurationBuilder AddVectorEmbeddingEnrichmentEtl(VectorEmbeddingEnrichmentEtlConfiguration configuration);
+    IEtlConfigurationBuilder AddAiEtl(AiEtlConfiguration configuration);
 }

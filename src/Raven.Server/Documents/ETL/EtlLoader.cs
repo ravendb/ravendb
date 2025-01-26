@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.ETL
         
         public List<SnowflakeEtlConfiguration> SnowflakeDestinations;
         
-        public List<VectorEmbeddingEnrichmentEtlConfiguration> VectorEmbeddingEnrichmentDestinations;
+        public List<AiEtlConfiguration> AiEtlDestinations;
 
         public long GetQueueDestinationCountByBroker(QueueBrokerType brokerType)
         {
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.ETL
 
         public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, record.SnowflakeEtls, record.VectorEmbeddingEnrichmentEtls, toRemove: null, null, null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, record.SnowflakeEtls, record.AiEtls, toRemove: null, null, null);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.ETL
             List<ElasticSearchEtlConfiguration> newElasticSearchDestinations,
             List<QueueEtlConfiguration> newQueueDestinations,
             List<SnowflakeEtlConfiguration> newSnowflakeDestinations,
-            List<VectorEmbeddingEnrichmentEtlConfiguration> newOpenAiDestinations,
+            List<AiEtlConfiguration> newOpenAiDestinations,
             List<EtlProcess> toRemove, Dictionary<string, string> responsibleNodes,
             List<string> explanations)
         {
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.ETL
                 ElasticSearchDestinations = _databaseRecord.ElasticSearchEtls;
                 QueueDestinations = _databaseRecord.QueueEtls;
                 SnowflakeDestinations = _databaseRecord.SnowflakeEtls;
-                VectorEmbeddingEnrichmentDestinations = _databaseRecord.VectorEmbeddingEnrichmentEtls;
+                AiEtlDestinations = _databaseRecord.AiEtls;
 
                 var processes = new List<EtlProcess>(_processes);
 
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.ETL
                     newProcesses.AddRange(GetRelevantProcesses<SnowflakeEtlConfiguration, SnowflakeConnectionString>(newSnowflakeDestinations, ensureUniqueConfigurationNames));
                 
                 if (newOpenAiDestinations != null && newOpenAiDestinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString>(newOpenAiDestinations, ensureUniqueConfigurationNames));
+                    newProcesses.AddRange(GetRelevantProcesses<AiEtlConfiguration, AiConnectionString>(newOpenAiDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.ETL
                 ElasticSearchEtlConfiguration elasticSearchConfig = null;
                 QueueEtlConfiguration queueConfig = null;
                 SnowflakeEtlConfiguration snowflakeConfig = null;
-                VectorEmbeddingEnrichmentEtlConfiguration llmConfig = null;
+                AiEtlConfiguration llmConfig = null;
 
                 var connectionStringNotFound = false;
 
@@ -313,8 +313,8 @@ namespace Raven.Server.Documents.ETL
 
                         break;
                     
-                    case EtlType.VectorEmbeddingEnrichment:
-                        llmConfig = config as VectorEmbeddingEnrichmentEtlConfiguration;
+                    case EtlType.Ai:
+                        llmConfig = config as AiEtlConfiguration;
                         
                         if (_databaseRecord.AiConnectionStrings.TryGetValue(config.ConnectionStringName, out var openAiConnection))
                             llmConfig.Initialize(openAiConnection);
@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.ETL
                     if (snowflakeConfig != null)
                         process = new SnowflakeEtl(transform, snowflakeConfig, _database, _serverStore);
                     if (llmConfig != null)
-                        process = new VectorEmbeddingEnrichmentEtl(transform, llmConfig, _database, _serverStore);
+                        process = new AiEtl(transform, llmConfig, _database, _serverStore);
                     yield return process;
                 }
             }
@@ -532,7 +532,7 @@ namespace Raven.Server.Documents.ETL
             var myElasticSearchEtl = new List<ElasticSearchEtlConfiguration>();
             var myQueueEtl = new List<QueueEtlConfiguration>();
             var mySnowflakeEtl = new List<SnowflakeEtlConfiguration>();
-            var myVectorEmbeddingEnrichmentEtl = new List<VectorEmbeddingEnrichmentEtlConfiguration>();
+            var myAiEtl = new List<AiEtlConfiguration>();
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -586,11 +586,11 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            foreach (var config in record.VectorEmbeddingEnrichmentEtls)
+            foreach (var config in record.AiEtls)
             {
-                if (IsMyEtlTask<VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString>(record, config, ref responsibleNodes, out explanations))
+                if (IsMyEtlTask<AiEtlConfiguration, AiConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
-                    myVectorEmbeddingEnrichmentEtl.Add(config);
+                    myAiEtl.Add(config);
                 }
             }
 
@@ -806,11 +806,11 @@ namespace Raven.Server.Documents.ETL
                         
                         break;
                     }
-                    case VectorEmbeddingEnrichmentEtl aiEtl:
+                    case AiEtl aiEtl:
                     {
-                        VectorEmbeddingEnrichmentEtlConfiguration existing = null;
+                        AiEtlConfiguration existing = null;
 
-                        foreach (var config in myVectorEmbeddingEnrichmentEtl)
+                        foreach (var config in myAiEtl)
                         {
                             var diff = aiEtl.Configuration.Compare(config);
 
@@ -824,7 +824,7 @@ namespace Raven.Server.Documents.ETL
                         if (existing != null)
                         {
                             toRemove.Remove(processesPerConfig.Key);
-                            myVectorEmbeddingEnrichmentEtl.Remove(existing);
+                            myAiEtl.Remove(existing);
                         }
 
                         break;
@@ -834,7 +834,7 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, mySnowflakeEtl, myVectorEmbeddingEnrichmentEtl, toRemove.SelectMany(x => x.Value).ToList(), responsibleNodes, explanations);
+            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, mySnowflakeEtl, myAiEtl, toRemove.SelectMany(x => x.Value).ToList(), responsibleNodes, explanations);
 
             if (toRemove.Count == 0)
                 return;
@@ -1134,9 +1134,9 @@ namespace Raven.Server.Documents.ETL
                 dict[source] = tombstoneCollections;
             }
             
-            foreach (var config in VectorEmbeddingEnrichmentDestinations.Where(config => config.Disabled))
+            foreach (var config in AiEtlDestinations.Where(config => config.Disabled))
             {
-                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.VectorEmbeddingEnrichmentEtl, config.Name, config.TaskId);
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.AiEtl, config.Name, config.TaskId);
                 dict[source] = tombstoneCollections;
             }
 

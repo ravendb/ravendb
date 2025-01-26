@@ -94,31 +94,31 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings { get; set; }
         public Dictionary<string, QueueConnectionString> QueueConnectionStrings { get; set; }
         public Dictionary<string, SnowflakeConnectionString> SnowflakeConnectionStrings { get; set; }
-        public Dictionary<string, AiEtlConnectionString> AiConnectionStrings { get; set; }
+        public Dictionary<string, AiConnectionString> AiConnectionStrings { get; set; }
         
         public DynamicJsonValue ToJson()
         {
             var result = new DynamicJsonValue();
 
-            AddConnections(RavenConnectionStrings);
-            AddConnections(SqlConnectionStrings);
-            AddConnections(OlapConnectionStrings);
-            AddConnections(ElasticSearchConnectionStrings);
-            AddConnections(QueueConnectionStrings);
-            AddConnections(SnowflakeConnectionStrings);
-            AddConnections(AiConnectionStrings);
+            AddConnections(RavenConnectionStrings, nameof(RavenConnectionStrings));
+            AddConnections(SqlConnectionStrings, nameof(SqlConnectionStrings));
+            AddConnections(OlapConnectionStrings, nameof(OlapConnectionStrings));
+            AddConnections(ElasticSearchConnectionStrings, nameof(ElasticSearchConnectionStrings));
+            AddConnections(QueueConnectionStrings, nameof(QueueConnectionStrings));
+            AddConnections(SnowflakeConnectionStrings, nameof(SnowflakeConnectionStrings));
+            AddConnections(AiConnectionStrings, nameof(AiConnectionStrings));
 
             return result;
 
-            void AddConnections<T>(Dictionary<string, T> connectionStrings) where T : IDynamicJsonValueConvertible
+            void AddConnections<T>(Dictionary<string, T> connectionStrings, string propertyName) 
+                where T : IDynamicJsonValueConvertible
             {
                 var jsonConnections = new DynamicJsonValue();
                 
                 foreach (var kvp in connectionStrings)
                     jsonConnections[kvp.Key] = kvp.Value.ToJson();
                 
-                var name = typeof(T).Name;
-                result[name] = jsonConnections;
+                result[propertyName] = jsonConnections;
             }
         }
     }

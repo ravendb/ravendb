@@ -473,20 +473,20 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.VectorEmbeddingEnrichmentEtls), out BlittableJsonReaderArray vectorEmbeddingEnrichmentEtls) &&
-                    vectorEmbeddingEnrichmentEtls != null)
+                if (reader.TryGet(nameof(databaseRecord.AiEtls), out BlittableJsonReaderArray aiEtls) &&
+                    aiEtls != null)
                 {
-                    databaseRecord.VectorEmbeddingEnrichmentEtls = new List<VectorEmbeddingEnrichmentEtlConfiguration>();
-                    foreach (BlittableJsonReaderObject etl in vectorEmbeddingEnrichmentEtls)
+                    databaseRecord.AiEtls = new List<AiEtlConfiguration>();
+                    foreach (BlittableJsonReaderObject etl in aiEtls)
                     {
                         try
                         {
-                            databaseRecord.VectorEmbeddingEnrichmentEtls.Add(JsonDeserializationCluster.VectorEmbeddingEnrichmentEtlConfiguration(etl));
+                            databaseRecord.AiEtls.Add(JsonDeserializationCluster.AiEtlConfiguration(etl));
                         }
                         catch (Exception e)
                         {
                             if (_log.IsInfoEnabled)
-                                _log.Info("Wasn't able to import the Vector Embedding Enrichment ETLs configuration from smuggler file. Skipping.", e);
+                                _log.Info("Wasn't able to import the AI ETLs configuration from smuggler file. Skipping.", e);
                         }
                     }
                 }

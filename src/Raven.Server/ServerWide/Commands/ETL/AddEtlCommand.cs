@@ -158,21 +158,21 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public sealed class AddVectorEmbeddingEnrichmentEtlCommand : AddEtlCommand<VectorEmbeddingEnrichmentEtlConfiguration, AiEtlConnectionString>
+    public sealed class AddAiEtlCommand : AddEtlCommand<AiEtlConfiguration, AiConnectionString>
     {
-        public AddVectorEmbeddingEnrichmentEtlCommand()
+        public AddAiEtlCommand()
         {
             // for deserialization
         }
 
-        public AddVectorEmbeddingEnrichmentEtlCommand(VectorEmbeddingEnrichmentEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base (configuration, databaseName, uniqueRequestId)
+        public AddAiEtlCommand(AiEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base (configuration, databaseName, uniqueRequestId)
         {
             
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Add(ref record.VectorEmbeddingEnrichmentEtls, record, etag);
+            Add(ref record.AiEtls, record, etag);
         }
     }
 }

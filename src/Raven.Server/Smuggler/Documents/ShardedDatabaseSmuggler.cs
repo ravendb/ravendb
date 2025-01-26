@@ -153,12 +153,12 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            foreach (var vectorEmbeddingEnrichmentEtl in databaseRecord.VectorEmbeddingEnrichmentEtls)
+            foreach (var aiEtl in databaseRecord.AiEtls)
             {
-                if (string.IsNullOrEmpty(vectorEmbeddingEnrichmentEtl.MentorNode) == false)
+                if (string.IsNullOrEmpty(aiEtl.MentorNode) == false)
                 {
-                    AddMentorNodeWarning(DatabaseRecordItemType.VectorEmbeddingEnrichmentEtls, vectorEmbeddingEnrichmentEtl.Name);
-                    vectorEmbeddingEnrichmentEtl.MentorNode = null;
+                    AddMentorNodeWarning(DatabaseRecordItemType.AiEtls, aiEtl.Name);
+                    aiEtl.MentorNode = null;
                 }
             }
 

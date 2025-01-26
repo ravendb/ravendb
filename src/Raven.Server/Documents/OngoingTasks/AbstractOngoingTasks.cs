@@ -137,13 +137,13 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
     }
 
-    private IEnumerable<OngoingTaskVectorEmbeddingEnrichmentEtl> GetVectorEmbeddingEnrichmentEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskAiEtl> GetAiEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
-        if (databaseRecord.VectorEmbeddingEnrichmentEtls == null || databaseRecord.VectorEmbeddingEnrichmentEtls.Count == 0)
+        if (databaseRecord.AiEtls == null || databaseRecord.AiEtls.Count == 0)
             yield break;
 
-        foreach (var vectorEmbeddingEnrichmentEtl in databaseRecord.VectorEmbeddingEnrichmentEtls)
-            yield return CreateVectorEmbeddingEnrichmentEtlTaskInfo(clusterTopology, databaseRecord, vectorEmbeddingEnrichmentEtl);
+        foreach (var aiEtl in databaseRecord.AiEtls)
+            yield return CreateAiEtlTaskInfo(clusterTopology, databaseRecord, aiEtl);
     }
 
     public IEnumerable<OngoingTask> GetAllTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
@@ -184,7 +184,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         foreach (var task in GetQueueSinkTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in GetVectorEmbeddingEnrichmentEtlTasks(clusterTopology, databaseRecord))
+        foreach (var task in GetAiEtlTasks(clusterTopology, databaseRecord))
             yield return task;
     }
 
@@ -308,13 +308,13 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                     return null;
 
                 return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
-            case OngoingTaskType.VectorEmbeddingEnrichmentEtl:
+            case OngoingTaskType.AiEtl:
 
-                var vectorEmbeddingEnrichmentEtl = taskName != null
-                    ? databaseRecord.VectorEmbeddingEnrichmentEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                    : databaseRecord.VectorEmbeddingEnrichmentEtls?.Find(x => x.TaskId == taskId);
+                var aiEtl = taskName != null
+                    ? databaseRecord.AiEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.AiEtls?.Find(x => x.TaskId == taskId);
 
-                return CreateVectorEmbeddingEnrichmentEtlTaskInfo(clusterTopology, databaseRecord, vectorEmbeddingEnrichmentEtl);
+                return CreateAiEtlTaskInfo(clusterTopology, databaseRecord, aiEtl);
             default:
                 return null;
         }
@@ -634,14 +634,14 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         };
     }
 
-    private OngoingTaskVectorEmbeddingEnrichmentEtl CreateVectorEmbeddingEnrichmentEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
-        VectorEmbeddingEnrichmentEtlConfiguration configuration)
+    private OngoingTaskAiEtl CreateAiEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
+        AiEtlConfiguration configuration)
     {
         databaseRecord.AiConnectionStrings.TryGetValue(configuration.ConnectionStringName, out var connection);
         var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, configuration, out var tag, out var error);
         var taskState = OngoingTasksHandler.GetEtlTaskState(configuration);
 
-        return new OngoingTaskVectorEmbeddingEnrichmentEtl
+        return new OngoingTaskAiEtl
         {
             TaskId = configuration.TaskId,
             TaskName = configuration.Name,

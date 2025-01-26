@@ -197,8 +197,8 @@ namespace Raven.Server.ServerWide
             [nameof(PutSnowflakeConnectionStringCommand)] = 70_000,
             [nameof(RemoveSnowflakeConnectionStringCommand)] = 70_000,
 
-            [nameof(AddVectorEmbeddingEnrichmentEtlCommand)] = 70_000,
-            [nameof(UpdateVectorEmbeddingEnrichmentEtlCommand)] = 70_000,
+            [nameof(AddAiEtlCommand)] = 70_000,
+            [nameof(UpdateAiEtlCommand)] = 70_000,
             [nameof(PutAiConnectionStringCommand)] = 70_000,
             [nameof(RemoveAiConnectionStringCommand)] = 70_000,
         };

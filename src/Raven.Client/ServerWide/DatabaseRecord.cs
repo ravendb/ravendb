@@ -125,7 +125,7 @@ namespace Raven.Client.ServerWide
         
         public Dictionary<string, SnowflakeConnectionString> SnowflakeConnectionStrings = new Dictionary<string, SnowflakeConnectionString>();
         
-        public Dictionary<string, AiEtlConnectionString> AiConnectionStrings = new();
+        public Dictionary<string, AiConnectionString> AiConnectionStrings = new();
 
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 
@@ -141,7 +141,7 @@ namespace Raven.Client.ServerWide
         
         public List<SnowflakeEtlConfiguration> SnowflakeEtls = new List<SnowflakeEtlConfiguration>();
         
-        public List<VectorEmbeddingEnrichmentEtlConfiguration> VectorEmbeddingEnrichmentEtls = [];
+        public List<AiEtlConfiguration> AiEtls = [];
 
         public ClientConfiguration Client;
 
@@ -485,8 +485,8 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Snowflake ETL task with that name");
             if (QueueSinks.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Queue Sink task with that name");
-            if (VectorEmbeddingEnrichmentEtls.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Vector Embedding Enrichment ETL task with that name");
+            if (AiEtls.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a AI ETL task with that name");
         }
 
         internal string EnsureUniqueTaskName(string defaultTaskName)

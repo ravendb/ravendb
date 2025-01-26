@@ -456,7 +456,7 @@ namespace Raven.Server.ServerWide
                     case nameof(AddQueueEtlCommand):
                     case nameof(AddQueueSinkCommand):
                     case nameof(AddSnowflakeEtlCommand):
-                    case nameof(AddVectorEmbeddingEnrichmentEtlCommand):
+                    case nameof(AddAiEtlCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
                     case nameof(UpdateOlapEtlCommand):
@@ -464,7 +464,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateQueueEtlCommand):
                     case nameof(UpdateQueueSinkCommand):
                     case nameof(UpdateSnowflakeEtlCommand):
-                    case nameof(UpdateVectorEmbeddingEnrichmentEtlCommand):
+                    case nameof(UpdateAiEtlCommand):
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
@@ -1761,7 +1761,7 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.QueueEtls),
             nameof(DatabaseRecord.SnowflakeEtls),
             nameof(DatabaseRecord.QueueSinks),
-            nameof(DatabaseRecord.VectorEmbeddingEnrichmentEtls)
+            nameof(DatabaseRecord.AiEtls)
         };
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
@@ -2793,7 +2793,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AddQueueEtlCommand):
                 case nameof(AddQueueSinkCommand):
                 case nameof(AddSnowflakeEtlCommand):
-                case nameof(AddVectorEmbeddingEnrichmentEtlCommand):
+                case nameof(AddAiEtlCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(DeleteIndexCommand):
@@ -2839,7 +2839,7 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateQueueEtlCommand):
                 case nameof(UpdateQueueSinkCommand):
                 case nameof(UpdateSnowflakeEtlCommand):
-                case nameof(UpdateVectorEmbeddingEnrichmentEtlCommand):
+                case nameof(UpdateAiEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
                 case nameof(StartBucketMigrationCommand):

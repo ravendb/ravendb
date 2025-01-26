@@ -1077,7 +1077,7 @@ namespace Raven.Server.Commercial
             var elasticSearchEtlCount = 0;
             var queueEtlCount = 0;
             var snowflakeEtlCount = 0;
-            var vectorEmbeddingEnrichmentEtlCount = 0;
+            var aiEtlCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
@@ -1151,9 +1151,9 @@ namespace Raven.Server.Commercial
                         databaseRecord.SnowflakeEtls.Count > 0)
                         snowflakeEtlCount++;
 
-                    if (databaseRecord.VectorEmbeddingEnrichmentEtls != null &&
-                        databaseRecord.VectorEmbeddingEnrichmentEtls.Count > 0)
-                        vectorEmbeddingEnrichmentEtlCount++;
+                    if (databaseRecord.AiEtls != null &&
+                        databaseRecord.AiEtls.Count > 0)
+                        aiEtlCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1245,10 +1245,10 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
             }
 
-            if (vectorEmbeddingEnrichmentEtlCount > 0 && newLicenseStatus.HasVectorEmbeddingEnrichmentEtl == false)
+            if (aiEtlCount > 0 && newLicenseStatus.HasAiEtl == false)
             {
-                var message = GenerateDetails(vectorEmbeddingEnrichmentEtlCount, "Vector Embedding Enrichment ETL");
-                throw GenerateLicenseLimit(LimitType.VectorEmbeddingEnrichmentEtl, message);
+                var message = GenerateDetails(aiEtlCount, "AI ETL");
+                throw GenerateLicenseLimit(LimitType.AiEtl, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
@@ -1616,16 +1616,16 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
         }
 
-        public void AssertCanAddVectorEmbeddingEnrichmentEtl()
+        public void AssertCanAddAiEtl()
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
             // todo: uncomment the code below after license work 
-            //if (LicenseStatus.HasVectorEmbeddingEnrichmentEtl)
+            //if (LicenseStatus.HasAiEtl)
             //    return;
-            //const string message = "Your current license doesn't include the Vector Embedding Enrichment ETL feature";
-            //throw GenerateLicenseLimit(LimitType.VectorEmbeddingEnrichmentEtl, message);
+            //const string message = "Your current license doesn't include the AI ETL feature";
+            //throw GenerateLicenseLimit(LimitType.AiEtl, message);
         }
 
         public void AssertCanAddConcurrentDataSubscriptions()

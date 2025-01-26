@@ -1,9 +1,9 @@
 ﻿namespace Raven.Client.Documents.Operations.ETL.AI;
 
-public enum LlmProviderType
+public enum AiConnectorType
 {
     None,
-    OpenAI,
+    OpenAi,
     Ollama,
     Onnx
 }

@@ -502,11 +502,11 @@ namespace Raven.Server.Smuggler.Documents
                             WriteQueueSinks(databaseRecord.QueueSinks);
                         }
 
-                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.VectorEmbeddingEnrichmentEtls))
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiEtls))
                         {
                             _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.VectorEmbeddingEnrichmentEtls));
-                            WriteVectorEmbeddingEnrichmentEtls(databaseRecord.VectorEmbeddingEnrichmentEtls);
+                            _writer.WritePropertyName(nameof(databaseRecord.AiEtls));
+                            WriteAiEtls(databaseRecord.AiEtls);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiConnectionStrings))
@@ -892,16 +892,16 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteVectorEmbeddingEnrichmentEtls(List<VectorEmbeddingEnrichmentEtlConfiguration> vectorEmbeddingEnrichmentEtlConfiguration)
+            private void WriteAiEtls(List<AiEtlConfiguration> aiEtlConfiguration)
             {
-                if (vectorEmbeddingEnrichmentEtlConfiguration == null)
+                if (aiEtlConfiguration == null)
                 {
                     _writer.WriteNull();
                     return;
                 }
                 _writer.WriteStartArray();
                 var first = true;
-                foreach (var etl in vectorEmbeddingEnrichmentEtlConfiguration)
+                foreach (var etl in aiEtlConfiguration)
                 {
                     if (first == false)
                         _writer.WriteComma();
@@ -911,7 +911,7 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteAiConnectionStrings(Dictionary<string, AiEtlConnectionString> connections)
+            private void WriteAiConnectionStrings(Dictionary<string, AiConnectionString> connections)
             {
                 _writer.WriteStartObject();
 

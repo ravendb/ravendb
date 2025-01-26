@@ -628,36 +628,36 @@ namespace Raven.Server.Web
         {
             if (serverStore.Configuration.Security.EnableCsrfFilter == false)
                 return true;
-            
+
             var requestedOrigin = httpContext.Request.Headers[Constants.Headers.Origin];
-            
+
             if (requestedOrigin.Count == 0 || requestedOrigin[0] == null)
                 return true;
-            
+
             // no origin at this point - it means it is safe request or non-browser
 
             var host = httpContext.Request.Host;
             if (string.IsNullOrEmpty(host.Host))
                 return false;
-            
+
             if (SafeCsrfMethods.Contains(httpContext.Request.Method))
                 return true;
-            
+
             var origin = requestedOrigin[0];
             var uriOrigin = new Uri(origin);
             var originHost = uriOrigin.Host;
             var originAuthority = uriOrigin.Authority;
-            
+
             // for hostname matching we validate both hostname and port
             var hostMatches = host.ToString() == originAuthority;
             if (hostMatches)
                 return true;
-            
+
             // for requests with-in cluster we value both hostname and port
             var requestWithinCluster = IsOriginAllowed(origin, serverStore);
             if (requestWithinCluster)
                 return true;
-            
+
             // for trusted origins we match hostname only, port is ignored
             var trustedOrigins = serverStore.Configuration.Security.CsrfTrustedOrigins ?? Array.Empty<string>();
             if (trustedOrigins.Length > 0)
@@ -687,7 +687,7 @@ namespace Raven.Server.Web
 
             return false;
         }
-        
+
         public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore, CorsMode corsMode)
         {
             httpContext.Response.Headers["Vary"] = "Origin";
@@ -817,7 +817,7 @@ namespace Raven.Server.Web
         public const string ConflictedRevisionsConfigTag = "conflicted-revisions-config";
         public const string RevisionsBinConfigTag = "revisions-bin-config";
 
-        private DynamicJsonValue GetCustomConfigurationAuditJson(string name, BlittableJsonReaderObject configuration)
+        private static DynamicJsonValue GetCustomConfigurationAuditJson(string name, BlittableJsonReaderObject configuration)
         {
             switch (name)
             {
@@ -854,7 +854,7 @@ namespace Raven.Server.Web
             return null;
         }
 
-        private DynamicJsonValue GetEtlConfigurationAuditJson(BlittableJsonReaderObject configuration)
+        private static DynamicJsonValue GetEtlConfigurationAuditJson(BlittableJsonReaderObject configuration)
         {
             var etlType = EtlConfiguration<ConnectionString>.GetEtlType(configuration);
 
@@ -871,21 +871,21 @@ namespace Raven.Server.Web
 
                 case EtlType.Sql:
                     return JsonDeserializationClient.SqlEtlConfiguration(configuration).ToAuditJson();
-                
+
                 case EtlType.Snowflake:
                     return JsonDeserializationClient.SnowflakeEtlConfiguration(configuration).ToAuditJson();
 
                 case EtlType.Olap:
                     return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToAuditJson();
 
-                case EtlType.VectorEmbeddingEnrichment:
-                    return JsonDeserializationClient.VectorEmbeddingEnrichmentEtlConfiguration(configuration).ToAuditJson();
+                case EtlType.Ai:
+                    return JsonDeserializationClient.AiEtlConfiguration(configuration).ToAuditJson();
             }
 
             return null;
         }
 
-        private DynamicJsonValue GetConnectionStringConfigurationAuditJson(BlittableJsonReaderObject configuration)
+        private static DynamicJsonValue GetConnectionStringConfigurationAuditJson(BlittableJsonReaderObject configuration)
         {
             var connectionStringType = ConnectionString.GetConnectionStringType(configuration);
             switch (connectionStringType)
@@ -904,7 +904,7 @@ namespace Raven.Server.Web
 
                 case ConnectionStringType.Olap:
                     return JsonDeserializationClient.OlapConnectionString(configuration).ToAuditJson();
-                
+
                 case ConnectionStringType.Snowflake:
                     return JsonDeserializationClient.SnowflakeConnectionString(configuration).ToAuditJson();
 
