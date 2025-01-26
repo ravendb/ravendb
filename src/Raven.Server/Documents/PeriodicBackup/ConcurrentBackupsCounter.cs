@@ -41,6 +41,17 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        public bool CanRunBackup
+        {
+            get
+            {
+                lock (_locker)
+                {
+                    return _concurrentBackups - 1 > 0;
+                }
+            }
+        }
+
         public ConcurrentBackupsCounter(BackupConfiguration backupConfiguration, LicenseManager licenseManager)
         {
             _licenseManager = licenseManager;
