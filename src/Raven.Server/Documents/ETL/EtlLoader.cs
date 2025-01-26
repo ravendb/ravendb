@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.ETL
             List<ElasticSearchEtlConfiguration> newElasticSearchDestinations,
             List<QueueEtlConfiguration> newQueueDestinations,
             List<SnowflakeEtlConfiguration> newSnowflakeDestinations,
-            List<AiEtlConfiguration> newOpenAiDestinations,
+            List<AiEtlConfiguration> newAiDestinations,
             List<EtlProcess> toRemove, Dictionary<string, string> responsibleNodes,
             List<string> explanations)
         {
@@ -171,8 +171,8 @@ namespace Raven.Server.Documents.ETL
                 if (newSnowflakeDestinations != null && newSnowflakeDestinations.Count > 0)
                     newProcesses.AddRange(GetRelevantProcesses<SnowflakeEtlConfiguration, SnowflakeConnectionString>(newSnowflakeDestinations, ensureUniqueConfigurationNames));
                 
-                if (newOpenAiDestinations != null && newOpenAiDestinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<AiEtlConfiguration, AiConnectionString>(newOpenAiDestinations, ensureUniqueConfigurationNames));
+                if (newAiDestinations != null && newAiDestinations.Count > 0)
+                    newProcesses.AddRange(GetRelevantProcesses<AiEtlConfiguration, AiConnectionString>(newAiDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.ETL
                 ElasticSearchEtlConfiguration elasticSearchConfig = null;
                 QueueEtlConfiguration queueConfig = null;
                 SnowflakeEtlConfiguration snowflakeConfig = null;
-                AiEtlConfiguration llmConfig = null;
+                AiEtlConfiguration aiConfig = null;
 
                 var connectionStringNotFound = false;
 
@@ -314,10 +314,10 @@ namespace Raven.Server.Documents.ETL
                         break;
                     
                     case EtlType.Ai:
-                        llmConfig = config as AiEtlConfiguration;
+                        aiConfig = config as AiEtlConfiguration;
                         
-                        if (_databaseRecord.AiConnectionStrings.TryGetValue(config.ConnectionStringName, out var openAiConnection))
-                            llmConfig.Initialize(openAiConnection);
+                        if (_databaseRecord.AiConnectionStrings.TryGetValue(config.ConnectionStringName, out var aiConnection))
+                            aiConfig.Initialize(aiConnection);
                         else
                             connectionStringNotFound = true;
                         
@@ -363,8 +363,8 @@ namespace Raven.Server.Documents.ETL
                         process = QueueEtl<QueueItem>.CreateInstance(transform, queueConfig, _database, _serverStore);
                     if (snowflakeConfig != null)
                         process = new SnowflakeEtl(transform, snowflakeConfig, _database, _serverStore);
-                    if (llmConfig != null)
-                        process = new AiEtl(transform, llmConfig, _database, _serverStore);
+                    if (aiConfig != null)
+                        process = new AiEtl(transform, aiConfig, _database, _serverStore);
                     yield return process;
                 }
             }
