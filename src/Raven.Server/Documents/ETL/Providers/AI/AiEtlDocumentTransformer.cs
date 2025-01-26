@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Jint.Native;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
-using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
@@ -17,7 +15,6 @@ namespace Raven.Server.Documents.ETL.Providers.AI;
 
 public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, EmbeddingRepresentation, EtlStatsScope, EtlPerformanceOperation>
 {
-    private readonly Transformation _transformation;
     private readonly AiEtlConfiguration _configuration;
     private AiEtlScriptRun _currentRun;
     

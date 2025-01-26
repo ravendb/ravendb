@@ -94,10 +94,10 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
         
         foreach (var embeddingRepresentation in aiEtlScriptRun.CurrentRun)
         {
-            var textValueHash = $"hash({embeddingRepresentation.Value})";
-            embeddingRepresentation.ValueHash = textValueHash;
+            var hash = AiHelper.CalculateValueHash(embeddingRepresentation.Value);
+            embeddingRepresentation.ValueHash = hash;
             
-            var idToSearchFor = GetPrivateDocumentId(textValueHash);
+            var idToSearchFor = AiHelper.GetCacheDocumentId(Configuration.Name, hash);
             
             var privateDocument = Database.DocumentsStorage.Get(context, idToSearchFor);
             
@@ -121,7 +121,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
             
             missingEmbeddings[i].AttachmentName = attachmentGuid;
 
-            var publicDocument = Database.DocumentsStorage.Get(context, GetPublicDocumentId(missingEmbeddings[i].OriginDocumentId));
+            var publicDocument = Database.DocumentsStorage.Get(context, AiHelper.GetDocumentEmbeddingsId(missingEmbeddings[i].OriginDocumentId));
 
             if (publicDocument == null || publicDocument.Data.TryGet(Configuration.Name, out object o) == false)
             {
@@ -135,7 +135,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
 
     private void CreateNewPublicDocument(string originDocumentId, string fieldName, string attachmentGuid, string changeVector, DocumentsOperationContext context)
     {
-        var newDocumentId = GetPublicDocumentId(originDocumentId);
+        var newDocumentId = AiHelper.GetDocumentEmbeddingsId(originDocumentId);
 
         // Root object
         var documentDjv = new DynamicJsonValue { ["Id"] = newDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "testembeddings" } };
@@ -164,8 +164,8 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
 
     private void CreateNewPrivateDocument(string textValue, float[] embeddingValue, DocumentsOperationContext context, out string attachmentGuid)
     {
-        var hash = $"hash({textValue})";
-        var newDocumentId = GetPrivateDocumentId(hash);
+        var hash = AiHelper.CalculateValueHash(textValue);
+        var newDocumentId = AiHelper.GetCacheDocumentId(Configuration.Name, hash);
         
         var documentDjv = new DynamicJsonValue { ["Id"] = newDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "@embeddings" } };
         
@@ -185,15 +185,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
         }
     }
 
-    private static string GetPublicDocumentId(string originalDocumentId)
-    {
-        return $"{originalDocumentId}/embeddings";
-    }
-    
-    private string GetPrivateDocumentId(string hash)
-    {
-        return $"embeddings/{Configuration.Name}/{hash}";
-    }
+
 
     protected override EtlStatsScope CreateScope(EtlRunStats stats)
     {
