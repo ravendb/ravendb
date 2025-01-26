@@ -30,7 +30,7 @@ public static class GenerateEmbeddings
 
     private static SessionOptions OnnxSessionOptions;
 
-    internal static readonly Lazy<BertOnnxTextEmbeddingGenerationService> Embedder = new(CreateTextEmbeddingGenerationService);
+    internal static readonly Lazy<BertOnnxTextEmbeddingGenerationService> Embedder = new(() => CreateTextEmbeddingGenerationService());
 
     static GenerateEmbeddings()
     {
@@ -156,7 +156,7 @@ public static class GenerateEmbeddings
         }
     }
 
-    private static BertOnnxTextEmbeddingGenerationService CreateTextEmbeddingGenerationService()
+    internal static BertOnnxTextEmbeddingGenerationService CreateTextEmbeddingGenerationService(BertOnnxOptions options = null)
     {
         using (var onnxModelStream = File.OpenRead(Path.Combine("LocalEmbeddings", "bge-micro-v2", "model.onnx")))
         using (var vocabStream = File.OpenRead(Path.Combine("LocalEmbeddings", "bge-micro-v2", "vocab.txt")))
@@ -166,7 +166,7 @@ public static class GenerateEmbeddings
             if (vocabStream == null)
                 throw new ArgumentNullException(nameof(vocabStream));
 
-            var options = new BertOnnxOptions();
+            options ??= new BertOnnxOptions();
 
             var modelBytes = new MemoryStream();
             onnxModelStream.CopyTo(modelBytes);

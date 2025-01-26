@@ -9,16 +9,6 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 public sealed class OnnxSettings
 {
     /// <summary>
-    /// The path to the ONNX model file.
-    /// </summary>
-    public string ModelPath { get; set; }
-
-    /// <summary>
-    /// The path to the vocab file.
-    /// </summary>
-    public string VocabularyPath { get; set; }
-
-    /// <summary>
     /// The flag to indicate whether the model should be case-sensitive. Defaults to false.
     /// </summary>
     public bool CaseSensitive { get; set; } = false;
@@ -68,13 +58,11 @@ public sealed class OnnxSettings
     /// <remarks>Normalized embeddings may be compared more efficiently, such as by using a dot product rather than cosine similarity.</remarks>
     public bool NormalizeEmbeddings { get; set; } = false;
 
-    public bool HasSettings() => string.IsNullOrWhiteSpace(ModelPath) == false && string.IsNullOrWhiteSpace(VocabularyPath) == false;
+    public bool HasSettings() => true;
 
     public DynamicJsonValue ToJson() =>
         new()
         {
-            [nameof(ModelPath)] = ModelPath,
-            [nameof(VocabularyPath)] = VocabularyPath,
             [nameof(CaseSensitive)] = CaseSensitive,
             [nameof(MaximumTokens)] = MaximumTokens,
             [nameof(ClsToken)] = ClsToken,

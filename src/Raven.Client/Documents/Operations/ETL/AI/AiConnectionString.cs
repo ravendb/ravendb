@@ -31,7 +31,7 @@ public sealed class AiConnectionString : ConnectionString
         if (OnnxSettings != null)
         {
             if (OnnxSettings.HasSettings() == false)
-                errors.Add($"{nameof(OnnxSettings)} has no valid setting. '{nameof(OnnxSettings.ModelPath)}' and '{nameof(OnnxSettings.VocabularyPath)}' are both have null or empty values");
+                errors.Add($"{nameof(OnnxSettings)} has no valid setting.");
         }
     }
 

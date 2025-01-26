@@ -47,8 +47,6 @@ public class RavenDB_23556 : RavenTestBase
                 Name = connectionStringName,
                 OnnxSettings = new OnnxSettings
                 {
-                    ModelPath = Path.Combine("LocalEmbeddings", "bge-micro-v2", "model.onnx"),
-                    VocabularyPath = Path.Combine("LocalEmbeddings", "bge-micro-v2", "vocab.txt"),
                     CaseSensitive = false
                 }
             };

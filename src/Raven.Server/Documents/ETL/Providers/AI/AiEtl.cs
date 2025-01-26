@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
+using Raven.Server.Documents.ETL.Providers.AI.Extensions;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.VectorSearch;
@@ -244,7 +245,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, EmbeddingRepresentation, AiEtl
 
             case AiConnectorType.Onnx:
                 var onnxSettings = configuration.Connection.OnnxSettings;
-                kernelBuilder.AddBertOnnxTextEmbeddingGeneration(onnxSettings.ModelPath, onnxSettings.VocabularyPath, onnxSettings.ToBertOnnxOptions());
+                kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions());
 
                 break;
 
