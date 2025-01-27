@@ -200,6 +200,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                                 $"The following field is not vector searchable {indexField.Name}, while the query needs to vector.search() on it"));
                             return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
                         }
+                        
+                        //When both VectorOptions are equal, the field is equal. No other options should be considered.
+                        continue;
                     }
                     if (field.IsFullTextSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Search) == false)
                     {
