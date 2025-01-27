@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Text;
@@ -44,8 +45,11 @@ using Sparrow.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Voron.Exceptions;
+using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 using XunitLogger;
+using ExceptionAggregator = Raven.Server.Utils.ExceptionAggregator;
 
 namespace FastTests
 {
@@ -182,8 +186,11 @@ namespace FastTests
             RavenLogManager.Instance.ConfigureLogging(configuration);
         }
 
+        protected readonly bool FromTryouts;
+
         protected TestBase(ITestOutputHelper output) : base(output)
         {
+            FromTryouts = output is ConsoleTestOutputHelper;
         }
 
         protected string GetDatabaseName([CallerMemberName] string caller = null)
@@ -638,6 +645,75 @@ namespace FastTests
         private void ThrowOnDuplicateConfiguration(string config)
         {
             throw new InvalidOperationException($"You cannot set {config} in both, {nameof(ServerCreationOptions)}.{nameof(ServerCreationOptions.CustomSettings)} and {nameof(ServerCreationOptions)}.{config}");
+        }
+
+        private bool IsTestOfType(RavenTestCategory testCategory)
+        {
+            try
+            {
+                var testMethod = Context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
+                if (testMethod == null)
+                    return false;
+
+                var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
+                if (ravenFactAttribute != null)
+                    return ravenFactAttribute.Category.HasFlag(testCategory);
+
+                var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
+                if (ravenTheoryAttribute != null)
+                    return ravenTheoryAttribute.Category.HasFlag(testCategory);
+
+                return false;
+            }
+            catch
+            {
+                // if we can't determine if it's a compression test, we assume it's not 
+                return false;
+            }
+        }
+
+        protected bool IsCompressionTest() => IsTestOfType(RavenTestCategory.Compression);
+        protected bool IsShardingTest() => IsTestOfType(RavenTestCategory.Sharding);
+        protected void AssertTestHasAttribute(RavenTestCategory attribute)
+        {
+            if (FromTryouts)
+                return;
+
+            if (attribute == RavenTestCategory.Sharding)
+            {
+                var testMethod = Context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
+                if (testMethod == null)
+                    return;
+            
+                var dataAttribute = testMethod.MethodInfo.GetCustomAttributes<RavenDataAttribute>().ToList();
+                if (dataAttribute.Count > 0)
+                {
+                    var notAllSharded = dataAttribute.All(a => a.DatabaseMode == RavenDatabaseMode.Sharded) == false;
+                    if (notAllSharded)
+                        return;
+                }
+
+                var memberDataAttribute = testMethod.MethodInfo.GetCustomAttributes<RavenMemberDataAttribute>().ToList();
+                if (memberDataAttribute.Count > 0)
+                {
+                    var notAllSharded = memberDataAttribute.All(a => a.DatabaseMode == RavenDatabaseMode.Sharded) == false;
+                    if (notAllSharded)
+                        return;
+                }
+
+                var externalReplicationAttributes = testMethod.MethodInfo.GetCustomAttributes<RavenExternalReplicationAttribute>().ToList();
+                if (externalReplicationAttributes.Count > 0)
+                {
+                    var notAllSharded = externalReplicationAttributes.All(a => a._destination == RavenDatabaseMode.Sharded && a._source == RavenDatabaseMode.Sharded) == false;
+                    if (notAllSharded)
+                        return;
+                }
+            }
+
+            if (IsTestOfType(attribute) == false)
+            {
+                Assert.Fail($"Please mark this test with {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attributes with {nameof(RavenTestCategory)}.{attribute.ToString()} set.");
+            }
         }
 
         protected static string UseFiddlerUrl(string url)

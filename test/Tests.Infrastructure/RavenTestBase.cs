@@ -7,8 +7,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
-using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -43,8 +43,6 @@ namespace FastTests
 
         protected RavenTestBase(ITestOutputHelper output) : base(output)
         {
-            _fromTryouts = output is ConsoleTestOutputHelper;
-
             Sharding = new ShardingTestBase(this);
             Samples = new SamplesTestBase(this);
             TimeSeries = new TimeSeriesTestBase(this);
@@ -148,7 +146,7 @@ namespace FastTests
         }
 
         private readonly object _getDocumentStoreSync = new object();
-        private readonly bool _fromTryouts;
+        private bool _hasXunitFailure;
 
         protected internal virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
@@ -236,17 +234,18 @@ namespace FastTests
                     }
 
                     options.ModifyDatabaseRecord?.Invoke(doc);
-                    var sharded = doc.IsSharded;
 
+                    var isSharded = doc.IsSharded;
                     var isCompressionTest = IsCompressionTest();
 
-                    if (doc.DocumentsCompression != null && isCompressionTest == false)
+                    if (doc.DocumentsCompression != null)
                     {
-                        if (_fromTryouts == false)
-                        {
-                            // check in DatabaseRecord if document compression is enabled, without setting Compression attribute on test method
-                            Assert.Fail($"Please mark compression test with {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attributes with {nameof(RavenTestCategory)}.{nameof(RavenTestCategory.Compression)} set.");
-                        }
+                        AssertTestHasAttribute(RavenTestCategory.Compression);
+                    }
+
+                    if (isSharded)
+                    {
+                        // AssertTestHasAttribute(RavenTestCategory.Sharding);
                     }
 
                     if (RavenTestHelper.RunTestsWithDocsCompression && doc.DocumentsCompression == null && isCompressionTest == false)
@@ -304,19 +303,34 @@ namespace FastTests
                         }
 
                         // skip 'wait for requests' on DocumentDatabase dispose
-                        servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name, sharded));
+                        servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name, isSharded));
+                    }
+
+                    if (isSharded)
+                    {
+                        AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceExceptionHandler;
                     }
 
                     store.BeforeDispose += (sender, args) =>
                     {
+                        if (_hasXunitFailure)
+                        {
+                            var sb = new StringBuilder();
+                            AsyncHelpers.RunSync(() => GetClusterDebugLogsAsync(sb));
+                            Output.WriteLine(sb.ToString());
+                        }
+
                         var realException = Context.GetException();
+
                         try
                         {
                             if (CreatedStores.TryRemove(store) == false)
                                 return; // can happen if we are wrapping the store inside sharded one
 
-                            if (sharded)
+                            if (isSharded)
                             {
+                                AppDomain.CurrentDomain.FirstChanceException -= OnFirstChanceExceptionHandler;
+
                                 if (servers.Contains(serverToUse) || IsGlobalOrLocalServer(serverToUse))
                                 {
                                     // check that the database wasn't deleted
@@ -351,36 +365,19 @@ namespace FastTests
                         CreatedStores.Add(adminStore);
 
                     return store;
-
-                    bool IsCompressionTest()
-                    {
-                        try
-                        {
-                            var testMethod = Context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
-                            if (testMethod == null)
-                                return false;
-
-                            var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
-                            if (ravenFactAttribute != null)
-                                return ravenFactAttribute.Category.HasFlag(RavenTestCategory.Compression);
-
-                            var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
-                            if (ravenTheoryAttribute != null)
-                                return ravenTheoryAttribute.Category.HasFlag(RavenTestCategory.Compression);
-
-                            return false;
-                        }
-                        catch
-                        {
-                            // if we can't determine if it's a compression test, we assume it's not 
-                            return false;
-                        }
-                    }
                 }
             }
             catch (TimeoutException te)
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{Cluster.GetLastStatesFromAllServersOrderedByTime()}");
+            }
+        }
+        
+        private void OnFirstChanceExceptionHandler(object sender, FirstChanceExceptionEventArgs args)
+        {
+            if (args.Exception is XunitException)
+            {
+                _hasXunitFailure = true;
             }
         }
 

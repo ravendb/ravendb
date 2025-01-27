@@ -565,7 +565,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void DateCheckMapReduce(Options options)
         {

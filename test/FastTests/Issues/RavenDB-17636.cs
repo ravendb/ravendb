@@ -711,7 +711,7 @@ filter Name = 'Frank'")
             .DurationInMs >= 0);
     }
 
-    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
     public void TimingsSharded(Options options)
     {

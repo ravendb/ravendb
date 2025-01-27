@@ -34,6 +34,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Tests.Infrastructure
 {
@@ -361,7 +362,7 @@ namespace Tests.Infrastructure
 
                 try
                 {
-                    servers ??= Servers;
+                    servers ??= GetServers();
                     var leader = servers.FirstOrDefault(s => s.ServerStore.IsLeader());
                     if (leader != null)
                     {
@@ -1210,101 +1211,12 @@ namespace Tests.Infrastructure
 
         }
 
-        internal async Task GetClusterDebugLogsAsync(StringBuilder sb)
+        protected override async Task<NodeDebugInfo> GetDebugInfoAsync()
         {
             NodeDebugInfo debugInfo = null;
-            await ActionWithLeader((l) =>
-            {
-                debugInfo = GetDebugInfoForNode(l);
-                return Task.CompletedTask;
-            });
-
-            AppendDebugInfo(sb, debugInfo);
-        }
-
-        internal static void GetDebugLogsForNode(RavenServer node, StringBuilder sb) => AppendDebugInfo(sb, GetDebugInfoForNode(node));
-
-        private static NodeDebugInfo GetDebugInfoForNode(RavenServer node)
-        {
-            var debugInfo = new NodeDebugInfo
-            {
-                ClusterObserverLogs = node.ServerStore.Observer?.ReadDecisionsForDatabase().List, 
-                PrevStates = node.ServerStore.Engine.PrevStates.Select(s => s.ToString()).ToList()
-            };
-
-            using (node.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                debugInfo.HistoryLogs = node.ServerStore.Engine.LogHistory.GetHistoryLogs(context).ToList();
-                debugInfo.InMemoryDebug = node.ServerStore.Engine.InMemoryDebug.ToJson();
-            }
-
+            await ActionWithLeader(l => debugInfo = GetDebugInfoForNode(l));
             return debugInfo;
         }
-
-        private static void AppendDebugInfo(StringBuilder sb, NodeDebugInfo debugInfo)
-        {
-            if (debugInfo.PrevStates != null)
-            {
-                sb.AppendLine($"{Environment.NewLine}States:{Environment.NewLine}-----------------------");
-                foreach (var state in debugInfo.PrevStates)
-                {
-                    sb.AppendLine($"{state}{Environment.NewLine}");
-                }
-                sb.AppendLine();
-            }
-
-            if (debugInfo.HistoryLogs != null)
-            {
-                sb.AppendLine($"HistoryLogs:{Environment.NewLine}-----------------------");
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    var c = 0;
-                    foreach (var log in debugInfo.HistoryLogs)
-                    {
-                        var json = context.ReadObject(log, nameof(log) + $"{c++}");
-                        sb.AppendLine(json.ToString());
-                    }
-                }
-                sb.AppendLine();
-            }
-
-            if (debugInfo.ClusterObserverLogs?.Length > 0)
-            {
-                sb.AppendLine($"Cluster Observer Log Entries:{Environment.NewLine}-----------------------");
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    var c = 0;
-                    foreach (var log in debugInfo.ClusterObserverLogs)
-                    {
-                        var json = context.ReadObject(log.ToJson(), nameof(log) + $"{c++}");
-                        sb.AppendLine(json.ToString());
-                    }
-                }
-            }
-
-            if (debugInfo.InMemoryDebug != null)
-            {
-                sb.AppendLine($"RachisDebug:{Environment.NewLine}-----------------------");
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    var json = context.ReadObject(debugInfo.InMemoryDebug, nameof(NodeDebugInfo.InMemoryDebug));
-                    sb.AppendLine(json.ToString());
-                }
-            }
-        }
-
-        private class NodeDebugInfo
-        {
-            public ClusterObserverLogEntry[] ClusterObserverLogs;
-
-            public List<DynamicJsonValue> HistoryLogs;
-
-            public DynamicJsonValue InMemoryDebug;
-
-            public List<string> PrevStates;
-        }
-
 
         public override void Dispose()
         {

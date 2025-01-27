@@ -1645,7 +1645,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions | RavenTestCategory.Sharding, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task GetRevisionsBinEntries2(Options options)
         {
@@ -1692,7 +1692,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions | RavenTestCategory.Sharding, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task EnforceRevisionsConfiguration(Options options)
         {

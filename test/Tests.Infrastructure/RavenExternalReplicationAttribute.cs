@@ -6,8 +6,8 @@ namespace Tests.Infrastructure;
 
 public class RavenExternalReplicationAttribute : RavenDataAttributeBase
 {
-    private readonly RavenDatabaseMode _source;
-    private readonly RavenDatabaseMode _destination;
+    internal readonly RavenDatabaseMode _source;
+    internal readonly RavenDatabaseMode _destination;
     private object[] _data;
 
     public RavenExternalReplicationAttribute(
