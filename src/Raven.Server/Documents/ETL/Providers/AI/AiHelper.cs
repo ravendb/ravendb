@@ -99,7 +99,7 @@ public static class AiHelper
 
             case AiConnectorType.Google:
                 var googleSettings = configuration.Connection.GoogleSettings;
-                kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey, googleSettings.ApiVersion, googleSettings.ServiceId);
+                kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey, googleSettings.ApiVersion.ToGoogleAiVersion(), googleSettings.ServiceId);
                 break;
 
             // case AiConnectorType.HuggingFace:

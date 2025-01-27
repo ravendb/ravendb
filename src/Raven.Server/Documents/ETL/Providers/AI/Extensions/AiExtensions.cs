@@ -44,6 +44,19 @@ public static class AiExtensions
         }
     }
 
+    public static Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion ToGoogleAiVersion(this GoogleAIVersion googleAiVersion)
+    {
+        switch (googleAiVersion)
+        {
+            case GoogleAIVersion.V1:
+                return Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion.V1;
+            case GoogleAIVersion.V1_Beta:
+                return Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion.V1_Beta;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(googleAiVersion), googleAiVersion, null);
+        }
+    }
+
     [Experimental("SKEXP0070")]
     public static IKernelBuilder AddCustomBertOnnxTextEmbeddingGeneration(
         this IKernelBuilder builder,

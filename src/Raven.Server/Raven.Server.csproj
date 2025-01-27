@@ -169,6 +169,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.HuggingFace" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Onnx" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" />
@@ -194,8 +196,6 @@
     <PackageReference Include="Raven.CodeAnalysis">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="SemanticKernelPooling.Connectors.Google" />
-    <PackageReference Include="SemanticKernelPooling.Connectors.HuggingFace" />
     <PackageReference Include="Snappier" />
     <PackageReference Include="Snowflake.Data" />
     <PackageReference Include="System.Collections.Immutable" />

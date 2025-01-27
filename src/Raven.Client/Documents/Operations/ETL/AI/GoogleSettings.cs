@@ -1,5 +1,4 @@
 ﻿#pragma warning disable SKEXP0070
-using Microsoft.SemanticKernel.Connectors.Google;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
@@ -29,5 +28,21 @@ public sealed class GoogleSettings
             [nameof(ApiVersion)] = ApiVersion.ToString(),
             [nameof(ServiceId)] = ServiceId
         };
+}
+
+/// <summary>
+/// Represents the version of the Google AI API.
+/// </summary>
+public enum GoogleAIVersion
+{
+    /// <summary>
+    /// Represents the V1 version of the Google AI API.
+    /// </summary>
+    V1,
+
+    /// <summary>
+    /// Represents the V1-beta version of the Google AI API.
+    /// </summary>
+    V1_Beta
 }
 #pragma warning restore SKEXP0070
