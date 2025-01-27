@@ -17,6 +17,7 @@ import Certificates2FAField from "components/pages/resources/manageServer/certif
 import CertificatesSecurityClearanceField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesSecurityClearanceField";
 import CertificatesExpireField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesExpireField";
 import CertificatesFileField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesFileField";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -24,6 +25,7 @@ export default function CertificatesUploadModal() {
     const dispatch = useAppDispatch();
     const confirm = useConfirm();
     const { manageServerService } = useServices();
+    const { reportEvent } = useEventsCollector();
 
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
@@ -44,6 +46,8 @@ export default function CertificatesUploadModal() {
 
     const handleUpload: SubmitHandler<FormData> = async (formData) => {
         return tryHandleSubmit(async () => {
+            reportEvent("certificates", "upload");
+
             if (formData.securityClearance === "ValidUser" && formData.databasePermissions.length === 0) {
                 const isConfirmed = await confirm(certificatesUtils.noPrivilegesConfirmOptions);
 

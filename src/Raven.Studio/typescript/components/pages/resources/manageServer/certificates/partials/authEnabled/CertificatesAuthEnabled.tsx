@@ -27,9 +27,11 @@ import CertificatesCloneModal from "components/pages/resources/manageServer/cert
 import CertificatesEditModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import CertificatesWellKnownList from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesWellKnownList";
 import { useChanges } from "components/hooks/useChanges";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
+    const { reportEvent } = useEventsCollector();
 
     const exportServerCertFormRef = useRef<HTMLFormElement>(null);
 
@@ -128,7 +130,10 @@ export default function CertificatesAuthEnabled() {
                             ]}
                         >
                             <DropdownItem
-                                onClick={() => exportServerCertFormRef.current?.submit()}
+                                onClick={() => {
+                                    reportEvent("certificates", "export-certs");
+                                    exportServerCertFormRef.current?.submit();
+                                }}
                                 disabled={!hasClusterNodeCertificate}
                             >
                                 <Icon icon="download" />

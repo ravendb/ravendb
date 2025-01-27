@@ -63,7 +63,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     })();
 
     const asyncRenewServerCertificate = useAsyncCallback(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        reportEvent("certificates", "renew");
         await manageServerService.forceRenewServerCertificate();
         await dispatch(certificatesActions.fetchData());
     });

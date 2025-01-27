@@ -14,10 +14,12 @@ import CertificatesFileField from "components/pages/resources/manageServer/certi
 import RichAlert from "components/common/RichAlert";
 import { useAsync } from "react-async-hook";
 import { LazyLoad } from "components/common/LazyLoad";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 export default function CertificatesReplaceServerModal() {
     const dispatch = useAppDispatch();
     const { manageServerService } = useServices();
+    const { reportEvent } = useEventsCollector();
 
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
@@ -36,6 +38,7 @@ export default function CertificatesReplaceServerModal() {
 
     const handleReplace: SubmitHandler<FormData> = async (formData) => {
         return tryHandleSubmit(async () => {
+            reportEvent("certificates", "replace");
             await manageServerService.replaceClusterCertificate(
                 certificatesUtils.mapReplaceServerToDto(formData),
                 formData.isReplaceImmediately

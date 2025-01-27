@@ -21,6 +21,7 @@ import Certificates2FAField from "components/pages/resources/manageServer/certif
 import CertificatesSecurityClearanceField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesSecurityClearanceField";
 import CertificatesExpireField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesExpireField";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -28,6 +29,7 @@ export default function CertificatesCloneModal() {
     const dispatch = useAppDispatch();
     const confirm = useConfirm();
     const { databasesService } = useServices();
+    const { reportEvent } = useEventsCollector();
 
     const downloadCertFormRef = useRef<HTMLFormElement>(null);
 
@@ -52,6 +54,8 @@ export default function CertificatesCloneModal() {
 
     const handleClone: SubmitHandler<FormData> = async (formData) => {
         return tryHandleSubmit(async () => {
+            reportEvent("certificates", "clone");
+
             if (formData.securityClearance === "ValidUser" && formData.databasePermissions.length === 0) {
                 const isConfirmed = await confirm(certificatesUtils.noPrivilegesConfirmOptions);
 

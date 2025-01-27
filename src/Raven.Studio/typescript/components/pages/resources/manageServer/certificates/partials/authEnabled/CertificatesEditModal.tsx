@@ -14,6 +14,7 @@ import CertificatesPermissionsField from "components/pages/resources/manageServe
 import Certificates2FAField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/Certificates2FAField";
 import CertificatesSecurityClearanceField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesSecurityClearanceField";
 import useConfirm from "components/common/ConfirmDialog";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -21,6 +22,7 @@ export default function CertificatesEditModal() {
     const dispatch = useAppDispatch();
     const { manageServerService } = useServices();
     const confirm = useConfirm();
+    const { reportEvent } = useEventsCollector();
 
     const certificate = useAppSelector(certificatesSelectors.certificateToEdit);
 
@@ -44,6 +46,8 @@ export default function CertificatesEditModal() {
 
     const handleEdit: SubmitHandler<FormData> = async (formData) => {
         return tryHandleSubmit(async () => {
+            reportEvent("certificates", "edit");
+
             if (formData.securityClearance === "ValidUser" && formData.databasePermissions.length === 0) {
                 const isConfirmed = await confirm(certificatesUtils.noPrivilegesConfirmOptions);
 

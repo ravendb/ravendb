@@ -13,11 +13,13 @@ import Certificates2FAField from "components/pages/resources/manageServer/certif
 import CertificatesExpireField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesExpireField";
 import { ExpireTimeUnit } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 export default function CertificatesRegenerateModal() {
     const dispatch = useAppDispatch();
     const { manageServerService } = useServices();
     const certificate = useAppSelector(certificatesSelectors.certificateToRegenerate);
+    const { reportEvent } = useEventsCollector();
 
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
@@ -39,6 +41,7 @@ export default function CertificatesRegenerateModal() {
 
     const handleRegenerate: SubmitHandler<FormData> = async (formData) => {
         return tryHandleSubmit(async () => {
+            reportEvent("certificates", "re-generate");
             await manageServerService.updateCertificate(
                 certificatesUtils.mapRegenerateToDto(formData, certificate),
                 formValues.twoFactorAction === "delete"
