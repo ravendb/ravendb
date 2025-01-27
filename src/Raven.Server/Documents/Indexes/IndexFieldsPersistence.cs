@@ -86,6 +86,11 @@ namespace Raven.Server.Documents.Indexes
         {
             return _vectorSourceEmbeddingType.TryGetValue(fieldName, out embeddingType);
         }
+        
+        internal bool TryReadNumberOfDimensions(string fieldName, out int dimensions)
+        {
+            return _vectorFieldsDimensions.TryGetValue(fieldName, out dimensions);
+        }
 
         internal void SetVectorSourceEmbeddingType(string fieldName, VectorEmbeddingType embeddingType)
         {

@@ -730,7 +730,16 @@ public static class CoraxQueryBuilder
                 _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
             };
         }
+        
+        if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out var numberOfDimensions) == false)
+            return builderParameters.IndexSearcher.EmptyMatch(); // no vector indexed
 
+        if (numberOfDimensions != transformedEmbedding.Length)
+        {
+            using (transformedEmbedding)
+                ThrowDifferentNumberOfDimensions();
+        }
+            
         return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, transformedEmbedding, minimumMatch, numberOfCandidates, exact, builderParameters.IsVectorSingleClause);
 
         VectorOptions GetOptions(IndexField field)
@@ -748,6 +757,19 @@ public static class CoraxQueryBuilder
                 _ => throw new InvalidDataException(
                     $"Unknown vector source embedding type: {vectorSourceEmbeddingType}. Implicit configuration support only single and text vector source embedding types.")
             };
+        }
+
+        void ThrowDifferentNumberOfDimensions()
+        {
+            var (storedDimensions, inputDimensions) = indexField.Vector.DestinationEmbeddingType switch
+            {
+                VectorEmbeddingType.Single => (numberOfDimensions / sizeof(float), transformedEmbedding.Length / sizeof(float)),
+                VectorEmbeddingType.Int8 => (numberOfDimensions - sizeof(float), transformedEmbedding.Length - sizeof(float)),
+                VectorEmbeddingType.Binary => (numberOfDimensions, transformedEmbedding.Length),
+                _ => throw new InvalidDataException($"Unexpected embedding type - {numberOfDimensions}.")
+            };
+
+            PortableExceptions.Throw<InvalidDataException>($"Vector field `{fieldName}` has {storedDimensions} dimensions, but the vector passed to vector.search() has {inputDimensions} dimensions.");
         }
     }
 
