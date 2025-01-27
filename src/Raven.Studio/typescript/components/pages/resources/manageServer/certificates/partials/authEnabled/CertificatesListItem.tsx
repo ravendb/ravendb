@@ -15,9 +15,6 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { TextColor } from "components/models/common";
-import CertificatesCloneModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
-import CertificatesEditModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
-import CertificatesRegenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { CertificateItem } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
@@ -44,10 +41,6 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const serverCertificateRenewalDate = useAppSelector(certificatesSelectors.serverCertificateRenewalDate);
     const clientCertificateThumbprint = useAppSelector(accessManagerSelectors.clientCertificateThumbprint);
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
-
-    const certificateToRegenerate = useAppSelector(certificatesSelectors.certificateToRegenerate);
-    const certificateToEdit = useAppSelector(certificatesSelectors.certificateToEdit);
-    const certificateToClone = useAppSelector(certificatesSelectors.certificateToClone);
 
     const state = certificatesUtils.getState(certificate.NotAfter);
     const clearance = certificatesUtils.getClearance(certificate.SecurityClearance);
@@ -157,39 +150,30 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                     </div>
                     <RichPanelActions>
                         {canRegenerate && (
-                            <>
-                                <Button
-                                    title="Regenerate certificate"
-                                    color="warning"
-                                    onClick={() => dispatch(certificatesActions.regenerateModalOpen(certificate))}
-                                >
-                                    <Icon icon="refresh" />
-                                    Regenerate
-                                </Button>
-                                {certificateToRegenerate && <CertificatesRegenerateModal />}
-                            </>
+                            <Button
+                                title="Regenerate certificate"
+                                color="warning"
+                                onClick={() => dispatch(certificatesActions.regenerateModalOpen(certificate))}
+                            >
+                                <Icon icon="refresh" />
+                                Regenerate
+                            </Button>
                         )}
                         {canClone && (
-                            <>
-                                <Button
-                                    title="Clone certificate"
-                                    onClick={() => dispatch(certificatesActions.cloneModalOpen(certificate))}
-                                >
-                                    <Icon icon="copy" margin="m-0" />
-                                </Button>
-                                {certificateToClone && <CertificatesCloneModal />}
-                            </>
+                            <Button
+                                title="Clone certificate"
+                                onClick={() => dispatch(certificatesActions.cloneModalOpen(certificate))}
+                            >
+                                <Icon icon="copy" margin="m-0" />
+                            </Button>
                         )}
                         {canEdit && (
-                            <>
-                                <Button
-                                    title="Edit certificate"
-                                    onClick={() => dispatch(certificatesActions.editModalOpen(certificate))}
-                                >
-                                    <Icon icon="edit" margin="m-0" />
-                                </Button>
-                                {certificateToEdit && <CertificatesEditModal />}
-                            </>
+                            <Button
+                                title="Edit certificate"
+                                onClick={() => dispatch(certificatesActions.editModalOpen(certificate))}
+                            >
+                                <Icon icon="edit" margin="m-0" />
+                            </Button>
                         )}
                         {canDelete && (
                             <ButtonWithSpinner

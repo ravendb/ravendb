@@ -22,6 +22,9 @@ import useDebouncedInput from "components/hooks/useDebouncedInput";
 import CertificatesUploadModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesUploadModal";
 import CertificatesReplaceServerModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesReplaceServerModal";
 import { StickyHeader } from "components/common/StickyHeader";
+import CertificatesRegenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
+import CertificatesCloneModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
+import CertificatesEditModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -44,6 +47,10 @@ export default function CertificatesAuthEnabled() {
         label: x,
     }));
     const sortMode = useAppSelector(certificatesSelectors.sortMode);
+
+    const certificateToRegenerate = useAppSelector(certificatesSelectors.certificateToRegenerate);
+    const certificateToEdit = useAppSelector(certificatesSelectors.certificateToEdit);
+    const certificateToClone = useAppSelector(certificatesSelectors.certificateToClone);
 
     // Initial load
     useEffect(() => {
@@ -69,12 +76,10 @@ export default function CertificatesAuthEnabled() {
                             <Icon icon="certificate" addon="plus" />
                             Generate client certificate
                         </DropdownItem>
-                        {isGenerateModalOpen && <CertificatesGenerateModal />}
                         <DropdownItem onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}>
                             <Icon icon="upload" />
                             Upload client certificate
                         </DropdownItem>
-                        {isUploadModalOpen && <CertificatesUploadModal />}
                         <DropdownItem divider />
                         <DropdownItem header>Server</DropdownItem>
                         <ConditionalPopover
@@ -104,7 +109,6 @@ export default function CertificatesAuthEnabled() {
                                 <Icon icon="refresh" />
                                 Replace server certificate
                             </DropdownItem>
-                            {isReplaceServerModalOpen && <CertificatesReplaceServerModal />}
                         </ConditionalPopover>
                     </DropdownMenu>
                 </UncontrolledDropdown>
@@ -187,6 +191,14 @@ export default function CertificatesAuthEnabled() {
 
             <CertificatesServerList />
             <CertificatesClientList />
+
+            {/* Action modals */}
+            {isGenerateModalOpen && <CertificatesGenerateModal />}
+            {isUploadModalOpen && <CertificatesUploadModal />}
+            {isReplaceServerModalOpen && <CertificatesReplaceServerModal />}
+            {certificateToRegenerate && <CertificatesRegenerateModal />}
+            {certificateToClone && <CertificatesCloneModal />}
+            {certificateToEdit && <CertificatesEditModal />}
 
             {/* This form is used to export server certificate */}
             <form
