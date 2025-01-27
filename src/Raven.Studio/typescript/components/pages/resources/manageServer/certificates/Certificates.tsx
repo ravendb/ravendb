@@ -1,6 +1,5 @@
 import { AboutViewHeading } from "components/common/AboutView";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { clusterSelectors } from "components/common/shell/clusterSlice";
 import CertificatesAuthDisabled from "components/pages/resources/manageServer/certificates/partials/authDisabled/CertificatesAuthDisabled";
 import CertificatesAuthEnabled from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesAuthEnabled";
 import { useAppSelector } from "components/store";

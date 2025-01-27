@@ -4,14 +4,17 @@ import { TextColor } from "components/models/common";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { CertificatesRegenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
+import { CertificatesReplaceServerFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesReplaceServerModal";
+import { CertificatesUploadFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesUploadModal";
 import {
     CertificateItem,
     CertificatesClearance,
     CertificatesState,
-    ExpireTimeUnit,
     GenerateCertificateDto,
+    ReplaceServerCertificateDto,
     TwoFactorAction,
     UpdateCertificateDto,
+    UploadCertificateDto,
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
 import moment from "moment";
@@ -98,10 +101,36 @@ function mapNotAfter(
     return moment.utc().add(formData.expireIn, formData.expireTimeUnits).format();
 }
 
+function mapPassword(password: string): string {
+    if (password == null || password === "") {
+        return undefined;
+    }
+
+    return password;
+}
+
 function mapGenerateToDto(formData: CertificatesGenerateFormData): GenerateCertificateDto {
     return {
         Name: formData.name,
-        Password: formData.certificatePassphrase,
+        Password: mapPassword(formData.certificatePassphrase),
+        Permissions: mapPermissions({
+            securityClearance: formData.securityClearance,
+            databasePermissions: formData.databasePermissions,
+        }),
+        SecurityClearance: formData.securityClearance,
+        NotAfter: mapNotAfter({
+            expireIn: formData.expireIn,
+            expireTimeUnits: formData.expireTimeUnits,
+        }),
+        TwoFactorAuthenticationKey: formData.isRequire2FA ? formData.authenticationKey : null,
+    };
+}
+
+function mapUploadToDto(formData: CertificatesUploadFormData): UploadCertificateDto {
+    return {
+        Name: formData.name,
+        Password: mapPassword(formData.certificatePassphrase),
+        Certificate: formData.certificateAsBase64,
         Permissions: mapPermissions({
             securityClearance: formData.securityClearance,
             databasePermissions: formData.databasePermissions,
@@ -145,6 +174,13 @@ function mapRegenerateToDto(
     };
 }
 
+function mapReplaceServerToDto(formData: CertificatesReplaceServerFormData): ReplaceServerCertificateDto {
+    return {
+        Certificate: formData.certificateAsBase64,
+        Password: mapPassword(formData.certificatePassphrase),
+    };
+}
+
 function mapDatabasePermissionsFromDto(dto: CertificateItem) {
     return Object.entries(dto.Permissions ?? []).map(([databaseName, accessLevel]) => ({
         databaseName,
@@ -176,8 +212,10 @@ export const certificatesUtils = {
     getStateColor,
     getStateDateColor,
     mapGenerateToDto,
+    mapUploadToDto,
     mapEditToDto,
     mapRegenerateToDto,
+    mapReplaceServerToDto,
     mapDatabasePermissionsFromDto,
     twoFactorActionSchema,
     databasePermissionsSchema,

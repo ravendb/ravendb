@@ -1,5 +1,8 @@
 import { unitOfTime } from "moment";
 
+type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
+type DatabaseAccess = Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess;
+
 export type CertificatesClearance = "Admin" | "Operator" | "User";
 
 export type CertificatesState = "Valid" | "About to expire" | "Expired";
@@ -23,19 +26,34 @@ export interface CertificateItem extends CertificateDto {
 export interface GenerateCertificateDto {
     Name: string;
     Password: string;
-    SecurityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
+    SecurityClearance: SecurityClearance;
     NotAfter?: string;
-    Permissions: Record<string, Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>;
+    Permissions: Record<string, DatabaseAccess>;
     TwoFactorAuthenticationKey: string;
 }
 
 export interface UpdateCertificateDto {
     Name: string;
     Thumbprint: string;
-    SecurityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
+    SecurityClearance: SecurityClearance;
     NotAfter?: string;
-    Permissions: Record<string, Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>;
+    Permissions: Record<string, DatabaseAccess>;
     TwoFactorAuthenticationKey: string;
+}
+
+export interface UploadCertificateDto {
+    Name: string;
+    Certificate: string;
+    Password: string;
+    Permissions: Record<string, DatabaseAccess>;
+    SecurityClearance: SecurityClearance;
+    NotAfter: string;
+    TwoFactorAuthenticationKey: string;
+}
+
+export interface ReplaceServerCertificateDto {
+    Certificate: string;
+    Password: string;
 }
 
 export type ExpireTimeUnit = Extract<unitOfTime.Base, "days" | "months">;

@@ -23,6 +23,9 @@ import generateTwoFactorSecretCommand = require("commands/auth/generateTwoFactor
 import forceRenewServerCertificateCommand = require("commands/auth/forceRenewServerCertificateCommand");
 import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
 import updateCertificateCommand = require("commands/auth/updateCertificateCommand");
+import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
+import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
+import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -112,6 +115,10 @@ export default class ManageServerService {
         return new generateTwoFactorSecretCommand().execute();
     }
 
+    async uploadCertificate(...args: ConstructorParameters<typeof uploadCertificateCommand>) {
+        return new uploadCertificateCommand(...args).execute();
+    }
+
     async forceRenewServerCertificate() {
         return new forceRenewServerCertificateCommand().execute();
     }
@@ -122,5 +129,13 @@ export default class ManageServerService {
 
     async updateCertificate(...args: ConstructorParameters<typeof updateCertificateCommand>) {
         return new updateCertificateCommand(...args).execute();
+    }
+
+    async replaceClusterCertificate(...args: ConstructorParameters<typeof replaceClusterCertificateCommand>) {
+        return new replaceClusterCertificateCommand(...args).execute();
+    }
+
+    async getClusterDomains() {
+        return new getClusterDomainsCommand().execute();
     }
 }

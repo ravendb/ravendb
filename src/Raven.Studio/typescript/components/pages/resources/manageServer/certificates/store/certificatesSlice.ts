@@ -23,8 +23,10 @@ interface InitialState {
     stateFilter: CertificatesState[];
     sortMode: CertificatesSortMode;
     isGenerateModalOpen: boolean;
+    isUploadModalOpen: boolean;
     certificateToRegenerate: CertificateItem;
     certificateToEdit: CertificateItem;
+    isReplaceServerModalOpen: boolean;
 }
 
 const initialState: InitialState = {
@@ -41,8 +43,10 @@ const initialState: InitialState = {
     stateFilter: [],
     sortMode: "Default",
     isGenerateModalOpen: false,
+    isUploadModalOpen: false,
     certificateToRegenerate: null,
     certificateToEdit: null,
+    isReplaceServerModalOpen: false,
 };
 
 export const certificatesSlice = createSlice({
@@ -67,6 +71,9 @@ export const certificatesSlice = createSlice({
         isGenerateModalOpenToggled: (state) => {
             state.isGenerateModalOpen = !state.isGenerateModalOpen;
         },
+        isUploadModalOpenToggled: (state) => {
+            state.isUploadModalOpen = !state.isUploadModalOpen;
+        },
         regenerateModalOpen: (state, action: PayloadAction<CertificateItem>) => {
             state.certificateToRegenerate = action.payload;
         },
@@ -78,6 +85,9 @@ export const certificatesSlice = createSlice({
         },
         editModalClosed: (state) => {
             state.certificateToEdit = null;
+        },
+        isReplaceServerModalOpenToggled: (state) => {
+            state.isReplaceServerModalOpen = !state.isReplaceServerModalOpen;
         },
     },
     extraReducers: (builder) => {
