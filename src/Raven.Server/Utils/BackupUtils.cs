@@ -640,14 +640,12 @@ internal static class BackupUtils
         try
         {
             var raftId = RaftIdGenerator.NewId();
-            // update backup status locally
-            serverStore.DatabaseInfoCache.BackupStatusStorage.InsertBackupStatus(status, databaseName, serverStore._env.Base64Id, status.TaskId);
-
-
+            
             AsyncHelpers.RunSync(async () =>
             {
                 var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
                     {
+                        // update backup status both locally and in cluster
                         var command = new UpdatePeriodicBackupStatusCommand(databaseName, raftId) { PeriodicBackupStatus = status };
                         var result = await serverStore.SendToLeaderAsync(command);
                         return result.Index;
@@ -671,12 +669,24 @@ internal static class BackupUtils
         }
         catch (Exception e)
         {
-            const string message = "Error saving the periodic backup status";
+            string message = $"Error saving the periodic backup status in {nameof(UpdatePeriodicBackupStatusCommand)}";
+            Exception fullException = e;
+            try
+            {
+                // if cluster command failed then we save the status locally on our own
+                serverStore.DatabaseInfoCache.BackupStatusStorage.InsertBackupStatus(status, databaseName, serverStore._env.Base64Id, status.TaskId);
+                message += $"{Environment.NewLine}Saving the local backup status directly succeeded";
+            }
+            catch (Exception ex)
+            {
+                message += $"{Environment.NewLine}Attempt at saving the local status directly failed as well";
+                fullException = new AggregateException(e, ex);
+            }
 
             if (logger.IsOperationsEnabled)
-                logger.Operations(message, e);
+                logger.Operations(message, fullException);
 
-            backupResult?.AddError($"{message}{Environment.NewLine}{e}");
+            backupResult?.AddError($"{message}{Environment.NewLine}{fullException}");
         }
     }
 

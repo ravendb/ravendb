@@ -1265,14 +1265,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
 
                     await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
-
-                    using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        // clean tombstones
-                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
-                        Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
-                    }
+                    await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: true);
 
                     using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
