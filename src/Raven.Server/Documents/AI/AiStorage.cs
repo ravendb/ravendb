@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using JetBrains.Annotations;
-using Microsoft.IO;
+using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.AI;
 
 public class AiStorage
 {
+    private const string EmbeddingAttachmentContentType = "application/octet-stream";
+
     private readonly DocumentsStorage _documentsStorage;
 
     public AiStorage([NotNull] DocumentsStorage documentsStorage)
@@ -30,7 +32,7 @@ public class AiStorage
 
         return GetValueEmbeddingsDocument(context, valueEmbeddingsDocumentId);
     }
-    
+
     private ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, string documentId)
     {
         var document = _documentsStorage.Get(context, documentId);
@@ -42,99 +44,98 @@ public class AiStorage
 
     public string AddOrUpdateValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlEmbeddingItem item)
     {
-        var document = GetValueEmbeddingsDocument(context, item.ValueEmbeddingsDocumentId);
-        string attachmentName = item.ValueEmbeddingsAttachmentName;
-        
-        // cache document doesn't exist
-        if (document == null)
-        {
-            // no embeddings
-            if (item.EmbeddingValue != null)
-            {
-                attachmentName = Guid.NewGuid().ToString();
-                
-                var documentDjv = new DynamicJsonValue
-                {
-                    [item.Value] = attachmentName,
-                    // todo expiration
-                    ["@metadata"] = new DynamicJsonValue()
-                    {
-                        ["@collection"] = "@embeddings"
-                    }
-                };
+        Debug.Assert((item.EmbeddingValue.IsEmpty && item.ValueEmbeddingsAttachmentName != null) || (item.EmbeddingValue.IsEmpty == false && item.ValueEmbeddingsAttachmentName == null));
 
-                using (var bjro = context.ReadObject(documentDjv, item.ValueEmbeddingsDocumentId)) 
-                    // todo
-                using (var stream = new MemoryStream(MemoryMarshal.Cast<float, byte>(item.EmbeddingValue).ToArray()))
-                using (var stream2 = new MemoryStream())
-                {
-                    var hash = AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, stream2, stream, CancellationToken.None).GetAwaiter().GetResult();
-                    
-                    _documentsStorage.Put(context, item.ValueEmbeddingsDocumentId, null, bjro);
-                    // todo content type
-                    _documentsStorage.AttachmentsStorage.PutAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, "application/octet-stream", hash, null, stream2);
-                }
-                
+        var document = GetValueEmbeddingsDocument(context, item.ValueEmbeddingsDocumentId);
+        string attachmentName = item.ValueEmbeddingsAttachmentName ?? Guid.NewGuid().ToString();
+
+        if (item.EmbeddingValue.IsEmpty == false)
+        {
+            if (document == null)
+            {
+                var djv = CreateDocument();
+
+                using (var json = context.ReadObject(djv, item.ValueEmbeddingsDocumentId))
+                    PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue);
+
                 return attachmentName;
             }
 
-            // todo embeddings should exist
-            throw new InvalidOperationException("Attachment exists but document was already deleted");
-        }
-
-        if (item.EmbeddingValue != null)
-        {
-            // document exists but property doesn't exist
-            if (document.Inner.Data.TryGet(item.Value, out attachmentName) == false)
-                attachmentName = Guid.NewGuid().ToString();
-            
-            document.Inner.Data.Modifications = new DynamicJsonValue(document.Inner.Data);
-            document.Inner.Data.Modifications[item.Value] = attachmentName;
-            
-            using (var bjro = context.ReadObject(document.Inner.Data, item.ValueEmbeddingsDocumentId))
-                // todo
-            using (var stream = new MemoryStream(MemoryMarshal.Cast<float, byte>(item.EmbeddingValue).ToArray()))
-            using (var streamCopy = new MemoryStream())
+            document.Inner.Data.Modifications = new DynamicJsonValue(document.Inner.Data)
             {
-                var hash = AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, streamCopy, stream, CancellationToken.None).GetAwaiter().GetResult();
+                [item.Value] = attachmentName
+            };
 
-                _documentsStorage.Put(context, item.ValueEmbeddingsDocumentId, null, bjro);
-                // todo content type
-                _documentsStorage.AttachmentsStorage.PutAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, "application/octet-stream", hash, null,
-                    streamCopy);
-            }
-            
+            using (var json = context.ReadObject(document.Inner.Data, item.ValueEmbeddingsDocumentId))
+                PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue);
+
             return attachmentName;
         }
 
         var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, AttachmentType.Document, null);
-
-        // todo 
         if (attachment == null)
-            throw new Exception("todo");
+            AttachmentDoesNotExistException.ThrowFor(item.ValueEmbeddingsDocumentId, attachmentName);
+
+        if (document == null)
+        {
+            var djv = CreateDocument();
+
+            using (var json = context.ReadObject(djv, item.ValueEmbeddingsDocumentId))
+                PutValueEmbeddingsDocumentFromAttachment(json, attachment);
+
+            return attachmentName;
+        }
 
         if (document.Inner.Data.TryGet(item.Value, out attachmentName) == false || attachment.Name != attachmentName)
         {
-            document.Inner.Data.Modifications = new DynamicJsonValue(document.Inner.Data);
-            document.Inner.Data.Modifications[item.Value] = attachment.Name;
-
-            using (var bjro = context.ReadObject(document.Inner.Data, item.ValueEmbeddingsDocumentId))
+            document.Inner.Data.Modifications = new DynamicJsonValue(document.Inner.Data)
             {
-                // change vector?
-                _documentsStorage.Put(context, item.ValueEmbeddingsDocumentId, document.Inner.ChangeVector, bjro);
+                [item.Value] = attachment.Name
+            };
+
+            using (var json = context.ReadObject(document.Inner.Data, item.ValueEmbeddingsDocumentId))
+                PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue);
+        }
+
+        return attachmentName;
+
+        void PutValueEmbeddingsDocumentFromEmbeddingValue(BlittableJsonReaderObject json, ReadOnlyMemory<float> embeddingValue)
+        {
+            using (var stream = new MemoryStream(MemoryMarshal.Cast<float, byte>(embeddingValue.Span).ToArray()))
+            {
+                var hash = AttachmentsStorageHelper.CalculateHash(context, stream);
+
+                _documentsStorage.Put(context, item.ValueEmbeddingsDocumentId, null, json);
+                _documentsStorage.AttachmentsStorage.PutAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, EmbeddingAttachmentContentType, hash, null, stream);
             }
         }
-        
-        return attachmentName;
+
+        void PutValueEmbeddingsDocumentFromAttachment(BlittableJsonReaderObject json, Attachment attachment)
+        {
+            _documentsStorage.Put(context, item.ValueEmbeddingsDocumentId, null, json);
+            _documentsStorage.AttachmentsStorage.PutAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, attachment.ContentType, attachment.Base64Hash.ToString(), null, attachment.Stream);
+        }
+
+        DynamicJsonValue CreateDocument()
+        {
+            return new DynamicJsonValue
+            {
+                [item.Value] = attachmentName,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.EmbeddingsCollection
+                }
+            };
+        }
     }
 
     public void AddOrUpdateDocumentEmbeddingsDocument(DocumentsOperationContext context, string configurationName, AiEtlEmbeddingItem item)
     {
         var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(item.DocumentId);
         var attachmentName = item.ValueEmbeddingsAttachmentName;
-        
+
         var document = _documentsStorage.Get(context, embeddingsDocumentId);
-        
+
         if (document == null)
         {
             var documentDjv = new DynamicJsonValue
@@ -144,17 +145,17 @@ public class AiStorage
                     [item.ValuePath] = new DynamicJsonArray() { attachmentName }
                 }
             };
-        
+
             using (var bjro = context.ReadObject(documentDjv, embeddingsDocumentId))
             {
                 _documentsStorage.Put(context, embeddingsDocumentId, null, bjro);
             }
-            
+
             var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, AttachmentType.Document, null);
 
             // todo hash
             _documentsStorage.AttachmentsStorage.PutAttachment(context, embeddingsDocumentId, attachmentName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.ChangeVector, attachment.Stream);
-            
+
             return;
         }
 
@@ -165,17 +166,17 @@ public class AiStorage
             {
                 [item.ValuePath] = new DynamicJsonArray() { attachmentName }
             };
-            
+
             using (var bjro = context.ReadObject(document.Data, embeddingsDocumentId))
             {
                 _documentsStorage.Put(context, embeddingsDocumentId, document.ChangeVector, bjro);
             }
-            
+
             var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, AttachmentType.Document, null);
 
             // todo hash
             _documentsStorage.AttachmentsStorage.PutAttachment(context, embeddingsDocumentId, attachmentName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.ChangeVector, attachment.Stream);
-            
+
             return;
         }
 
@@ -184,25 +185,25 @@ public class AiStorage
             document.Data.Modifications = new DynamicJsonValue(document.Data);
 
             var configurationObject = (DynamicJsonValue)document.Data.Modifications[configurationName];
-            
+
             configurationObject[item.ValuePath] = new DynamicJsonArray() { attachmentName };
-            
+
             using (var bjro = context.ReadObject(document.Data, embeddingsDocumentId))
             {
                 _documentsStorage.Put(context, embeddingsDocumentId, document.ChangeVector, bjro);
             }
-            
+
             var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, AttachmentType.Document, null);
 
             // todo hash
             _documentsStorage.AttachmentsStorage.PutAttachment(context, embeddingsDocumentId, attachmentName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.ChangeVector, attachment.Stream);
-            
+
             return;
         }
-        
+
         if (valuesUnderProperty.Contains(attachmentName))
             return;
-        
-        
+
+
     }
 }

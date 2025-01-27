@@ -42,6 +42,37 @@ namespace Raven.Server.Documents
             }
         }
 
+        public static string CalculateHash(JsonOperationContext context, MemoryStream stream)
+        {
+            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
+            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer cryptoState))
+            {
+                if (cryptoState.Size < (int)Sodium.crypto_generichash_statebytes())
+                    throw new InvalidOperationException("BUG: shouldn't happen, the size of a generic hash state was too large!");
+
+                InitComputeHash(cryptoState);
+
+                var bufferRead = 0;
+                while (true)
+                {
+                    var count = stream.Read(buffer.Memory.Memory.Span.Slice(bufferRead));
+                    if (count == 0)
+                        break;
+
+                    bufferRead += count;
+
+                    if (bufferRead == buffer.Size)
+                    {
+                        PartialComputeHash(cryptoState, buffer, bufferRead);
+                        bufferRead = 0;
+                    }
+                }
+                PartialComputeHash(cryptoState, buffer, bufferRead);
+                var hash = FinalizeGetHash(cryptoState, buffer);
+                return hash;
+            }
+        }
+
         private static unsafe void InitComputeHash(JsonOperationContext.MemoryBuffer cryptoState)
         {
             var rc = Sodium.crypto_generichash_init(cryptoState.Address, null, UIntPtr.Zero, Sodium.crypto_generichash_bytes());

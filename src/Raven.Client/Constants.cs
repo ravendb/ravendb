@@ -323,6 +323,8 @@ namespace Raven.Client
                 public const string AllDocumentsCollection = "@all_docs";
 
                 public const string EmptyCollection = "@empty";
+
+                public const string EmbeddingsCollection = "@embeddings";
             }
 
             public sealed class Indexing

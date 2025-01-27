@@ -1,3 +1,5 @@
+using System;
+
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
 public class AiEtlEmbeddingItem
@@ -9,5 +11,5 @@ public class AiEtlEmbeddingItem
     public string ValueEmbeddingsDocumentId { get; set; }
     public string ValueEmbeddingsAttachmentName { get; set; }
 
-    public float[] EmbeddingValue { get; set; }
+    public ReadOnlyMemory<float> EmbeddingValue { get; set; }
 }

@@ -112,7 +112,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                     var embeddingItem = embeddingsMap[i];
                     var embedding = generatedValues[i];
 
-                    embeddingItem.EmbeddingValue = embedding.ToArray();
+                    embeddingItem.EmbeddingValue = embedding;
 
                     //CreateNewPrivateDocument(missingEmbeddings[i].Value, missingEmbeddings[i].EmbeddingValue, context, out var attachmentGuid);
 

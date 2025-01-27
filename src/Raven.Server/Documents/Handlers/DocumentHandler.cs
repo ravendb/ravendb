@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
 
-                if (item.EmbeddingValue != null)
+                if (item.EmbeddingValue.IsEmpty == false)
                 {
                     
                 }

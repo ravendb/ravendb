@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Raven.Client.Exceptions.Documents.Attachments
 {
@@ -28,6 +29,9 @@ namespace Raven.Client.Exceptions.Documents.Attachments
         {
         }
 
+#if !NETSTANDARD2_0
+        [DoesNotReturn]
+#endif
         public static AttachmentDoesNotExistException ThrowFor(string documentId, string attachmentName)
         {
             throw new AttachmentDoesNotExistException($"There is no attachment with '{attachmentName}' name for document '{documentId}'.");
