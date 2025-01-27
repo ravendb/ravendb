@@ -44,6 +44,7 @@ namespace Raven.Server.Documents
 
         public static string CalculateHash(JsonOperationContext context, MemoryStream stream)
         {
+            var initialPosition = stream.Position;
             using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
             using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer cryptoState))
             {
@@ -67,6 +68,7 @@ namespace Raven.Server.Documents
                         bufferRead = 0;
                     }
                 }
+                stream.Position = initialPosition;
                 PartialComputeHash(cryptoState, buffer, bufferRead);
                 var hash = FinalizeGetHash(cryptoState, buffer);
                 return hash;
