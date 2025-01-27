@@ -15,6 +15,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { TextColor } from "components/models/common";
+import CertificatesCloneModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import CertificatesEditModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import CertificatesRegenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
@@ -46,6 +47,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     const certificateToRegenerate = useAppSelector(certificatesSelectors.certificateToRegenerate);
     const certificateToEdit = useAppSelector(certificatesSelectors.certificateToEdit);
+    const certificateToClone = useAppSelector(certificatesSelectors.certificateToClone);
 
     const state = certificatesUtils.getState(certificate.NotAfter);
     const clearance = certificatesUtils.getClearance(certificate.SecurityClearance);
@@ -55,6 +57,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     const canBeAutomaticallyRenewed = isServerCert && serverCertificateSetupMode === "LetsEncrypt";
     const canEdit = !isServerCert && state !== "Expired";
+    const canClone = !isServerCert;
     const canRegenerate = !isServerCert && (state === "Expired" || state === "About to expire");
     const canDelete = (() => {
         if (isServerCert) {
@@ -164,6 +167,17 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     Regenerate
                                 </Button>
                                 {certificateToRegenerate && <CertificatesRegenerateModal />}
+                            </>
+                        )}
+                        {canClone && (
+                            <>
+                                <Button
+                                    title="Clone certificate"
+                                    onClick={() => dispatch(certificatesActions.cloneModalOpen(certificate))}
+                                >
+                                    <Icon icon="copy" margin="m-0" />
+                                </Button>
+                                {certificateToClone && <CertificatesCloneModal />}
                             </>
                         )}
                         {canEdit && (

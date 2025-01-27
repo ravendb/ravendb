@@ -188,6 +188,24 @@ function mapDatabasePermissionsFromDto(dto: CertificateItem) {
     }));
 }
 
+function mapExpireFromDro(dto: CertificateItem): Pick<CertificatesGenerateFormData, "expireIn" | "expireTimeUnits"> {
+    const notAfter = moment.utc(dto.NotAfter);
+    const now = moment.utc();
+    const expireInDays = Math.ceil(moment.duration(notAfter.diff(now)).asDays());
+
+    if (expireInDays <= 0) {
+        return {
+            expireIn: null,
+            expireTimeUnits: "months",
+        };
+    }
+
+    return {
+        expireIn: expireInDays,
+        expireTimeUnits: "days",
+    };
+}
+
 const twoFactorActionSchema = yup
     .string<TwoFactorAction>()
     .nullable()
@@ -217,6 +235,7 @@ export const certificatesUtils = {
     mapRegenerateToDto,
     mapReplaceServerToDto,
     mapDatabasePermissionsFromDto,
+    mapExpireFromDro,
     twoFactorActionSchema,
     databasePermissionsSchema,
     noPrivilegesConfirmOptions,

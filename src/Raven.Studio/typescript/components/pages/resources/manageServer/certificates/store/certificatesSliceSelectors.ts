@@ -145,5 +145,6 @@ export const certificatesSelectors = {
     isUploadModalOpen: (state: RootState) => state.certificates.isUploadModalOpen,
     certificateToRegenerate: (state: RootState) => state.certificates.certificateToRegenerate,
     certificateToEdit: (state: RootState) => state.certificates.certificateToEdit,
+    certificateToClone: (state: RootState) => state.certificates.certificateToClone,
     isReplaceServerModalOpen: (state: RootState) => state.certificates.isReplaceServerModalOpen,
 };

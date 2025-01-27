@@ -26,6 +26,7 @@ interface InitialState {
     isUploadModalOpen: boolean;
     certificateToRegenerate: CertificateItem;
     certificateToEdit: CertificateItem;
+    certificateToClone: CertificateItem;
     isReplaceServerModalOpen: boolean;
 }
 
@@ -46,6 +47,7 @@ const initialState: InitialState = {
     isUploadModalOpen: false,
     certificateToRegenerate: null,
     certificateToEdit: null,
+    certificateToClone: null,
     isReplaceServerModalOpen: false,
 };
 
@@ -85,6 +87,12 @@ export const certificatesSlice = createSlice({
         },
         editModalClosed: (state) => {
             state.certificateToEdit = null;
+        },
+        cloneModalOpen: (state, action: PayloadAction<CertificateItem>) => {
+            state.certificateToClone = action.payload;
+        },
+        cloneModalClosed: (state) => {
+            state.certificateToClone = null;
         },
         isReplaceServerModalOpenToggled: (state) => {
             state.isReplaceServerModalOpen = !state.isReplaceServerModalOpen;
