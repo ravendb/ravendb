@@ -4,6 +4,9 @@ public enum AiConnectorType
 {
     None,
     OpenAi,
+    AzureOpenAI,
     Ollama,
-    Onnx
+    Onnx,
+    Google,
+    HuggingFace,
 }

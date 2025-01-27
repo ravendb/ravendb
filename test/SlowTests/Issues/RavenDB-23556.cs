@@ -16,7 +16,7 @@ public class RavenDB_23556 : RavenTestBase
     [RavenFact(RavenTestCategory.Etl)]
     public void Test()
     {
-        const string connectionStringName = "someConnectionStringName";
+        const string connectionStringName = "some Connection стринг StringName";
 
         using (var store = GetDocumentStore())
         {

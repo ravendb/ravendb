@@ -59,9 +59,11 @@
     <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="Microsoft.NETCore.Jit" Version="2.0.8" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.34.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.34.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.18.1-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.33.0-alpha" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Onnx" Version="1.33.0-alpha" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.33.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.34.0" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
     <PackageVersion Include="MongoDB.Driver.GridFS" Version="2.30.0" />

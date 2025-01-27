@@ -56,10 +56,22 @@ public static class AiHelper
                     Endpoint = new Uri(openAiSettings.Endpoint),
                     OrganizationId = openAiSettings.OrganizationId,
                     ProjectId = openAiSettings.ProjectId,
-                    UserAgentApplicationId = $"RavenDB/{ServerVersion.FullVersion}/{nameof(AiEtl)}"
+                    UserAgentApplicationId = $"RavenDB/{ServerVersion.Version}/{nameof(AiEtl)}"
                 };
                 var openAIClient = new OpenAIClient(apiKey, openAiOptions);
                 kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient);
+
+                break;
+
+            case AiConnectorType.AzureOpenAI:
+                var azureOpenAiSettings = configuration.Connection.AzureOpenAiSettings;
+
+                kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
+                    azureOpenAiSettings.DeploymentName,
+                    azureOpenAiSettings.Endpoint,
+                    azureOpenAiSettings.ApiKey,
+                    azureOpenAiSettings.ServiceId,
+                    azureOpenAiSettings.Model);
 
                 break;
 
@@ -84,6 +96,16 @@ public static class AiHelper
                 kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions());
 
                 break;
+
+            case AiConnectorType.Google:
+                var googleSettings = configuration.Connection.GoogleSettings;
+                kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey, googleSettings.ApiVersion, googleSettings.ServiceId);
+                break;
+
+            // case AiConnectorType.HuggingFace:
+            //     var huggingFaceSettings = configuration.Connection.HuggingFaceSettings;
+            //
+            //     ke
 
             default:
                 throw new NotSupportedException($"'{configuration.AiConnectorType}' provider is not supported");

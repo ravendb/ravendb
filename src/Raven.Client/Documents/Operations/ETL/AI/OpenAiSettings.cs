@@ -5,23 +5,8 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 /// <summary>
 /// The configuration for the OpenAI API client.
 /// </summary>
-public sealed class OpenAiSettings
+public sealed class OpenAiSettings : OpenAiBaseSettings
 {
-    /// <summary>
-    /// The API key to used to authenticate with the service.
-    /// </summary>
-    public string ApiKey { get; set; }
-
-    /// <summary>
-    /// The service endpoint that the client will send requests to. If not set, the default endpoint will be used.
-    /// </summary>
-    public string Endpoint { get; set; }
-
-    /// <summary>
-    /// The model that should be used.
-    /// </summary>
-    public string Model { get; set; }
-
     /// <summary>
     /// The value to use for the <c>OpenAI-Organization</c> request header. Users who belong to multiple organizations
     /// can set this value to specify which organization is used for an API request. Usage from these API requests will
@@ -31,7 +16,6 @@ public sealed class OpenAiSettings
     /// </summary>
     public string OrganizationId { get; set; }
 
-
     /// <summary>
     /// The value to use for the <c>OpenAI-Project</c> request header. Users who are accessing their projects through
     /// their legacy user API key can set this value to specify which project is used for an API request. Usage from
@@ -40,14 +24,13 @@ public sealed class OpenAiSettings
     /// </summary>
     public string ProjectId { get; set; }
 
-    public bool HasSettings() => string.IsNullOrWhiteSpace(ApiKey) == false;
+    public override DynamicJsonValue ToJson()
+    {
+        var json = base.ToJson();
 
-    public DynamicJsonValue ToJson() =>
-        new()
-        {
-            [nameof(ApiKey)] = ApiKey,
-            [nameof(Endpoint)] = Endpoint,
-            [nameof(OrganizationId)] = OrganizationId,
-            [nameof(ProjectId)] = ProjectId
-        };
+        json[OrganizationId] = OrganizationId;
+        json[ProjectId] = ProjectId;
+
+        return json;
+    }
 }

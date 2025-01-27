@@ -139,6 +139,8 @@
     <PackageReference Include="Lambda2Js.Signed" />
     <PackageReference Include="Microsoft.AspNetCore.JsonPatch" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Onnx" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Nito.AsyncEx.Coordination" />
     <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />
