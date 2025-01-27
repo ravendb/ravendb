@@ -10,11 +10,13 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Constants = Raven.Client.Constants;
@@ -203,33 +205,49 @@ namespace Raven.Server.Documents.Handlers
         }
     }
     
-    public sealed class MergedPutEmbeddingCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+    public sealed class MergedPutEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
     {
-        private string _id;
-        private readonly BlittableJsonReaderObject _document;
-        private readonly LazyStringValue _expectedChangeVector;
-        private readonly Dictionary<string, byte[]> _attachmentsData;
+        private readonly List<AiEtlEmbeddingItem> _items;
+        private readonly string _configurationName;
         private readonly DocumentDatabase _database;
         public DocumentsStorage.PutOperationResults PutResult;
         
-        public MergedPutEmbeddingCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, Dictionary<string, byte[]> attachmentsData, DocumentDatabase database)
+        public MergedPutEmbeddingsCommand(List<AiEtlEmbeddingItem> items, string configurationName, DocumentDatabase database)
         {
-            _document = doc;
-            _id = id;
-            _expectedChangeVector = changeVector;
-            _attachmentsData = attachmentsData;
+            _items = items;
+            _configurationName = configurationName;
             _database = database;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
-
-            foreach (var attachmentData in _attachmentsData)
+            foreach (var item in _items)
             {
-                using (var stream = new MemoryStream(attachmentData.Value))
+                var attachmentName = _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, item);
+                
+                if (item.ValueEmbeddingsAttachmentName == null)
                 {
-                    _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, _id, attachmentData.Key, "dd", "YWJjZDIxMzdkYXdhZWF3ZXdxMjMzMTIzMjEzMjFkZA==", _expectedChangeVector, stream);
+                    var documentDjv = new DynamicJsonValue { ["Id"] = item.ValueEmbeddingsDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "@embeddings" } };
+
+                    var attachmentGuid = Guid.NewGuid().ToString();
+                    documentDjv[item.Value] = attachmentGuid;
+                    
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var bjro = ctx.ReadObject(documentDjv, "doc");
+                        _database.DocumentsStorage.Put(context, item.ValueEmbeddingsDocumentId, null, bjro);
+                    }
+                    
+                    using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, item.DocumentId, attachmentGuid, "dd",
+                            "YWJjZDIxMzdkYXdhZWF3ZXdxMjMzMTIzMjEzMjFkZA==", null, stream);
+                    }
+                }
+
+                if (item.EmbeddingValue != null)
+                {
+                    
                 }
             }
             
@@ -238,16 +256,14 @@ namespace Raven.Server.Documents.Handlers
         
         public void Dispose()
         {
-            _document?.Dispose();
+            
         }
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
             return new MergedPutCommandDto
             {
-                Id = _id,
-                ExpectedChangeVector = _expectedChangeVector,
-                Document = _document
+                
             };
         }
 

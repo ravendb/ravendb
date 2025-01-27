@@ -35,9 +35,9 @@ public static class AiHelper
         return $"{documentId}/embeddings";
     }
 
-    public static string ValueEmbeddingsDocumentId(string configurationKey, string hash)
+    public static string GetValueEmbeddingsDocumentId(string configurationName, string hash)
     {
-        return $"embeddings/{configurationKey}/{hash}";
+        return $"embeddings/{configurationName}/{hash}";
     }
 
     [Experimental("SKEXP0001")]

@@ -109,10 +109,10 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
 
                 for (var i = 0; i < embeddingsMap.Count; ++i)
                 {
-                    var embeddingHolder = embeddingsMap[i];
+                    var embeddingItem = embeddingsMap[i];
                     var embedding = generatedValues[i];
 
-                    embeddingHolder.EmbeddingValue = embedding.ToArray();
+                    embeddingItem.EmbeddingValue = embedding.ToArray();
 
                     //CreateNewPrivateDocument(missingEmbeddings[i].Value, missingEmbeddings[i].EmbeddingValue, context, out var attachmentGuid);
 
@@ -130,11 +130,14 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
             }
 
             // process the aiEtlScriptRun here via TxMerger
+            var cmd = new MergedPutEmbeddingsCommand(aiEtlScriptRun.CurrentRun, Configuration.Name, Database);
+
+            Database.TxMerger.EnqueueSync(cmd);
 
             return processed;
         }
     }
-
+    /*
     private void CreateNewPublicDocument(string originDocumentId, string fieldName, string attachmentGuid, string changeVector, DocumentsOperationContext context)
     {
         var newDocumentId = AiHelper.GetDocumentEmbeddingsId(originDocumentId);
@@ -163,32 +166,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
             Database.TxMerger.EnqueueSync(cmd);
         }
     }
-
-    private void CreateNewPrivateDocument(string textValue, float[] embeddingValue, DocumentsOperationContext context, out string attachmentGuid)
-    {
-        var hash = AiHelper.CalculateValueHash(textValue);
-        var newDocumentId = AiHelper.ValueEmbeddingsDocumentId(Configuration.Name, hash);
-
-        var documentDjv = new DynamicJsonValue { ["Id"] = newDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "@embeddings" } };
-
-        attachmentGuid = Guid.NewGuid().ToString();
-
-        documentDjv[textValue] = attachmentGuid;
-
-        var embedding = GenerateEmbeddings.FromText(context.Allocator, VectorOptions.DefaultText, textValue).GetEmbedding().ToArray();
-
-        using (var ctx = JsonOperationContext.ShortTermSingleUse())
-        {
-            var bjro = ctx.ReadObject(documentDjv, "doc");
-
-            var cmd = new MergedPutEmbeddingCommand(bjro, newDocumentId, null, new Dictionary<string, byte[]>() { { attachmentGuid, embedding } }, Database);
-
-            Database.TxMerger.EnqueueSync(cmd);
-        }
-    }
-
-
-
+    */
     protected override EtlStatsScope CreateScope(EtlRunStats stats)
     {
         return new EtlStatsScope(stats);
