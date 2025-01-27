@@ -259,7 +259,7 @@ const sortOptions: SelectOptionWithIconAndSeparator<CertificatesSortMode>[] = (
     [
         { value: "Default", horizontalSeparatorLine: true },
         { value: "By Name - Asc", icon: "arrow-up" },
-        { value: "By Name - Desc", horizontalSeparatorLine: true },
+        { value: "By Name - Desc", icon: "arrow-down", horizontalSeparatorLine: true },
         { value: "By Expiration Date - Asc", icon: "arrow-up" },
         {
             value: "By Expiration Date - Desc",

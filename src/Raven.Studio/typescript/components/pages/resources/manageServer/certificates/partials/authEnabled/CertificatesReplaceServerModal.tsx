@@ -74,7 +74,7 @@ export default function CertificatesReplaceServerModal() {
                                 Please verify that the new certificate contains all of the following domain names in the
                                 CN or ASN properties of the certificate:
                                 <ul className="mt-2">
-                                    {asyncGetClusterDomains.result?.map((domain) => <li key={domain}>{domain}</li>)}
+                                    {asyncGetClusterDomains.result?.map((domain, idx) => <li key={idx}>{domain}</li>)}
                                 </ul>
                             </RichAlert>
                         </LazyLoad>
