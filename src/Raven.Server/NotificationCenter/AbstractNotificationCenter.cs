@@ -186,7 +186,7 @@ public abstract class AbstractNotificationCenter : NotificationsBase
 
     public void Dismiss(string id, RavenTransaction existingTransaction = null, bool sendNotificationEvenIfDoesntExist = true)
     {
-        var deleted = Storage.Exists(id) && Storage.Delete(id, existingTransaction);
+        var deleted = Exists(id) && Storage.Delete(id, existingTransaction);
         if (deleted == false && sendNotificationEvenIfDoesntExist == false)
             return;
 
