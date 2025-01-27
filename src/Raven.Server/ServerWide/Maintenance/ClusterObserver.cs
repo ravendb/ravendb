@@ -98,7 +98,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public bool Suspended = false; // don't really care about concurrency here
         private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog = new BlockingCollection<ClusterObserverLogEntry>();
-        internal long _iteration;
+        private long _iteration;
         private readonly long _term;
         private readonly long _moveToRehabTimeMs;
         private readonly long _maxChangeVectorDistance;
@@ -556,7 +556,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return null;
             }
 
-            cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(state, out long maxEtag);
+            cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state, out long maxEtag);
 
             if(_server.ForTestingPurposes?.AfterCompareExchangeTombstonesResult != null)
                 _server.ForTestingPurposes?.AfterCompareExchangeTombstonesResult.Invoke(cleanupState);
@@ -574,7 +574,7 @@ namespace Raven.Server.ServerWide.Maintenance
             NoMoreTombstones
         }
 
-        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete(DatabaseObservationState state, out long maxEtag)
+        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete(TransactionOperationContext context, string databaseName, DatabaseObservationState state, out long maxEtag)
         {
             maxEtag = -1;
             long minClusterWideTransactionIndex = -1;
@@ -611,7 +611,16 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var (taskId, status) in report.BackupStatuses)
                 {
                     if (status == null)
+                    {
+                        var clusterStatus = BackupUtils.GetBackupStatusFromClusterBlittable(_server, context, databaseName, taskId);
+                        if (clusterStatus == null)
+                        {
+                            // existing backup hasn't run yet for the first time, we don't want to delete anything until we have a first status
+                            return 0;
+                        }
+
                         continue;
+                    }
 
                     var lastFullBackupInternal = status.LastFullBackupInternal;
                     if (lastFullBackupInternal == null)

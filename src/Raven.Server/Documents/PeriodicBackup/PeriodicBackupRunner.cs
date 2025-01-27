@@ -1060,7 +1060,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (taskIdsStatusesToDelete != null && taskIdsStatusesToDelete.Count > 0)
             {
-                if (_serverStore.DatabaseInfoCache.DeleteBackupStatusesByTaskIds(_database.Name, _serverStore._env.Base64Id, taskIdsStatusesToDelete) == false)
+                if (_serverStore.DatabaseInfoCache.BackupStatusStorage.DeleteBackupStatusesByTaskIds(_database.Name, _serverStore._env.Base64Id, taskIdsStatusesToDelete) == false)
                     minLastEtag = 0; // deleting the local status did not succeed. we can't remove any tombstones because it is not guaranteed next backup will be full.
             }
 

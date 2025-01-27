@@ -107,14 +107,6 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             return $"{GenerateItemName(databaseName, taskId)}/{base64DbId}";
         }
-
-        public override string ToString()
-        {
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            {
-                return ctx.ReadObject(ToJson(), "backup-status").ToString();
-            }
-        }
     }
 
     public class Error

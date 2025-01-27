@@ -27,8 +27,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private static readonly Slice BackupStatusSlice;
 
-        public SystemTime Time = new SystemTime();
-
         static BackupStatusStorage()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -123,36 +121,20 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public bool DeleteBackupStatusesByTaskIds(string databaseName, string dbId, HashSet<long> taskIds)
         {
-            try
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromMinutes(1)))
             {
-                using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromMinutes(1)))
+                var table = ctx.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
+                foreach (var taskId in taskIds)
                 {
-                    foreach (var taskId in taskIds)
+                    var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+                    using (Slice.From(ctx.Allocator, backupKey.ToLowerInvariant(), out Slice key))
                     {
-                        var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
-                        using (Slice.From(ctx.Allocator, backupKey.ToLowerInvariant(), out Slice key))
-                        {
-                            var table = ctx.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
-                            table.DeleteByKey(key);
-                        }
+                        table.DeleteByKey(key);
                     }
-
-                    tx.Commit();
                 }
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(
-                        $"{databaseName}: Deleted local backup statuses for the following ids [{string.Join(",", taskIds)}], because node with db id {dbId} is not responsible anymore and is overdue for a full backup.");
-            }
-            catch (Exception ex)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(
-                        $"{databaseName}: Could not delete the local backup statuses for the following ids [{string.Join(",", taskIds)}]. We will not remove any tombstones.",
-                        ex);
-
-                return false;
+                tx.Commit();
             }
 
             return true;
