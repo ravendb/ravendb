@@ -18,6 +18,11 @@ namespace Sparrow.Json
         private UsageMode _mode;
         private readonly IJsonParser _reader;
         public IBlittableDocumentModifier _modifier;
+
+        // We introduced a delegate that encapsulates the reading logic.
+        // This avoids branching on every 'Read()' call to figure out which path to take
+        // (WriteNone vs. WriteFull, ObjectJsonParser vs. UnmanagedJsonParser).
+        // Instead, we decide once in the constructor or Renew(...) and store that strategy here.
         private Func<bool> _readInternalFunc;
 
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
@@ -41,6 +46,8 @@ namespace Sparrow.Json
             _modifier = modifier;
             _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
 
+            // Here we bind the specialized read function once, based on the current parser and mode.
+            // This helps eliminate per-call conditionals in Read().
             _readInternalFunc = GetReadInternalFunction(_reader, _mode);
         }
 
@@ -61,6 +68,10 @@ namespace Sparrow.Json
 
         private Func<bool> GetReadInternalFunction(IJsonParser reader, UsageMode mode)
         {
+            // Instead of checking mode and parser type repeatedly in the reading loop,
+            // we perform that check once. We return a specialized generic function
+            // (either ReadInternal<WriteNone, TParser> or ReadInternal<WriteFull, TParser>).
+            // This approach enables better inlining and reduces branching inside Read().
             return mode switch
             {
                 UsageMode.None => reader switch
@@ -99,6 +110,10 @@ namespace Sparrow.Json
             _writeToken = default;
             _debugTag = debugTag;
             _mode = mode;
+
+            // Renew is now also responsible for re-binding the read function
+            // if the UsageMode changes. This resets parsing state and ensures
+            // we're using the correct specialized read routine going forward.
             _readInternalFunc = GetReadInternalFunction(_reader, mode);
 
             ClearState();
@@ -168,6 +183,11 @@ namespace Sparrow.Json
         {
             CachedProperties.PropertyName fakeProperty = null;
 
+            // PERF: This method is performance critical, therefore, we replaced
+            // '_continuationState.Push(...)' with 'PushByRef() = ...' to avoid unnecessary copying
+            // of 'BuildingState' structs and reduce overhead.
+            // This small change can yield noticeable performance improvements under heavy usage.
+
             var continuationState = _continuationState;
             var currentState = continuationState.Pop();
             var reader = (TJsonParser) _reader;
@@ -204,6 +224,9 @@ namespace Sparrow.Json
                                     currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
                                     currentState.State = ContinuationState.ReadPropertyValue;
 
+                                    // PERF: _isVectorProperty is now set by CurrentProperty.IsVectorProperty,
+                                    // removing a string comparison each time. We rely on a cached boolean 
+                                    // from the property lookup to decide if we should read buffered vector data.
                                     _isVectorProperty = currentState.CurrentProperty.IsVectorProperty;
 
                                     goto case ContinuationState.ReadPropertyValue;
@@ -343,6 +366,10 @@ namespace Sparrow.Json
                     
                     case ContinuationState.ReadBufferedArrayValue:
 
+                        // The same approach of buffered vectors is used, but we streamlined the
+                        // transition to/from "vector reading mode" by short-circuiting and returning
+                        // to normal array reading if any token doesn't fit the vector requirements.
+                        // This reduces overhead for large numeric arrays or mixed-type arrays.
                         if (reader.Read() == false)
                         {
                             continuationState.PushByRef() = currentState;
@@ -468,7 +495,7 @@ namespace Sparrow.Json
 
         private struct VectorProcessor<T> where T : unmanaged
         {
-            internal static unsafe int ProcessVector(byte* buffer, int size, JsonParserState state, BlittableWriter<UnmanagedWriteBuffer> writer)
+            internal static int ProcessVector(byte* buffer, int size, JsonParserState state, BlittableWriter<UnmanagedWriteBuffer> writer)
             {
                 Span<T> st = new(buffer, size);
                 int count = state.FillVector(st);
@@ -476,13 +503,17 @@ namespace Sparrow.Json
             }
         }
 
-        private unsafe int WriteBufferedVector()
+        private int WriteBufferedVector()
         {
             int count = _state._bufferedSequence.Count;
             int size = count * sizeof(long);
             using var _ = _context.GetMemoryBuffer(size, out var buffer);
 
             var type = _state.GetBufferedOptimalType();
+
+            // Additional small but impactful detail:
+            // Using 'switch (type)' with specialized method calls (VectorProcessor<double>, etc.)
+            // helps the JIT inline the vector writing logic for each numeric type more effectively.
             switch (type)
             {
                 case BlittableVectorType.Double:

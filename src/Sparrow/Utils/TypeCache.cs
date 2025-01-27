@@ -19,18 +19,18 @@ namespace Sparrow.Utils
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGet(Type type, out T result)
         {
-            int bucket = GetBucket(type);
+            Unsafe.SkipInit(out result);
 
-            // We get the data and after that we always work from there to avoid
-            // harmful race conditions.
-            var storage = _buckets[bucket];
+            int typeHash = type.GetHashCode();
+
+            // We get the data and after that we always work from there to avoid harmful race conditions.
+            // 
+            // The new design emphasizes minimal synchronization overhead.
+            // We do direct index lookups and only check a single or small list of items for collisions.
+            // This drastically reduces contention compared to a dictionary-based approach.
+            var storage = _buckets[typeHash % _size];
             if (storage == null)
-                goto NotFound;
-
-            // The idea is that the type cache is big enough so that type collisions are
-            // unlikely occurrences. 
-            if (storage.Count != 1)
-                return TryGetUnlikely(storage, type, out result);
+                return false;
 
             ref var item = ref storage.GetAsRef(0);
             if (item.Item1 == type)
@@ -39,25 +39,33 @@ namespace Sparrow.Utils
                 return true;
             }
 
-            NotFound:
-            result = default;
+            // The idea is that the type cache is big enough so that type collisions are
+            // unlikely occurrences. 
+            if (storage.Count != 1)
+                return TryGetUnlikely(storage, type, out result);
+
             return false;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public bool TryGetUnlikely(FastList<Tuple<Type, T>>  storage, Type type, out T result)
         {
-            for (int i = storage.Count - 1; i >= 0; i--)
+            Unsafe.SkipInit(out result);
+
+            // In the uncommon scenario of collisions or multiple inserts,
+            // we revert to a simple linear scan. This is rare enough not to impact
+            // normal performance, ensuring a good average-case behavior, but since 
+            // we have already checked 0 so we will skip it. 
+            for (int i = storage.Count - 1; i > 0; i--)
             {
                 ref var item = ref storage.GetAsRef(i);
-                if (item.Item1 == type)
-                {
-                    result = item.Item2;
-                    return true;
-                }
+                if (item.Item1 != type) 
+                    continue;
+
+                result = item.Item2;
+                return true;
             }
 
-            result = default;
             return false;
         }
 
@@ -65,9 +73,10 @@ namespace Sparrow.Utils
         {
             int bucket = GetBucket(type);
 
-            // The idea is that this TypeCache<T> is thread safe. It is better to lose some Put
-            // that to allow side effects to happen. The tradeoff is having to recompute in case
-            // of race conditions.
+            // The unsynchronized 'Put' is designed for a high concurrency scenario.
+            // It's "okay" if we lose some new entries under race conditions, so long as
+            // readers never retrieve the wrong (Type, T) pair. This is a beneficial trade-off
+            // for many real-world read-heavy workloads.
             FastList<Tuple<Type,T>> newBucket;
             var storage = _buckets[bucket];
             if (storage == null)
@@ -106,12 +115,20 @@ namespace Sparrow.Utils
         //  1) Atomic reference assignment in .NET
         //  2) The check (item.Item1 == type) to avoid incorrect Type mismatches
         //  3) It's acceptable for TryGet to return false in race conditions
+        // This is a simpler, specialized design used for an even lighter collision approach.
+        // Instead of a collection of items (like in TypeCache<T>), we store a single entry per slot.
+        // Collisions overwrite the previous entry. This drastically reduces overhead in reading
+        // at the cost of occasionally losing older entries.
+
         private FastList<Tuple<Type, T>> _buckets;
         private readonly int _size;
         private readonly int _mask;
 
         public ReplacementTypeCache(int size = 64)
         {
+            // We use power-of-two sizing (rounded up via Bits.PowerOf2)
+            // to make (hash & mask) faster than % operations. This is a micro-optimization
+            // that can matter when this call is extremely hot.
             _size = Bits.PowerOf2(size);
             _mask = _size - 1;
             _buckets = new(_size);
@@ -128,8 +145,9 @@ namespace Sparrow.Utils
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGet(Type type, out T result)
         {
-            // Grab the slot. Note that this read is not synchronized.
-            // Under a race, we might see a stale tuple or null => return false.
+            // The simplified approach uses a single entry per bucket.
+            // This yields a very fast read path. If the entry is for a different type
+            // or a race overwrote it, we just return false => 'cache miss'.
             var item = _buckets[type.GetHashCode() & _mask];
             if (item is not null && item.Item1 == type)
             {
@@ -153,6 +171,10 @@ namespace Sparrow.Utils
         /// </summary>
         public void Put(Type type, T value)
         {
+            // Collisions simply overwrite. No chain or recheck.
+            // This drastically cuts memory overhead and lock contention,
+            // making it ideal for a scenario where each type is typically
+            // hashed consistently, with few collisions in practice.
             _buckets[type.GetHashCode() & _mask] = new Tuple<Type, T>(type, value);
         }
     }

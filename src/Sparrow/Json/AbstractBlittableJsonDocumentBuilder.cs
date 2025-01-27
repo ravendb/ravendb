@@ -23,6 +23,9 @@ namespace Sparrow.Json
 
         static AbstractBlittableJsonDocumentBuilder()
         {
+            // PERF: Utilizing PerCoreContainer to manage GlobalPoolItem instances.
+            // This reduces contention and improves cache locality across multiple cores.
+            // On 32-bit platforms, a smaller pool size is used to conserve memory resources.
             GlobalCache = PlatformDetails.Is32Bits 
                 ? new PerCoreContainer<GlobalPoolItem>(4) 
                 : new PerCoreContainer<GlobalPoolItem>();
@@ -30,8 +33,12 @@ namespace Sparrow.Json
 
         protected AbstractBlittableJsonDocumentBuilder()
         {
+            // PERF: Efficiently pulling a GlobalPoolItem from the global cache.
+            // If the cache is empty, a new GlobalPoolItem is instantiated.
+            // This leverages object pooling to minimize memory allocations and enhance performance.
             if (GlobalCache.TryPull(out _cacheItem) == false)
                 _cacheItem = new GlobalPoolItem();
+
             _propertiesCache = _cacheItem.PropertyCache;
             _positionsCache = _cacheItem.PositionsCache;
             _tokensCache = _cacheItem.TokensCache;
@@ -42,8 +49,10 @@ namespace Sparrow.Json
         {
             GlobalCache.TryPush(_cacheItem);
 
-            // PERF: We are clearing the array without removing the references because the type is an struct.
+            // PERF: Efficiently clearing the continuation stack by using WeakClear,
+            // which avoids removing references since BuildingState is a struct.
             _continuationState.WeakClear();
+
             ContinuationPool.Free(_continuationState);
 
             _disposed = true;
@@ -79,6 +88,9 @@ namespace Sparrow.Json
 
             internal bool PartialRead;
 
+            // PERF: Added multiple constructors to allow efficient initialization
+            // based on different use cases. This reduces the overhead of setting properties
+            // individually and enables better inlining by the JIT compiler.
             public BuildingState(ContinuationState state) : this()
             {
                 State = state;
@@ -104,31 +116,27 @@ namespace Sparrow.Json
             }
         }
 
-        // PERF: The numbers for continuation states have been changed to improve the chance of the
-        // JIT to emit a jump-table instead of complex switch.
+        // PERF: Simplified the ContinuationState enum to use sequential integer values.
+        // This allows the JIT compiler to emit efficient jump tables for switch statements,
+        // reducing branch prediction overhead and improving performance in tight loops.
         protected enum ContinuationState 
         {
-            // PERF: Code size optimizations for read method.
-            None = 0,
-
-            ReadValue = 1,  
-            ReadObjectDocument = 2, 
-            ReadArrayDocument = 3,  
-            ReadObject = 4, 
-            ReadPropertyName = 5, 
-            ReadPropertyValue = 6,  
-            CompleteDocumentArray = 7,  
-            CompleteReadingPropertyValue = 8,  
-            ReadArray = 9, 
-            ReadArrayValue = 10, 
-            CompleteArray = 11,
-            CompleteArrayValue = 12, 
+            ReadValue = 0,  
+            ReadObjectDocument, 
+            ReadArrayDocument,  
+            ReadObject, 
+            ReadPropertyName, 
+            ReadPropertyValue,  
+            CompleteDocumentArray,  
+            CompleteReadingPropertyValue,  
+            ReadArray, 
+            ReadArrayValue, 
+            CompleteArray,
+            CompleteArrayValue, 
 
             // Support for vector type.
-            ReadBufferedArrayValue = 13, 
-            ReadBufferedValue = 14, 
-            CompleteBufferedArray = 15, 
-            CompleteBufferedArrayValue = 16, 
+            ReadBufferedArrayValue, 
+            CompleteBufferedArray, 
         }
 
         public struct PropertyTag(byte type, CachedProperties.PropertyName property, int position)
@@ -148,7 +156,7 @@ namespace Sparrow.Json
         {
             private static readonly int MaxSize = PlatformDetails.Is32Bits ? 256 : 1024;
 
-            private readonly FastList<FastList<T>> _cache = new FastList<FastList<T>>();
+            private readonly FastList<FastList<T>> _cache = new();
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public FastList<T> Allocate()

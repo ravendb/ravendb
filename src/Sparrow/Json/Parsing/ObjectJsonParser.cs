@@ -262,6 +262,10 @@ namespace Sparrow.Json.Parsing
 
         private enum KnownJsonObjectType : byte
         {
+            // We introduced a dedicated enum to represent each recognized data shape.
+            // This replaced the repeated, nested 'if (current is X) { ... } else if ...' pattern,
+            // making the parse loop both smaller and easier for the JIT to optimize.
+
             // Primary object flows  
             DynamicJsonValue, // DynamicJsonValue => goto ValueTuple
             ValueTuple,
@@ -571,7 +575,11 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                // Attempt to get the known type from the cache
+                // PERF: The central optimization is the "TypeCache.TryGet(...)"
+                // call, which finds or assigns a known classification for the current
+                // object type. This drastically reduces the overhead of the prior
+                // multi-level if/else chain. Repeatedly encountered types are recognized
+                // in O(1) time, letting the parser jump directly to the relevant handling block.
                 if (TypeCache.TryGet(current.GetType(), out var knownType) == false)
                 {
                     // If not in cache, determine and cache it
@@ -582,6 +590,9 @@ namespace Sparrow.Json.Parsing
                 {
                     case KnownJsonObjectType.DynamicJsonValue:
                     {
+                        // PERF: We handle the normal logic for 'DynamicJsonValue' here (which is the most common),
+                        // same as before. The difference is that we get here quickly as 0 is no jump 
+                        // thanks to the TypeCache classification.
                         var value = (DynamicJsonValue)current;
                         if (_seenValues.Add(value))
                         {
@@ -606,6 +617,7 @@ namespace Sparrow.Json.Parsing
                         if (current == null)
                             continue;
 
+                        // PERF: We know we are dealing with a ValueTuple so we just continue to it.
                         goto case KnownJsonObjectType.ValueTuple;
                     }
                     case KnownJsonObjectType.ValueTuple:
