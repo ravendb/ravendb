@@ -1,12 +1,26 @@
 ﻿import {
+    abstractNotificationCenterClientInterface,
     ChangesProps,
     databaseNotificationCenterClientInterface,
     serverNotificationCenterClientInterface,
 } from "hooks/types";
 import changeSubscription from "common/changeSubscription";
 
-class MockDatabaseNotifications implements databaseNotificationCenterClientInterface {
-    private static readonly _noOpSubscription = new changeSubscription(() => {
+class MockAbstractNotification implements abstractNotificationCenterClientInterface {
+    static readonly _noOpSubscription = new changeSubscription(() => {
+        // empty
+    });
+
+    watchAllAlerts(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        onChange: (e: Raven.Server.NotificationCenter.Notifications.AlertRaised) => void
+    ): changeSubscription {
+        return MockAbstractNotification._noOpSubscription;
+    }
+}
+
+class MockDatabaseNotifications extends MockAbstractNotification implements databaseNotificationCenterClientInterface {
+    static readonly _noOpSubscription = new changeSubscription(() => {
         // empty
     });
 
@@ -18,8 +32,8 @@ class MockDatabaseNotifications implements databaseNotificationCenterClientInter
     }
 }
 
-class MockServerNotifications implements serverNotificationCenterClientInterface {
-    private static readonly _noOpSubscription = new changeSubscription(() => {
+class MockServerNotifications extends MockAbstractNotification implements serverNotificationCenterClientInterface {
+    static readonly _noOpSubscription = new changeSubscription(() => {
         // empty
     });
 

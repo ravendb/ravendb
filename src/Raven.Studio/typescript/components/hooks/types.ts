@@ -11,13 +11,19 @@ export interface EventsCollectorProps {
     reportEvent(category: string, action: string, label?: string): void;
 }
 
-export interface databaseNotificationCenterClientInterface {
+export interface abstractNotificationCenterClientInterface {
+    watchAllAlerts(
+        onChange: (e: Raven.Server.NotificationCenter.Notifications.AlertRaised) => void
+    ): changeSubscription;
+}
+
+export interface databaseNotificationCenterClientInterface extends abstractNotificationCenterClientInterface {
     watchAllDatabaseStatsChanged(
         onChange: (e: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) => void
     ): changeSubscription;
 }
 
-export interface serverNotificationCenterClientInterface {
+export interface serverNotificationCenterClientInterface extends abstractNotificationCenterClientInterface {
     watchReconnect(onChange: () => void): changeSubscription;
 
     watchClusterTopologyChanges(

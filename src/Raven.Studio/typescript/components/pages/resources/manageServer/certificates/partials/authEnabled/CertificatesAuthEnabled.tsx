@@ -13,7 +13,7 @@ import { certificatesActions } from "components/pages/resources/manageServer/cer
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { CertificatesSortMode } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Button, DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
 import endpoints from "endpoints";
 import CertificatesGenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
@@ -25,6 +25,8 @@ import { StickyHeader } from "components/common/StickyHeader";
 import CertificatesRegenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
 import CertificatesCloneModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import CertificatesEditModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
+import CertificatesWellKnownList from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesWellKnownList";
+import { useChanges } from "components/hooks/useChanges";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -57,6 +59,31 @@ export default function CertificatesAuthEnabled() {
         dispatch(certificatesActions.fetchData());
     }, [dispatch]);
 
+    const { serverNotifications } = useChanges();
+
+    const handleAlert = useCallback(
+        (alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) => {
+            if (
+                alert.AlertType === "Certificates_ReplaceError" ||
+                alert.AlertType === "Certificates_ReplaceSuccess" ||
+                alert.AlertType === "Certificates_EntireClusterReplaceSuccess"
+            ) {
+                dispatch(certificatesActions.fetchData());
+            }
+        },
+        [dispatch]
+    );
+
+    useEffect(() => {
+        if (serverNotifications) {
+            const watchAllAlerts = serverNotifications.watchAllAlerts((e) => handleAlert(e));
+
+            return () => {
+                watchAllAlerts.off();
+            };
+        }
+    }, [handleAlert, serverNotifications]);
+
     const { localValue: nameOrThumbprintFilterInputValue, handleChange: nameOrThumbprintFilterInputHandleChange } =
         useDebouncedInput({
             value: nameOrThumbprintFilter,
@@ -83,10 +110,22 @@ export default function CertificatesAuthEnabled() {
                         <DropdownItem divider />
                         <DropdownItem header>Server</DropdownItem>
                         <ConditionalPopover
-                            conditions={{
-                                isActive: !hasClusterNodeCertificate,
-                                message: "You need to have a server certificate to export it",
-                            }}
+                            conditions={[
+                                {
+                                    isActive: !hasClusterNodeCertificate,
+                                    message: "You need to have a server certificate to export it",
+                                },
+                                {
+                                    isActive: true,
+                                    message: (
+                                        <span>
+                                            Export the server certificate(s) without their private key into a .pfx file.
+                                            These certificates can be used during a manual cluster setup, when you need
+                                            to register server certificates to be trusted on other nodes.
+                                        </span>
+                                    ),
+                                },
+                            ]}
                         >
                             <DropdownItem
                                 onClick={() => exportServerCertFormRef.current?.submit()}
@@ -189,6 +228,7 @@ export default function CertificatesAuthEnabled() {
                 </div>
             </StickyHeader>
 
+            <CertificatesWellKnownList />
             <CertificatesServerList />
             <CertificatesClientList />
 

@@ -26,9 +26,9 @@ const selectClearanceFilterOptions = createSelector(
         });
 
         return [
-            { value: "User", label: "User", count: userCount },
-            { value: "Operator", label: "Operator", count: operatorCount },
             { value: "Admin", label: "Admin", count: adminCount },
+            { value: "Operator", label: "Operator", count: operatorCount },
+            { value: "User", label: "User", count: userCount },
         ];
     }
 );
@@ -74,7 +74,7 @@ const selectFilteredCertificates = createSelector(
             if (
                 nameOrThumbprintFilter &&
                 !cert.Name.toLowerCase().includes(nameOrThumbprintFilter.toLowerCase()) &&
-                !cert.Thumbprint.toLowerCase().includes(nameOrThumbprintFilter.toLowerCase())
+                !cert.Thumbprints.some((x) => x.toLowerCase().includes(nameOrThumbprintFilter.toLowerCase()))
             ) {
                 return false;
             }
@@ -131,6 +131,8 @@ export const certificatesSelectors = {
     certificates: (state: RootState) => state.certificates.certificates,
     filteredCertificates: selectFilteredCertificates,
     hasClusterNodeCertificate: selectHasClusterNodeCertificate,
+    wellKnownAdminCerts: (state: RootState) => state.certificates.wellKnownAdminCerts,
+    wellKnownIssuers: (state: RootState) => state.certificates.wellKnownIssuers,
     serverCertificateThumbprint: (state: RootState) => state.certificates.serverCertificateThumbprint,
     serverCertificateSetupMode: (state: RootState) => state.certificates.serverCertificateSetupMode,
     serverCertificateRenewalDate: (state: RootState) => state.certificates.serverCertificateRenewalDate,

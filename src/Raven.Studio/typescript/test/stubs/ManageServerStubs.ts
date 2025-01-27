@@ -482,8 +482,8 @@ export class ManageServerStubs {
                 },
             ],
             LoadedServerCert: "BCD2B71A3021A644E94768CCEFF7BE56E2006144",
-            WellKnownAdminCerts: null,
-            WellKnownIssuers: [],
+            WellKnownAdminCerts: ["AdminCerts1", "AdminCerts2"],
+            WellKnownIssuers: ["Issuers1", "Issuers2"],
         };
     }
 
