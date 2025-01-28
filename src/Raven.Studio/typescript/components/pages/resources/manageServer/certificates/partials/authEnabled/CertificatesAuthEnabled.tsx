@@ -28,6 +28,7 @@ import CertificatesEditModal from "components/pages/resources/manageServer/certi
 import CertificatesWellKnownList from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesWellKnownList";
 import { useChanges } from "components/hooks/useChanges";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { LoadingView } from "components/common/LoadingView";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -35,6 +36,7 @@ export default function CertificatesAuthEnabled() {
 
     const exportServerCertFormRef = useRef<HTMLFormElement>(null);
 
+    const isInitialLoading = useAppSelector(certificatesSelectors.isInitialLoading);
     const isGenerateModalOpen = useAppSelector(certificatesSelectors.isGenerateModalOpen);
     const isUploadModalOpen = useAppSelector(certificatesSelectors.isUploadModalOpen);
     const isReplaceServerModalOpen = useAppSelector(certificatesSelectors.isReplaceServerModalOpen);
@@ -233,9 +235,15 @@ export default function CertificatesAuthEnabled() {
                 </div>
             </StickyHeader>
 
-            <CertificatesWellKnownList />
-            <CertificatesServerList />
-            <CertificatesClientList />
+            {isInitialLoading ? (
+                <LoadingView />
+            ) : (
+                <>
+                    <CertificatesWellKnownList />
+                    <CertificatesServerList />
+                    <CertificatesClientList />
+                </>
+            )}
 
             {/* Action modals */}
             {isGenerateModalOpen && <CertificatesGenerateModal />}

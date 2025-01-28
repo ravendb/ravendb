@@ -10,6 +10,7 @@ import {
 import { RootState } from "components/store";
 
 interface InitialState {
+    isInitialLoading: boolean;
     certificates: CertificateItem[];
     certificatesLoadStatus: loadStatus;
     serverCertificateThumbprint: string;
@@ -31,6 +32,7 @@ interface InitialState {
 }
 
 const initialState: InitialState = {
+    isInitialLoading: true,
     certificates: [],
     certificatesLoadStatus: "idle",
     serverCertificateThumbprint: null,
@@ -126,6 +128,7 @@ export const certificatesSlice = createSlice({
             state.wellKnownIssuers = certificatesDto.WellKnownIssuers ?? [];
 
             state.certificatesLoadStatus = "success";
+            state.isInitialLoading = false;
         });
         builder.addCase(fetchData.rejected, (state) => {
             state.certificatesLoadStatus = "failure";

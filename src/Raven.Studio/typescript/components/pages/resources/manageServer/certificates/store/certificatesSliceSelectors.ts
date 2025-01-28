@@ -128,6 +128,7 @@ const selectHasClusterNodeCertificate = createSelector(
 );
 
 export const certificatesSelectors = {
+    isInitialLoading: (state: RootState) => state.certificates.isInitialLoading,
     certificates: (state: RootState) => state.certificates.certificates,
     filteredCertificates: selectFilteredCertificates,
     hasClusterNodeCertificate: selectHasClusterNodeCertificate,
