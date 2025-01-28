@@ -3,11 +3,15 @@ name: Studio conventions
 on:
   push:
     branches:
-        - v5.4
+        - feature/*
+        - release/**
+        - 'v[4-9]+.[0-9]+'
 
   pull_request:
     branches:
-        - v5.4
+        - feature/*
+        - release/**
+        - 'v[4-9]+.[0-9]+'
 jobs:
   conventions:
     name: Studio Conventions

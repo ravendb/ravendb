@@ -4,12 +4,14 @@ on:
   push:
     branches:
         - feature/*
-        - v5.4
+        - release/**
+        - 'v[4-9]+.[0-9]+'
 
   pull_request:
     branches:
         - feature/*
-        - v5.4
+        - release/**
+        - 'v[4-9]+.[0-9]+'
 jobs:
   build:
     runs-on: ubuntu-latest
