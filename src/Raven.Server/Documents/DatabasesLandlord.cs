@@ -1163,35 +1163,32 @@ namespace Raven.Server.Documents
                         case IdleDatabaseActivityType.WakeUpDatabase:
                             if (_serverStore.ConcurrentBackupsCounter.CanRunBackup == false)
                             {
-                                // reached max concurrent backups, retry after 1 min
-
+                                // reached max concurrent backups
+                                var delayInMs = RescheduleDatabaseWakeup();
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent backups, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
-
-                                RescheduleDatabaseWakeup();
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached " +
+                                                 $"max concurrent backups ({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}), will retry the wakeup in {delayInMs:#,#;;0}ms");
                                 break;
                             }
 
-                            if (CanServerRunBackup() == false)
+                            if (BackupUtils.CanServerRunBackup(_serverStore) == false)
                             {
                                 // the server cannot run the backup anyway (low memory, low cpu credits or high dirty memory state)
-
+                                var delayInMs = RescheduleDatabaseWakeup();
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we are in a low memory state, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
-
-                                RescheduleDatabaseWakeup();
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we are in a low memory state, " +
+                                                 $"will retry the wakeup in {delayInMs:#,#;;0}ms");
                                 break;
                             }
 
                             var startDatabaseForBackup = _serverStore.ConcurrentBackupsCounter.TryStartDatabaseForBackup();
                             if (startDatabaseForBackup == null)
                             {
-                                // reached max concurrent loading of databases for backup, retry after 1 min
-
+                                // reached max concurrent loading of databases for backup
+                                var delayInMs = RescheduleDatabaseWakeup();
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent loading of databases for backup, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms");
-
-                                RescheduleDatabaseWakeup();
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent loading of databases " +
+                                                 $"for backup ({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}), will retry the wakeup in {delayInMs:#,#;;0}ms");
                             }
                             else
                             {
@@ -1202,22 +1199,23 @@ namespace Raven.Server.Documents
                                     var ex = t.Exception.ExtractSingleInnerException();
                                     if (ex is DatabaseConcurrentLoadTimeoutException e)
                                     {
-                                        // database failed to load, retry after 1 min
-
+                                        // database failed to load
+                                        var delayInMs = RescheduleDatabaseWakeup();
                                         if (_logger.IsInfoEnabled)
-                                            _logger.Info($"Failed to start database '{databaseName}' for running a backup, will retry the wakeup in {_dueTimeOnRetry:#,#;;0}ms", e);
-
-                                        RescheduleDatabaseWakeup();
+                                            _logger.Info($"Failed to start database '{databaseName}' for running a backup, will retry the wakeup in {delayInMs:#,#;;0}ms", e);
                                     }
                                 });
                             }
                             break;
 
-                            void RescheduleDatabaseWakeup()
+                            int RescheduleDatabaseWakeup()
                             {
                                 ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
-                                nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(_dueTimeOnRetry);
+
+                                var delayInMs = _dueTimeOnRetry + Random.Shared.Next(0, _dueTimeOnRetry);
+                                nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(delayInMs);
                                 RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
+                                return delayInMs;
                             }
                     }
                 }
@@ -1230,19 +1228,6 @@ namespace Raven.Server.Documents
                     _logger.Operations($"Failed to schedule the next activity for the idle database '{databaseName}'.", e);
 
                 ForTestingPurposes?.OnFailedRescheduleNextScheduledActivity?.Invoke(e, databaseName);
-            }
-        }
-
-        private bool CanServerRunBackup()
-        {
-            try
-            {
-                BackupUtils.CheckServerHealthBeforeBackup(_serverStore, name: null);
-                return true;
-            }
-            catch (BackupDelayException)
-            {
-                return false;
             }
         }
 
