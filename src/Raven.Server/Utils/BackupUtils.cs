@@ -416,6 +416,19 @@ internal static class BackupUtils
         }
     }
 
+    public static bool CanServerRunBackup(ServerStore serverStore)
+    {
+        try
+        {
+            CheckServerHealthBeforeBackup(serverStore, name: null);
+            return true;
+        }
+        catch (BackupDelayException)
+        {
+            return false;
+        }
+    }
+
     public static PathSetting GetBackupTempPath(RavenConfiguration configuration, string dir, out PathSetting basePath)
     {
         basePath = configuration.Backup.TempPath ?? configuration.Storage.TempPath ?? configuration.Core.DataDirectory;
