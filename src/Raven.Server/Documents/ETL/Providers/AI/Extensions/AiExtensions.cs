@@ -2,11 +2,13 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Connectors.HuggingFace;
 using Microsoft.SemanticKernel.Connectors.Onnx;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
+using GoogleAIVersion = Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion;
 
 #pragma warning disable SKEXP0070
 
@@ -69,6 +71,35 @@ public static class AiExtensions
         builder.Services.AddKeyedSingleton<ITextEmbeddingGenerationService>(
             serviceId,
             GenerateEmbeddings.CreateTextEmbeddingGenerationService(options));
+
+        return builder;
+    }
+
+    [Experimental("SKEXP0070")]
+    public static IKernelBuilder AddGoogleTextEmbeddingGeneration(
+        this IKernelBuilder builder,
+        GoogleSettings settings,
+        string serviceId = null)
+    {
+        GoogleAITextEmbeddingGenerationService googleService;
+
+        if (settings.AiVersion.HasValue)
+        {
+            googleService = new GoogleAITextEmbeddingGenerationService(
+                settings.Model,
+                settings.ApiKey,
+                settings.AiVersion.Value.ToGoogleAiVersion()
+            );
+        }
+        else
+        {
+            googleService = new GoogleAITextEmbeddingGenerationService(
+                settings.Model,
+                settings.ApiKey
+            );
+        }
+
+        builder.Services.AddKeyedSingleton<ITextEmbeddingGenerationService>(serviceId, googleService);
 
         return builder;
     }

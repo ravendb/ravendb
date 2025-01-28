@@ -6,12 +6,11 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 
 public sealed class GoogleSettings
 {
-    public GoogleSettings(string model, string apiKey, GoogleAIVersion? apiVersion = null, string? serviceId = null)
+    public GoogleSettings(string model, string apiKey, GoogleAIVersion? aiVersion = null)
     {
         Model = model;
         ApiKey = apiKey;
-        ApiVersion = apiVersion;
-        ServiceId = serviceId;
+        AiVersion = aiVersion;
     }
 
     /// <summary>The model that should be used.</summary>
@@ -21,13 +20,7 @@ public sealed class GoogleSettings
     public string ApiKey { get; set; }
 
     /// <summary>The version of the Google API.</summary>
-    public GoogleAIVersion? ApiVersion { get; set; }
-
-    /// <summary>The optional service ID.</summary>
-    /// <remarks>
-    /// The service ID is an optional identifier that can be used to distinguish between different instances of the same service.
-    /// </remarks>
-    public string? ServiceId { get; set; }
+    public GoogleAIVersion? AiVersion { get; set; }
 
     public bool HasSettings() =>
         string.IsNullOrWhiteSpace(Model) == false &&
@@ -41,11 +34,8 @@ public sealed class GoogleSettings
             [nameof(ApiKey)] = ApiKey
         };
 
-        if (string.IsNullOrWhiteSpace(ServiceId) == false)
-            json[nameof(ServiceId)] = ServiceId;
-
-        if (ApiVersion != null)
-            json[nameof(ApiVersion)] = ApiVersion.ToString();
+        if (AiVersion != null)
+            json[nameof(AiVersion)] = AiVersion.ToString();
 
         return json;
     }

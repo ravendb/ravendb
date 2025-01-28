@@ -93,18 +93,14 @@ public static class AiHelper
             case AiConnectorType.Onnx:
                 var onnxSettings = configuration.Connection.OnnxSettings;
                 kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions());
-
                 break;
 
             case AiConnectorType.Google:
-                var googleSettings = configuration.Connection.GoogleSettings;
-                kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey, googleSettings.ApiVersion.Value.ToGoogleAiVersion(), googleSettings.ServiceId);
-
+                kernelBuilder.AddGoogleTextEmbeddingGeneration(configuration.Connection.GoogleSettings);
                 break;
 
             case AiConnectorType.HuggingFace:
                 kernelBuilder.AddHuggingFaceTextEmbeddingGeneration(configuration.Connection.HuggingFaceSettings);
-
                 break;
 
             default:
