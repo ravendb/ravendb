@@ -379,7 +379,7 @@ namespace Raven.Server.Dashboard
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
                                 ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount +
                                 rabbitMqEtlCount + azureQueueStorageEtlCount + amazonSqsEtlCount + periodicBackupCount +
-                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount;
+                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + snowflakeEtlCount;
 
             return new DatabaseOngoingTasksInfoItem
             {
@@ -399,6 +399,7 @@ namespace Raven.Server.Dashboard
                 SubscriptionCount = subscriptionCountOnNode,
                 KafkaSinkCount = kafkaSinkCountOnNode,
                 RabbitMqSinkCount = rabbitMqSinkCountOnNode,
+                SnowflakeEtlCount = snowflakeEtlCountOnNode,
             };
         }
 

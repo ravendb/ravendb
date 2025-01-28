@@ -46,6 +46,8 @@ namespace Raven.Server.Dashboard
         public long KafkaSinkCount { get; set; }
 
         public long RabbitMqSinkCount { get; set; }
+        
+        public long SnowflakeEtlCount { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -67,6 +69,7 @@ namespace Raven.Server.Dashboard
                 [nameof(SubscriptionCount)] = SubscriptionCount,
                 [nameof(KafkaSinkCount)] = KafkaSinkCount,
                 [nameof(RabbitMqSinkCount)] = RabbitMqSinkCount,
+                [nameof(SnowflakeEtlCount)] = SnowflakeEtlCount,
             };
         }
     }
