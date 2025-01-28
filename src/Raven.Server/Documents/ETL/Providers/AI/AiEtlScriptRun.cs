@@ -6,12 +6,10 @@ namespace Raven.Server.Documents.ETL.Providers.AI;
 public class AiEtlScriptRun : IEnumerable<AiEtlEmbeddingItem>
 {
     public List<AiEtlEmbeddingItem> CurrentRun { get; set; }
-    public Dictionary<string, Dictionary<string, List<string>>> Runs { get; set; }
     
     public AiEtlScriptRun()
     {
         CurrentRun = new List<AiEtlEmbeddingItem>();
-        Runs = new Dictionary<string, Dictionary<string, List<string>>>();
     }
     
     public IEnumerator<AiEtlEmbeddingItem> GetEnumerator()

@@ -89,12 +89,20 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
         {
             foreach (var aiEtlEmbeddingItem in aiEtlScriptRun)
             {
-                var valueEmbeddings = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, aiEtlEmbeddingItem.Value, out var valueEmbeddingsDocumentId);
-                aiEtlEmbeddingItem.ValueEmbeddingsDocumentId = valueEmbeddingsDocumentId;
-                aiEtlEmbeddingItem.ValueEmbeddingsAttachmentName = valueEmbeddings?.GetAttachmentNameForValue(aiEtlEmbeddingItem.Value);
+                foreach (var kvp in aiEtlEmbeddingItem.Values)
+                {
+                    var propertyPath = kvp.Key;
+                    var values = kvp.Value;
+                }
+                
+                var valueEmbeddings = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, aiEtlEmbeddingItem.TextualValue, out var valueEmbeddingsDocumentsIds);
+                aiEtlEmbeddingItem.ValueEmbeddingDocumentId = valueEmbeddingsDocumentsIds;
+                
+                var valueEmbeddingsAttachments
+                aiEtlEmbeddingItem.ValueEmbeddingsAttachmentsNames = valueEmbeddings?.GetAttachmentNameForValue(aiEtlEmbeddingItem.TextualValues);
 
-                if (aiEtlEmbeddingItem.ValueEmbeddingsAttachmentName == null)
-                    _missingEmbeddingsHolder.Add(aiEtlEmbeddingItem.Value, aiEtlEmbeddingItem);
+                if (aiEtlEmbeddingItem.ValueEmbeddingsAttachmentsNames == null)
+                    _missingEmbeddingsHolder.Add(aiEtlEmbeddingItem.TextualValues, aiEtlEmbeddingItem);
             }
 
             var missingValues = _missingEmbeddingsHolder.GetValuesForMissingEmbeddings();
@@ -113,19 +121,6 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                     var embedding = generatedValues[i];
 
                     embeddingItem.EmbeddingValue = embedding;
-
-                    //CreateNewPrivateDocument(missingEmbeddings[i].Value, missingEmbeddings[i].EmbeddingValue, context, out var attachmentGuid);
-
-                    //missingEmbeddings[i].AttachmentName = attachmentGuid;
-
-                    //var publicDocument = Database.DocumentsStorage.Get(context, AiHelper.GetDocumentEmbeddingsId(missingEmbeddings[i].DocumentId));
-
-                    //if (publicDocument == null || publicDocument.Data.TryGet(Configuration.Name, out object o) == false)
-                    //{
-                    //    // todo handle existing doc
-                    //    CreateNewPublicDocument(missingEmbeddings[i].DocumentId, missingEmbeddings[i].ValuePath, missingEmbeddings[i].AttachmentName, null,
-                    //        context);
-                    //}
                 }
             }
 
@@ -137,36 +132,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
             return processed;
         }
     }
-    /*
-    private void CreateNewPublicDocument(string originDocumentId, string fieldName, string attachmentGuid, string changeVector, DocumentsOperationContext context)
-    {
-        var newDocumentId = AiHelper.GetDocumentEmbeddingsId(originDocumentId);
 
-        // Root object
-        var documentDjv = new DynamicJsonValue { ["Id"] = newDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "testembeddings" } };
-
-        // ConfigurationName -> (fieldName, attachmentsGuids[])[]
-        var embeddingsObjectDjv = new DynamicJsonValue();
-
-        var dja = new DynamicJsonArray();
-
-        dja.Add(attachmentGuid);
-
-        // todo handle existing array
-        embeddingsObjectDjv[fieldName] = dja;
-
-        documentDjv[Configuration.Name] = embeddingsObjectDjv;
-
-        using (var ctx = JsonOperationContext.ShortTermSingleUse())
-        {
-            var bjro = ctx.ReadObject(documentDjv, "doc");
-
-            var cmd = new MergedPutCommand(bjro, newDocumentId, null, Database);
-
-            Database.TxMerger.EnqueueSync(cmd);
-        }
-    }
-    */
     protected override EtlStatsScope CreateScope(EtlRunStats stats)
     {
         return new EtlStatsScope(stats);
@@ -181,17 +147,17 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
     {
         private const int MaxCapacity = 1024;
 
-        private readonly List<string> _missingValues = new();
+        private readonly List<List<string>> _missingValues = new();
 
         private readonly List<AiEtlEmbeddingItem> _embeddingsMap = new();
 
-        public void Add(string value, AiEtlEmbeddingItem aiEtlEmbedding)
+        public void Add(List<string> values, AiEtlEmbeddingItem aiEtlEmbedding)
         {
-            _missingValues.Add(value);
+            _missingValues.Add(values);
             _embeddingsMap.Add(aiEtlEmbedding);
         }
 
-        public List<string> GetValuesForMissingEmbeddings() => _missingValues;
+        public List<List<string>> GetValuesForMissingEmbeddings() => _missingValues;
 
         public IReadOnlyList<AiEtlEmbeddingItem> GetEmbeddingsMap() => _embeddingsMap;
 

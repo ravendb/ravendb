@@ -223,8 +223,51 @@ namespace Raven.Server.Documents.Handlers
         {
             foreach (var item in _items)
             {
-                var attachmentName = _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, item);
+                var configDjv = new DynamicJsonValue();
                 
+                foreach (var kvp in item.Values)
+                {
+                    var valuePath = kvp.Key;
+                    var values = kvp.Value;
+
+                    var attachmentNamesDja = new DynamicJsonArray();
+                    
+                    foreach (var value in values)
+                    {
+                        var attachmentName = _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, item.DocumentId, value);
+                        attachmentNamesDja.Add(attachmentName);
+                    }
+                    
+                    configDjv[valuePath] = attachmentNamesDja;
+                }
+
+                var documentEmbeddings = _database.AiStorage.GetDocumentEmbeddings(context, item.DocumentId, out string documentEmbeddingsId);
+
+                DynamicJsonValue documentDjv;
+                
+                if (documentEmbeddings == null)
+                {
+                    documentDjv = new DynamicJsonValue
+                    {
+                        [_configurationName] = configDjv
+                    };
+                }
+                else
+                    documentDjv = documentEmbeddings.Data.Modifications;
+                
+                documentDjv[_configurationName] = configDjv;
+                
+                using (var bjro = context.ReadObject(documentDjv, documentEmbeddingsId))
+                {
+                    _database.DocumentsStorage.Put(context, documentEmbeddingsId, null, bjro);
+                    
+                    _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, );
+
+                    // put attachments
+                }
+                
+                //////
+                /*
                 if (item.ValueEmbeddingsAttachmentName == null)
                 {
                     var documentDjv = new DynamicJsonValue { ["Id"] = item.ValueEmbeddingsDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "@embeddings" } };
@@ -249,6 +292,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     
                 }
+                */
             }
             
             return 1;

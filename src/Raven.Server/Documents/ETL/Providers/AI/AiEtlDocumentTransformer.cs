@@ -62,8 +62,8 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
     {
         Current = item;
         _currentRun ??= new AiEtlScriptRun();
-        
-        var result = new Dictionary<string, List<string>>();
+
+        var aiEtlEmbeddingItem = new AiEtlEmbeddingItem() { DocumentId = item.DocumentId, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>() };
         
         foreach (var fieldName in _configuration.FieldsToInclude)
         {
@@ -72,21 +72,20 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
 
             if (fieldValue is LazyStringValue lsv)
             {
-                result.Add(fieldName, new List<string>() { lsv });
-                _currentRun.CurrentRun.Add(new AiEtlEmbeddingItem() { Value = lsv, DocumentId = item.DocumentId, ValuePath = fieldName });
+                aiEtlEmbeddingItem.Values[fieldName].Add(new AiEtlEmbeddingItemValue() { TextualValue = lsv });
             }
-            // todo lazy
-            else if (fieldValue is List<string> list)
+            // todo lazy and dja
+            else if (fieldValue is List<string> valuesList)
             {
-                result.Add(fieldName, list);
-
-                foreach (var value in list)
-                    _currentRun.CurrentRun.Add(new AiEtlEmbeddingItem() { Value = value, DocumentId = item.DocumentId, ValuePath = fieldName });
+                foreach (var textualValue in valuesList)
+                {
+                    aiEtlEmbeddingItem.Values[fieldName].Add(new AiEtlEmbeddingItemValue() { TextualValue = textualValue });
+                }
             }
             else
                 throw new Exception();
         }
         
-        _currentRun.Runs.Add(item.Document.Id, result);
+        _currentRun.CurrentRun.Add(aiEtlEmbeddingItem);
     }
 }
