@@ -1,5 +1,4 @@
 import serverSettings from "common/settings/serverSettings";
-import { ConfirmOptions } from "components/common/ConfirmDialog";
 import { TextColor } from "components/models/common";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
@@ -218,12 +217,6 @@ const databasePermissionsSchema = yup
     .array()
     .of(yup.object({ databaseName: yup.string(), accessLevel: yup.string<DatabaseAccess>() }));
 
-const noPrivilegesConfirmOptions: ConfirmOptions = {
-    title: "Did you forget about assigning database privileges?",
-    message: "Leaving the database privileges section empty is going to prevent users from accessing the database.",
-    confirmText: "Save anyway",
-};
-
 export const certificatesUtils = {
     getClearance,
     getState,
@@ -238,5 +231,4 @@ export const certificatesUtils = {
     mapExpireFromDro,
     twoFactorActionSchema,
     databasePermissionsSchema,
-    noPrivilegesConfirmOptions,
 };

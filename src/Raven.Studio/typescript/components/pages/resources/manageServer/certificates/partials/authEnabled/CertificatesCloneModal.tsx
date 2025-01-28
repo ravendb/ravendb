@@ -12,7 +12,6 @@ import { Button, Form, FormGroup, Label, Modal, ModalBody, ModalFooter } from "r
 import * as yup from "yup";
 import endpoints from "endpoints";
 import notificationCenter from "common/notifications/notificationCenter";
-import useConfirm from "components/common/ConfirmDialog";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import CertificatesPermissionsField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesPermissionsField";
 import { ExpireTimeUnit } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
@@ -22,14 +21,15 @@ import CertificatesSecurityClearanceField from "components/pages/resources/manag
 import CertificatesExpireField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesExpireField";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
 export default function CertificatesCloneModal() {
     const dispatch = useAppDispatch();
-    const confirm = useConfirm();
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
+    const permissionsConfirm = useCertificatePermissionsConfirm();
 
     const downloadCertFormRef = useRef<HTMLFormElement>(null);
 
@@ -56,12 +56,9 @@ export default function CertificatesCloneModal() {
         return tryHandleSubmit(async () => {
             reportEvent("certificates", "clone");
 
-            if (formData.securityClearance === "ValidUser" && formData.databasePermissions.length === 0) {
-                const isConfirmed = await confirm(certificatesUtils.noPrivilegesConfirmOptions);
-
-                if (!isConfirmed) {
-                    return;
-                }
+            const isPermissionConfirmed = await permissionsConfirm(formData);
+            if (!isPermissionConfirmed) {
+                return;
             }
 
             const operationId = await databasesService.getNextOperationId(null);

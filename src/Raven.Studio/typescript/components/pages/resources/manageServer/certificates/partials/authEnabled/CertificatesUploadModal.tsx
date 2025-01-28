@@ -8,7 +8,6 @@ import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { Button, Form, FormGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
-import useConfirm from "components/common/ConfirmDialog";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import CertificatesPermissionsField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesPermissionsField";
 import { ExpireTimeUnit } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
@@ -18,14 +17,15 @@ import CertificatesSecurityClearanceField from "components/pages/resources/manag
 import CertificatesExpireField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesExpireField";
 import CertificatesFileField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesFileField";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
 export default function CertificatesUploadModal() {
     const dispatch = useAppDispatch();
-    const confirm = useConfirm();
     const { manageServerService } = useServices();
     const { reportEvent } = useEventsCollector();
+    const permissionsConfirm = useCertificatePermissionsConfirm();
 
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
@@ -48,12 +48,9 @@ export default function CertificatesUploadModal() {
         return tryHandleSubmit(async () => {
             reportEvent("certificates", "upload");
 
-            if (formData.securityClearance === "ValidUser" && formData.databasePermissions.length === 0) {
-                const isConfirmed = await confirm(certificatesUtils.noPrivilegesConfirmOptions);
-
-                if (!isConfirmed) {
-                    return;
-                }
+            const isPermissionConfirmed = await permissionsConfirm(formData);
+            if (!isPermissionConfirmed) {
+                return;
             }
 
             await manageServerService.uploadCertificate(certificatesUtils.mapUploadToDto(formData));
