@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.HuggingFace;
 using Microsoft.SemanticKernel.Connectors.Onnx;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.ETL.AI;
@@ -68,6 +69,24 @@ public static class AiExtensions
         builder.Services.AddKeyedSingleton<ITextEmbeddingGenerationService>(
             serviceId,
             GenerateEmbeddings.CreateTextEmbeddingGenerationService(options));
+
+        return builder;
+    }
+
+    [Experimental("SKEXP0070")]
+    public static IKernelBuilder AddHuggingFaceTextEmbeddingGeneration(
+        this IKernelBuilder builder,
+        HuggingFaceSettings settings,
+        string serviceId = null)
+    {
+        var endpoint = string.IsNullOrWhiteSpace(settings.Endpoint) ? null : new Uri(settings.Endpoint);
+
+        builder.Services.AddKeyedSingleton<ITextEmbeddingGenerationService>(serviceId,
+            new HuggingFaceTextEmbeddingGenerationService(
+                settings.Model,
+                endpoint,
+                settings.ApiKey
+            ));
 
         return builder;
     }

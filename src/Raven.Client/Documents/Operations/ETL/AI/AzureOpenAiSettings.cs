@@ -8,9 +8,6 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
 {
     public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, string? serviceId = null, int? dimensions = null) : base(apiKey, endpoint, model)
     {
-        if (string.IsNullOrWhiteSpace(deploymentName))
-            throw new ArgumentException("Deployment name cannot be null or whitespace.", nameof(deploymentName));
-
         DeploymentName = deploymentName;
         ServiceId = serviceId;
         Dimensions = dimensions;

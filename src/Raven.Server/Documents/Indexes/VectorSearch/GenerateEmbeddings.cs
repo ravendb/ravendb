@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using FastBertTokenizer;
 using Microsoft.ML.OnnxRuntime;
+using Microsoft.SemanticKernel.Connectors.HuggingFace;
 using Microsoft.SemanticKernel.Connectors.Onnx;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries.Vector;
@@ -182,6 +183,11 @@ public static class GenerateEmbeddings
 
             return (BertOnnxTextEmbeddingGenerationService)BertOnnxTextEmbeddingGenerationServiceCtor.Invoke([onnxSession, tokenizer, dimensions, options]);
         }
+    }
+
+    internal static HuggingFaceTextEmbeddingGenerationService CreateHuggingFaceTextEmbeddingGenerationService(string model)
+    {
+        return new HuggingFaceTextEmbeddingGenerationService(model);
     }
 }
 #pragma warning restore SKEXP0070

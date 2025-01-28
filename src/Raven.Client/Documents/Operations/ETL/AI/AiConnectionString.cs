@@ -22,26 +22,21 @@ public sealed class AiConnectionString : ConnectionString
 
     public OpenAiSettings OpenAiSettings { get; set; }
 
+    public AzureOpenAiSettings AzureOpenAiSettings { get; set; }
+
     public OllamaSettings OllamaSettings { get; set; }
 
     public OnnxSettings OnnxSettings { get; set; }
 
     public GoogleSettings GoogleSettings { get; set; }
 
-    public AzureOpenAiSettings AzureOpenAiSettings { get; set; }
+    public HuggingFaceSettings HuggingFaceSettings { get; set; }
 
     public override ConnectionStringType Type => ConnectionStringType.Ai;
 
     protected override void ValidateImpl(ref List<string> errors)
     {
         var settings = new List<string>();
-
-        if (OllamaSettings != null)
-        {
-            settings.Add(nameof(OllamaSettings));
-            if (OllamaSettings.HasSettings() == false)
-                errors.Add($"{nameof(OllamaSettings)} has no valid setting. '{nameof(OllamaSettings.Uri)}' and '{nameof(OllamaSettings.Model)}' are both have null or empty values");
-        }
 
         if (OpenAiSettings != null)
         {
@@ -50,11 +45,32 @@ public sealed class AiConnectionString : ConnectionString
                 errors.Add($"{nameof(OpenAiSettings)} has no valid setting. '{nameof(OpenAiSettings.ApiKey)}' has null or empty value");
         }
 
+        if (AzureOpenAiSettings != null)
+        {
+            settings.Add(nameof(AzureOpenAiSettings));
+            if (AzureOpenAiSettings.HasSettings() == false)
+                errors.Add($"{nameof(AzureOpenAiSettings)} has no valid setting. '{nameof(AzureOpenAiSettings.ApiKey)}' has null or empty value");
+        }
+
+        if (OllamaSettings != null)
+        {
+            settings.Add(nameof(OllamaSettings));
+            if (OllamaSettings.HasSettings() == false)
+                errors.Add($"{nameof(OllamaSettings)} has no valid setting. '{nameof(OllamaSettings.Uri)}' and '{nameof(OllamaSettings.Model)}' are both have null or empty values");
+        }
+
         if (OnnxSettings != null)
         {
             settings.Add(nameof(OnnxSettings));
             if (OnnxSettings.HasSettings() == false)
                 errors.Add($"{nameof(OnnxSettings)} has no valid setting.");
+        }
+
+        if (GoogleSettings != null)
+        {
+            settings.Add(nameof(GoogleSettings));
+            if (GoogleSettings.HasSettings() == false)
+                errors.Add($"{nameof(GoogleSettings)} has no valid setting. '{nameof(GoogleSettings.ApiKey)}' has null or empty value");
         }
 
         var identifier = Identifier;

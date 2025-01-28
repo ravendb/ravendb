@@ -99,12 +99,13 @@ public static class AiHelper
             case AiConnectorType.Google:
                 var googleSettings = configuration.Connection.GoogleSettings;
                 kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey, googleSettings.ApiVersion.Value.ToGoogleAiVersion(), googleSettings.ServiceId);
+
                 break;
 
-            // case AiConnectorType.HuggingFace:
-            //     var huggingFaceSettings = configuration.Connection.HuggingFaceSettings;
-            //
-            //     ke
+            case AiConnectorType.HuggingFace:
+                kernelBuilder.AddHuggingFaceTextEmbeddingGeneration(configuration.Connection.HuggingFaceSettings);
+
+                break;
 
             default:
                 throw new NotSupportedException($"'{configuration.AiConnectorType}' provider is not supported");
