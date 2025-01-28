@@ -14,6 +14,7 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Config;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Server;
 using InvalidOperationException = System.InvalidOperationException;
 using VectorValue = Corax.Utils.VectorValue;
@@ -131,7 +132,7 @@ public static class GenerateEmbeddings
 
         return embeddings;
     }
-
+    
     private static (IDisposable MemoryScope, Memory<byte> Memory, int UsedBytes) CreateEmbeddingViaSmartComponentsLocalEmbedding(ByteStringContext allocator, in string text, in int dimensions)
     {
         List ??= new List<string>(1);

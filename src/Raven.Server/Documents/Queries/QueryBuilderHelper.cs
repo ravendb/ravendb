@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Corax;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
@@ -10,11 +11,13 @@ using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -23,6 +26,7 @@ using Sparrow.Server;
 using Spatial4n.Shapes;
 using Constants = Raven.Client.Constants;
 using Index = Raven.Server.Documents.Indexes.Index;
+using VectorOptions = Raven.Client.Documents.Indexes.Vector.VectorOptions;
 
 namespace Raven.Server.Documents.Queries;
 
@@ -785,5 +789,52 @@ public static class QueryBuilderHelper
         }
 
         return valueAsString;
+    }
+
+    internal static VectorValue GetVectorValueFromBlittableJsonVectorReader(ByteStringContext allocator, in VectorOptions options, BlittableJsonReaderVector value)
+    {
+        var bytesRequired = value.Length * (options.SourceEmbeddingType is VectorEmbeddingType.Single ? sizeof(float) : sizeof(byte));
+        var scope = allocator.Allocate(bytesRequired, out Memory<byte> memory);
+        
+        
+        switch (options.SourceEmbeddingType)
+        {
+            case VectorEmbeddingType.Single when value.TryReadArray(out ReadOnlySpan<float> asFloats):
+                asFloats.CopyTo(MemoryMarshal.Cast<byte, float>(memory.Span));
+                break;
+            case VectorEmbeddingType.Single:
+            {
+                var floats = MemoryMarshal.Cast<byte, float>(memory.Span);
+                int it = 0;
+                foreach (var v in value.ReadAs<float>())
+                    floats[it++] = v;
+                break;
+            }
+            case VectorEmbeddingType.Int8 when value.TryReadArray(out ReadOnlySpan<sbyte> asSbyte):
+            {
+                asSbyte.CopyTo(MemoryMarshal.Cast<byte, sbyte>(memory.Span));
+                break;
+            }
+            case VectorEmbeddingType.Int8:
+            {
+                var sbytes = MemoryMarshal.Cast<byte, sbyte>(memory.Span);
+                int it = 0;
+                foreach (var v in value.ReadAs<sbyte>())
+                    sbytes[it++] = v;
+                break;
+            }
+            case VectorEmbeddingType.Binary when value.TryReadArray(out ReadOnlySpan<byte> asSbyte):
+                asSbyte.CopyTo(memory.Span);
+                break;
+            case VectorEmbeddingType.Binary:
+            {
+                int it = 0;
+                foreach (var v in value.ReadAs<byte>())
+                    memory.Span[it++] = v;
+                break;
+            }
+        }
+
+        return GenerateEmbeddings.FromArray(allocator, scope, memory, options, bytesRequired);
     }
 }

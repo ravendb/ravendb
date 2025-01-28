@@ -519,23 +519,59 @@ namespace Sparrow.Json
             private static TOut FloatConverter(byte* data)
             {
                 var value = Unsafe.ReadUnaligned<float>(data);
-
+                
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
                 if (typeof(TOut) == typeof(double))
                     return (TOut)(object)Convert.ToDouble(value);
 #if NET6_0_OR_GREATER
                 if (typeof(TOut) == typeof(Half))
-                    return (TOut)(object)(Half)value;
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
 #endif
+                
                 return (TOut)(object)value;
             }
             
             private static TOut DoubleConverter(byte* data)
             {
                 var value = Unsafe.ReadUnaligned<double>(data);
-
-                if (typeof(TOut) == typeof(float))
-                    return (TOut)(object)Convert.ToSingle(value);
                 
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
 #if NET6_0_OR_GREATER
                 if (typeof(TOut) == typeof(Half))
                     return (TOut)(object)(Half)Convert.ToSingle(value);

@@ -671,11 +671,7 @@ public static class CoraxQueryBuilder
             PortableExceptions.ThrowIfNot<InvalidDataException>(vectorObjectFound, "Cannot find vector property in the object.");
 
             var vectorReader = (BlittableJsonReaderVector)vectorObject;
-            var bytesUsed = vectorReader.Length * vectorReader.ElementSize;
-            var memoryScope = builderParameters.Allocator.Allocate(bytesUsed, out Memory<byte> vectorBytes);
-
-            vectorReader.ReadUnderlyingMemory().CopyTo(vectorBytes.Span);
-            transformedEmbedding = GenerateEmbeddings.FromArray(builderParameters.Allocator, memoryScope, vectorBytes, vectorOptions, bytesUsed);
+            transformedEmbedding = QueryBuilderHelper.GetVectorValueFromBlittableJsonVectorReader(builderParameters.Allocator, vectorOptions, vectorReader);
         }
         else
         {

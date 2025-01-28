@@ -220,10 +220,7 @@ namespace Sparrow.Json.Parsing
             Continuation = JsonParserTokenContinuation.None;
             EscapePositions.Clear();
 
-            // We will change this value to MinValue because the 0 magnitude number is valid as the content of a vector.
-            _maxLong = long.MinValue;
-            _minLong = long.MaxValue;
-            _maxDoubleMagnitude = double.MinValue;
+            ClearBuffered();
         }
 
         internal FastList<(JsonParserToken, long)> _bufferedSequence;
@@ -235,12 +232,13 @@ namespace Sparrow.Json.Parsing
 
         internal void ClearBuffered()
         {
-            _bufferedSequence.WeakClear();
+            _bufferedSequence?.WeakClear();
 
             // We will change this value to MinValue because the 0 magnitude number is valid as the content of a vector.
             _maxLong = long.MinValue;
             _minLong = long.MaxValue;
             _maxDoubleMagnitude = double.MinValue;
+            IsBufferedFloat = false;
         }
 
         internal BlittableVectorType GetBufferedOptimalType()

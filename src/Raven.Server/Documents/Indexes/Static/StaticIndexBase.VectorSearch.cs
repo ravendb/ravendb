@@ -223,10 +223,35 @@ public partial class AbstractStaticIndexBase
             if (TryGetFirstNonNullElement(data, out var firstNonNull) == false)
                 return VectorValue.Null;
 
+            var values = new object[dataLength];
+            if (firstNonNull is BlittableJsonReaderObject or DynamicBlittableJson)
+            {
+                for (int i = 0; i < dataLength; i++)
+                {
+                    var currentObject = data[i];
+                    if (IsNullValue(currentObject))
+                    {
+                        values[i] = VectorValue.Null;
+                        continue;
+                    }
+                    
+                    var bjro = currentObject as BlittableJsonReaderObject ?? ((DynamicBlittableJson)value).BlittableJson;
+                    if (bjro != null && bjro.TryGetMember(Sparrow.Global.Constants.Naming.VectorPropertyName, out var vector) 
+                        && vector is BlittableJsonReaderVector bjrv)
+                    {
+                        values[i] = HandleBlittableJsonReaderVector(bjrv);
+                        continue;
+                    }
+                    
+                    PortableExceptions.Throw<InvalidDataException>($"Expected BlittableJsonReaderVector, but got {value.GetType().FullName}");
+                }
+
+                return values;
+            }
+
             //Array of base64s
             if (IsBase64(firstNonNull))
             {
-                var values = new object[dataLength];
                 for (var i = 0; i < dataLength; i++)
                     values[i] = Base64ToVector(data[i].ToString());
 
@@ -236,7 +261,6 @@ public partial class AbstractStaticIndexBase
             //Array of arrays
             if (firstNonNull is BlittableJsonReaderArray)
             {
-                var values = new object[dataLength];
                 for (var i = 0; i < dataLength; i++)
                 {
                     values[i] = IsNullValue(data[i]) 
@@ -279,18 +303,52 @@ public partial class AbstractStaticIndexBase
 
         object HandleBlittableJsonReaderVector(BlittableJsonReaderVector bjrv)
         {
-            var type = bjrv[0].GetType();
+            if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Int8)
+            {
+                if (bjrv.TryReadArray(out ReadOnlySpan<sbyte> asSbyte))
+                    return HandleBjrvInternal(asSbyte);
 
-            if (type == typeof(float))
-                return HandleBjrvInternal(bjrv.ReadArray<float>());
-            if (type == typeof(double))
-                return HandleBjrvInternal(bjrv.ReadArray<double>());
-            if (type == typeof(byte))
-                return HandleBjrvInternal(bjrv.ReadArray<byte>());
-            if (type == typeof(sbyte))
-                return HandleBjrvInternal(bjrv.ReadArray<sbyte>());
+                using (allocator.Allocate(bjrv.Length, out Span<sbyte> mem))
+                {
+                    var it = 0;
+                    foreach (var itValue in bjrv.ReadAs<sbyte>())
+                        mem[it++] = itValue;
 
-            throw new NotSupportedException($"Embeddings of type {type.FullName} are not supported.");
+                    return HandleBjrvInternal<sbyte>(mem);
+                }
+            }
+
+            if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Binary)
+            {
+                if (bjrv.TryReadArray(out ReadOnlySpan<byte> asBytes))
+                    return HandleBjrvInternal(asBytes);
+
+                using (allocator.Allocate(bjrv.Length, out Span<byte> mem))
+                {
+                    var it = 0;
+                    foreach (var itValue in bjrv.ReadAs<byte>())
+                        mem[it++] = itValue;
+
+                    return HandleBjrvInternal<byte>(mem);
+                }
+            }
+
+            if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Single)
+            {
+                if (bjrv.TryReadArray(out ReadOnlySpan<float> asFloat))
+                    return HandleBjrvInternal(asFloat);
+
+                using (allocator.Allocate(bjrv.Length, out Span<float> mem))
+                {
+                    var it = 0;
+                    foreach (var itValue in bjrv.ReadAs<float>())
+                        mem[it++] = itValue;
+
+                    return HandleBjrvInternal<float>(mem);
+                }
+            }
+            
+            throw new ArgumentException($"Unknown type. Vector embedding source: {vectorOptions.SourceEmbeddingType}");
         }
 
         object HandleBjrvInternal<T>(ReadOnlySpan<T> embedding) where T : unmanaged
