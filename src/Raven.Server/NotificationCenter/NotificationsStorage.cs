@@ -187,7 +187,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        internal NotificationTableValue Get(string id, JsonOperationContext context, RavenTransaction tx)
+        private NotificationTableValue Get(string id, JsonOperationContext context, RavenTransaction tx)
         {
             var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
             if (table == null)
@@ -332,11 +332,9 @@ namespace Raven.Server.NotificationCenter
         public void ChangePostponeDate(string id, DateTime? postponeUntil)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
             {
-                var getCommand = new GetNotificationCommand(id, this);
-                serverStore.Engine.TxMerger.EnqueueSync(getCommand);
-
-                using (var item = getCommand.NotificationTableValue)
+                using(var item = Get(id, context, tx))
                 {
                     if (item == null)
                         return;
