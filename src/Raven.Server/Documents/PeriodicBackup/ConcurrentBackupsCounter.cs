@@ -15,21 +15,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private readonly LicenseManager _licenseManager;
         private readonly Dictionary<string, int> _runningBackupsPerDatabase = new();
-        private int _maxConcurrentBackups;
         private readonly TimeSpan _concurrentBackupsDelay;
         private readonly bool _skipModifications;
         private SemaphoreSlim _concurrentDatabaseWakeup;
 
-        public int MaxNumberOfConcurrentBackups
-        {
-            get
-            {
-                lock (_locker)
-                {
-                    return _maxConcurrentBackups;
-                }
-            }
-        }
+        public int MaxNumberOfConcurrentBackups { get; private set; }
 
         public int CurrentNumberOfRunningBackups
         {
@@ -69,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 numberOfCoresToUse = GetNumberOfCoresToUseForBackup(utilizedCores);
             }
 
-            _maxConcurrentBackups = numberOfCoresToUse;
+            MaxNumberOfConcurrentBackups = numberOfCoresToUse;
             _concurrentDatabaseWakeup = new SemaphoreSlim(numberOfCoresToUse);
             _concurrentBackupsDelay = backupConfiguration.ConcurrentBackupsDelay.AsTimeSpan;
             _skipModifications = skipModifications;
@@ -85,12 +75,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return;
                 }
 
-                if (_maxConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
+                if (MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
                 {
                     throw new BackupDelayException(
                         $"Failed to start Backup Task: '{backupName}'. " +
                         $"The task exceeds the maximum number of concurrent backup tasks configured. " +
-                        $"Current maximum number of concurrent backups is: {_maxConcurrentBackups:#,#;;0}")
+                        $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}")
                     {
                         DelayPeriod = _concurrentBackupsDelay
                     };
@@ -182,12 +172,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             var utilizedCores = _licenseManager.GetCoresLimitForNode(out _);
             var newMaxConcurrentBackups = GetNumberOfCoresToUseForBackup(utilizedCores);
 
-            if (_maxConcurrentBackups == newMaxConcurrentBackups)
+            if (MaxNumberOfConcurrentBackups == newMaxConcurrentBackups)
                 return;
 
             lock (_locker)
             {
-                _maxConcurrentBackups = newMaxConcurrentBackups;
+                MaxNumberOfConcurrentBackups = newMaxConcurrentBackups;
                 _concurrentDatabaseWakeup = new SemaphoreSlim(newMaxConcurrentBackups);
             }
         }
