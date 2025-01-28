@@ -6,6 +6,7 @@ import RichAlert from "components/common/RichAlert";
 import SelectCreatable from "components/common/select/SelectCreatable";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { useAppSelector } from "components/store";
@@ -18,7 +19,9 @@ export default function CertificatesPermissionsField() {
     const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
     const hasReadOnlyCertificates = useAppSelector(licenseSelectors.statusValue("HasReadOnlyCertificates"));
 
-    const { control, formState } = useFormContext<CertificatesGenerateFormData | CertificatesEditFormData>();
+    const { control, formState } = useFormContext<
+        CertificatesGenerateFormData | CertificatesCloneFormData | CertificatesEditFormData
+    >();
 
     const formValues = useWatch({ control });
 

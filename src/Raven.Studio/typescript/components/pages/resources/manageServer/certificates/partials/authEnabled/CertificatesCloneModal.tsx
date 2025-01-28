@@ -154,4 +154,4 @@ const schema = yup.object({
 
 type FormData = yup.InferType<typeof schema>;
 
-export type CertificatesGenerateFormData = FormData;
+export type CertificatesCloneFormData = FormData;

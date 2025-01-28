@@ -4,6 +4,7 @@ import { Icon } from "components/common/Icon";
 import RichAlert from "components/common/RichAlert";
 import { SelectOption } from "components/common/select/Select";
 import { useServices } from "components/hooks/useServices";
+import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { CertificatesRegenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
@@ -21,7 +22,10 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
     const { manageServerService } = useServices();
 
     const { control, setValue, watch } = useFormContext<
-        CertificatesGenerateFormData | CertificatesEditFormData | CertificatesRegenerateFormData
+        | CertificatesGenerateFormData
+        | CertificatesCloneFormData
+        | CertificatesEditFormData
+        | CertificatesRegenerateFormData
     >();
 
     const formValues = useWatch({ control });

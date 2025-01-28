@@ -1,6 +1,7 @@
 import { FormSelect } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { useAppSelector } from "components/store";
@@ -10,7 +11,9 @@ import { FormGroup, Label } from "reactstrap";
 export default function CertificatesSecurityClearanceField() {
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
-    const { control } = useFormContext<CertificatesGenerateFormData | CertificatesEditFormData>();
+    const { control } = useFormContext<
+        CertificatesGenerateFormData | CertificatesCloneFormData | CertificatesEditFormData | CertificatesEditFormData
+    >();
 
     return (
         <FormGroup>

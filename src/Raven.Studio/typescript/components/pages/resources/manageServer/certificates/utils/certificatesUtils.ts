@@ -1,5 +1,6 @@
 import serverSettings from "common/settings/serverSettings";
 import { TextColor } from "components/models/common";
+import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { CertificatesRegenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
@@ -108,7 +109,7 @@ function mapPassword(password: string): string {
     return password;
 }
 
-function mapGenerateToDto(formData: CertificatesGenerateFormData): GenerateCertificateDto {
+function mapGenerateToDto(formData: CertificatesGenerateFormData | CertificatesCloneFormData): GenerateCertificateDto {
     return {
         Name: formData.name,
         Password: mapPassword(formData.certificatePassphrase),
