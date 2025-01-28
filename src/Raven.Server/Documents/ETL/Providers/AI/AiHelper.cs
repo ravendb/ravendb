@@ -54,7 +54,6 @@ public static class AiHelper
                 var openAiOptions = new OpenAIClientOptions
                 {
                     Endpoint = new Uri(openAiSettings.Endpoint),
-                    OrganizationId = openAiSettings.OrganizationId,
                     ProjectId = openAiSettings.ProjectId,
                     UserAgentApplicationId = $"RavenDB/{ServerVersion.Version}/{nameof(AiEtl)}"
                 };
@@ -99,7 +98,7 @@ public static class AiHelper
 
             case AiConnectorType.Google:
                 var googleSettings = configuration.Connection.GoogleSettings;
-                kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey, googleSettings.ApiVersion.ToGoogleAiVersion(), googleSettings.ServiceId);
+                kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey, googleSettings.ApiVersion.Value.ToGoogleAiVersion(), googleSettings.ServiceId);
                 break;
 
             // case AiConnectorType.HuggingFace:

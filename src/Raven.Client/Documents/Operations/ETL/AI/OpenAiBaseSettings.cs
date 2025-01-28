@@ -1,16 +1,25 @@
-﻿using Sparrow.Json.Parsing;
+﻿#nullable enable
+using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
 public abstract class OpenAiBaseSettings : AbstractAiSettings
 {
+    protected OpenAiBaseSettings(string apiKey, string endpoint, string model)
+    {
+        ApiKey = apiKey;
+        Endpoint = endpoint;
+        Model = model;
+    }
+
     /// <summary>
     /// The API key to used to authenticate with the service.
     /// </summary>
     public string ApiKey { get; set; }
 
     /// <summary>
-    /// The service endpoint that the client will send requests to. If not set, the default endpoint will be used.
+    /// The service endpoint that the client will send requests to.
     /// </summary>
     public string Endpoint { get; set; }
 
@@ -21,14 +30,20 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
 
     public override bool HasSettings() =>
         string.IsNullOrWhiteSpace(ApiKey) == false &&
-        string.IsNullOrWhiteSpace(Model) == false &&
-        string.IsNullOrWhiteSpace(Endpoint) == false;
+        string.IsNullOrWhiteSpace(Endpoint) == false &&
+        string.IsNullOrWhiteSpace(Model) == false;
 
-    public override DynamicJsonValue ToJson() =>
-        new()
+    public override DynamicJsonValue ToJson()
+    {
+        var json = new DynamicJsonValue
         {
             [nameof(ApiKey)] = ApiKey,
-            [nameof(Endpoint)] = Endpoint,
             [nameof(Model)] = Model
         };
+
+        if (string.IsNullOrWhiteSpace(Endpoint) == false)
+            json[nameof(Endpoint)] = Endpoint;
+
+        return json;
+    }
 }

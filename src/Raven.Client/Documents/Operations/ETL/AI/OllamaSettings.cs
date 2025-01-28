@@ -7,6 +7,12 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 /// </summary>
 public sealed class OllamaSettings
 {
+    public OllamaSettings(string uri, string model)
+    {
+        Uri = uri;
+        Model = model;
+    }
+
     /// <summary>
     /// The URI of the Ollama API.
     /// </summary>
@@ -20,7 +26,9 @@ public sealed class OllamaSettings
     /// <summary>
     /// Returns a value indicating whether the settings are valid.
     /// </summary>
-    public bool HasSettings() => string.IsNullOrWhiteSpace(Uri) == false && string.IsNullOrWhiteSpace(Model) == false;
+    public bool HasSettings() =>
+        string.IsNullOrWhiteSpace(Uri) == false &&
+        string.IsNullOrWhiteSpace(Model) == false;
 
     public DynamicJsonValue ToJson() =>
         new()

@@ -33,7 +33,7 @@ public class RavenDB_23556 : RavenTestBase
                 ConnectionStringName = connectionStringName,
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }],
                 FieldsToInclude = ["Name"],
-                AiConnectorType = AiConnectorType.Onnx
+                AiConnectorType = AiConnectorType.OpenAi
             };
 
             // var connectionString = new AiConnectionString
@@ -42,13 +42,19 @@ public class RavenDB_23556 : RavenTestBase
             //     OllamaSettings = new OllamaSettings { Model = "mistral-nemo", Uri = "http://127.0.0.1:11434" }
             // };
 
+            // var connectionString = new AiConnectionString
+            // {
+            //     Name = connectionStringName,
+            //     OnnxSettings = new OnnxSettings
+            //     {
+            //         CaseSensitive = false
+            //     }
+            // };
+
             var connectionString = new AiConnectionString
             {
                 Name = connectionStringName,
-                OnnxSettings = new OnnxSettings
-                {
-                    CaseSensitive = false
-                }
+                OpenAiSettings = new OpenAiSettings(apiKey: "someApiKey", endpoint: "someEndpoint", model: "someModel")
             };
 
             Etl.AddEtl(store, configuration, connectionString);

@@ -15,17 +15,19 @@ public static class AiExtensions
 {
     public static BertOnnxOptions ToBertOnnxOptions(this OnnxSettings settings)
     {
-        return new()
+        var defaults = new BertOnnxOptions();
+
+        return new BertOnnxOptions
         {
-            CaseSensitive = settings.CaseSensitive,
-            MaximumTokens = settings.MaximumTokens,
-            ClsToken = settings.ClsToken,
-            UnknownToken = settings.UnknownToken,
-            SepToken = settings.SepToken,
-            PadToken = settings.PadToken,
-            UnicodeNormalization = settings.UnicodeNormalization,
-            PoolingMode = settings.PoolingMode.ToEmbeddingPoolingMode(),
-            NormalizeEmbeddings = settings.NormalizeEmbeddings
+            CaseSensitive = settings.CaseSensitive ?? defaults.CaseSensitive,
+            MaximumTokens = settings.MaximumTokens ?? defaults.MaximumTokens,
+            ClsToken = settings.ClsToken ?? defaults.ClsToken,
+            UnknownToken = settings.UnknownToken ?? defaults.UnknownToken,
+            SepToken = settings.SepToken ?? defaults.UnknownToken,
+            PadToken = settings.PadToken ?? defaults.PadToken,
+            UnicodeNormalization = settings.UnicodeNormalization ?? defaults.UnicodeNormalization,
+            PoolingMode = settings.PoolingMode?.ToEmbeddingPoolingMode() ?? defaults.PoolingMode,
+            NormalizeEmbeddings = settings.NormalizeEmbeddings ?? defaults.NormalizeEmbeddings
         };
     }
 

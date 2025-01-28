@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿#nullable enable
+using System.Text;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
@@ -9,54 +10,54 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 public sealed class OnnxSettings
 {
     /// <summary>
-    /// The flag to indicate whether the model should be case-sensitive. Defaults to false.
+    /// The flag to indicate whether the model should be case-sensitive.
     /// </summary>
-    public bool CaseSensitive { get; set; } = false;
+    public bool? CaseSensitive { get; set; }
 
-    /// <summary>The maximum number of tokens that the model can process. Defaults to 512.</summary>
-    public int MaximumTokens { get; set; } = 512;
+    /// <summary>The maximum number of tokens that the model can process.</summary>
+    public int? MaximumTokens { get; set; }
 
     /// <summary>Gets or sets the cls token. Defaults to "[CLS]".</summary>
     /// <remarks>
     /// The CLS token is a special token that is added to the beginning of the input sequence.
     /// It is used to represent the classification of the entire input sequence.
     /// </remarks>
-    public string ClsToken { get; set; } = "[CLS]";
+    public string? ClsToken { get; set; }
 
-    /// <summary>Gets or sets the unknown token. Defaults to "[UNK]".</summary>
+    /// <summary>Gets or sets the unknown token.</summary>
     /// <remarks>
     /// The UNK token is a special token that is used to represent unknown words in the input sequence.
     /// It is used to handle out-of-vocabulary words.
     /// </remarks>
-    public string UnknownToken { get; set; } = "[UNK]";
+    public string? UnknownToken { get; set; }
 
-    /// <summary>Gets or sets the sep token. Defaults to "[SEP]".</summary>
+    /// <summary>Gets or sets the sep token.</summary>
     /// <remarks>
     /// The SEP token is a special token that is added to the end of the input sequence.
     /// It is used to separate the input sequence from the classification label.
     /// </remarks>
-    public string SepToken { get; set; } = "[SEP]";
+    public string? SepToken { get; set; }
 
-    /// <summary>Gets or sets the pad token. Defaults to "[PAD]".</summary>
+    /// <summary>Gets or sets the pad token.</summary>
     /// <remarks>
     /// The PAD token is a special token that is used to pad the input sequence to a fixed length.
     /// It is used to handle input sequences that are shorter than the maximum sequence length.
     /// </remarks>
-    public string PadToken { get; set; } = "[PAD]";
+    public string? PadToken { get; set; }
 
-    /// <summary>Gets or sets the type of Unicode normalization to perform on input text. Defaults to <see cref="NormalizationForm.FormD"/>.</summary>
+    /// <summary>Gets or sets the type of Unicode normalization to perform on input text.</summary>
     /// <remarks>
     /// Unicode normalization is the process of transforming input text into a standard form that can be more easily compared.
     /// The normalization form determines the specific normalization rules that are applied to the input text.
     /// </remarks>
-    public NormalizationForm UnicodeNormalization { get; set; } = NormalizationForm.FormD;
+    public NormalizationForm? UnicodeNormalization { get; set; }
 
-    /// <summary>Gets or sets the pooling mode to use when generating the fixed-length embedding result. Defaults to <see cref="EmbeddingPoolingMode.Mean"/>.</summary>
-    public OnnxEmbeddingPoolingMode PoolingMode { get; set; } = OnnxEmbeddingPoolingMode.Mean;
+    /// <summary>Gets or sets the pooling mode to use when generating the fixed-length embedding result.</summary>
+    public OnnxEmbeddingPoolingMode? PoolingMode { get; set; }
 
-    /// <summary>Gets or sets whether the resulting embedding vectors should be explicitly normalized. Defaults to false.</summary>
+    /// <summary>Gets or sets whether the resulting embedding vectors should be explicitly normalized.</summary>
     /// <remarks>Normalized embeddings may be compared more efficiently, such as by using a dot product rather than cosine similarity.</remarks>
-    public bool NormalizeEmbeddings { get; set; } = false;
+    public bool? NormalizeEmbeddings { get; set; }
 
     public bool HasSettings() => true;
 

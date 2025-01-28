@@ -1,33 +1,56 @@
 ﻿#pragma warning disable SKEXP0070
+#nullable enable
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
 public sealed class GoogleSettings
 {
+    public GoogleSettings(string model, string apiKey, GoogleAIVersion? apiVersion = null, string? serviceId = null)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+            throw new System.ArgumentException("Model cannot be null or whitespace.", nameof(model));
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+            throw new System.ArgumentException("API key cannot be null or whitespace.", nameof(apiKey));
+
+        Model = model;
+        ApiKey = apiKey;
+        ApiVersion = apiVersion;
+        ServiceId = serviceId;
+    }
+
     /// <summary>The model that should be used.</summary>
     public string Model { get; set; }
 
     /// <summary>The API key to used to authenticate with the service.</summary>
     public string ApiKey { get; set; }
 
-    /// <summary>  The version of the Google API. Defaults to <see href="GoogleAIVersion.V1_Beta"/>.</summary>
-    public GoogleAIVersion ApiVersion { get; set; } = GoogleAIVersion.V1_Beta;
+    /// <summary>The version of the Google API.</summary>
+    public GoogleAIVersion? ApiVersion { get; set; }
 
     /// <summary>The optional service ID.</summary>
     /// <remarks>
     /// The service ID is an optional identifier that can be used to distinguish between different instances of the same service.
     /// </remarks>
-    public string ServiceId { get; set; }
+    public string? ServiceId { get; set; }
 
-    public DynamicJsonValue ToJson() =>
-        new()
+    public DynamicJsonValue ToJson()
+    {
+        var json = new DynamicJsonValue
         {
             [nameof(Model)] = Model,
-            [nameof(ApiKey)] = ApiKey,
-            [nameof(ApiVersion)] = ApiVersion.ToString(),
-            [nameof(ServiceId)] = ServiceId
+            [nameof(ApiKey)] = ApiKey
         };
+
+        if (string.IsNullOrWhiteSpace(ServiceId) == false)
+            json[nameof(ServiceId)] = ServiceId;
+
+        if (ApiVersion != null)
+            json[nameof(ApiVersion)] = ApiVersion.ToString();
+
+        return json;
+    }
 }
 
 /// <summary>
