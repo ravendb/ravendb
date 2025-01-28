@@ -76,36 +76,7 @@ public static class AiExtensions
     }
 
     [Experimental("SKEXP0070")]
-    public static IKernelBuilder AddGoogleTextEmbeddingGeneration(
-        this IKernelBuilder builder,
-        GoogleSettings settings,
-        string serviceId = null)
-    {
-        GoogleAITextEmbeddingGenerationService googleService;
-
-        if (settings.AiVersion.HasValue)
-        {
-            googleService = new GoogleAITextEmbeddingGenerationService(
-                settings.Model,
-                settings.ApiKey,
-                settings.AiVersion.Value.ToGoogleAiVersion()
-            );
-        }
-        else
-        {
-            googleService = new GoogleAITextEmbeddingGenerationService(
-                settings.Model,
-                settings.ApiKey
-            );
-        }
-
-        builder.Services.AddKeyedSingleton<ITextEmbeddingGenerationService>(serviceId, googleService);
-
-        return builder;
-    }
-
-    [Experimental("SKEXP0070")]
-    public static IKernelBuilder AddHuggingFaceTextEmbeddingGeneration(
+    public static IKernelBuilder AddHuggingFaceTextEmbeddingGeneration2(
         this IKernelBuilder builder,
         HuggingFaceSettings settings,
         string serviceId = null)

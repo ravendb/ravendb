@@ -96,11 +96,21 @@ public static class AiHelper
                 break;
 
             case AiConnectorType.Google:
-                kernelBuilder.AddGoogleTextEmbeddingGeneration(configuration.Connection.GoogleSettings);
+                var googleSettings = configuration.Connection.GoogleSettings;
+
+                if (googleSettings.AiVersion.HasValue)
+                    kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey, googleSettings.AiVersion.Value.ToGoogleAiVersion());
+                else
+                    kernelBuilder.AddGoogleAIEmbeddingGeneration(googleSettings.Model, googleSettings.ApiKey);
+
                 break;
 
             case AiConnectorType.HuggingFace:
-                kernelBuilder.AddHuggingFaceTextEmbeddingGeneration(configuration.Connection.HuggingFaceSettings);
+                var huggingFaceSettings = configuration.Connection.HuggingFaceSettings;
+                var uri = string.IsNullOrWhiteSpace(huggingFaceSettings.Endpoint) ? null : new Uri(huggingFaceSettings.Endpoint);
+
+                kernelBuilder.AddHuggingFaceTextEmbeddingGeneration(huggingFaceSettings.Model, uri, huggingFaceSettings.ApiKey);
+
                 break;
 
             default:
