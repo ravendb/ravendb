@@ -29,6 +29,7 @@ import CertificatesWellKnownList from "components/pages/resources/manageServer/c
 import { useChanges } from "components/hooks/useChanges";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { LoadingView } from "components/common/LoadingView";
+import { LoadError } from "components/common/LoadError";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -36,7 +37,8 @@ export default function CertificatesAuthEnabled() {
 
     const exportServerCertFormRef = useRef<HTMLFormElement>(null);
 
-    const isInitialLoading = useAppSelector(certificatesSelectors.isInitialLoading);
+    const isInitialLoad = useAppSelector(certificatesSelectors.isInitialLoad);
+    const loadStatus = useAppSelector(certificatesSelectors.loadStatus);
     const isGenerateModalOpen = useAppSelector(certificatesSelectors.isGenerateModalOpen);
     const isUploadModalOpen = useAppSelector(certificatesSelectors.isUploadModalOpen);
     const isReplaceServerModalOpen = useAppSelector(certificatesSelectors.isReplaceServerModalOpen);
@@ -97,67 +99,69 @@ export default function CertificatesAuthEnabled() {
     return (
         <div className="vstack gap-2">
             <StickyHeader>
-                <UncontrolledDropdown>
-                    <DropdownToggle color="primary" caret className="rounded-pill">
-                        Manage certificates
-                    </DropdownToggle>
-                    <DropdownMenu>
-                        <DropdownItem header>Client</DropdownItem>
-                        <DropdownItem onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}>
-                            <Icon icon="certificate" addon="plus" />
-                            Generate client certificate
-                        </DropdownItem>
-                        <DropdownItem onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}>
-                            <Icon icon="upload" />
-                            Upload client certificate
-                        </DropdownItem>
-                        <DropdownItem divider />
-                        <DropdownItem header>Server</DropdownItem>
-                        <ConditionalPopover
-                            conditions={[
-                                {
+                {loadStatus === "success" && (
+                    <UncontrolledDropdown>
+                        <DropdownToggle color="primary" caret className="rounded-pill">
+                            Manage certificates
+                        </DropdownToggle>
+                        <DropdownMenu>
+                            <DropdownItem header>Client</DropdownItem>
+                            <DropdownItem onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}>
+                                <Icon icon="certificate" addon="plus" />
+                                Generate client certificate
+                            </DropdownItem>
+                            <DropdownItem onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}>
+                                <Icon icon="upload" />
+                                Upload client certificate
+                            </DropdownItem>
+                            <DropdownItem divider />
+                            <DropdownItem header>Server</DropdownItem>
+                            <ConditionalPopover
+                                conditions={[
+                                    {
+                                        isActive: !hasClusterNodeCertificate,
+                                        message: "You need to have a server certificate to export it",
+                                    },
+                                    {
+                                        isActive: true,
+                                        message: (
+                                            <span>
+                                                Export the server certificate(s) without their private key into a .pfx
+                                                file. These certificates can be used during a manual cluster setup, when
+                                                you need to register server certificates to be trusted on other nodes.
+                                            </span>
+                                        ),
+                                    },
+                                ]}
+                            >
+                                <DropdownItem
+                                    onClick={() => {
+                                        reportEvent("certificates", "export-certs");
+                                        exportServerCertFormRef.current?.submit();
+                                    }}
+                                    disabled={!hasClusterNodeCertificate}
+                                >
+                                    <Icon icon="download" />
+                                    Export server certificate
+                                </DropdownItem>
+                            </ConditionalPopover>
+                            <ConditionalPopover
+                                conditions={{
                                     isActive: !hasClusterNodeCertificate,
-                                    message: "You need to have a server certificate to export it",
-                                },
-                                {
-                                    isActive: true,
-                                    message: (
-                                        <span>
-                                            Export the server certificate(s) without their private key into a .pfx file.
-                                            These certificates can be used during a manual cluster setup, when you need
-                                            to register server certificates to be trusted on other nodes.
-                                        </span>
-                                    ),
-                                },
-                            ]}
-                        >
-                            <DropdownItem
-                                onClick={() => {
-                                    reportEvent("certificates", "export-certs");
-                                    exportServerCertFormRef.current?.submit();
+                                    message: "You need to have a server certificate to replace it",
                                 }}
-                                disabled={!hasClusterNodeCertificate}
                             >
-                                <Icon icon="download" />
-                                Export server certificate
-                            </DropdownItem>
-                        </ConditionalPopover>
-                        <ConditionalPopover
-                            conditions={{
-                                isActive: !hasClusterNodeCertificate,
-                                message: "You need to have a server certificate to replace it",
-                            }}
-                        >
-                            <DropdownItem
-                                onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
-                                disabled={!hasClusterNodeCertificate}
-                            >
-                                <Icon icon="refresh" />
-                                Replace server certificate
-                            </DropdownItem>
-                        </ConditionalPopover>
-                    </DropdownMenu>
-                </UncontrolledDropdown>
+                                <DropdownItem
+                                    onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
+                                    disabled={!hasClusterNodeCertificate}
+                                >
+                                    <Icon icon="refresh" />
+                                    Replace server certificate
+                                </DropdownItem>
+                            </ConditionalPopover>
+                        </DropdownMenu>
+                    </UncontrolledDropdown>
+                )}
                 <div className="hstack gap-2 mt-2 flex-wrap">
                     <div className="flex-grow">
                         <span className="small-label">Filter by name/thumbprint</span>
@@ -235,9 +239,14 @@ export default function CertificatesAuthEnabled() {
                 </div>
             </StickyHeader>
 
-            {isInitialLoading ? (
-                <LoadingView />
-            ) : (
+            {isInitialLoad && loadStatus === "loading" && <LoadingView />}
+            {loadStatus === "failure" && (
+                <LoadError
+                    error="Unable to load certificates"
+                    refresh={() => dispatch(certificatesActions.fetchData())}
+                />
+            )}
+            {loadStatus === "success" && (
                 <>
                     <CertificatesWellKnownList />
                     <CertificatesServerList />

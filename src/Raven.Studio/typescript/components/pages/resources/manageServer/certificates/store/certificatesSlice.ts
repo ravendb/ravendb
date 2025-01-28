@@ -10,9 +10,9 @@ import {
 import { RootState } from "components/store";
 
 interface InitialState {
-    isInitialLoading: boolean;
     certificates: CertificateItem[];
-    certificatesLoadStatus: loadStatus;
+    isInitialLoad: boolean;
+    loadStatus: loadStatus;
     serverCertificateThumbprint: string;
     serverCertificateRenewalDate: string;
     serverCertificateSetupMode: Raven.Server.Commercial.SetupMode;
@@ -32,9 +32,9 @@ interface InitialState {
 }
 
 const initialState: InitialState = {
-    isInitialLoading: true,
     certificates: [],
-    certificatesLoadStatus: "idle",
+    loadStatus: "idle",
+    isInitialLoad: true,
     serverCertificateThumbprint: null,
     serverCertificateRenewalDate: null,
     serverCertificateSetupMode: null,
@@ -127,14 +127,14 @@ export const certificatesSlice = createSlice({
             state.wellKnownAdminCerts = certificatesDto.WellKnownAdminCerts ?? [];
             state.wellKnownIssuers = certificatesDto.WellKnownIssuers ?? [];
 
-            state.certificatesLoadStatus = "success";
-            state.isInitialLoading = false;
+            state.loadStatus = "success";
+            state.isInitialLoad = false;
         });
         builder.addCase(fetchData.rejected, (state) => {
-            state.certificatesLoadStatus = "failure";
+            state.loadStatus = "failure";
         });
         builder.addCase(fetchData.pending, (state) => {
-            state.certificatesLoadStatus = "loading";
+            state.loadStatus = "loading";
         });
     },
 });
