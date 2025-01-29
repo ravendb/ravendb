@@ -933,16 +933,16 @@ namespace Sparrow.Server
                 _str = str;
             }
 
-            public override Memory<T> Memory => CreateMemory(_str.Length);
+            public override Memory<T> Memory => CreateMemory(_str.Length / sizeof(T));
 
-            public override Span<T> GetSpan() => new Span<T>(_str.Ptr, _str.Length);
+            public override Span<T> GetSpan() => new Span<T>(_str.Ptr, _str.Length / sizeof(T));
 
             public override MemoryHandle Pin(int elementIndex = 0)
             {
                 if (elementIndex < 0 || elementIndex >= _str.Length / sizeof(T))
                     throw new ArgumentOutOfRangeException(nameof(elementIndex));
 
-                return new MemoryHandle(_str._pointer + (elementIndex * sizeof(T)));
+                return new MemoryHandle(_str.Ptr + (elementIndex * sizeof(T)));
             }
 
             public override void Unpin()
