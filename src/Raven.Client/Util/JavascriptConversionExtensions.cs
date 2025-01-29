@@ -1240,20 +1240,29 @@ namespace Raven.Client.Util
             }
         }
 
-        internal sealed class ReplaceParameterWithNewName(ParameterExpression parameter, string newName) : JavascriptConversionExtension
+        internal sealed class ReplaceParameterWithNewName : JavascriptConversionExtension
         {
+            private readonly string _newName;
+            private readonly ParameterExpression _parameter;
+
+            public ReplaceParameterWithNewName(ParameterExpression parameter, string newName)
+            {
+                _newName = newName;
+                _parameter = parameter;
+            }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                var parameter1 = context.Node as ParameterExpression;
-                if (parameter1 == null || parameter1 != parameter)
+                var parameter = context.Node as ParameterExpression;
+                if (parameter == null || parameter != _parameter)
                     return;
 
                 context.PreventDefault();
                 var writer = context.GetWriter();
 
-                using (writer.Operation(parameter1))
+                using (writer.Operation(parameter))
                 {
-                    writer.Write(newName);
+                    writer.Write(_newName);
                 }
             }
         }

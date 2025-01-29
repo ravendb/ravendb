@@ -44,6 +44,32 @@ namespace SlowTests.Client.Queries
                 }
             }
         }
+        [RavenFact(RavenTestCategory.Querying)]
+
+        public void IncludeWithSingleProperty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query3 = from e in session.Query<Address>()
+                        let _ = RavenQuery.Include<Address>(a => a.StateId)
+                        select e;
+
+                    var results = query3.ToString();
+                    var results3 = query3.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query3.ToString(),
+                        "declare function output(e) {\r\n\tinclude(e.StateId);\r\n\treturn e;\r\n}\r\nfrom 'Addresses' as e select output(e)"
+                    );
+                }
+            }
+        }
 
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void IncludeWithSplitAndMathTest()
@@ -147,7 +173,6 @@ namespace SlowTests.Client.Queries
                 }
             }
         }
-
 
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void MultipleIncludesInsideSelect()

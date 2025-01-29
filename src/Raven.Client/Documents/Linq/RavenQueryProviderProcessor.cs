@@ -3376,7 +3376,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (expression is MemberExpression or MethodCallExpression)
             {
-                if (_includeSupport is not null && _includeSupport.IncludeFunctions.IsNullOrEmpty() == false)
+                var anyInclude = (_includeSupport is not null && _includeSupport.IncludeFunctions.IsNullOrEmpty() == false);
+                var containsDot = GetMember(expression).Path.Contains('.');
+                if (anyInclude && containsDot)
                 {
                     sb.Append('{');
                     var name = GetMember(expression);
@@ -3389,7 +3391,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     script = ToJs(expression);
 
                 sb.Append(script);
-                if (_includeSupport is not null && _includeSupport.IncludeFunctions.IsNullOrEmpty() == false)
+                if (anyInclude && containsDot)
                 {
                     sb.Append("}");
                 }
