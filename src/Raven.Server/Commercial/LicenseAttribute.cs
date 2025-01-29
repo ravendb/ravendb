@@ -38,6 +38,7 @@
         PostgreSqlIntegration,
         CanBeActivatedUntil,
         QueueEtl,
+        ServerWideBackups,
         ServerWideExternalReplications,
         ServerWideCustomSorters,
         ServerWideAnalyzers,
