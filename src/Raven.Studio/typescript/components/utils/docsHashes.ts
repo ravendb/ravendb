@@ -1,6 +1,6 @@
 import { StringWithAutocomplete } from "components/utils/common";
 
-export const docsHashes: Record<string, StringWithAutocomplete<"MISSING_DOCS">> = {
+const docsHashes: Record<string, StringWithAutocomplete<"MISSING_DOCS">> = {
     "databases/documents": "H6XJDZ",
     "databases/documents/revisions/bin": "T4Y76K",
     "databases/patch(/:recentPatchHash)": "VXSYQ7",
@@ -70,7 +70,7 @@ export const docsHashes: Record<string, StringWithAutocomplete<"MISSING_DOCS">> 
     "admin/settings/editServerWideExternalReplication": "MZOBO3",
     "admin/settings/serverWideCustomAnalyzers": "VWCQPI",
     "admin/settings/serverWideCustomSorters": "XI6BMT",
-    // missing docs
+    // routs for which the documentation is missing (there may be more)
     "databases/indexes/terms/(:indexName)": "MISSING_DOCS",
     "databases/indexes/cleanup": "MISSING_DOCS",
     "databases/status/buckets/report": "MISSING_DOCS",
@@ -97,4 +97,15 @@ export const docsHashes: Record<string, StringWithAutocomplete<"MISSING_DOCS">> 
     about: "MISSING_DOCS",
     "databases/tasks/editSnowflakeEtlTask": "MISSING_DOCS",
     "databases/documents/revisions/all": "MISSING_DOCS",
+    "databases/settings/revisionsBinCleaner": "MISSING_DOCS",
 };
+
+export function getDocsHash(route: string): StringWithAutocomplete<"MISSING_DOCS"> {
+    const hash = docsHashes[route];
+
+    if (!hash) {
+        return "MISSING_DOCS";
+    }
+
+    return hash;
+}
