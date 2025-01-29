@@ -592,31 +592,31 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         public IndexResetMode ResetMode { get; set; }
 
-        [Description("The default complex field indexing behavior for static Corax indexes")]
+        [Description("The default complex field indexing behavior for static Corax indexes.")]
         [DefaultValue(CoraxComplexFieldIndexingBehavior.Throw)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Corax.Static.ComplexFieldIndexingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public CoraxComplexFieldIndexingBehavior CoraxStaticIndexComplexFieldIndexingBehavior { get; protected set; }
 
-        [Description("Default minimum similarity for vector search (0.0f - 1.0f, default is 0.75f)")]
+        [Description("The default minimum similarity for vector search (0.0f - 1.0f, default is 0.75f)")]
         [DefaultValue(0.75f)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultMinimumSimilarity", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public float CoraxVectorSearchDefaultMinimumSimilarity { get; protected set; }
         
-        [Description("Default number of edges for vector indexing.")]
+        [Description("The default number of edges created for a vector during vector indexing.")]
         [DefaultValue(12)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfEdges", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int CoraxVectorDefaultNumberOfEdges { get; protected set; }
         
-        [Description("Default number of candidates for vector indexing.")]
+        [Description("The default number of candidates (potential neighboring vectors) that RavenDB evaluates during vector indexing.")]
         [DefaultValue(16)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForIndexing", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int CoraxVectorDefaultNumberOfCandidatesForIndexing { get; protected set; }
         
-        [Description("Default number of candidates for vector querying.")]
+        [Description("The default maximum number of vectors that we will return from a graph search.")]
         [DefaultValue(16)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]

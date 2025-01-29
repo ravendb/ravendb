@@ -16,7 +16,6 @@ public interface IVectorFieldFactory<T>
     /// Defines the text field that vector search will be performed on.
     /// </summary>
     /// <param name="fieldName">Name of the document field containing text data.</param>
-    /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
     public IVectorEmbeddingTextField WithText(string fieldName);
     
     /// <inheritdoc cref="WithText(string,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
@@ -28,7 +27,6 @@ public interface IVectorFieldFactory<T>
     /// </summary>
     /// <param name="fieldName">Name of the document field containing embedding data.</param>
     /// <param name="storedEmbeddingQuantization">Quantization that was performed on stored embeddings.</param>
-    /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
     public IVectorEmbeddingField WithEmbedding(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
     ///<inheritdoc cref="WithEmbedding(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
@@ -40,7 +38,6 @@ public interface IVectorFieldFactory<T>
     /// </summary>
     /// <param name="fieldName">Name of the document field containing base64 encoded embedding data.</param>
     /// <param name="storedEmbeddingQuantization">Quantization of stored embeddings.</param>
-    /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
     public IVectorEmbeddingField WithBase64(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
     /// <inheritdoc cref="WithBase64(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
@@ -49,11 +46,11 @@ public interface IVectorFieldFactory<T>
     /// <summary>
     /// Defines the field (that's already indexed) that vector search will be performed on.
     /// </summary>
-    /// <param name="fieldName">Name of the document field containing indexed data.</param>
+    /// <param name="fieldName">Name of the index-field containing indexed data.</param>
     public IVectorField WithField(string fieldName);
     
     /// <inheritdoc cref="WithField(string)"/>
-    /// <param name="propertySelector">Path to the document field containing indexed data.</param>
+    /// <param name="propertySelector">Path to the index-field containing indexed data.</param>
     public IVectorField WithField(Expression<Func<T, object>> propertySelector);
 }
 
