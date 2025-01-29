@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -1298,6 +1299,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var server = GetNewServer())
             {
+                var sb = new StringBuilder();
                 options.Server = server;
                 using (var store = GetDocumentStore(options))
                 {
@@ -1326,6 +1328,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var cxCount = GetCompareExchangeCount(server, store.Database);
                     Assert.Equal(number, cxCount);
                     Assert.Equal(number, indexesList.Count);
+                    sb.AppendLine($"cxCount = {number}");
 
                     var delCount = 0;
                     var allCount = number;
@@ -1355,6 +1358,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
 
                     Assert.True(delCount > 0);
+                    sb.AppendLine($"delCount = {delCount}");
 
                     using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
@@ -1366,21 +1370,30 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(allCount, numOfCompareExchanges);
                     }
 
+
+                    server.ServerStore.Engine.GetLastCommitIndex(out long index, out _);
+                    sb.AppendLine($"Last Commit Index = {index}");
+                    await server.ServerStore.Cluster.WaitForIndexNotification(index);
+
                     using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         // clean tombstones
-                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
+                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true, sb);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                     }
+
+                    server.ServerStore.Engine.GetLastCommitIndex(out index, out _);
+                    sb.AppendLine($"Last Commit Index = {index}");
 
                     using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
                         var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                        sb.AppendLine($"Final Check - Tombstones: {numOfCompareExchangeTombstones}, CompareExchanges: {numOfCompareExchanges}");
 
-                        Assert.Equal(0, numOfCompareExchangeTombstones);
+                        Assert.True(0 == numOfCompareExchangeTombstones, sb.ToString());
                         Assert.Equal(allCount, numOfCompareExchanges);
                     }
                 }
