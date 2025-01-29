@@ -106,25 +106,48 @@ public sealed class AiConnectionString : ConnectionString
         return string.IsNullOrEmpty(finalResult) ? $"{nameof(AiConnectionString)}Identifier" : finalResult;
     }
 
-    public bool HasCriticalChanges(AiConnectionString other)
+    public bool HasCriticalChanges(AiConnectionString newConnectionString)
     {
-        if (other == null)
+        if (newConnectionString == null)
             return true;
 
-        if (Identifier != other.Identifier)
+        if (Identifier != newConnectionString.Identifier)
             return true;
 
-        var settingsPairs = new (AbstractAiSettings ExistingSettings, AbstractAiSettings NewSettings)[]
+        var oldProvider = GetActiveProvider();
+        var newProvider = newConnectionString.GetActiveProvider();
+
+        if (oldProvider != newProvider)
+            return true;
+
+        return oldProvider switch
         {
-            (OpenAiSettings, other.OpenAiSettings),
-            (AzureOpenAiSettings, other.AzureOpenAiSettings),
-            (OllamaSettings, other.OllamaSettings),
-            (OnnxSettings, other.OnnxSettings),
-            (GoogleSettings, other.GoogleSettings),
-            (HuggingFaceSettings, other.HuggingFaceSettings)
+            AiConnectorType.OpenAi => OpenAiSettings.HasCriticalChanges(newConnectionString.OpenAiSettings),
+            AiConnectorType.AzureOpenAI => AzureOpenAiSettings.HasCriticalChanges(newConnectionString.AzureOpenAiSettings),
+            AiConnectorType.Ollama => OllamaSettings.HasCriticalChanges(newConnectionString.OllamaSettings),
+            AiConnectorType.Onnx => OnnxSettings.HasCriticalChanges(newConnectionString.OnnxSettings),
+            AiConnectorType.Google => GoogleSettings.HasCriticalChanges(newConnectionString.GoogleSettings),
+            AiConnectorType.HuggingFace => HuggingFaceSettings.HasCriticalChanges(newConnectionString.HuggingFaceSettings),
+            _ => true
         };
+    }
 
-        return settingsPairs.Any(pair => pair.ExistingSettings != null && pair.ExistingSettings.HasCriticalChanges(pair.NewSettings));
+    private AiConnectorType GetActiveProvider()
+    {
+        if (OpenAiSettings != null)
+            return AiConnectorType.OpenAi;
+        if (AzureOpenAiSettings != null)
+            return AiConnectorType.AzureOpenAI;
+        if (OllamaSettings != null)
+            return AiConnectorType.Ollama;
+        if (OnnxSettings != null)
+            return AiConnectorType.Onnx;
+        if (GoogleSettings != null)
+            return AiConnectorType.Google;
+        if (HuggingFaceSettings != null)
+            return AiConnectorType.HuggingFace;
+
+        return AiConnectorType.None;
     }
 
     public override DynamicJsonValue ToJson()

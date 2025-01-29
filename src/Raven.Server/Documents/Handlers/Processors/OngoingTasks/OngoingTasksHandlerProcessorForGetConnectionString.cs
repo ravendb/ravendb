@@ -28,7 +28,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 return;
 
             var connectionStringName = RequestHandler.GetStringQueryString("connectionStringName", false);
-            var type = RequestHandler.GetStringQueryString("type", false);
+            var typeString = RequestHandler.GetStringQueryString("type", false);
+            if (Enum.TryParse(typeString, ignoreCase: true, out ConnectionStringType connectionStringType) == false && typeString != null)
+                throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
             await RequestHandler.ServerStore.EnsureNotPassiveAsync();
             RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -40,17 +42,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 using (context.OpenReadTransaction())
                 using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName))
                 {
-                    if (string.IsNullOrWhiteSpace(connectionStringName))
-                    {
-                        if (Enum.TryParse<ConnectionStringType>(type, ignoreCase: true, out var connectionStringType) == false)
-                            throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-
-                        connectionStrings = rawRecord.GetConnectionString(connectionStringName, connectionStringType);
-                    }
-                    else
-                    {
-                        connectionStrings = rawRecord.GetConnectionStrings();
-                    }
+                    connectionStrings = string.IsNullOrWhiteSpace(connectionStringName)
+                        ? rawRecord.GetConnectionString(connectionStringName, connectionStringType)
+                        : rawRecord.GetConnectionStrings();
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
