@@ -1,4 +1,4 @@
-using System.IO;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
@@ -53,11 +53,15 @@ public class RavenDB_23556 : RavenTestBase
             //     }
             // };
 
+            // todo handle lack of transforms
             var configuration = new AiEtlConfiguration()
             {
+                Name = "someETLConfigurationName",
                 AiConnectorType = AiConnectorType.Onnx, 
                 AllowEtlOnNonEncryptedChannel = true, 
-                ConnectionStringName = connectionStringName
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -76,8 +80,42 @@ public class RavenDB_23556 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestDocumentsWithListOfValues()
+    {
+        const string connectionStringName = "AI Connection String Name";
+        
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto = new Dto { Names = new List<string> { "Name1", "Name2", "Name3" } };
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            // todo handle lack of transforms
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx, 
+                AllowEtlOnNonEncryptedChannel = true, 
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Names"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            
+            Etl.AddEtl(store, configuration, connectionString);
+            
+            WaitForUserToContinueTheTest(store);
+        }
+    }
+
     private class Dto
     {
         public string Name { get; set; }
+        public List<string> Names { get; set; }
     }
 }

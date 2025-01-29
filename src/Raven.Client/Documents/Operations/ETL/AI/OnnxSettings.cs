@@ -86,8 +86,8 @@ public sealed class OnnxSettings : AbstractAiSettings
             [nameof(UnknownToken)] = UnknownToken,
             [nameof(SepToken)] = SepToken,
             [nameof(PadToken)] = PadToken,
-            [nameof(UnicodeNormalization)] = UnicodeNormalization.ToString(),
-            [nameof(PoolingMode)] = PoolingMode.ToString(),
+            [nameof(UnicodeNormalization)] = UnicodeNormalization?.ToString(),
+            [nameof(PoolingMode)] = PoolingMode?.ToString(),
             [nameof(NormalizeEmbeddings)] = NormalizeEmbeddings
         };
 }

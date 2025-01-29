@@ -87,7 +87,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
 
         using (_missingEmbeddingsHolder)
         {
-            foreach (var aiEtlEmbeddingItem in aiEtlScriptRun)
+            foreach (var aiEtlEmbeddingItem in aiEtlScriptRun.CurrentRun)
             {
                 foreach (var kvp in aiEtlEmbeddingItem.Values)
                 {
@@ -98,12 +98,14 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                         var valueEmbeddingsDocument = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, value.TextualValue, out var valueEmbeddingsDocumentId);
 
                         value.ValueEmbeddingsDocumentId = valueEmbeddingsDocumentId;
-                        value.ValueEmbeddingsAttachmentName = valueEmbeddingsDocument.GetAttachmentNameForValue(value.TextualValue);
+                        value.ValueEmbeddingsAttachmentName = valueEmbeddingsDocument?.GetAttachmentNameForValue(value.TextualValue);
                         
                         if (value.ValueEmbeddingsAttachmentName == null)
                             _missingEmbeddingsHolder.Add(value.TextualValue, value);
                     }
                 }
+
+                processed++;
             }
 
             var missingValues = _missingEmbeddingsHolder.GetValuesForMissingEmbeddings();
@@ -124,8 +126,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                     embeddingItem.EmbeddingValue = embedding;
                 }
             }
-
-            // process the aiEtlScriptRun here via TxMerger
+            
             var cmd = new MergedPutEmbeddingsCommand(aiEtlScriptRun.CurrentRun, Configuration.Name, Database);
 
             Database.TxMerger.EnqueueSync(cmd);

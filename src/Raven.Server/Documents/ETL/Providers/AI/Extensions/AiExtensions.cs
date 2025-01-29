@@ -24,7 +24,7 @@ public static class AiExtensions
             MaximumTokens = settings.MaximumTokens ?? defaults.MaximumTokens,
             ClsToken = settings.ClsToken ?? defaults.ClsToken,
             UnknownToken = settings.UnknownToken ?? defaults.UnknownToken,
-            SepToken = settings.SepToken ?? defaults.UnknownToken,
+            SepToken = settings.SepToken ?? defaults.SepToken,
             PadToken = settings.PadToken ?? defaults.PadToken,
             UnicodeNormalization = settings.UnicodeNormalization ?? defaults.UnicodeNormalization,
             PoolingMode = settings.PoolingMode?.ToEmbeddingPoolingMode() ?? defaults.PoolingMode,

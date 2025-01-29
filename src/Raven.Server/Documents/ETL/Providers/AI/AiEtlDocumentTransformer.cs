@@ -63,23 +63,25 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
         Current = item;
         _currentRun ??= new AiEtlScriptRun();
 
-        var aiEtlEmbeddingItem = new AiEtlEmbeddingItem() { DocumentId = item.DocumentId, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>() };
+        var aiEtlEmbeddingItem = new AiEtlEmbeddingItem() { DocumentId = item.DocumentId, DocumentCollectionName = item.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>() };
         
         foreach (var fieldName in _configuration.FieldsToInclude)
         {
             if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, item.Document, fieldName, out var fieldValue) == false)
                 continue;
 
+            if (aiEtlEmbeddingItem.Values.ContainsKey(fieldName) == false)
+                aiEtlEmbeddingItem.Values.Add(fieldName, new List<AiEtlEmbeddingItemValue>());
+            
             if (fieldValue is LazyStringValue lsv)
-            {
                 aiEtlEmbeddingItem.Values[fieldName].Add(new AiEtlEmbeddingItemValue() { TextualValue = lsv });
-            }
+            
             // todo lazy and dja
-            else if (fieldValue is List<string> valuesList)
+            else if (fieldValue is BlittableJsonReaderArray bjra)
             {
-                foreach (var textualValue in valuesList)
+                foreach (var textualValue in bjra)
                 {
-                    aiEtlEmbeddingItem.Values[fieldName].Add(new AiEtlEmbeddingItemValue() { TextualValue = textualValue });
+                    aiEtlEmbeddingItem.Values[fieldName].Add(new AiEtlEmbeddingItemValue() { TextualValue = (LazyStringValue)textualValue });
                 }
             }
             else

@@ -35,6 +35,11 @@ public static class AiHelper
         return $"{documentId}/embeddings";
     }
 
+    public static string GetDocumentEmbeddingsCollectionName(string sourceCollectionName)
+    {
+        return $"{sourceCollectionName}/embeddings";
+    }
+
     public static string GetValueEmbeddingsDocumentId(string configurationName, string hash)
     {
         return $"embeddings/{configurationName}/{hash}";

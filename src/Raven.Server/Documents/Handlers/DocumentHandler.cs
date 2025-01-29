@@ -251,7 +251,12 @@ namespace Raven.Server.Documents.Handlers
                 {
                     documentDjv = new DynamicJsonValue
                     {
-                        [_configurationName] = configDjv
+                        [_configurationName] = configDjv,
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
+                        {
+                            // todo cache
+                            [Constants.Documents.Metadata.Collection] = AiHelper.GetDocumentEmbeddingsCollectionName(item.DocumentCollectionName)
+                        }
                     };
                 }
                 else
