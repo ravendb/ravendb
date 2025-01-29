@@ -14,7 +14,7 @@ namespace Raven.Server.ServerWide
         private static string _releaseDate;
 
         public static string Version => 
-            _version ?? (_version = RavenVersionAttribute.Instance.Version);
+            _version ?? (_version = "5.4");
 
         public static int Build =>  
             _buildVersion ?? (_buildVersion = RavenVersionAttribute.Instance.BuildVersion).Value;
@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide
         public static string CommitHash => 
             _commitHash ?? (_commitHash = RavenVersionAttribute.Instance.CommitHash);
         public static string FullVersion => 
-            _fullVersion ?? (_fullVersion = RavenVersionAttribute.Instance.FullVersion);
+            _fullVersion ?? (_fullVersion = "5.4.201");
 
         public static string AssemblyVersion =>
             _assemblyVersion ?? (_assemblyVersion = RavenVersionAttribute.Instance.AssemblyVersion);
