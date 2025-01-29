@@ -41,7 +41,7 @@ class licenseModel {
         }
 
         const dateFormat = "YYYY MMMM Do";
-        const expiration = moment(licenseStatus.SubscriptionExpiration);
+        const expiration = moment.utc(licenseStatus.SubscriptionExpiration);
         const now = moment();
         const nextMonth = moment().add(1, 'month');
         if (now.isBefore(expiration)) {

@@ -19,7 +19,7 @@ class licenseAgpl  {
         }
 
         const now = moment();
-        const firstStart = moment(licenseStatus.FirstServerStartDate);
+        const firstStart = moment.utc(licenseStatus.FirstServerStartDate);
         const weekAfterFirstStart = firstStart.clone().add("1", "week");
 
         return now.isBefore(weekAfterFirstStart) ? weekAfterFirstStart.format("YYYY-MM-DD") : null; 

@@ -111,7 +111,7 @@ class registration extends dialogViewModelBase {
                 error += `: ${licenseStatus.ErrorMessage}`;
             }
         } else if (licenseStatus.Expired) {
-            const expiration = moment(licenseStatus.SubscriptionExpiration);
+            const expiration = moment.utc(licenseStatus.SubscriptionExpiration);
             error = "License has expired";
             if (expiration.isValid()) {
                 error += ` on ${expiration.format("YYYY MMMM Do")}`;
@@ -119,7 +119,7 @@ class registration extends dialogViewModelBase {
         }
         this.error(error);
 
-        const firstStart = moment(licenseStatus.FirstServerStartDate)
+        const firstStart = moment.utc(licenseStatus.FirstServerStartDate)
             .add("1", "week").add("1", "day");
 
         this.daysToRegister = ko.pureComputed(() => {
