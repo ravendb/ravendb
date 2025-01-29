@@ -24,6 +24,9 @@ public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
         {
             case AiConnectorType.Ollama:
                 return Connection.OllamaSettings.Uri.StartsWith("https");
+
+            // todo: other AI connectors
+
             default:
                 throw new NotSupportedException($"Unknown AI connector type: {AiConnectorType}");
         }

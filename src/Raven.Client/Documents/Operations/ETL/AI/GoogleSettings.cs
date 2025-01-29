@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
-public sealed class GoogleSettings
+public sealed class GoogleSettings : AbstractAiSettings
 {
     public GoogleSettings(string model, string apiKey, GoogleAIVersion? aiVersion = null)
     {
@@ -19,14 +19,25 @@ public sealed class GoogleSettings
     /// <summary>The API key to used to authenticate with the service.</summary>
     public string ApiKey { get; set; }
 
-    /// <summary>The version of the Google API.</summary>
+    /// <summary>The version of the Google AI.</summary>
     public GoogleAIVersion? AiVersion { get; set; }
 
-    public bool HasSettings() =>
-        string.IsNullOrWhiteSpace(Model) == false &&
-        string.IsNullOrWhiteSpace(ApiKey) == false;
+    public override bool HasSettings()
+    {
+        return string.IsNullOrWhiteSpace(Model) == false &&
+               string.IsNullOrWhiteSpace(ApiKey) == false;
+    }
 
-    public DynamicJsonValue ToJson()
+    public override bool HasCriticalChanges(AbstractAiSettings other)
+    {
+        if (other is not GoogleSettings googleSettings)
+            return true;
+
+        return Model != googleSettings.Model ||
+               AiVersion != googleSettings.AiVersion;
+    }
+
+    public override DynamicJsonValue ToJson()
     {
         var json = new DynamicJsonValue
         {

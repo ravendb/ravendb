@@ -1,4 +1,6 @@
-﻿using Raven.Client.Documents.Operations.ConnectionStrings;
+﻿using System;
+using System.Linq;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -8,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -167,6 +170,33 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            var oldConfig = record.AiEtls.FirstOrDefault(x => x.Name == Configuration.Name);
+            if (oldConfig != null)
+            {
+                if (oldConfig.AiConnectorType != Configuration.AiConnectorType)
+                {
+                    throw new RachisApplyException(
+                        $"Cannot update AI ETL task '{Configuration.Name}' because you are trying to change its connector type from '{oldConfig.AiConnectorType}' to '{Configuration.AiConnectorType}'. " +
+                        $"Changing the AI connector type requires recreating the embeddings to maintain data consistency. " +
+                        $"To proceed with these changes:{Environment.NewLine}" +
+                        $"1. Delete the existing ETL task{Environment.NewLine}" +
+                        $"2. Create a new ETL task with your desired connector type{Environment.NewLine}" +
+                        "This will ensure all documents are processed with consistent settings and maintain data integrity.");
+                }
+
+                if (oldConfig.Connection.HasCriticalChanges(Configuration.Connection))
+                {
+                    throw new RachisApplyException(
+                        $"Cannot update AI ETL task '{Configuration.Name}' because it contains critical changes in the connection settings that would affect the structure or creation process of embeddings. " +
+                        $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
+                        $"To proceed with these changes:{Environment.NewLine}" +
+                        $"1. Delete the existing ETL task{Environment.NewLine}" +
+                        $"2. Create a new ETL task with your desired settings{Environment.NewLine}" +
+                        "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
+                        "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
+                }
+            }
+
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.AiEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddAiEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }

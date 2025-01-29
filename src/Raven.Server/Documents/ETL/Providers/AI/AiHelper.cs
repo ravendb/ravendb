@@ -69,7 +69,6 @@ public static class AiHelper
                     azureOpenAiSettings.DeploymentName,
                     azureOpenAiSettings.Endpoint,
                     azureOpenAiSettings.ApiKey,
-                    azureOpenAiSettings.ServiceId,
                     azureOpenAiSettings.Model);
 
                 break;

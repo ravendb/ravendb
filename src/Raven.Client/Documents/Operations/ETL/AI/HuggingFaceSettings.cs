@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
-public sealed class HuggingFaceSettings
+public sealed class HuggingFaceSettings : AbstractAiSettings
 {
     public HuggingFaceSettings(string model, string? endpoint = null, string? apiKey = null, string? serviceId = null)
     {
@@ -27,10 +27,20 @@ public sealed class HuggingFaceSettings
     /// </summary>
     public string? ApiKey { get; set; }
 
-    public bool HasSettings() =>
-        string.IsNullOrWhiteSpace(Model) == false;
+    public override bool HasSettings()
+    {
+        return string.IsNullOrWhiteSpace(Model) == false;
+    }
 
-    public DynamicJsonValue ToJson()
+    public override bool HasCriticalChanges(AbstractAiSettings other)
+    {
+        if (other is not HuggingFaceSettings huggingFaceSettings)
+            return true;
+
+        return Model != huggingFaceSettings.Model;
+    }
+
+    public override DynamicJsonValue ToJson()
     {
         var json = new DynamicJsonValue
         {

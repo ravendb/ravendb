@@ -28,10 +28,20 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
     /// </summary>
     public string Model { get; set; }
 
-    public override bool HasSettings() =>
-        string.IsNullOrWhiteSpace(ApiKey) == false &&
-        string.IsNullOrWhiteSpace(Endpoint) == false &&
-        string.IsNullOrWhiteSpace(Model) == false;
+    public override bool HasSettings()
+    {
+        return string.IsNullOrWhiteSpace(ApiKey) == false &&
+               string.IsNullOrWhiteSpace(Endpoint) == false &&
+               string.IsNullOrWhiteSpace(Model) == false;
+    }
+
+    public override bool HasCriticalChanges(AbstractAiSettings other)
+    {
+        if (other is not OpenAiBaseSettings openAiBaseSettings)
+            return true;
+
+        return Model != openAiBaseSettings.Model;
+    }
 
     public override DynamicJsonValue ToJson()
     {

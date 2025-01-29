@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 /// <summary>
 /// The configuration for the ONNX model.
 /// </summary>
-public sealed class OnnxSettings
+public sealed class OnnxSettings : AbstractAiSettings
 {
     /// <summary>
     /// The flag to indicate whether the model should be case-sensitive.
@@ -59,9 +59,25 @@ public sealed class OnnxSettings
     /// <remarks>Normalized embeddings may be compared more efficiently, such as by using a dot product rather than cosine similarity.</remarks>
     public bool? NormalizeEmbeddings { get; set; }
 
-    public bool HasSettings() => true;
+    public override bool HasSettings() => true;
 
-    public DynamicJsonValue ToJson() =>
+    public override bool HasCriticalChanges(AbstractAiSettings other)
+    {
+        if (other is not OnnxSettings onnxSettings)
+            return true;
+
+        return CaseSensitive != onnxSettings.CaseSensitive ||
+            MaximumTokens != onnxSettings.MaximumTokens ||
+            ClsToken != onnxSettings.ClsToken ||
+            UnknownToken != onnxSettings.UnknownToken ||
+            SepToken != onnxSettings.SepToken ||
+            PadToken != onnxSettings.PadToken ||
+            UnicodeNormalization != onnxSettings.UnicodeNormalization ||
+            PoolingMode != onnxSettings.PoolingMode ||
+            NormalizeEmbeddings != onnxSettings.NormalizeEmbeddings;
+    }
+
+    public override DynamicJsonValue ToJson() =>
         new()
         {
             [nameof(CaseSensitive)] = CaseSensitive,

@@ -19,15 +19,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        private static GetConnectionStringsResult GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
-        {
-            var connectionStringResult = rawRecord.GetConnectionString(connectionStringName, connectionStringType);
-            
-
-
-            return connectionStringResult;
-        }
-
         public override async ValueTask ExecuteAsync()
         {
             if (ResourceNameValidator.IsValidResourceName(RequestHandler.DatabaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)

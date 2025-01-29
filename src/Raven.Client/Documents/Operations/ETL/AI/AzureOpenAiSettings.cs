@@ -6,10 +6,9 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 
 public sealed class AzureOpenAiSettings : OpenAiBaseSettings
 {
-    public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, string? serviceId = null, int? dimensions = null) : base(apiKey, endpoint, model)
+    public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, int? dimensions = null) : base(apiKey, endpoint, model)
     {
         DeploymentName = deploymentName;
-        ServiceId = serviceId;
         Dimensions = dimensions;
     }
 
@@ -18,24 +17,29 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
     /// </summary>
     public string DeploymentName { get; set; }
 
-    /// <summary>A local identifier for given AI service</summary>
-    public string? ServiceId { get; set; }
-
     /// <summary>The number of dimensions the resulting output embeddings should have.</summary>
     /// <remarks>Only supported in "text-embedding-3" and later models.</remarks>
     public int? Dimensions { get; set; }
 
-    public override bool HasSettings() => 
-        base.HasSettings() && 
-        string.IsNullOrWhiteSpace(DeploymentName) == false;
+    public override bool HasSettings()
+    {
+        return base.HasSettings() &&
+               string.IsNullOrWhiteSpace(DeploymentName) == false;
+    }
+
+    public override bool HasCriticalChanges(AbstractAiSettings other)
+    {
+        if (other is not AzureOpenAiSettings azureSettings)
+            return true;
+
+        return base.HasCriticalChanges(other) ||
+               Dimensions != azureSettings.Dimensions;
+    }
 
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();
         json[nameof(DeploymentName)] = DeploymentName;
-
-        if (string.IsNullOrWhiteSpace(ServiceId) == false)
-            json[nameof(ServiceId)] = ServiceId;
 
         if (Dimensions.HasValue)
             json[nameof(Dimensions)] = Dimensions;

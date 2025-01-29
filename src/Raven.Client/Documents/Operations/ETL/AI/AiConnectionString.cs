@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
@@ -16,8 +17,8 @@ public sealed class AiConnectionString : ConnectionString
     /// </summary>
     public string Identifier
     {
-        get => _identifier ?? GenerateIdentifierFromName(Name);
-        set => _identifier = NormalizeIdentifier(value);
+        get => _identifier ?? GenerateIdentifier(Name);
+        set => _identifier = GenerateIdentifier(value);
     }
 
     public OpenAiSettings OpenAiSettings { get; set; }
@@ -36,45 +37,23 @@ public sealed class AiConnectionString : ConnectionString
 
     protected override void ValidateImpl(ref List<string> errors)
     {
-        var settings = new List<string>();
-
-        if (OpenAiSettings != null)
+        var settings = new AbstractAiSettings[]
         {
-            settings.Add(nameof(OpenAiSettings));
-            if (OpenAiSettings.HasSettings() == false)
-                errors.Add($"{nameof(OpenAiSettings)} has no valid setting. '{nameof(OpenAiSettings.ApiKey)}' has null or empty value");
+            OpenAiSettings,
+            AzureOpenAiSettings,
+            OllamaSettings,
+            OnnxSettings,
+            GoogleSettings,
+            HuggingFaceSettings
+        }.Where(s => s != null).ToList();
+
+        foreach (var setting in settings)
+        {
+            if (setting.HasSettings() == false)
+                errors.Add($"{setting.GetType().Name} has invalid configuration");
         }
 
-        if (AzureOpenAiSettings != null)
-        {
-            settings.Add(nameof(AzureOpenAiSettings));
-            if (AzureOpenAiSettings.HasSettings() == false)
-                errors.Add($"{nameof(AzureOpenAiSettings)} has no valid setting. '{nameof(AzureOpenAiSettings.ApiKey)}' has null or empty value");
-        }
-
-        if (OllamaSettings != null)
-        {
-            settings.Add(nameof(OllamaSettings));
-            if (OllamaSettings.HasSettings() == false)
-                errors.Add($"{nameof(OllamaSettings)} has no valid setting. '{nameof(OllamaSettings.Uri)}' and '{nameof(OllamaSettings.Model)}' are both have null or empty values");
-        }
-
-        if (OnnxSettings != null)
-        {
-            settings.Add(nameof(OnnxSettings));
-            if (OnnxSettings.HasSettings() == false)
-                errors.Add($"{nameof(OnnxSettings)} has no valid setting.");
-        }
-
-        if (GoogleSettings != null)
-        {
-            settings.Add(nameof(GoogleSettings));
-            if (GoogleSettings.HasSettings() == false)
-                errors.Add($"{nameof(GoogleSettings)} has no valid setting. '{nameof(GoogleSettings.ApiKey)}' has null or empty value");
-        }
-
-        var identifier = Identifier;
-        if (string.IsNullOrEmpty(identifier))
+        if (string.IsNullOrEmpty(Identifier))
             errors.Add("Could not generate valid identifier from name. Please specify identifier explicitly.");
 
         switch (settings.Count)
@@ -83,20 +62,13 @@ public sealed class AiConnectionString : ConnectionString
                 errors.Add($"At least one of the following settings must be set: {string.Join(", ", nameof(OllamaSettings), nameof(OpenAiSettings), nameof(OnnxSettings))}");
                 break;
             case > 1:
-                errors.Add($"Only one of the following settings can be set: {string.Join(", ", settings)}");
+                var configuredNames = settings.Select(s => s.GetType().Name);
+                errors.Add($"Only one of the following settings can be set: {string.Join(", ", configuredNames)}");
                 break;
         }
     }
 
-    private static string GenerateIdentifierFromName(string name)
-    {
-        if (string.IsNullOrEmpty(name))
-            return null;
-
-        return NormalizeIdentifier(name);
-    }
-
-    private static string NormalizeIdentifier(string input)
+    private static string GenerateIdentifier(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
             return null;
@@ -108,17 +80,19 @@ public sealed class AiConnectionString : ConnectionString
         foreach (var c in input.Normalize(NormalizationForm.FormD))
         {
             // Check if this is a letter that needs to be preserved
-            if (c >= 'a' && c <= 'z' || c >= '0' && c <= '9')
+            if (c is
+                >= 'a' and <= 'z' or
+                >= '0' and <= '9')
             {
                 result.Append(c);
                 lastWasHyphen = false;
             }
-            else if (c >= 'A' && c <= 'Z')
+            else if (c is >= 'A' and <= 'Z')
             {
                 result.Append(char.ToLowerInvariant(c));
                 lastWasHyphen = false;
             }
-            else if (!lastWasHyphen && result.Length > 0) // Add hyphen for any other character
+            else if (lastWasHyphen == false && result.Length > 0) // Add hyphen for any other character
             {
                 result.Append('-');
                 lastWasHyphen = true;
@@ -129,7 +103,28 @@ public sealed class AiConnectionString : ConnectionString
         var finalResult = result.ToString().TrimEnd('-');
 
         // Ensure we have at least one character
-        return string.IsNullOrEmpty(finalResult) ? "default" : finalResult;
+        return string.IsNullOrEmpty(finalResult) ? $"{nameof(AiConnectionString)}Identifier" : finalResult;
+    }
+
+    public bool HasCriticalChanges(AiConnectionString other)
+    {
+        if (other == null)
+            return true;
+
+        if (Identifier != other.Identifier)
+            return true;
+
+        var settingsPairs = new (AbstractAiSettings ExistingSettings, AbstractAiSettings NewSettings)[]
+        {
+            (OpenAiSettings, other.OpenAiSettings),
+            (AzureOpenAiSettings, other.AzureOpenAiSettings),
+            (OllamaSettings, other.OllamaSettings),
+            (OnnxSettings, other.OnnxSettings),
+            (GoogleSettings, other.GoogleSettings),
+            (HuggingFaceSettings, other.HuggingFaceSettings)
+        };
+
+        return settingsPairs.Any(pair => pair.ExistingSettings != null && pair.ExistingSettings.HasCriticalChanges(pair.NewSettings));
     }
 
     public override DynamicJsonValue ToJson()
@@ -137,11 +132,12 @@ public sealed class AiConnectionString : ConnectionString
         var json = base.ToJson();
 
         json[nameof(Identifier)] = Identifier;
-        json[nameof(OllamaSettings)] = OllamaSettings?.ToJson();
         json[nameof(OpenAiSettings)] = OpenAiSettings?.ToJson();
+        json[nameof(AzureOpenAiSettings)] = AzureOpenAiSettings?.ToJson();
+        json[nameof(OllamaSettings)] = OllamaSettings?.ToJson();
         json[nameof(OnnxSettings)] = OnnxSettings?.ToJson();
         json[nameof(GoogleSettings)] = GoogleSettings?.ToJson();
-        json[nameof(AzureOpenAiSettings)] = AzureOpenAiSettings?.ToJson();
+        json[nameof(HuggingFaceSettings)] = HuggingFaceSettings?.ToJson();
 
         return json;
     }
