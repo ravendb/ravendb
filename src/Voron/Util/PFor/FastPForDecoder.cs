@@ -109,6 +109,8 @@ public unsafe struct FastPForDecoder : IDisposable
         bigDeltaOffsets.Initialize(_allocator);
         var buffer = stackalloc uint[256];
         int read = 0;
+        Span<long> outputSpan = new Span<long>(output, outputCount);
+        
         while (_metadata < _end && read < outputCount)
         {
             Debug.Assert(read + 256 <= outputCount, "We assume a minimum of 256 free spaces");
@@ -127,12 +129,14 @@ public unsafe struct FastPForDecoder : IDisposable
                 case FastPForEncoder.VarIntBatchMarker:
                     var countOfVarIntBatch = *_metadata++;
                     var prevScalar = _prev.GetElement(3);
+                    var offset = VariableSizeEncoding.ReadMany(new ReadOnlySpan<byte>(_input, (int)(_end - _input)), countOfVarIntBatch, outputSpan[read..]);
+                    _input += offset;
+                    
                     for (int i = 0; i < countOfVarIntBatch; i++)
                     {
-                        var cur = VariableSizeEncoding.Read<long>(_input, out var offset);
-                        _input += offset;
+                        var cur = outputSpan[read];
                         cur += prevScalar;
-                        output[read++] = cur << _prefixShiftAmount | _sharedPrefix;
+                        outputSpan[read++] = cur << _prefixShiftAmount | _sharedPrefix;
                         prevScalar = cur;
                     }
                     _prev = Vector256.Create(prevScalar);
