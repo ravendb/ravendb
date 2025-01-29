@@ -14,6 +14,11 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         ProjectId = projectId;
     }
 
+    public OpenAiSettings()
+    {
+        // deserialization
+    }
+
     /// <summary>
     /// The value to use for the <c>OpenAI-Organization</c> request header. Users who belong to multiple organizations
     /// can set this value to specify which organization is used for an API request. Usage from these API requests will

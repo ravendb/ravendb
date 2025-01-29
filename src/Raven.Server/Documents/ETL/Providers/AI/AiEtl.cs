@@ -91,18 +91,19 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
             {
                 foreach (var kvp in aiEtlEmbeddingItem.Values)
                 {
-                    var propertyPath = kvp.Key;
                     var values = kvp.Value;
-                }
-                
-                var valueEmbeddings = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, aiEtlEmbeddingItem.TextualValue, out var valueEmbeddingsDocumentsIds);
-                aiEtlEmbeddingItem.ValueEmbeddingDocumentId = valueEmbeddingsDocumentsIds;
-                
-                var valueEmbeddingsAttachments
-                aiEtlEmbeddingItem.ValueEmbeddingsAttachmentsNames = valueEmbeddings?.GetAttachmentNameForValue(aiEtlEmbeddingItem.TextualValues);
+                    
+                    foreach (var value in values)
+                    {
+                        var valueEmbeddingsDocument = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, value.TextualValue, out var valueEmbeddingsDocumentId);
 
-                if (aiEtlEmbeddingItem.ValueEmbeddingsAttachmentsNames == null)
-                    _missingEmbeddingsHolder.Add(aiEtlEmbeddingItem.TextualValues, aiEtlEmbeddingItem);
+                        value.ValueEmbeddingsDocumentId = valueEmbeddingsDocumentId;
+                        value.ValueEmbeddingsAttachmentName = valueEmbeddingsDocument.GetAttachmentNameForValue(value.TextualValue);
+                        
+                        if (value.ValueEmbeddingsAttachmentName == null)
+                            _missingEmbeddingsHolder.Add(value.TextualValue, value);
+                    }
+                }
             }
 
             var missingValues = _missingEmbeddingsHolder.GetValuesForMissingEmbeddings();
@@ -147,19 +148,19 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
     {
         private const int MaxCapacity = 1024;
 
-        private readonly List<List<string>> _missingValues = new();
+        private readonly List<string> _missingValues = new();
 
-        private readonly List<AiEtlEmbeddingItem> _embeddingsMap = new();
+        private readonly List<AiEtlEmbeddingItemValue> _embeddingsMap = new();
 
-        public void Add(List<string> values, AiEtlEmbeddingItem aiEtlEmbedding)
+        public void Add(string value, AiEtlEmbeddingItemValue item)
         {
-            _missingValues.Add(values);
-            _embeddingsMap.Add(aiEtlEmbedding);
+            _missingValues.Add(value);
+            _embeddingsMap.Add(item);
         }
 
-        public List<List<string>> GetValuesForMissingEmbeddings() => _missingValues;
+        public List<string> GetValuesForMissingEmbeddings() => _missingValues;
 
-        public IReadOnlyList<AiEtlEmbeddingItem> GetEmbeddingsMap() => _embeddingsMap;
+        public IReadOnlyList<AiEtlEmbeddingItemValue> GetEmbeddingsMap() => _embeddingsMap;
 
         public void Dispose()
         {

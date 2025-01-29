@@ -11,9 +11,14 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
         DeploymentName = deploymentName;
         Dimensions = dimensions;
     }
-
+    
+    public AzureOpenAiSettings()
+    {
+        // deserialization
+    }
+    
     /// <summary>AzureOpenAI deployment name.
-    /// <see cref="https://learn.microsoft.com/azure/cognitive-services/openai/how-to/create-resource">Learn more</see>
+    /// <see href="https://learn.microsoft.com/azure/cognitive-services/openai/how-to/create-resource">Learn more</see>
     /// </summary>
     public string DeploymentName { get; set; }
 

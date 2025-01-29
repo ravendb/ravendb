@@ -13,6 +13,11 @@ public sealed class OllamaSettings : AbstractAiSettings
         Model = model;
     }
 
+    public OllamaSettings()
+    {
+        // deserialization
+    }
+
     /// <summary>
     /// The URI of the Ollama API.
     /// </summary>

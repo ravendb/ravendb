@@ -13,6 +13,11 @@ public sealed class GoogleSettings : AbstractAiSettings
         AiVersion = aiVersion;
     }
 
+    public GoogleSettings()
+    {
+        // deserialization
+    }
+
     /// <summary>The model that should be used.</summary>
     public string Model { get; set; }
 

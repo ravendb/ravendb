@@ -12,6 +12,11 @@ public sealed class HuggingFaceSettings : AbstractAiSettings
         ApiKey = apiKey;
     }
 
+    public HuggingFaceSettings()
+    {
+        // deserialization
+    }
+
     /// <summary>
     /// The name of the Hugging Face model.
     /// </summary>

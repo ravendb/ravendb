@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.Processors.Documents;
@@ -234,7 +235,8 @@ namespace Raven.Server.Documents.Handlers
                     
                     foreach (var value in values)
                     {
-                        var attachmentName = _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, item.DocumentId, value);
+                        var attachmentName = _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, value);
+                        value.ValueEmbeddingsAttachmentName = attachmentName;
                         attachmentNamesDja.Add(attachmentName);
                     }
                     
@@ -259,43 +261,27 @@ namespace Raven.Server.Documents.Handlers
                 
                 using (var bjro = context.ReadObject(documentDjv, documentEmbeddingsId))
                 {
+                    // todo change vector?
                     _database.DocumentsStorage.Put(context, documentEmbeddingsId, null, bjro);
-                    
-                    _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, );
 
-                    // put attachments
-                }
-                
-                //////
-                /*
-                if (item.ValueEmbeddingsAttachmentName == null)
-                {
-                    var documentDjv = new DynamicJsonValue { ["Id"] = item.ValueEmbeddingsDocumentId, ["@metadata"] = new DynamicJsonValue() { ["@collection"] = "@embeddings" } };
+                    foreach (var kvp in item.Values)
+                    {
+                        foreach (var itemValue in kvp.Value)
+                        {
+                            // todo optimize
+                            var attachment = _database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, itemValue.ValueEmbeddingsDocumentId,
+                                itemValue.ValueEmbeddingsAttachmentName, AttachmentType.Document, null);
 
-                    var attachmentGuid = Guid.NewGuid().ToString();
-                    documentDjv[item.Value] = attachmentGuid;
-                    
-                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                    {
-                        var bjro = ctx.ReadObject(documentDjv, "doc");
-                        _database.DocumentsStorage.Put(context, item.ValueEmbeddingsDocumentId, null, bjro);
-                    }
-                    
-                    using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
-                    {
-                        _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, item.DocumentId, attachmentGuid, "dd",
-                            "YWJjZDIxMzdkYXdhZWF3ZXdxMjMzMTIzMjEzMjFkZA==", null, stream);
+                            using (var stream = attachment.Stream)
+                            {
+                                _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, documentEmbeddingsId, attachment.Name, attachment.ContentType, attachment.Base64Hash.ToString(), null, stream);
+                            }
+                        }
                     }
                 }
-
-                if (item.EmbeddingValue.IsEmpty == false)
-                {
-                    
-                }
-                */
             }
             
-            return 1;
+            return _items.Count;
         }
         
         public void Dispose()
@@ -303,15 +289,13 @@ namespace Raven.Server.Documents.Handlers
             
         }
 
+        // todo
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new MergedPutCommandDto
-            {
-                
-            };
+            throw new NotImplementedException();
         }
 
-        public sealed class MergedPutCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedPutCommand>
+        public sealed class MergedPutEmbeddingsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedPutCommand>
         {
             public string Id { get; set; }
             public LazyStringValue ExpectedChangeVector { get; set; }
@@ -319,7 +303,7 @@ namespace Raven.Server.Documents.Handlers
 
             public MergedPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new MergedPutCommand(Document, Id, ExpectedChangeVector, database);
+                throw new NotImplementedException();
             }
         }
     }

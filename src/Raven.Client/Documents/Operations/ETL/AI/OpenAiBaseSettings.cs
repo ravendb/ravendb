@@ -13,6 +13,11 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
         Model = model;
     }
 
+    protected OpenAiBaseSettings()
+    {
+        // deserialization
+    }
+
     /// <summary>
     /// The API key to used to authenticate with the service.
     /// </summary>

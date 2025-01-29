@@ -27,6 +27,7 @@ public class RavenDB_23556 : RavenTestBase
                 session.SaveChanges();
             }
 
+            /*
             var configuration = new AiEtlConfiguration
             {
                 Name = "someETLConfigurationName",
@@ -35,7 +36,8 @@ public class RavenDB_23556 : RavenTestBase
                 FieldsToInclude = ["Name"],
                 AiConnectorType = AiConnectorType.OpenAi
             };
-
+            */
+            
             // var connectionString = new AiConnectionString
             // {
             //     Name = connectionStringName,
@@ -51,11 +53,22 @@ public class RavenDB_23556 : RavenTestBase
             //     }
             // };
 
+            var configuration = new AiEtlConfiguration()
+            {
+                AiConnectorType = AiConnectorType.Onnx, 
+                AllowEtlOnNonEncryptedChannel = true, 
+                ConnectionStringName = connectionStringName
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+        
+            /*
             var connectionString = new AiConnectionString
             {
                 Name = connectionStringName,
                 OpenAiSettings = new OpenAiSettings(apiKey: "someApiKey", endpoint: "someEndpoint", model: "someModel")
             };
+            */
 
             Etl.AddEtl(store, configuration, connectionString);
             

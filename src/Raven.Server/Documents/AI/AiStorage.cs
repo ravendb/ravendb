@@ -39,24 +39,14 @@ public class AiStorage
         return document;
     }
 
-    public List<ValueEmbeddingsDocument> GetValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlConfiguration configuration, List<string> values,
-        out List<string> valueEmbeddingsDocumentsIds)
+    public ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlConfiguration configuration, string value,
+        out string valueEmbeddingsDocumentId)
     {
-        var valueEmbeddingsDocuments = new List<ValueEmbeddingsDocument>();
-        valueEmbeddingsDocumentsIds = new List<string>();
+        valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, AiHelper.CalculateValueHash(value));
+        
+        var valueEmbeddingsDocument = GetValueEmbeddingsDocument(context, valueEmbeddingsDocumentId);
 
-        foreach (var value in values)
-        {
-            var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, AiHelper.CalculateValueHash(value));
-
-            valueEmbeddingsDocumentsIds.Add(valueEmbeddingsDocumentId);
-
-            var valueEmbeddingsDocument = GetValueEmbeddingsDocument(context, valueEmbeddingsDocumentId);
-
-            valueEmbeddingsDocuments.Add(valueEmbeddingsDocument);
-        }
-
-        return valueEmbeddingsDocuments;
+        return valueEmbeddingsDocument;
     }
 
     private ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, string documentId)
@@ -68,7 +58,7 @@ public class AiStorage
         return new ValueEmbeddingsDocument(document);
     }
 
-    public string AddOrUpdateValueEmbeddingsDocument(DocumentsOperationContext context, string documentId, AiEtlEmbeddingItemValue item)
+    public string AddOrUpdateValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlEmbeddingItemValue item)
     {
         Debug.Assert((item.EmbeddingValue.IsEmpty && item.ValueEmbeddingsAttachmentName != null) ||
                      (item.EmbeddingValue.IsEmpty == false && item.ValueEmbeddingsAttachmentName == null));
