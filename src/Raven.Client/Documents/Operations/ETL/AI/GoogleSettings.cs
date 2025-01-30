@@ -1,5 +1,4 @@
 ﻿#pragma warning disable SKEXP0070
-#nullable enable
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
