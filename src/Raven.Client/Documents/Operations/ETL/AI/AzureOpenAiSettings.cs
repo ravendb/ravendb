@@ -32,13 +32,20 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
                string.IsNullOrWhiteSpace(DeploymentName) == false;
     }
 
-    public override bool HasCriticalChanges(AbstractAiSettings other)
+    public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {
         if (other is not AzureOpenAiSettings azureSettings)
-            return true;
+            return AiSettingsCompareDifferences.All;
 
-        return base.HasCriticalChanges(other) ||
-               Dimensions != azureSettings.Dimensions;
+        var differences = base.Compare(other);
+
+        if (DeploymentName != azureSettings.DeploymentName)
+            differences |= AiSettingsCompareDifferences.DeploymentConfiguration;
+
+        if (Dimensions != azureSettings.Dimensions)
+            differences |= AiSettingsCompareDifferences.EmbeddingDimensions;
+
+        return differences;
     }
 
     public override DynamicJsonValue ToJson()

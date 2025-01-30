@@ -36,6 +36,20 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     /// </summary>
     public string? ProjectId { get; set; }
 
+    public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
+    {
+        if (other is not OpenAiSettings openAiSettings)
+            return AiSettingsCompareDifferences.All;
+
+        var differences = base.Compare(other);
+
+        if (OrganizationId != openAiSettings.OrganizationId ||
+            ProjectId != openAiSettings.ProjectId)
+            differences |= AiSettingsCompareDifferences.AuthenticationSettings;
+
+        return differences;
+    }
+
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();

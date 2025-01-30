@@ -106,30 +106,34 @@ public sealed class AiConnectionString : ConnectionString
         return string.IsNullOrEmpty(finalResult) ? $"{nameof(AiConnectionString)}Identifier" : finalResult;
     }
 
-    public bool HasCriticalChanges(AiConnectionString newConnectionString)
+    public AiSettingsCompareDifferences Compare(AiConnectionString newConnectionString)
     {
         if (newConnectionString == null)
-            return true;
+            return AiSettingsCompareDifferences.All;
+
+        var result = AiSettingsCompareDifferences.None;
 
         if (Identifier != newConnectionString.Identifier)
-            return true;
+            result |= AiSettingsCompareDifferences.ConnectionConfig;
 
         var oldProvider = GetActiveProvider();
         var newProvider = newConnectionString.GetActiveProvider();
 
         if (oldProvider != newProvider)
-            return true;
+            return AiSettingsCompareDifferences.All;
 
-        return oldProvider switch
+        result |= oldProvider switch
         {
-            AiConnectorType.OpenAi => OpenAiSettings.HasCriticalChanges(newConnectionString.OpenAiSettings),
-            AiConnectorType.AzureOpenAI => AzureOpenAiSettings.HasCriticalChanges(newConnectionString.AzureOpenAiSettings),
-            AiConnectorType.Ollama => OllamaSettings.HasCriticalChanges(newConnectionString.OllamaSettings),
-            AiConnectorType.Onnx => OnnxSettings.HasCriticalChanges(newConnectionString.OnnxSettings),
-            AiConnectorType.Google => GoogleSettings.HasCriticalChanges(newConnectionString.GoogleSettings),
-            AiConnectorType.HuggingFace => HuggingFaceSettings.HasCriticalChanges(newConnectionString.HuggingFaceSettings),
-            _ => true
+            AiConnectorType.OpenAi => OpenAiSettings.Compare(newConnectionString.OpenAiSettings),
+            AiConnectorType.AzureOpenAI => AzureOpenAiSettings.Compare(newConnectionString.AzureOpenAiSettings),
+            AiConnectorType.Ollama => OllamaSettings.Compare(newConnectionString.OllamaSettings),
+            AiConnectorType.Onnx => OnnxSettings.Compare(newConnectionString.OnnxSettings),
+            AiConnectorType.Google => GoogleSettings.Compare(newConnectionString.GoogleSettings),
+            AiConnectorType.HuggingFace => HuggingFaceSettings.Compare(newConnectionString.HuggingFaceSettings),
+            _ => AiSettingsCompareDifferences.All
         };
+
+        return result;
     }
 
     private AiConnectorType GetActiveProvider()

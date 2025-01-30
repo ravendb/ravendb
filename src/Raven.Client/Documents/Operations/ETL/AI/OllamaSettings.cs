@@ -37,12 +37,20 @@ public sealed class OllamaSettings : AbstractAiSettings
                string.IsNullOrWhiteSpace(Model) == false;
     }
 
-    public override bool HasCriticalChanges(AbstractAiSettings other)
+    public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {
         if (other is not OllamaSettings ollamaSettings)
-            return true;
+            return AiSettingsCompareDifferences.All;
 
-        return Model != ollamaSettings.Model;
+        var differences = AiSettingsCompareDifferences.None;
+
+        if (Model != ollamaSettings.Model)
+            differences |= AiSettingsCompareDifferences.ModelArchitecture;
+
+        if (Uri != ollamaSettings.Uri)
+            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+
+        return differences;
     }
 
     public override DynamicJsonValue ToJson() =>

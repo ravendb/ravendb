@@ -61,20 +61,33 @@ public sealed class OnnxSettings : AbstractAiSettings
 
     public override bool HasSettings() => true;
 
-    public override bool HasCriticalChanges(AbstractAiSettings other)
+    public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {
         if (other is not OnnxSettings onnxSettings)
-            return true;
+            return AiSettingsCompareDifferences.All;
 
-        return CaseSensitive != onnxSettings.CaseSensitive ||
-            MaximumTokens != onnxSettings.MaximumTokens ||
-            ClsToken != onnxSettings.ClsToken ||
+        var differences = AiSettingsCompareDifferences.None;
+
+        if (CaseSensitive != onnxSettings.CaseSensitive ||
+            UnicodeNormalization != onnxSettings.UnicodeNormalization)
+            differences |= AiSettingsCompareDifferences.TextPreprocessing;
+
+        if (ClsToken != onnxSettings.ClsToken ||
             UnknownToken != onnxSettings.UnknownToken ||
             SepToken != onnxSettings.SepToken ||
-            PadToken != onnxSettings.PadToken ||
-            UnicodeNormalization != onnxSettings.UnicodeNormalization ||
-            PoolingMode != onnxSettings.PoolingMode ||
-            NormalizeEmbeddings != onnxSettings.NormalizeEmbeddings;
+            PadToken != onnxSettings.PadToken)
+            differences |= AiSettingsCompareDifferences.TokenizationSettings;
+
+        if (MaximumTokens != onnxSettings.MaximumTokens)
+            differences |= AiSettingsCompareDifferences.SequenceLimits;
+
+        if (PoolingMode != onnxSettings.PoolingMode)
+            differences |= AiSettingsCompareDifferences.PoolingStrategy;
+
+        if (NormalizeEmbeddings != onnxSettings.NormalizeEmbeddings)
+            differences |= AiSettingsCompareDifferences.EmbeddingNormalization;
+
+        return differences;
     }
 
     public override DynamicJsonValue ToJson() =>

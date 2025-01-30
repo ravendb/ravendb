@@ -184,7 +184,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
                         "This will ensure all documents are processed with consistent settings and maintain data integrity.");
                 }
 
-                if (oldConfig.Connection.HasCriticalChanges(Configuration.Connection))
+                var differences = oldConfig.Connection.Compare(Configuration.Connection);
+                if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration))
                 {
                     throw new RachisApplyException(
                         $"Cannot update AI ETL task '{Configuration.Name}' because it contains critical changes in the connection settings that would affect the structure or creation process of embeddings. " +

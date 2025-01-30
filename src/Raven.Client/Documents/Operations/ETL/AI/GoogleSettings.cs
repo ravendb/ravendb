@@ -33,13 +33,21 @@ public sealed class GoogleSettings : AbstractAiSettings
                string.IsNullOrWhiteSpace(ApiKey) == false;
     }
 
-    public override bool HasCriticalChanges(AbstractAiSettings other)
+    public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {
         if (other is not GoogleSettings googleSettings)
-            return true;
+            return AiSettingsCompareDifferences.All;
 
-        return Model != googleSettings.Model ||
-               AiVersion != googleSettings.AiVersion;
+        var differences = AiSettingsCompareDifferences.None;
+
+        if (Model != googleSettings.Model ||
+            AiVersion != googleSettings.AiVersion)
+            differences |= AiSettingsCompareDifferences.ModelArchitecture;
+
+        if (ApiKey != googleSettings.ApiKey)
+            differences |= AiSettingsCompareDifferences.AuthenticationSettings;
+
+        return differences;
     }
 
     public override DynamicJsonValue ToJson()

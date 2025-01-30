@@ -37,12 +37,23 @@ public sealed class HuggingFaceSettings : AbstractAiSettings
         return string.IsNullOrWhiteSpace(Model) == false;
     }
 
-    public override bool HasCriticalChanges(AbstractAiSettings other)
+    public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {
         if (other is not HuggingFaceSettings huggingFaceSettings)
-            return true;
+            return AiSettingsCompareDifferences.All;
 
-        return Model != huggingFaceSettings.Model;
+        var differences = AiSettingsCompareDifferences.None;
+
+        if (Model != huggingFaceSettings.Model)
+            differences |= AiSettingsCompareDifferences.ModelArchitecture;
+
+        if (Endpoint != huggingFaceSettings.Endpoint)
+            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+
+        if (ApiKey != huggingFaceSettings.ApiKey)
+            differences |= AiSettingsCompareDifferences.AuthenticationSettings;
+
+        return differences;
     }
 
     public override DynamicJsonValue ToJson()

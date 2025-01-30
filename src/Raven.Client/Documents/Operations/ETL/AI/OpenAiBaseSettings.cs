@@ -40,12 +40,23 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
                string.IsNullOrWhiteSpace(Model) == false;
     }
 
-    public override bool HasCriticalChanges(AbstractAiSettings other)
+    public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {
-        if (other is not OpenAiBaseSettings openAiBaseSettings)
-            return true;
+        if (other is not OpenAiBaseSettings openAiSettings)
+            return AiSettingsCompareDifferences.All;
 
-        return Model != openAiBaseSettings.Model;
+        var differences = AiSettingsCompareDifferences.None;
+
+        if (ApiKey != openAiSettings.ApiKey)
+            differences |= AiSettingsCompareDifferences.AuthenticationSettings;
+
+        if (Endpoint != openAiSettings.Endpoint)
+            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+
+        if (Model != openAiSettings.Model)
+            differences |= AiSettingsCompareDifferences.ModelArchitecture;
+
+        return differences;
     }
 
     public override DynamicJsonValue ToJson()
