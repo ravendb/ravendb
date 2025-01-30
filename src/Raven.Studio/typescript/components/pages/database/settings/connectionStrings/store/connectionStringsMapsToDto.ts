@@ -213,9 +213,8 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                 ? {
                       ApiKey: connection.azureOpenAiSettings.apiKey,
                       Endpoint: connection.azureOpenAiSettings.endpoint,
-                      DeploymentName: connection.azureOpenAiSettings.deploymentName,
                       Model: connection.azureOpenAiSettings.model,
-                      ServiceId: connection.azureOpenAiSettings.serviceId,
+                      DeploymentName: connection.azureOpenAiSettings.deploymentName,
                       Dimensions: connection.azureOpenAiSettings.dimensions,
                   }
                 : null,

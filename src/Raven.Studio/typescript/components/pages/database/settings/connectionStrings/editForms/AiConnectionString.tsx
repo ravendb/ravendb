@@ -1,4 +1,4 @@
-﻿import { Form, Label, UncontrolledTooltip } from "reactstrap";
+﻿import { Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import { FormProvider, SubmitHandler, useForm, useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
@@ -8,6 +8,7 @@ import * as yup from "yup";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { SelectOption } from "components/common/select/Select";
+import RichAlert from "components/common/RichAlert";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -19,7 +20,14 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
     const form = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
-        resolver: yupSchemaResolver,
+        resolver: (data, _, options) =>
+            yupResolver(schema)(
+                data,
+                {
+                    connectorType: data.connectorType,
+                },
+                options
+            ),
     });
 
     const { control, handleSubmit } = form;
@@ -55,12 +63,14 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 <div className="mb-2">
                     <Label>
                         Identifier
-                        <Icon icon="info" color="info" id="identifier-info" margin="ms-1" />
+                        <Icon icon="info" color="info" margin="ms-1" id="identifier-info" />
                     </Label>
-                    <UncontrolledTooltip target="identifier-info" placement="right">
-                        A unique identifier used in document paths. If not specified, will be auto-generated from the
-                        connection name.
-                    </UncontrolledTooltip>
+                    <UncontrolledPopover target="identifier-info" trigger="hover" placement="top" className="bs5">
+                        <PopoverBody>
+                            A unique identifier used in document paths. If not specified, will be auto-generated from
+                            the connection name.
+                        </PopoverBody>
+                    </UncontrolledPopover>
                     <FormInput
                         control={control}
                         name="identifier"
@@ -85,25 +95,27 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                                 { label: "OpenAI", value: "openAiSettings" },
                             ] satisfies SelectOption<FormData["connectorType"]>[]
                         }
-                        disabled={isUsedByAnyTask}
+                        isDisabled={isUsedByAnyTask}
                     />
                 </div>
 
                 {formValues.connectorType === "azureOpenAiSettings" && (
                     <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />
                 )}
-
                 {formValues.connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
-
                 {formValues.connectorType === "huggingFaceSettings" && (
                     <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />
                 )}
-
                 {formValues.connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
-
                 {formValues.connectorType === "onnxSettings" && <OnnxSettings isUsedByAnyTask={isUsedByAnyTask} />}
-
                 {formValues.connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+
+                {isUsedByAnyTask && (
+                    <RichAlert variant="info">
+                        Some options cannot be edited because this connection string is in use by a task. To modify
+                        them, please create a new connection string.
+                    </RichAlert>
+                )}
 
                 {/* TODO kalczur add urlProvider */}
                 <ConnectionStringUsedByTasks tasks={initialConnection.usedByTasks} urlProvider={() => () => "#"} />
@@ -119,40 +131,26 @@ function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) 
         <>
             <div className="mb-2">
                 <Label>API Key</Label>
-                <FormInput control={control} name="openAiSettings.apiKey" type="text" />
+                <FormInput control={control} name="azureOpenAiSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
                 <Label>Endpoint</Label>
-                <FormInput control={control} name="openAiSettings.endpoint" type="text" disabled={isUsedByAnyTask} />
+                <FormInput control={control} name="azureOpenAiSettings.endpoint" type="text" />
             </div>
             <div className="mb-2">
                 <Label>Model</Label>
-                <FormInput control={control} name="openAiSettings.model" type="text" disabled={isUsedByAnyTask} />
+                <FormInput control={control} name="azureOpenAiSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
                 <Label>Deployment Name</Label>
-                <FormInput
-                    control={control}
-                    name="azureOpenAiSettings.deploymentName"
-                    type="text"
-                    disabled={isUsedByAnyTask}
-                />
+                <FormInput control={control} name="azureOpenAiSettings.deploymentName" type="text" />
             </div>
             <div className="mb-2">
                 <Label>Dimensions</Label>
                 <FormInput
                     control={control}
                     name="azureOpenAiSettings.dimensions"
-                    type="text"
-                    disabled={isUsedByAnyTask}
-                />
-            </div>
-            <div className="mb-2">
-                <Label>Service ID</Label>
-                <FormInput
-                    control={control}
-                    name="azureOpenAiSettings.serviceId"
-                    type="text"
+                    type="number"
                     disabled={isUsedByAnyTask}
                 />
             </div>
@@ -176,12 +174,12 @@ function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                             { label: "V1_Beta", value: "V1_Beta" },
                         ] satisfies SelectOption<FormData["googleSettings"]["aiVersion"]>[]
                     }
-                    disabled={isUsedByAnyTask}
+                    isDisabled={isUsedByAnyTask}
                 />
             </div>
             <div className="mb-2">
                 <Label>API Key</Label>
-                <FormInput control={control} name="googleSettings.apiKey" type="text" />
+                <FormInput control={control} name="googleSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
                 <Label>Model</Label>
@@ -198,16 +196,11 @@ function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) 
         <>
             <div className="mb-2">
                 <Label>API Key</Label>
-                <FormInput control={control} name="huggingFaceSettings.apiKey" type="text" />
+                <FormInput control={control} name="huggingFaceSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
                 <Label>Endpoint</Label>
-                <FormInput
-                    control={control}
-                    name="huggingFaceSettings.endpoint"
-                    type="text"
-                    disabled={isUsedByAnyTask}
-                />
+                <FormInput control={control} name="huggingFaceSettings.endpoint" type="text" />
             </div>
             <div className="mb-2">
                 <Label>Model</Label>
@@ -228,7 +221,7 @@ function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
             </div>
             <div className="mb-2">
                 <Label>URI</Label>
-                <FormInput control={control} name="ollamaSettings.uri" type="text" disabled={isUsedByAnyTask} />
+                <FormInput control={control} name="ollamaSettings.uri" type="text" />
             </div>
         </>
     );
@@ -250,8 +243,14 @@ function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                 </FormSwitch>
             </div>
             <div className="mb-2">
-                <Label>CLS Token</Label>
-                <FormInput control={control} name="onnxSettings.clsToken" type="text" disabled={isUsedByAnyTask} />
+                <FormSwitch
+                    control={control}
+                    name="onnxSettings.normalizeEmbeddings"
+                    disabled={isUsedByAnyTask}
+                    color="primary"
+                >
+                    Normalize Embeddings
+                </FormSwitch>
             </div>
             <div className="mb-2">
                 <Label>Maximum Tokens</Label>
@@ -263,18 +262,20 @@ function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                 />
             </div>
             <div className="mb-2">
-                <FormSwitch
-                    control={control}
-                    name="onnxSettings.normalizeEmbeddings"
-                    disabled={isUsedByAnyTask}
-                    color="primary"
-                >
-                    Normalize Embeddings
-                </FormSwitch>
+                <Label>CLS Token</Label>
+                <FormInput control={control} name="onnxSettings.clsToken" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
                 <Label>Pad Token</Label>
                 <FormInput control={control} name="onnxSettings.padToken" type="text" disabled={isUsedByAnyTask} />
+            </div>
+            <div className="mb-2">
+                <Label>SEP Token</Label>
+                <FormInput control={control} name="onnxSettings.sepToken" type="text" disabled={isUsedByAnyTask} />
+            </div>
+            <div className="mb-2">
+                <Label>Unknown Token</Label>
+                <FormInput control={control} name="onnxSettings.unknownToken" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
                 <Label>Pooling Mode</Label>
@@ -288,12 +289,8 @@ function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                             { label: "MeanSquareRootTokensLength", value: "MeanSquareRootTokensLength" },
                         ] satisfies SelectOption<FormData["onnxSettings"]["poolingMode"]>[]
                     }
-                    disabled={isUsedByAnyTask}
+                    isDisabled={isUsedByAnyTask}
                 />
-            </div>
-            <div className="mb-2">
-                <Label>SEP Token</Label>
-                <FormInput control={control} name="onnxSettings.sepToken" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
                 <Label>Unicode Normalization</Label>
@@ -308,12 +305,8 @@ function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                             { label: "FormKD", value: "FormKD" },
                         ] satisfies SelectOption<FormData["onnxSettings"]["unicodeNormalization"]>[]
                     }
-                    disabled={isUsedByAnyTask}
+                    isDisabled={isUsedByAnyTask}
                 />
-            </div>
-            <div className="mb-2">
-                <Label>Unknown Token</Label>
-                <FormInput control={control} name="onnxSettings.unknownToken" type="text" disabled={isUsedByAnyTask} />
             </div>
         </>
     );
@@ -326,11 +319,11 @@ function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
         <>
             <div className="mb-2">
                 <Label>API Key</Label>
-                <FormInput control={control} name="openAiSettings.apiKey" type="text" />
+                <FormInput control={control} name="openAiSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
                 <Label>Endpoint</Label>
-                <FormInput control={control} name="openAiSettings.endpoint" type="text" disabled={isUsedByAnyTask} />
+                <FormInput control={control} name="openAiSettings.endpoint" type="text" />
             </div>
             <div className="mb-2">
                 <Label>Model</Label>
@@ -338,16 +331,11 @@ function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
             </div>
             <div className="mb-2">
                 <Label>Organization ID</Label>
-                <FormInput
-                    control={control}
-                    name="openAiSettings.organizationId"
-                    type="text"
-                    disabled={isUsedByAnyTask}
-                />
+                <FormInput control={control} name="openAiSettings.organizationId" type="text" />
             </div>
             <div className="mb-2">
                 <Label>Project ID</Label>
-                <FormInput control={control} name="openAiSettings.projectId" type="text" disabled={isUsedByAnyTask} />
+                <FormInput control={control} name="openAiSettings.projectId" type="text" />
             </div>
         </>
     );
@@ -358,31 +346,88 @@ const schema = yupObjectSchema<FormData>({
     identifier: yup
         .string()
         .nullable()
-        .test("is-identifier", "Only English letters, numbers and hyphens are allowed.", (value) =>
-            /^[a-zA-Z0-9-]+$/.test(value)
-        ),
+        .test("is-identifier", "Only English letters, numbers and hyphens are allowed.", (value) => {
+            if (!value) {
+                return true;
+            }
+
+            return /^[a-zA-Z0-9-]+$/.test(value);
+        }),
     connectorType: yup.string<FormData["connectorType"]>().nullable().required(),
     azureOpenAiSettings: yup.object({
-        apiKey: yup.string().nullable(),
-        endpoint: yup.string().nullable(),
-        model: yup.string().nullable(),
-        deploymentName: yup.string().nullable(),
+        apiKey: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "azureOpenAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        endpoint: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "azureOpenAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        model: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "azureOpenAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        deploymentName: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "azureOpenAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
         dimensions: yup.number().nullable().integer().positive(),
-        serviceId: yup.string().nullable(),
     }),
     googleSettings: yup.object({
         aiVersion: yup.string<Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion>().nullable(),
-        apiKey: yup.string().nullable(),
-        model: yup.string().nullable(),
+        apiKey: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "googleSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        model: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "googleSettings",
+                then: (schema) => schema.trim().required(),
+            }),
     }),
     huggingFaceSettings: yup.object({
         apiKey: yup.string().nullable(),
         endpoint: yup.string().nullable(),
-        model: yup.string().nullable(),
+        model: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "huggingFaceSettings",
+                then: (schema) => schema.trim().required(),
+            }),
     }),
     ollamaSettings: yup.object({
-        model: yup.string().nullable(),
-        uri: yup.string().nullable(),
+        model: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "ollamaSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        uri: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "ollamaSettings",
+                then: (schema) => schema.trim().required(),
+            }),
     }),
     onnxSettings: yup.object({
         caseSensitive: yup.boolean().nullable(),
@@ -396,15 +441,31 @@ const schema = yupObjectSchema<FormData>({
         unknownToken: yup.string().nullable(),
     }),
     openAiSettings: yup.object({
-        apiKey: yup.string().nullable(),
-        endpoint: yup.string().nullable(),
-        model: yup.string().nullable(),
+        apiKey: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "openAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        endpoint: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "openAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        model: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "openAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
         organizationId: yup.string().nullable(),
         projectId: yup.string().nullable(),
     }),
 });
-
-const yupSchemaResolver = yupResolver(schema);
 
 function getDefaultValues(initialConnection: AiConnection, isForNewConnection: boolean): FormData {
     if (isForNewConnection) {
@@ -413,9 +474,11 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
             identifier: null,
             connectorType: null,
             azureOpenAiSettings: {
+                apiKey: null,
+                endpoint: null,
+                model: null,
                 deploymentName: null,
                 dimensions: null,
-                serviceId: null,
             },
             googleSettings: {
                 aiVersion: null,

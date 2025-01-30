@@ -49,6 +49,10 @@ export function ConnectionStringsInfoHub() {
                 featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "amazon-sqs-etl").featureName,
                 value: features.hasQueueEtl,
             },
+            {
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "question").featureName, // TODO kalczur
+                value: features.hasAiEtl,
+            },
         ],
     });
 
@@ -147,6 +151,13 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Amazon SQS ETL",
         featureIcon: "amazon-sqs-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "AI ETL",
+        featureIcon: "question", // TODO kalczur
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },

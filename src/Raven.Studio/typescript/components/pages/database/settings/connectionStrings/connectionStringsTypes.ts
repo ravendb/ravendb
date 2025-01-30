@@ -124,7 +124,6 @@ export interface AiConnection extends ConnectionBase {
         model?: string;
         deploymentName?: string;
         dimensions?: number;
-        serviceId?: string;
     };
     googleSettings?: {
         aiVersion?: Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion;

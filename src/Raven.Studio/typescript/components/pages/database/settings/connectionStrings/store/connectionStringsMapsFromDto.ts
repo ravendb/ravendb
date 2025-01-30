@@ -367,9 +367,11 @@ export function mapAiConnectionsFromDto(
                 identifier: connection.Identifier,
                 connectorType: getConnectorType(connection),
                 azureOpenAiSettings: {
+                    apiKey: connection.AzureOpenAiSettings?.ApiKey,
+                    endpoint: connection.AzureOpenAiSettings?.Endpoint,
+                    model: connection.AzureOpenAiSettings?.Model,
                     deploymentName: connection.AzureOpenAiSettings?.DeploymentName,
                     dimensions: connection.AzureOpenAiSettings?.Dimensions,
-                    serviceId: connection.AzureOpenAiSettings?.ServiceId,
                 },
                 googleSettings: {
                     aiVersion: connection.GoogleSettings?.AiVersion,
