@@ -29,8 +29,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             var connectionStringName = RequestHandler.GetStringQueryString("connectionStringName", false);
             var typeString = RequestHandler.GetStringQueryString("type", false);
-            if (Enum.TryParse(typeString, ignoreCase: true, out ConnectionStringType connectionStringType) == false && typeString != null)
-                throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
             await RequestHandler.ServerStore.EnsureNotPassiveAsync();
             RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -42,9 +40,20 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 using (context.OpenReadTransaction())
                 using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName))
                 {
-                    connectionStrings = string.IsNullOrWhiteSpace(connectionStringName)
-                        ? rawRecord.GetConnectionString(connectionStringName, connectionStringType)
-                        : rawRecord.GetConnectionStrings();
+                    if (connectionStringName != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(connectionStringName))
+                            throw new BadRequestException($"'{nameof(connectionStringName)}' must have a non empty value");
+
+                        if (Enum.TryParse(typeString, ignoreCase: true, out ConnectionStringType connectionStringType) == false)
+                            throw new BadRequestException($"Unknown connection string type: {typeString}");
+
+                        connectionStrings = rawRecord.GetConnectionString(connectionStringName, connectionStringType);
+                    }
+                    else
+                    {
+                        connectionStrings = rawRecord.GetConnectionStrings();
+                    }
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
