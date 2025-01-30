@@ -1,8 +1,13 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using FastTests;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
@@ -14,45 +19,20 @@ public class RavenDB_23556 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl)]
-    public void Test()
+    public void TestDocumentsWithSingleValue()
     {
-        const string connectionStringName = "some Connection стринг StringName";
+        const string connectionStringName = "connection string name";
 
         using (var store = GetDocumentStore())
         {
+            var dto = new Dto { Name = "Name1" };
+            
             using (var session = store.OpenSession())
             {
-                var dto = new Dto { Name = "very cool name" };
                 session.Store(dto);
                 session.SaveChanges();
             }
-
-            /*
-            var configuration = new AiEtlConfiguration
-            {
-                Name = "someETLConfigurationName",
-                ConnectionStringName = connectionStringName,
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }],
-                FieldsToInclude = ["Name"],
-                AiConnectorType = AiConnectorType.OpenAi
-            };
-            */
             
-            // var connectionString = new AiConnectionString
-            // {
-            //     Name = connectionStringName,
-            //     OllamaSettings = new OllamaSettings { Model = "mistral-nemo", Uri = "http://127.0.0.1:11434" }
-            // };
-
-            // var connectionString = new AiConnectionString
-            // {
-            //     Name = connectionStringName,
-            //     OnnxSettings = new OnnxSettings
-            //     {
-            //         CaseSensitive = false
-            //     }
-            // };
-
             // todo handle lack of transforms
             var configuration = new AiEtlConfiguration()
             {
@@ -65,18 +45,41 @@ public class RavenDB_23556 : RavenTestBase
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
-        
-            /*
-            var connectionString = new AiConnectionString
-            {
-                Name = connectionStringName,
-                OpenAiSettings = new OpenAiSettings(apiKey: "someApiKey", endpoint: "someEndpoint", model: "someModel")
-            };
-            */
 
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
             Etl.AddEtl(store, configuration, connectionString);
             
-            WaitForUserToContinueTheTest(store);
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            using (var session = store.OpenSession())
+            {
+                var valueHash = AiHelper.CalculateValueHash(dto.Name);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                var expectedAttachmentName = (string)((dynamic)valueEmbeddingsDocument).Name1;
+
+                var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+
+                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                var attachmentNamesForNamePropertyJArray = (JArray)configurationValues.Name;
+                var attachmentNamesForNameProperty = attachmentNamesForNamePropertyJArray.ToObject<string[]>();
+                
+                Assert.Single(attachmentNamesForNameProperty);
+                Assert.Equal(expectedAttachmentName, attachmentNamesForNameProperty[0]);
+                
+                attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+            }
         }
     }
 
@@ -87,9 +90,10 @@ public class RavenDB_23556 : RavenTestBase
         
         using (var store = GetDocumentStore())
         {
+            var dto = new Dto { Names = new List<string> { "Name1", "Name2", "Name3" } };
+            
             using (var session = store.OpenSession())
             {
-                var dto = new Dto { Names = new List<string> { "Name1", "Name2", "Name3" } };
                 session.Store(dto);
                 session.SaveChanges();
             }
@@ -107,14 +111,164 @@ public class RavenDB_23556 : RavenTestBase
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
             
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
             Etl.AddEtl(store, configuration, connectionString);
             
-            WaitForUserToContinueTheTest(store);
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            using (var session = store.OpenSession())
+            {
+                var expectedAttachmentNames = new List<string>();
+                
+                foreach (var name in dto.Names)
+                {
+                    var valueHash = AiHelper.CalculateValueHash(name);
+                    var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                    var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                    var expectedAttachmentName = (string)((dynamic)valueEmbeddingsDocument)[name];
+                    expectedAttachmentNames.Add(expectedAttachmentName);
+
+                    var cacheAttachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                    
+                    Assert.Single(cacheAttachmentNames);
+                    Assert.Equal(expectedAttachmentName, cacheAttachmentNames[0].Name);
+                }
+                
+                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                var attachmentNamesForNamePropertyJArray = (JArray)configurationValues.Names;
+                var attachmentNamesForNameProperty = attachmentNamesForNamePropertyJArray.ToObject<string[]>();
+                
+                Assert.Equal(3, attachmentNamesForNameProperty.Length);
+                Assert.Equal(expectedAttachmentNames[0], attachmentNamesForNameProperty[0]);
+                Assert.Equal(expectedAttachmentNames[1], attachmentNamesForNameProperty[1]);
+                Assert.Equal(expectedAttachmentNames[2], attachmentNamesForNameProperty[2]);
+                
+                var attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument).Select(x => x.Name).ToList();
+                
+                Assert.Equal(3, attachmentNames.Count);
+                Assert.Contains(expectedAttachmentNames[0], attachmentNames);
+                Assert.Contains(expectedAttachmentNames[1], attachmentNames);
+                Assert.Contains(expectedAttachmentNames[2], attachmentNames);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestIfEmbeddingsAreGeneratedOnlyOnceInDifferentBatches()
+    {
+        const string connectionStringName = "AI Connection String Name";
+
+        using (var store = GetDocumentStore())
+        {
+            var dto1 = new Dto { Name = "Name1" };
+            var dto2 = new Dto { Name = "Name1" };
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto1);
+                session.SaveChanges();
+            }
+            
+            // todo handle lack of transforms
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx, 
+                AllowEtlOnNonEncryptedChannel = true, 
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
+            Etl.AddEtl(store, configuration, connectionString);
+            
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            string expectedAttachmentName, expectedValueEmbeddingsDocumentId, expectedChangeVector;
+            
+            using (var session = store.OpenSession())
+            {
+                var valueHash = AiHelper.CalculateValueHash(dto1.Name);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                expectedAttachmentName = (string)((dynamic)valueEmbeddingsDocument).Name1;
+                expectedValueEmbeddingsDocumentId = (string)((dynamic)valueEmbeddingsDocument).Id;
+                expectedChangeVector = session.Advanced.GetChangeVectorFor(valueEmbeddingsDocument);
+
+                var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+
+                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto1.Id);
+                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                var attachmentNamesForNamePropertyJArray = (JArray)configurationValues.Name;
+                var attachmentNamesForNameProperty = attachmentNamesForNamePropertyJArray.ToObject<string[]>();
+                
+                Assert.Single(attachmentNamesForNameProperty);
+                Assert.Equal(expectedAttachmentName, attachmentNamesForNameProperty[0]);
+                
+                attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+            }
+            
+            etlDone.Reset();
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto2);
+                session.SaveChanges();
+            }
+            
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            using (var session = store.OpenSession())
+            {
+                var valueHash = AiHelper.CalculateValueHash(dto2.Name);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                var changeVector = session.Advanced.GetChangeVectorFor(valueEmbeddingsDocument);
+                
+                Assert.Equal(expectedValueEmbeddingsDocumentId, (string)((dynamic)valueEmbeddingsDocument).Id);
+                Assert.Equal(expectedChangeVector, changeVector);
+                Assert.Equal(expectedAttachmentName, (string)((dynamic)valueEmbeddingsDocument).Name1);
+                
+                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto2.Id);
+                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                var attachmentNamesForNamePropertyJArray = (JArray)configurationValues.Name;
+                var attachmentNamesForNameProperty = attachmentNamesForNamePropertyJArray.ToObject<string[]>();
+                
+                Assert.Single(attachmentNamesForNameProperty);
+                Assert.Equal(expectedAttachmentName, attachmentNamesForNameProperty[0]);
+                
+                var attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+            }
         }
     }
 
     private class Dto
     {
+        public string Id { get; set; }
         public string Name { get; set; }
         public List<string> Names { get; set; }
     }
