@@ -20,7 +20,11 @@ export function SelectIndexErrorsDropdown(props: SelectIndexErrorsDropdownProps)
 
     return (
         <UncontrolledDropdown className="select-index-errors-dropdown">
-            <DropdownToggle disabled={props.isLoading} className="select-index-errors-toggle d-flex align-items-center" caret>
+            <DropdownToggle
+                disabled={props.isLoading}
+                className="select-index-errors-toggle d-flex align-items-center"
+                caret
+            >
                 <div className="flex-grow d-flex align-items-center">{labelText}</div>
             </DropdownToggle>
             <DropdownMenu className="p-3 custom-dropdown-menu">

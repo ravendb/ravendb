@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useRef } from "react";
 import {
     RichPanel,
     RichPanelActions,
@@ -69,24 +69,24 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                             </RichPanelName>
                         </RichPanelInfo>
                     </RichPanelHeader>
-                            <RichPanelDetails className="pb-0">
-                                <RichPanelDetailItem>
-                                    <Button
-                                        onClick={togglePanelCollapsed}
-                                        title={panelCollapsed ? "Expand errors details" : "Collapse errors details"}
-                                        className="btn-toggle-panel rounded-pill"
-                                    >
-                                        <Icon icon={panelCollapsed ? "unfold" : "fold"} margin="m-0" />
-                                    </Button>
-                                </RichPanelDetailItem>
-                            </RichPanelDetails>
-                            <Collapse isOpen={!panelCollapsed}>
-                                <RichPanelDetails>
-                                    <div className="w-100">
-                                        {(asyncFetchErrorDetails.error as unknown as JQueryXHR).responseJSON.Message}
-                                    </div>
-                                </RichPanelDetails>
-                            </Collapse>
+                    <RichPanelDetails className="pb-0">
+                        <RichPanelDetailItem>
+                            <Button
+                                onClick={togglePanelCollapsed}
+                                title={panelCollapsed ? "Expand errors details" : "Collapse errors details"}
+                                className="btn-toggle-panel rounded-pill"
+                            >
+                                <Icon icon={panelCollapsed ? "unfold" : "fold"} margin="m-0" />
+                            </Button>
+                        </RichPanelDetailItem>
+                    </RichPanelDetails>
+                    <Collapse isOpen={!panelCollapsed}>
+                        <RichPanelDetails>
+                            <div className="w-100">
+                                {(asyncFetchErrorDetails.error as unknown as JQueryXHR).responseJSON.Message}
+                            </div>
+                        </RichPanelDetails>
+                    </Collapse>
                 </div>
             </RichPanel>
         );

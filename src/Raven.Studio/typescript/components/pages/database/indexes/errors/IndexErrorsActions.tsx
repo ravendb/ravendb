@@ -28,14 +28,14 @@ export default function IndexErrorsActions({
         <div className="hstack flex-wrap align-items-end gap-2 mb-3 justify-content-end">
             <FlexGrow />
             <SelectIndexErrorsDropdown
-              isLoading={isLoading}
+                isLoading={isLoading}
                 filters={filters}
                 indexesList={erroredIndexNames}
                 setFilters={setFilters}
                 dropdownType="IndexName"
             />
             <SelectIndexErrorsDropdown
-              isLoading={isLoading}
+                isLoading={isLoading}
                 filters={filters}
                 indexesList={erroredActionNames}
                 setFilters={setFilters}

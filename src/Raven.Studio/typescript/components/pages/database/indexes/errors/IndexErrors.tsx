@@ -41,9 +41,9 @@ export default function IndexErrors() {
                     </Col>
                     {/*TODO Until Danielle adds the text, this component will remain disabled so as not to block the possibility of it being merged.*/}
                     {false && (
-                    <Col sm={12} lg={4}>
-                        <IndexErrorsAboutView />
-                    </Col>
+                        <Col sm={12} lg={4}>
+                            <IndexErrorsAboutView />
+                        </Col>
                     )}
                 </Row>
             </Col>

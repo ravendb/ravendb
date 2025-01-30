@@ -27,9 +27,13 @@ export function useResizeObserver<T extends HTMLElement = HTMLElement>(options: 
     onResize.current = options.onResize;
 
     useEffect(() => {
-        if (!ref.current) return;
+        if (!ref.current) {
+            return;
+        }
 
-        if (typeof window === "undefined" || !("ResizeObserver" in window)) return;
+        if (typeof window === "undefined" || !("ResizeObserver" in window)) {
+            return;
+        }
 
         const observer = new ResizeObserver(([entry]) => {
             const boxProp =
@@ -64,6 +68,7 @@ export function useResizeObserver<T extends HTMLElement = HTMLElement>(options: 
         return () => {
             observer.disconnect();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [box, ref?.current, isMounted]);
 
     return { width, height };
