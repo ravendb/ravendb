@@ -321,6 +321,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "Backup";
             case "SubscriptionCount":
                 return "Subscription";
+            case "SnowflakeEtlCount":
+                return "SnowflakeEtl";
             default:
                 throw new Error("Unknown task type count received:" + input);
             }
