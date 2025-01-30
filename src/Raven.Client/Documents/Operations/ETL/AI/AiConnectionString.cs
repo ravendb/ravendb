@@ -114,7 +114,7 @@ public sealed class AiConnectionString : ConnectionString
         var result = AiSettingsCompareDifferences.None;
 
         if (Identifier != newConnectionString.Identifier)
-            result |= AiSettingsCompareDifferences.ConnectionConfig;
+            result |= AiSettingsCompareDifferences.Identifier;
 
         var oldProvider = GetActiveProvider();
         var newProvider = newConnectionString.GetActiveProvider();
