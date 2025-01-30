@@ -14,21 +14,22 @@ namespace Raven.Server.Documents.ETL.Providers.AI.Extensions;
 
 public static class AiExtensions
 {
+    private static readonly BertOnnxOptions BertOnnxDefaults = new();
+
     public static BertOnnxOptions ToBertOnnxOptions(this OnnxSettings settings)
     {
-        var defaults = new BertOnnxOptions();
 
         return new BertOnnxOptions
         {
-            CaseSensitive = settings.CaseSensitive ?? defaults.CaseSensitive,
-            MaximumTokens = settings.MaximumTokens ?? defaults.MaximumTokens,
-            ClsToken = settings.ClsToken ?? defaults.ClsToken,
-            UnknownToken = settings.UnknownToken ?? defaults.UnknownToken,
-            SepToken = settings.SepToken ?? defaults.SepToken,
-            PadToken = settings.PadToken ?? defaults.PadToken,
-            UnicodeNormalization = settings.UnicodeNormalization ?? defaults.UnicodeNormalization,
-            PoolingMode = settings.PoolingMode?.ToEmbeddingPoolingMode() ?? defaults.PoolingMode,
-            NormalizeEmbeddings = settings.NormalizeEmbeddings ?? defaults.NormalizeEmbeddings
+            CaseSensitive = settings.CaseSensitive ?? BertOnnxDefaults.CaseSensitive,
+            MaximumTokens = settings.MaximumTokens ?? BertOnnxDefaults.MaximumTokens,
+            ClsToken = settings.ClsToken ?? BertOnnxDefaults.ClsToken,
+            UnknownToken = settings.UnknownToken ?? BertOnnxDefaults.UnknownToken,
+            SepToken = settings.SepToken ?? BertOnnxDefaults.SepToken,
+            PadToken = settings.PadToken ?? BertOnnxDefaults.PadToken,
+            UnicodeNormalization = settings.UnicodeNormalization ?? BertOnnxDefaults.UnicodeNormalization,
+            PoolingMode = settings.PoolingMode?.ToEmbeddingPoolingMode() ?? BertOnnxDefaults.PoolingMode,
+            NormalizeEmbeddings = settings.NormalizeEmbeddings ?? BertOnnxDefaults.NormalizeEmbeddings
         };
     }
 
