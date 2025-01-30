@@ -122,7 +122,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
         Assert.Equal("No `loadTo<QueueName>()` method call found in 'test' script", errors[0]);
     }
 
-    [RavenFact(RavenTestCategory.Etl, AzureQueueStorageRequired = true)]
+    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding, AzureQueueStorageRequired = true)]
     public void ShardedAzureQueueStorageEtlNotSupported()
     {
         using (var store = Sharding.GetDocumentStore())

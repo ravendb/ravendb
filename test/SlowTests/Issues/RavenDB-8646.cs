@@ -52,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CanStreamShardedQueryWithMapReduceResult(Options options)
         {

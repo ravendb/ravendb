@@ -245,7 +245,7 @@ namespace FastTests
 
                     if (isSharded)
                     {
-                        // AssertTestHasAttribute(RavenTestCategory.Sharding);
+                        AssertTestHasAttribute(RavenTestCategory.Sharding);
                     }
 
                     if (RavenTestHelper.RunTestsWithDocsCompression && doc.DocumentsCompression == null && isCompressionTest == false)

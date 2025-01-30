@@ -1283,7 +1283,7 @@ namespace SlowTests.Sharding.Replication
         }
 
         // RavenDB-20369
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ShouldNotDelayReplicationForDifferentMissingAttachments()
         {
             using (var source = GetDocumentStore())

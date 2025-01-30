@@ -16,7 +16,7 @@ public class RavenDB_18166 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
     public async Task ShouldMarkQueryResultsAsStaleIfShardsHaveDifferentAutoIndexes()
     {
         using (var store = Sharding.GetDocumentStore())
@@ -61,7 +61,7 @@ public class RavenDB_18166 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
     public async Task ShouldMarkQueryResultsAsStaleIfShardsHaveDifferentStaticIndexes()
     {
         using (var store = Sharding.GetDocumentStore())

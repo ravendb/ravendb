@@ -602,7 +602,7 @@ if (hasCounter('down')) {
             }
         }
 
-        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void Should_skip_counter_if_has_lower_etag_than_document(Options options)
         {

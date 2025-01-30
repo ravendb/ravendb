@@ -34,7 +34,7 @@ namespace SlowTests.Core.Streaming
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanStreamQueryResults_Lucene(Options options) => CanStreamQueryResults<Users_ByName>(options);
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CanStreamQueryResults_Lucene_Sharded(Options options) => CanStreamQueryResults<Users_ByName_WithoutBoosting>(options);
 
@@ -164,7 +164,7 @@ namespace SlowTests.Core.Streaming
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanStreamQueryResultsWithQueryStatistic_Lucene(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName>(options);
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CanStreamQueryResultsWithQueryStatistic_Lucene_Sharded(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName_WithoutBoosting>(options);
         
@@ -227,7 +227,7 @@ namespace SlowTests.Core.Streaming
         public async Task CanStreamQueryResultsWithQueryStatisticsAsync_Lucene(Options options) =>
             await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName>(options);
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CanStreamQueryResultsWithQueryStatisticsAsync_Lucene_Sharded(Options options) =>
             await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName_WithoutBoosting>(options);
@@ -597,7 +597,7 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task Streaming_Query_Custom_Order_Fail(Options options)
         {

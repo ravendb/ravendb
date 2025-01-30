@@ -681,33 +681,8 @@ namespace FastTests
 
             if (attribute == RavenTestCategory.Sharding)
             {
-                var testMethod = Context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
-                if (testMethod == null)
+                if (ShouldAssertForShardingAttribute() == false)
                     return;
-            
-                var dataAttribute = testMethod.MethodInfo.GetCustomAttributes<RavenDataAttribute>().ToList();
-                if (dataAttribute.Count > 0)
-                {
-                    var notAllSharded = dataAttribute.All(a => a.DatabaseMode == RavenDatabaseMode.Sharded) == false;
-                    if (notAllSharded)
-                        return;
-                }
-
-                var memberDataAttribute = testMethod.MethodInfo.GetCustomAttributes<RavenMemberDataAttribute>().ToList();
-                if (memberDataAttribute.Count > 0)
-                {
-                    var notAllSharded = memberDataAttribute.All(a => a.DatabaseMode == RavenDatabaseMode.Sharded) == false;
-                    if (notAllSharded)
-                        return;
-                }
-
-                var externalReplicationAttributes = testMethod.MethodInfo.GetCustomAttributes<RavenExternalReplicationAttribute>().ToList();
-                if (externalReplicationAttributes.Count > 0)
-                {
-                    var notAllSharded = externalReplicationAttributes.All(a => a._destination == RavenDatabaseMode.Sharded && a._source == RavenDatabaseMode.Sharded) == false;
-                    if (notAllSharded)
-                        return;
-                }
             }
 
             if (IsTestOfType(attribute) == false)
@@ -715,6 +690,50 @@ namespace FastTests
                 Assert.Fail($"Please mark this test with {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attributes with {nameof(RavenTestCategory)}.{attribute.ToString()} set.");
             }
         }
+
+        private bool ShouldAssertForShardingAttribute()
+        {
+            var testMethod = Context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
+            if (testMethod == null)
+                return false;
+
+            var allAttributes = testMethod.MethodInfo.GetCustomAttributes().ToList();
+            foreach (Attribute attribute in allAttributes)
+            {
+                var type = attribute.GetType();
+
+                if (type.Namespace is not "Tests.Infrastructure" and not "Xunit")
+                    continue;
+
+                if (ShardingExactTypesToCheck.Contains(type) == false)
+                    return false;
+
+                switch (attribute)
+                {
+                    case RavenDataAttribute dataAttribute:
+                        if (dataAttribute.DatabaseMode != RavenDatabaseMode.Sharded)
+                            return false;
+                        break;
+
+                    case RavenMemberDataAttribute memberDataAttribute:
+                        if (memberDataAttribute.DatabaseMode != RavenDatabaseMode.Sharded)
+                            return false;
+                        break;
+                }
+            }
+
+            return true;
+        }
+
+        private static readonly List<Type> ShardingExactTypesToCheck =
+        [
+            typeof(RavenFactAttribute),
+            typeof(FactAttribute),
+            typeof(RavenTheoryAttribute),
+            typeof(TheoryAttribute),
+            typeof(RavenMemberDataAttribute),
+            typeof(RavenDataAttribute)
+        ];
 
         protected static string UseFiddlerUrl(string url)
         {

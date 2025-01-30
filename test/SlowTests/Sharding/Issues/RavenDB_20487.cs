@@ -142,7 +142,7 @@ namespace SlowTests.Sharding.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ReplicationWithCountersToShardedAndThenToNonShardedShouldWork()
         {
             using (var store1 = GetDocumentStore(new Options
@@ -206,7 +206,7 @@ namespace SlowTests.Sharding.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ReplicationToShardedAndThenToNonShardedShouldWork2()
         {
             using (var store1 = GetDocumentStore(new Options

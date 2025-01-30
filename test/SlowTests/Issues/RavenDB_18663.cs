@@ -13,7 +13,7 @@ public class RavenDB_18663 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Patching)]
+    [RavenTheory(RavenTestCategory.Patching | RavenTestCategory.Sharding)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void CanUsePagingWhilePatchingOrDeleting(Options options)
     {

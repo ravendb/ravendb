@@ -139,7 +139,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryWillThrowWhenIndexHasBoostingAndAutomaticallySortingByScoreIsNotDisable(Options options)
         {

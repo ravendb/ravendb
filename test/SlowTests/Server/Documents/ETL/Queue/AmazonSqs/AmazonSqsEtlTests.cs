@@ -222,7 +222,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
     }
 
 
-    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding, AmazonSqsRequired = true)]
     public void ShardedAmazonSqsEtlNotSupported()
     {
         using (var store = Sharding.GetDocumentStore())

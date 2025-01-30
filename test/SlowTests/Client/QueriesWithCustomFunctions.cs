@@ -2053,7 +2053,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void Sharded_Streaming_Query_On_Index_With_Load(Options options)
         {

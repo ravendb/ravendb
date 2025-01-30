@@ -68,7 +68,7 @@ public class RavenDB_21998 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Sharding)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void AssertOnlyFieldsWithNoTermsAreSkippedInSharding(Options options)
     {

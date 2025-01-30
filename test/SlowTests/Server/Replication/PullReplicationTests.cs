@@ -63,7 +63,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         public async Task PullReplicationShouldThrowForSharding()
         {
             var name = $"pull-replication {GetDatabaseName()}";

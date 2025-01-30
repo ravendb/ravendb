@@ -315,7 +315,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CallingStartBackupOperationWhileBackupRunningShouldThrow_sharded(Options options)
         {

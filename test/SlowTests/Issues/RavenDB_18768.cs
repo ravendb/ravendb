@@ -20,7 +20,7 @@ public class RavenDB_18768 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Revisions)]
+    [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Sharding)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public async Task CanIncludeRevisionsByPathInLoadByIdQuery(Options options)
     {
@@ -66,7 +66,7 @@ public class RavenDB_18768 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Revisions)]
+    [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Sharding)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public async Task CanIncludeRevisionsBeforeInLoadByIdQuery(Options options)
     {
@@ -111,7 +111,7 @@ public class RavenDB_18768 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.TimeSeries)]
+    [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Sharding)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void CanIncludeMultipleTimeSeriesInLoadByIdQuery(Options options)
     {
@@ -207,7 +207,7 @@ public class RavenDB_18768 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Counters)]
+    [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Sharding)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void CanIncludeCounterInLoadByIdQuery(Options options)
     {

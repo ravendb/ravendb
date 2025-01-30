@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task LazyQueryCachingTest(Options options)
         {

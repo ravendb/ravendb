@@ -116,7 +116,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void ShardedStreamDocumentQueryWithInclude(Options options)
         {

@@ -86,7 +86,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void BasicPaging_Sharded_Corax(Options options)
         {
@@ -99,7 +99,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void BasicPaging_Sharded_Lucene_StaticIndexWithStoredField(Options options)
         {

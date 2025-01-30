@@ -1258,7 +1258,7 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
     public async Task TestShardedDatabase(Options options)
     {
@@ -1318,7 +1318,7 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
     public async Task TestShardedDatabaseWithNoDocumentsOnPickedShard(Options options)
     {

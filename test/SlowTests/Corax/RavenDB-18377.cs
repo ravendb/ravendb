@@ -16,7 +16,7 @@ public class RavenDB_18377 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
     public void EnumerableSavedAsValue(Options options)
     {

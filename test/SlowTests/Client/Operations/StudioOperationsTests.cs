@@ -45,7 +45,7 @@ namespace SlowTests.Client.Operations
             }
         }
 
-        [RavenTheory(RavenTestCategory.Studio)]
+        [RavenTheory(RavenTestCategory.Studio | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task GetLastChangeVector(Options options)
         {
@@ -145,7 +145,7 @@ namespace SlowTests.Client.Operations
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CanGetStudioCollectionFields(Options options)
         {
