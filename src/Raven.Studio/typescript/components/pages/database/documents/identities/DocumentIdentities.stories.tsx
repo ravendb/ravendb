@@ -28,12 +28,11 @@ export const DocumentIdentitiesStory: StoryObj<DocumentIdentitiesStoryArgs> = {
 
         databasesService.withIdentities(args.identities);
 
-
         return (
-          <div style={{height: "800px"}}>
-              <DocumentIdentities />
-          </div>
-        )
+            <div style={{ height: "800px" }}>
+                <DocumentIdentities />
+            </div>
+        );
     },
     argTypes: {
         databaseAccess: databaseAccessArgType,
