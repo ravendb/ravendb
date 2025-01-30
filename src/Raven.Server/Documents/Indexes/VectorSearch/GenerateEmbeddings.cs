@@ -184,10 +184,5 @@ public static class GenerateEmbeddings
             return (BertOnnxTextEmbeddingGenerationService)BertOnnxTextEmbeddingGenerationServiceCtor.Invoke([onnxSession, tokenizer, dimensions, options]);
         }
     }
-
-    internal static HuggingFaceTextEmbeddingGenerationService CreateHuggingFaceTextEmbeddingGenerationService(string model)
-    {
-        return new HuggingFaceTextEmbeddingGenerationService(model);
-    }
 }
 #pragma warning restore SKEXP0070
