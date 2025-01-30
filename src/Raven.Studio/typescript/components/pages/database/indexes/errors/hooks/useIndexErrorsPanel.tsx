@@ -13,13 +13,7 @@ import { ColumnFilter } from "@tanstack/react-table";
 import RichAlert from "components/common/RichAlert";
 import genUtils from "common/generalUtils";
 
-export function useIndexErrorsPanel({
-    errorItem,
-    table,
-    shardNumber,
-    nodeTag,
-    asyncFetchAllErrorCount,
-}: IndexErrorsPanelProps) {
+export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount }: IndexErrorsPanelProps) {
     const { indexesService } = useServices();
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
@@ -55,7 +49,12 @@ export function useIndexErrorsPanel({
 
     const handleClearErrors: () => Promise<void> = async () => {
         const isConfirmed = await confirm({
-            title: <IndexErrorsModalTitle nodeTag={nodeTag} shardNumber={shardNumber} />,
+            title: (
+                <IndexErrorsModalTitle
+                    nodeTag={errorItem.location.nodeTag}
+                    shardNumber={errorItem.location.shardNumber}
+                />
+            ),
             message: <IndexErrorsModalBody selectedErrors={selectedErrors} />,
             actionColor: "warning",
             icon: "trash",

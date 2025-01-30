@@ -1,15 +1,14 @@
 import React from "react";
-import { FlexGrow } from "components/common/FlexGrow";
-import { Icon } from "components/common/Icon";
-import { SelectIndexErrorsDropdown } from "components/pages/database/indexes/errors/SelectIndexErrorsDropdown";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { nameAndCount } from "components/pages/database/indexes/errors/types";
+import { NameAndCount } from "components/pages/database/indexes/errors/types";
 import { ColumnFiltersState, Updater } from "@tanstack/react-table";
 import { ErrorInfoItem } from "components/pages/database/indexes/errors/hooks/useIndexErrors";
+import { SelectActionDropdown } from "components/pages/database/indexes/errors/dropdowns/SelectActionDropdown";
+import { SelectIndexNameDropdown } from "components/pages/database/indexes/errors/dropdowns/SelectIndexNameDropdown";
 
 interface FilterIndexErrorProps {
-    erroredIndexNames: nameAndCount[];
-    erroredActionNames: nameAndCount[];
+    erroredIndexNames: NameAndCount[];
+    erroredActionNames: NameAndCount[];
     refresh: () => Promise<Awaited<ErrorInfoItem>[]>;
     isLoading: boolean;
     filters: ColumnFiltersState;
@@ -26,23 +25,20 @@ export default function IndexErrorsActions({
 }: FilterIndexErrorProps) {
     return (
         <div className="hstack flex-wrap align-items-end gap-2 mb-3 justify-content-end">
-            <FlexGrow />
-            <SelectIndexErrorsDropdown
+            <SelectIndexNameDropdown
                 isLoading={isLoading}
                 filters={filters}
                 indexesList={erroredIndexNames}
                 setFilters={setFilters}
-                dropdownType="IndexName"
             />
-            <SelectIndexErrorsDropdown
+            <SelectActionDropdown
                 isLoading={isLoading}
                 filters={filters}
                 indexesList={erroredActionNames}
                 setFilters={setFilters}
-                dropdownType="Action"
             />
-            <ButtonWithSpinner onClick={refresh} isSpinning={isLoading} color="primary">
-                <Icon icon="refresh" /> Refresh
+            <ButtonWithSpinner onClick={refresh} icon="refresh" isSpinning={isLoading} color="primary">
+                Refresh
             </ButtonWithSpinner>
         </div>
     );

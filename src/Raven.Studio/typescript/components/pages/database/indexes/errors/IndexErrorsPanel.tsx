@@ -23,16 +23,13 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { UseAsyncReturn } from "react-async-hook";
 
 export interface IndexErrorsPanelProps {
-    nodeTag: string;
-    shardNumber: number | undefined;
-    totalErrorsCount: number;
     errorItem: ErrorInfoItem;
     asyncFetchAllErrorCount: UseAsyncReturn<ErrorInfoItem[]>;
     table: Table<IndexErrorPerDocument>;
 }
 
 export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
-    const { nodeTag, totalErrorsCount, table, shardNumber, asyncFetchAllErrorCount } = props;
+    const { table, asyncFetchAllErrorCount, errorItem } = props;
 
     const ref = useRef<HTMLDivElement>();
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
@@ -59,11 +56,12 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                         <RichPanelInfo>
                             <RichPanelName className="d-flex gap-3">
                                 <span className="d-flex align-items-center justify-content-center gap-1">
-                                    <Icon icon="node" color="node" margin="m-0" /> {nodeTag}
+                                    <Icon icon="node" color="node" margin="m-0" /> {errorItem.location.nodeTag}
                                 </span>
-                                {shardNumber != null && (
+                                {errorItem.location.shardNumber != null && (
                                     <span className="d-flex align-items-center justify-content-center gap-1">
-                                        <Icon icon="shard" color="shard" margin="m-0" /> ${shardNumber}
+                                        <Icon icon="shard" color="shard" margin="m-0" /> $
+                                        {errorItem.location.shardNumber}
                                     </span>
                                 )}
                             </RichPanelName>
@@ -108,11 +106,11 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                     <RichPanelInfo>
                         <RichPanelName className="d-flex gap-3">
                             <span className="d-flex align-items-center justify-content-center gap-1">
-                                <Icon icon="node" color="node" margin="m-0" /> {nodeTag}
+                                <Icon icon="node" color="node" margin="m-0" /> {errorItem.location.nodeTag}
                             </span>
-                            {shardNumber != null && (
+                            {errorItem.location.shardNumber != null && (
                                 <span className="d-flex align-items-center justify-content-center gap-1">
-                                    <Icon icon="shard" color="shard" margin="m-0" /> ${shardNumber}
+                                    <Icon icon="shard" color="shard" margin="m-0" /> ${errorItem.location.shardNumber}
                                 </span>
                             )}
                         </RichPanelName>
@@ -143,7 +141,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                                     <Icon icon="warning" />
                                     Total count
                                 </span>
-                                <div className="value">{totalErrorsCount} errors</div>
+                                <div className="value">{errorItem.totalErrorCount} errors</div>
                             </RichPanelDetailItem>
                             <RichPanelDetailItem>
                                 <span>

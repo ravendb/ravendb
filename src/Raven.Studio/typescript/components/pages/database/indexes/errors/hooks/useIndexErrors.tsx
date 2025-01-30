@@ -3,7 +3,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useState } from "react";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import { nameAndCount } from "components/pages/database/indexes/errors/types";
+import { NameAndCount } from "components/pages/database/indexes/errors/types";
 import { useAsync } from "react-async-hook";
 import { indexErrorsUtils } from "components/pages/database/indexes/errors/IndexErrorsUtils";
 
@@ -19,8 +19,8 @@ export const useIndexErrors = () => {
 
     const [errorInfoItems, setErrorInfoItems] = useState<ErrorInfoItem[]>([]);
 
-    const [erroredIndexNames, setErroredIndexNames] = useState<nameAndCount[]>([]);
-    const [erroredActionNames, setErroredActionNames] = useState<nameAndCount[]>([]);
+    const [erroredIndexNames, setErroredIndexNames] = useState<NameAndCount[]>([]);
+    const [erroredActionNames, setErroredActionNames] = useState<NameAndCount[]>([]);
 
     const fetchErrorCount = async (model: ErrorInfoItem) => {
         try {

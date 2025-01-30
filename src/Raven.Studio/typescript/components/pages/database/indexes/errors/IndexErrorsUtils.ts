@@ -3,7 +3,7 @@ import genUtils from "common/generalUtils";
 import { orderBy } from "lodash";
 import { ErrorInfoItem } from "components/pages/database/indexes/errors/hooks/useIndexErrors";
 import { sortBy } from "common/typeUtils";
-import { nameAndCount } from "components/pages/database/indexes/errors/types";
+import { NameAndCount } from "components/pages/database/indexes/errors/types";
 
 const mapItems = (indexErrorsDto: Raven.Client.Documents.Indexes.IndexErrors[]) => {
     const mappedItems =
@@ -41,7 +41,7 @@ const findNearestTimestamp = (data: Raven.Client.Documents.Indexes.IndexErrors[]
     return closestTimestamp;
 };
 
-const getErroredIndexNames = (errorInfoItems: ErrorInfoItem[]): nameAndCount[] => {
+const getErroredIndexNames = (errorInfoItems: ErrorInfoItem[]): NameAndCount[] => {
     const erroredIndexNamesResult = new Map<string, number>();
 
     errorInfoItems.forEach((item) => {
@@ -58,7 +58,7 @@ const getErroredIndexNames = (errorInfoItems: ErrorInfoItem[]): nameAndCount[] =
     );
 };
 
-const getErroredActionNames = (errorInfoItems: ErrorInfoItem[]): nameAndCount[] => {
+const getErroredActionNames = (errorInfoItems: ErrorInfoItem[]): NameAndCount[] => {
     const erroredActionNamesResult = new Map<string, number>();
 
     errorInfoItems.forEach((item) => {

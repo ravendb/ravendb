@@ -1,4 +1,4 @@
-export type nameAndCount = {
+export type NameAndCount = {
     name: string;
     count: number;
 };
