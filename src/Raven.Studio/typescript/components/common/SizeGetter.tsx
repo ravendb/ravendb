@@ -1,5 +1,4 @@
-import { useRef } from "react";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface SizeGetterProps {
     render: (size: { width: number; height: number }) => JSX.Element;

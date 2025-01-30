@@ -28,7 +28,12 @@ export const DocumentIdentitiesStory: StoryObj<DocumentIdentitiesStoryArgs> = {
 
         databasesService.withIdentities(args.identities);
 
-        return <DocumentIdentities />;
+
+        return (
+          <div style={{height: "800px"}}>
+              <DocumentIdentities />
+          </div>
+        )
     },
     argTypes: {
         databaseAccess: databaseAccessArgType,

@@ -22,7 +22,7 @@ export default function DocumentIdentities() {
     const { identities, reload, status, isLoading } = useGetIdentities();
 
     return (
-        <div className="content-padding">
+        <div className="content-padding h-100">
             <Row className="gy-sm h-100">
                 <Col>
                     <DocumentIdentitiesWithSize
