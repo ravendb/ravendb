@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
@@ -31,6 +32,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
     public AiEtl(Transformation transformation, AiEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, AiEtlTag)
     {
+        Metrics = new EtlMetricsCountersManager();
     }
 
     public override EtlType EtlType => EtlType.Ai;
@@ -49,22 +51,22 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
 
     protected override IEnumerator<AiEtlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
     protected override IEnumerator<AiEtlItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
     protected override IEnumerator<AiEtlItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
     protected override IEnumerator<AiEtlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
     protected override bool ShouldTrackAttachmentTombstones()
@@ -153,6 +155,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
 
         private readonly List<AiEtlEmbeddingItemValue> _embeddingsMap = new();
 
+        // todo change mapping
         public void Add(string value, AiEtlEmbeddingItemValue item)
         {
             _missingValues.Add(value);

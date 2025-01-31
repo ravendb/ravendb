@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
@@ -159,6 +162,75 @@ public class RavenDB_23556 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl)]
+    public void TestIfEmbeddingsAreGeneratedOnlyOnceInSameBatch()
+    {
+        const string connectionStringName = "AI Connection String Name";
+
+        using (var store = GetDocumentStore())
+        {
+            var dto1 = new Dto { Name = "Name1" };
+            var dto2 = new Dto { Name = "Name1" };
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto1);
+                session.Store(dto2);
+                session.SaveChanges();
+            }
+            
+            // todo handle lack of transforms
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx, 
+                AllowEtlOnNonEncryptedChannel = true, 
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
+            Etl.AddEtl(store, configuration, connectionString);
+            
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            WaitForUserToContinueTheTest(store);
+            
+            using (var session = store.OpenSession())
+            {
+                var valueHash = AiHelper.CalculateValueHash(dto1.Name);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                var expectedAttachmentName = (string)((dynamic)valueEmbeddingsDocument).Name1;
+
+                var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+
+                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto1.Id);
+                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                var attachmentNamesForNamePropertyJArray = (JArray)configurationValues.Name;
+                var attachmentNamesForNameProperty = attachmentNamesForNamePropertyJArray.ToObject<string[]>();
+                
+                Assert.Single(attachmentNamesForNameProperty);
+                Assert.Equal(expectedAttachmentName, attachmentNamesForNameProperty[0]);
+                
+                attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
     public void TestIfEmbeddingsAreGeneratedOnlyOnceInDifferentBatches()
     {
         const string connectionStringName = "AI Connection String Name";
@@ -266,10 +338,263 @@ public class RavenDB_23556 : RavenTestBase
         }
     }
 
+    /*
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestHandlingOfNonStringValues()
+    {
+        const string connectionStringName = "AI Connection String Name";
+
+        using (var store = GetDocumentStore())
+        {
+            var dto = new Dto { Age = 21 };
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            // todo handle lack of transforms
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx, 
+                AllowEtlOnNonEncryptedChannel = true, 
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Age"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
+            Etl.AddEtl(store, configuration, connectionString);
+            
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+        }
+    }
+    */
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestIfFieldsToIncludeAreRespected()
+    {
+        const string connectionStringName = "AI Connection String Name";
+
+        using (var store = GetDocumentStore())
+        {
+            var dto = new Dto { Names = new List<string>() { "Name1", "Name2" }, Name = "SomeName" };
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+
+            // todo handle lack of transforms
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            using (var session = store.OpenSession())
+            {
+                var valueHash = AiHelper.CalculateValueHash(dto.Name);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                var expectedAttachmentName = (string)((dynamic)valueEmbeddingsDocument).SomeName;
+
+                var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+
+                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                var attachmentNamesForNamePropertyJArray = (JArray)configurationValues.Name;
+                var attachmentNamesForNameProperty = attachmentNamesForNamePropertyJArray.ToObject<string[]>();
+                
+                Assert.Single(attachmentNamesForNameProperty);
+                Assert.Equal(expectedAttachmentName, attachmentNamesForNameProperty[0]);
+                
+                attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+            }
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Etl)]
+    public async Task TestIfModificationOfNonProcessedFieldsTriggersEtl()
+    {
+        const string connectionStringName = "AI Connection String Name";
+
+        using (var store = GetDocumentStore())
+        {
+            var dto = new Dto { Name = "SomeName", Age = 21 };
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+
+                // todo handle lack of transforms
+                var configuration = new AiEtlConfiguration()
+                {
+                    Name = "someETLConfigurationName",
+                    AiConnectorType = AiConnectorType.Onnx,
+                    AllowEtlOnNonEncryptedChannel = true,
+                    ConnectionStringName = connectionStringName,
+                    FieldsToInclude = ["Name"],
+                    Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                };
+
+                var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+                var etlDone = Etl.WaitForEtlToComplete(store);
+
+                Etl.AddEtl(store, configuration, connectionString);
+
+                etlDone.Wait(TimeSpan.FromSeconds(10));
+
+                var db = await GetDatabase(store.Database);
+            
+                var etlProcess = (AiEtl)db.EtlLoader.Processes.First();
+
+                var stats = etlProcess.GetPerformanceStats();
+            
+                etlDone.Reset();
+                
+                dto.Age = 37;
+                session.SaveChanges();
+                
+                etlDone.Wait(TimeSpan.FromSeconds(10));
+                
+                var etlStats2 = etlProcess.GetPerformanceStats();
+
+                var x = 0;
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public async Task TestIfDefaultBatchSizeIsRespected()
+    {
+        const string connectionStringName = "AI Connection String Name";
+        
+        using (var store = GetDocumentStore())
+        {
+            await using (BulkInsertOperation bulkInsert = store.BulkInsert())
+            {
+                for (int i = 0; i < 10_000; i++)
+                {
+                    await bulkInsert.StoreAsync(new Dto
+                    {
+                        Name = "Name #" + i,
+                    });
+                }
+            }
+            
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(100));
+
+            var db = await GetDatabase(store.Database);
+            
+            var etlProcess = (AiEtl)db.EtlLoader.Processes.First();
+
+            var stats = etlProcess.GetPerformanceStats();
+
+            Assert.Equal(stats[0].BatchTransformationCompleteReason, "Stopping the batch because it has already processed max number of extracted documents : 8192");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public async Task TestIfCustomBatchSizeIsRespected()
+    {
+        const string connectionStringName = "AI Connection String Name";
+        const int batchSize = 4;
+
+        var options = new Options()
+        {
+            ModifyDatabaseRecord =
+                record => record.Settings[RavenConfiguration.GetKey(x => x.Ai.MaxNumberOfExtractedDocuments)] = batchSize.ToString()
+        };
+
+        using (var store = GetDocumentStore(options))
+        {
+            await using (BulkInsertOperation bulkInsert = store.BulkInsert())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    await bulkInsert.StoreAsync(new Dto { Name = "Name #" + i, });
+                }
+            }
+
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+
+            var db = await GetDatabase(store.Database);
+
+            var etlProcess = (AiEtl)db.EtlLoader.Processes.First();
+
+            var stats = etlProcess.GetPerformanceStats();
+
+            Assert.Equal(stats[0].BatchTransformationCompleteReason, "Stopping the batch because it has already processed max number of extracted documents : 4");
+        }
+    }
+
     private class Dto
     {
         public string Id { get; set; }
         public string Name { get; set; }
         public List<string> Names { get; set; }
+        public int Age { get; set; }
     }
 }

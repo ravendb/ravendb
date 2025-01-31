@@ -55,6 +55,8 @@ namespace Raven.Server.Config
         public HttpConfiguration Http { get; }
 
         public EtlConfiguration Etl { get; }
+        
+        public AiConfiguration Ai { get; }
 
         public QueueSinkConfiguration QueueSink { get; }
 
@@ -150,6 +152,7 @@ namespace Raven.Server.Config
             Replication = new ReplicationConfiguration();
             Cluster = new ClusterConfiguration();
             Etl = new EtlConfiguration();
+            Ai = new AiConfiguration();
             Storage = new StorageConfiguration();
             Security = new SecurityConfiguration();
             Backup = new BackupConfiguration();
@@ -217,6 +220,7 @@ namespace Raven.Server.Config
             Replication.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Cluster.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Etl.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Ai.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Queries.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Patching.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Logs.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);

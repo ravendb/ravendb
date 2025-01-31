@@ -51,7 +51,7 @@ public static class Program
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
 
-                    test.Test();
+                    //test.Test();
                 }
             }
             catch (Exception e)

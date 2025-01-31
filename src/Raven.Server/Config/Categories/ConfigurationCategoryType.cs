@@ -42,6 +42,7 @@ namespace Raven.Server.Config.Categories
         QueueSink,
         [Description("Export & Import")]
         ExportImport,
-        Debug
+        Debug,
+        Ai
     }
 }

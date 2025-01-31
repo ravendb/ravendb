@@ -20,6 +20,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
@@ -543,6 +544,21 @@ namespace Raven.Server.Documents.ETL
             if (currentItem is ToOlapItem)
             {
                 if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.OlapMaxNumberOfExtractedDocuments)
+                {
+                    var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"[{Name}] {reason}");
+
+                    stats.RecordBatchTransformationCompleteReason(reason);
+
+                    return false;
+                }
+            }
+            
+            else if (currentItem is AiEtlItem)
+            {
+                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.MaxNumberOfExtractedDocuments)
                 {
                     var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
 
