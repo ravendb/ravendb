@@ -334,4 +334,19 @@ export class IndexesStubs {
             },
         ];
     }
+
+    static getIndexTermFields(): getIndexEntriesFieldsCommandResult {
+        return {
+            Static: ["Date", "Country", "Volume"],
+            Dynamic: ["Test"],
+        };
+    }
+
+    static getIndexTerms(): Raven.Client.Documents.Queries.TermsQueryResult {
+        return {
+            IndexName: "Companies/StockPrices/TradeVolumeByMonth",
+            ResultEtag: -49605565631,
+            Terms: Array.from<string>({ length: 1000 }).fill(new Date().toISOString()),
+        };
+    }
 }

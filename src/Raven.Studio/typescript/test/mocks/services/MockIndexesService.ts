@@ -5,6 +5,7 @@ import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import IndexMergeResults = Raven.Server.Documents.Indexes.IndexMerging.IndexMergeResults;
 import IndexErrors = Raven.Client.Documents.Indexes.IndexErrors;
+import TermsQueryResult = Raven.Client.Documents.Queries.TermsQueryResult;
 
 export default class MockIndexesService extends AutoMockService<IndexesService> {
     constructor() {
@@ -37,5 +38,13 @@ export default class MockIndexesService extends AutoMockService<IndexesService> 
 
     withGetIndexesErrorDetails(dto?: MockedValue<IndexErrors[]>) {
         return this.mockResolvedValue(this.mocks.getIndexErrorDetails, dto, IndexesStubs.getIndexErrorDetails());
+    }
+
+    withGetIndexFields(dto?: MockedValue<getIndexEntriesFieldsCommandResult>) {
+        return this.mockResolvedValue(this.mocks.getIndexEntriesFields, dto, IndexesStubs.getIndexTermFields());
+    }
+
+    withGetIndexTerms(dto?: MockedValue<TermsQueryResult>) {
+        return this.mockResolvedValue(this.mocks.getIndexTerms, dto, IndexesStubs.getIndexTerms());
     }
 }
