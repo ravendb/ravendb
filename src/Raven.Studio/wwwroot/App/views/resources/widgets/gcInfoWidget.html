@@ -16,89 +16,87 @@
                     <i class="icon-chevron-down"></i>
                     <i class="icon-chevron-up"></i>
                 </button>
-                <div class="d-flex flex-vertical w-100" data-bind="foreach: nodeStats">
-                    <div class="nodes-container">
-                        <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem() }">
-                            <div class="nodes-item-header" data-bind="css: { 'spinner': spinner }">
-                                <div class="node-label" data-bind="text: tag"></div>
-                                <div class="node-value">
-                                    <span data-bind="text: memoryFormatted"></span>
-                                    <span class="supplementary-info">Total heap size after GC</span>
-                                </div>
-                                <div title="Data has been pinned. Click on any chart to unpin" class="pin-container" data-bind="css: { active:  $root.pinned() && currentItem() }">
-                                    <i class="icon-pinned text-warning"></i>
-                                </div>
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem() }">
+                        <div class="nodes-item-header" data-bind="css: { 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: memoryFormatted"></span>
+                                <span class="supplementary-info">Total heap size after GC</span>
                             </div>
+                            <div title="Data has been pinned. Click on any chart to unpin" class="pin-container" data-bind="css: { active:  $root.pinned() && currentItem() }">
+                                <i class="icon-pinned text-warning"></i>
+                            </div>
+                        </div>
 
-                            <div class="details-list">
-                                <div class="details-item flex-row align-items-center">
-                                    <div class="details-item-name">GC Kind</div>
-                                    <div class="details-item-value" data-bind="text: type"></div>
-                                </div>
-                                <div class="details-item flex-row align-items-center">
-                                    <div class="details-item-name">Concurrent</div>
-                                    <div class="details-item-value" data-bind="text: concurrent"></div>
-                                </div>
-                                <div class="details-item flex-row align-items-center">
-                                    <div class="details-item-name">Compacted</div>
-                                    <div class="details-item-value" data-bind="text: compacted"></div>
-                                </div>
-                                <div class="details-item flex-row align-items-center">
-                                    <div class="details-item-name">Generation</div>
-                                    <div class="details-item-value" data-bind="text: generation"></div>
-                                </div>
+                        <div class="details-list">
+                            <div class="details-item flex-row align-items-center">
+                                <div class="details-item-name">GC Kind</div>
+                                <div class="details-item-value" data-bind="text: type"></div>
                             </div>
-                            <div class="details-list">
-                                <h4 class="no-padding-left">
-                                    &nbsp;
-                                    <span data-bind="visible: $index() === 0">Generations (before GC → after GC)</span>
-                                </h4>
-                                <div data-toggle="tooltip" data-html="true" data-animation="true" data-placement="bottom" data-bind="tooltipText: fragmentationInfo">
-                                    <div class="details-item flex-row align-items-center gen-0">
-                                        <div class="details-item-value" data-bind="text: gen0Formatted"></div>
-                                    </div>
-                                    <div class="details-item flex-row align-items-center gen-1">
-                                        <div class="details-item-value" data-bind="text: gen1Formatted"></div>
-                                    </div>
-                                    <div class="details-item flex-row align-items-center gen-2">
-                                        <div class="details-item-value" data-bind="text: gen2Formatted"></div>
-                                    </div>
-                                    <div class="details-item flex-row align-items-center loh">
-                                        <div class="details-item-value" data-bind="text: lohFormatted"></div>
-                                    </div>
-                                    <div class="details-item flex-row align-items-center pinned">
-                                        <div class="details-item-value" data-bind="text: pinnedFormatted"></div>
-                                    </div>
+                            <div class="details-item flex-row align-items-center">
+                                <div class="details-item-name">Concurrent</div>
+                                <div class="details-item-value" data-bind="text: concurrent"></div>
+                            </div>
+                            <div class="details-item flex-row align-items-center">
+                                <div class="details-item-name">Compacted</div>
+                                <div class="details-item-value" data-bind="text: compacted"></div>
+                            </div>
+                            <div class="details-item flex-row align-items-center">
+                                <div class="details-item-name">Generation</div>
+                                <div class="details-item-value" data-bind="text: generation"></div>
+                            </div>
+                        </div>
+                        <div class="details-list">
+                            <h4 class="no-padding-left">
+                                &nbsp;
+                                <span data-bind="text: $index() === 0 ? 'Generations (before GC → after GC)' : ' '"></span>
+                            </h4>
+                            <div data-toggle="tooltip" data-html="true" data-animation="true" data-placement="bottom" data-bind="tooltipText: fragmentationInfo">
+                                <div class="details-item flex-row align-items-center gen-0">
+                                    <div class="details-item-value" data-bind="text: gen0Formatted"></div>
+                                </div>
+                                <div class="details-item flex-row align-items-center gen-1">
+                                    <div class="details-item-value" data-bind="text: gen1Formatted"></div>
+                                </div>
+                                <div class="details-item flex-row align-items-center gen-2">
+                                    <div class="details-item-value" data-bind="text: gen2Formatted"></div>
+                                </div>
+                                <div class="details-item flex-row align-items-center loh">
+                                    <div class="details-item-value" data-bind="text: lohFormatted"></div>
+                                </div>
+                                <div class="details-item flex-row align-items-center pinned">
+                                    <div class="details-item-value" data-bind="text: pinnedFormatted"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="gc-legend">
-                        <div class="details-item flex-row align-items-center gen-0">
-                            <div class="details-item-name">
-                                Gen0 <span class="rect"></span>
-                            </div>
-                        </div>
-                        <div class="details-item flex-row align-items-center gen-1">
-                            <div class="details-item-name">
-                                Gen1 <span class="rect"></span>
-                            </div>
-                        </div>
-                        <div class="details-item flex-row align-items-center gen-2">
-                            <div class="details-item-name">
-                                Gen2 <span class="rect"></span>
-                            </div>
-                        </div>
-                        <div class="details-item flex-row align-items-center loh">
-                            <div class="details-item-name" title="Large object heap">
-                                LOH <span class="rect"></span>
-                            </div>
-                        </div>
-                        <div class="details-item flex-row align-items-center pinned">
-                            <div class="details-item-name" title="Pinned object heap">
-                                POH <span class="rect"></span>
-                            </div>
-                        </div>
+                </div>
+            </div>
+            <div class="gc-legend">
+                <div class="details-item flex-row align-items-center gen-0">
+                    <div class="details-item-name">
+                        Gen0 <span class="rect"></span>
+                    </div>
+                </div>
+                <div class="details-item flex-row align-items-center gen-1">
+                    <div class="details-item-name">
+                        Gen1 <span class="rect"></span>
+                    </div>
+                </div>
+                <div class="details-item flex-row align-items-center gen-2">
+                    <div class="details-item-name">
+                        Gen2 <span class="rect"></span>
+                    </div>
+                </div>
+                <div class="details-item flex-row align-items-center loh">
+                    <div class="details-item-name" title="Large object heap">
+                        LOH <span class="rect"></span>
+                    </div>
+                </div>
+                <div class="details-item flex-row align-items-center pinned">
+                    <div class="details-item-name" title="Pinned object heap">
+                        POH <span class="rect"></span>
                     </div>
                 </div>
             </div>
