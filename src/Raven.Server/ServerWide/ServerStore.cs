@@ -2420,6 +2420,19 @@ namespace Raven.Server.ServerWide
 
                         command = new UpdateSnowflakeEtlCommand(id, snowflakeEtl, databaseName, raftRequestId);
                         break;
+
+                    case EtlType.Ai:
+                        var aiEtl = JsonDeserializationCluster.AiEtlConfiguration(etlConfiguration);
+                        aiEtl.Validate(out var aiEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, aiEtl.ConnectionStringName, aiEtl.EtlType) == false)
+                            aiEtlErr.Add($"Could not find connection string named '{aiEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        UpdateAiEtlCommand.OnBeforeCommandExecuteValidation(aiEtlErr, aiEtl, rawRecord);
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiEtlErr);
+
+                        command = new UpdateAiEtlCommand(id, aiEtl, databaseName, raftRequestId);
+                        break;
+
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
                 }
@@ -2493,7 +2506,15 @@ namespace Raven.Server.ServerWide
                         raftRequestId);
                     break;
                 case ConnectionStringType.Ai:
-                    command = new PutAiConnectionStringCommand(JsonDeserializationCluster.AiConnectionString(connectionString), databaseName, raftRequestId);
+                    var aiConnectionString = JsonDeserializationCluster.AiConnectionString(connectionString);
+
+                    DatabaseRecord databaseRecord;
+                    using (context.OpenReadTransaction())
+                        databaseRecord = Cluster.ReadDatabase(context, databaseName);
+
+                    PutAiConnectionStringCommand.OnBeforeCommandExecuteValidation(aiConnectionString, databaseRecord);
+
+                    command = new PutAiConnectionStringCommand(aiConnectionString, databaseName, raftRequestId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
