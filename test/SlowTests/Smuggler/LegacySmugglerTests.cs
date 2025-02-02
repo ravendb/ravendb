@@ -166,13 +166,8 @@ namespace SlowTests.Smuggler
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
-
-                // "SlowTests.Smuggler.Data.Revisions_3.5.35220.ravendbdump" contains 2 docs:
-                // users/1 - with 4 revisions
-                // Raven/Versioning/DefaultConfiguration - with no revisions
-                Assert.Equal(4, stats.CountOfRevisionDocuments);
-
-                Assert.Equal(9, stats.LastDocEtag);
+                Assert.Equal(5, stats.CountOfRevisionDocuments);
+                Assert.Equal(10, stats.LastDocEtag);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStats.CountOfDocuments);
@@ -232,15 +227,9 @@ namespace SlowTests.Smuggler
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-
                 Assert.Equal(2, stats.CountOfDocuments);
-
-                // "SlowTests.Smuggler.Data.DocumentWithRevisions.ravendbdump" contains 2 docs:
-                // users/1 - with 5 revisions
-                // Raven/Versioning/DefaultConfiguration - with no revisions
-                Assert.Equal(5, stats.CountOfRevisionDocuments);
-
-                Assert.Equal(10, stats.LastDocEtag);
+                Assert.Equal(6, stats.CountOfRevisionDocuments);
+                Assert.Equal(11, stats.LastDocEtag);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStats.CountOfDocuments);
@@ -291,7 +280,7 @@ namespace SlowTests.Smuggler
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
-                Assert.Equal(5, stats.CountOfRevisionDocuments); // 0 revisions of the doc "Raven/Versioning/DefaultConfiguration", and 5 revisions of the deleted doc "test" 
+                Assert.Equal(6, stats.CountOfRevisionDocuments); // 1 of the doc "Raven/Versioning/DefaultConfiguration", and 5 revisions of the deleted doc "test" 
                                                                                 // (which had originally 6 revisions, but the last was deleted in the import because default configuration has 'MinimumRevisionsToKeep=5')
                 Assert.Equal(2, stats.LastDocEtag);
                 
@@ -337,7 +326,7 @@ namespace SlowTests.Smuggler
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
-                Assert.Equal(0, stats.CountOfRevisionDocuments);
+                Assert.Equal(1, stats.CountOfRevisionDocuments);
                 Assert.Equal(2, stats.LastDocEtag);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());

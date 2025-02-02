@@ -450,7 +450,7 @@ namespace SlowTests.Smuggler
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
-                    Assert.Equal(8, stats.CountOfRevisionDocuments);
+                    Assert.Equal(10, stats.CountOfRevisionDocuments);
                 }
             }
             finally
@@ -809,7 +809,7 @@ namespace SlowTests.Smuggler
 
                 Assert.Equal(1059, stats.CountOfDocuments);
                 Assert.Equal(3, stats.CountOfIndexes);
-                Assert.Equal(3815, stats.CountOfRevisionDocuments); // 4645 - 830 orders (the only collection with revisions)
+                Assert.Equal(4645, stats.CountOfRevisionDocuments);
                 Assert.Equal(17, stats.CountOfAttachments);
 
                 Assert.Equal(29, stats.CountOfCounterEntries);
@@ -2167,8 +2167,8 @@ namespace SlowTests.Smuggler
                     Assert.True(destStats.CountOfDocuments == sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments, 
                         $"The destination database contains {destStats.CountOfDocuments} documents, but expected {sourceStats.CountOfDocuments - sourceStats.CountOfRevisionDocuments}");
 
-                    Assert.True(destStats.CountOfRevisionDocuments == result.RevisionDocuments.ReadCount * 2,
-                        $"The destination database contains {destStats.CountOfRevisionDocuments} revisions, but expected {result.RevisionDocuments.ReadCount * 2}");
+                    Assert.True(destStats.CountOfRevisionDocuments == result.Documents.ReadCount + result.RevisionDocuments.ReadCount * 2,
+                        $"The destination database contains {destStats.CountOfRevisionDocuments} revisions, but expected {result.Documents.ReadCount + result.RevisionDocuments.ReadCount * 2}");
                 }
             }
             finally

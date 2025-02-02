@@ -293,7 +293,17 @@ namespace Raven.Server.Documents.Revisions
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
             {
-                return false;
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
+                    return false;
+
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate))
+                    return false;
+
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByTimeSeriesUpdate))
+                    return false;
+
+                if (docConfiguration == ConflictConfiguration.Default || docConfiguration == _emptyConfiguration || docConfiguration.Disabled)
+                    return false;
             }
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))

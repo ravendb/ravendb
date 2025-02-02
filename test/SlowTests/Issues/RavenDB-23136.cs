@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
@@ -18,67 +19,66 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.Revisions)]
-        public async Task Database_Shouldnt_Create_Redundant_Revisions_On_Document_Import()
+        public async Task Import_Should_Create_Revisions_When_Configuration_Is_On(bool withRevisionsConfig)
         {
             DoNotReuseServer();
-            var file = GetTempFileName();
+            var files = new List<string>()
+            {
+                GetTempFileName(),
+                GetTempFileName(),
+                GetTempFileName()
+            };
             try
             {
-                await Database_Shouldnt_Create_Redundant_Revisions_On_Document_Import(file);
+                await Import_Should_Create_Revisions_When_Configuration_Is_On_Internal(files, withRevisionsConfig);
             }
             finally
             {
-                File.Delete(file);
+                foreach (var f in files)
+                {
+                    File.Delete(f);
+                }
             }
         }
 
-        private async Task Database_Shouldnt_Create_Redundant_Revisions_On_Document_Import(string file)
+        private async Task Import_Should_Create_Revisions_When_Configuration_Is_On_Internal(List<string> files, bool withRevisionsConfig)
         {
             using (var source = GetDocumentStore())
             {
-                // Create a doc with no revisions
-                using (var session = source.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "NoRevision" }, "Users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 100 } };
-                await RevisionsHelper.SetupRevisions(source, Server.ServerStore, configuration: configuration);
-
-                // Create a doc with 3 revisions
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < files.Count; i++)
                 {
                     using (var session = source.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User { Name = $"Revision{i}" }, "Users/2");
+                        await session.StoreAsync(new User { Name = i.ToString() }, "Users/1");
                         await session.SaveChangesAsync();
                     }
-                }
 
-                using (var session = source.OpenAsyncSession())
-                {
-                    var revisionsCount1 = await session.Advanced.Revisions.GetCountForAsync("Users/1");
-                    Assert.Equal(0, revisionsCount1);
-                    var revisionsCount2 = await session.Advanced.Revisions.GetCountForAsync("Users/2");
-                    Assert.Equal(3, revisionsCount2);
+                    var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), files[i]);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
-
-                var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
             using (var dest = GetDocumentStore())
             {
-                var importOperation = await dest.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-
-                using (var session = dest.OpenAsyncSession())
+                if (withRevisionsConfig)
                 {
-                    var revisionsCount1 = await session.Advanced.Revisions.GetCountForAsync("Users/1");
-                    Assert.Equal(0, revisionsCount1);
-                    var revisionsCount2 = await session.Advanced.Revisions.GetCountForAsync("Users/2");
-                    Assert.Equal(3, revisionsCount2);
+                    var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 100 } };
+                    await RevisionsHelper.SetupRevisions(dest, Server.ServerStore, configuration: configuration);
+                }
+
+                for (int i = 0; i < files.Count; i++)
+                {
+                    var importOperation = await dest.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), files[i]);
+                    await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+
+                    using (var session = dest.OpenAsyncSession())
+                    {
+                        var revisionsCount = await session.Advanced.Revisions.GetCountForAsync("Users/1");
+                        if (withRevisionsConfig == false)
+                            Assert.Equal(0, revisionsCount);
+                        else
+                            Assert.Equal(i + 1, revisionsCount);
+                    }
                 }
             }
         }

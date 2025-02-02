@@ -141,7 +141,7 @@ namespace SlowTests.Issues
                     Assert.True(metadata.ContainsKey("@attachments"));
                     Assert.Equal("HasRevisions, HasAttachments", metadata.GetString("@flags"));
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
-                    Assert.Equal(11, revisionsMetadata.Count);
+                    Assert.Equal(12, revisionsMetadata.Count); // +1 revision added when importing
                     for (int i = 0; i < 10; i++)
                     {
                         Assert.True(await session.Advanced.Attachments.ExistsAsync(id, $"attachment.{i}"));
@@ -164,7 +164,7 @@ namespace SlowTests.Issues
                     Assert.False(metadata.ContainsKey("@attachments"));
                     Assert.Equal("HasRevisions", metadata.GetString("@flags"));
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
-                    Assert.Equal(11, revisionsMetadata.Count);
+                    Assert.Equal(12, revisionsMetadata.Count);
                 }
             }
             // if doc had attachments => they must be kept.

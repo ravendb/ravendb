@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     using (var session = store2.OpenAsyncSession())
                     {
                         var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
-                        Assert.Equal(2, revisionsMetadata.Count);
+                        Assert.Equal(3, revisionsMetadata.Count);
                     }
                 }
             }

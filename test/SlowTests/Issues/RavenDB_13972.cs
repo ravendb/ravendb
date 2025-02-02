@@ -49,10 +49,9 @@ namespace SlowTests.Issues
                 }
             }
 
-            if (numberOfRevisionsPerDocument > 1)
+            if (numberOfRevisionsPerDocument > 2)
             {
-                var numberOfRevisionToCreate = numberOfRevisionsPerDocument - 1; // the docs already has 1 revision
-                for (int j = 0; j < numberOfRevisionToCreate; j++)
+                for (int j = 0; j < numberOfRevisionsPerDocument; j++)
                 {
                     using (var bulk = storeToExport.BulkInsert())
                     {
@@ -72,20 +71,17 @@ namespace SlowTests.Issues
                 }
             }
 
-            if (numberOfCountersPerUser > 0)
+            using (var session = storeToExport.OpenSession())
             {
-                using (var session = storeToExport.OpenSession())
+                for (int i = 0; i < numberOfUsers; i++)
                 {
-                    for (int i = 0; i < numberOfUsers; i++)
+                    for (int j = 0; j < numberOfCountersPerUser; j++)
                     {
-                        for (int j = 0; j < numberOfCountersPerUser; j++)
-                        {
-                            session.CountersFor("users/" + i).Increment("counter/" + j, 100);
-                        }
+                        session.CountersFor("users/" + i).Increment("counter/" + j, 100);
                     }
-
-                    session.SaveChanges();
                 }
+
+                session.SaveChanges();
             }
 
             var originalStats = await storeToExport.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -165,7 +161,7 @@ namespace SlowTests.Issues
 
             Assert.Equal(numberOfUsers - deletedUsers + numberOfOrders, statsAfterDeletions.CountOfDocuments);
             Assert.Equal(numberOfUsers - deletedUsers, statsAfterDeletions.CountOfCounterEntries);
-            Assert.Equal(expectedNumberOfRevisions + deletedUsers, statsAfterDeletions.CountOfRevisionDocuments); // delete revisions has been added
+            Assert.Equal(expectedNumberOfRevisions, statsAfterDeletions.CountOfRevisionDocuments);
             Assert.Equal(deletedUsers, statsAfterDeletions.CountOfTombstones);
         }
 
