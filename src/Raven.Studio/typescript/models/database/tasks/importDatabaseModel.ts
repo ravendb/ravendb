@@ -1,8 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import smugglerDatabaseRecord = require("models/database/tasks/smugglerDatabaseRecord");
 import genUtils = require("common/generalUtils");
-import accessManager from "common/shell/accessManager";
-import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import accessManager = require("common/shell/accessManager");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class importDatabaseModel {
     private isAdminAccessOrAbove = ko.pureComputed(() => accessManager.default.adminAccessOrAboveForDatabase(activeDatabaseTracker.default.database()));
