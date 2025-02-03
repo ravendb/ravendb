@@ -10,6 +10,7 @@ using Sparrow.Compression;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.VxSort;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
@@ -937,11 +938,23 @@ public unsafe partial class Hnsw
             
             long MergePostingList(long postingList, NativeList<long> modifications)
             {
+                // We may have duplicates in the list.
+                // Scenarios:
+                // 1) additions: when the source document contains a list of the same vectors
+                // 2) removals: when the deleted document contained a list of the same vectors
+                // However, the HNSW does not use frequency. So we want to have information in buffer about:
+                // - There was an addition
+                // - There was a removal
+                // In such case, we can just sort and remove duplicates to have unique list.
+                modifications.Shrink(Sorting.SortAndRemoveDuplicates(modifications.ToSpan()));
+                
                 listBuffer.Clear();
                 listBuffer.AddRange(modifications.ToSpan());
+                
                 int currentSize = 0;
                 bool hasSmallPostingList = false;
                 long rawPostingListId = postingList & Constants.Graphs.VectorId.ContainerType;
+                
                 switch (postingList & Constants.Graphs.VectorId.EnsureIsSingleMask)
                 {
                     case Constants.Graphs.VectorId.Tombstone: // nothing there
@@ -956,8 +969,16 @@ public unsafe partial class Hnsw
                     case Constants.Graphs.VectorId.PostingList:
                         return UpdatePostingList(rawPostingListId, in modifications, pforEncoder, ref pforDecoder, ref listBuffer);
                 }
+
+                // Due to deduplication performed before reading the posting list from disk, we can now have the following scenarios:
+                // 1) 2x Additions + 1x Removal
+                // There was an update of the document. So, we have 1x addition and 1x removal from indexing, plus the loaded entry id from disk -> the ID will remain in the buffer
+                // 2) 1x Addition + 1x Removal:
+                // There was a delete operation during indexing, plus the loaded entry id from disk: id will be removed from buffer
+                // 3) 1x Addition: New document 
+                // INFO: All other scenarios are invalid.
+                PostingList.SortModificationsAndRemoveDuplicates(ref listBuffer);
                 
-                PostingList.SortEntriesAndRemoveDuplicatesAndRemovals(ref listBuffer);
                 if (listBuffer.Count is 0 or 1)
                 {
                     if (hasSmallPostingList)

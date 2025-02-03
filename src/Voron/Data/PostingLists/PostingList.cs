@@ -729,5 +729,38 @@ namespace Voron.Data.PostingLists
 
             list.Count = (int)(outputBufferPtr - list.RawItems + 1);
         }
+        
+        //The method is used to prepare final list that should be stored in the posting list.
+        //It should:
+        // - Filter updates (sequence: [ X, X, X | 1] ) => [X] )
+        // - Filter removals (sequence: [X, X | 1] => [] )
+        // - Addition (sequence: [X] => [X] )
+        public static void SortModificationsAndRemoveDuplicates(ref ContextBoundNativeList<long> list)
+        {
+            if (list.Count <= 1)
+                return;
+            
+            list.Sort();
+
+            int outputIdx = 1;
+            for (int i = 1; i < list.Count; i++)
+            {
+                if ((list[i] & 1) == 1) //removal
+                {
+                    var isRemovalPrevious = (list[i - 1] | 1) == list[i];
+                    Debug.Assert((list[i - 1] & 1) == 0, "orphaned removal, not supposed to happen");
+                    if (isRemovalPrevious)
+                    {
+                        outputIdx--; // remove from output
+                        continue;
+                    }
+                }
+                
+                list[outputIdx] = list[i];
+                outputIdx++;
+            }
+
+            list.Shrink(outputIdx);
+        }
     }
 }
