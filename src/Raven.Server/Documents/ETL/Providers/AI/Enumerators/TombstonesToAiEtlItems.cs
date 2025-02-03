@@ -19,7 +19,6 @@ public sealed class TombstonesToAiEtlItems : IEnumerator<AiEtlItem>
     
     public AiEtlItem Current { get; private set; }
     
-    // todo
     public TombstonesToAiEtlItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
     {
         _context = context;

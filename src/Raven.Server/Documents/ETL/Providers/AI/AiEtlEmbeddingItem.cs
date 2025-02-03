@@ -7,6 +7,7 @@ public class AiEtlEmbeddingItem
 {
     public string DocumentId { get; set; }
     public string DocumentCollectionName { get; set; }
+    public bool IsDelete { get; set; }
     
     // PropertyPath -> PropertyValues
     public Dictionary<string, List<AiEtlEmbeddingItemValue>> Values { get; set; }

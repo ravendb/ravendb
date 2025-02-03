@@ -763,6 +763,62 @@ public class RavenDB_23556 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestDocumentDeletes()
+    {
+        const string connectionStringName = "connection string name";
+
+        var dto1 = new Dto { Name = "Name1" };
+        var dto2 = new Dto { Name = "Name2" };
+        
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto1);
+                session.Store(dto2);
+                session.SaveChanges();
+                
+                var configuration = new AiEtlConfiguration()
+                {
+                    Name = "someETLConfigurationName",
+                    AiConnectorType = AiConnectorType.Onnx,
+                    AllowEtlOnNonEncryptedChannel = true,
+                    ConnectionStringName = connectionStringName,
+                    FieldsToInclude = ["Name"],
+                    Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                };
+
+                var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+                var etlDone = Etl.WaitForEtlToComplete(store);
+
+                Etl.AddEtl(store, configuration, connectionString);
+
+                etlDone.Wait(TimeSpan.FromSeconds(10));
+                
+                etlDone.Reset();
+                
+                session.Delete(dto1);
+                session.SaveChanges();
+                
+                etlDone.Wait(TimeSpan.FromSeconds(10));
+            }
+            
+            var documentEmbeddingsId1 = AiHelper.GetDocumentEmbeddingsId(dto1.Id);
+            var documentEmbeddingsId2 = AiHelper.GetDocumentEmbeddingsId(dto2.Id);
+            
+            using (var session = store.OpenSession())
+            {
+                var documentEmbeddings1 = session.Load<object>(documentEmbeddingsId1);
+                var documentEmbeddings2 = session.Load<object>(documentEmbeddingsId2);
+                
+                Assert.Null(documentEmbeddings1);
+                Assert.NotNull(documentEmbeddings2);
+            }
+        }
+    }
+
     private class Dto
     {
         public string Id { get; set; }

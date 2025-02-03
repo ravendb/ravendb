@@ -63,6 +63,15 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
         Current = item;
         _currentRun ??= new AiEtlScriptRun();
 
+        if (item.IsDelete)
+        {
+            var deletedItem = new AiEtlEmbeddingItem() { DocumentId = item.DocumentId, DocumentCollectionName = item.Collection, IsDelete = true };
+            
+            _currentRun.Deletes.Add(deletedItem);
+            
+            return;
+        }
+
         var aiEtlEmbeddingItem = new AiEtlEmbeddingItem() { DocumentId = item.DocumentId, DocumentCollectionName = item.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>() };
         
         foreach (var fieldName in _configuration.FieldsToInclude)

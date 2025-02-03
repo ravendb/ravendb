@@ -13,6 +13,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -132,9 +133,17 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
             var cmd = new MergedPutEmbeddingsCommand(aiEtlScriptRun.CurrentRun, Configuration.Name, Database);
 
             Database.TxMerger.EnqueueSync(cmd);
-
-            return processed;
         }
+
+        foreach (var aiEtlEmbeddingItem in aiEtlScriptRun.Deletes)
+        {
+            var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(aiEtlEmbeddingItem.DocumentId);
+            var cmd = new DeleteDocumentCommand(documentEmbeddingsId, null, Database);
+            
+            Database.TxMerger.EnqueueSync(cmd);
+        }
+        
+        return processed;
     }
 
     protected override EtlStatsScope CreateScope(EtlRunStats stats)
