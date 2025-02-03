@@ -1,6 +1,6 @@
 ﻿import { Button, Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
-import { FormProvider, SubmitHandler, useForm, useFormContext, useWatch } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, AiConnection } from "../connectionStringsTypes";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -10,6 +10,12 @@ import { yupObjectSchema } from "components/utils/yupUtils";
 import { SelectOption } from "components/common/select/Select";
 import RichAlert from "components/common/RichAlert";
 import OptionalLabel from "components/common/OptionalLabel";
+import AzureOpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/AzureOpenAiSettings";
+import GoogleSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/GoogleSettings";
+import HuggingFaceSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/HuggingFaceSettings";
+import OllamaSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OllamaSettings";
+import OnnxSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OnnxSettings";
+import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -73,14 +79,14 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 <div className="mb-2">
                     <Label>
                         Identifier <OptionalLabel />
-                        <Icon icon="info" color="info" margin="ms-1" id="identifier-info" />
+                        <Icon icon="info" color="info" margin="ms-1" id="identifier" />
+                        <UncontrolledPopover target="identifier" trigger="hover" className="bs5">
+                            <PopoverBody>
+                                A unique identifier used in document paths. If not specified, will be auto-generated
+                                from the connection name.
+                            </PopoverBody>
+                        </UncontrolledPopover>
                     </Label>
-                    <UncontrolledPopover target="identifier-info" trigger="hover" placement="top" className="bs5">
-                        <PopoverBody>
-                            A unique identifier used in document paths. If not specified, will be auto-generated from
-                            the connection name.
-                        </PopoverBody>
-                    </UncontrolledPopover>
                     <FormInput
                         control={control}
                         name="identifier"
@@ -140,265 +146,6 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
         </FormProvider>
     );
 }
-
-function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
-
-    return (
-        <>
-            <div className="mb-2">
-                <Label>API Key</Label>
-                <FormInput control={control} name="azureOpenAiSettings.apiKey" type="password" passwordPreview />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Endpoint <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="azureOpenAiSettings.endpoint" type="text" />
-            </div>
-            <div className="mb-2">
-                <Label>Model</Label>
-                <FormInput control={control} name="azureOpenAiSettings.model" type="text" disabled={isUsedByAnyTask} />
-            </div>
-            <div className="mb-2">
-                <Label>Deployment Name</Label>
-                <FormInput control={control} name="azureOpenAiSettings.deploymentName" type="text" />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Dimensions <OptionalLabel />
-                </Label>
-                <FormInput
-                    control={control}
-                    name="azureOpenAiSettings.dimensions"
-                    type="number"
-                    disabled={isUsedByAnyTask}
-                />
-            </div>
-        </>
-    );
-}
-
-function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
-
-    return (
-        <>
-            <div className="mb-2">
-                <Label className="col-form-label">
-                    AI Version <OptionalLabel />
-                </Label>
-                <FormSelect
-                    control={control}
-                    name="googleSettings.aiVersion"
-                    options={
-                        [
-                            { label: "V1", value: "V1" },
-                            { label: "V1_Beta", value: "V1_Beta" },
-                        ] satisfies SelectOption<FormData["googleSettings"]["aiVersion"]>[]
-                    }
-                    isDisabled={isUsedByAnyTask}
-                    isClearable
-                />
-            </div>
-            <div className="mb-2">
-                <Label>API Key</Label>
-                <FormInput control={control} name="googleSettings.apiKey" type="password" passwordPreview />
-            </div>
-            <div className="mb-2">
-                <Label>Model</Label>
-                <FormInput control={control} name="googleSettings.model" type="text" disabled={isUsedByAnyTask} />
-            </div>
-        </>
-    );
-}
-
-function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
-
-    return (
-        <>
-            <div className="mb-2">
-                <Label>
-                    API Key <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="huggingFaceSettings.apiKey" type="password" passwordPreview />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Endpoint <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="huggingFaceSettings.endpoint" type="text" />
-            </div>
-            <div className="mb-2">
-                <Label>Model</Label>
-                <FormInput control={control} name="huggingFaceSettings.model" type="text" disabled={isUsedByAnyTask} />
-            </div>
-        </>
-    );
-}
-
-function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
-
-    return (
-        <>
-            <div className="mb-2">
-                <Label>Model</Label>
-                <FormInput control={control} name="ollamaSettings.model" type="text" disabled={isUsedByAnyTask} />
-            </div>
-            <div className="mb-2">
-                <Label>URI</Label>
-                <FormInput control={control} name="ollamaSettings.uri" type="text" />
-            </div>
-        </>
-    );
-}
-
-function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
-
-    return (
-        <>
-            <div className="mb-2">
-                <Label>
-                    Case Sensitive <OptionalLabel />
-                </Label>
-                <FormSelect
-                    control={control}
-                    name="onnxSettings.caseSensitive"
-                    disabled={isUsedByAnyTask}
-                    options={booleanSelectOptions}
-                    isClearable
-                />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Normalize Embeddings <OptionalLabel />
-                </Label>
-                <FormSelect
-                    control={control}
-                    name="onnxSettings.normalizeEmbeddings"
-                    disabled={isUsedByAnyTask}
-                    options={booleanSelectOptions}
-                    isClearable
-                />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Maximum Tokens <OptionalLabel />
-                </Label>
-                <FormInput
-                    control={control}
-                    name="onnxSettings.maximumTokens"
-                    type="number"
-                    disabled={isUsedByAnyTask}
-                />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    CLS Token <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="onnxSettings.clsToken" type="text" disabled={isUsedByAnyTask} />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Pad Token <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="onnxSettings.padToken" type="text" disabled={isUsedByAnyTask} />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    SEP Token <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="onnxSettings.sepToken" type="text" disabled={isUsedByAnyTask} />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Unknown Token <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="onnxSettings.unknownToken" type="text" disabled={isUsedByAnyTask} />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Pooling Mode <OptionalLabel />
-                </Label>
-                <FormSelect
-                    control={control}
-                    name="onnxSettings.poolingMode"
-                    options={
-                        [
-                            { label: "Max", value: "Max" },
-                            { label: "Mean", value: "Mean" },
-                            { label: "MeanSquareRootTokensLength", value: "MeanSquareRootTokensLength" },
-                        ] satisfies SelectOption<FormData["onnxSettings"]["poolingMode"]>[]
-                    }
-                    isDisabled={isUsedByAnyTask}
-                    isClearable
-                />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Unicode Normalization <OptionalLabel />
-                </Label>
-                <FormSelect
-                    control={control}
-                    name="onnxSettings.unicodeNormalization"
-                    options={
-                        [
-                            { label: "FormC", value: "FormC" },
-                            { label: "FormD", value: "FormD" },
-                            { label: "FormKC", value: "FormKC" },
-                            { label: "FormKD", value: "FormKD" },
-                        ] satisfies SelectOption<FormData["onnxSettings"]["unicodeNormalization"]>[]
-                    }
-                    isDisabled={isUsedByAnyTask}
-                    isClearable
-                />
-            </div>
-        </>
-    );
-}
-
-function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
-
-    return (
-        <>
-            <div className="mb-2">
-                <Label>API Key</Label>
-                <FormInput control={control} name="openAiSettings.apiKey" type="password" passwordPreview />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Endpoint <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="openAiSettings.endpoint" type="text" />
-            </div>
-            <div className="mb-2">
-                <Label>Model</Label>
-                <FormInput control={control} name="openAiSettings.model" type="text" disabled={isUsedByAnyTask} />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Organization ID <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="openAiSettings.organizationId" type="text" />
-            </div>
-            <div className="mb-2">
-                <Label>
-                    Project ID <OptionalLabel />
-                </Label>
-                <FormInput control={control} name="openAiSettings.projectId" type="text" />
-            </div>
-        </>
-    );
-}
-
-const booleanSelectOptions: SelectOption<boolean>[] = [
-    { value: true, label: "Yes" },
-    { value: false, label: "No" },
-];
 
 // copied from AiConnectionString.cs
 function getGeneratedIdentifier(name: string): string {
