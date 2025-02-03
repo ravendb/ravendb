@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Voron)]
+        [RavenMultiplatformFact(RavenTestCategory.Counters | RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public async Task CanCleanCounterTombstones()
         {
             await using var replayStream = typeof(RavenDB_23409).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB-23409.rec");
