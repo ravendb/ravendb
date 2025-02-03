@@ -1,5 +1,5 @@
 ﻿import { Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
-import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
+import { FormInput, FormSelect } from "components/common/Form";
 import { FormProvider, SubmitHandler, useForm, useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, AiConnection } from "../connectionStringsTypes";
@@ -9,6 +9,7 @@ import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { SelectOption } from "components/common/select/Select";
 import RichAlert from "components/common/RichAlert";
+import OptionalLabel from "components/common/OptionalLabel";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -62,7 +63,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 </div>
                 <div className="mb-2">
                     <Label>
-                        Identifier
+                        Identifier <OptionalLabel />
                         <Icon icon="info" color="info" margin="ms-1" id="identifier-info" />
                     </Label>
                     <UncontrolledPopover target="identifier-info" trigger="hover" placement="top" className="bs5">
@@ -91,7 +92,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                                 { label: "Google AI", value: "googleSettings" },
                                 { label: "Hugging Face", value: "huggingFaceSettings" },
                                 { label: "Ollama", value: "ollamaSettings" },
-                                { label: "ONNX", value: "onnxSettings" },
+                                { label: "ONNX (local)", value: "onnxSettings" },
                                 { label: "OpenAI", value: "openAiSettings" },
                             ] satisfies SelectOption<FormData["connectorType"]>[]
                         }
@@ -134,7 +135,9 @@ function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) 
                 <FormInput control={control} name="azureOpenAiSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
-                <Label>Endpoint</Label>
+                <Label>
+                    Endpoint <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="azureOpenAiSettings.endpoint" type="text" />
             </div>
             <div className="mb-2">
@@ -146,7 +149,9 @@ function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) 
                 <FormInput control={control} name="azureOpenAiSettings.deploymentName" type="text" />
             </div>
             <div className="mb-2">
-                <Label>Dimensions</Label>
+                <Label>
+                    Dimensions <OptionalLabel />
+                </Label>
                 <FormInput
                     control={control}
                     name="azureOpenAiSettings.dimensions"
@@ -164,7 +169,9 @@ function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     return (
         <>
             <div className="mb-2">
-                <Label>AI Version</Label>
+                <Label className="col-form-label">
+                    AI Version <OptionalLabel />
+                </Label>
                 <FormSelect
                     control={control}
                     name="googleSettings.aiVersion"
@@ -175,6 +182,7 @@ function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                         ] satisfies SelectOption<FormData["googleSettings"]["aiVersion"]>[]
                     }
                     isDisabled={isUsedByAnyTask}
+                    isClearable
                 />
             </div>
             <div className="mb-2">
@@ -195,11 +203,15 @@ function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) 
     return (
         <>
             <div className="mb-2">
-                <Label>API Key</Label>
+                <Label>
+                    API Key <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="huggingFaceSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
-                <Label>Endpoint</Label>
+                <Label>
+                    Endpoint <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="huggingFaceSettings.endpoint" type="text" />
             </div>
             <div className="mb-2">
@@ -233,27 +245,33 @@ function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     return (
         <>
             <div className="mb-2">
-                <FormSwitch
+                <Label>
+                    Case Sensitive <OptionalLabel />
+                </Label>
+                <FormSelect
                     control={control}
                     name="onnxSettings.caseSensitive"
                     disabled={isUsedByAnyTask}
-                    color="primary"
-                >
-                    Case Sensitive
-                </FormSwitch>
+                    options={booleanSelectOptions}
+                    isClearable
+                />
             </div>
             <div className="mb-2">
-                <FormSwitch
+                <Label>
+                    Normalize Embeddings <OptionalLabel />
+                </Label>
+                <FormSelect
                     control={control}
                     name="onnxSettings.normalizeEmbeddings"
                     disabled={isUsedByAnyTask}
-                    color="primary"
-                >
-                    Normalize Embeddings
-                </FormSwitch>
+                    options={booleanSelectOptions}
+                    isClearable
+                />
             </div>
             <div className="mb-2">
-                <Label>Maximum Tokens</Label>
+                <Label>
+                    Maximum Tokens <OptionalLabel />
+                </Label>
                 <FormInput
                     control={control}
                     name="onnxSettings.maximumTokens"
@@ -262,23 +280,33 @@ function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                 />
             </div>
             <div className="mb-2">
-                <Label>CLS Token</Label>
+                <Label>
+                    CLS Token <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="onnxSettings.clsToken" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
-                <Label>Pad Token</Label>
+                <Label>
+                    Pad Token <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="onnxSettings.padToken" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
-                <Label>SEP Token</Label>
+                <Label>
+                    SEP Token <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="onnxSettings.sepToken" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
-                <Label>Unknown Token</Label>
+                <Label>
+                    Unknown Token <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="onnxSettings.unknownToken" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
-                <Label>Pooling Mode</Label>
+                <Label>
+                    Pooling Mode <OptionalLabel />
+                </Label>
                 <FormSelect
                     control={control}
                     name="onnxSettings.poolingMode"
@@ -290,10 +318,13 @@ function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                         ] satisfies SelectOption<FormData["onnxSettings"]["poolingMode"]>[]
                     }
                     isDisabled={isUsedByAnyTask}
+                    isClearable
                 />
             </div>
             <div className="mb-2">
-                <Label>Unicode Normalization</Label>
+                <Label>
+                    Unicode Normalization <OptionalLabel />
+                </Label>
                 <FormSelect
                     control={control}
                     name="onnxSettings.unicodeNormalization"
@@ -306,6 +337,7 @@ function OnnxSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                         ] satisfies SelectOption<FormData["onnxSettings"]["unicodeNormalization"]>[]
                     }
                     isDisabled={isUsedByAnyTask}
+                    isClearable
                 />
             </div>
         </>
@@ -322,7 +354,9 @@ function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                 <FormInput control={control} name="openAiSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
-                <Label>Endpoint</Label>
+                <Label>
+                    Endpoint <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="openAiSettings.endpoint" type="text" />
             </div>
             <div className="mb-2">
@@ -330,16 +364,25 @@ function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
                 <FormInput control={control} name="openAiSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
-                <Label>Organization ID</Label>
+                <Label>
+                    Organization ID <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="openAiSettings.organizationId" type="text" />
             </div>
             <div className="mb-2">
-                <Label>Project ID</Label>
+                <Label>
+                    Project ID <OptionalLabel />
+                </Label>
                 <FormInput control={control} name="openAiSettings.projectId" type="text" />
             </div>
         </>
     );
 }
+
+const booleanSelectOptions: SelectOption<boolean>[] = [
+    { value: true, label: "Yes" },
+    { value: false, label: "No" },
+];
 
 const schema = yupObjectSchema<FormData>({
     name: yup.string().nullable().required(),
@@ -362,13 +405,7 @@ const schema = yupObjectSchema<FormData>({
                 is: "azureOpenAiSettings",
                 then: (schema) => schema.trim().required(),
             }),
-        endpoint: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "azureOpenAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
+        endpoint: yup.string().nullable(),
         model: yup
             .string()
             .nullable()
@@ -448,13 +485,7 @@ const schema = yupObjectSchema<FormData>({
                 is: "openAiSettings",
                 then: (schema) => schema.trim().required(),
             }),
-        endpoint: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "openAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
+        endpoint: yup.string().nullable(),
         model: yup
             .string()
             .nullable()
