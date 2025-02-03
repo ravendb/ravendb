@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.PerSubscriptionInfo));
                     writer.WriteStartArray();
-                    if (state.PerSubscriptionInfoExtended != null)
+                    if (state.PerSubscriptionInfo != null)
                     {
                         var first = true;
 
