@@ -22,7 +22,7 @@ export function RevisionsBinCleanerInfoHub() {
                     <br />
                     This view allows you to configure automatic deletion of{" "}
                     <strong>
-                        <code>Deleted Revisions</code>
+                        <code>&quot;Delete Revisions&quot;</code>
                     </strong>{" "}
                     that are stored in the{" "}
                     <a href={appUrl.forRevisionsBin(activeDatabaseName)} target="_blank">
@@ -37,7 +37,7 @@ export function RevisionsBinCleanerInfoHub() {
                             when the cleaner executes.
                         </li>
                         <li>
-                            <strong>Custom cleaner frequency</strong>:
+                            <strong>Cleaner frequency</strong>:
                             <br />
                             Defines how often the cleaner executes to remove revisions.
                         </li>
@@ -46,7 +46,7 @@ export function RevisionsBinCleanerInfoHub() {
                 <p>
                     <strong>Manual deletion</strong>:
                     <br />
-                    Manual deletion of individual &quot;Deleted Revisions&quot; can be performed from the{" "}
+                    Manual deletion of individual &quot;Delete Revisions&quot; can be performed from the{" "}
                     <a href={appUrl.forRevisionsBin(activeDatabaseName)} target="_blank">
                         Revisions Bin View
                     </a>
