@@ -176,7 +176,7 @@ export function FormSelect<
         shouldUnregister,
     });
 
-    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
+    const valueAccessor = rest.getOptionValue ?? ((option: any) => option?.value ?? null);
 
     const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
 
@@ -230,7 +230,7 @@ export function FormSelectCreatable<
 
     const [customOptions, setCustomOptions] = useState<OptionsOrGroups<Option, Group>>(rest.customOptions ?? []);
 
-    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
+    const valueAccessor = rest.getOptionValue ?? ((option: any) => option?.value ?? null);
     const optionCreator = rest.optionCreator ?? ((value: string) => ({ value, label: value }));
 
     const selectedOptions = getFormSelectedOptions<Option>(
