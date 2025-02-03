@@ -455,7 +455,7 @@ class appUrl {
         return "#databases/documents?" + collectionPart + appUrl.getEncodedDbPart(db);
     }
 
-    static forRevisionsBin(db: database): string {
+    static forRevisionsBin(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/documents/revisions/bin?" + databasePart;
     }

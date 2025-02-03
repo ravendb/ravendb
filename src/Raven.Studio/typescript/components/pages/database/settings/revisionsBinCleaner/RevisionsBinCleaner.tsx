@@ -149,7 +149,7 @@ export default function RevisionsBinCleaner() {
                                                     !formValues.isRevisionsBinCleanerEnabled
                                                 }
                                             >
-                                                Set custom refresh frequency
+                                                Set custom cleaner frequency
                                             </FormSwitch>
                                             <FormInput
                                                 name="refreshFrequencyInSec"
@@ -170,8 +170,7 @@ export default function RevisionsBinCleaner() {
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
-                        {/*TODO: Until Danielle adds the text, this component will remain disabled so as not to block the possibility of it being merged.*/}
-                        {false && <RevisionsBinCleanerInfoHub />}
+                        <RevisionsBinCleanerInfoHub />
                     </Col>
                 </Row>
             </Col>
