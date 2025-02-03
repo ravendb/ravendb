@@ -502,6 +502,7 @@ namespace FastTests
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter), "3");
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout), "3");
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout), "10");
+                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Backup.MaxNumberOfConcurrentBackups), "512");
 
                 if (options.CustomSettings != null)
                 {
