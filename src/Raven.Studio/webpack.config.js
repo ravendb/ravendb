@@ -283,10 +283,7 @@ module.exports = (env, args) => {
                 {
                     test: /\.tsx?$/,
                     use: {
-                        loader: 'ts-loader',
-                        options: {
-                            transpileOnly: true,
-                        },
+                        loader: 'swc-loader',
                     },
                 },
                 {
