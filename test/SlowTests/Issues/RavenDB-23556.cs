@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
@@ -839,6 +840,54 @@ public class RavenDB_23556 : RavenTestBase
                 
                 Assert.Null(documentEmbeddings1);
                 Assert.NotNull(documentEmbeddings2);
+            }
+        }
+    }
+
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestDocumentExpiration()
+    {
+        const string connectionStringName = "connection string name";
+
+        var dto = new Dto { Name = "Name1" };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+
+            using (var session = store.OpenSession())
+            {
+                var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var documentEmbeddings = session.Load<object>(documentEmbeddingsId);
+                
+                var metadata = session.Advanced.GetMetadataFor(documentEmbeddings);
+
+                var expiration = DateTime.Parse((string)metadata[Constants.Documents.Metadata.Expires]);
+                
+                Assert.True(expiration > DateTime.UtcNow.AddMonths(2).AddDays(27));
             }
         }
     }

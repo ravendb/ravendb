@@ -255,7 +255,9 @@ namespace Raven.Server.Documents.Handlers
                         [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
                         {
                             // todo cache
-                            [Constants.Documents.Metadata.Collection] = AiHelper.GetDocumentEmbeddingsCollectionName(item.DocumentCollectionName)
+                            [Constants.Documents.Metadata.Collection] = AiHelper.GetDocumentEmbeddingsCollectionName(item.DocumentCollectionName),
+                            // todo cache baseline datetime?
+                            [Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMonths(3)
                         }
                     };
                 }
