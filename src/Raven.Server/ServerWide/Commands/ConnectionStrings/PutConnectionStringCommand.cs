@@ -164,48 +164,73 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            try
+            {
+                ConnectionString.Identifier ??= ConnectionString.GenerateIdentifier();
+            }
+            catch (Exception e)
+            {
+                throw new RachisApplyException("Failed to generate AI connection string identifier", e);
+            }
+
+            InClusterValidation(record);
+
             record.AiConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
 
-        public static void OnBeforeCommandExecuteValidation(AiConnectionString connectionString, DatabaseRecord databaseRecord)
+        private void InClusterValidation(DatabaseRecord databaseRecord)
         {
-            if (databaseRecord == null)
-                throw new InvalidOperationException("Failed to get database record, but it is required for further validation");
+            try
+            {
+                if (databaseRecord == null)
+                    throw new RachisApplyException("Failed to get database record, but it is required for further validation");
 
-            var isUpdate = databaseRecord.AiConnectionStrings.TryGetValue(connectionString.Name, out var oldAiConnectionString) && oldAiConnectionString != null;
-            var identifierConflicts = databaseRecord?.AiConnectionStrings
-                .Where(x => x.Value != null && x.Value.Identifier == connectionString.Identifier && x.Key != connectionString.Name)
-                .ToArray();
+                if (string.IsNullOrWhiteSpace(ConnectionString.Identifier))
+                    throw new RachisApplyException("Connection string identifier must be set, but it is not");
 
-            if (identifierConflicts.Length > 0)
-                throw new InvalidOperationException(
-                    $"Can't {(isUpdate ? "update" : "create")} connection string: '{connectionString.Name}'. " +
-                    $"The identifier '{connectionString.Identifier}' is already used by " +
-                    $"connection string{(identifierConflicts.Length > 1 ? "s" : "")} " +
-                    $"'{string.Join("', '", identifierConflicts.Select(x => x.Key))}'");
+                var isUpdate = databaseRecord.AiConnectionStrings.TryGetValue(ConnectionString.Name, out var oldAiConnectionString) && oldAiConnectionString != null;
+                var identifierConflicts = databaseRecord?.AiConnectionStrings
+                    .Where(x => x.Value != null && x.Value.Identifier == ConnectionString.Identifier && x.Key != ConnectionString.Name)
+                    .ToArray();
 
-            var etlsUsingConnection = databaseRecord.AiEtls.Where(x => x.ConnectionStringName == connectionString.Name).ToArray();
-            var isConnectionStringInUse = etlsUsingConnection.Length > 0;
+                if (identifierConflicts.Length > 0)
+                    throw new RachisApplyException(
+                        $"Can't {(isUpdate ? "update" : "create")} connection string: '{ConnectionString.Name}'. " +
+                        $"The identifier '{ConnectionString.Identifier}' is already used by " +
+                        $"connection string{(identifierConflicts.Length > 1 ? "s" : "")} " +
+                        $"'{string.Join("', '", identifierConflicts.Select(x => x.Key))}'");
 
-            if (isUpdate == false || isConnectionStringInUse == false)
-                return;
+                var etlsUsingConnection = databaseRecord.AiEtls.Where(x => x.ConnectionStringName == ConnectionString.Name).ToArray();
+                var isConnectionStringInUse = etlsUsingConnection.Length > 0;
 
-            var differences = connectionString.Compare(oldAiConnectionString);
-            if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration) == false)
-                return;
+                if (isUpdate == false || isConnectionStringInUse == false)
+                    return;
 
-            var etlNames = string.Join("', '", etlsUsingConnection.Select(x => x.Name));
-            throw new InvalidOperationException(
-                $"Cannot update connection string '{connectionString.Name}' because it contains changes that would affect the structure or creation process of embeddings. " +
-                $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
-                $"To proceed with these changes:{Environment.NewLine}" +
-                $"1. Delete the existing ETL task{(etlsUsingConnection.Length == 1 ? "" : "s")}{Environment.NewLine}" +
-                $"2. {(etlsUsingConnection.Length == 1 ?
-                    "After deleting the ETL task, you can either update this connection string or create a new one with your desired settings" :
-                    $"Create a new connection string with your desired settings, as this connection string is used by ETL tasks: '{etlNames}'")}{Environment.NewLine}" +
-                $"3. Create a new ETL task using the {(etlsUsingConnection.Length == 1 ? "updated or new" : "new")} connection string{Environment.NewLine}" +
-                "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
-                "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
+                var differences = ConnectionString.Compare(oldAiConnectionString);
+                if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration) == false)
+                    return;
+
+                var etlNames = string.Join("', '", etlsUsingConnection.Select(x => x.Name));
+                throw new RachisApplyException(
+                    $"Cannot update connection string '{ConnectionString.Name}' because it contains changes that would affect the structure or creation process of embeddings. " +
+                    $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
+                    $"To proceed with these changes:{Environment.NewLine}" +
+                    $"1. Delete the existing ETL task{(etlsUsingConnection.Length == 1 ? "" : "s")}{Environment.NewLine}" +
+                    $"2. {(etlsUsingConnection.Length == 1 ?
+                        "After deleting the ETL task, you can either update this connection string or create a new one with your desired settings" :
+                        $"Create a new connection string with your desired settings, as this connection string is used by ETL tasks: '{etlNames}'")}{Environment.NewLine}" +
+                    $"3. Create a new ETL task using the {(etlsUsingConnection.Length == 1 ? "updated or new" : "new")} connection string{Environment.NewLine}" +
+                    "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
+                    "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
+            }
+            catch (Exception e) when (ClusterStateMachine.ExpectedException(e))
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw new RachisApplyException("Failed to validate AI connection string", e);
+            }
         }
     }
 }

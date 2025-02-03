@@ -1,4 +1,5 @@
 ﻿#pragma warning disable SKEXP0070
+using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
@@ -26,10 +27,13 @@ public sealed class GoogleSettings : AbstractAiSettings
     /// <summary>The version of the Google AI.</summary>
     public GoogleAIVersion? AiVersion { get; set; }
 
-    public override bool HasSettings()
+    public override void ValidateMandatoryFields(ref List<string> errors)
     {
-        return string.IsNullOrWhiteSpace(Model) == false &&
-               string.IsNullOrWhiteSpace(ApiKey) == false;
+        if (string.IsNullOrWhiteSpace(Model))
+            errors.Add($"Value of `{nameof(Model)}` field cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(ApiKey))
+            errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)

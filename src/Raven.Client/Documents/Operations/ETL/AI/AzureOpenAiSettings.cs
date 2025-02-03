@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
@@ -24,10 +25,12 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
     /// <remarks>Only supported in "text-embedding-3" and later models.</remarks>
     public int? Dimensions { get; set; }
 
-    public override bool HasSettings()
+    public override void ValidateMandatoryFields(ref List<string> errors)
     {
-        return base.HasSettings() &&
-               string.IsNullOrWhiteSpace(DeploymentName) == false;
+        base.ValidateMandatoryFields(ref errors);
+
+        if (string.IsNullOrWhiteSpace(DeploymentName))
+            errors.Add($"Value for `{nameof(DeploymentName)}` field cannot be empty.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)

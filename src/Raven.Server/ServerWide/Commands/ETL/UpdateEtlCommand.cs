@@ -176,44 +176,54 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            InClusterValidation(record);
+
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.AiEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddAiEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
 
-        public static void OnBeforeCommandExecuteValidation(List<string> errors, AiEtlConfiguration configuration, RawDatabaseRecord record)
+        private void InClusterValidation(DatabaseRecord record)
         {
-            if (record == null)
+            try
             {
-                errors.Add("Failed to get database record, but it is required for further validation");
-                return;
+                if (record == null)
+                    throw new RachisApplyException("Failed to get database record, but it is required for further validation");
+
+                var oldConfig = record.AiEtls.FirstOrDefault(x => x.Name == Configuration.Name);
+                if (oldConfig == null)
+                    return;
+
+                if (oldConfig.AiConnectorType != Configuration.AiConnectorType)
+                {
+                    throw new RachisApplyException(
+                        $"Cannot update AI ETL task '{Configuration.Name}' because you are trying to change its connector type from '{oldConfig.AiConnectorType}' to '{Configuration.AiConnectorType}'. " +
+                        $"Changing the AI connector type requires recreating the embeddings to maintain data consistency. " +
+                        $"To proceed with these changes:{Environment.NewLine}" +
+                        $"1. Delete the existing ETL task{Environment.NewLine}" +
+                        $"2. Create a new ETL task with your desired connector type{Environment.NewLine}" +
+                        "This will ensure all documents are processed with consistent settings and maintain data integrity.");
+                }
+
+                var differences = oldConfig.Connection.Compare(Configuration.Connection);
+                if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration))
+                {
+                    throw new RachisApplyException(
+                        $"Cannot update AI ETL task '{Configuration.Name}' because it contains critical changes in the connection settings that would affect the structure or creation process of embeddings. " +
+                        $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
+                        $"To proceed with these changes:{Environment.NewLine}" +
+                        $"1. Delete the existing ETL task{Environment.NewLine}" +
+                        $"2. Create a new ETL task with your desired settings{Environment.NewLine}" +
+                        "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
+                        "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
+                }
             }
-
-            var oldConfig = record.AiEtls.FirstOrDefault(x => x.Name == configuration.Name);
-            if (oldConfig == null)
-                return;
-
-            if (oldConfig.AiConnectorType != configuration.AiConnectorType)
+            catch (Exception e) when (ClusterStateMachine.ExpectedException(e))
             {
-                errors.Add(
-                    $"Cannot update AI ETL task '{configuration.Name}' because you are trying to change its connector type from '{oldConfig.AiConnectorType}' to '{configuration.AiConnectorType}'. " +
-                    $"Changing the AI connector type requires recreating the embeddings to maintain data consistency. " +
-                    $"To proceed with these changes:{Environment.NewLine}" +
-                    $"1. Delete the existing ETL task{Environment.NewLine}" +
-                    $"2. Create a new ETL task with your desired connector type{Environment.NewLine}" +
-                    "This will ensure all documents are processed with consistent settings and maintain data integrity.");
+                throw;
             }
-
-            var differences = oldConfig.Connection.Compare(configuration.Connection);
-            if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration))
+            catch (Exception e)
             {
-                errors.Add(
-                    $"Cannot update AI ETL task '{configuration.Name}' because it contains critical changes in the connection settings that would affect the structure or creation process of embeddings. " +
-                    $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
-                    $"To proceed with these changes:{Environment.NewLine}" +
-                    $"1. Delete the existing ETL task{Environment.NewLine}" +
-                    $"2. Create a new ETL task with your desired settings{Environment.NewLine}" +
-                    "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
-                    "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
+                throw new RachisApplyException("Failed to validate AI ETL configuration", e);
             }
         }
     }

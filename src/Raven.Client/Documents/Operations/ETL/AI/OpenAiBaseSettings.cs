@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
@@ -31,11 +32,16 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
     /// </summary>
     public string Model { get; set; }
 
-    public override bool HasSettings()
+    public override void ValidateMandatoryFields(ref List<string> errors)
     {
-        return string.IsNullOrWhiteSpace(ApiKey) == false &&
-               string.IsNullOrWhiteSpace(Endpoint) == false &&
-               string.IsNullOrWhiteSpace(Model) == false;
+        if (string.IsNullOrWhiteSpace(ApiKey))
+            errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(Endpoint))
+            errors.Add($"Value of `{nameof(Endpoint)}` field cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(Model))
+            errors.Add($"Value of `{nameof(Model)}` field cannot be empty");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)

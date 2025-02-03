@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
@@ -2427,7 +2428,6 @@ namespace Raven.Server.ServerWide
                         if (ValidateConnectionString(rawRecord, aiEtl.ConnectionStringName, aiEtl.EtlType) == false)
                             aiEtlErr.Add($"Could not find connection string named '{aiEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
-                        UpdateAiEtlCommand.OnBeforeCommandExecuteValidation(aiEtlErr, aiEtl, rawRecord);
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiEtlErr);
 
                         command = new UpdateAiEtlCommand(id, aiEtl, databaseName, raftRequestId);
@@ -2506,15 +2506,7 @@ namespace Raven.Server.ServerWide
                         raftRequestId);
                     break;
                 case ConnectionStringType.Ai:
-                    var aiConnectionString = JsonDeserializationCluster.AiConnectionString(connectionString);
-
-                    DatabaseRecord databaseRecord;
-                    using (context.OpenReadTransaction())
-                        databaseRecord = Cluster.ReadDatabase(context, databaseName);
-
-                    PutAiConnectionStringCommand.OnBeforeCommandExecuteValidation(aiConnectionString, databaseRecord);
-
-                    command = new PutAiConnectionStringCommand(aiConnectionString, databaseName, raftRequestId);
+                    command = new PutAiConnectionStringCommand(JsonDeserializationCluster.AiConnectionString(connectionString), databaseName, raftRequestId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");

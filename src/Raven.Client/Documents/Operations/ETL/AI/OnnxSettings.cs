@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
@@ -58,7 +59,10 @@ public sealed class OnnxSettings : AbstractAiSettings
     /// <remarks>Normalized embeddings may be compared more efficiently, such as by using a dot product rather than cosine similarity.</remarks>
     public bool? NormalizeEmbeddings { get; set; }
 
-    public override bool HasSettings() => true;
+    public override void ValidateMandatoryFields(ref List<string> errors)
+    {
+        // all settings are optional
+    }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {

@@ -8,18 +8,7 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 
 public sealed class AiConnectionString : ConnectionString
 {
-    private string _identifier;
-
-    /// <summary>
-    /// A unique identifier used in document paths.
-    /// Only English letters, numbers and hyphens are allowed.
-    /// If not specified, will be auto-generated from the connection name.
-    /// </summary>
-    public string Identifier
-    {
-        get => _identifier ?? GenerateIdentifier(Name);
-        set => _identifier = GenerateIdentifier(value);
-    }
+    public string Identifier { get; set; }
 
     public OpenAiSettings OpenAiSettings { get; set; }
 
@@ -48,13 +37,7 @@ public sealed class AiConnectionString : ConnectionString
         }.Where(s => s != null).ToList();
 
         foreach (var setting in settings)
-        {
-            if (setting.HasSettings() == false)
-                errors.Add($"{setting.GetType().Name} has invalid configuration");
-        }
-
-        if (string.IsNullOrEmpty(Identifier))
-            errors.Add("Could not generate valid identifier from name. Please specify identifier explicitly.");
+            setting.ValidateMandatoryFields(ref errors);
 
         switch (settings.Count)
         {
@@ -68,7 +51,9 @@ public sealed class AiConnectionString : ConnectionString
         }
     }
 
-    private static string GenerateIdentifier(string input)
+    internal string GenerateIdentifier() => GenerateIdentifier(Name);
+
+    internal string GenerateIdentifier(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
             return null;

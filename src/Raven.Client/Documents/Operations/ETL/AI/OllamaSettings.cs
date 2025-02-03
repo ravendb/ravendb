@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
@@ -28,13 +29,13 @@ public sealed class OllamaSettings : AbstractAiSettings
     /// </summary>
     public string Model { get; set; }
 
-    /// <summary>
-    /// Returns a value indicating whether the settings are valid.
-    /// </summary>
-    public override bool HasSettings()
+    public override void ValidateMandatoryFields(ref List<string> errors)
     {
-        return string.IsNullOrWhiteSpace(Uri) == false &&
-               string.IsNullOrWhiteSpace(Model) == false;
+        if (string.IsNullOrWhiteSpace(Uri))
+            errors.Add($"Value of `{nameof(Uri)}` field cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(Model))
+            errors.Add($"Value of `{nameof(Model)}` field cannot be empty");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
