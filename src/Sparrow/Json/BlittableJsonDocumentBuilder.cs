@@ -95,7 +95,7 @@ namespace Sparrow.Json
 
             _debugTag = null;
             _mode = UsageMode.None;
-            _readInternalFunc = GetReadInternalFunction(_reader, _mode);
+            _readInternalFunc = null;
 
             ClearState();
 
