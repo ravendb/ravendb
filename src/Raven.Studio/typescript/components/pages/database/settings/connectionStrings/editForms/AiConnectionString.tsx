@@ -1,4 +1,4 @@
-﻿import { Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+﻿import { Button, Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import { FormProvider, SubmitHandler, useForm, useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
@@ -31,12 +31,16 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
             ),
     });
 
-    const { control, handleSubmit } = form;
+    const { control, handleSubmit, setValue } = form;
 
     // TODO kalczur
     // const { forCurrentDatabase } = useAppUrls();
 
     const formValues = useWatch({ control });
+
+    const handleGenerateIdentifier = () => {
+        setValue("identifier", getGeneratedIdentifier(formValues.name));
+    };
 
     const isUsedByAnyTask = !!initialConnection.usedByTasks?.length;
 
@@ -59,6 +63,11 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         placeholder="Enter a name for the connection string"
                         disabled={!isForNewConnection}
                         autoComplete="off"
+                        onBlur={() => {
+                            if (!formValues.identifier) {
+                                handleGenerateIdentifier();
+                            }
+                        }}
                     />
                 </div>
                 <div className="mb-2">
@@ -78,6 +87,12 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         type="text"
                         placeholder="Enter identifier for the connection string"
                         disabled={isUsedByAnyTask}
+                        addon={
+                            <Button color="link" className="text-reset" onClick={handleGenerateIdentifier}>
+                                <Icon icon="refresh" />
+                                Generate from name
+                            </Button>
+                        }
                     />
                 </div>
                 <div className="mb-2">
@@ -113,8 +128,9 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
 
                 {isUsedByAnyTask && (
                     <RichAlert variant="info">
-                        Some options cannot be edited because this connection string is in use by a task. To modify
-                        them, please create a new connection string.
+                        Some options cannot be edited because this connection string is in use by a task.
+                        <br />
+                        To modify them, please create a new connection string.
                     </RichAlert>
                 )}
 
@@ -383,6 +399,41 @@ const booleanSelectOptions: SelectOption<boolean>[] = [
     { value: true, label: "Yes" },
     { value: false, label: "No" },
 ];
+
+// copied from AiConnectionString.cs
+function getGeneratedIdentifier(name: string): string {
+    if (!name || name.trim().length === 0) {
+        return null;
+    }
+
+    let result = "";
+    let lastWasHyphen = false;
+
+    // Normalize to FormD to separate letters from their diacritics
+    for (const c of name.normalize("NFD")) {
+        // Check if character is a-z, 0-9
+        if ((c >= "a" && c <= "z") || (c >= "0" && c <= "9")) {
+            result += c;
+            lastWasHyphen = false;
+        }
+        // Check if character is A-Z
+        else if (c >= "A" && c <= "Z") {
+            result += c.toLowerCase();
+            lastWasHyphen = false;
+        }
+        // Add hyphen for any other character if we haven't just added one
+        else if (!lastWasHyphen && result.length > 0) {
+            result += "-";
+            lastWasHyphen = true;
+        }
+    }
+
+    // Trim any trailing hyphens
+    result = result.replace(/-+$/, "");
+
+    // Return default identifier if empty
+    return result.length === 0 ? "AiConnectionStringIdentifier" : result;
+}
 
 const schema = yupObjectSchema<FormData>({
     name: yup.string().nullable().required(),
