@@ -97,7 +97,8 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
                     break;
                 }
                 default:
-                    throw new ArgumentException($"Unsupported field value type: {fieldValue.GetType()}");
+                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = fieldValue.ToString() });
+                    break;
             }
         }
         

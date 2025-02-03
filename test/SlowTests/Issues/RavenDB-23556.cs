@@ -339,8 +339,7 @@ public class RavenDB_23556 : RavenTestBase
             }
         }
     }
-
-    /*
+    
     [RavenFact(RavenTestCategory.Etl)]
     public void TestHandlingOfNonStringValues()
     {
@@ -356,7 +355,6 @@ public class RavenDB_23556 : RavenTestBase
                 session.SaveChanges();
             }
             
-            // todo handle lack of transforms
             var configuration = new AiEtlConfiguration()
             {
                 Name = "someETLConfigurationName",
@@ -374,9 +372,35 @@ public class RavenDB_23556 : RavenTestBase
             Etl.AddEtl(store, configuration, connectionString);
             
             etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            WaitForUserToContinueTheTest(store);
+
+            using (var session = store.OpenSession())
+            {
+                var valueHash = AiHelper.CalculateValueHash(dto.Age.ToString());
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                var expectedAttachmentName = (string)((dynamic)valueEmbeddingsDocument)[dto.Age.ToString()];
+                
+                Assert.NotNull(valueEmbeddingsDocument);
+                
+                var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+                
+                var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var documentEmbeddings = session.Load<object>(documentEmbeddingsId);
+                
+                Assert.NotNull(documentEmbeddings);
+                
+                attachmentNames = session.Advanced.Attachments.GetNames(documentEmbeddings);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+            }
         }
     }
-    */
 
     [RavenFact(RavenTestCategory.Etl)]
     public void TestIfFieldsToIncludeAreRespected()
