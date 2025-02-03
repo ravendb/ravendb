@@ -100,6 +100,7 @@ namespace FastTests
         {
             IgnoreProcessorAffinityChanges(ignore: true);
             LicenseManager.IgnoreCompressionLicenseLimit = true;
+            BackupUtils.IgnoreHealthChecksBeforeBackup = true;
 
             //RequestExecutor.HttpClientFactory = RavenServerHttpClientFactory.Instance;
             LicenseManager.AddLicenseStatusToLicenseLimitsException = true;

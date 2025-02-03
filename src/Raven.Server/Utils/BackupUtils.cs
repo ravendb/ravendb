@@ -33,6 +33,8 @@ namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
+    internal static bool IgnoreHealthChecksBeforeBackup = false;
+
     internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
     {
         return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
@@ -358,6 +360,9 @@ internal static class BackupUtils
 
     internal static void CheckServerHealthBeforeBackup(ServerStore serverStore, string name)
     {
+        if (IgnoreHealthChecksBeforeBackup)
+            return;
+
         if (serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
         {
             throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.")
