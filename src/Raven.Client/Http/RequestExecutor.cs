@@ -322,7 +322,7 @@ namespace Raven.Client.Http
 
             ClientConfigurationChanged += (_, args) =>
             {
-                if (args.Configuration.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                if (args.Configuration?.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
                     _nodeSelector?.ScheduleSpeedTest();
                 else
                     _nodeSelector?.DisableFastestNodeReadBalance();
