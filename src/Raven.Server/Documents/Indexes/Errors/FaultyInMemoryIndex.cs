@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         }
 
         private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBaseServerSide definition, SearchEngineType searchEngineType)
-            : base(IndexType.Faulty, IndexSourceType.None, definition)
+            : base(IndexType.Faulty, IndexSourceType.None, definition, compiled: null)
         {
             _e = e;
             _createdAt = DateTime.UtcNow;
