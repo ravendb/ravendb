@@ -208,7 +208,7 @@ namespace FastTests.Server.Documents.Indexing
 
     internal class TestIndex : Index
     {
-        public TestIndex(DocumentDatabase database, IndexingConfiguration configuration) : base(IndexType.None, IndexSourceType.None, new TestIndexDefinitions())
+        public TestIndex(DocumentDatabase database, IndexingConfiguration configuration) : base(IndexType.None, IndexSourceType.None, new TestIndexDefinitions(), compiled: null)
         {
             DocumentDatabase = database;
             Configuration = configuration;

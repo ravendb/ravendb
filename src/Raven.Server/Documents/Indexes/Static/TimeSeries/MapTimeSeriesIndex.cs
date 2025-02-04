@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private HandleCompareExchangeTimeSeriesReferences _handleCompareExchangeReferences;
 
         private MapTimeSeriesIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
-            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
+            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition, compiled)
         {
             _compiled = compiled;
 
@@ -44,12 +44,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             foreach (var collection in _compiled.ReferencedCollections)
             {
                 foreach (var referencedCollection in collection.Value)
-                {
                     _referencedCollections.Add(referencedCollection.Name);
-
-                    if (referencedCollection.Name == Constants.Documents.Collections.AllDocumentsCollection)
-                        HandleAllDocs = true;
-                }
             }
         }
 
@@ -164,9 +159,6 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             if (_referencedCollections == null)
                 return false;
-
-            if (HandleAllDocs)
-                return true;
 
             return _referencedCollections.Overlaps(collections);
         }

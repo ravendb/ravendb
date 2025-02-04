@@ -30,12 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             foreach (var collection in _compiled.ReferencedCollections)
             {
                 foreach (var referencedCollection in collection.Value)
-                {
                     _referencedCollections.Add(referencedCollection.Name);
-
-                    if (referencedCollection.Name == Constants.Documents.Collections.AllDocumentsCollection)
-                        HandleAllDocs = true;
-                }
             }
         }
 

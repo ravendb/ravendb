@@ -89,8 +89,8 @@ namespace Raven.Server.Documents.Indexes
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
-        protected Index(IndexType type, IndexSourceType sourceType, TIndexDefinition definition)
-            : base(type, sourceType, definition)
+        protected Index(IndexType type, IndexSourceType sourceType, TIndexDefinition definition, AbstractStaticIndexBase compiled)
+            : base(type, sourceType, definition, compiled)
         {
         }
     }
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Indexes
         private string _lastPendingStatus;
         public MultipleUseFlag ForceReplace = new MultipleUseFlag();
 
-        protected bool HandleAllDocs;
+        protected readonly bool HandleAllDocs;
 
         protected internal MeterMetric MapsPerSec;
         protected internal MeterMetric ReducesPerSec;
@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _newComplexFieldsToReport = false;
         public HashSet<IndexField> ComplexFieldsNotIndexedByCorax { get; private set; }
 
-        protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
+        protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition, AbstractStaticIndexBase compiled)
         {
             Type = type;
             SourceType = sourceType;
@@ -290,7 +290,20 @@ namespace Raven.Server.Documents.Indexes
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
 
             if (Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
+            {
                 HandleAllDocs = true;
+            }
+            else if (compiled != null)
+            {
+                foreach (var collection in compiled.ReferencedCollections)
+                {
+                    foreach (var referencedCollection in collection.Value)
+                    {
+                        if (referencedCollection.Name == Constants.Documents.Collections.AllDocumentsCollection)
+                            HandleAllDocs = true;
+                    }
+                }
+            }
 
             _queryBuilderFactories = new QueryBuilderFactories
             {
@@ -4443,6 +4456,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (Collections.Count == 0)
                 return false;
+
+            if (HandleAllDocs)
+                return true;
 
             return Collections.Overlaps(collections);
         }

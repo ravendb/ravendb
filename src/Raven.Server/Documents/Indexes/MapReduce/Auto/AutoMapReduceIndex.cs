@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         private readonly MapOutput _output;
 
         private AutoMapReduceIndex(AutoMapReduceIndexDefinition definition)
-            : base(IndexType.AutoMapReduce, IndexSourceType.Documents, definition)
+            : base(IndexType.AutoMapReduce, IndexSourceType.Documents, definition, compiled: null)
         {
             _isFanout = definition.GroupByFields.Any(x => x.Value.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues);
             _output = new MapOutput(_isFanout);
