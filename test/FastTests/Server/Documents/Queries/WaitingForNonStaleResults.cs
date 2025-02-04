@@ -3,8 +3,12 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -100,5 +104,87 @@ namespace FastTests.Server.Documents.Queries
                 }
             }
         }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task CanWaitForNonStaleResultsForAllDocsIndex()
+        {
+            const string companyName1 = "Hibernating Rhinos";
+            const string companyName2 = "RavenDB";
+
+            using (var store = GetDocumentStore())
+            {
+                var index = new AllDocsMapIndex();
+                await index.ExecuteAsync(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
+                    await session.StoreAsync(new Company { Name = companyName1 });
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var count = await session.Query<AllDocsMapIndex.Result, AllDocsMapIndex>().CountAsync();
+                    Assert.Equal(1, count);
+                }
+
+                await store.Maintenance.SendAsync(new DisableIndexOperation(index.IndexName));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(1), throwOnTimeout: true, indexes: [index.IndexName]);
+
+                    var list = await session.Query<AllDocsMapIndex.Result, AllDocsMapIndex>().ToListAsync();
+                    foreach (var company in list)
+                    {
+                        company.Name = companyName2;
+                    }
+
+                    var error = await Assert.ThrowsAsync<RavenTimeoutException>(async() => await session.SaveChangesAsync());
+                    Assert.Contains(index.IndexName, error.Message);
+                }
+
+                await store.Maintenance.SendAsync(new EnableIndexOperation(index.IndexName));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(15));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var count = await session.Query<AllDocsMapIndex.Result, AllDocsMapIndex>()
+                        .Where(x => x.Name == companyName2).CountAsync();
+
+                    Assert.Equal(1, count);
+                }
+            }
+        }
+
+        private class AllDocsMapIndex : AbstractIndexCreationTask<object>
+        {
+            public class Result
+            {
+                public string Name { get; set; }
+            }
+
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                var index = new IndexDefinition
+                {
+                    Name = IndexName,
+
+                    Maps =
+                    {
+                        @"
+                        from doc in docs
+                        select new 
+                        {
+                            Name = doc.Name
+                        }"
+                    }
+                };
+
+                return index;
+            }
+        }
+
     }
 }
