@@ -18,7 +18,7 @@ export default function AllRevisionsAboutView() {
                 heading="About this view"
             >
                 <p>
-                    This view displays all revisions for every document in the database.
+                    This view displays ALL revisions for every document in the database.
                     <br />
                     You can filter the revisions by their <strong>Collection</strong> or <strong>Type</strong>:
                     <p className="mt-3">
@@ -37,13 +37,24 @@ export default function AllRevisionsAboutView() {
                         <ul>
                             <li>
                                 A &quot;Delete Revision&quot; is created for a document when the document is deleted.
+                                These revisions are also listed in the Revisions Bin View.
                             </li>
                             <li>
-                                These revisions are also listed in the{" "}
-                                <a href={appUrl.forRevisionsBin(activeDatabaseName)} target="_blank">
-                                    Revisions Bin
-                                </a>{" "}
-                                view and can only be deleted from there.
+                                &quot;Delete revisions&quot; can be deleted from:
+                                <ul className="no-padding-left">
+                                    <li>
+                                        The{" "}
+                                        <a href={appUrl.forRevisionsBin(activeDatabaseName)} target="_blank">
+                                            Revisions Bin View
+                                        </a>{" "}
+                                    </li>
+                                    <li>
+                                        Or set automatic deletion using the{" "}
+                                        <a href={appUrl.forRevisionsBinCleaner(activeDatabaseName)} target="_blank">
+                                            Revisions Bin Cleaner
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         </ul>
                     </p>
