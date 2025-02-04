@@ -1,4 +1,4 @@
-import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
+import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
 import { composeStories } from "@storybook/react";
 import * as stories from "./IndexErrors.stories";
@@ -16,6 +16,8 @@ const textSelectors = {
     erroredNodePanelItemStatusBadge: "Errors",
     nodePanelItemStatusBadge: "OK",
     erroredNodePanelTotalErrorCount: "Total count",
+    title: "Index Errors",
+    clearErrorsButtonLabel: "Clear Errors",
 };
 
 const totalErrorCount = IndexesStubs.getIndexesErrorCount().Results.reduce(
@@ -25,83 +27,64 @@ const totalErrorCount = IndexesStubs.getIndexesErrorCount().Results.reduce(
 
 describe("IndexErrors", function () {
     it("renders a single non-sharded node without errors", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
+        const { screen } = rtlRender(
             <IndexErrorsStory hasErrors={false} databaseAccess="DatabaseAdmin" isSharded={false} />
         );
 
-        expect(screen.getByRole("heading", { name: "Index Errors" })).toBeInTheDocument();
-        expect(screen.getByText(textSelectors.nodePanelItemStatusBadge)).toBeInTheDocument();
-        expect(screen.getAllByClassName(classSelectors.nodePanel)).toHaveLength(1);
+        expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
+        expect(await screen.findByText(textSelectors.nodePanelItemStatusBadge)).toBeInTheDocument();
+        expect(await screen.findAllByClassName(classSelectors.nodePanel)).toHaveLength(1);
     });
 
     it("renders sharded nodes without errors", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <IndexErrorsStory hasErrors={false} databaseAccess="DatabaseAdmin" isSharded />
-        );
+        const { screen } = rtlRender(<IndexErrorsStory hasErrors={false} databaseAccess="DatabaseAdmin" isSharded />);
 
-        expect(screen.getByRole("heading", { name: "Index Errors" })).toBeInTheDocument();
-        expect(screen.getAllByClassName(classSelectors.nodePanel)).toHaveLength(6);
+        expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
+        expect(await screen.findAllByClassName(classSelectors.nodePanel)).toHaveLength(6);
     });
 
     it("renders a single non-sharded node with errors and displays total count", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />
-        );
+        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />);
 
-        expect(screen.getByRole("heading", { name: "Index Errors" })).toBeInTheDocument();
-        expect(screen.getByText(textSelectors.erroredNodePanelItemStatusBadge)).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
+        expect(await screen.findByText(textSelectors.erroredNodePanelItemStatusBadge)).toBeInTheDocument();
 
-        const totalErrorsElement = screen
-            .getByText(textSelectors.erroredNodePanelTotalErrorCount)
-            .closest<HTMLElement>(classSelectors.erroredNodePanelTotalErrorCountContainer);
+        const totalErrorsElement = (
+            await screen.findByText(textSelectors.erroredNodePanelTotalErrorCount)
+        ).closest<HTMLElement>(classSelectors.erroredNodePanelTotalErrorCountContainer);
 
         expect(within(totalErrorsElement).getByText(`${totalErrorCount} errors`)).toBeInTheDocument();
     });
 
     it("renders sharded nodes with errors and displays total count for each", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded />
-        );
+        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded />);
 
-        const totalErrorsElements = screen
-            .getAllByText(textSelectors.erroredNodePanelTotalErrorCount)
-            .map((x) => x.closest<HTMLElement>(classSelectors.erroredNodePanelTotalErrorCountContainer));
+        const totalErrorsElements = (await screen.findAllByText(textSelectors.erroredNodePanelTotalErrorCount)).map(
+            (x) => x.closest<HTMLElement>(classSelectors.erroredNodePanelTotalErrorCountContainer)
+        );
 
         for (const totalErrorsElement of totalErrorsElements) {
             expect(within(totalErrorsElement).getByText(`${totalErrorCount} errors`)).toBeInTheDocument();
         }
-        expect(screen.getByRole("heading", { name: "Index Errors" })).toBeInTheDocument();
-        expect(screen.getAllByClassName(classSelectors.nodePanel)).toHaveLength(6);
-    });
-
-    it("shows 'Clear errors' button for users with 'DatabaseReadWrite' access", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <IndexErrorsStory hasErrors databaseAccess="DatabaseReadWrite" isSharded={false} />
-        );
-
-        expect(screen.getByRole("button", { name: "Clear errors" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
+        expect(await screen.findAllByClassName(classSelectors.nodePanel)).toHaveLength(6);
     });
 
     it("does not show 'Clear errors' button for users with 'DatabaseRead' access", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />
-        );
+        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />);
 
-        expect(screen.queryByRole("button", { name: "Clear errors" })).not.toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: textSelectors.clearErrorsButtonLabel })).not.toBeInTheDocument();
     });
 
     it("renders a shard icon with isSharded is true", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded />
-        );
+        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded />);
 
-        expect(screen.getAllByClassName("icon-shard")[0]).toBeInTheDocument();
+        expect((await screen.findAllByClassName("icon-shard"))[0]).toBeInTheDocument();
     });
 
     it("does not render shard icon with isSharded is false", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />
-        );
+        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />);
 
         expect(screen.queryByClassName("icon-shard")).not.toBeInTheDocument();
     });

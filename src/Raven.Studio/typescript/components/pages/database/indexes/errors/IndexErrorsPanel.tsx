@@ -176,15 +176,21 @@ interface IndexErrorsPanelStatusProps {
     status: AsyncStateStatus;
 }
 function IndexErrorsPanelStatus({ isLoading, hasErrors, status }: IndexErrorsPanelStatusProps) {
-    return (
-        <>
-            {isLoading && (
-                <RichPanelStatus color="secondary" data-testid="loader">
-                    Loading
-                </RichPanelStatus>
-            )}
-            {!isLoading && hasErrors && <RichPanelStatus color="danger">Errors</RichPanelStatus>}
-            {!isLoading && !hasErrors && status === "success" && <RichPanelStatus color="success">OK</RichPanelStatus>}
-        </>
-    );
+    if (isLoading) {
+        return (
+            <RichPanelStatus color="secondary" data-testid="loader">
+                Loading
+            </RichPanelStatus>
+        );
+    }
+
+    if (hasErrors) {
+        return <RichPanelStatus color="danger">Errors</RichPanelStatus>;
+    }
+
+    if (status === "success") {
+        return <RichPanelStatus color="success">OK</RichPanelStatus>;
+    }
+
+    return null;
 }
