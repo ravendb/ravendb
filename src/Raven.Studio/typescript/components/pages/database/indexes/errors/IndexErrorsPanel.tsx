@@ -20,7 +20,7 @@ import { Table } from "@tanstack/react-table";
 import { useResizeObserver } from "hooks/useResizeObserver";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { UseAsyncReturn } from "react-async-hook";
+import { AsyncStateStatus, UseAsyncReturn } from "react-async-hook";
 
 export interface IndexErrorsPanelProps {
     errorItem: ErrorInfoItem;
@@ -92,17 +92,13 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
 
     return (
         <RichPanel className="flex-row with-status">
-            {isLoading && (
-                <RichPanelStatus color="secondary" data-testid="loader">
-                    Loading
-                </RichPanelStatus>
-            )}
-            {!isLoading && hasErrors && <RichPanelStatus color="danger">Errors</RichPanelStatus>}
-            {!isLoading && !hasErrors && asyncFetchErrorDetails.status === "success" && (
-                <RichPanelStatus color="success">OK</RichPanelStatus>
-            )}
+            <IndexErrorsPanelStatus
+                isLoading={isLoading}
+                hasErrors={hasErrors}
+                status={asyncFetchErrorDetails.status}
+            />
             <div className="flex-grow-1" style={{ width: 0 }}>
-                <RichPanelHeader>
+                <RichPanelHeader className="py-3">
                     <RichPanelInfo>
                         <RichPanelName className="d-flex gap-3">
                             <span className="d-flex align-items-center justify-content-center gap-1">
@@ -126,7 +122,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                 </RichPanelHeader>
                 {!isLoading && hasErrors && (
                     <>
-                        <RichPanelDetails className="pb-0">
+                        <RichPanelDetails>
                             <RichPanelDetailItem>
                                 <Button
                                     onClick={togglePanelCollapsed}
@@ -171,5 +167,24 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                 )}
             </div>
         </RichPanel>
+    );
+}
+
+interface IndexErrorsPanelStatusProps {
+    isLoading: boolean;
+    hasErrors: boolean;
+    status: AsyncStateStatus;
+}
+function IndexErrorsPanelStatus({ isLoading, hasErrors, status }: IndexErrorsPanelStatusProps) {
+    return (
+        <>
+            {isLoading && (
+                <RichPanelStatus color="secondary" data-testid="loader">
+                    Loading
+                </RichPanelStatus>
+            )}
+            {!isLoading && hasErrors && <RichPanelStatus color="danger">Errors</RichPanelStatus>}
+            {!isLoading && !hasErrors && status === "success" && <RichPanelStatus color="success">OK</RichPanelStatus>}
+        </>
     );
 }

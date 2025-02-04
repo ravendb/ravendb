@@ -15,7 +15,7 @@ import genUtils from "common/generalUtils";
 
 export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount }: IndexErrorsPanelProps) {
     const { indexesService } = useServices();
-    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
     const [mappedIndexErrors, setMappedIndexErrors] = useState<IndexErrorPerDocument[]>();
     const confirm = useConfirm();
@@ -26,7 +26,7 @@ export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount 
     const hasErrors = errorItem.totalErrorCount > 0;
 
     const handleClearSelectedIndexErrorsForNode = useAsyncCallback(
-        async () => indexesService.clearIndexErrors(selectedErrors, db.name, errorItem.location),
+        async () => indexesService.clearIndexErrors(selectedErrors, dbName, errorItem.location),
         {
             onSuccess: async () => {
                 messagePublisher.reportSuccess(
@@ -38,7 +38,7 @@ export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount 
     );
 
     const asyncFetchErrorDetails = useAsync(
-        () => indexesService.getIndexErrorDetails(db.name, errorItem.location),
+        () => indexesService.getIndexErrorDetails(dbName, errorItem.location),
         [asyncFetchAllErrorCount.status],
         {
             onSuccess: (resultDto) => setMappedIndexErrors(indexErrorsUtils.mapItems(resultDto)),
@@ -70,7 +70,6 @@ export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount 
 
     return {
         handleClearErrors,
-        db,
         mappedIndexErrors,
         hasErrors,
         asyncFetchErrorDetails,

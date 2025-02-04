@@ -1,50 +1,42 @@
-import React, { useMemo } from "react";
+import React from "react";
 import "./SelectIndexDropdownToggle.scss";
 import { Badge, DropdownMenu, DropdownToggle, Label, UncontrolledDropdown } from "reactstrap";
 import { Checkbox } from "components/common/Checkbox";
 import { FlexGrow } from "components/common/FlexGrow";
-import { NameAndCount } from "components/pages/database/indexes/errors/types";
+import { IndexErrorsDropdownType, NameAndCount } from "components/pages/database/indexes/errors/types";
 import CheckboxSelectAll from "components/common/CheckboxSelectAll";
 import { useCheckboxes } from "hooks/useCheckboxes";
+import { useIndexErrorsDropdown } from "components/pages/database/indexes/errors/hooks/useIndexErrorsDropdown";
 import { ColumnFiltersState, Updater } from "@tanstack/react-table";
 
 interface SelectIndexErrorsDropdownProps {
     indexesList: NameAndCount[];
-    selectedIndexes: string[];
+    filters: ColumnFiltersState;
     setFilters: (updater: Updater<ColumnFiltersState>) => void;
     isLoading: boolean;
-    dropdownType: "Action" | "IndexName";
+    dropdownTypeLabelText: string;
+    dropdownType: IndexErrorsDropdownType;
 }
 
 export function SelectIndexErrorsDropdown({
     indexesList,
-    selectedIndexes,
-    isLoading,
-    setFilters,
     dropdownType,
+    setFilters,
+    filters,
+    dropdownTypeLabelText,
+    isLoading,
 }: SelectIndexErrorsDropdownProps) {
-    const setSelectedIndexes = (selected: string[]) => {
-        setFilters((prev) => {
-            const updatedFilters = prev.filter((filter) => filter.id !== dropdownType);
-            if (selected.length > 0) {
-                updatedFilters.push({ id: dropdownType, value: selected });
-            }
-            return updatedFilters;
-        });
-    };
-
-    const labelText = useMemo(() => {
-        const dropdownTypeLabelText = dropdownType === "Action" ? "actions" : "indexes";
-        if (selectedIndexes.length !== 0 && selectedIndexes.length < indexesList.length) {
-            return `Selected ${dropdownTypeLabelText} (${selectedIndexes.length})`;
-        }
-
-        return `All ${dropdownTypeLabelText} selected`;
-    }, [selectedIndexes, indexesList.length]);
+    const { setSelectedIndexes, labelText, selectedColumnFilters } = useIndexErrorsDropdown({
+        indexesList,
+        filters,
+        dropdownType,
+        setFilters,
+        dropdownTypeLabelText,
+    });
 
     const { selectionState, toggleOne, toggleAll } = useCheckboxes({
         allItems: indexesList.map((item) => item.name),
-        selectedItems: selectedIndexes,
+        selectedItems: selectedColumnFilters,
         setValue: setSelectedIndexes,
     });
 
@@ -57,7 +49,7 @@ export function SelectIndexErrorsDropdown({
                 <div className="vstack gap-2">
                     <div className="hstack lh-1 gap-3">
                         <CheckboxSelectAll
-                            selectedItemsCount={selectedIndexes.length}
+                            selectedItemsCount={selectedColumnFilters.length}
                             allItemsCount={indexesList.length}
                             color="primary"
                             selectionState={selectionState}
@@ -69,7 +61,7 @@ export function SelectIndexErrorsDropdown({
                         <div className="hstack gap-2" key={index}>
                             <div className="hstack lh-1 gap-3 dropdown-checkbox-group">
                                 <Checkbox
-                                    selected={selectedIndexes.includes(item.name)}
+                                    selected={selectedColumnFilters.includes(item.name)}
                                     toggleSelection={() => toggleOne(item.name)}
                                 />
                                 <Label className="m-0">
