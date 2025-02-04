@@ -319,14 +319,6 @@ namespace Raven.Client.Http
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
 
             UpdateConnectionLimit(initialUrls);
-
-            ClientConfigurationChanged += (_, args) =>
-            {
-                if (args.Configuration?.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
-                    _nodeSelector?.ScheduleSpeedTest();
-                else
-                    _nodeSelector?.DisableFastestNodeReadBalance();
-            };
         }
 
         ~RequestExecutor()
@@ -441,6 +433,12 @@ namespace Raven.Client.Http
                         return;
 
                     Conventions.UpdateFrom(result.Configuration);
+
+                    if (Conventions.ReadBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        _nodeSelector?.ScheduleSpeedTest();
+                    else
+                        _nodeSelector?.DisableFastestNodeReadBalance();
+                    
                     ClientConfigurationEtag = result.Etag;
                     ClientConfigurationChanged?.Invoke(this, (result.Etag, result.Configuration));
                 }
