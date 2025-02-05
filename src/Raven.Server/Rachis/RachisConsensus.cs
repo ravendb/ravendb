@@ -976,6 +976,11 @@ namespace Raven.Server.Rachis
                     {
                         return await PutToLeaderAsync(cmd);
                     }
+                    catch (TermValidationException)
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(100));
+                        continue;
+                    }
                     catch (Exception e) when (e is ConcurrencyException || e is NotLeadingException)
                     {
                         // if the leader was changed during the PutAsync, we will retry.
@@ -1996,29 +2001,6 @@ namespace Raven.Server.Rachis
 
             // give the other side enough time to become the leader before challenging them
             Timeout.Defer(votedFor);
-
-            var currentlyTheLeader = _currentLeader;
-            if (currentlyTheLeader == null)
-                return;
-
-            ThreadPool.QueueUserWorkItem(_ =>
-            {
-                try
-                {
-                    if (Log.IsInfoEnabled)
-                    {
-                        Log.Info($"Disposing the leader because we casted a vote for {votedFor} in {term:#,#;;0}");
-                    }
-                    currentlyTheLeader.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (Log.IsInfoEnabled)
-                    {
-                        Log.Info($"Failed to shut down leader after voting in term {term:#,#;;0} for {votedFor}", e);
-                    }
-                }
-            }, null);
         }
 
         public (string VotedFor, long LastVotedTerm) GetWhoGotMyVoteIn(ClusterOperationContext context, long term)
