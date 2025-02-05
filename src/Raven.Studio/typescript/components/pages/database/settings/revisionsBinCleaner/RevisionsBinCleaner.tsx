@@ -2,7 +2,7 @@ import React from "react";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "hooks/useServices";
-import { Card, CardBody, Col, Collapse, Form, FormGroup, Row } from "reactstrap";
+import { Card, CardBody, Col, Collapse, Form, FormGroup, Row, UncontrolledPopover } from "reactstrap";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import {
     RevisionsBinCleanerFormData,
@@ -21,6 +21,7 @@ import { LoadError } from "components/common/LoadError";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import useRevisionsBinCleanerFormSideEffects from "components/pages/database/settings/revisionsBinCleaner/useRevisionsBinCleanerFormSideEffects";
 import { revisionsBinCleanerUtils } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerUtils";
+import { Icon } from "components/common/Icon";
 
 export default function RevisionsBinCleaner() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -103,9 +104,10 @@ export default function RevisionsBinCleaner() {
                                                 Enable Revisions Bin Cleaner
                                             </FormSwitch>
                                         </FormGroup>
-                                        <FormGroup>
+                                        <FormGroup className="d-flex gap-2 align-items-center">
                                             <FormSwitch
                                                 name="isMinimumEntriesAgeToKeepEnabled"
+                                                className="flex-grow"
                                                 control={control}
                                                 color="primary"
                                                 disabled={
@@ -116,6 +118,27 @@ export default function RevisionsBinCleaner() {
                                             >
                                                 Set minimum entries age to keep
                                             </FormSwitch>
+                                            {formValues.isRevisionsBinCleanerEnabled &&
+                                                !formValues.isMinimumEntriesAgeToKeepEnabled && (
+                                                    <>
+                                                        <Icon
+                                                            id="setMinimumEntriesAgeToKeep"
+                                                            icon="warning"
+                                                            color="warning"
+                                                        />
+                                                        <UncontrolledPopover
+                                                            target="setMinimumEntriesAgeToKeep"
+                                                            trigger="hover"
+                                                            container="PopoverContainer"
+                                                            placement="right"
+                                                        >
+                                                            <div className="p-3">
+                                                                All items from the Revision Bin will be deleted when the{" "}
+                                                                <b>Set minimum entries age to keep</b> is toggled off.
+                                                            </div>
+                                                        </UncontrolledPopover>
+                                                    </>
+                                                )}
                                         </FormGroup>
                                         <Collapse
                                             isOpen={
@@ -167,6 +190,7 @@ export default function RevisionsBinCleaner() {
                                     </CardBody>
                                 </Card>
                             </Col>
+                            <div id="PopoverContainer"></div>
                         </Form>
                     </Col>
                     <Col sm={12} lg={4}>
