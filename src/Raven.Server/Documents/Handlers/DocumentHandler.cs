@@ -208,12 +208,12 @@ namespace Raven.Server.Documents.Handlers
     
     public sealed class MergedPutEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
     {
-        private readonly List<AiEtlEmbeddingItem> _items;
+        private readonly AiEtlScriptRun _items;
         private readonly string _configurationName;
         private readonly DocumentDatabase _database;
         public DocumentsStorage.PutOperationResults PutResult;
         
-        public MergedPutEmbeddingsCommand(List<AiEtlEmbeddingItem> items, string configurationName, DocumentDatabase database)
+        public MergedPutEmbeddingsCommand(AiEtlScriptRun items, string configurationName, DocumentDatabase database)
         {
             _items = items;
             _configurationName = configurationName;
@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Handlers
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            foreach (var item in _items)
+            foreach (var item in _items.CurrentRun)
             {
                 var configDjv = new DynamicJsonValue();
                 
@@ -287,8 +287,15 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
+
+            foreach (var item in _items.Deletes)
+            {
+                var documentEmbeddingsToDeleteId = AiHelper.GetDocumentEmbeddingsId(item.DocumentId);
+
+                _database.DocumentsStorage.Delete(context, documentEmbeddingsToDeleteId, DocumentFlags.None);
+            }
             
-            return _items.Count;
+            return _items.CurrentRun.Count + _items.Deletes.Count;
         }
         
         public void Dispose()

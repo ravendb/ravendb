@@ -133,15 +133,10 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                 }
             }
             
-            var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(aiEtlScriptRun.CurrentRun, Configuration.Name, Database);
+            var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(aiEtlScriptRun, Configuration.Name, Database);
 
             Database.TxMerger.EnqueueSync(putEmbeddingsCommand);
         }
-
-        var documentEmbeddingsToDeleteIds = aiEtlScriptRun.Deletes.Select(x => AiHelper.GetDocumentEmbeddingsId(x.DocumentId)).ToList();
-        var deleteDocumentsCommand = new DeleteDocumentsCommand(documentEmbeddingsToDeleteIds, Database);
-        
-        Database.TxMerger.EnqueueSync(deleteDocumentsCommand);
         
         return processed;
     }

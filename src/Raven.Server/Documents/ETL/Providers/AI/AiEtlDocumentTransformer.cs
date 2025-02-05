@@ -23,7 +23,7 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
     private readonly AiEtlConfiguration _configuration;
     private AiEtlScriptRun _currentRun;
     
-    public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiEtlConfiguration configuration) : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.AiEtl), behaviorFunctions)
+    public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiEtlConfiguration configuration) : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SnowflakeEtl), behaviorFunctions)
     {
         _configuration = configuration;
 
