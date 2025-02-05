@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Counters;
@@ -77,7 +78,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
 
     protected override EtlTransformer<AiEtlItem, AiEtlEmbeddingItem, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
-        return new AiEtlDocumentTransformer(Database, context, null, null, Configuration);
+        return new AiEtlDocumentTransformer(Database, context, Transformation, null, Configuration);
     }
 
     protected override int LoadInternal(IEnumerable<AiEtlEmbeddingItem> items, DocumentsOperationContext context, EtlStatsScope scope)
@@ -130,18 +131,15 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                 }
             }
             
-            var cmd = new MergedPutEmbeddingsCommand(aiEtlScriptRun.CurrentRun, Configuration.Name, Database);
+            var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(aiEtlScriptRun.CurrentRun, Configuration.Name, Database);
 
-            Database.TxMerger.EnqueueSync(cmd);
+            Database.TxMerger.EnqueueSync(putEmbeddingsCommand);
         }
 
-        foreach (var aiEtlEmbeddingItem in aiEtlScriptRun.Deletes)
-        {
-            var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(aiEtlEmbeddingItem.DocumentId);
-            var cmd = new DeleteDocumentCommand(documentEmbeddingsId, null, Database);
-            
-            Database.TxMerger.EnqueueSync(cmd);
-        }
+        var documentEmbeddingsToDeleteIds = aiEtlScriptRun.Deletes.Select(x => AiHelper.GetDocumentEmbeddingsId(x.DocumentId)).ToList();
+        var deleteDocumentsCommand = new DeleteDocumentsCommand(documentEmbeddingsToDeleteIds, Database);
+        
+        Database.TxMerger.EnqueueSync(deleteDocumentsCommand);
         
         return processed;
     }

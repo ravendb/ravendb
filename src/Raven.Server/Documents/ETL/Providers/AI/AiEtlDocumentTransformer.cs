@@ -1,7 +1,12 @@
+#pragma warning disable SKEXP0050
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jint;
 using Jint.Native;
+using Jint.Runtime.Interop;
+using Microsoft.SemanticKernel.Text;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Server.Documents.ETL.Stats;
@@ -18,9 +23,11 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
     private readonly AiEtlConfiguration _configuration;
     private AiEtlScriptRun _currentRun;
     
-    public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, PatchRequest mainScript, PatchRequest behaviorFunctions, AiEtlConfiguration configuration) : base(database, context, mainScript, behaviorFunctions)
+    public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiEtlConfiguration configuration) : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.AiEtl), behaviorFunctions)
     {
         _configuration = configuration;
+
+        LoadToDestinations = [];
     }
 
     public override void Initialize(bool debugMode)
@@ -29,6 +36,8 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
 
         if (DocumentScript == null)
             return;
+        
+        DocumentScript.ScriptEngine.SetValue("splitMarkDownLines", new ClrFunction(DocumentScript.ScriptEngine, "splitMarkDownLines", SplitMarkDownLines));
     }
 
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
@@ -65,18 +74,20 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
 
         if (item.IsDelete)
         {
-            var deletedItem = new AiEtlEmbeddingItem() { DocumentId = item.DocumentId, DocumentCollectionName = item.Collection, IsDelete = true };
+            var deletedItem = new AiEtlEmbeddingItem() { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, IsDelete = true };
             
             _currentRun.Deletes.Add(deletedItem);
             
             return;
         }
+        
+        DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
 
-        var aiEtlEmbeddingItem = new AiEtlEmbeddingItem() { DocumentId = item.DocumentId, DocumentCollectionName = item.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>() };
+        var aiEtlEmbeddingItem = new AiEtlEmbeddingItem() { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>() };
         
         foreach (var fieldName in _configuration.FieldsToInclude)
         {
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, item.Document, fieldName, out var fieldValue) == false)
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var fieldValue) == false)
                 continue;
 
             if (aiEtlEmbeddingItem.Values.TryGetValue(fieldName, out var values) == false)
@@ -104,4 +115,32 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
         
         _currentRun.CurrentRun.Add(aiEtlEmbeddingItem);
     }
+    
+    // todo non-default token counter
+    private JsValue SplitMarkDownLines(JsValue self, JsValue[] args)
+    {
+        var methodSignature = "splitMarkDownLines(text, maxTokensPerLine)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+        
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+        
+        var chunks = TextChunker.SplitMarkDownLines(args[0].AsString(), (int)args[1].AsNumber());
+        
+        var jsChunks = new JsValue[chunks.Count];
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            jsChunks[i] = new JsString(chunks[i]);
+        }
+        
+        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
+
+        return jsArray;
+    }
 }
+#pragma warning restore SKEXP0050

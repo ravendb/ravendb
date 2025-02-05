@@ -357,7 +357,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
                 var collections = GetCollectionsFromScript();
 
-                if (collections == null || collections.Length == 0)
+                if (type != EtlType.Ai && (collections == null || collections.Length == 0))
                 {
                     var actualScript = Script;
 
@@ -393,9 +393,6 @@ namespace Raven.Client.Documents.Operations.ETL
                                 break;
                             case EtlType.Queue:
                                 targetName = "Queue";
-                                break;
-                            case EtlType.Ai:
-                                targetName = "Vector";
                                 break;
                             default:
                                 throw new ArgumentException($"Unknown ETL type: {type}");

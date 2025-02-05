@@ -891,6 +891,43 @@ public class RavenDB_23556 : RavenTestBase
             }
         }
     }
+    
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestChunkingInTransformation()
+    {
+        const string connectionStringName = "connection string name";
+
+        var dto = new Dto { Name = "Name1" };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                FieldsToInclude = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "let x = splitMarkDownLines(\"text\", 23); return x;" }]
+            };
+            
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            WaitForUserToContinueTheTest(store);
+        }
+    }
 
     private class Dto
     {

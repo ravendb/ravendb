@@ -19,7 +19,8 @@ namespace Raven.Server.Documents.Patch
         EtlBehaviorFunctions,
         QueueEtl,
         QueueSink,
-        SnowflakeEtl
+        SnowflakeEtl,
+        AiEtl
     }
 
     /// <summary>
@@ -109,6 +110,7 @@ function resolve(docs, hasTombstone, resolveToTombstone){{
 
 }}";
                 case PatchRequestType.EtlBehaviorFunctions:
+                case PatchRequestType.AiEtl:
                     return Script;
                 default:
                     throw new ArgumentOutOfRangeException();
