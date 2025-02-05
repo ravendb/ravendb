@@ -14,6 +14,7 @@ const schema = yup.object({
             then: (schema) => schema.required(),
         }),
     isRefreshFrequencyEnabled: yup.boolean(),
+    timeMagnitude: yup.mixed<timeMagnitude>().oneOf(["minutes", "hours", "days"]),
     refreshFrequencyInSec: yup
         .number()
         .nullable()

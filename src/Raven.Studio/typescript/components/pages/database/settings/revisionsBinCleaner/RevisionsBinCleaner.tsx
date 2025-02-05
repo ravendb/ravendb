@@ -14,7 +14,7 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
@@ -156,7 +156,15 @@ export default function RevisionsBinCleaner() {
                                                         formState.isSubmitting ||
                                                         !formValues.isMinimumEntriesAgeToKeepEnabled
                                                     }
-                                                    addon="minutes"
+                                                    addon={
+                                                        <FormSelect
+                                                            control={control}
+                                                            name="timeMagnitude"
+                                                            options={revisionsBinCleanerUtils.timeMagnitudeOptions}
+                                                            isSearchable={false}
+                                                            className="w-25"
+                                                        />
+                                                    }
                                                 />
                                             </FormGroup>
                                         </Collapse>
