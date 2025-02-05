@@ -745,17 +745,21 @@ namespace Voron.Data.PostingLists
             // Sort so that additions (LSB=0) come before any corresponding removals (LSB=1).
             list.Sort();
 
-            int outputIdx = 1;
-            for (int i = 1; i < list.Count; i++)
+            long* ptr = list.RawItems;
+            long* outPtr = ptr;
+            long* endPtr = ptr + list.Count;
+
+            // Process each element starting from the second one.
+            while (++ptr < endPtr)
             {
-                // We preemptively copy, worst case scenario it is a useless copy. 
-                list[outputIdx] = list[i];
+                // Preemptively copy the current element to outPtr + 1. 
+                // The redundant write is acceptable in this loop.
+                *(outPtr + 1) = *ptr;
 
                 // Build a small 2-bit key
                 // 1x if this element is a removal, else 0x
                 // x1 if ignoring the LSB, the previous (output) item is the same, else x0
-                int key = ((int)(list[i] & 1) << 1) | ((list[outputIdx - 1] | 1) == list[i]).ToInt32();
-
+                int key = ((int)(*ptr & 1) << 1) | ((*outPtr | 1) == *ptr).ToInt32();
 
                 // We embed the rules on how to update the index in a small table:
                 //   index : (isRem<<1 | isSame)
@@ -763,10 +767,10 @@ namespace Voron.Data.PostingLists
                 //     1 =>  0 (skip)    [add, duplicate]
                 //     2 => +1 (place)   [rem, different => "orphan removal"?]
                 //     3 => -1 (pop old) [rem, same => remove old, skip new]
-                outputIdx += _modificationsAndRemoveTable[key];
+                outPtr += _modificationsAndRemoveTable[key];
             }
 
-            list.Shrink(outputIdx);
+            list.Shrink((int)(outPtr - list.RawItems + 1));
         }
     }
 }
