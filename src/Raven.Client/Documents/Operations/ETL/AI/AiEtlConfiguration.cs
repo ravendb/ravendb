@@ -24,14 +24,20 @@ public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
         {
             case AiConnectorType.Ollama:
                 return Connection.OllamaSettings.Uri.StartsWith("https");
+            case AiConnectorType.OpenAi:
+                return Connection.OpenAiSettings.Endpoint.StartsWith("https");
+            case AiConnectorType.AzureOpenAI:
+                return Connection.AzureOpenAiSettings.Endpoint.StartsWith("https");
+            case AiConnectorType.HuggingFace:
+                return Connection.HuggingFaceSettings.Endpoint.StartsWith("https");
 
-            // todo: other AI connectors
+            case AiConnectorType.Onnx:
+            case AiConnectorType.Google:
+                return true;
 
             default:
                 throw new NotSupportedException($"Unknown AI connector type: {AiConnectorType}");
         }
-
-        return false;
     }
 
     public override DynamicJsonValue ToJson()

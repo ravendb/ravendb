@@ -53,7 +53,7 @@ public sealed class AiConnectionString : ConnectionString
 
     internal string GenerateIdentifier() => GenerateIdentifier(Name);
 
-    internal string GenerateIdentifier(string input)
+    private string GenerateIdentifier(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
             return null;
