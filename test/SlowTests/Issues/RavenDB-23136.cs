@@ -18,31 +18,18 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.Revisions)]
+        [InlineData(true)]
+        [InlineData(false)]
         public async Task Import_Should_Create_Revisions_When_Configuration_Is_On(bool withRevisionsConfig)
         {
-            DoNotReuseServer();
             var files = new List<string>()
             {
                 GetTempFileName(),
                 GetTempFileName(),
                 GetTempFileName()
             };
-            try
-            {
-                await Import_Should_Create_Revisions_When_Configuration_Is_On_Internal(files, withRevisionsConfig);
-            }
-            finally
-            {
-                foreach (var f in files)
-                {
-                    File.Delete(f);
-                }
-            }
-        }
 
-        private async Task Import_Should_Create_Revisions_When_Configuration_Is_On_Internal(List<string> files, bool withRevisionsConfig)
-        {
             using (var source = GetDocumentStore())
             {
                 for (int i = 0; i < files.Count; i++)
