@@ -970,4 +970,7 @@ interface taskInfo {
 }
 
 type TombstoneItem = Raven.Server.Documents.TombstoneCleaner.StateHolder & { Collection: string };
-type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.TombstonesState, "Tombstones"> & { Results: TombstoneItem[]; PerSubscriptionInfoExtended: subscriptionInfoExtended[] };
+type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.TombstonesState,"Tombstones" | "PerSubscriptionInfoExtended"> & {
+    Results: TombstoneItem[];
+    PerSubscriptionInfoExtended: Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfoExtended[];
+};

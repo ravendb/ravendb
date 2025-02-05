@@ -4,8 +4,8 @@ import appUrl = require("common/appUrl");
 import getTombstonesStateCommand = require("commands/database/debug/getTombstonesStateCommand");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import subscriptionInfoExtended = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfoExtended;
-import tombstoneTypes = Raven.Server.Documents.TombstoneCleaner.TombstonesState.TombstoneTypes;
+import SubscriptionInfoExtended = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfoExtended;
+import TombstoneTypes = Raven.Server.Documents.TombstoneCleaner.TombstonesState.TombstoneTypes;
 import forceTombstonesCleanup = require("commands/database/debug/forceTombstonesCleanupCommand");
 
 class tombstonesState extends viewModelBase {
@@ -13,7 +13,7 @@ class tombstonesState extends viewModelBase {
     view = require("views/database/advanced/tombstonesState.html");
 
     private collectionsStateController = ko.observable<virtualGridController<TombstoneItem>>();
-    private subscriptionsStateController = ko.observable<virtualGridController<subscriptionInfoExtended>>();
+    private subscriptionsStateController = ko.observable<virtualGridController<SubscriptionInfoExtended>>();
     
     isForbidden = ko.observable<boolean>(false);
     
@@ -85,25 +85,25 @@ class tombstonesState extends viewModelBase {
 
         subscriptionsGrid.init(() => this.subscriptionsFetcher(), () => {
             return [
-                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.Process, "Process", "15%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.Process, "Process", "15%", {
                     sortable: "string"
                 }),
-                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.Identifier, "Name", "15%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.Identifier, "Name", "15%", {
                     sortable: "string"
                 }),
-                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.NumberOfTombstoneLeft, "Number of tombstones left", "10%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.NumberOfTombstoneLeft, "Number of tombstones left", "10%", {
                     sortable: "number"
                 }),
-                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => this.formatTombstoneTypes(x.Types), "Tombstone Types", "25%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => this.formatTombstoneTypes(x.Types), "Tombstone Types", "25%", {
                     sortable: "string"
                 }),
-                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.Collection, "Collection", "10%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.Collection, "Collection", "10%", {
                     sortable: "string"
                 }),
-                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => this.formatEtag(x.Etag), "Etag", "10%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => this.formatEtag(x.Etag), "Etag", "10%", {
                     sortable: "number", title: (x) => this.getEtagTitle(x.Etag)
                 }),
-                new textColumn<subscriptionInfoExtended>(subscriptionsGrid, x => x.CleanupStatus, "CleanupStatus", "15%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.CleanupStatus, "CleanupStatus", "15%", {
                     sortable: "string"
                 }),
             ];
@@ -119,7 +119,7 @@ class tombstonesState extends viewModelBase {
             });
     }
 
-    private subscriptionsFetcher(): JQueryPromise<pagedResult<subscriptionInfoExtended>> {
+    private subscriptionsFetcher(): JQueryPromise<pagedResult<SubscriptionInfoExtended>> {
         const info = this.state().PerSubscriptionInfoExtended;
         return $.Deferred<pagedResult<any>>()
             .resolve({
@@ -194,7 +194,7 @@ class tombstonesState extends viewModelBase {
         return "Can remove any tombstone";
     }
 
-    private formatTombstoneTypes(types: tombstoneTypes) {
+    private formatTombstoneTypes(types: TombstoneTypes) {
         if (!types) {
             return '';
         }
