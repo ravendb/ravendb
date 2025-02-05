@@ -14,7 +14,7 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
@@ -132,7 +132,7 @@ export default function RevisionsBinCleaner() {
                                                             placement="right"
                                                         >
                                                             <div className="p-3">
-                                                                All items from the Revision Bin will be deleted when the{" "}
+                                                                All items in the Revision Bin will be deleted when the{" "}
                                                                 <b>Set minimum entries age to keep</b> is toggled off.
                                                             </div>
                                                         </UncontrolledPopover>
@@ -146,24 +146,15 @@ export default function RevisionsBinCleaner() {
                                             }
                                         >
                                             <FormGroup>
-                                                <FormInput
-                                                    name="minimumEntriesAgeToKeepInMin"
+                                                <FormDurationPicker
                                                     control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        !hasDatabaseAdminAccess ||
-                                                        formState.isSubmitting ||
-                                                        !formValues.isMinimumEntriesAgeToKeepEnabled
-                                                    }
-                                                    addon={
-                                                        <FormSelect
-                                                            control={control}
-                                                            name="timeMagnitude"
-                                                            options={revisionsBinCleanerUtils.timeMagnitudeOptions}
-                                                            isSearchable={false}
-                                                            className="w-25"
-                                                        />
-                                                    }
+                                                    placeholder={{
+                                                        days: "Default (30)",
+                                                        hours: "Default (0)",
+                                                        minutes: "Default (0)",
+                                                    }}
+                                                    name="minimumEntriesAgeToKeep"
+                                                    showDays
                                                 />
                                             </FormGroup>
                                         </Collapse>

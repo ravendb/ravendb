@@ -14,10 +14,16 @@ export interface DurationPickerProps {
     showDays?: boolean;
     showSeconds?: boolean;
     disabled?: boolean;
+    placeholder?: {
+        days?: string;
+        hours?: string;
+        minutes?: string;
+        seconds?: string;
+    };
 }
 
 export default function DurationPicker(props: DurationPickerProps) {
-    const { totalSeconds, onChange, showDays, showSeconds, disabled } = props;
+    const { totalSeconds, onChange, showDays, placeholder, showSeconds, disabled } = props;
 
     const initialValues = getInitialValues(totalSeconds, showDays);
 
@@ -49,6 +55,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                         type="number"
                         min={0}
                         value={days}
+                        placeholder={placeholder?.days}
                         onChange={(e) => setDays(getInputValue(e))}
                         disabled={disabled}
                     />
@@ -60,6 +67,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                     type="number"
                     min={0}
                     value={hours}
+                    placeholder={placeholder?.hours}
                     onChange={(e) => setHours(getInputValue(e))}
                     disabled={disabled}
                 />
@@ -70,6 +78,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                     type="number"
                     min={0}
                     value={minutes}
+                    placeholder={placeholder?.minutes}
                     onChange={(e) => setMinutes(getInputValue(e))}
                     disabled={disabled}
                 />
@@ -81,6 +90,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                         type="number"
                         min={0}
                         value={seconds}
+                        placeholder={placeholder?.seconds}
                         onChange={(e) => setSeconds(getInputValue(e))}
                         disabled={disabled}
                     />

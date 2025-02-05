@@ -112,51 +112,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             requiredAccess: "DatabaseAdmin"
         }),
         new leafMenuItem({
-            route: 'databases/settings/revisions',
-            moduleId: reactUtils.bridgeToReact(DocumentRevisions.default, "nonShardedView"),
-            shardingMode: "allShards",
-            title: 'Document Revisions',
-            search: {
-                innerActions: [
-                    { name: "Enforce Revisions Configuration" },
-                    { name: "Add New Revision Configuration", alternativeNames: ["Create Revision Configuration"] },
-                    { name: "Delete Revision Configuration", alternativeNames: ["Remove Revision Configuration"] },
-                    { name: "Edit Revision Configuration" },
-                    { name: "Enable Revision Configuration" },
-                    { name: "Disable Revision Configuration" },
-                ],
-            },
-            nav: true,
-            css: 'icon-revisions',
-            dynamicHash: appUrls.revisions
-        }),
-        new leafMenuItem({
-            route: 'databases/settings/revisionsBinCleaner',
-            moduleId: reactUtils.bridgeToReact(RevisionsBinCleaner.default, "nonShardedView"),
-            shardingMode: "allShards",
-            title: 'Revisions Bin Cleaner',
-            nav: true,
-            css: 'icon-revisions-bin',
-            dynamicHash: appUrls.revisionsBinCleaner,
-            search: {
-                innerActions: [
-                    { name: "Set automatic revision bin configuration" },
-                    { name: "Configure retention policies" },
-                    { name: "View current revisions bin configuration" },
-                ],
-            },
-        }),
-        new leafMenuItem({
-            route: 'databases/settings/revertRevisions',
-            moduleId: reactUtils.bridgeToReact(RevertRevisions.default, "nonShardedView"),
-            shardingMode: "allShards",
-            title: 'Revert Revisions',
-            nav: false,
-            css: 'icon-revert-revisions',
-            dynamicHash: appUrls.revertRevisions,
-            itemRouteToHighlight: "databases/settings/revisions",
-        }),
-        new leafMenuItem({
             route: 'databases/settings/refresh',
             moduleId: reactUtils.bridgeToReact(DocumentRefresh.default, "nonShardedView"),
             shardingMode: "allShards",
@@ -201,6 +156,51 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                     { name: "Compress revisions for all collections" },
                 ],
             },
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/revisions',
+            moduleId: reactUtils.bridgeToReact(DocumentRevisions.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Document Revisions',
+            search: {
+                innerActions: [
+                    { name: "Enforce Revisions Configuration" },
+                    { name: "Add New Revision Configuration", alternativeNames: ["Create Revision Configuration"] },
+                    { name: "Delete Revision Configuration", alternativeNames: ["Remove Revision Configuration"] },
+                    { name: "Edit Revision Configuration" },
+                    { name: "Enable Revision Configuration" },
+                    { name: "Disable Revision Configuration" },
+                ],
+            },
+            nav: true,
+            css: 'icon-revisions',
+            dynamicHash: appUrls.revisions
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/revisionsBinCleaner',
+            moduleId: reactUtils.bridgeToReact(RevisionsBinCleaner.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Revisions Bin Cleaner',
+            nav: true,
+            css: 'icon-revisions-bin',
+            dynamicHash: appUrls.revisionsBinCleaner,
+            search: {
+                innerActions: [
+                    { name: "Set automatic revision bin configuration" },
+                    { name: "Configure retention policies" },
+                    { name: "View current revisions bin configuration" },
+                ],
+            },
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/revertRevisions',
+            moduleId: reactUtils.bridgeToReact(RevertRevisions.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Revert Revisions',
+            nav: false,
+            css: 'icon-revert-revisions',
+            dynamicHash: appUrls.revertRevisions,
+            itemRouteToHighlight: "databases/settings/revisions",
         }),
         new leafMenuItem({
             route: 'databases/settings/dataArchival',

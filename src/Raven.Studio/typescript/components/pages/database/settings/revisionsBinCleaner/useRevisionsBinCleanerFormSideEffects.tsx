@@ -1,6 +1,7 @@
 import { UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { RevisionsBinCleanerFormData } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerValidation";
 import { useEffect } from "react";
+import moment from "moment";
 
 export default function useRevisionsBinCleanerFormSideEffects(
     watch: UseFormWatch<RevisionsBinCleanerFormData>,
@@ -18,7 +19,11 @@ export default function useRevisionsBinCleanerFormSideEffects(
                 }
                 case "isMinimumEntriesAgeToKeepEnabled": {
                     if (!values.isMinimumEntriesAgeToKeepEnabled) {
-                        setValue("minimumEntriesAgeToKeepInMin", null, { shouldValidate: true });
+                        setValue("minimumEntriesAgeToKeep", null, { shouldValidate: true });
+                    } else {
+                        if (values.minimumEntriesAgeToKeep === null) {
+                            setValue("minimumEntriesAgeToKeep", moment.duration(1, "month").asSeconds());
+                        }
                     }
                     break;
                 }
