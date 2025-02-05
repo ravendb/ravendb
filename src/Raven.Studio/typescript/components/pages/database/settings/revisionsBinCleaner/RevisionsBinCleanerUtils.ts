@@ -76,5 +76,5 @@ function mapToFormData(dto: RevisionsBinConfiguration): RevisionsBinCleanerFormD
 export const revisionsBinCleanerUtils = {
     mapToDto,
     mapToFormData,
-    timeMagnitudeOptions
+    timeMagnitudeOptions,
 };

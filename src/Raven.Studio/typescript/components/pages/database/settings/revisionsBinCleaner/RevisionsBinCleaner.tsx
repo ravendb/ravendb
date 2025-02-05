@@ -107,7 +107,6 @@ export default function RevisionsBinCleaner() {
                                         <FormGroup className="d-flex gap-2 align-items-center">
                                             <FormSwitch
                                                 name="isMinimumEntriesAgeToKeepEnabled"
-                                                className="flex-grow"
                                                 control={control}
                                                 color="primary"
                                                 disabled={
