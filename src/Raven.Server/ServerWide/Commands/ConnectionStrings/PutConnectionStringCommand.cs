@@ -188,6 +188,9 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
                 if (string.IsNullOrWhiteSpace(ConnectionString.Identifier))
                     throw new RachisApplyException("Connection string identifier must be set, but it is not");
 
+                if (ConnectionString.ValidateIdentifier(out var errors) == false)
+                    throw new RachisApplyException( $"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
+
                 var isUpdate = databaseRecord.AiConnectionStrings.TryGetValue(ConnectionString.Name, out var oldAiConnectionString) && oldAiConnectionString != null;
                 var identifierConflicts = databaseRecord?.AiConnectionStrings
                     .Where(x => x.Value != null && x.Value.Identifier == ConnectionString.Identifier && x.Key != ConnectionString.Name)

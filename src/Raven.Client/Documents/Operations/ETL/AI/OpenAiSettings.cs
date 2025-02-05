@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Sparrow.Json.Parsing;
+﻿using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
@@ -8,7 +7,7 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 /// </summary>
 public sealed class OpenAiSettings : OpenAiBaseSettings
 {
-    public OpenAiSettings(string apiKey, string endpoint, string model, string? organizationId = null, string? projectId = null) : base(apiKey, endpoint, model)
+    public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, string projectId = null) : base(apiKey, endpoint, model)
     {
         OrganizationId = organizationId;
         ProjectId = projectId;
@@ -26,7 +25,7 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     /// organization will be billed. You can change your default organization in your user settings.
     /// <see href="https://platform.openai.com/docs/guides/production-best-practices/setting-up-your-organization">Learn more</see>.
     /// </summary>
-    public string? OrganizationId { get; set; }
+    public string OrganizationId { get; set; }
 
     /// <summary>
     /// The value to use for the <c>OpenAI-Project</c> request header. Users who are accessing their projects through
@@ -34,7 +33,7 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     /// these API requests will count as usage for the specified project. If not set, the header will be omitted, and
     /// the default project will be accessed.
     /// </summary>
-    public string? ProjectId { get; set; }
+    public string ProjectId { get; set; }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {

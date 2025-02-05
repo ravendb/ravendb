@@ -35,13 +35,13 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
     public override void ValidateMandatoryFields(ref List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(ApiKey))
-            errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty");
+            errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(Endpoint))
-            errors.Add($"Value of `{nameof(Endpoint)}` field cannot be empty");
+            errors.Add($"Value of `{nameof(Endpoint)}` field cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(Model))
-            errors.Add($"Value of `{nameof(Model)}` field cannot be empty");
+            errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)

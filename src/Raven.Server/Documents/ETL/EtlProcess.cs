@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -38,7 +39,6 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -47,7 +47,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -1411,26 +1410,38 @@ namespace Raven.Server.Documents.ETL
                             }
                     }
                         
-                    case EtlType.Snowflake:
-                        using (var snowflakeEtl = new SnowflakeEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SnowflakeEtlConfiguration, database,
-                            database.ServerStore))
-                        using (snowflakeEtl.EnterTestMode(out debugOutput))
-                        {
-                            snowflakeEtl.EnsureThreadAllocationStats();
+                case EtlType.Snowflake:
+                    using (var snowflakeEtl = new SnowflakeEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SnowflakeEtlConfiguration, database,
+                        database.ServerStore))
+                    using (snowflakeEtl.EnterTestMode(out debugOutput))
+                    {
+                        snowflakeEtl.EnsureThreadAllocationStats();
 
-                            var snowflakeItem = testScript.IsDelete ? new RelationalDatabaseItem(tombstone, docCollection) : new RelationalDatabaseItem(document, docCollection);
+                        var snowflakeItem = testScript.IsDelete ? new RelationalDatabaseItem(tombstone, docCollection) : new RelationalDatabaseItem(document, docCollection);
 
-                            var transformed = snowflakeEtl.Transform(new[] { snowflakeItem }, context, new EtlStatsScope(new EtlRunStats()),
-                                new EtlProcessState());
+                        var transformed = snowflakeEtl.Transform(new[] { snowflakeItem }, context, new EtlStatsScope(new EtlRunStats()),
+                            new EtlProcessState());
 
-                            Debug.Assert(relationalTestScript != null);
+                        Debug.Assert(relationalTestScript != null);
 
-                            var result = snowflakeEtl.RunTest(context, transformed, relationalTestScript.PerformRolledBackTransaction);
-                            result.DebugOutput = debugOutput;
-                            return result;
-                        }
-                        
-                    default:
+                        var result = snowflakeEtl.RunTest(context, transformed, relationalTestScript.PerformRolledBackTransaction);
+                        result.DebugOutput = debugOutput;
+                        return result;
+                    }
+                    
+                case EtlType.Ai:
+                    using (var aiEtl = new AiEtl(testScript.Configuration.Transforms[0], testScript.Configuration as AiEtlConfiguration, database, database.ServerStore))
+                    using (aiEtl.EnterTestMode(out debugOutput))
+                    {
+                        aiEtl.EnsureThreadAllocationStats();
+
+                        // var aiItem = testScript.IsDelete ? new AiEtlItem(tombstone, docCollection) : new AiEtlItem(document, docCollection);
+                        throw new NotImplementedException("TODO");
+
+                        // var result = aiEtl.RunTest();
+                    }
+
+                default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
                 }
         }

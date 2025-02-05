@@ -734,7 +734,6 @@ public class RavenDB_23556 : RavenTestBase
         var connectionString = new AiConnectionString { Name = connectionStringName };
 
         const string expectedApiKeyValue = "someApiKey";
-        const string expectedModelValue = "someModel";
         const string expectedUriValue = "https://someUri.com";
         const string expectedDeploymentName = "someDeploymentName";
 
@@ -760,7 +759,7 @@ public class RavenDB_23556 : RavenTestBase
         using (var store = GetDocumentStore())
         {
             var exception = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString)));
-            Assert.Contains($"Value of `{nameof(OpenAiSettings.Model)}` field cannot be empty", exception.Message);
+            Assert.Contains($"Value of `{nameof(OpenAiSettings.Model)}` field cannot be empty.", exception.Message);
         }
     }
 

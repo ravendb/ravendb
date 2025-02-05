@@ -232,6 +232,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Documents\ETL\Providers\AI\Test\" />
     <Folder Include="Documents\Sharding\Smuggler\" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">

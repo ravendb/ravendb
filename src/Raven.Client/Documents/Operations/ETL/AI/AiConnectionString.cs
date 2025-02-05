@@ -91,6 +91,43 @@ public sealed class AiConnectionString : ConnectionString
         return string.IsNullOrEmpty(finalResult) ? $"{nameof(AiConnectionString)}Identifier" : finalResult;
     }
 
+    public bool ValidateIdentifier(out List<string> errors)
+    {
+        errors = [];
+
+        if (string.IsNullOrWhiteSpace(Identifier))
+        {
+            errors.Add("Identifier cannot be empty or contain only whitespace;");
+            return false;
+        }
+
+        // Check that the string is already normalized (contains only a-z, 0-9 and hyphens)
+        if (Identifier != Identifier.Normalize(NormalizationForm.FormD))
+            errors.Add("Identifier contains diacritical marks or non-ASCII characters;");
+
+        // Check that there are no uppercase letters
+        if (Identifier.Any(char.IsUpper))
+            errors.Add("Identifier contains uppercase letters;");
+
+        // Check for invalid characters and collect them
+        var invalidChars = Identifier.Where(c => c is not (>= 'a' and <= 'z' or >= '0' and <= '9' or '-'))
+            .Distinct()
+            .ToList();
+        if (invalidChars.Count != 0)
+            errors.Add($"Identifier contains invalid characters: {string.Join(", ", invalidChars.Select(c => $"'{c}'"))}. " +
+                       $"Only lowercase letters (a-z), numbers (0-9) and hyphens (-) are allowed.");
+
+        // Check that there are no consecutive hyphens
+        if (Identifier.Contains("--"))
+            errors.Add("Identifier contains consecutive hyphens;");
+
+        // Check that the string does not end with a hyphen
+        if (Identifier.EndsWith("-"))
+            errors.Add("Identifier ends with a hyphen;");
+
+        return errors.Count != 0 == false;
+    }
+
     public AiSettingsCompareDifferences Compare(AiConnectionString newConnectionString)
     {
         if (newConnectionString == null)

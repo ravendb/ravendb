@@ -32,10 +32,10 @@ public sealed class OllamaSettings : AbstractAiSettings
     public override void ValidateMandatoryFields(ref List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(Uri))
-            errors.Add($"Value of `{nameof(Uri)}` field cannot be empty");
+            errors.Add($"Value of `{nameof(Uri)}` field cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(Model))
-            errors.Add($"Value of `{nameof(Model)}` field cannot be empty");
+            errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
