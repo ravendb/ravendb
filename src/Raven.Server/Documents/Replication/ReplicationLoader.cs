@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Replication
                         var state = GetExternalReplicationState(_server, Database.Name, external.TaskId, ctx);
                         var myEtag = ChangeVectorUtils.GetEtagById(state.DestinationChangeVector, Database.DbBase64Id);
                         minEtag = Math.Min(myEtag, minEtag);
-                        lastProcessedTombstonesInfo?.Add(external.Name, new LastTombstoneInfo(external.Name, collection, myEtag, ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication));
+                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, external.Name, myEtag, ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication);
                     }
                 }
             }
@@ -150,7 +150,21 @@ namespace Raven.Server.Documents.Replication
             {
                 replicationNodes.Remove(lastEtagPerDestination.Key);
                 minEtag = Math.Min(lastEtagPerDestination.Value.LastEtag, minEtag);
-                lastProcessedTombstonesInfo?.Add(lastEtagPerDestination.Key.Url, new LastTombstoneInfo(lastEtagPerDestination.Key.Url, collection, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.InternalReplication));
+                switch (lastEtagPerDestination.Key)
+                {
+                    case PullReplicationAsHub pullReplicationAsHub:
+                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, pullReplicationAsHub.Name, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsHub);
+                        break;
+                    case PullReplicationAsSink pullReplicationAsSink:
+                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, pullReplicationAsSink.Name, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink);
+                        break;
+                    case ExternalReplication externalReplication:
+                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, externalReplication.Name, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication);
+                        break;
+                    case InternalReplication internalReplication:
+                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, internalReplication.NodeTag, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.InternalReplication);
+                        break;
+                }
             }
 
             if (replicationNodes.Count > 0)
@@ -163,13 +177,26 @@ namespace Raven.Server.Documents.Replication
 
                 foreach (var node in replicationNodes)
                 {
-                    lastProcessedTombstonesInfo.Add(node.Url, new LastTombstoneInfo(node.Url, collection, 0, ITombstoneAware.TombstoneDeletionBlockerType.InternalReplication));
+                    AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, ((InternalReplication)node).NodeTag, 0, ITombstoneAware.TombstoneDeletionBlockerType.InternalReplication);
                 }
 
                 return 0;
             }
 
             return minEtag;
+        }
+
+        private static void AddOrUpdateLastEtag(Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo, string collection, string name, long etag, ITombstoneAware.TombstoneDeletionBlockerType type)
+        {
+            if (lastProcessedTombstonesInfo?.TryGetValue(name, out LastTombstoneInfo info) == true)
+            {
+                info.Etag = Math.Min(etag, info.Etag);
+                lastProcessedTombstonesInfo[name] = info;
+            }
+            else
+            {
+                lastProcessedTombstonesInfo?.Add(name, new LastTombstoneInfo(name, collection, etag, type));
+            }
         }
 
         public long GetMinimalEtagForTombstoneCleanupWithHubReplication(Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null, string collection = null)
