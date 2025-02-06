@@ -1435,10 +1435,12 @@ namespace Raven.Server.Documents.ETL
                     {
                         aiEtl.EnsureThreadAllocationStats();
 
-                        // var aiItem = testScript.IsDelete ? new AiEtlItem(tombstone, docCollection) : new AiEtlItem(document, docCollection);
-                        throw new NotImplementedException("TODO");
+                        var aiEtlItem = new AiEtlItem(document, docCollection);
+                        var results = aiEtl.Transform([aiEtlItem], context, new EtlStatsScope(new EtlRunStats()), new EtlProcessState());
 
-                        // var result = aiEtl.RunTest();
+                        var result  = aiEtl.RunTest(results, context);
+                        result.DebugOutput = debugOutput;
+                        return result;
                     }
 
                 default:

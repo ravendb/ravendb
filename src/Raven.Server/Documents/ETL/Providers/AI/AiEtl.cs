@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Counters;
@@ -9,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
+using Raven.Server.Documents.ETL.Providers.AI.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.VectorSearch;
@@ -188,5 +190,32 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                     list.Capacity = MaxCapacity;
             }
         }
+    }
+
+    public AiEtlTestScriptResult RunTest(IEnumerable<AiEtlEmbeddingItem> records, DocumentsOperationContext context)
+    {
+        var services = AiHelper.CreateServicesForTest(
+            new AiEtlConfiguration
+            {
+                AiConnectorType = AiConnectorType.Onnx,
+                Connection = new AiConnectionString { OnnxSettings = new OnnxSettings()}
+            }, out string serviceId);
+
+        var embeddingService = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId);
+        var result = new AiEtlTestScriptResult();
+
+        foreach (var record in records)
+        {
+            foreach (var aiEtlEmbeddingItemValue in record.Values.SelectMany(x => x.Value))
+            {
+                aiEtlEmbeddingItemValue.ValueEmbeddingsDocumentId = record.DocumentId;
+                aiEtlEmbeddingItemValue.EmbeddingValue = embeddingService.GenerateEmbeddingsAsync([aiEtlEmbeddingItemValue.TextualValue]).Result[0];
+
+                result.EmbeddingItemValues.Add(aiEtlEmbeddingItemValue);
+            }
+        }
+
+        result.TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList();
+        return result;
     }
 }
