@@ -701,7 +701,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                         if (shouldSkip != null)
                         {
-                            var ptr = table.DirectRead(id, out int size);
+                            var ptr = table.DirectRead(id, out int size, out _);
                             if (tableValueHolder == null)
                                 tableValueHolder = new Table.TableValueHolder();
 
