@@ -1825,7 +1825,7 @@ namespace Raven.Server.Documents
                 var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                     collectionName.GetTableName(CollectionTableType.Documents));
 
-                var ptr = table.DirectRead(doc.StorageId, out int size);
+                var ptr = table.DirectRead(doc.StorageId, out int size, out bool compressed);
                 var tvr = new TableValueReader(ptr, size);
                 var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr).Strip(DocumentFlags.FromClusterTransaction) | documentFlags;
 
@@ -1898,7 +1898,7 @@ namespace Raven.Server.Documents
                         TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
                 }
 
-                table.Delete(doc.StorageId);
+                table.Delete(doc.StorageId, ptr, size, compressed);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

@@ -197,7 +197,7 @@ namespace Voron.Data.Tables
                     var cur = buffer.Ptr;
                     for (int i = 0; i < used; i++)
                     {
-                        var ptr = table.DirectRead(dataIds[i], out int size);
+                        var ptr = table.DirectRead(dataIds[i], out int size, out _);
                         Memory.Copy(cur, ptr, size);
                         cur += size;
                     }
