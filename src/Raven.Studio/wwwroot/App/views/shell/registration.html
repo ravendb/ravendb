@@ -21,7 +21,7 @@
                         day<span data-bind="if: daysToRegister() > 1">s</span> left to register
                     </span>
                     <span data-bind="if: error">
-                        <strong class="text-warning" data-bind="text: error"></strong>
+                        <strong class="text-warning" data-bind="html: error"></strong>
                     </span>
                     <div data-bind="visible: licenseExpired" class="margin-top-lg"> 
                         Select one of the following options:

@@ -111,19 +111,19 @@ class registration extends dialogViewModelBase {
                 error += `: ${licenseStatus.ErrorMessage}`;
             }
         } else if (licenseStatus.Expired) {
-            const expiration = moment(licenseStatus.SubscriptionExpiration);
+            const expiration = moment.utc(licenseStatus.SubscriptionExpiration);
             error = "License has expired";
             if (expiration.isValid()) {
-                error += ` on ${expiration.format("YYYY MMMM Do")}`;
+                error += ` on ${expiration.format("YYYY MMMM Do")} UTC ${license.getLicenseInfoIcon({ date: expiration, isExpired: true, isSmall: false })}`;
             }
         }
         this.error(error);
 
-        const firstStart = moment(licenseStatus.FirstServerStartDate)
+        const firstStart = moment.utc(licenseStatus.FirstServerStartDate)
             .add("1", "week").add("1", "day");
 
         this.daysToRegister = ko.pureComputed(() => {
-            const now = moment();
+            const now = moment.utc();
             return firstStart.diff(now, "days");
         });        
         

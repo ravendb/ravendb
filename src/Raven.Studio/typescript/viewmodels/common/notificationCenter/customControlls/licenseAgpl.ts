@@ -18,11 +18,18 @@ class licenseAgpl  {
             return null;
         }
 
-        const now = moment();
-        const firstStart = moment(licenseStatus.FirstServerStartDate);
+        const now = moment.utc();
+        const firstStart = moment.utc(licenseStatus.FirstServerStartDate);
         const weekAfterFirstStart = firstStart.clone().add("1", "week");
+        const dateFormat = "YYYY-MM-DD HH:mm:ss";
 
-        return now.isBefore(weekAfterFirstStart) ? weekAfterFirstStart.format("YYYY-MM-DD") : null; 
+        return now.isBefore(weekAfterFirstStart)
+            ? `<strong>${weekAfterFirstStart.format(dateFormat)} UTC
+                    <i class="icon-info text-info"
+                        title="Studio will work until ${weekAfterFirstStart.format(dateFormat)} UTC which is ${weekAfterFirstStart.local().format(dateFormat)} your local time">
+                    </i>
+                </strong>`
+            : null;
     });
     
     register() {

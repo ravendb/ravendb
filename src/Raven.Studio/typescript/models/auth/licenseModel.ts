@@ -41,21 +41,28 @@ class licenseModel {
         }
 
         const dateFormat = "YYYY MMMM Do";
-        const expiration = moment(licenseStatus.SubscriptionExpiration);
-        const now = moment();
-        const nextMonth = moment().add(1, 'month');
+        const expiration = moment.utc(licenseStatus.SubscriptionExpiration);
+        const now = moment.utc();
+        const nextMonth = moment.utc().add(1, 'month');
         if (now.isBefore(expiration)) {
             const relativeDurationClass = nextMonth.isBefore(expiration) ? "" : "text-warning";
 
             const fromDuration = generalUtils.formatDurationByDate(expiration, true);
-            return `${expiration.format(dateFormat)} <br /><small class="${relativeDurationClass}">(${fromDuration})</small>`;
+            return `${expiration.format(dateFormat)} UTC ${this.getLicenseInfoIcon({ date: expiration, isExpired: false })}<br /><small class="${relativeDurationClass}">(${fromDuration})</small>`;
         }
 
         const expiredClass = licenseStatus.Expired ? "text-danger" : "";
         const duration = generalUtils.formatDurationByDate(expiration, true);
-        return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration})</Small>`;
+
+        return `${expiration.format(dateFormat)} UTC ${this.getLicenseInfoIcon({ date: expiration, isExpired: true })}<br /><Small class="${expiredClass}">(${duration})</Small>`;
     });
-    
+
+    static getLicenseInfoIcon({ date, isExpired, isSmall = true }: { date: moment.Moment, isExpired: boolean, isSmall?: boolean }): string {
+        return `<i class="icon-info text-info"
+            title="Your license ${isExpired ? "has expired" : "will expire"} at the end of ${date.format("YYYY-MM-DD")} UTC which is ${date.local().format("YYYY-MM-DD HH:mm:ss")} your local time"
+            style="font-size: ${isSmall ? "16px" : undefined}">
+        </i>`;
+    }
         
     static generateLicenseRequestUrl(limitType: Raven.Client.Exceptions.Commercial.LimitType = null): string {
         let url = `${licenseModel.baseUrl}?`;
