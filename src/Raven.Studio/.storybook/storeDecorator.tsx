@@ -1,10 +1,12 @@
 import { resetAllMocks } from "@storybook/test";
 import { useState } from "react";
-import { createStoreConfiguration } from "components/store";
-import { setEffectiveTestStore } from "components/storeCompat";
+import { createStoreConfiguration } from "../typescript/components/store";
+import { setEffectiveTestStore } from "../typescript/components/storeCompat";
 import { Provider } from "react-redux";
+import React from "react";
 
-export const StoreDecorator = (Story) => {
+export const StoreDecorator = (Story, context) => {
+    useTheme(context.globals.theme);
     resetAllMocks();
 
     const [store] = useState(() => {
@@ -21,3 +23,39 @@ export const StoreDecorator = (Story) => {
         </Provider>
     );
 };
+
+const stylesheetPrefix = "styles/";
+
+export type Theme = "dark" | "light" | "blue" | "classic";
+
+const themeToStylesheet: Record<Theme, string> = {
+    dark: "styles.css",
+    light: "styles-light.css",
+    blue: "styles-blue.css",
+    classic: "styles-classic.css",
+};
+
+function useTheme(theme: Theme) {
+    const fileName = themeToStylesheet[theme];
+
+    // remove all style links
+    document.querySelector('link[href="styles/styles.css"]')?.remove();
+    document.querySelector('link[href="styles/styles-light.css"]')?.remove();
+    document.querySelector('link[href="styles/styles-blue.css"]')?.remove();
+    document.querySelector('link[href="styles/styles-classic.css"]')?.remove();
+    document.querySelector('link[href="styles/bs5-styles.css"]')?.remove();
+    document.querySelector('link[href="styles/bs5-styles-light.css"]')?.remove();
+    document.querySelector('link[href="styles/bs5-styles-blue.css"]')?.remove();
+    document.querySelector('link[href="styles/bs5-styles-classic.css"]')?.remove();
+
+    // add new style links
+    const bs5ThemeLink = document.createElement("link");
+    bs5ThemeLink.rel = "stylesheet";
+    bs5ThemeLink.href = stylesheetPrefix + "bs5-" + fileName;
+    document.head.insertBefore(bs5ThemeLink, document.head.firstChild);
+
+    const themeLink = document.createElement("link");
+    themeLink.rel = "stylesheet";
+    themeLink.href = stylesheetPrefix + fileName;
+    document.head.insertBefore(themeLink, document.head.firstChild);
+}

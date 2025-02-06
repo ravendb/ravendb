@@ -1,7 +1,4 @@
-﻿import "../wwwroot/Content/css/bs5-styles.scss";
-import "../wwwroot/Content/css/styles.less"
-
-import { overrideViews } from "../typescript/overrides/views";
+﻿import { overrideViews } from "../typescript/overrides/views";
 import { overrideComposition } from "../typescript/overrides/composition";
 import { overrideSystem } from "../typescript/overrides/system";
 
@@ -48,9 +45,6 @@ pluginWidget.install({});
 import { commonInit } from "components/common/shell/setup";
 
 import { fn } from "@storybook/test";
-import { useState } from "react";
-import { createStoreConfiguration } from "components/store";
-import { setEffectiveTestStore } from "components/storeCompat";
 window.jest = { fn }
 
 commonInit();
@@ -58,10 +52,6 @@ commonInit();
 import studioSettings from "common/settings/studioSettings";
 const mockJQueryPromise = () => $().promise();
 studioSettings.default.configureLoaders(mockJQueryPromise, mockJQueryPromise, mockJQueryPromise, mockJQueryPromise);
-
-import { Provider } from "react-redux";
-
-import { resetAllMocks } from "@storybook/test";
 
 import { StoreDecorator } from "./storeDecorator"
 
@@ -77,37 +67,21 @@ export const parameters = {
       date: /Date$/,
     },
   },
-  backgrounds: {
-    default: 'default-body',
-    values: [
-      {
-        name: 'default-body',
-        value: '#181826',
-      },
-      {
-        name: 'default-panel',
-        value: '#1e1f2b',
-      },
-      {
-        name: 'default-panel-header',
-        value: '#262936',
-      },
-      {
-        name: 'blue-body',
-        value: '#172138',
-      },
-      {
-        name: 'blue-panel',
-        value: '#e1e3ef',
-      },
-      {
-        name: 'blue-panel-header',
-        value: '#f4f5fb',
-      },
-      {
-        name: 'light-body',
-        value: '#dbdde3',
-      },      
-    ],
-  },
 }
+
+export const globalTypes = {
+  theme: {
+    name: "Theme",
+    description: "Global theme for components",
+    defaultValue: "dark",
+    toolbar: {
+      icon: "paintbrush",
+      items: [
+        { value: "dark", title: "Default" },
+        { value: "classic", title: "Classic" },
+        { value: "blue", title: "Blue" },
+        { value: "light", title: "Light" },
+      ],
+    },
+  },
+};
