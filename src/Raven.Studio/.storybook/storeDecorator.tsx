@@ -39,14 +39,10 @@ function useTheme(theme: Theme) {
     const fileName = themeToStylesheet[theme];
 
     // remove all style links
-    document.querySelector('link[href="styles/styles.css"]')?.remove();
-    document.querySelector('link[href="styles/styles-light.css"]')?.remove();
-    document.querySelector('link[href="styles/styles-blue.css"]')?.remove();
-    document.querySelector('link[href="styles/styles-classic.css"]')?.remove();
-    document.querySelector('link[href="styles/bs5-styles.css"]')?.remove();
-    document.querySelector('link[href="styles/bs5-styles-light.css"]')?.remove();
-    document.querySelector('link[href="styles/bs5-styles-blue.css"]')?.remove();
-    document.querySelector('link[href="styles/bs5-styles-classic.css"]')?.remove();
+    Object.values(themeToStylesheet).forEach((fileName) => {
+        document.querySelector(`link[href="styles/bs5-${fileName}"]`)?.remove();
+        document.querySelector(`link[href="styles/${fileName}"]`)?.remove();
+    });
 
     // add new style links
     const bs5ThemeLink = document.createElement("link");
