@@ -26,7 +26,7 @@ class licenseAgpl  {
         return now.isBefore(weekAfterFirstStart)
             ? `<strong>${weekAfterFirstStart.format(dateFormat)} UTC
                     <i class="icon-info text-info"
-                        title="Studio will work until ${weekAfterFirstStart.format(dateFormat)} UTC which is ${weekAfterFirstStart.local().format(dateFormat)} your local time">
+                        title="The Studio will be available for use until ${weekAfterFirstStart.format(dateFormat)} UTC, which is ${weekAfterFirstStart.local().format(dateFormat)} your local time.">
                     </i>
                 </strong>`
             : null;

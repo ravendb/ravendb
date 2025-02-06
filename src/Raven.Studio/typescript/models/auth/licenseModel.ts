@@ -59,7 +59,7 @@ class licenseModel {
 
     static getLicenseInfoIcon({ date, isExpired, isSmall = true }: { date: moment.Moment, isExpired: boolean, isSmall?: boolean }): string {
         return `<i class="icon-info text-info"
-            title="Your license ${isExpired ? "has expired" : "will expire"} at the end of ${date.format("YYYY-MM-DD")} UTC which is ${date.local().format("YYYY-MM-DD HH:mm:ss")} your local time"
+            title="Your license ${isExpired ? "has expired on" : "will expire at the end of"} ${date.format("YYYY-MM-DD")} UTC, which ${isExpired ? "was" : "is"} ${date.local().format("YYYY-MM-DD HH:mm:ss")} your local time."
             style="font-size: ${isSmall ? "16px" : undefined}">
         </i>`;
     }
