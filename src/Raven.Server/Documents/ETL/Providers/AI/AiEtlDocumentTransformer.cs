@@ -1,5 +1,3 @@
-#pragma warning disable SKEXP0050
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,22 +20,30 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
 {
     private readonly AiEtlConfiguration _configuration;
     private AiEtlScriptRun _currentRun;
+    private PatchRequest _mainScript;
     
-    public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiEtlConfiguration configuration) : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SnowflakeEtl), behaviorFunctions)
+    public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiEtlConfiguration configuration) : base(database, context, null, behaviorFunctions)
     {
         _configuration = configuration;
+        _mainScript = new PatchRequest(transformation.Script, PatchRequestType.AiEtl);
 
         LoadToDestinations = [];
     }
 
     public override void Initialize(bool debugMode)
     {
-        base.Initialize(debugMode);
-
+        Database.Scripts.GetScriptRunner(_mainScript, true, out DocumentScript);
+        
         if (DocumentScript == null)
             return;
         
+        if (debugMode)
+            DocumentScript.DebugMode = true;
+        
         DocumentScript.ScriptEngine.SetValue("splitMarkDownLines", new ClrFunction(DocumentScript.ScriptEngine, "splitMarkDownLines", SplitMarkDownLines));
+        DocumentScript.ScriptEngine.SetValue("splitMarkDownParagraphs", new ClrFunction(DocumentScript.ScriptEngine, "splitMarkDownParagraphs", SplitMarkDownParagraphs));
+        DocumentScript.ScriptEngine.SetValue("splitPlainTextLines", new ClrFunction(DocumentScript.ScriptEngine, "splitPlainTextLines", SplitPlainTextLines));
+        DocumentScript.ScriptEngine.SetValue("splitPlainTextParagraphs", new ClrFunction(DocumentScript.ScriptEngine, "splitPlainTextParagraphs", SplitPlainTextParagraphs));
     }
 
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
@@ -80,8 +86,16 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
             
             return;
         }
-        
-        DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
+        /*
+        using (var res = DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }))
+        {
+            var z = res.TranslateToObject(Context);
+
+            z.TryGet("Something", out object r);
+
+            var x = 0;
+        }
+        */
 
         var aiEtlEmbeddingItem = new AiEtlEmbeddingItem() { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>() };
         
@@ -116,10 +130,11 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
         _currentRun.CurrentRun.Add(aiEtlEmbeddingItem);
     }
     
+#pragma warning disable SKEXP0050
     // todo non-default token counter
     private JsValue SplitMarkDownLines(JsValue self, JsValue[] args)
     {
-        var methodSignature = "splitMarkDownLines(text, maxTokensPerLine)";
+        const string methodSignature = "splitMarkDownLines(text, maxTokensPerLine)";
         
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
@@ -131,6 +146,101 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
             ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
         
         var chunks = TextChunker.SplitMarkDownLines(args[0].AsString(), (int)args[1].AsNumber());
+        
+        var jsChunks = new JsValue[chunks.Count];
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            jsChunks[i] = new JsString(chunks[i]);
+        }
+        
+        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
+
+        return jsArray;
+    }
+    
+    // todo optional params
+    private JsValue SplitMarkDownParagraphs(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "splitMarkDownParagraphs(lines, maxTokensPerLine)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
+        if (args[0].IsArray() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be of type {typeof(IEnumerable<string>)}");
+        
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+
+        var lines = new List<string>();
+
+        foreach (var line in args[0].AsArray())
+        {
+            lines.Add(line.AsString());
+        }
+        
+        var chunks = TextChunker.SplitMarkdownParagraphs(lines, (int)args[1].AsNumber());
+        
+        var jsChunks = new JsValue[chunks.Count];
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            jsChunks[i] = new JsString(chunks[i]);
+        }
+        
+        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
+
+        return jsArray;
+    }
+    
+    // todo non-default token counter
+    private JsValue SplitPlainTextLines(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "splitPlainTextLines(text, maxTokensPerLine)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+        
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+        
+        var chunks = TextChunker.SplitPlainTextLines(args[0].AsString(), (int)args[1].AsNumber());
+        
+        var jsChunks = new JsValue[chunks.Count];
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            jsChunks[i] = new JsString(chunks[i]);
+        }
+        
+        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
+
+        return jsArray;
+    }
+    
+    // todo optional params
+    private JsValue SplitPlainTextParagraphs(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "splitPlainTextParagraphs(lines, maxTokensPerLine)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
+        if (args[0].IsArray() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be of type {typeof(IEnumerable<string>)}");
+        
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+
+        var lines = new List<string>();
+
+        foreach (var line in args[0].AsArray())
+        {
+            lines.Add(line.AsString());
+        }
+        
+        var chunks = TextChunker.SplitPlainTextParagraphs(lines, (int)args[1].AsNumber());
         
         var jsChunks = new JsValue[chunks.Count];
         for (var i = 0; i < chunks.Count; i++)

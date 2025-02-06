@@ -47,7 +47,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -112,7 +112,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Names"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -189,7 +189,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -257,7 +257,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -363,7 +363,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Age"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -426,7 +426,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -490,7 +490,7 @@ public class RavenDB_23556 : RavenTestBase
                     AllowEtlOnNonEncryptedChannel = true,
                     ConnectionStringName = connectionStringName,
                     FieldsToInclude = ["Name"],
-                    Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                    Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
                 };
 
                 var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -546,7 +546,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -596,7 +596,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -811,7 +811,7 @@ public class RavenDB_23556 : RavenTestBase
                     AllowEtlOnNonEncryptedChannel = true,
                     ConnectionStringName = connectionStringName,
                     FieldsToInclude = ["Name"],
-                    Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                    Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
                 };
 
                 var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -867,7 +867,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "loadToWhatever(){}" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -892,12 +892,15 @@ public class RavenDB_23556 : RavenTestBase
         }
     }
     
+#pragma warning disable SKEXP0050
     [RavenFact(RavenTestCategory.Etl)]
     public void TestChunkingInTransformation()
     {
         const string connectionStringName = "connection string name";
+        
+        const string plainTextToChunk = "text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk";
 
-        var dto = new Dto { Name = "Name1" };
+        var dto = new Dto { Name = plainTextToChunk };
 
         using (var store = GetDocumentStore())
         {
@@ -914,7 +917,7 @@ public class RavenDB_23556 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "let x = splitMarkDownLines(\"text\", 23); return x;" }]
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "this.Something = splitPlainTextLines(this.Name, 5);" }]
             };
             
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -928,6 +931,7 @@ public class RavenDB_23556 : RavenTestBase
             WaitForUserToContinueTheTest(store);
         }
     }
+#pragma warning restore SKEXP0050
 
     private class Dto
     {

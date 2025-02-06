@@ -414,7 +414,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
             if (IsEmptyScript)
             {
-                if (type != EtlType.Raven)
+                if (type != EtlType.Raven && type != EtlType.Ai)
                     errors.Add($"Script '{Name}' must not be empty");
             }
 

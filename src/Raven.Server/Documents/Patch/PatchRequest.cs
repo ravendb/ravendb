@@ -90,6 +90,7 @@ namespace Raven.Server.Documents.Patch
                 case PatchRequestType.QueueSink:
                 // modify and return the document
                 case PatchRequestType.Patch:
+                case PatchRequestType.AiEtl:
                     return $@"
  function __actual_func(args) {{ 
 Raven_ExplodeArgs(this, args);
@@ -110,7 +111,6 @@ function resolve(docs, hasTombstone, resolveToTombstone){{
 
 }}";
                 case PatchRequestType.EtlBehaviorFunctions:
-                case PatchRequestType.AiEtl:
                     return Script;
                 default:
                     throw new ArgumentOutOfRangeException();
