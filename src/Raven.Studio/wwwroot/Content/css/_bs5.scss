@@ -66,11 +66,6 @@
 @import "../scss/qrcode.scss";
 @import "../scss/navbar";
 
-// Storybook theme testing
-.sb-show-main {
-    background-color: $body-bg !important;
-}
-
 //Reduce tooltip ul size, TODO move to different scss when bs3 is removed
 
 .tooltip {
