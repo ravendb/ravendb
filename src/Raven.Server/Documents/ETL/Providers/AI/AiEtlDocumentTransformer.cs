@@ -26,8 +26,6 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
     {
         _configuration = configuration;
         _mainScript = new PatchRequest(transformation.Script, PatchRequestType.AiEtl);
-
-        LoadToDestinations = [];
     }
 
     public override void Initialize(bool debugMode)
@@ -86,48 +84,47 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
             
             return;
         }
-        /*
-        using (var res = DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }))
+
+        using (var scriptResult = DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }))
         {
-            var z = res.TranslateToObject(Context);
-
-            z.TryGet("Something", out object r);
-
-            var x = 0;
-        }
-        */
-
-        var aiEtlEmbeddingItem = new AiEtlEmbeddingItem() { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>() };
-        
-        foreach (var fieldName in _configuration.FieldsToInclude)
-        {
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var fieldValue) == false)
-                continue;
-
-            if (aiEtlEmbeddingItem.Values.TryGetValue(fieldName, out var values) == false)
-                aiEtlEmbeddingItem.Values[fieldName] = values = new List<AiEtlEmbeddingItemValue>();
-            
-            switch (fieldValue)
+            var aiEtlEmbeddingItem = new AiEtlEmbeddingItem()
             {
-                case LazyStringValue lsv:
-                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lsv });
-                    break;
-                case LazyCompressedStringValue lcsv:
-                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lcsv });
-                    break;
-                case BlittableJsonReaderArray bjra:
+                DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>()
+            };
+
+            var transformedBjro = scriptResult.TranslateToObject(Context);
+            
+            foreach (var fieldName in _configuration.FieldsToInclude)
+            {
+                if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var fieldValue) == false
+                    && transformedBjro.TryGet(fieldName, out fieldValue) == false)
+                    continue;
+
+                if (aiEtlEmbeddingItem.Values.TryGetValue(fieldName, out var values) == false)
+                    aiEtlEmbeddingItem.Values[fieldName] = values = new List<AiEtlEmbeddingItemValue>();
+
+                switch (fieldValue)
                 {
-                    foreach (var textualValue in bjra)
-                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = (LazyStringValue)textualValue });
-                    break;
+                    case LazyStringValue lsv:
+                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lsv });
+                        break;
+                    case LazyCompressedStringValue lcsv:
+                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lcsv });
+                        break;
+                    case BlittableJsonReaderArray bjra:
+                    {
+                        foreach (var textualValue in bjra)
+                            values.Add(new AiEtlEmbeddingItemValue() { TextualValue = (LazyStringValue)textualValue });
+                        break;
+                    }
+                    default:
+                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = fieldValue.ToString() });
+                        break;
                 }
-                default:
-                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = fieldValue.ToString() });
-                    break;
             }
+            
+            _currentRun.Additions.Add(aiEtlEmbeddingItem);
         }
-        
-        _currentRun.CurrentRun.Add(aiEtlEmbeddingItem);
     }
     
 #pragma warning disable SKEXP0050

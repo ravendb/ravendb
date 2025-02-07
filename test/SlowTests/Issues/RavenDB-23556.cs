@@ -916,8 +916,8 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Name"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "this.Something = splitPlainTextLines(this.Name, 5);" }]
+                FieldsToInclude = ["ChunkedName"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "this.ChunkedName = splitPlainTextLines(this.Name, 5);" }]
             };
             
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -928,7 +928,19 @@ public class RavenDB_23556 : RavenTestBase
 
             etlDone.Wait(TimeSpan.FromSeconds(10));
             
-            WaitForUserToContinueTheTest(store);
+            using (var session = store.OpenSession())
+            {
+                var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var documentEmbeddings = session.Load<object>(documentEmbeddingsId);
+                
+                Assert.NotNull(documentEmbeddings);
+                
+                var configurationValues = ((dynamic)documentEmbeddings)[configuration.Name];
+                var attachmentNamesForChunkedNamePropertyJArray = (JArray)configurationValues.ChunkedName;
+                var attachmentNamesForNameProperty = attachmentNamesForChunkedNamePropertyJArray.ToObject<string[]>();
+                
+                Assert.Equal(8, attachmentNamesForNameProperty.Length);
+            }
         }
     }
 #pragma warning restore SKEXP0050

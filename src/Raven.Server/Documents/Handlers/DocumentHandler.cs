@@ -222,7 +222,10 @@ namespace Raven.Server.Documents.Handlers
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            foreach (var item in _items.CurrentRun)
+            // textual value -> attachment name
+            var embeddingsTracker = new Dictionary<string, string>();
+            
+            foreach (var item in _items.Additions)
             {
                 var configDjv = new DynamicJsonValue();
                 
@@ -235,7 +238,12 @@ namespace Raven.Server.Documents.Handlers
                     
                     foreach (var value in values)
                     {
-                        var attachmentName = _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, value);
+                        if (embeddingsTracker.TryGetValue(value.TextualValue, out var attachmentName) == false)
+                        {
+                            attachmentName = _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, value);
+                            embeddingsTracker.Add(value.TextualValue, attachmentName);
+                        }
+                        
                         value.ValueEmbeddingsAttachmentName = attachmentName;
                         attachmentNamesDja.Add(attachmentName);
                     }
@@ -295,7 +303,7 @@ namespace Raven.Server.Documents.Handlers
                 _database.DocumentsStorage.Delete(context, documentEmbeddingsToDeleteId, DocumentFlags.None);
             }
             
-            return _items.CurrentRun.Count + _items.Deletes.Count;
+            return _items.Additions.Count + _items.Deletes.Count;
         }
         
         public void Dispose()

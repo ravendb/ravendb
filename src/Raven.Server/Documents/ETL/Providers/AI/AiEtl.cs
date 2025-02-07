@@ -93,7 +93,7 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
 
         using (_missingEmbeddingsHolder)
         {
-            foreach (var aiEtlEmbeddingItem in aiEtlScriptRun.CurrentRun)
+            foreach (var aiEtlEmbeddingItem in aiEtlScriptRun.Additions)
             {
                 foreach (var kvp in aiEtlEmbeddingItem.Values)
                 {
@@ -114,22 +114,22 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                 processed++;
             }
 
-            var missingValues = _missingEmbeddingsHolder.GetValuesForMissingEmbeddings();
-            if (missingValues.Count > 0)
+            var embeddingsMap = _missingEmbeddingsHolder.GetEmbeddingsMap();
+            var keys = embeddingsMap.Keys.ToList();
+            if (embeddingsMap.Keys.Any())
             {
-                var generatedValues = AsyncHelpers.RunSync(() => _service.GenerateEmbeddingsAsync(missingValues));
+                var generatedValues = AsyncHelpers.RunSync(() => _service.GenerateEmbeddingsAsync(keys));
 
-                if (generatedValues.Count != missingValues.Count)
+                if (generatedValues.Count != keys.Count)
                     throw new InvalidOperationException("Generated embeddings count does not match missing values count");
-
-                var embeddingsMap = _missingEmbeddingsHolder.GetEmbeddingsMap();
-
-                for (var i = 0; i < embeddingsMap.Count; ++i)
+                
+                for (var i = 0; i < keys.Count; ++i)
                 {
-                    var embeddingItem = embeddingsMap[i];
+                    var key = keys[i];
                     var embedding = generatedValues[i];
-
-                    embeddingItem.EmbeddingValue = embedding;
+                    
+                    foreach (var embeddingItem in embeddingsMap[key])
+                        embeddingItem.EmbeddingValue = embedding;
                 }
             }
             
@@ -153,37 +153,22 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
 
     private class MissingEmbeddingsHolder : IDisposable
     {
-        private const int MaxCapacity = 1024;
-
-        private readonly List<string> _missingValues = new();
-
-        private readonly List<AiEtlEmbeddingItemValue> _embeddingsMap = new();
-
-        // todo change mapping
+        // missing value -> embeddings
+        private readonly Dictionary<string, List<AiEtlEmbeddingItemValue>> _embeddingsMap = new();
+        
         public void Add(string value, AiEtlEmbeddingItemValue item)
         {
-            _missingValues.Add(value);
-            _embeddingsMap.Add(item);
+            if (_embeddingsMap.ContainsKey(value) == false)
+                _embeddingsMap.Add(value, new List<AiEtlEmbeddingItemValue>());
+                
+            _embeddingsMap[value].Add(item);
         }
 
-        public List<string> GetValuesForMissingEmbeddings() => _missingValues;
-
-        public IReadOnlyList<AiEtlEmbeddingItemValue> GetEmbeddingsMap() => _embeddingsMap;
+        public IReadOnlyDictionary<string, List<AiEtlEmbeddingItemValue>> GetEmbeddingsMap() => _embeddingsMap;
 
         public void Dispose()
         {
-            _missingValues.Clear();
             _embeddingsMap.Clear();
-
-            SetCapacityIfNeeded(_missingValues);
-            SetCapacityIfNeeded(_embeddingsMap);
-            return;
-
-            static void SetCapacityIfNeeded<T>(List<T> list)
-            {
-                if (list.Capacity > MaxCapacity)
-                    list.Capacity = MaxCapacity;
-            }
         }
     }
 
