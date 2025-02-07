@@ -36,8 +36,8 @@ class showDataDialog extends dialogViewModelBase {
     }
 
     copyToClipboard() {
-        this.close();
-        copyToClipboard.copy(this.inputData(), this.title + " was copied to clipboard");
+      copyToClipboard.copy(this.inputData(), this.title + " was copied to clipboard", document.getElementById("showDataDialog"));
+      this.close();
     }
 }
 

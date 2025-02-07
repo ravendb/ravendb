@@ -151,3 +151,5 @@ src/Sparrow.Server/Utils/VxSort/codegen/.idea/
 src/Sparrow.Server/Utils/VxSort/codegen/__pycache__/
 
 /.cache
+
+.cursorignore
