@@ -21,10 +21,10 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             public BlittableJsonReaderObject.PropertyDetails PropertyDetails;
         }
 
-        private readonly Action<JsonReader, State> _setState = ExpressionHelper.CreateFieldSetter<JsonReader, State>("_currentState");
-        private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelper.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
-        private readonly Action<JsonReader, bool> _setHasExceededMaxDepth = ExpressionHelper.CreateFieldSetter<JsonReader, bool>("_hasExceededMaxDepth");
-        private readonly Action<JsonReader> _clearStack = ExpressionHelper.SafelyClearList<JsonReader>("_stack");
+        private static readonly Action<JsonReader, State> _setState = ExpressionHelper.CreateFieldSetter<JsonReader, State>("_currentState");
+        private static readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelper.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
+        private static readonly Action<JsonReader, bool> _setHasExceededMaxDepth = ExpressionHelper.CreateFieldSetter<JsonReader, bool>("_hasExceededMaxDepth");
+        private static readonly Action<JsonReader> _clearStack = ExpressionHelper.SafelyClearList<JsonReader>("_stack");
 
         public readonly JsonOperationContext Context;
 
