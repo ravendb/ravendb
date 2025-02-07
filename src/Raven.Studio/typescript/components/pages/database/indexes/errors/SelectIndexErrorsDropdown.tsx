@@ -59,17 +59,21 @@ export function SelectIndexErrorsDropdown({
                     <hr className="m-0" />
                     {indexesList.map((item, index) => (
                         <div className="hstack gap-2" key={index}>
-                            <div className="hstack lh-1 gap-3 dropdown-checkbox-group">
+                            <div
+                                title={item.name}
+                                className="hstack  lh-1 gap-3 dropdown-checkbox-group"
+                                style={{ width: dropdownType === "Action" ? "260px" : "450px" }}
+                            >
                                 <Checkbox
                                     selected={selectedColumnFilters.includes(item.name)}
                                     toggleSelection={() => toggleOne(item.name)}
                                 />
-                                <Label className="m-0">
+                                <Label className="m-0 text-truncate">
                                     <small>{item.name}</small>
                                 </Label>
                             </div>
                             <FlexGrow />
-                            <Badge color={item.count > 0 ? "faded-danger" : "faded-dark"}>{item.count}</Badge>
+                            <Badge color="faded-danger">{item.count}</Badge>
                         </div>
                     ))}
                 </div>

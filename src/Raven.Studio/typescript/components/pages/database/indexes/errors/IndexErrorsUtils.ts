@@ -48,6 +48,11 @@ const getErroredIndexNames = (errorInfoItems: ErrorInfoItem[]): NameAndCount[] =
         item.indexErrorsCountDto.forEach((countDto) => {
             const prevCount = erroredIndexNamesResult.get(countDto.Name) || 0;
             const currentCount = countDto.Errors.reduce((count, val) => val.NumberOfErrors + count, 0);
+
+            if (currentCount + prevCount === 0) {
+                return;
+            }
+
             erroredIndexNamesResult.set(countDto.Name, prevCount + currentCount);
         });
     });
@@ -66,6 +71,11 @@ const getErroredActionNames = (errorInfoItems: ErrorInfoItem[]): NameAndCount[] 
             countDto.Errors.forEach((error) => {
                 const prevCount = erroredActionNamesResult.get(error.Action) || 0;
                 const currentCount = error.NumberOfErrors;
+
+                if (currentCount + prevCount === 0) {
+                    return;
+                }
+
                 erroredActionNamesResult.set(error.Action, prevCount + currentCount);
             });
         });

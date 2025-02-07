@@ -121,8 +121,8 @@ function IndexErrorsModalBody({ selectedErrors }: IndexErrorsModalBodyProps) {
                 </>
             )}
             <RichAlert variant="info" className="mt-3">
-                While the current indexing errors will be cleared, an index with an <code>Error state</code> will not be
-                set back to <code>Normal</code> state.
+                While the current indexing errors will be cleared, an index with an <b>Error state</b> will not be set
+                back to <b>Normal</b> state.
             </RichAlert>
         </div>
     );

@@ -45,21 +45,29 @@ export default function IndexErrorsModal({
                     <Icon icon="warning" color="warning" margin="me-0" className="fs-1" />
                 </div>
                 <div className="text-center lead">Indexing error details</div>
-                <Row className="details-item">
-                    <Col>Index name</Col>
-                    <Col className="text-right fw-bold">{errorDetailsOriginal.IndexName}</Col>
+                <Row className="details-item" title={errorDetailsOriginal.IndexName}>
+                    <Col lg={2}>Index name</Col>
+                    <Col lg={10} className="text-right fw-bold text-truncate">
+                        {errorDetailsOriginal.IndexName}
+                    </Col>
                 </Row>
-                <Row className="details-item">
-                    <Col>Document ID</Col>
-                    <Col className="text-right fw-bold ">{errorDetailsOriginal.Document}</Col>
+                <Row className="details-item" title={errorDetailsOriginal.Document}>
+                    <Col lg={2}>Document ID</Col>
+                    <Col lg={10} className="text-right fw-bold text-truncate">
+                        {errorDetailsOriginal.Document}
+                    </Col>
                 </Row>
-                <Row className="details-item">
-                    <Col>Date</Col>
-                    <Col className="text-right fw-bold">{errorDetailsOriginal.LocalTime}</Col>
+                <Row className="details-item" title={errorDetailsOriginal.LocalTime}>
+                    <Col lg={2}>Date</Col>
+                    <Col lg={10} className="text-right fw-bold text-truncate">
+                        {errorDetailsOriginal.LocalTime}
+                    </Col>
                 </Row>
-                <Row className="details-item">
-                    <Col>Action</Col>
-                    <Col className="text-right fw-bold">{errorDetailsOriginal.Action}</Col>
+                <Row className="details-item" title={errorDetailsOriginal.Action}>
+                    <Col lg={2}>Action</Col>
+                    <Col lg={10} className="text-right fw-bold text-truncate">
+                        {errorDetailsOriginal.Action}
+                    </Col>
                 </Row>
                 <Code code={errorDetailsOriginal.Error} elementToCopy={errorDetailsOriginal.Error} language="csharp" />
             </ModalBody>
