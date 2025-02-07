@@ -132,22 +132,29 @@ export default function RevisionsBinCleaner() {
                                                             placement="right"
                                                         >
                                                             <div className="p-3">
-                                                                All items in the Revision Bin will be deleted when the{" "}
-                                                                <b>Set minimum entries age to keep</b> is toggled off.
+                                                                All items in the Revisions Bin will be deleted when
+                                                                &#39;Set minimum entries age to keep&#39; is toggled
+                                                                off.
                                                             </div>
                                                         </UncontrolledPopover>
                                                     </>
                                                 )}
                                         </FormGroup>
                                         <Collapse
+                                            data-testid="collapse"
                                             isOpen={
                                                 formValues.isMinimumEntriesAgeToKeepEnabled &&
                                                 formValues.isRevisionsBinCleanerEnabled
                                             }
                                         >
-                                            <FormGroup>
+                                            <FormGroup data-testid="durationPicker">
                                                 <FormDurationPicker
                                                     control={control}
+                                                    disabled={
+                                                        !hasDatabaseAdminAccess ||
+                                                        formState.isSubmitting ||
+                                                        !formValues.isMinimumEntriesAgeToKeepEnabled
+                                                    }
                                                     placeholder={{
                                                         days: "Default (30)",
                                                         hours: "Default (0)",

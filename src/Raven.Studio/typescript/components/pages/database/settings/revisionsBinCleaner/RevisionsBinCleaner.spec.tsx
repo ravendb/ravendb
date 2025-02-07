@@ -2,8 +2,8 @@ import React from "react";
 import { composeStories } from "@storybook/react";
 import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as stories from "./RevisionsBinCleaner.stories";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import userEvent from "@testing-library/user-event";
+import { queryAllByClassName } from "test/byClassNameQueries";
 
 const { DefaultRevisionsBinCleaner } = composeStories(stories);
 
@@ -18,22 +18,34 @@ describe("RevisionsBinCleaner", () => {
     });
 
     it("can disable 'set minimum entries age to keep' after disabling 'enable revisions bin cleaner'", async () => {
+        const durationPickerValues = [0, 0, 1];
         const user = userEvent.setup();
+
         const { screen } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const minimumEntriesAgeToKeepBefore = await screen.findByName("minimumEntriesAgeToKeepInMin");
+        const durationPickerBefore = await screen.findByTestId("durationPicker");
+        const durationPickerInputsBefore = queryAllByClassName(durationPickerBefore, "form-control");
+        expect(durationPickerInputsBefore).toHaveLength(3);
 
-        expect(minimumEntriesAgeToKeepBefore).toBeEnabled();
-        expect(minimumEntriesAgeToKeepBefore).toHaveValue(
-            DatabasesStubs.revisionsBinCleaner().MinimumEntriesAgeToKeepInMin
-        );
+        expect(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" })).toBeChecked();
+
+        durationPickerInputsBefore.forEach((input, index) => {
+            expect(input).toHaveValue(durationPickerValues[index]);
+            expect(input).not.toBeDisabled();
+        });
 
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
-        const minimumEntriesAgeToKeepAfter = await screen.findByName("minimumEntriesAgeToKeepInMin");
+        expect(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" })).not.toBeChecked();
 
-        expect(minimumEntriesAgeToKeepAfter).toBeDisabled();
-        expect(minimumEntriesAgeToKeepAfter).toHaveValue(null);
+        const durationPickerAfter = await screen.findByTestId("durationPicker");
+        const durationPickerInputsAfter = queryAllByClassName(durationPickerAfter, "form-control");
+        expect(durationPickerInputsAfter).toHaveLength(3);
+
+        durationPickerInputsAfter.forEach((input, index) => {
+            expect(input).toHaveValue(durationPickerValues[index]);
+            expect(input).toBeDisabled();
+        });
     });
 
     it("can disable 'set custom refresh frequency' after disabling 'enable revisions bin cleaner'", async () => {
@@ -117,40 +129,5 @@ describe("RevisionsBinCleaner", () => {
         expect(refreshFrequencyAfter).toHaveValue(null);
         expect(refreshFrequencyAfter).toBeDisabled();
         expect(refreshFrequencySwitchAfter.checked).toBe(false);
-    });
-
-    it("can remove value from 'set minimum entries age to keep' when disabling checkbox", async () => {
-        const minimumEntriesAge = 3;
-
-        const user = userEvent.setup();
-
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <DefaultRevisionsBinCleaner
-                revisionsBinCleanerDto={{
-                    Disabled: false,
-                    MinimumEntriesAgeToKeepInMin: minimumEntriesAge,
-                    RefreshFrequencyInSec: 500,
-                }}
-            />
-        );
-
-        const setMinimumEntriesAgeToKeepSwitchBefore = (await screen.findByRole("checkbox", {
-            name: "Set minimum entries age to keep",
-        })) as HTMLInputElement;
-        const setMinimumEntriesAgeToKeepBefore = await screen.findByName("minimumEntriesAgeToKeepInMin");
-
-        expect(setMinimumEntriesAgeToKeepBefore).toHaveValue(minimumEntriesAge);
-        expect(setMinimumEntriesAgeToKeepSwitchBefore.checked).toBe(true);
-
-        await user.click(setMinimumEntriesAgeToKeepSwitchBefore);
-
-        const setMinimumEntriesAgeToKeepSwitchAfter = (await screen.findByRole("checkbox", {
-            name: "Set minimum entries age to keep",
-        })) as HTMLInputElement;
-        const setMinimumEntriesAgeToKeepAfter = await screen.findByName("minimumEntriesAgeToKeepInMin");
-
-        expect(setMinimumEntriesAgeToKeepAfter).toHaveValue(null);
-        expect(setMinimumEntriesAgeToKeepAfter).toBeDisabled();
-        expect(setMinimumEntriesAgeToKeepSwitchAfter.checked).toBe(false);
     });
 });
