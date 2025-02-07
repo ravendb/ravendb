@@ -1,139 +1,111 @@
-# RavenDB - An ACID NoSQL Document Database
-This repository contains source code for the [RavenDB](https://ravendb.net/) document database. With a RavenDB database you can set up a NoSQL data architecture or add a NoSQL layer to your current relational database.
+<h1 align="center"><img src="docs/logoBlue.png" alt="">  
 
-![RavenDB Studio](docs/readmeScreenshot.png)
+Modern ACID NoSQL Database</h1>
 
-## Supported Platforms
-- Windows
-- Linux
-- Docker
-- MacOS
-- Raspberry Pi
+<h4 align="center">    
+    <a href="https://discord.com/invite/ravendb">Discord 🌐💬🎙️</a> |
+    <a href="https://github.com/ravendb/ravendb/discussions">Discusssions 🎫</a> |
+    <a href="https://www.youtube.com/@ravendb_net">YouTube ▶️</a> 
+    <br/><br/>
+    <a href="http://live-test.ravendb.net/">🔌 Try from your browser, now! 🔌</a>
+    <br/><br/>
+    <a href="https://ravendb.net/docs">🎒👶 Documentation</a> |
+    <a href="https://ravendb.net/articles">📰 Articles</a> | 
+    <a href="https://ravendb.net/book"> Book 📖🍵 </a>
+    <br/><br/>
+    <a href="https://ravendb.net/license/request/dev">💹💰 Free developer license </a>
+    <br/><br/>
+</h4>
 
-## Grab Your License and Download Latest Version
+[RavenDB](https://ravendb.net/) is a NoSQL database forged in the flames of passion, by the people frustrated with the state of database industry. Fusing extreme performance and tranquility of ease-of-use, RavenDB offers **above-the-roof developer experience**. While we take the heavy lifting of managing your data (and a lot more..) on our shoulders, you can focus on your system and application code.
 
-Request [your license](https://ravendb.net/free).
+## We're 
 
-Download [the latest version of RavenDB](https://ravendb.net/downloads).
+- Completely open-source (AGPLv3)
 
-## Getting Started
-Install and [set up your database](https://ravendb.net/docs/article-page/7.0/csharp/start/getting-started).
+- Fully ACID & Secure by default
 
-## Learn RavenDB Quickly
-[RavenDB Bootcamp](https://ravendb.net/learn/bootcamp) is a free, self-directed learning course. In just three units you will learn how to use RavenDB to create fully-functional, real-world programs with NoSQL Databases. If you are unfamiliar with NoSQL, it’s okay. We will provide you with all the information you need.
+- Equipped with state-of-art web UI
 
-## Stay Updated on New Developments
-We keep adding new features to improve your RavenDB experience. Check out [our latest improvements](https://ravendb.net/docs/article-page/7.0/csharp/start/whats-new), updated weekly.
+- Continuously growing for 15+ years
 
-## Documentation
-Access [full documentation](https://ravendb.net/docs/article-page/7.0/csharp) for RavenDB. Like our database, it is easy to use.
+- Trusted by major Fortune500 companies 
 
-## Where to Ask for Help
-If you have any questions, or need further assistance, you can [contact us directly](https://ravendb.net/contact).
+- Supporting all major platforms - Linux, MacOS, Windows, Containers, Raspberry Pi
 
-## Report an Issue
-Please check where to report an issue in our [contribution guidelines](./CONTRIBUTING.md#reporting-an-issue).
+- Offering great on-premise experience and also a DBaaS solution - [RavenDB Cloud](https://ravendb.net/cloud)
 
-## RavenDB Developer Community Group
-If you have any questions please visit our [discussions page](https://github.com/ravendb/ravendb/discussions) or check [Google community group archive](http://groups.google.com/group/ravendb/). The solutions for the most common challenges are available. You are welcome to join!
+- Growing [Developers Community](https://discord.com/invite/ravendb), hosting events and talks  
 
-## Pull Requests
-Please check how to submit a Pull Request in our [contribution guidelines](./CONTRIBUTING.md#submitting-a-pull-request).
+- Hosting booths at many major conferences - [take a look](https://ravendb.net/events) where to meet us
 
-## Setup & Run
 
-First please [review and set up prerequisites](https://ravendb.net/docs/article-page/7.0/csharp/start/getting-started#prerequisites).
+## Get your hands-on 🧑‍💻
 
-### Launch RavenDB:
-Running locally:
-```
-<path/to/ravendb>/Server/Raven.Server
-```
+#### Quick tryout 🔌
+- Plug-in to RavenDB now - http://live-test.ravendb.net/
 
-Registering as service in Windows using `rvn` utility available in the package *Server* directory:
-```
-<path\to\ravendb>\rvn.exe windows-service register --service-name RavenDB4
-```
+#### RavenDB Cloud ☁️
+- Get your [free instance here](https://cloud.ravendb.net/pricing)
 
-### Hello World (.NET)
+#### Linux, MacOS, Windows⚡
+- [Download](https://ravendb.net/download), extract, and execute `run.sh`/`run.ps1`. 
 
-#### Server Side
+#### Docker 🐳
+- Start RavenDB container -  `docker run --rm -it ravendb/ravendb:latest -p 8080:8080`
 
-- Launch a RavenDB server instance as follows:
-```
-<path/to/ravendb>/Server/Raven.Server --ServerUrl=http://localhost:8080
-```
 
-- Open a web browser and enter `http://localhost:8080`
+#### .deb package 🐧
+- Install with `apt`! Manual is here - [.deb installation guide](https://ravendb.net/docs/article-page/7.0/csharp/start/installation/gnu-linux/deb)
 
-- Click on `Databases` in the menu on the left-hand side, and then create a new database named `SampleDataDB`
 
-- Click on `Settings` and then on `Create Sample Data` in the left menu. Now Click on `Create`
+#### More details 🎒💿
+- For advanced setup guide, visit [Getting Started](https://ravendb.net/docs/start/getting-started). For Studio manual, check [Overview](https://ravendb.net/docs/studio/overview). 
 
-#### Client Side
 
-- Install .NET Core SDK. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
+<h2 align="left">🏗️ SDKs </h2>
+<h4 align="left">
+    Official
+    <br/> 
+    <a href="https://www.nuget.org/packages/RavenDB.Client/">.NET </a> |
+    <a href="https://github.com/ravendb/ravendb-nodejs-client"> Node.JS </a> |
+    <a href="https://github.com/ravendb/ravendb-python-client"> Python </a> |
+    <a href="https://github.com/ravendb/ravendb-jvm-client"> Java  </a> |
+    <a href="https://github.com/ravendb/ravendb-php-client"> PHP </a> |
+    <a href="https://github.com/ravendb/ravendb-go-client"> Golang </a> |
+    <a href="https://github.com/ravendb/ravendb-cpp-client"> C++ </a> |
+    <a href="https://github.com/ravendb/ravendb-ruby-client"> Ruby </a> 
+    </br></br>
+    Community
+    </br>
+    <a href="https://github.com/YgorCastor/ravix"> Elixir </a>
+    <br/><br/>
+</h4>
 
-- Open a terminal and type:
+##  RavenDB Management Studio 🐦‍⬛
+<img src="docs/image.png" alt="">
 
-```bash
-mkdir HelloWorld
-cd HelloWorld
-dotnet new console
-```
 
-- Add the RavenDB Client package:
+## Content & Learning 
+- [RavenDB vs MongoDB: Check the full comparison](https://ravendb.net/ravendb-vs-mongodb)
+- [RavenDB Book](https://ravendb.net/book) 💙
+- [RavenDB Bootcamp](https://ravendb.net/learn/bootcamp):  fast, free, and self-directed learning course.
+- [RavenDB Founder - Oren's Blog 💡](https://ayende.com/blog/)
+- [RavenDB Official YouTube Channel](https://www.youtube.com/@ravendb_net)
 
-```powershell
-   dotnet add package RavenDB.Client --version 7.0.0-*
-```
 
-- Replace the content of Program.cs with the following:
-```csharp
-using System;
-using Raven.Client.Documents;
+## Contributing & releases 
+- [Latest improvements](https://ravendb.net/docs/article-page/7.0/csharp/start/whats-new), updated weekly.
+- [Contribution guidelines](./CONTRIBUTING.md) for both issues and PRs.
 
-namespace HelloWorld
-{
-    class Shippers
-    {
-        public string Name;
-        public string Phone;
-    }
-    
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            using (var store = new DocumentStore
-            {
-                Urls = new string[] {"http://localhost:8080"},
-                Database = "SampleDataDB"
-            })
-            {
-                store.Initialize();
 
-                using (var session = store.OpenSession())
-                {
-                    var shipper = session.Load<Shippers>("shippers/1-A");
-                    Console.WriteLine("Shipper #1 : " + shipper.Name + ", Phone: " + shipper.Phone);
-                }
-            }
-        }
-    }
-}
-```
+<h2 align="center">Hall of Fame 🏆</h2>
 
-- Type:
-```bash
-dotnet restore
-dotnet build
-dotnet run
-```
+<h4 align="center"> Special thanks to all our contributors! </h4>
 
-### SAST Tools
+<a href="https://github.com/ravendb/ravendb/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ravendb/ravendb&columns=12&max=138" />
+</a>
 
-- [PVS-Studio](https://pvs-studio.com/)
-- [Snyk](https://snyk.io/)
 
-###### Enjoy :)
+
