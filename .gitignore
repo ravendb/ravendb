@@ -148,3 +148,5 @@ src/Sparrow.Server/Utils/VxSort/codegen/__pycache__/
 
 /bench/Vector.Benchmark/vectors
 /.cache
+
+.cursorignore
