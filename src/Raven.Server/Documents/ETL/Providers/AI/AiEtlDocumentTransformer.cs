@@ -16,11 +16,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEmbeddingItem, EtlStatsScope, EtlPerformanceOperation>
+internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEmbeddingItem, AiEtlStatsScope, AiEtlPerformanceOperation>
 {
     private readonly AiEtlConfiguration _configuration;
     private AiEtlScriptRun _currentRun;
     private PatchRequest _mainScript;
+    private AiEtlStatsScope _stats;
     
     public AiEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiEtlConfiguration configuration) : base(database, context, null, behaviorFunctions)
     {
@@ -64,14 +65,13 @@ public sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtlEm
     {
         throw new NotImplementedException();
     }
-
-    /// docId -> <fieldName, <fieldValues>>
+    
     public override IEnumerable<AiEtlEmbeddingItem> GetTransformedResults()
     {
         return _currentRun ?? Enumerable.Empty<AiEtlEmbeddingItem>();
     }
 
-    public override void Transform(AiEtlItem item, EtlStatsScope stats, EtlProcessState state)
+    public override void Transform(AiEtlItem item, AiEtlStatsScope stats, EtlProcessState state)
     {
         Current = item;
         _currentRun ??= new AiEtlScriptRun();

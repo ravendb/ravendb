@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -52,6 +54,43 @@ namespace Raven.Server.Documents.ETL.Stats
                 S3Upload = S3Upload,
                 NumberOfFiles = NumberOfFiles,
                 FileName = FileName
+            };
+
+            if (Scopes != null)
+            {
+                operation.Operations = Scopes
+                    .Select(x => ToPerformanceOperation(x.Key, x.Value))
+                    .ToArray();
+            }
+
+            return operation;
+        }
+    }
+
+    public sealed class AiEtlStatsScope : AbstractEtlStatsScope<AiEtlStatsScope, AiEtlPerformanceOperation>
+    {
+        public TimeSpan GenerateEmbeddings { get; set; }
+        
+        public AiEtlStatsScope(EtlRunStats stats, bool start = true) : base(stats, start)
+        {
+        }
+
+        protected override AiEtlStatsScope OpenNewScope(EtlRunStats stats, bool start)
+        {
+            return new AiEtlStatsScope(stats, start);
+        }
+
+        protected override AiEtlPerformanceOperation ToPerformanceOperation(string name, AiEtlStatsScope scope)
+        {
+            return scope.ToPerformanceOperation(name);
+        }
+
+        public override AiEtlPerformanceOperation ToPerformanceOperation(string name)
+        {
+            var operation = new AiEtlPerformanceOperation(Duration)
+            {
+                Name = name,
+                GenerateEmbeddings = GenerateEmbeddings
             };
 
             if (Scopes != null)

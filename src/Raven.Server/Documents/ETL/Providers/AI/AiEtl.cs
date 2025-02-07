@@ -25,7 +25,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfiguration, AiConnectionString, EtlStatsScope, EtlPerformanceOperation>
+public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfiguration, AiConnectionString, AiEtlStatsScope, AiEtlPerformanceOperation>
 {
     private ITextEmbeddingGenerationService _service;
 
@@ -38,6 +38,8 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
     {
         Metrics = new EtlMetricsCountersManager();
     }
+
+    private AiEtlStatsScope _statsScope;
 
     public override EtlType EtlType => EtlType.Ai;
     public override bool ShouldTrackCounters() => false;
@@ -78,12 +80,12 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
         return false;
     }
 
-    protected override EtlTransformer<AiEtlItem, AiEtlEmbeddingItem, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<AiEtlItem, AiEtlEmbeddingItem, AiEtlStatsScope, AiEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
         return new AiEtlDocumentTransformer(Database, context, Transformation, null, Configuration);
     }
 
-    protected override int LoadInternal(IEnumerable<AiEtlEmbeddingItem> items, DocumentsOperationContext context, EtlStatsScope scope)
+    protected override int LoadInternal(IEnumerable<AiEtlEmbeddingItem> items, DocumentsOperationContext context, AiEtlStatsScope scope)
     {
         _service ??= AiHelper.CreateService(Configuration);
 
@@ -141,9 +143,9 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
         return processed;
     }
 
-    protected override EtlStatsScope CreateScope(EtlRunStats stats)
+    protected override AiEtlStatsScope CreateScope(EtlRunStats stats)
     {
-        return new EtlStatsScope(stats);
+        return new AiEtlStatsScope(stats);
     }
 
     protected override bool ShouldFilterOutHiLoDocument()
