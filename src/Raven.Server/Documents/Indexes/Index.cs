@@ -3062,13 +3062,17 @@ namespace Raven.Server.Documents.Indexes
         internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
             Stopwatch overallDuration)
         {
-            progressStats.NumberOfItemsToProcess +=
-                DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration);
+            progressStats.NumberOfItemsToProcess += collectionName == Constants.Documents.Collections.AllDocumentsCollection
+                ? DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
+                    queryContext.Documents, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration)
+                : DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
+                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out totalCount, overallDuration);
             progressStats.TotalNumberOfItems += totalCount;
 
-            progressStats.NumberOfTombstonesToProcess +=
-                DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
+            progressStats.NumberOfTombstonesToProcess += collectionName == Constants.Documents.Collections.AllDocumentsCollection
+                ? DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
+                    queryContext.Documents, progressStats.LastProcessedTombstoneEtag, out totalCount, overallDuration)
+                : DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
                     queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, out totalCount, overallDuration);
             progressStats.TotalNumberOfTombstones += totalCount;
         }

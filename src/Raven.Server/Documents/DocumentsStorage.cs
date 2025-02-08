@@ -2247,9 +2247,19 @@ namespace Raven.Server.Documents
             return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: false, totalCount: out totalCount, overallDuration);
         }
 
+        public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, long afterEtag, out long totalCount, Stopwatch overallDuration)
+        {
+            return GetNumberOfItemsToProcess(context, afterEtag, tombstones: false, totalCount: out totalCount, overallDuration);
+        }
+
         public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
             return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: true, totalCount: out totalCount, overallDuration);
+        }
+
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, out long totalCount, Stopwatch overallDuration)
+        {
+            return GetNumberOfItemsToProcess(context, afterEtag, tombstones: true, totalCount: out totalCount, overallDuration);
         }
 
         private long GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, out long totalCount,
@@ -2282,6 +2292,25 @@ namespace Raven.Server.Documents
             {
                 totalCount = 0;
                 return 0;
+            }
+
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+        }
+
+        private long GetNumberOfItemsToProcess(DocumentsOperationContext context, long afterEtag, bool tombstones, out long totalCount,
+            Stopwatch overallDuration)
+        {
+            Table table;
+            TableSchema.FixedSizeKeyIndexDef indexDef;
+            if (tombstones)
+            {
+                table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+                indexDef = TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice];
+            }
+            else
+            {
+                table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+                indexDef = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
             }
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
