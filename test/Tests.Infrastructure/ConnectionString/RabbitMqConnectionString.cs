@@ -31,7 +31,7 @@ public class RabbitMqConnectionString : IDisposable
 
         var envConnectionString = Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty;
         if (envConnectionString.Length == 0)
-            return null;
+            throw new InvalidOperationException($"Environment variable {EnvironmentVariable} is empty");
 
         _connection = CreateConnection(envConnectionString, out var ex);
         if (_connection != null)
