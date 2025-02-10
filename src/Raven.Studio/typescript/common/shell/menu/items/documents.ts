@@ -5,6 +5,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import DocumentIdentities = require("components/pages/database/documents/identities/DocumentIdentities");
 import reactUtils = require("common/reactUtils");
 import AllRevisions = require("components/pages/database/documents/allRevisions/AllRevisions");
+import CompareExchange = require("components/pages/database/documents/compareExchange/CompareExchange");
 
 export = getDocumentsMenuItem;
 
@@ -107,7 +108,9 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: "databases/cmpXchg",
+            // moduleId: reactUtils.bridgeToReact(CompareExchange.default, "nonShardedView"),
             moduleId: require("viewmodels/database/cmpXchg/cmpXchg"),
+            // TODO check for sharding
             shardingMode: "allShards",
             title: "Compare Exchange",
             nav: true,

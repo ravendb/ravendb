@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getCompareExchangeItemsCommand extends commandBase {
 
-    constructor(private database: database, private prefix: string, private start: number, private take: number) {
+    constructor(private database: database | string, private prefix: string, private start: number, private take: number) {
         super();
     }
 
