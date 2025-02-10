@@ -42,7 +42,7 @@ jobs:
       run: npm run compile
       working-directory: ./src/Raven.Studio
 
-    - name: Test Studio
+    - name: Test Studio (jest)
       run: npm run test
       working-directory: ./src/Raven.Studio
       
@@ -54,7 +54,7 @@ jobs:
       run: npm run build-storybook --quiet
       working-directory: ./src/Raven.Studio
       
-    - name: Serve Storybook and run tests
+    - name: Test Studio (storybook)
       run: |
         npx concurrently -k -s first -n "SB,TEST" -c "magenta,blue" \
           "npx http-server storybook-static --port 6006 --silent" \

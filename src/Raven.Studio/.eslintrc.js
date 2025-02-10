@@ -26,7 +26,13 @@ module.exports = {
     "@typescript-eslint/no-unused-vars": "warn",
     "react/react-in-jsx-scope": "off",
     "local-rules/no-reactstrap-alert": "warn",
-    "local-rules/mixed-imports": "error",
+    "local-rules/mixed-imports": "error", 
+    "react-hooks/exhaustive-deps": [
+      "error",
+      {
+        additionalHooks: '(useAsync|useAsyncCallback)',
+      },
+    ],
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',
