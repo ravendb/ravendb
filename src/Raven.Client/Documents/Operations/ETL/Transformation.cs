@@ -27,6 +27,8 @@ namespace Raven.Client.Documents.Operations.ETL
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
         private static readonly Regex AddAttachmentMethodRegex = new Regex(AddAttachment, RegexOptions.Compiled);
 
+        private static readonly Regex GenerateEmbeddingsRegex = new Regex();
+
         internal readonly CountersTransformation Counters;
         
         internal sealed class CountersTransformation
@@ -396,7 +398,6 @@ namespace Raven.Client.Documents.Operations.ETL
                                 break;
                             default:
                                 throw new ArgumentException($"Unknown ETL type: {type}");
-
                         }
 
                         errors.Add($"No `loadTo<{targetName}Name>()` method call found in '{Name}' script");

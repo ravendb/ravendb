@@ -46,7 +46,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx, 
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Name"],
+                PathsToProcess = ["Name"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -111,7 +111,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx, 
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Names"],
+                PathsToProcess = ["Names"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -165,6 +165,113 @@ public class RavenDB_23556 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl)]
+    public void TestDocumentsWithNestedPropertyPath()
+    {
+        const string connectionStringName = "AI Connection String Name";
+        
+        using (var store = GetDocumentStore())
+        {
+            var subDto = new SubDto() { Name = "Subname1" };
+            var dto = new Dto { SubDto = subDto };
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(subDto);
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx, 
+                AllowEtlOnNonEncryptedChannel = true, 
+                ConnectionStringName = connectionStringName,
+                PathsToProcess = ["SubDto.Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
+            Etl.AddEtl(store, configuration, connectionString);
+            
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            using (var session = store.OpenSession())
+            {
+                var valueHash = AiHelper.CalculateValueHash(dto.SubDto.Name);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                var expectedAttachmentName = (string)((dynamic)valueEmbeddingsDocument).Subname1;
+
+                var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+
+                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                var attachmentNamesForSubDtoNamePropertyJArray = (JArray)configurationValues["SubDto.Name"];
+                var attachmentNamesForSubDtoNameProperty = attachmentNamesForSubDtoNamePropertyJArray.ToObject<string[]>();
+                
+                Assert.Single(attachmentNamesForSubDtoNameProperty);
+                Assert.Equal(expectedAttachmentName, attachmentNamesForSubDtoNameProperty[0]);
+                
+                attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+            }
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestDocumentsWithNestedArrayPropertyPath()
+    {
+        const string connectionStringName = "AI Connection String Name";
+        
+        using (var store = GetDocumentStore())
+        {
+            var subDto1 = new SubDto() { Name = "Subname1" };
+            var subDto2 = new SubDto() { Name = "Subname2" };
+            var dto = new Dto { SubDtos = [subDto1, subDto2] };
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            WaitForUserToContinueTheTest(store);
+            
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx, 
+                AllowEtlOnNonEncryptedChannel = true, 
+                ConnectionStringName = connectionStringName,
+                PathsToProcess = ["SubDto.Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
+            Etl.AddEtl(store, configuration, connectionString);
+            
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            WaitForUserToContinueTheTest(store);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
     public void TestIfEmbeddingsAreGeneratedOnlyOnceInSameBatch()
     {
         const string connectionStringName = "AI Connection String Name";
@@ -188,7 +295,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx, 
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Name"],
+                PathsToProcess = ["Name"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -256,7 +363,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx, 
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Name"],
+                PathsToProcess = ["Name"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -342,6 +449,88 @@ public class RavenDB_23556 : RavenTestBase
     }
     
     [RavenFact(RavenTestCategory.Etl)]
+    public void TestDocumentsWithSingleValueWithUpdate()
+    {
+        const string connectionStringName = "connection string name";
+
+        using (var store = GetDocumentStore())
+        {
+            var dto = new Dto { Name = "Name1" };
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            // todo handle lack of transforms
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx, 
+                AllowEtlOnNonEncryptedChannel = true, 
+                ConnectionStringName = connectionStringName,
+                PathsToProcess = ["Name"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
+            Etl.AddEtl(store, configuration, connectionString);
+            
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+
+            AssertEmbeddings();
+
+            using (var session = store.OpenSession())
+            {
+                var loadDoc = session.Load<Dto>(dto.Id);
+                loadDoc.Name = "updated";
+                session.SaveChanges();
+                dto = loadDoc;
+            }
+
+            WaitForUserToContinueTheTest(store);
+            //Assert embedding after update:
+            AssertEmbeddings();
+            
+            void AssertEmbeddings()
+            {
+                using (var session = store.OpenSession())
+                {
+                    var valueHash = AiHelper.CalculateValueHash(dto.Name);
+                    var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, valueHash);
+                    var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                    //Assert.NotNull(valueEmbeddingsDocument);
+                    var expectedAttachmentName = (string)((dynamic)valueEmbeddingsDocument).Name1;
+
+                    var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                    Assert.Single(attachmentNames);
+                    Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+
+                    var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                    var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                    var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                    var attachmentNamesForNamePropertyJArray = (JArray)configurationValues.Name;
+                    var attachmentNamesForNameProperty = attachmentNamesForNamePropertyJArray.ToObject<string[]>();
+                
+                    Assert.Single(attachmentNamesForNameProperty);
+                    Assert.Equal(expectedAttachmentName, attachmentNamesForNameProperty[0]);
+                
+                    attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
+                
+                    Assert.Single(attachmentNames);
+                    Assert.Equal(expectedAttachmentName, attachmentNames[0].Name);
+                }
+            }
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Etl)]
     public void TestHandlingOfNonStringValues()
     {
         const string connectionStringName = "AI Connection String Name";
@@ -362,7 +551,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx, 
                 AllowEtlOnNonEncryptedChannel = true, 
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Age"],
+                PathsToProcess = ["Age"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -425,7 +614,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Name"],
+                PathsToProcess = ["Name"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -489,7 +678,7 @@ public class RavenDB_23556 : RavenTestBase
                     AiConnectorType = AiConnectorType.Onnx,
                     AllowEtlOnNonEncryptedChannel = true,
                     ConnectionStringName = connectionStringName,
-                    FieldsToInclude = ["Name"],
+                    PathsToProcess = ["Name"],
                     Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
                 };
 
@@ -545,7 +734,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Name"],
+                PathsToProcess = ["Name"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -563,7 +752,7 @@ public class RavenDB_23556 : RavenTestBase
 
             var stats = etlProcess.GetPerformanceStats();
 
-            Assert.Equal(stats[0].BatchTransformationCompleteReason, "Stopping the batch because it has already processed max number of extracted documents : 8192");
+            Assert.Equal(stats[0].BatchTransformationCompleteReason, "Stopping the batch because it has already processed max number of extracted documents : 128");
         }
     }
 
@@ -595,7 +784,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Name"],
+                PathsToProcess = ["Name"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -810,7 +999,7 @@ public class RavenDB_23556 : RavenTestBase
                     AiConnectorType = AiConnectorType.Onnx,
                     AllowEtlOnNonEncryptedChannel = true,
                     ConnectionStringName = connectionStringName,
-                    FieldsToInclude = ["Name"],
+                    PathsToProcess = ["Name"],
                     Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
                 };
 
@@ -866,7 +1055,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["Name"],
+                PathsToProcess = ["Name"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
@@ -916,7 +1105,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                FieldsToInclude = ["ChunkedName"],
+                PathsToProcess = ["ChunkedName"],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "this.ChunkedName = splitPlainTextLines(this.Name, 5);" }]
             };
             
@@ -951,5 +1140,13 @@ public class RavenDB_23556 : RavenTestBase
         public string Name { get; set; }
         public List<string> Names { get; set; }
         public int Age { get; set; }
+        public SubDto SubDto { get; set; }
+        public SubDto[] SubDtos { get; set; }
+    }
+
+    private class SubDto
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
     }
 }

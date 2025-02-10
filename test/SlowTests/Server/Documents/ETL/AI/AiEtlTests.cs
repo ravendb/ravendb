@@ -56,7 +56,7 @@ public class AiEtlTests : RavenTestBase
                 Name = "EtlForTestingPurposes",
                 ConnectionStringName = "ConnectionStringForTestingPurposes",
                 AiConnectorType = AiConnectorType.Onnx,
-                FieldsToInclude = ["Lines"],
+                PathsToProcess = ["Lines"],
                 Transforms = [transformation],
             };
 

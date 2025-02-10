@@ -39,6 +39,8 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
         if (debugMode)
             DocumentScript.DebugMode = true;
         
+        DocumentScript.ScriptEngine.SetValue("embeddings.generate", new ClrFunction(DocumentScript.ScriptEngine, "embeddings.generate", EmbeddingsGenerate));
+        
         DocumentScript.ScriptEngine.SetValue("splitMarkDownLines", new ClrFunction(DocumentScript.ScriptEngine, "splitMarkDownLines", SplitMarkDownLines));
         DocumentScript.ScriptEngine.SetValue("splitMarkDownParagraphs", new ClrFunction(DocumentScript.ScriptEngine, "splitMarkDownParagraphs", SplitMarkDownParagraphs));
         DocumentScript.ScriptEngine.SetValue("splitPlainTextLines", new ClrFunction(DocumentScript.ScriptEngine, "splitPlainTextLines", SplitPlainTextLines));
@@ -94,7 +96,7 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
 
             var transformedBjro = scriptResult.TranslateToObject(Context);
             
-            foreach (var fieldName in _configuration.FieldsToInclude)
+            foreach (var fieldName in _configuration.PathsToProcess)
             {
                 if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var fieldValue) == false
                     && transformedBjro.TryGet(fieldName, out fieldValue) == false)
@@ -248,6 +250,24 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
         var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
 
         return jsArray;
+    }
+    
+    private JsValue EmbeddingsGenerate(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "splitPlainTextParagraphs(lines, maxTokensPerLine)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
+        if (args[0].IsArray() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be of type {typeof(IEnumerable<string>)}");
+        
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+        
+        return JsValue.Null;
+
+        //return jsArray;
     }
 }
 #pragma warning restore SKEXP0050

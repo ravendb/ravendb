@@ -222,6 +222,8 @@ namespace Raven.Server.Documents.Handlers
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
+            var now = _database.Time.GetUtcNow();
+            
             // textual value -> attachment name
             var embeddingsTracker = new Dictionary<string, string>();
             
@@ -264,8 +266,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             // todo cache
                             [Constants.Documents.Metadata.Collection] = AiHelper.GetDocumentEmbeddingsCollectionName(item.DocumentCollectionName),
-                            // todo cache baseline datetime?
-                            [Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMonths(3)
+                            [Constants.Documents.Metadata.Expires] = now.AddMonths(3)
                         }
                     };
                 }
@@ -283,14 +284,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         foreach (var itemValue in kvp.Value)
                         {
-                            // todo optimize
-                            var attachment = _database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, itemValue.ValueEmbeddingsDocumentId,
-                                itemValue.ValueEmbeddingsAttachmentName, AttachmentType.Document, null);
-
-                            using (var stream = attachment.Stream)
-                            {
-                                _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, documentEmbeddingsId, attachment.Name, attachment.ContentType, attachment.Base64Hash.ToString(), null, stream);
-                            }
+                            _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, itemValue.ValueEmbeddingsDocumentId, itemValue.ValueEmbeddingsAttachmentName,
+                                documentEmbeddingsId, itemValue.ValueEmbeddingsAttachmentName, null, AttachmentType.Document);
                         }
                     }
                 }

@@ -7,7 +7,7 @@ namespace Raven.Server.Config.Categories;
 public sealed class AiConfiguration : ConfigurationCategory
 {
     [Description("Max number of extracted documents in AI integration batch")]
-    [DefaultValue(8192)]
+    [DefaultValue(128)]
     [ConfigurationEntry("Ai.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int? MaxNumberOfExtractedDocuments { get; set; }
 }

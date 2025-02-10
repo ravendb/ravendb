@@ -11,7 +11,7 @@ public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
 
     public AiConnectorType AiConnectorType { get; set; }
 
-    public List<string> FieldsToInclude { get; set; }
+    public List<string> PathsToProcess { get; set; }
 
     public override string GetDestination() => Identifier;
     public override string GetDefaultTaskName() => Identifier;
@@ -44,7 +44,7 @@ public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
     {
         var json = base.ToJson();
 
-        json[nameof(FieldsToInclude)] = new DynamicJsonArray(FieldsToInclude);
+        json[nameof(PathsToProcess)] = new DynamicJsonArray(PathsToProcess);
         json[nameof(AiConnectorType)] = AiConnectorType;
 
         return json;
