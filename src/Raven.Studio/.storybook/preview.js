@@ -67,23 +67,6 @@ export const parameters = {
       date: /Date$/,
     },
   },
-}
-
-export const globalTypes = {
-  theme: {
-    name: "Theme",
-    description: "Global theme for components",
-    defaultValue: "dark",
-    toolbar: {
-      icon: "paintbrush",
-      items: [
-        { value: "dark", title: "Default" },
-        { value: "classic", title: "Classic" },
-        { value: "blue", title: "Blue" },
-        { value: "light", title: "Light" },
-      ],
-    },
-  },
   options: {
     storySort: {
       order: [
@@ -163,5 +146,22 @@ export const globalTypes = {
           "Bits",
       ],
     }
-  },
+  }
 }
+
+export const globalTypes = {
+  theme: {
+    name: "Theme",
+    description: "Global theme for components",
+    defaultValue: "dark",
+    toolbar: {
+      icon: "paintbrush",
+      items: [
+        { value: "dark", title: "Default" },
+        { value: "classic", title: "Classic" },
+        { value: "blue", title: "Blue" },
+        { value: "light", title: "Light" },
+      ],
+    },
+  },
+};

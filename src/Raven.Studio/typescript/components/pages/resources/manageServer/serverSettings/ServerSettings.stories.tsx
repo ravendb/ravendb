@@ -6,7 +6,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
-    title: "Pages/ManageServer/Server Settings",
+    title: "Pages/Manage Server/Server Settings",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
