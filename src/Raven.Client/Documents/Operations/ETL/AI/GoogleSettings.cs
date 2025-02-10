@@ -27,6 +27,11 @@ public sealed class GoogleSettings : AbstractAiSettings
     /// <summary>The version of the Google AI.</summary>
     public GoogleAIVersion? AiVersion { get; set; }
 
+    /// <summary>
+    /// The number of dimensions that the model should use.
+    /// </summary>
+    public int? Dimensions { get; set; }
+
     public override void ValidateMandatoryFields(ref List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(Model))
@@ -49,6 +54,9 @@ public sealed class GoogleSettings : AbstractAiSettings
 
         if (ApiKey != googleSettings.ApiKey)
             differences |= AiSettingsCompareDifferences.AuthenticationSettings;
+
+        if (Dimensions != googleSettings.Dimensions)
+            differences |= AiSettingsCompareDifferences.EmbeddingDimensions;
 
         return differences;
     }

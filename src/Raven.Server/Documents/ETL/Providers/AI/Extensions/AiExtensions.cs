@@ -18,7 +18,7 @@ using OpenAI;
 using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide;
-using GoogleAIVersion = Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion;
+using GoogleApiVersion = Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion;
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0010
 #pragma warning disable SKEXP0070
@@ -61,16 +61,16 @@ public static class AiExtensions
         }
     }
 
-    public static Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion ToGoogleAiVersion(this GoogleAIVersion googleAiVersion)
+    public static Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion ToGoogleApiVersion(this GoogleApiVersion googleApiVersion)
     {
-        switch (googleAiVersion)
+        switch (googleApiVersion)
         {
-            case GoogleAIVersion.V1:
+            case GoogleApiVersion.V1:
                 return Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion.V1;
-            case GoogleAIVersion.V1_Beta:
+            case GoogleApiVersion.V1_Beta:
                 return Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion.V1_Beta;
             default:
-                throw new ArgumentOutOfRangeException(nameof(googleAiVersion), googleAiVersion, null);
+                throw new ArgumentOutOfRangeException(nameof(googleApiVersion), googleApiVersion, null);
         }
     }
 
@@ -78,11 +78,12 @@ public static class AiExtensions
     public static IKernelBuilder AddCustomBertOnnxTextEmbeddingGeneration(
         this IKernelBuilder builder,
         BertOnnxOptions options = null,
+        int? dimensions = null,
         string serviceId = null)
     {
         builder.Services.AddKeyedSingleton<ITextEmbeddingGenerationService>(
             serviceId,
-            GenerateEmbeddings.CreateTextEmbeddingGenerationService(options));
+            GenerateEmbeddings.CreateTextEmbeddingGenerationService(options, dimensions));
 
         return builder;
     }
@@ -90,11 +91,12 @@ public static class AiExtensions
     public static IKernelBuilder AddTransientCustomBertOnnxTextEmbeddingGeneration(
         this IKernelBuilder builder,
         BertOnnxOptions options = null,
+        int? dimensions = null,
         string serviceId = null)
     {
         builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(
             serviceId,
-            (_, _) => GenerateEmbeddings.CreateTextEmbeddingGenerationService(options));
+            (_, _) => GenerateEmbeddings.CreateTextEmbeddingGenerationService(options, dimensions));
 
         return builder;
     }
@@ -172,7 +174,7 @@ public static class AiExtensions
         this IKernelBuilder builder,
         string modelId,
         string apiKey,
-        GoogleAIVersion apiVersion,
+        GoogleApiVersion apiVersion,
         string serviceId = null,
         HttpClient httpClient = null)
     {
@@ -184,7 +186,7 @@ public static class AiExtensions
             new GoogleAITextEmbeddingGenerationService(
                 modelId: modelId,
                 apiKey: apiKey,
-                apiVersion: apiVersion.ToGoogleAiVersion(),
+                apiVersion: apiVersion.ToGoogleApiVersion(),
                 httpClient: httpClient ?? serviceProvider.GetService<HttpClient>(),
                 loggerFactory: serviceProvider.GetService<ILoggerFactory>()));
 
@@ -265,9 +267,9 @@ public static class AiExtensions
                 var openAIClient = new OpenAIClient(apiKey, openAiOptions);
 
                 if (isConnectionTest)
-                    kernelBuilder.AddTransientOpenAiEmbeddingGeneration(openAiSettings.Model, openAIClient, resolvedServiceId);
+                    kernelBuilder.AddTransientOpenAiEmbeddingGeneration(openAiSettings.Model, openAIClient, resolvedServiceId, openAiSettings.Dimensions);
                 else
-                    kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient, resolvedServiceId);
+                    kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient, resolvedServiceId, openAiSettings.Dimensions);
                 break;
 
             case AiConnectorType.AzureOpenAI:
@@ -279,14 +281,16 @@ public static class AiExtensions
                         azureOpenAiSettings.Endpoint,
                         azureOpenAiSettings.ApiKey,
                         resolvedServiceId,
-                        azureOpenAiSettings.Model);
+                        azureOpenAiSettings.Model,
+                        dimensions: azureOpenAiSettings.Dimensions);
                 else
                     kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
                         azureOpenAiSettings.DeploymentName,
                         azureOpenAiSettings.Endpoint,
                         azureOpenAiSettings.ApiKey,
                         resolvedServiceId,
-                        azureOpenAiSettings.Model);
+                        azureOpenAiSettings.Model,
+                        dimensions: azureOpenAiSettings.Dimensions);
                 break;
 
             case AiConnectorType.Ollama:
@@ -304,13 +308,17 @@ public static class AiExtensions
             case AiConnectorType.Onnx:
                 var onnxSettings = configuration.Connection.OnnxSettings;
                 if (isConnectionTest)
-                    kernelBuilder.AddTransientCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), resolvedServiceId);
+                    kernelBuilder.AddTransientCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), onnxSettings.Dimensions, resolvedServiceId);
                 else
-                    kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), resolvedServiceId);
+                    kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), onnxSettings.Dimensions, resolvedServiceId);
                 break;
 
             case AiConnectorType.Google:
                 var googleSettings = configuration.Connection.GoogleSettings;
+
+                HttpClient httpClient = null;
+                if (googleSettings.Dimensions.HasValue)
+                    httpClient = HttpClientExtensions.CreateWithDimensionality(googleSettings.Dimensions.Value);
 
                 if (isConnectionTest)
                 {
@@ -319,12 +327,14 @@ public static class AiExtensions
                             googleSettings.Model,
                             googleSettings.ApiKey,
                             googleSettings.AiVersion.Value,
-                            resolvedServiceId);
+                            resolvedServiceId,
+                            httpClient);
                     else
                         kernelBuilder.AddTransientGoogleEmbeddingGeneration(
                             googleSettings.Model,
                             googleSettings.ApiKey,
-                            serviceId: resolvedServiceId);
+                            resolvedServiceId,
+                            httpClient);
                 }
                 else
                 {
@@ -332,13 +342,15 @@ public static class AiExtensions
                         kernelBuilder.AddGoogleAIEmbeddingGeneration(
                             googleSettings.Model,
                             googleSettings.ApiKey,
-                            googleSettings.AiVersion.Value.ToGoogleAiVersion(),
-                            resolvedServiceId);
+                            googleSettings.AiVersion.Value.ToGoogleApiVersion(),
+                            resolvedServiceId,
+                            httpClient);
                     else
                         kernelBuilder.AddGoogleAIEmbeddingGeneration(
                             googleSettings.Model,
                             googleSettings.ApiKey,
-                            serviceId: resolvedServiceId);
+                            serviceId: resolvedServiceId,
+                            httpClient: httpClient);
                 }
 
                 break;

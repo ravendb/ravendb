@@ -157,7 +157,7 @@ public static class GenerateEmbeddings
         }
     }
 
-    internal static BertOnnxTextEmbeddingGenerationService CreateTextEmbeddingGenerationService(BertOnnxOptions options = null)
+    internal static BertOnnxTextEmbeddingGenerationService CreateTextEmbeddingGenerationService(BertOnnxOptions options = null, int? dimensions = null)
     {
         using (var onnxModelStream = File.OpenRead(Path.Combine("LocalEmbeddings", "bge-micro-v2", "model.onnx")))
         using (var vocabStream = File.OpenRead(Path.Combine("LocalEmbeddings", "bge-micro-v2", "vocab.txt")))
@@ -173,7 +173,7 @@ public static class GenerateEmbeddings
             onnxModelStream.CopyTo(modelBytes);
 
             var onnxSession = new InferenceSession(modelBytes.Length == modelBytes.GetBuffer().Length ? modelBytes.GetBuffer() : modelBytes.ToArray(), OnnxSessionOptions ?? new SessionOptions());
-            int dimensions = onnxSession.OutputMetadata.First().Value.Dimensions.Last();
+            dimensions ??= onnxSession.OutputMetadata.First().Value.Dimensions.Last();
 
             var tokenizer = new BertTokenizer();
             using (StreamReader vocabReader = new(vocabStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: true))

@@ -21,10 +21,6 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
     /// </summary>
     public string DeploymentName { get; set; }
 
-    /// <summary>The number of dimensions the resulting output embeddings should have.</summary>
-    /// <remarks>Only supported in "text-embedding-3" and later models.</remarks>
-    public int? Dimensions { get; set; }
-
     public override void ValidateMandatoryFields(ref List<string> errors)
     {
         base.ValidateMandatoryFields(ref errors);

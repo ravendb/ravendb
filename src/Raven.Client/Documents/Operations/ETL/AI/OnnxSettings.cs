@@ -59,6 +59,14 @@ public sealed class OnnxSettings : AbstractAiSettings
     /// <remarks>Normalized embeddings may be compared more efficiently, such as by using a dot product rather than cosine similarity.</remarks>
     public bool? NormalizeEmbeddings { get; set; }
 
+    /// <summary>
+    /// Gets or sets the number of dimensions in the embedding vectors.
+    /// </summary>
+    /// <remarks>
+    /// The number of dimensions in the embedding vectors is a hyperparameter that determines the size of the embedding space.
+    /// </remarks>
+    public int? Dimensions { get; set; }
+
     public override void ValidateMandatoryFields(ref List<string> errors)
     {
         // all settings are optional
@@ -89,6 +97,9 @@ public sealed class OnnxSettings : AbstractAiSettings
 
         if (NormalizeEmbeddings != onnxSettings.NormalizeEmbeddings)
             differences |= AiSettingsCompareDifferences.EmbeddingNormalization;
+
+        if (Dimensions != onnxSettings.Dimensions)
+            differences |= AiSettingsCompareDifferences.EmbeddingDimensions;
 
         return differences;
     }

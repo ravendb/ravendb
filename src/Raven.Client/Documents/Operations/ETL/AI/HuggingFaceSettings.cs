@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Operations.ETL.AI;
 
 public sealed class HuggingFaceSettings : AbstractAiSettings
 {
-    public HuggingFaceSettings(string model, string endpoint = null, string apiKey = null)
+    public HuggingFaceSettings(string apiKey, string model, string endpoint = null)
     {
         Model = model;
         Endpoint = endpoint;

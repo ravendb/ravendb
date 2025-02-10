@@ -32,6 +32,11 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
     /// </summary>
     public string Model { get; set; }
 
+    /// <summary>
+    /// The number of dimensions that the model should use.
+    /// </summary>
+    public int? Dimensions { get; set; }
+
     public override void ValidateMandatoryFields(ref List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(ApiKey))
@@ -59,6 +64,9 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
 
         if (Model != openAiSettings.Model)
             differences |= AiSettingsCompareDifferences.ModelArchitecture;
+
+        if (Dimensions != openAiSettings.Dimensions)
+            differences |= AiSettingsCompareDifferences.EmbeddingDimensions;
 
         return differences;
     }
