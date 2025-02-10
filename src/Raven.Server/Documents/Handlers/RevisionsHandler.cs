@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions/size", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/revisions/size", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsSize()
         {
             List<RevisionSizeDetails> sizes;

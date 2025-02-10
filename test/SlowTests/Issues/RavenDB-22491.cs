@@ -121,7 +121,7 @@ public class RavenDB_22491 : RavenTestBase
 
                 return new HttpRequestMessage
                 {
-                    Method = HttpMethod.Get,
+                    Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(async stream =>
                         await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false))
                 };
