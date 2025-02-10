@@ -117,16 +117,18 @@ class compactDatabaseDetails extends abstractOperationDetails {
             this.detailsVisible(true);
         }
     }
-    
-    private scrollDown() {
-        const messages = $(".compact-messages")[0];
-        if (messages) {
-            messages.scrollTop = messages.scrollHeight;
-        }
-    }
 
     toggleDetails() {
         this.detailsVisible(!this.detailsVisible());
+    }
+
+    private scrollDown() {
+        setTimeout(() => {
+            const container = $(".compact-messages")[0];
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }, 0);
     }
     
     static supportsDetailsFor(notification: abstractNotification) {
