@@ -20,6 +20,264 @@ namespace SlowTests.Client.Queries
         }
 
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeWithMemberInitMethodSyntax()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Address>()
+                        .Select(a => new
+                        {
+                            _ = RavenQuery.Include<Address>(a => a.StateId),
+                            a.StateId
+                        });
+
+                    _ = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query.ToString(),
+                        "from 'Addresses' select StateId include StateId");
+
+                    var typedProjection = session.Query<Address>()
+                        .Select(a => new Foo { _ = RavenQuery.Include<Address>(a => a.StateId), StateId = a.StateId, });
+
+                    _ = typedProjection.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        typedProjection.ToString(),
+                        "from 'Addresses' select StateId include StateId");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeWithMemberInitQuerySyntax()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from a in session.Query<Address>()
+                        let _ = RavenQuery.Include<Address>(a => a.StateId)
+                        select new
+                        {
+                            StateId = a.StateId,
+                        };
+
+                    _ = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query.ToString(),
+                        "from 'Addresses' select StateId include StateId");
+
+                    var typedProjection = from a in session.Query<Address>()
+                        let _ = RavenQuery.Include<Address>(a => a.StateId)
+                        select new Foo
+                        {
+                            StateId = a.StateId
+                        };
+
+                    _ = typedProjection.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        typedProjection.ToString(),
+                        "from 'Addresses' select StateId include StateId");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void IncludeWithMemberInitAndProjectedFieldMethodSyntax()
+        {
+            using (DocumentStore store = GetDocumentStore())
+            {
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Address>()
+                        .Select(a => new
+                        {
+                            _ = RavenQuery.Include<Address>(x => x.StateId),
+                            Name = a.City,
+                            StateId = a.StateId
+                        });
+
+                    _ = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query.ToString(),
+                        "from 'Addresses' select City as Name, StateId include StateId");
+
+                    var typedProjection = session.Query<Address>()
+                        .Select(a => new Foo
+                        {
+                            _ = RavenQuery.Include<Address>(x => x.StateId),
+                            Name = a.City,
+                            StateId = a.StateId
+                        });
+
+                    _ = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        typedProjection.ToString(),
+                        "from 'Addresses' select City as Name, StateId include StateId");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void IncludeWithMemberInitAndProjectedFieldQuerySyntax()
+        {
+            using (DocumentStore store = GetDocumentStore())
+            {
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from a in session.Query<Address>()
+                        let _ = RavenQuery.Include<Address>(x => x.StateId)
+                        select new
+                        {
+                            Name = a.City,
+                            StateId = a.StateId
+                        };
+
+                    _ = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query.ToString(),
+                        "from 'Addresses' select City as Name, StateId include StateId");
+
+                    var typedProjection = from a in session.Query<Address>()
+                        let _ = RavenQuery.Include<Address>(x => x.StateId)
+                        select new Foo
+                        {
+                            Name = a.City,
+                            StateId = a.StateId
+                        };
+
+                    _ = typedProjection.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        typedProjection.ToString(),
+                        "from 'Addresses' select City as Name, StateId include StateId");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void SelectAndProjectionWithInclude()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query1 = session.Query<Address>()
+                        .Select(a => new
+                        {
+                            Name = a.City + a.StateId,
+                            StateId = a.StateId,
+                            _ = RavenQuery.Include<Address>(a => a.StateId)
+                        });
+
+                    _ = query1.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["states/1", "states/2"],
+                        query1.ToString(),
+                        "from 'Addresses' as a select { Name : a.City+a.StateId, StateId : a.StateId } include StateId");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeTwoSelect()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from e in session.Query<Address>()
+                                let _ = RavenQuery.Include<Address>(a => a.StateId)
+                                let __ = RavenQuery.Include<Address>(e => e.Company)
+                                select new
+                                {
+                                    City = e.City,
+                                    StateId = e.StateId,
+                                    Company = e.Company,
+                                };
+
+                    var result = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/Raven", "Companies/App", "states/1", "states/2"],
+                        query.ToString(),
+                        "from 'Addresses' select City, StateId, Company include StateId,Company");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeInsideAndOutsideSelect()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from e in session.Query<Address>()
+                                let _ = RavenQuery.Include<Address>(a => a.StateId) // Outside select
+                                select new
+                                {
+                                    City = e.City,
+                                    StateId = e.StateId,
+                                    Company = e.Company,
+                                    _ = RavenQuery.Include<Address>(e => e.Company) // Inside select
+                                };
+
+                    var result = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/Raven", "Companies/App", "states/1", "states/2"],
+                        query.ToString(),
+                        "from 'Addresses' select City, StateId, Company include StateId,Company");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void IncludeWithMemberInitSplitTest()
         {
             using (var store = GetDocumentStore())
@@ -29,11 +287,12 @@ namespace SlowTests.Client.Queries
                 using (var session = store.OpenSession())
                 {
                     var query1 = session.Query<Employee, Employees_ByFirstName>()
-                        .Select(a => new Foo()
+                        .Select(a => new Foo
                         {
                             _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
-                            Name = a.FirstName,
+                            Name = a.FirstName
                         });
+
                     var res = query1.ToList();
 
                     AssertIncludedDocsAndRql(
@@ -44,8 +303,68 @@ namespace SlowTests.Client.Queries
                 }
             }
         }
-        [RavenFact(RavenTestCategory.Querying)]
 
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeWithMemberInitSplitTestQueryStyle()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
+                InitializeData2(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from e in session.Query<Address>()
+                        let _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0])
+                        let __ = RavenQuery.Include<Address>(a => a.StateId)
+                        select new
+                        {
+                            Company = e.Company,
+                            StateId = e.StateId
+                        };
+
+                    _ = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/App", "Companies/Raven", "states/1", "states/2"],
+                        query.ToString(),
+                        "declare function output(e) {\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn { Company : e.Company, StateId : e.StateId };\r\n}\r\nfrom 'Addresses' as e select output(e) include StateId");
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeWithMemberInitSplitTestQueryStyleWithTypedProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query1 = from e in session.Query<Employee, Employees_ByFirstName>()
+                                let _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0])
+                                let __ = RavenQuery.Include<Address>(a => a.StateId)
+                                select new Foo
+                                {
+                                    Name = e.FirstName,
+                                };
+                    
+                    _ = query1.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/App", "Companies/Raven"],
+                        query1.ToString(),
+                        "declare function output(e) {\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn { Name : e.FirstName };\r\n}\r\nfrom index 'Employees/ByFirstName' as e select output(e) include StateId");
+                }
+            }
+        }
+
+        
+
+        [RavenFact(RavenTestCategory.Querying)]
         public void IncludeWithSingleProperty()
         {
             using (var store = GetDocumentStore())
@@ -56,16 +375,15 @@ namespace SlowTests.Client.Queries
                 {
                     var query3 = from e in session.Query<Address>()
                         let _ = RavenQuery.Include<Address>(a => a.StateId)
-                        select e;
+                        select e.StateId;
 
-                    var results = query3.ToString();
                     var results3 = query3.ToList();
 
                     AssertIncludedDocsAndRql(
                         session,
                         ["states/1", "states/2"],
                         query3.ToString(),
-                        "declare function output(e) {\r\n\tinclude(e.StateId);\r\n\treturn e;\r\n}\r\nfrom 'Addresses' as e select output(e)"
+                        "from 'Addresses' select StateId include StateId"
                     );
                 }
             }
@@ -87,7 +405,7 @@ namespace SlowTests.Client.Queries
                             _ = RavenQuery.Include<Employee>(e => "Companies/dd"+Math.Round(e.Number)),
                             __ = RavenQuery.Include<Employee>(e => e.Company.Split('#', StringSplitOptions.None)[0])
                         });
-                    
+
                     var results = query1.ToList();
 
                     AssertIncludedDocsAndRql(
@@ -117,6 +435,7 @@ namespace SlowTests.Client.Queries
                         };
 
                     var results = query1.ToList();
+
                     AssertIncludedDocsAndRql(
                         session,
                         ["Companies/App", "Companies/Raven"], 
@@ -138,9 +457,13 @@ namespace SlowTests.Client.Queries
                 {
                     var query2 = from e in session.Query<Employee>()
                         let _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0])
-                        select new { FirstName = e.FirstName };
+                        select new
+                        {
+                            FirstName = e.FirstName
+                        };
 
                     var results = query2.ToList();
+
                     AssertIncludedDocsAndRql(
                         session,
                         ["Companies/App", "Companies/Raven"],
@@ -162,6 +485,7 @@ namespace SlowTests.Client.Queries
                     var query3 = from e in session.Query<Employee>()
                         let _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0])
                         select e.FirstName;
+
                     var results3 = query3.ToList();
 
                     AssertIncludedDocsAndRql(
@@ -170,6 +494,36 @@ namespace SlowTests.Client.Queries
                         query3.ToString(),
                         "declare function output(e) {\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\treturn {FirstName:e.FirstName};\r\n}\r\nfrom 'Employees' as e select output(e)"
                         );
+                }
+            }
+        }
+
+        
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeInsideAndOutsideSelectComplex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from e in session.Query<Employee, Employees_ByFirstName>()
+                         let _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]) // Outside select
+                        select new
+                        {
+                            FirstName = e.FirstName,
+                            _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[1]) // Inside select
+                        };
+
+                   var result = query.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session,
+                        ["Companies/Amaz", "Companies/App", "Companies/Raven", "Companies/App"],
+                        query.ToString(),
+                        "declare function output(e) {\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[1]);\r\n\treturn { FirstName : e.FirstName };\r\n}\r\nfrom index 'Employees/ByFirstName' as e select output(e)");
                 }
             }
         }
@@ -193,6 +547,36 @@ namespace SlowTests.Client.Queries
                         });
 
                     var res = query4.ToList();
+
+                    AssertIncludedDocsAndRql(
+                        session, 
+                        ["Companies/Amaz", "Companies/App", "Companies/Raven", "Companies/App"], 
+                        query4.ToString(),
+                        "declare function output(e) {\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[0]);\r\n\tinclude(e.Company.split(new RegExp(\"#\", \"g\"))[1]);\r\n\treturn { FirstName : e.FirstName };\r\n}\r\nfrom index 'Employees/ByFirstName' as e select output(e)");
+                }
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void NewTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query4 = session.Query<Employee, Employees_ByFirstName>()
+                        .Select
+                        (e => new
+                        {
+                            FirstName = e.FirstName,
+                            _ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
+                            __ = RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[1])
+                        });
+
+                    var res = query4.ToList();
+
                     AssertIncludedDocsAndRql(
                         session, 
                         ["Companies/Amaz", "Companies/App", "Companies/Raven", "Companies/App"], 
@@ -218,7 +602,30 @@ namespace SlowTests.Client.Queries
                             _ = Raven.Client.Documents.Queries.RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[0]),
                             Include = Raven.Client.Documents.Queries.RavenQuery.Include<Employee>(a => a.Company.Split('#', StringSplitOptions.None)[1])
                         });
-                        
+
+                    var error = Assert.Throws<InvalidOperationException>(() => query5.ToList());
+                    Assert.Equal("The include variable can only be assigned to the discard character (_)", error.Message);
+                }
+            }
+        }
+
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        public void IncludeWithInvalidName2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                InitializeData1(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query5 = session.Query<Employee, Employees_ByFirstName>()
+                        .Select(e => new
+                        {
+                            FirstName = e.FirstName,
+                            Includy = Raven.Client.Documents.Queries.RavenQuery.Include<Employee>(a => a.Company)
+                        });
+
                     var error = Assert.Throws<InvalidOperationException>(() => query5.ToList());
                     Assert.Equal("The include variable can only be assigned to the discard character (_)", error.Message);
                 }
@@ -248,29 +655,6 @@ namespace SlowTests.Client.Queries
         }
 
         [RavenFact(RavenTestCategory.Querying)]
-        public void SessionQuerySelectAddressFromIncludeDoc_UsingRavenQueryStringWithStateObject()
-        {
-            using (DocumentStore store = GetDocumentStore())
-            {
-                InitializeData2(store);
-
-                using (var session = store.OpenSession())
-                {
-                    var query3 = from a in session.Query<Address>()
-                        let _ = RavenQuery.Include<Address>(x => x.StateId)
-                        select new { Name = a.City };
-
-                    query3.ToList();
-                    AssertIncludedDocsAndRql(
-                        session,
-                        ["states/1", "states/2"],
-                        query3.ToString(),
-                        "declare function output(a) {\r\n\tinclude(a.StateId);\r\n\treturn { Name : a.City };\r\n}\r\nfrom 'Addresses' as a select output(a)");
-                }
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Querying)]
         public void SessionQuerySelectAddressFromIncludeDoc_UsingRavenQueryWithComplexLambdaExpression()
         { 
             using (DocumentStore store = GetDocumentStore())
@@ -279,16 +663,15 @@ namespace SlowTests.Client.Queries
 
                 using (var session = store.OpenSession())
                 {
-                    var address = session.Include<Address>(x => x.CountryState.Split('#', StringSplitOptions.None)[0]).ToString();
-                }
-
-                using (var session = store.OpenSession())
-                {
                     var query3 = from a in session.Query<Address>()
                         let _ = RavenQuery.Include<Address>(x => x.CountryState.Split('#', StringSplitOptions.None)[0])
-                        select new { Name = a.City };
+                        select new
+                        {
+                            Name = a.City
+                        };
 
                     var res2 = query3.ToList();
+
                     AssertIncludedDocsAndRql(
                         session,
                         ["states/1", "states/2"],
@@ -297,29 +680,6 @@ namespace SlowTests.Client.Queries
                 }
             }
         }
-
-        [RavenFact(RavenTestCategory.Querying)]
-        public void SessionQuerySelectAdressFromIncludeDoc_UsingRavenQueryWithSimpleLambdaExpression()
-        {
-            using (var store = GetDocumentStore())
-            {
-                InitializeData2(store);
-                using (var session = store.OpenSession())
-                {
-                    var query3 = from a in session.Query<Address>()
-                        let _ = RavenQuery.Include<Address>(x => x.StateId)
-                        select new { Name = a.City };
-                    var res2 = query3.ToList();
-
-                    AssertIncludedDocsAndRql(
-                        session,
-                        ["states/1", "states/2"],
-                        query3.ToString(),
-                        "declare function output(a) {\r\n\tinclude(a.StateId);\r\n\treturn { Name : a.City };\r\n}\r\nfrom 'Addresses' as a select output(a)");
-                }
-            }
-        }
-            
 
         private void InitializeData1(IDocumentStore store)
         {
@@ -354,11 +714,21 @@ namespace SlowTests.Client.Queries
             using (var session = store.OpenSession())
             {
 
-                session.Store(new Address { CountryState = "states/1#zip07", City = "new-york", StateId = "states/1" });
-                session.Store(new Address { CountryState = "states/2#zip05", City = "haifa", StateId = "states/2" });
+                session.Store(new Address { CountryState = "states/1#zip07", City = "new-york", StateId = "states/1",
+                    Company = "Companies/Raven"});
+                session.Store(new Address { CountryState = "states/2#zip05", City = "haifa", StateId = "states/2",
+                    Company = "Companies/App" });
 
                 session.Store(new State { Name = "Alabama" }, "states/1");
                 session.Store(new State { Name = "Minassota" }, "states/2");
+                var company1 = new Company { Name = "RavenDB" };
+                var company2 = new Company { Name = "App" };
+                var company3 = new Company { Name = "Micro" };
+                var company4 = new Company { Name = "Amaz" };
+                session.Store(company1, "Companies/Raven");
+                session.Store(company2, "Companies/App");
+                session.Store(company3, "Companies/Micro");
+                session.Store(company4, "Companies/Amaz");
 
                 session.SaveChanges();
             }
@@ -399,6 +769,7 @@ namespace SlowTests.Client.Queries
         {
             public object _ { get; set; }
             public string Name { get; set; }
+            public string StateId { get; set; }
         }
 
         private class Employee
@@ -420,7 +791,8 @@ namespace SlowTests.Client.Queries
         {
             public string CountryState { get; set; }
             public string City { get; set; }
-            public string StateId;
+            public string StateId { get; set; }
+            public string Company { get; set; }
         }
 
         private class State

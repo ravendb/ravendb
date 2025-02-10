@@ -2738,12 +2738,29 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                     if (LinqPathProvider.IsIncludeCall(mce))
                     {
-                        if (FromAlias == null)
+                        var name = field.Member.Name;
+                        if (name.All(c => c == '_') == false)
                         {
-                            AddFromAlias(lambdaExpression?.Parameters[0].Name);
+                            throw new InvalidOperationException("The include variable can only be assigned to the discard character (_)");
                         }
-                        _declareBuilder ??= new();
-                        AddReturnStatementToOutputFunction(memberInitExpression);
+                        if (mce.Arguments[0] is UnaryExpression unaryExpr && unaryExpr.Operand is LambdaExpression lambdaExpr)
+                        {
+                            if (lambdaExpr.Body is MemberExpression memberExpr)
+                            {
+                                string fieldName = memberExpr.Member.Name;
+                                DocumentQuery.Include(fieldName);
+                                continue;
+                            }
+                            else
+                            {
+                                if (FromAlias == null)
+                                {
+                                    AddFromAlias(lambdaExpression?.Parameters[0].Name);
+                                }
+                                _declareBuilder ??= new();
+                                AddReturnStatementToOutputFunction(memberInitExpression);
+                            }
+                        }
                         return;
                     }
                 }
@@ -2830,14 +2847,34 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         HandleSelectId(GetSelectPath(newExpression.Members[index]));
                         continue;
                     }
+
                     if (LinqPathProvider.IsIncludeCall(mce))
                     {
-                        if (FromAlias == null)
+                        var name = newExpression.Members[index].Name;
+                        if (name.All(c => c == '_') == false)
                         {
-                            AddFromAlias(lambdaExpression?.Parameters[0].Name);
+                            throw new InvalidOperationException("The include variable can only be assigned to the discard character (_)");
                         }
-                        _declareBuilder ??= new();
-                        AddReturnStatementToOutputFunction(newExpression);
+
+                        if (mce.Arguments[0] is UnaryExpression unaryExpr && unaryExpr.Operand is LambdaExpression lambdaExpr)
+                        {
+                            if (lambdaExpr.Body is MemberExpression memberExpr)
+                            {
+                                string fieldName = memberExpr.Member.Name;
+                                DocumentQuery.Include(fieldName);
+                                continue;
+                            }
+                            else
+                            {
+                                if (FromAlias == null)
+                                {
+                                    AddFromAlias(lambdaExpression?.Parameters[0].Name);
+                                }
+
+                                _declareBuilder ??= new();
+                                AddReturnStatementToOutputFunction(newExpression);
+                            }
+                        }
                         return;
                     }
                 }
@@ -2850,6 +2887,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 FieldsToFetch?.Clear();
                 _jsSelectBody = TranslateSelectBodyToJs(newExpression);
+                if (_includeSupport?.IncludeFunctions != null)
+                {
+                    foreach (var includeFunction in _includeSupport?.IncludeFunctions)
+                    {
+                        var includeName = includeFunction.Split('.')[1];
+                        DocumentQuery.Include(includeName);
+                    }
+                }
                 break;
             }
         }
@@ -3017,6 +3062,32 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (_insideWhereOrSearchCounter > 0)
                 throw new NotSupportedException("Queries with a LET clause before a WHERE clause are not supported. " +
                                                 "WHERE clauses should appear before any LET clauses.");
+
+            var includeMethodCall = expression.Arguments
+                .OfType<MethodCallExpression>()
+                .FirstOrDefault(methodCall =>
+                    methodCall.Method.DeclaringType == typeof(RavenQuery) &&
+                    methodCall.Method.Name == "Include");
+
+            if (includeMethodCall != null)
+            {
+                var name = expression.Members[expression.Arguments.IndexOf(includeMethodCall)].Name;
+                if (name.All(c => c == '_') == false)
+                {
+                    throw new InvalidOperationException("The include variable can only be assigned to the discard character (_)");
+                }
+                if (includeMethodCall.Arguments[0] is UnaryExpression unaryExpr &&
+                    unaryExpr.Operand is LambdaExpression lambdaExpr)
+                {
+                    if (lambdaExpr.Body is MemberExpression memberExpr)
+                    {
+                        string fieldName = memberExpr.Member.Name;
+                        string fullFieldName = $"{fieldName}";
+                        DocumentQuery.Include(fullFieldName);
+                        return;
+                    }
+                }
+            }
 
             if (FromAlias == null)
             {
@@ -3363,7 +3434,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (null != _includeSupport?.IncludeFunctions?.Count)
                     {
-                        AddJsProjection(name, field.Expression, sb, index - _includeSupport?.IncludeFunctions.Count != 0);
+                        AddJsProjection(name, field.Expression, sb, index - _includeSupport?.IncludeFunctions.Count > 0);
                     }
                     else
                     {
