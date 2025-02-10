@@ -91,7 +91,7 @@ public sealed class AiConnectionString : ConnectionString
         return string.IsNullOrEmpty(finalResult) ? $"{nameof(AiConnectionString)}Identifier" : finalResult;
     }
 
-    public bool ValidateIdentifier(out List<string> errors)
+    internal bool ValidateIdentifier(out List<string> errors)
     {
         errors = [];
 
@@ -147,7 +147,7 @@ public sealed class AiConnectionString : ConnectionString
         result |= oldProvider switch
         {
             AiConnectorType.OpenAi => OpenAiSettings.Compare(newConnectionString.OpenAiSettings),
-            AiConnectorType.AzureOpenAI => AzureOpenAiSettings.Compare(newConnectionString.AzureOpenAiSettings),
+            AiConnectorType.AzureOpenAi => AzureOpenAiSettings.Compare(newConnectionString.AzureOpenAiSettings),
             AiConnectorType.Ollama => OllamaSettings.Compare(newConnectionString.OllamaSettings),
             AiConnectorType.Onnx => OnnxSettings.Compare(newConnectionString.OnnxSettings),
             AiConnectorType.Google => GoogleSettings.Compare(newConnectionString.GoogleSettings),
@@ -163,7 +163,7 @@ public sealed class AiConnectionString : ConnectionString
         if (OpenAiSettings != null)
             return AiConnectorType.OpenAi;
         if (AzureOpenAiSettings != null)
-            return AiConnectorType.AzureOpenAI;
+            return AiConnectorType.AzureOpenAi;
         if (OllamaSettings != null)
             return AiConnectorType.Ollama;
         if (OnnxSettings != null)

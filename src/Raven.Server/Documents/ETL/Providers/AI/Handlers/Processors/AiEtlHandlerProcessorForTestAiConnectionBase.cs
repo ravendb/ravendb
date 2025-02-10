@@ -29,7 +29,9 @@ internal abstract class AiEtlHandlerProcessorForTestAiConnectionBase<TRequestHan
         IServiceProvider services = null;
         try
         {
-            JsonConfigString = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+            using (var streamReader = new StreamReader(HttpContext.Request.Body))
+                JsonConfigString = await streamReader.ReadToEndAsync();
+
             (AiConnectorType aiConnectorType, AiConnectionString connection) = GetAiConnectorDetails();
             var aiEtlConfiguration = new AiEtlConfiguration { AiConnectorType = aiConnectorType, Connection = connection };
 

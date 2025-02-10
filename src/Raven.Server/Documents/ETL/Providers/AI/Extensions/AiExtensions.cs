@@ -272,7 +272,7 @@ public static class AiExtensions
                     kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient, resolvedServiceId, openAiSettings.Dimensions);
                 break;
 
-            case AiConnectorType.AzureOpenAI:
+            case AiConnectorType.AzureOpenAi:
                 var azureOpenAiSettings = configuration.Connection.AzureOpenAiSettings;
 
                 if (isConnectionTest)

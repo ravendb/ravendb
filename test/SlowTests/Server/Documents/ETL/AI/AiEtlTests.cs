@@ -110,7 +110,7 @@ public class AiEtlTests : RavenTestBase
                     Assert.Equal(aiEtlConfiguration.Connection.OpenAiSettings.Endpoint, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OpenAiSettings.Endpoint);
                     break;
 
-                case AiConnectorType.AzureOpenAI:
+                case AiConnectorType.AzureOpenAi:
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OpenAiSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OllamaSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OnnxSettings);
@@ -185,7 +185,7 @@ public class AiEtlTests : RavenTestBase
             case AiConnectorType.OpenAi:
                 aiEtlConfiguration.Connection.OpenAiSettings.Model = string.Empty;
                 break;
-            case AiConnectorType.AzureOpenAI:
+            case AiConnectorType.AzureOpenAi:
                 aiEtlConfiguration.Connection.AzureOpenAiSettings.Model = string.Empty;
                 break;
             case AiConnectorType.Ollama:
@@ -240,7 +240,7 @@ public class AiEtlTests : RavenTestBase
             case AiConnectorType.OpenAi:
                 aiEtlConfiguration.Connection.OpenAiSettings.Dimensions = dimensions;
                 break;
-            case AiConnectorType.AzureOpenAI:
+            case AiConnectorType.AzureOpenAi:
                 aiEtlConfiguration.Connection.AzureOpenAiSettings.Dimensions = dimensions;
                 break;
             case AiConnectorType.Onnx:

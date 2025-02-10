@@ -26,11 +26,11 @@ public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
                 return Connection.OllamaSettings.Uri.StartsWith("https");
             case AiConnectorType.OpenAi:
                 return Connection.OpenAiSettings.Endpoint.StartsWith("https");
-            case AiConnectorType.AzureOpenAI:
+            case AiConnectorType.AzureOpenAi:
                 return Connection.AzureOpenAiSettings.Endpoint.StartsWith("https");
             case AiConnectorType.HuggingFace:
-                return Connection.HuggingFaceSettings.Endpoint.StartsWith("https");
-
+                // Endpoint is optional for HuggingFace, it will use the default endpoint if not provided, which is HTTPS
+                return string.IsNullOrWhiteSpace(Connection.HuggingFaceSettings.Endpoint) || Connection.HuggingFaceSettings.Endpoint.StartsWith("https");
             case AiConnectorType.Onnx:
             case AiConnectorType.Google:
                 return true;

@@ -16,6 +16,6 @@ internal sealed class AiEtlHandlerProcessorForTestAzureOpenAiConnection<TRequest
     public override (AiConnectorType, AiConnectionString) GetAiConnectorDetails()
     {
         var azureOpenAiSettings = JsonConvert.DeserializeObject<AzureOpenAiSettings>(JsonConfigString);
-        return (AiConnectorType.AzureOpenAI, new AiConnectionString { AzureOpenAiSettings = azureOpenAiSettings });
+        return (AiConnectorType.AzureOpenAi, new AiConnectionString { AzureOpenAiSettings = azureOpenAiSettings });
     }
 }
