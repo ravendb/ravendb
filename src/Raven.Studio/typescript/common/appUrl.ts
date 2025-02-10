@@ -300,7 +300,7 @@ class appUrl {
         return "#clusterDashboard";
     }
 
-    static forEditCmpXchg(key: string, db: database) {
+    static forEditCmpXchg(key: string, db: database | string) {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const keyUrlPart = key ? "&key=" + encodeURIComponent(key) : "";
         return "#databases/cmpXchg/edit?" + databaseUrlPart + keyUrlPart;
@@ -342,7 +342,7 @@ class appUrl {
         return databaseTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-    static forNewCmpXchg(db: database) {
+    static forNewCmpXchg(db: database | string) {
         const baseUrlPart = "#databases/cmpXchg/edit?";
         const databasePart = appUrl.getEncodedDbPart(db);
         return baseUrlPart + databasePart;
