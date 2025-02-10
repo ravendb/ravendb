@@ -58,7 +58,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
             if (column.header === "Last access") {
                 onValue(moment.utc(details.Date), details.Date);
             } else if (!_.isUndefined(value)) {
-                onValue(generalUtils.escapeHtml(value));
+                onValue(generalUtils.escapeHtml(value), value);
             }
         });
     }
