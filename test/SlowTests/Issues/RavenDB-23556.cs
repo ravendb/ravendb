@@ -929,7 +929,7 @@ public class RavenDB_23556 : RavenTestBase
                 AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                PathsToProcess = ["ChunkedName"],
+                PathsToProcess = [],
                 Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "generateEmbeddings({ Foo: this.Name, Bar: 'ConstValue'});" }]
             };
             
@@ -940,6 +940,58 @@ public class RavenDB_23556 : RavenTestBase
             Etl.AddEtl(store, configuration, connectionString);
 
             etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            using (var session = store.OpenSession())
+            {
+                var fooValueHash = AiHelper.CalculateValueHash(dto.Name);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, fooValueHash);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                var expectedFooAttachmentName = (string)((dynamic)valueEmbeddingsDocument).Name1;
+
+                var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedFooAttachmentName, attachmentNames[0].Name);
+                
+                var barValueHash = AiHelper.CalculateValueHash("ConstValue");
+                
+                valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, barValueHash);
+                valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+                
+                var expectedBarAttachmentName = (string)((dynamic)valueEmbeddingsDocument).ConstValue;
+
+                attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
+                
+                Assert.Single(attachmentNames);
+                Assert.Equal(expectedBarAttachmentName, attachmentNames[0].Name);
+                
+                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
+                
+                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                
+                var attachmentNamesForFooPropertyJArray = (JArray)configurationValues.Foo;
+                var attachmentNamesForFooProperty = attachmentNamesForFooPropertyJArray.ToObject<string[]>();
+                
+                Assert.Single(attachmentNamesForFooProperty);
+                Assert.Equal(expectedFooAttachmentName, attachmentNamesForFooProperty[0]);
+                
+                
+                var attachmentNamesForBarPropertyJArray = (JArray)configurationValues.Bar;
+                var attachmentNamesForBarProperty = attachmentNamesForBarPropertyJArray.ToObject<string[]>();
+                
+                Assert.Single(attachmentNamesForBarProperty);
+                Assert.Equal(expectedBarAttachmentName, attachmentNamesForBarProperty[0]);
+
+                attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
+                var attachmentNamesStringList = attachmentNames.Select(x => x.Name).ToList();
+                
+                Assert.Equal(2, attachmentNames.Length);
+                Assert.NotEqual(expectedFooAttachmentName, expectedBarAttachmentName);
+                Assert.Contains(expectedFooAttachmentName, attachmentNamesStringList);
+                Assert.Contains(expectedBarAttachmentName, attachmentNamesStringList);
+            }
         }
     }
     

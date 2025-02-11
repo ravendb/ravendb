@@ -87,46 +87,47 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
             return;
         }
 
-        using (var scriptResult = DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }))
+        if (_configuration.PathsToProcess == null || _configuration.PathsToProcess.Count == 0)
         {
-            var aiEtlEmbeddingItem = new AiEtlEmbeddingItem()
-            {
-                DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>()
-            };
-
-            var transformedBjro = scriptResult.TranslateToObject(Context);
+            DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document });
             
-            foreach (var fieldName in _configuration.PathsToProcess)
-            {
-                if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var fieldValue) == false
-                    && transformedBjro.TryGet(fieldName, out fieldValue) == false)
-                    continue;
-
-                if (aiEtlEmbeddingItem.Values.TryGetValue(fieldName, out var values) == false)
-                    aiEtlEmbeddingItem.Values[fieldName] = values = new List<AiEtlEmbeddingItemValue>();
-
-                switch (fieldValue)
-                {
-                    case LazyStringValue lsv:
-                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lsv });
-                        break;
-                    case LazyCompressedStringValue lcsv:
-                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lcsv });
-                        break;
-                    case BlittableJsonReaderArray bjra:
-                    {
-                        foreach (var textualValue in bjra)
-                            values.Add(new AiEtlEmbeddingItemValue() { TextualValue = (LazyStringValue)textualValue });
-                        break;
-                    }
-                    default:
-                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = fieldValue.ToString() });
-                        break;
-                }
-            }
-            
-            _currentRun.Additions.Add(aiEtlEmbeddingItem);
+            return;
         }
+
+        var aiEtlEmbeddingItem = new AiEtlEmbeddingItem()
+        {
+            DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>()
+        };
+        
+        foreach (var fieldName in _configuration.PathsToProcess)
+        {
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var fieldValue) == false)
+                continue;
+
+            if (aiEtlEmbeddingItem.Values.TryGetValue(fieldName, out var values) == false)
+                aiEtlEmbeddingItem.Values[fieldName] = values = new List<AiEtlEmbeddingItemValue>();
+
+            switch (fieldValue)
+            {
+                case LazyStringValue lsv:
+                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lsv });
+                    break;
+                case LazyCompressedStringValue lcsv:
+                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lcsv });
+                    break;
+                case BlittableJsonReaderArray bjra:
+                {
+                    foreach (var textualValue in bjra)
+                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = (LazyStringValue)textualValue });
+                    break;
+                }
+                default:
+                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = fieldValue.ToString() });
+                    break;
+            }
+        }
+            
+        _currentRun.Additions.Add(aiEtlEmbeddingItem);
     }
     
 #pragma warning disable SKEXP0050
@@ -262,17 +263,37 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
         if (args[0].IsObject() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be an object");
         
-        var obj = args[0].AsObject();
-
-        var aiEtlItem = new AiEtlEmbeddingItemValue();
-
-        foreach (var propertyKey in obj.GetOwnPropertyKeys())
+        var mainObj = args[0].AsObject();
+        
+        var aiEtlEmbeddingItem = new AiEtlEmbeddingItem()
         {
-            obj.TryGetValue(propertyKey, out JsValue value);
+            DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiEtlEmbeddingItemValue>>()
+        };
 
-            var y = propertyKey.AsString();
-            var x = value.AsString();
+        foreach (var propertyKey in mainObj.GetOwnPropertyKeys())
+        {
+            var propertyName = propertyKey.AsString();
+            
+            if (aiEtlEmbeddingItem.Values.TryGetValue(propertyName, out var values) == false)
+                aiEtlEmbeddingItem.Values[propertyName] = values = new List<AiEtlEmbeddingItemValue>();
+            
+            mainObj.TryGetValue(propertyKey, out JsValue value);
+            
+            if (value.IsString())
+            {
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = value.AsString() });
+            }
+            
+            else if (value.IsArray())
+            {
+                var jsArray = value.AsArray();
+                
+                foreach (var jsValue in jsArray)
+                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = jsValue.AsString() });
+            }
         }
+        
+        _currentRun.Additions.Add(aiEtlEmbeddingItem);
         
         return JsValue.Null;
     }
