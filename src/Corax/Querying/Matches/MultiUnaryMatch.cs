@@ -75,6 +75,7 @@ public unsafe struct MultiUnaryItem
     private readonly delegate*<long, long, bool> _longComparerRight;
     private readonly delegate*<double, double, bool> _doubleComparerRight;
     private readonly delegate*<bool,bool> _compareNullLeft, _compareNullRight;
+    private readonly delegate*<bool,bool> _compareNonExistingLeft, _compareNonExistingRight;
     private readonly bool _leftIsNull, _rightIsNull;
 
     private MultiUnaryItem(in FieldMetadata binding, DataType dataType, bool isBetween, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
@@ -96,14 +97,15 @@ public unsafe struct MultiUnaryItem
         _leftSideOperation = leftOperation;
         _rightSideOperation = rightOperation;
 
-        SelectComparers(leftOperation, out _byteComparerLeft, out _longComparerLeft, out _doubleComparerLeft, out _compareNullLeft);
-        SelectComparers(rightOperation, out _byteComparerRight, out _longComparerRight, out _doubleComparerRight, out _compareNullRight);
+        SelectComparers(leftOperation, out _byteComparerLeft, out _longComparerLeft, out _doubleComparerLeft, out _compareNullLeft, out _compareNonExistingLeft);
+        SelectComparers(rightOperation, out _byteComparerRight, out _longComparerRight, out _doubleComparerRight, out _compareNullRight, out _compareNonExistingRight);
 
         void SelectComparers(UnaryMatchOperation operation, 
             out delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> byteComparer,
             out delegate*<long, long, bool> longComparer,
             out delegate*<double, double, bool> doubleComparer,
-            out delegate*<bool, bool> compareNull)
+            out delegate*<bool, bool> compareNull,
+            out delegate*<bool, bool> compareNotExisting)
         {
             static bool AlwaysFalse(bool _) => false;
             static bool AlwaysTrue(bool _) => true;
@@ -121,42 +123,49 @@ public unsafe struct MultiUnaryItem
                     longComparer = &LessThanMatchComparer.Compare;
                     doubleComparer = &LessThanMatchComparer.Compare;
                     compareNull = &TrueUnlessNull;
+                    compareNotExisting = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.LessThanOrEqual:
                     byteComparer = &LessThanOrEqualMatchComparer.Compare;
                     longComparer = &LessThanOrEqualMatchComparer.Compare;
                     doubleComparer = &LessThanOrEqualMatchComparer.Compare;
                     compareNull = &AlwaysTrue;
+                    compareNotExisting = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.GreaterThan:
                     byteComparer = &GreaterThanMatchComparer.Compare;
                     longComparer = &GreaterThanMatchComparer.Compare;
                     doubleComparer = &GreaterThanMatchComparer.Compare;
                     compareNull = &AlwaysFalse;
+                    compareNotExisting = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.GreaterThanOrEqual:
                     byteComparer = &GreaterThanOrEqualMatchComparer.Compare;
                     longComparer = &GreaterThanOrEqualMatchComparer.Compare;
                     doubleComparer = &GreaterThanOrEqualMatchComparer.Compare;
                     compareNull = &FalseUnlessNull;
+                    compareNotExisting = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.NotEquals:
                     byteComparer = &NotEqualsMatchComparer.Compare;
                     longComparer = &NotEqualsMatchComparer.Compare;
                     doubleComparer = &NotEqualsMatchComparer.Compare;
                     compareNull = &TrueUnlessNull;
+                    compareNotExisting = &AlwaysTrue;
                     break;
                 case UnaryMatchOperation.Equals:
                     byteComparer = &EqualsMatchComparer.Compare;
                     longComparer = &EqualsMatchComparer.Compare;
                     doubleComparer = &EqualsMatchComparer.Compare;
                     compareNull = &FalseUnlessNull;
+                    compareNotExisting = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.None:
                     byteComparer = &EmptyComparer.Compare;
                     longComparer = &EmptyComparer.Compare;
                     doubleComparer = &EmptyComparer.Compare;
                     compareNull = &ThrowWhenUsed;
+                    compareNotExisting = &ThrowWhenUsed;
                     break;
                 default:
                     throw new Exception("Unsupported type of operation: " + operation);
@@ -171,6 +180,11 @@ public unsafe struct MultiUnaryItem
         {
             return _compareNullLeft(_leftIsNull) && 
                    (_isBetween == false || _compareNullRight(_rightIsNull));
+        }
+        if (it.IsNonExisting)
+        {
+            return _compareNonExistingLeft(_leftIsNull) && 
+                   (_isBetween == false || _compareNonExistingRight(_rightIsNull));
         }
         bool leftResult;
         if (Type == DataType.Long)
@@ -194,6 +208,11 @@ public unsafe struct MultiUnaryItem
         {
             return _compareNullLeft(_leftIsNull) && 
                    (_isBetween == false || _compareNullRight(_rightIsNull));
+        }
+        if (it.IsNonExisting)
+        {
+            return _compareNonExistingLeft(_leftIsNull) && 
+                (_isBetween == false || _compareNonExistingRight(_rightIsNull));
         }
         
         ReadOnlySpan<byte> value = it.Current.Decoded();
