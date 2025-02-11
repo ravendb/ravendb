@@ -19,41 +19,42 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.NotificationCenter
 {
-    public sealed unsafe class NotificationsStorage(ServerStore serverStore, string resourceName = null)
+    public abstract unsafe class NotificationsStorage(ServerStore serverStore, string resourceName = null)
     {
-        private readonly string _tableName = GetTableName(resourceName);
+        protected readonly string TableName = GetTableName(resourceName);
 
         private readonly Logger Logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
 
-        private StorageEnvironment _environment;
+        protected StorageEnvironment Environment;
 
-        private TransactionContextPool _contextPool;
+        protected TransactionContextPool ContextPool;
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
-            _environment = environment;
-            _contextPool = contextPool;
+            Environment = environment;
+            ContextPool = contextPool;
 
             bool createSchema;
             using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                var tableTree = tx.InnerTransaction.ReadTree(_tableName, RootObjectType.Table);
+                var tableTree = tx.InnerTransaction.ReadTree(TableName, RootObjectType.Table);
                 createSchema = tableTree == null;
             }
 
             if (createSchema)
             {
-                var command = new InitializeSchemaForNotificationsCommand(_tableName);
-                serverStore.Engine.TxMerger.EnqueueSync(command);
+                CreateSchema();
             }
 
             Cleanup();
         }
 
+        protected abstract void CreateSchema();
+
         public bool Store(Notification notification, DateTime? postponeUntil = null, bool updateExisting = true)
         {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
@@ -91,7 +92,7 @@ namespace Raven.Server.NotificationCenter
 
         internal void Store(LazyStringValue id, DateTime createdAt, DateTime? postponedUntil, BlittableJsonReaderObject action, RavenTransaction tx)
         {
-            var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, TableName);
 
             var createdAtTicks = Bits.SwapBytes(createdAt.Ticks);
 
@@ -114,7 +115,7 @@ namespace Raven.Server.NotificationCenter
         {
             using (var scope = new DisposableScope())
             {
-                scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(ContextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
                 actions = ReadActionsByCreatedAtIndex(context);
@@ -129,7 +130,7 @@ namespace Raven.Server.NotificationCenter
             {
                 RavenTransaction tx;
 
-                scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(ContextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(tx = context.OpenReadTransaction());
 
                 value = Get(id, context, tx);
@@ -140,7 +141,7 @@ namespace Raven.Server.NotificationCenter
 
         private IEnumerable<NotificationTableValue> ReadActionsByCreatedAtIndex(TransactionOperationContext context)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, TableName);
             if (table == null)
                 yield break;
 
@@ -154,7 +155,7 @@ namespace Raven.Server.NotificationCenter
         {
             using (var scope = new DisposableScope())
             {
-                scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(ContextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
                 actions = ReadPostponedActionsByPostponedUntilIndex(context, cutoff);
@@ -165,7 +166,7 @@ namespace Raven.Server.NotificationCenter
 
         private IEnumerable<NotificationTableValue> ReadPostponedActionsByPostponedUntilIndex(TransactionOperationContext context, DateTime cutoff)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, TableName);
             if (table == null)
                 yield break;
 
@@ -197,7 +198,7 @@ namespace Raven.Server.NotificationCenter
 
         private NotificationTableValue Get(string id, JsonOperationContext context, RavenTransaction tx)
         {
-            var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, TableName);
             if (table == null)
                 return null;
 
@@ -212,7 +213,7 @@ namespace Raven.Server.NotificationCenter
 
         public IEnumerable<NotificationTableValue> GetByPrefix(TransactionOperationContext<RavenTransaction> context, string prefix)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, TableName);
 
             using (Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out Slice prefixSlice))
             {
@@ -245,7 +246,7 @@ namespace Raven.Server.NotificationCenter
 
         public bool DeleteFromTable(string id, RavenTransaction tx)
         {
-            var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+            var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, TableName);
 
             using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice alertSlice))
             {
@@ -255,11 +256,11 @@ namespace Raven.Server.NotificationCenter
 
         public bool Exists(string id)
         {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice slice))
             {
-                var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+                var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, TableName);
                 if (table == null)
                     return false;
 
@@ -281,7 +282,7 @@ namespace Raven.Server.NotificationCenter
         {
             var count = 0;
 
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var action in ReadActionsByCreatedAtIndex(context))
@@ -324,7 +325,7 @@ namespace Raven.Server.NotificationCenter
 
         public string GetDatabaseFor(string id)
         {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 using (var item = Get(id, context, tx))
@@ -339,7 +340,7 @@ namespace Raven.Server.NotificationCenter
 
         public void ChangePostponeDate(string id, DateTime? postponeUntil)
         {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 using(var item = Get(id, context, tx))
@@ -421,13 +422,13 @@ namespace Raven.Server.NotificationCenter
                 $"Could not find notification type. Notification: {notificationJson}, created at: {action.CreatedAt}, postponed until: {action.PostponedUntil}");
         }
 
-        public NotificationsStorage GetStorageFor(string database)
+        public DatabaseNotificationStorage GetStorageFor(string database)
         {
             if (database == null)
                 throw new ArgumentNullException(nameof(database));
 
-            var storage = new NotificationsStorage(serverStore, database);
-            storage.Initialize(_environment, _contextPool);
+            var storage = new DatabaseNotificationStorage(serverStore, database);
+            storage.Initialize(Environment, ContextPool);
 
             return storage;
         }
@@ -439,7 +440,7 @@ namespace Raven.Server.NotificationCenter
 
             var tableName = GetTableName(database);
 
-            using (var tx = _environment.WriteTransaction())
+            using (var tx = Environment.WriteTransaction())
             {
                 tx.DeleteTable(tableName);
 
