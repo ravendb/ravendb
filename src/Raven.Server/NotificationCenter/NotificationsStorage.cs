@@ -439,13 +439,8 @@ namespace Raven.Server.NotificationCenter
                 throw new ArgumentNullException(nameof(database));
 
             var tableName = GetTableName(database);
-
-            using (var tx = Environment.WriteTransaction())
-            {
-                tx.DeleteTable(tableName);
-
-                tx.Commit();
-            }
+            var command = new DeleteTableForNotificationsCommand(tableName);
+            serverStore.Engine.TxMerger.EnqueueSync(command);
         }
 
         public void DeleteStorageFor<T>(TransactionOperationContext<T> ctx, string database) where T : RavenTransaction
