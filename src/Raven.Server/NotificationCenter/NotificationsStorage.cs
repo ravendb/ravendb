@@ -21,9 +21,11 @@ namespace Raven.Server.NotificationCenter
 {
     public abstract unsafe class NotificationsStorage(ServerStore serverStore, string resourceName = null)
     {
+        protected readonly ServerStore ServerStore = serverStore;
+
         protected readonly string TableName = GetTableName(resourceName);
 
-        private readonly Logger Logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
 
         protected StorageEnvironment Environment;
 
@@ -75,13 +77,13 @@ namespace Raven.Server.NotificationCenter
                     }
                 }
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Saving notification '{notification.Id}'.");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Saving notification '{notification.Id}'.");
 
                 using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var command = new StoreNotificationCommand(context.GetLazyString(notification.Id), notification.CreatedAt, postponeUntil, json, this);
-                    serverStore.Engine.TxMerger.EnqueueSync(command);
+                    ServerStore.Engine.TxMerger.EnqueueSync(command);
                 }
             }
 
@@ -235,12 +237,12 @@ namespace Raven.Server.NotificationCenter
             else
             {
                 var command = new DeleteNotificationCommand(id, this);
-                serverStore.Engine.TxMerger.EnqueueSync(command);
+                ServerStore.Engine.TxMerger.EnqueueSync(command);
                 deleteResult = command.Deleted;
             }
 
-            if (deleteResult && Logger.IsInfoEnabled)
-                Logger.Info($"Deleted notification '{id}'.");
+            if (deleteResult && _logger.IsInfoEnabled)
+                _logger.Info($"Deleted notification '{id}'.");
             return deleteResult;
         }
 
@@ -353,7 +355,7 @@ namespace Raven.Server.NotificationCenter
                     Memory.Copy(itemCopy.Address, item.Json.BasePointer, item.Json.Size);
 
                     var command = new StoreNotificationCommand(context.GetLazyString(id), item.CreatedAt, postponeUntil, new BlittableJsonReaderObject(itemCopy.Address, item.Json.Size, context), this);
-                    serverStore.Engine.TxMerger.EnqueueSync(command);
+                    ServerStore.Engine.TxMerger.EnqueueSync(command);
                 }
             }
         }
@@ -427,7 +429,7 @@ namespace Raven.Server.NotificationCenter
             if (database == null)
                 throw new ArgumentNullException(nameof(database));
 
-            var storage = new DatabaseNotificationStorage(serverStore, database);
+            var storage = new DatabaseNotificationStorage(ServerStore, database);
             storage.Initialize(Environment, ContextPool);
 
             return storage;
@@ -440,7 +442,7 @@ namespace Raven.Server.NotificationCenter
 
             var tableName = GetTableName(database);
             var command = new DeleteTableForNotificationsCommand(tableName);
-            serverStore.Engine.TxMerger.EnqueueSync(command);
+            ServerStore.Engine.TxMerger.EnqueueSync(command);
         }
 
         public void DeleteStorageFor<T>(TransactionOperationContext<T> ctx, string database) where T : RavenTransaction

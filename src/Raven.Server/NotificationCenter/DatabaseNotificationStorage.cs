@@ -8,6 +8,6 @@ public sealed class DatabaseNotificationStorage(ServerStore serverStore, string 
     protected override void CreateSchema()
     {
         var command = new InitializeSchemaForNotificationsCommand(TableName);
-        serverStore.Engine.TxMerger.EnqueueSync(command);
+        ServerStore.Engine.TxMerger.EnqueueSync(command);
     }
 }
