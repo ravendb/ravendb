@@ -96,8 +96,8 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),
             Transforms: this.transformationScripts().map(x => x.toDto()),
-            AiConnectorType: "AzureOpenAI", // TODO kalczur
-            FieldsToInclude: []
+            AiConnectorType: "AzureOpenAi", // TODO kalczur
+            PathsToProcess: []
         };
         
     }

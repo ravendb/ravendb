@@ -9,8 +9,8 @@ import { Label, UncontrolledPopover, PopoverBody } from "reactstrap";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function OllamaSettings<T extends FormData>({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<T>();
+export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+    const { control } = useFormContext<FormData>();
 
     return (
         <>
