@@ -77,8 +77,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             colorClass: "amazon-sqs-etl",
         },
         "AiEtl": {
-            nameForUI: "AI ETL",
-            icon: "icon-ai-etl", // TODO kalczur check icon name
+            nameForUI: "AI",
+            icon: "icon-ai-etl",
             colorClass: "ai-etl"
         },
         "KafkaQueueSink": {

@@ -7,7 +7,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { yupObjectSchema } from "components/utils/yupUtils";
-import { SelectOption } from "components/common/select/Select";
+import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import RichAlert from "components/common/RichAlert";
 import OptionalLabel from "components/common/OptionalLabel";
 import AzureOpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/AzureOpenAiSettings";
@@ -109,15 +109,19 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         placeholder="Select connector"
                         options={
                             [
-                                { label: "Azure OpenAI", value: "azureOpenAiSettings" },
-                                { label: "Google AI", value: "googleSettings" },
-                                { label: "Hugging Face", value: "huggingFaceSettings" },
-                                { label: "Ollama", value: "ollamaSettings" },
-                                { label: "ONNX (local)", value: "onnxSettings" },
-                                { label: "OpenAI", value: "openAiSettings" },
-                            ] satisfies SelectOption<FormData["connectorType"]>[]
+                                { label: "Azure OpenAI", value: "azureOpenAiSettings", icon: "openai" },
+                                { label: "Google AI", value: "googleSettings", icon: "google-gemini" },
+                                { label: "Hugging Face", value: "huggingFaceSettings", icon: "huggingface" },
+                                { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
+                                { label: "ONNX (local)", value: "onnxSettings", icon: "onnx" },
+                                { label: "OpenAI", value: "openAiSettings", icon: "openai" },
+                            ] satisfies SelectOptionWithIcon<FormData["connectorType"]>[]
                         }
                         isDisabled={isUsedByAnyTask}
+                        components={{
+                            Option: OptionWithIcon,
+                            SingleValue: SingleValueWithIcon,
+                        }}
                     />
                 </div>
 

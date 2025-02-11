@@ -661,12 +661,6 @@ class appUrl {
         return "#databases/tasks/editElasticSearchEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditAiEtl(db: database | string, taskId?: number): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editAiEtlTask?" + databasePart + taskPart;
-    }
-
     static forEditKafkaEtl(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
@@ -702,7 +696,13 @@ class appUrl {
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRabbitMqSinkTask?" + databasePart + taskPart;
     }
-    
+
+    static forEditAiEtl(db: database | string, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editAiEtlTask?" + databasePart + taskPart;
+    }
+
     static forSampleData(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/sampleData?" + databasePart;

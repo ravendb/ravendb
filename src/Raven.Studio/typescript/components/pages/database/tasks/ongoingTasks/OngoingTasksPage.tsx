@@ -606,8 +606,7 @@ export function OngoingTasksPage() {
                         {aiEtls.length > 0 && (
                             <div key="ai-etls">
                                 <HrHeader className="ai-etl" count={aiEtls.length}>
-                                    {/* TODO kalczur icon */}
-                                    <Icon icon="question" />
+                                    <Icon icon="ai-etl" />
                                     AI ETL
                                 </HrHeader>
 

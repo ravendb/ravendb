@@ -189,6 +189,7 @@ module.exports = (env, args) => {
                                     "preview": 0xf133,
                                     "azure-queue-storage-etl": 0xf134,
                                     "amazon-sqs-etl": 0xf135,
+                                    "ai-etl": 0xf139,
                                     "corax-include-null-match": 0xf140,
                                     "corax-fallback": 0xf141,
                                     "corax-all-entries-match": 0xf142,

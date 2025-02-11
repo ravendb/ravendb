@@ -50,7 +50,7 @@ export function ConnectionStringsInfoHub() {
                 value: features.hasQueueEtl,
             },
             {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "question").featureName, // TODO kalczur
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "ai-etl").featureName,
                 value: features.hasAiEtl,
             },
         ],
@@ -156,8 +156,8 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         enterprise: { value: true },
     },
     {
-        featureName: "AI ETL",
-        featureIcon: "question", // TODO kalczur
+        featureName: "AI",
+        featureIcon: "ai-etl",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },

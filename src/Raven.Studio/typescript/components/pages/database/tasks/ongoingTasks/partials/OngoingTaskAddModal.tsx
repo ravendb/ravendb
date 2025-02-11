@@ -286,8 +286,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         disabled={isSharded}
                         disableReason={getDisableReasonForSharded()}
                     >
-                        {/* TODO kalczur */}
-                        <Icon icon="question" />
+                        <Icon icon="ai-etl" />
                         <h4 className="mt-1 mb-0">AI ETL</h4>
                         {!hasAiEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>

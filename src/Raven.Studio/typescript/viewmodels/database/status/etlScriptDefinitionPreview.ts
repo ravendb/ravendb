@@ -26,6 +26,7 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiEtl |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>) {
         super();
 

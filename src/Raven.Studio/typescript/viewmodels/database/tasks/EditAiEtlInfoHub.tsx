@@ -45,8 +45,8 @@ export function EditAiEtlInfoHub() {
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "AI ETL",
-        featureIcon: "question", // TODO kalczur icon
+        featureName: "AI",
+        featureIcon: "ai-etl",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },

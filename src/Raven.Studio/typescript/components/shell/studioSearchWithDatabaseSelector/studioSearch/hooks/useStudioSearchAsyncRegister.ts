@@ -104,7 +104,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                         }
                     }
                     case "AiEtl":
-                        return null; // TODO kalczur: add AI ETL
+                        return getUrlFromProvider(appUrl.forEditAiEtl);
                     default:
                         assertUnreachable(taskType);
                 }

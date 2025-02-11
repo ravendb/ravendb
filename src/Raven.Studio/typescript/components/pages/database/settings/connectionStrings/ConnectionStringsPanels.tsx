@@ -91,7 +91,7 @@ function getIcon(type: StudioEtlType): IconName {
         case "AmazonSqs":
             return "amazon-sqs";
         case "Ai":
-            return "question"; // TODO kalczur: replace with AI icon
+            return "ai-etl";
         default:
             return null;
     }

@@ -170,6 +170,13 @@ interface ConnectionStringOption extends SelectOptionWithIcon<StudioEtlType> {
 function getAvailableConnectionStringsOptions(features: ConnectionStringsLicenseFeatures): ConnectionStringOption[] {
     return [
         {
+            value: "Ai",
+            label: "AI",
+            icon: "ai-etl",
+            licenseRequired: "Enterprise",
+            isDisabled: !features.hasAiEtl,
+        },
+        {
             value: "Raven",
             label: "RavenDB",
             icon: "raven",
@@ -231,13 +238,6 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
             icon: "amazon-sqs",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasQueueEtl,
-        },
-        {
-            value: "Ai",
-            label: "AI",
-            icon: "question", // TODO kalczur: replace with AI icon
-            licenseRequired: "Enterprise",
-            isDisabled: !features.hasAiEtl,
         },
     ];
 }

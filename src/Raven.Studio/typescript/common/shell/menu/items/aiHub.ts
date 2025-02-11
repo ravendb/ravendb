@@ -13,7 +13,7 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             moduleId: reactUtils.bridgeToReact(AiConnectionStrings.default, "nonShardedView"),
             title: 'AI Connection Strings',
             nav: true,
-            css: 'icon-question',
+            css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.aiConnectionStrings
         }),
         new leafMenuItem({
@@ -22,7 +22,7 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             title: 'AI Tasks',
             nav: true,
-            css: 'icon-question',
+            css: 'icon-manage-ongoing-tasks',
             dynamicHash: appUrls.aiTasks
             
         }),
@@ -32,10 +32,10 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             shardingMode: "singleShard",
             title: 'AI Tasks Stats',
             nav: true,
-            css: 'icon-question',
+            css: 'icon-replication-stats',
             dynamicHash: appUrls.aiTasksStats
         }),
     ];
 
-    return new intermediateMenuItem("AI Hub", statsItems, "icon-question"); // TODO kalczur
+    return new intermediateMenuItem("AI Hub", statsItems, "icon-ai");
 }
