@@ -103,4 +103,9 @@ interface computedAppUrls {
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;
+
+    // AI Hub
+    aiConnectionStrings: KnockoutComputed<string>;
+    aiTasks: KnockoutComputed<string>;
+    aiTasksStats: KnockoutComputed<string>;
 }

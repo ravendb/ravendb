@@ -15,7 +15,6 @@ import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
     RichPanelActions,
-    RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,

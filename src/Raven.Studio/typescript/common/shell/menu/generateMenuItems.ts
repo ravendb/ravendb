@@ -12,6 +12,7 @@ import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 import rootItems = require("common/shell/menu/items/rootItems");
+import getAiHubMenuItem = require("./items/aiHub");
 
 export = generateMenuItems;
 
@@ -49,6 +50,7 @@ function generateActiveDatabaseMenuItems(options: GenerateMenuItemsOptions) {
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
+        getAiHubMenuItem(appUrls),
         
         new separatorMenuItem('Server'),
         getDatabasesMenuItem(appUrls),

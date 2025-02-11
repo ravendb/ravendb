@@ -124,6 +124,11 @@ class appUrl {
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().find(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.pureComputed(() => appUrl.forDatabases()),
+
+        // AI Hub
+        aiConnectionStrings: ko.pureComputed(() => appUrl.forAiConnectionStrings(appUrl.currentDatabase())),
+        aiTasks: ko.pureComputed(() => appUrl.forAiTasks(appUrl.currentDatabase())),
+        aiTasksStats: ko.pureComputed(() => appUrl.forAiTasksStats(appUrl.currentDatabase())),
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -738,6 +743,21 @@ class appUrl {
 
     static forDocumentRevisionRawData(db: database, revisionChangeVector: string): string { 
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/revisions?changeVector=" + encodeURIComponent(revisionChangeVector);
+    }
+
+    static forAiConnectionStrings(db: database | string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/ai/connectionStrings?" + databasePart;
+    }
+
+    static forAiTasks(db: database | string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/ai/tasks?" + databasePart;
+    }
+
+    static forAiTasksStats(db: database | string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/ai/tasksStats?" + databasePart;
     }
 
     static getDatabaseNameFromUrl(): string {

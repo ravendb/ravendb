@@ -6,11 +6,9 @@ import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTa
 import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
-import generalUtils = require("common/generalUtils");
 import ongoingTaskElasticSearchEtlTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
-import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
 import document = require("models/database/documents/document");
@@ -20,15 +18,13 @@ import getDocumentsMetadataByIDPrefixCommand = require("commands/database/docume
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
 import ongoingTaskElasticSearchTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
-import discoveryUrl = require("models/database/settings/discoveryUrl");
-import { highlight, languages } from "prismjs";
-import shardViewModelBase from "viewmodels/shardViewModelBase";
-import licenseModel from "models/auth/licenseModel";
-import { EditAiEtlInfoHub } from "viewmodels/database/tasks/EditAiEtlInfoHub";
-import { sortBy } from "common/typeUtils";
+import prismjs = require("prismjs");
+import shardViewModelBase = require("viewmodels/shardViewModelBase");
+import licenseModel = require("models/auth/licenseModel");
+import EditAiEtlInfoHub = require("viewmodels/database/tasks/EditAiEtlInfoHub");
+import typeUtils = require("common/typeUtils");
 import ongoingTaskAiEtlEditModel = require("models/database/tasks/ongoingTaskAiEtlEditModel");
-import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
-import { after } from "lodash";
+import EditConnectionStrings = require("components/pages/database/settings/connectionStrings/EditConnectionStrings");
 
 class aiTaskTestMode {
 
@@ -114,7 +110,7 @@ class aiTaskTestMode {
                             const metaDto = docDto["@metadata"];
                             documentMetadata.filterMetadata(metaDto);
                             const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(highlight(text, languages.javascript, "js"));
+                            this.loadedDocument(prismjs.highlight(text, prismjs.languages.javascript, "js"));
                             this.loadedDocumentId(doc.getId());
 
                             $('.test-container a[href="#documentPreview"]').tab('show');
@@ -202,10 +198,10 @@ class aiEtlTask extends shardViewModelBase {
     showEditTransformationArea: KnockoutComputed<boolean>;
    
     hasAiEtl = licenseModel.getStatusValue("HasAiEtl");
-    infoHubView: ReactInKnockout<typeof EditAiEtlInfoHub>;
+    infoHubView: ReactInKnockout<typeof EditAiEtlInfoHub.EditAiEtlInfoHub>;
 
     isNewConnectionStringOpen = ko.observable<boolean>(false);
-    newConnectionStringView: ReactInKnockout<typeof EditConnectionStrings>;
+    newConnectionStringView: ReactInKnockout<typeof EditConnectionStrings.default>;
 
     constructor(db: database) {
         super(db);
@@ -222,11 +218,11 @@ class aiEtlTask extends shardViewModelBase {
         aceEditorBindingHandler.install();
 
         this.infoHubView = ko.pureComputed(() => ({
-            component: EditAiEtlInfoHub
+            component: EditAiEtlInfoHub.EditAiEtlInfoHub
         }));
 
         this.newConnectionStringView = ko.pureComputed(() => ({
-            component: EditConnectionStrings,
+            component: EditConnectionStrings.default,
             props: {
                 initialConnection: {
                     type: "Ai"
@@ -306,7 +302,7 @@ class aiEtlTask extends shardViewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.AiConnectionStrings);
-                this.connectionStringsNames(sortBy(connectionStringsNames, x => x.toUpperCase()));
+                this.connectionStringsNames(typeUtils.sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
     }
 

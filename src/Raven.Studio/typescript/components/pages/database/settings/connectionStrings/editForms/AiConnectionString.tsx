@@ -16,8 +16,6 @@ import HuggingFaceSettings from "components/pages/database/settings/connectionSt
 import OllamaSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OllamaSettings";
 import OnnxSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OnnxSettings";
 import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
-import { useAppSelector } from "components/store";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -38,7 +36,6 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 options
             ),
     });
-
 
     const { control, handleSubmit, setValue } = form;
 

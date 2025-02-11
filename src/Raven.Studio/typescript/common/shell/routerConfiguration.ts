@@ -9,6 +9,7 @@ import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 import rootItems = require("common/shell/menu/items/rootItems");
+import getAiHubMenuItem = require("./menu/items/aiHub");
 
 export = getRouterConfiguration();
 
@@ -72,6 +73,7 @@ function generateAllMenuItems() {
         getSettingsMenuItem(appUrls),
         getTasksMenuItem(appUrls),
         getStatsMenuItem(appUrls),
+        getAiHubMenuItem(appUrls),
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
         rootItems.whatsNew(),
