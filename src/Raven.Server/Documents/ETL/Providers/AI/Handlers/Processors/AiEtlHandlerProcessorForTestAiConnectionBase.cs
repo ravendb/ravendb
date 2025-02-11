@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.Embeddings;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Web.System;
@@ -14,13 +15,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Handlers.Processors;
 
-internal abstract class AiEtlHandlerProcessorForTestAiConnectionBase<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+internal class AiEtlHandlerProcessorForTestAiConnection<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     private protected string JsonConfigString;
+    public AiConnectorType AiConnectorType { get; init; }
 
-    public AiEtlHandlerProcessorForTestAiConnectionBase([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    public AiEtlHandlerProcessorForTestAiConnection([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -32,8 +34,45 @@ internal abstract class AiEtlHandlerProcessorForTestAiConnectionBase<TRequestHan
             using (var streamReader = new StreamReader(HttpContext.Request.Body))
                 JsonConfigString = await streamReader.ReadToEndAsync();
 
-            (AiConnectorType aiConnectorType, AiConnectionString connection) = GetAiConnectorDetails();
-            var aiEtlConfiguration = new AiEtlConfiguration { AiConnectorType = aiConnectorType, Connection = connection };
+            var aiConnectionString = new AiConnectionString();
+
+            switch (AiConnectorType)
+            {
+                case AiConnectorType.OpenAi:
+                    var openAiSettings = JsonConvert.DeserializeObject<OpenAiSettings>(JsonConfigString);
+                    aiConnectionString.OpenAiSettings = openAiSettings;
+                    break;
+
+                case AiConnectorType.AzureOpenAi:
+                    var azureOpenAiSettings = JsonConvert.DeserializeObject<AzureOpenAiSettings>(JsonConfigString);
+                    aiConnectionString.AzureOpenAiSettings = azureOpenAiSettings;
+                    break;
+
+                case AiConnectorType.Ollama:
+                    var ollamaSettings = JsonConvert.DeserializeObject<OllamaSettings>(JsonConfigString);
+                    aiConnectionString.OllamaSettings = ollamaSettings;
+                    break;
+
+                case AiConnectorType.Onnx:
+                    var onnxSettings = JsonConvert.DeserializeObject<OnnxSettings>(JsonConfigString);
+                    aiConnectionString.OnnxSettings = onnxSettings;
+                    break;
+
+                case AiConnectorType.Google:
+                    var googleSettings = JsonConvert.DeserializeObject<GoogleSettings>(JsonConfigString);
+                    aiConnectionString.GoogleSettings = googleSettings;
+                    break;
+
+                case AiConnectorType.HuggingFace:
+                    var huggingFace = JsonConvert.DeserializeObject<HuggingFaceSettings>(JsonConfigString);
+                    aiConnectionString.HuggingFaceSettings = huggingFace;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            var aiEtlConfiguration = new AiEtlConfiguration { AiConnectorType = AiConnectorType, Connection = aiConnectionString };
 
             services = AiHelper.CreateServicesForTest(aiEtlConfiguration, out string serviceId);
             var embeddings = await services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId).GenerateEmbeddingsAsync(AiHelper.TestValuesList);
@@ -76,6 +115,4 @@ internal abstract class AiEtlHandlerProcessorForTestAiConnectionBase<TRequestHan
             (services?.GetRequiredService<ILoggerProvider>() as InMemoryLoggerProvider)?.Dispose();
         }
     }
-
-    public abstract (AiConnectorType AiConnectorType, AiConnectionString Connection) GetAiConnectorDetails();
 }
