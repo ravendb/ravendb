@@ -39,7 +39,7 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
         if (debugMode)
             DocumentScript.DebugMode = true;
         
-        DocumentScript.ScriptEngine.SetValue("embeddings.generate", new ClrFunction(DocumentScript.ScriptEngine, "embeddings.generate", EmbeddingsGenerate));
+        DocumentScript.ScriptEngine.SetValue("generateEmbeddings", new ClrFunction(DocumentScript.ScriptEngine, "generateEmbeddings", EmbeddingsGenerate));
         
         DocumentScript.ScriptEngine.SetValue("splitMarkDownLines", new ClrFunction(DocumentScript.ScriptEngine, "splitMarkDownLines", SplitMarkDownLines));
         DocumentScript.ScriptEngine.SetValue("splitMarkDownParagraphs", new ClrFunction(DocumentScript.ScriptEngine, "splitMarkDownParagraphs", SplitMarkDownParagraphs));
@@ -254,20 +254,27 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
     
     private JsValue EmbeddingsGenerate(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "splitPlainTextParagraphs(lines, maxTokensPerLine)";
+        const string methodSignature = "embeddings.generate(object)";
         
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        if (args.Length != 1)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 1 argument");
         
-        if (args[0].IsArray() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be of type {typeof(IEnumerable<string>)}");
+        if (args[0].IsObject() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be an object");
         
-        if (args[1].IsNumber() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+        var obj = args[0].AsObject();
+
+        var aiEtlItem = new AiEtlEmbeddingItemValue();
+
+        foreach (var propertyKey in obj.GetOwnPropertyKeys())
+        {
+            obj.TryGetValue(propertyKey, out JsValue value);
+
+            var y = propertyKey.AsString();
+            var x = value.AsString();
+        }
         
         return JsValue.Null;
-
-        //return jsArray;
     }
 }
 #pragma warning restore SKEXP0050

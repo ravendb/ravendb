@@ -33,9 +33,7 @@ public class AiStorage
         documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(sourceDocumentId);
 
         var document = _documentsStorage.Get(context, documentEmbeddingsId);
-        if (document == null)
-            return null;
-
+        
         return document;
     }
 

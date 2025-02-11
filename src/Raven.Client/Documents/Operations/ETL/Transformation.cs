@@ -19,6 +19,8 @@ namespace Raven.Client.Documents.Operations.ETL
         internal const string GenericDeleteDocumentsBehaviorFunctionKey = "$deleteDocumentsBehavior<>";
 
         internal const string GenericDeleteDocumentsBehaviorFunctionName = "deleteDocumentsBehavior";
+        
+        internal const string GenerateEmbeddingsFunctionName = "generateEmbeddings";
 
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
 
@@ -27,7 +29,7 @@ namespace Raven.Client.Documents.Operations.ETL
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
         private static readonly Regex AddAttachmentMethodRegex = new Regex(AddAttachment, RegexOptions.Compiled);
 
-        // private static readonly Regex GenerateEmbeddingsRegex = new Regex(); // TODO I commented it to fix build
+        private static readonly Regex GenerateEmbeddingsRegex = new Regex($@"{GenerateEmbeddingsFunctionName}(\w+)", RegexOptions.Compiled);
 
         internal readonly CountersTransformation Counters;
         

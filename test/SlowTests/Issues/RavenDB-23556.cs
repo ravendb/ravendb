@@ -908,6 +908,41 @@ public class RavenDB_23556 : RavenTestBase
         }
     }
     
+    [RavenFact(RavenTestCategory.Etl)]
+    public void TestTransformation()
+    {
+        const string connectionStringName = "connection string name";
+        
+        var dto = new Dto { Name = "Name1" };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                PathsToProcess = ["ChunkedName"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "generateEmbeddings({ Foo: this.Name, Bar: 'ConstValue'});" }]
+            };
+            
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+        }
+    }
+    
 #pragma warning disable SKEXP0050
     [RavenFact(RavenTestCategory.Etl)]
     public void TestChunkingInTransformation()
