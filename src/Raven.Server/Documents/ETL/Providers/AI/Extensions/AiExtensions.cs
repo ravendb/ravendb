@@ -10,6 +10,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Connectors.HuggingFace;
+using Microsoft.SemanticKernel.Connectors.MistralAI;
 using Microsoft.SemanticKernel.Connectors.Onnx;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Embeddings;
@@ -104,18 +105,19 @@ public static class AiExtensions
     public static IKernelBuilder AddTransientOpenAiEmbeddingGeneration(
         this IKernelBuilder builder,
         string modelId,
-        OpenAIClient openAIClient = null,
+        OpenAIClient openAIClient,
         string serviceId = null,
         int? dimensions = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(openAIClient);
         ArgumentException.ThrowIfNullOrEmpty(modelId);
 
         builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(
             serviceId,
             (serviceProvider, _) => new OpenAITextEmbeddingGenerationService(
                 modelId,
-                openAIClient ?? serviceProvider.GetRequiredService<OpenAIClient>(),
+                openAIClient,
                 serviceProvider.GetService<ILoggerFactory>(),
                 dimensions));
 
@@ -134,6 +136,11 @@ public static class AiExtensions
         string apiVersion = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrEmpty(deploymentName);
+        ArgumentException.ThrowIfNullOrEmpty(endpoint);
+        ArgumentException.ThrowIfNullOrEmpty(apiKey);
+        ArgumentException.ThrowIfNullOrEmpty(modelId);
+
 
         builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(serviceId, (serviceProvider, _) =>
             new AzureOpenAITextEmbeddingGenerationService(
@@ -155,6 +162,7 @@ public static class AiExtensions
         string serviceId = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(ollamaClient);
 
         builder.Services.AddKeyedTransient(serviceId, (serviceProvider, _) =>
         {
@@ -217,18 +225,46 @@ public static class AiExtensions
     public static IKernelBuilder AddTransientHuggingFaceEmbeddingGeneration(
         this IKernelBuilder builder,
         string model,
-        Uri endpoint = null,
-        string apiKey = null,
+        Uri endpoint,
+        string apiKey,
         string serviceId = null,
         HttpClient httpClient = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(endpoint);
+        ArgumentException.ThrowIfNullOrEmpty(model);
+        ArgumentException.ThrowIfNullOrEmpty(apiKey);
 
         builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(serviceId, (serviceProvider, _) =>
             new HuggingFaceTextEmbeddingGenerationService(
                 model,
                 endpoint,
                 apiKey,
+                httpClient ?? serviceProvider.GetService<HttpClient>(),
+                serviceProvider.GetService<ILoggerFactory>()
+            ));
+
+        return builder;
+    }
+
+    public static IKernelBuilder AddTransientMistralEmbeddingGeneration(
+        this IKernelBuilder builder,
+        string model,
+        string apiKey,
+        Uri endpoint,
+        string serviceId = null,
+        HttpClient httpClient = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(endpoint);
+        ArgumentException.ThrowIfNullOrEmpty(model);
+        ArgumentException.ThrowIfNullOrEmpty(apiKey);
+
+        builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(serviceId, (serviceProvider, _) =>
+            new MistralAITextEmbeddingGenerationService(
+                model,
+                apiKey,
+                endpoint,
                 httpClient ?? serviceProvider.GetService<HttpClient>(),
                 serviceProvider.GetService<ILoggerFactory>()
             ));
@@ -357,21 +393,40 @@ public static class AiExtensions
 
             case AiConnectorType.HuggingFace:
                 var huggingFaceSettings = configuration.Connection.HuggingFaceSettings;
-                var uri = string.IsNullOrWhiteSpace(huggingFaceSettings.Endpoint) ? null : new Uri(huggingFaceSettings.Endpoint);
+                var huggingFaceUri = string.IsNullOrWhiteSpace(huggingFaceSettings.Endpoint) ? null : new Uri(huggingFaceSettings.Endpoint);
 
                 if (isConnectionTest)
                     kernelBuilder.AddTransientHuggingFaceEmbeddingGeneration(
                         huggingFaceSettings.Model,
-                        uri,
+                        huggingFaceUri,
                         huggingFaceSettings.ApiKey,
                         resolvedServiceId);
                 else
                     kernelBuilder.AddHuggingFaceTextEmbeddingGeneration(
                         huggingFaceSettings.Model,
-                        uri,
+                        huggingFaceUri,
                         huggingFaceSettings.ApiKey,
                         resolvedServiceId);
                 break;
+
+            case AiConnectorType.MistralAi:
+                var mistralSettings = configuration.Connection.MistralAiSettings;
+                var mistralUri = new Uri(mistralSettings.Endpoint);
+
+                if (isConnectionTest)
+                    kernelBuilder.AddTransientMistralEmbeddingGeneration(
+                        mistralSettings.Model,
+                        mistralSettings.ApiKey,
+                        mistralUri,
+                        resolvedServiceId);
+                else
+                    kernelBuilder.AddMistralTextEmbeddingGeneration(
+                        mistralSettings.Model,
+                        mistralSettings.ApiKey,
+                        mistralUri,
+                        resolvedServiceId);
+                break;
+
 
             default:
                 throw new NotSupportedException($"'{configuration.AiConnectorType}' provider is not supported");

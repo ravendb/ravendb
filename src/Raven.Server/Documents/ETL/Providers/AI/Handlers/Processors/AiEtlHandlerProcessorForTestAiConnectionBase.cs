@@ -68,6 +68,11 @@ internal class AiEtlHandlerProcessorForTestAiConnection<TRequestHandler, TOperat
                     aiConnectionString.HuggingFaceSettings = huggingFace;
                     break;
 
+                case AiConnectorType.MistralAi:
+                    var mistralAiSettings = JsonConvert.DeserializeObject<MistralAiSettings>(JsonConfigString);
+                    aiConnectionString.MistralAiSettings = mistralAiSettings;
+                    break;
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }

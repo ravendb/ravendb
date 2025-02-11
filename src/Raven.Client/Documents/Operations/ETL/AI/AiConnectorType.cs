@@ -9,4 +9,5 @@ public enum AiConnectorType
     Onnx,
     Google,
     HuggingFace,
+    MistralAi
 }

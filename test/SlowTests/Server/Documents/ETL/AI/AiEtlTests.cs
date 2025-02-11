@@ -103,6 +103,7 @@ public class AiEtlTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OnnxSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OpenAiSettings);
                     Assert.Equal(aiEtlConfiguration.Connection.OpenAiSettings.ApiKey, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OpenAiSettings.ApiKey);
@@ -116,6 +117,7 @@ public class AiEtlTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OnnxSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].AzureOpenAiSettings);
                     Assert.Equal(aiEtlConfiguration.Connection.AzureOpenAiSettings.ApiKey, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].AzureOpenAiSettings.ApiKey);
@@ -129,6 +131,7 @@ public class AiEtlTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OnnxSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OllamaSettings);
                     Assert.Equal(aiEtlConfiguration.Connection.OllamaSettings.Model, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OllamaSettings.Model);
@@ -141,6 +144,7 @@ public class AiEtlTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OllamaSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OnnxSettings);
                     break;
@@ -151,6 +155,7 @@ public class AiEtlTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OllamaSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OnnxSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].GoogleSettings);
                     Assert.Equal(aiEtlConfiguration.Connection.GoogleSettings.ApiKey, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].GoogleSettings.ApiKey);
@@ -163,10 +168,25 @@ public class AiEtlTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OllamaSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OnnxSettings);
                     Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Equal(aiEtlConfiguration.Connection.HuggingFaceSettings.ApiKey, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings.ApiKey);
                     Assert.Equal(aiEtlConfiguration.Connection.HuggingFaceSettings.Model, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings.Model);
+                    break;
+
+                case AiConnectorType.MistralAi:
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].OnnxSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].HuggingFaceSettings);
+
+                    Assert.NotNull(aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Equal(aiEtlConfiguration.Connection.MistralAiSettings.ApiKey, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings.ApiKey);
+                    Assert.Equal(aiEtlConfiguration.Connection.MistralAiSettings.Model, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings.Model);
+                    Assert.Equal(aiEtlConfiguration.Connection.MistralAiSettings.Endpoint, aiConnectionStringsDictionary[aiEtlConfiguration.Connection.Name].MistralAiSettings.Endpoint);
                     break;
 
                 default:
@@ -197,6 +217,9 @@ public class AiEtlTests : RavenTestBase
             case AiConnectorType.HuggingFace:
                 aiEtlConfiguration.Connection.HuggingFaceSettings.Model = string.Empty;
                 break;
+            case AiConnectorType.MistralAi:
+                aiEtlConfiguration.Connection.MistralAiSettings.Model = string.Empty;
+                break;
         }
         using (var store = GetDocumentStore())
         {
@@ -220,7 +243,7 @@ public class AiEtlTests : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.AiIntegration)]
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Onnx | RavenAiIntegration.Google)]
-    [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.Ollama | RavenAiIntegration.HuggingFace, Skip = "This provider does not support dimensionality yet.")]
+    [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.Ollama | RavenAiIntegration.HuggingFace | RavenAiIntegration.MistralAi, Skip = "This provider does not support dimensionality yet.")]
     public void SemanticKernel_ShouldRespect_Dimensionality(Options options, AiEtlConfiguration aiEtlConfiguration)
     {
         const int dimensions = 5;

@@ -28,6 +28,8 @@ public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
                 return Connection.OpenAiSettings.Endpoint.StartsWith("https");
             case AiConnectorType.AzureOpenAi:
                 return Connection.AzureOpenAiSettings.Endpoint.StartsWith("https");
+            case AiConnectorType.MistralAi:
+                return Connection.MistralAiSettings.Endpoint.StartsWith("https");
             case AiConnectorType.HuggingFace:
                 // Endpoint is optional for HuggingFace, it will use the default endpoint if not provided, which is HTTPS
                 return string.IsNullOrWhiteSpace(Connection.HuggingFaceSettings.Endpoint) || Connection.HuggingFaceSettings.Endpoint.StartsWith("https");

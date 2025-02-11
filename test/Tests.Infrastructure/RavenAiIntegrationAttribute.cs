@@ -17,9 +17,10 @@ public enum RavenAiIntegration
     Onnx = 1 << 4,
     Google = 1 << 5,
     HuggingFace = 1 << 6,
+    MistralAi = 1 << 7,
 
-    All = OpenAi | AzureOpenAI | Ollama | Onnx | Google | HuggingFace,
-    NonInternal = OpenAi | AzureOpenAI | Ollama | Google | HuggingFace
+    All = OpenAi | AzureOpenAI | Ollama | Onnx | Google | HuggingFace | MistralAi,
+    NonInternal = OpenAi | AzureOpenAI | Ollama | Google | HuggingFace | MistralAi
 }
 
 public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
@@ -152,6 +153,9 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
 
         if (aiIntegration.HasFlag(RavenAiIntegration.HuggingFace))
             yield return HuggingFaceConnectorForTesting.CreateNewInstance(testMethodName);
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.MistralAi))
+            yield return MistralAiConnectorForTesting.CreateNewInstance(testMethodName);
     }
 
     private static IEnumerable<IAiConnectorForTesting> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration)
@@ -173,5 +177,8 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
 
         if (aiIntegration.HasFlag(RavenAiIntegration.HuggingFace))
             yield return HuggingFaceConnectorForTesting.Instance;
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.MistralAi))
+            yield return MistralAiConnectorForTesting.Instance;
     }
 }

@@ -22,6 +22,8 @@ public sealed class AiConnectionString : ConnectionString
 
     public HuggingFaceSettings HuggingFaceSettings { get; set; }
 
+    public MistralAiSettings MistralAiSettings { get; set; }
+
     public override ConnectionStringType Type => ConnectionStringType.Ai;
 
     protected override void ValidateImpl(ref List<string> errors)
@@ -152,6 +154,7 @@ public sealed class AiConnectionString : ConnectionString
             AiConnectorType.Onnx => OnnxSettings.Compare(newConnectionString.OnnxSettings),
             AiConnectorType.Google => GoogleSettings.Compare(newConnectionString.GoogleSettings),
             AiConnectorType.HuggingFace => HuggingFaceSettings.Compare(newConnectionString.HuggingFaceSettings),
+            AiConnectorType.MistralAi => MistralAiSettings.Compare(newConnectionString.MistralAiSettings),
             _ => AiSettingsCompareDifferences.All
         };
 
@@ -172,6 +175,8 @@ public sealed class AiConnectionString : ConnectionString
             return AiConnectorType.Google;
         if (HuggingFaceSettings != null)
             return AiConnectorType.HuggingFace;
+        if (MistralAiSettings != null)
+            return AiConnectorType.MistralAi;
 
         return AiConnectorType.None;
     }

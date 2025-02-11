@@ -1,0 +1,23 @@
+﻿using System;
+using Raven.Client.Documents.Operations.ETL.AI;
+
+namespace Tests.Infrastructure.ConnectionString.AI;
+
+public class MistralAiConnectorForTesting : BaseAiConnectorForTesting<MistralAiConnectorForTesting>
+{
+    private const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_MISTRAL_API_KEY";
+    private const string Endpoint = "https://api.mistral.ai/v1/embeddings";
+    private const string Model = "mistral-embed";
+
+    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.ETL.AI.AiConnectorType.MistralAi);
+
+    protected override AiConnectionString CreateAiConnectionStringImpl()
+    {
+        var apiKey = Environment.GetEnvironmentVariable(EnvironmentVariable);
+
+        return new AiConnectionString
+        {
+            MistralAiSettings = new MistralAiSettings(Model, apiKey, Endpoint)
+        };
+    }
+}
