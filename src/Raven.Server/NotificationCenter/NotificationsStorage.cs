@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
 
 namespace Raven.Server.NotificationCenter
@@ -33,13 +34,20 @@ namespace Raven.Server.NotificationCenter
             _environment = environment;
             _contextPool = contextPool;
 
+            bool createSchema;
             using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = _environment.WriteTransaction(context.PersistentContext))
+            using (var tx = context.OpenReadTransaction())
             {
-                Documents.Schemas.Notifications.Current.Create(tx, _tableName, 16);
-
-                tx.Commit();
+                var tableTree = tx.InnerTransaction.ReadTree(_tableName, RootObjectType.Table);
+                createSchema = tableTree == null;
             }
+
+            if (createSchema)
+            {
+                var command = new InitializeSchemaForNotificationsCommand(_tableName);
+                serverStore.Engine.TxMerger.EnqueueSync(command);
+            }
+
             Cleanup();
         }
 
