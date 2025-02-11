@@ -2008,6 +2008,8 @@ namespace Raven.Server.Documents.Revisions
 
         private List<IEnumerable<TableValueHolder>> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, long lastScannedEtag)
         {
+            lastScannedEtag = long.Max(lastScannedEtag - 1, 0);
+            
             var collectionsTables = new List<IEnumerable<TableValueHolder>>();
 
             if (collections == null)
