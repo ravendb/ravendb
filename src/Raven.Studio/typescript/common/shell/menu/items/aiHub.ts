@@ -2,6 +2,7 @@
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import reactUtils = require("common/reactUtils");
 import AiConnectionStrings = require("components/pages/database/aiHub/aiConnectionStrings/AiConnectionStrings");
+import AiTasks = require("components/pages/database/aiHub/aiTasks/AiTasks");
 
 export = getAiHubMenuItem;
 
@@ -17,7 +18,8 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/ai/tasks',
-            moduleId: reactUtils.bridgeToReact(AiConnectionStrings.default, "nonShardedView"),
+            moduleId: reactUtils.bridgeToReact(AiTasks.default, "shardedView"),
+            shardingMode: "allShards",
             title: 'AI Tasks',
             nav: true,
             css: 'icon-question',
@@ -26,7 +28,8 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/ai/tasksStats',
-            moduleId: reactUtils.bridgeToReact(AiConnectionStrings.default, "nonShardedView"),
+            moduleId: require('viewmodels/database/aiHub/aiTasksStats'),
+            shardingMode: "singleShard",
             title: 'AI Tasks Stats',
             nav: true,
             css: 'icon-question',

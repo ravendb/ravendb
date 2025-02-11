@@ -1,3 +1,3 @@
 export default function AiConnectionStrings() {
-    return <div>AiConnectionStrings</div>;
+    return <div className="content-padding">AiConnectionStrings</div>;
 }
