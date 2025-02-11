@@ -1939,13 +1939,13 @@ namespace Raven.Server.Documents.Revisions
                 OnProgress = onProgress
             };
 
-            parameters.LastScannedEtag = parameters.EtagBarrier;
-
             var ids = new List<string>();
             var sw = Stopwatch.StartNew();
 
             // send initial progress
             parameters.OnProgress?.Invoke(result);
+
+            var tablesLastScannedEtags = new Dictionary<string, long>();
 
             var hasMore = true;
             while (hasMore)
@@ -1959,15 +1959,16 @@ namespace Raven.Server.Documents.Revisions
                 {
                     using (ctx.OpenReadTransaction())
                     {
-                        var tables = GetRevisionsTables(ctx, collections, parameters.LastScannedEtag);
+                        var tables = GetRevisionsTables(ctx, collections, parameters.EtagBarrier, tablesLastScannedEtags);
 
-                        foreach (var table in tables)
+                        foreach (var (collection, table) in tables)
                         {
                             foreach (var tvr in table)
                             {
                                 token.ThrowIfCancellationRequested();
 
                                 var state = ShouldProcessNextRevisionId(ctx, ref tvr.Reader, parameters, result, out var id);
+                                tablesLastScannedEtags[collection] = parameters.LastScannedEtag;
                                 if (state == NextRevisionIdResult.Break)
                                     break;
                                 if (state == NextRevisionIdResult.Continue)
@@ -1990,13 +1991,17 @@ namespace Raven.Server.Documents.Revisions
                                 }
                             }
 
-                            var moreWork = true;
-                            while (moreWork)
+                            if (ids.Count != 0)
                             {
-                                token.Delay();
-                                var cmd = createCommand(ids, result, token);
-                                await _database.TxMerger.Enqueue(cmd);
-                                moreWork = cmd.MoreWork;
+                                var moreWork = true;
+                                while (moreWork)
+                                {
+                                    token.Delay();
+                                    var cmd = createCommand(ids, result, token);
+                                    await _database.TxMerger.Enqueue(cmd);
+                                    moreWork = cmd.MoreWork;
+                                }
+                                ids.Clear();
                             }
                         }
                     }
@@ -2006,17 +2011,18 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private List<IEnumerable<TableValueHolder>> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, long lastScannedEtag)
+        private List<(string TableName, IEnumerable<TableValueHolder> Items)> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, long etagBarrier, Dictionary<string, long> tableEtags)
         {
-            lastScannedEtag = long.Max(lastScannedEtag - 1, 0);
-            
-            var collectionsTables = new List<IEnumerable<TableValueHolder>>();
+            var collectionsTables = new List<(string, IEnumerable<TableValueHolder>)>();
 
             if (collections == null)
             {
                 var revisions = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-                var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
-                collectionsTables.Add(table);
+                if (tableEtags.TryGetValue(string.Empty, out var lastEtag) == false)
+                    tableEtags[string.Empty] = lastEtag = etagBarrier;
+                
+                var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastEtag - 1);
+                collectionsTables.Add((string.Empty, table));
             }
             else
             {
@@ -2030,9 +2036,12 @@ namespace Raven.Server.Documents.Revisions
                         continue;
                     }
 
-                    var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
+                    if (tableEtags.TryGetValue(collection, out var lastEtag) == false)
+                        tableEtags[collection] = lastEtag = etagBarrier;
 
-                    collectionsTables.Add(table);
+                    var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastEtag - 1);
+
+                    collectionsTables.Add((collection, table));
                 }
             }
 
@@ -2134,8 +2143,10 @@ namespace Raven.Server.Documents.Revisions
             return (moreWork, deleted);
         }
 
-        internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
+        internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, out bool moreWork)
         {
+            moreWork = false;
+
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
             {
@@ -2165,8 +2176,7 @@ namespace Raven.Server.Documents.Revisions
                 var prevRevisionsCount = result.PreviousCount;
                 var currentRevisionsCount = result.Remaining;
 
-                if (needToDeleteMore && currentRevisionsCount > 0)
-                    moreWork = true;
+                moreWork = needToDeleteMore && currentRevisionsCount > 0;
 
                 if (currentRevisionsCount == 0)
                 {

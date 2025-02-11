@@ -62,7 +62,6 @@ namespace SlowTests.Issues
             await AssertRevisionsCountAsync(store, "Users/1", 1);
 
 
-
             // 2 Document
 
             configuration = new RevisionsConfiguration
@@ -116,7 +115,7 @@ namespace SlowTests.Issues
                 var timeoutTask = Task.Delay(timeout, cancellationTokenSource.Token);
                 if (await Task.WhenAny(task, timeoutTask) == task)
                 {
-                    cancellationTokenSource.Cancel(); // Cancel delay task if operation completes within timeout
+                    await cancellationTokenSource.CancelAsync(); // Cancel delay task if operation completes within timeout
                     await task; // Propagate any exceptions thrown by the task
                 }
                 else
@@ -124,6 +123,73 @@ namespace SlowTests.Issues
                     throw new TimeoutException("The operation has timed out.");
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Revisions)]
+        public async Task EnforceRevisionsConfigurationSkipRevisions()
+        {
+            using var store = GetDocumentStore();
+
+            var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration()};
+            await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
+            
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            database.DocumentsStorage.RevisionsStorage.SizeLimitInBytes = 1024 * 32;
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Id = "Companies/1", Name = GenerateLargeRandomString(1024) });
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Id = "Users/1", Name = i.ToString() });
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Id = "Users/2", Name = GenerateLargeRandomString(32 * 1024) });
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 5 } };
+            await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: configuration);
+
+            // enforce
+            await WaitWithTimeoutAsync(() => EnforceConfiguration(store, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Users", "Companies" }), timeout: TimeSpan.FromSeconds(15));
+
+            await AssertRevisionsCountAsync(store, "Companies/1", 5);
+            await AssertRevisionsCountAsync(store, "Users/2", 5);
+
+            await AssertRevisionsCountAsync(store, "Users/1", 5); // Fail
+
+        }
+
+        public static string GenerateLargeRandomString(int sizeInBytes)
+        {
+            int length = sizeInBytes / 2; // Each char is 2 bytes
+            Random random = new Random();
+            StringBuilder stringBuilder = new StringBuilder(length);
+
+            for (int i = 0; i < length; i++)
+            {
+                // Generate a random lowercase letter from 'a' to 'z'
+                char randomChar = (char)random.Next('a', 'z' + 1);
+                stringBuilder.Append(randomChar);
+            }
+
+            return stringBuilder.ToString();
         }
 
         private static async Task AssertRevisionsCountAsync(DocumentStore store, string id, int expectedCount)
@@ -135,18 +201,24 @@ namespace SlowTests.Issues
             }
         }
 
-        private async Task EnforceConfiguration(DocumentStore store, long timeout = 15_000)
+        private async Task EnforceConfiguration(DocumentStore store, HashSet<string> collections = null)
         {
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-            using (var token = new OperationCancelToken(TimeSpan.FromMilliseconds(timeout), db.DatabaseShutdown, CancellationToken.None))
-                await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, token: token);
+            using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+                await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, collections, token: token);
         }
-
 
         private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
+
+        private class Company
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
     }
 }
