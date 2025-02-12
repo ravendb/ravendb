@@ -45,6 +45,8 @@ import globalSettings = require("common/settings/globalSettings");
 import fileDownloader = require("common/fileDownloader");
 import moment = require("moment");
 import generalUtils = require("common/generalUtils");
+import getDocumentRevisionsPhysicalSizeCommand
+    from "commands/database/documents/getDocumentRevisionPhysicalSizeCommand";
 
 class editDocument extends viewModelBase {
 
@@ -238,7 +240,7 @@ class editDocument extends viewModelBase {
         (ace as any).config.loadModule("ace/mode/raven_document_newline_friendly");
 
         this.connectedDocuments.compositionComplete();
-        
+
         studioSettings.default.globalSettings()
             .done((settings: globalSettings) => {
                 if (settings.collapseDocsWhenOpening.getValue()) {
@@ -539,11 +541,11 @@ class editDocument extends viewModelBase {
         });
 
         this.documentSizeHtml = ko.computed(() => {
-            if (this.isClone() || this.isCreatingNewDocument() || this.inReadOnlyMode()) {
+            if (this.isClone() || this.isCreatingNewDocument()) {
                 return `Computed Size: ${this.computedDocumentSize()} KB`;
             }
-            
-            const text = `<div class="margin-top-sm margin-bottom-sm"><strong>Document Size on Disk</strong></div> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()} <br/> Compressed: ${this.isCompressed() ? "Yes" : "No"}`;
+
+            const text = `<div class="margin-top-sm margin-bottom-sm"><strong>${this.inReadOnlyMode() ? "Revision" : "Document"} Size on Disk</strong></div> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()} <br/> Compressed: ${this.isCompressed() ? "Yes" : "No"}`;
             const hugeSizeText = this.isHugeDocument() ? `<br /><div class="text-warning bg-warning margin-top margin-bottom">Document is huge</div>` : "";
             
             return text + hugeSizeText;
@@ -1235,13 +1237,21 @@ class editDocument extends viewModelBase {
                 
                 this.document(doc);
                 this.displayDocumentChange(false);
-
+                this.getRevisionPhysicalSize(changeVector)
                 this.revisionChangeVector(changeVector);
 
                 this.dirtyFlag().reset();
             })
             .fail(() => messagePublisher.reportError("Could not find requested revision. Redirecting to latest version"))
             .always(() => this.isBusy(false));
+    }
+
+    private getRevisionPhysicalSize(changeVector: string): JQueryPromise<Raven.Server.Documents.Handlers.SizeDetails> {
+        return new getDocumentRevisionsPhysicalSizeCommand(changeVector, this.activeDatabase()).execute().done((response) => {
+            this.sizeOnDiskActual(response.HumaneActualSize);
+            this.sizeOnDiskAllocated(response.HumaneAllocatedSize);
+            this.isCompressed(response.IsCompressed);
+        });
     }
 
     refreshDocument() {
