@@ -88,7 +88,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                             onChange={(x: SelectOptionWithIcon<StudioEtlType>) => setConnectionStringType(x.value)}
                             placeholder="Select a connection string type"
                             isSearchable={false}
-                            isDisabled={!isForNewConnection}
+                            isDisabled={!isForNewConnection || !!initialConnection.type}
                             components={{
                                 Option: OptionWithIconAndBadge,
                                 SingleValue: SingleValueWithIcon,
