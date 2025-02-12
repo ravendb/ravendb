@@ -11,7 +11,6 @@ import {
 } from "reactstrap";
 import { UseAsyncReturn } from "react-async-hook";
 import React from "react";
-import { CounterBadge } from "components/common/CounterBadge";
 import "./IndexTerms.scss";
 import copyToClipboard from "common/copyToClipboard";
 import queryCriteria from "models/database/query/queryCriteria";
@@ -19,16 +18,26 @@ import queryUtil from "common/queryUtil";
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import { LoadingView } from "components/common/LoadingView";
 import useBoolean from "hooks/useBoolean";
-import { termsForField, useIndexTerms } from "components/pages/database/indexes/list/terms/useIndexTerms";
+import {
+    INDEX_TERMS_PAGE_LIMIT,
+    termsForField,
+    useIndexTerms,
+} from "components/pages/database/indexes/list/terms/useIndexTerms";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import IndexTermsPreviewModal from "components/pages/database/indexes/list/terms/IndexTermsPreviewModal";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { EmptySet } from "components/common/EmptySet";
+import { LoadError } from "components/common/LoadError";
 
-export default function IndexTerms({ pathParam }: { pathParam: string }) {
-    const indexName = pathParam;
+export default function IndexTerms({ pathParams }: ReactProps) {
+    const indexName = pathParams[0];
 
     const { asyncGetIndexEntriesFields, indexTerms, termsLoadedAmount, loadMore, editUrl } = useIndexTerms(indexName);
+
+    if (asyncGetIndexEntriesFields.error) {
+        return <LoadError error="Error during getting fields" refresh={asyncGetIndexEntriesFields.execute} />;
+    }
 
     return (
         <div className="index-terms content-margin">
@@ -43,16 +52,9 @@ export default function IndexTerms({ pathParam }: { pathParam: string }) {
             </Row>
             <Row className="mt-4">
                 {asyncGetIndexEntriesFields.loading && <LoadingView />}
-
                 {!asyncGetIndexEntriesFields.loading && indexTerms.length === 0 && (
-                    <span className="d-flex w-100 justify-content-center">
-                        <h3>
-                            <Icon icon="empty-set" />
-                            <span>No fields were found.</span>
-                        </h3>
-                    </span>
+                    <EmptySet iconSize="lg">No fields were found.</EmptySet>
                 )}
-
                 {indexTerms.map((field) => (
                     <IndexTermsAccordions key={field.name} field={field} indexName={indexName} loadMore={loadMore} />
                 ))}
@@ -87,18 +89,11 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                                 Dynamic field
                             </Badge>
                         )}
-                        <CounterBadge count={field.terms.length} />
+                        <Badge pill>{field.hasMoreTerms ? `${INDEX_TERMS_PAGE_LIMIT}+` : field.terms.length}</Badge>
                     </div>
                 </AccordionHeader>
                 <AccordionBody accordionId={field.name}>
-                    {field.terms.length === 0 && (
-                        <span className="d-flex w-100 justify-content-center">
-                            <h3>
-                                <Icon icon="empty-set" />
-                                <span>No entries were found.</span>
-                            </h3>
-                        </span>
-                    )}
+                    {field.terms.length === 0 && <EmptySet iconSize="lg">No entries were found.</EmptySet>}
                     <div>
                         {field.terms.map((term, index) => (
                             <IndexTermItem
@@ -117,8 +112,8 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                                 data-testid="term-load-more-btn"
                                 color="primary"
                                 icon="refresh"
-                                isSpinning={field.loadInProgress}
-                                disabled={field.loadInProgress}
+                                isSpinning={loadMore.loading}
+                                disabled={loadMore.loading}
                                 onClick={() => loadMore.execute(field.name)}
                             >
                                 Load more

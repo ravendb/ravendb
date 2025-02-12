@@ -14,7 +14,7 @@ export default {
 interface IndexTermsStoryArgs {
     indexFieldsDto?: getIndexEntriesFieldsCommandResult;
     indexTerms?: TermsQueryResult;
-    pathParam?: string;
+    pathParams?: string[];
 }
 
 export const IndexTermsStory: StoryObj<IndexTermsStoryArgs> = {
@@ -27,10 +27,10 @@ export const IndexTermsStory: StoryObj<IndexTermsStoryArgs> = {
         indexesService.withGetIndexFields(args.indexFieldsDto);
         indexesService.withGetIndexTerms(args.indexTerms);
 
-        return <IndexTerms pathParam={args.pathParam} />;
+        return <IndexTerms pathParams={args.pathParams} />;
     },
     args: {
-        pathParam: "Companies/StockPrices/TradeVolumeByMonth",
+        pathParams: ["Companies/StockPrices/TradeVolumeByMonth"],
         indexFieldsDto: IndexesStubs.getIndexTermFields(),
         indexTerms: IndexesStubs.getIndexTerms(),
     },

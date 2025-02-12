@@ -3,14 +3,14 @@ import * as stories from "./IndexTerms.stories";
 import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
-import userEvent from "@testing-library/user-event";
 import { within } from "@testing-library/dom";
 import { INDEX_TERMS_PAGE_LIMIT } from "components/pages/database/indexes/list/terms/useIndexTerms";
 import TermsQueryResult = Raven.Client.Documents.Queries.TermsQueryResult;
 
 const { IndexTermsStory } = composeStories(stories);
 
-const indexName = "Orders/ByShipment/Location";
+const pathParams = ["Orders/ByShipment/Location"];
+const indexName = pathParams[0];
 
 const testIdSelectors = {
     termAccordion: "term-accordion",
@@ -47,13 +47,13 @@ const indexTermsMockups: IndexTermsMockupType = {
 
 describe("IndexTerms", () => {
     it("can render indexName", async () => {
-        const { screen } = rtlRender(<IndexTermsStory pathParam={indexName} />);
+        const { screen } = rtlRender(<IndexTermsStory pathParams={pathParams} />);
 
         expect(await screen.findByText(indexName)).toBeInTheDocument();
     });
 
     it("can render accordion and number of accordion must equal number of static and dynamic fields", async () => {
-        const { screen } = rtlRender(<IndexTermsStory pathParam={indexName} />);
+        const { screen } = rtlRender(<IndexTermsStory pathParams={pathParams} />);
 
         const accordions = await screen.findAllByTestId(testIdSelectors.termAccordion);
 
@@ -64,7 +64,7 @@ describe("IndexTerms", () => {
     });
 
     it("can render accordion with 'dynamic field' badge", async () => {
-        const { screen } = rtlRender(<IndexTermsStory pathParam={indexName} />);
+        const { screen } = rtlRender(<IndexTermsStory pathParams={pathParams} />);
 
         const dynamicTermFields = await screen.findAllByTestId(testIdSelectors.termDynamicField);
 
@@ -75,7 +75,7 @@ describe("IndexTerms", () => {
     it("can render 'no fields were found' when fields arr = 0", async () => {
         const { screen } = rtlRender(
             <IndexTermsStory
-                pathParam={indexName}
+                pathParams={pathParams}
                 indexFieldsDto={indexTermsMockups.indexFieldsDto.empty as getIndexEntriesFieldsCommandResult}
             />
         );
@@ -88,8 +88,7 @@ describe("IndexTerms", () => {
     });
 
     it("can render accordion with term pills", async () => {
-        const user = userEvent.setup();
-        const { screen } = rtlRender(<IndexTermsStory pathParam={indexName} />);
+        const { screen, user } = rtlRender(<IndexTermsStory pathParams={pathParams} />);
 
         const accordion = (await screen.findAllByTestId(testIdSelectors.termAccordion))[0];
 
@@ -97,19 +96,14 @@ describe("IndexTerms", () => {
 
         const termPills = await within(accordion).findAllByTestId(testIdSelectors.termPill);
 
-        expect(termPills).toHaveLength(
-            INDEX_TERMS_PAGE_LIMIT < IndexesStubs.getIndexTerms().Terms.length
-                ? INDEX_TERMS_PAGE_LIMIT
-                : IndexesStubs.getIndexTerms().Terms.length
-        );
+        expect(termPills).toHaveLength(INDEX_TERMS_PAGE_LIMIT);
     });
 
     it("can render text 'no more entries found' when terms length = 0", async () => {
-        const user = userEvent.setup();
-        const { screen } = rtlRender(
+        const { screen, user } = rtlRender(
             <IndexTermsStory
                 indexTerms={indexTermsMockups.indexTerms.empty as TermsQueryResult}
-                pathParam={indexName}
+                pathParams={pathParams}
             />
         );
 
@@ -127,8 +121,7 @@ describe("IndexTerms", () => {
     });
 
     it("can render load more if terms array extend 500 length", async () => {
-        const user = userEvent.setup();
-        const { screen } = rtlRender(<IndexTermsStory pathParam={indexName} />);
+        const { screen, user } = rtlRender(<IndexTermsStory pathParams={pathParams} />);
 
         const accordion = (await screen.findAllByTestId(testIdSelectors.termAccordion))[0];
 
@@ -140,11 +133,10 @@ describe("IndexTerms", () => {
     });
 
     it("can not render load more if terms array not extend 500 length", async () => {
-        const user = userEvent.setup();
-        const { screen } = rtlRender(
+        const { screen, user } = rtlRender(
             <IndexTermsStory
                 indexTerms={indexTermsMockups.indexTerms.empty as TermsQueryResult}
-                pathParam={indexName}
+                pathParams={pathParams}
             />
         );
 
@@ -158,25 +150,24 @@ describe("IndexTerms", () => {
     });
 
     it("can render more terms on load more click", async () => {
-        const user = userEvent.setup();
-        const { screen } = rtlRender(<IndexTermsStory pathParam={indexName} />);
+        const { screen, user } = rtlRender(<IndexTermsStory pathParams={pathParams} />);
 
         const accordion = (await screen.findAllByTestId(testIdSelectors.termAccordion))[0];
 
         await user.click(accordion);
-
+        
+        const termPillsBefore = within(accordion).queryAllByTestId(testIdSelectors.termPill);
+        
+        expect(termPillsBefore).toHaveLength(INDEX_TERMS_PAGE_LIMIT);
+        
         const loadMoreBtn = await within(accordion).findByTestId(testIdSelectors.termLoadMoreButton);
-
+        
         expect(loadMoreBtn).toBeInTheDocument();
 
         await user.click(loadMoreBtn);
 
-        const termPills = await within(accordion).findAllByTestId(testIdSelectors.termPill);
+        const termPillsAfter = await within(accordion).findAllByTestId(testIdSelectors.termPill);
 
-        expect(termPills).toHaveLength(
-            INDEX_TERMS_PAGE_LIMIT * 2 > IndexesStubs.getIndexTerms().Terms.length
-                ? INDEX_TERMS_PAGE_LIMIT * 2
-                : IndexesStubs.getIndexTerms().Terms.length
-        );
+        expect(termPillsAfter).toHaveLength(INDEX_TERMS_PAGE_LIMIT * 2);
     });
 });

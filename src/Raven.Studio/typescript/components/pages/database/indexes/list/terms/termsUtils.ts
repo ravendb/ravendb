@@ -7,7 +7,6 @@ const createTermsForField = (fieldName: string, type: fieldType): termsForField 
         hasMoreTerms: true,
         terms: [],
         type,
-        loadInProgress: false,
         loadError: "",
     };
 };

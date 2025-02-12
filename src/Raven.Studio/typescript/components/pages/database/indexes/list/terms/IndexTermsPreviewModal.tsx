@@ -1,14 +1,7 @@
 import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Code from "components/common/Code";
-
-interface IndexTermsPreviewModalProps {
-    isOpen: boolean;
-    toggleModal: () => void;
-    termIndex: number;
-    fieldTerms: string[];
-}
 
 interface IndexTermsPreviewModalProps {
     isOpen: boolean;
@@ -24,10 +17,6 @@ export default function IndexTermsPreviewModal({
     fieldTerms,
 }: IndexTermsPreviewModalProps) {
     const [currentIndex, setCurrentIndex] = useState<number>(termIndex);
-
-    useEffect(() => {
-        setCurrentIndex(termIndex);
-    }, [termIndex]);
 
     const term = fieldTerms[currentIndex] ?? "";
 

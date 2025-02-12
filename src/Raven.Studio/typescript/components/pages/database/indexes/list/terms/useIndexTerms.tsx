@@ -16,13 +16,12 @@ export type termsForField = {
     fromValue: string;
     type: fieldType;
     hasMoreTerms: boolean;
-    loadInProgress: boolean;
     loadError: string;
 };
 
 export type fieldType = "static" | "dynamic";
 
-export const INDEX_TERMS_PAGE_LIMIT = 500;
+export const INDEX_TERMS_PAGE_LIMIT = 800;
 
 export function useIndexTerms(indexName: string) {
     const { forCurrentDatabase: urls } = useAppUrls();
@@ -96,11 +95,7 @@ export function useIndexTerms(indexName: string) {
             return;
         }
 
-        field.loadInProgress = true;
-
         const terms = await loadTerms.execute(indexName, field);
-
-        field.loadInProgress = false;
 
         setIndexTerms((prev) => {
             return prev.map((x) => (x.name === fieldName ? terms : x));
