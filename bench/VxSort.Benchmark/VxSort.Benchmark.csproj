@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="3.1.18" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="3.1.19" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="BenchmarkDotNet.Artifacts\**" />

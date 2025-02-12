@@ -4,9 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Collections.Generic;
-using System.Diagnostics.Metrics;
-using Google.Protobuf.WellKnownTypes;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
