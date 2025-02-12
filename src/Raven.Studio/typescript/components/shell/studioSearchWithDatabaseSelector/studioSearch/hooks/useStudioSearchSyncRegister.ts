@@ -182,6 +182,7 @@ const databaseRouteMappings: Record<string, StudioSearchMenuItemType> = {
     manageDatabaseGroup: "settingsMenuItem",
     advanced: "settingsMenuItem",
     status: "statsMenuItem",
+    ai: "aiHubMenuItem",
 };
 
 const allMenuItemTypes = exhaustiveStringTuple<StudioSearchMenuItemType>()(
@@ -190,5 +191,6 @@ const allMenuItemTypes = exhaustiveStringTuple<StudioSearchMenuItemType>()(
     "indexesMenuItem",
     "tasksMenuItem",
     "settingsMenuItem",
-    "statsMenuItem"
+    "statsMenuItem",
+    "aiHubMenuItem"
 );

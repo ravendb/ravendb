@@ -71,6 +71,9 @@ export function useStudioSearchOmniSearch(searchQuery: string) {
                 case "statsMenuItem":
                     newResult.database.stats = items;
                     break;
+                case "aiHubMenuItem":
+                    newResult.database.aiHub = items;
+                    break;
                 case "serverMenuItem":
                     newResult.server = items;
                     break;

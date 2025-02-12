@@ -340,14 +340,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             route: 'databases/tasks/editAiEtlTask',
             moduleId: require('viewmodels/database/tasks/editAiEtlTask'),
             shardingMode: "allShards",
-            title: 'AI ETL Task',
+            title: 'AI Task',
             nav: false,
             css: "icon-plus",
             dynamicHash: appUrls.editAiEtlTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks',
             search: {
-                overrideTitle: "Add New AI ETL Task",
-                alternativeTitles: ["Create AI ETL Task"],
+                overrideTitle: "Add New AI Task",
+                alternativeTitles: ["Create AI Task"],
             }
         }),
         new leafMenuItem({

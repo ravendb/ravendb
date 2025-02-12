@@ -58,6 +58,13 @@ export default function StudioSearchDatabaseGroupHeader({ groupType }: StudioSea
                     Stats
                 </>
             );
+        case "aiHub":
+            return (
+                <>
+                    <Icon icon="ai" />
+                    AI Hub
+                </>
+            );
         default:
             assertUnreachable(groupType);
     }

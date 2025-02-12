@@ -7,7 +7,8 @@ export type StudioSearchMenuItemType =
     | "indexesMenuItem"
     | "tasksMenuItem"
     | "settingsMenuItem"
-    | "statsMenuItem";
+    | "statsMenuItem"
+    | "aiHubMenuItem";
 
 export type StudioSearchItemType =
     | StudioSearchMenuItemType
@@ -30,6 +31,7 @@ export interface StudioSearchResult {
         tasks?: StudioSearchResultItem[];
         settings?: StudioSearchResultItem[];
         stats?: StudioSearchResultItem[];
+        aiHub?: StudioSearchResultItem[];
     };
     switchToDatabase: StudioSearchResultItem[];
 }
