@@ -8,7 +8,7 @@ export const connectionStringsUpdateUrlMiddleware = createListenerMiddleware();
 connectionStringsUpdateUrlMiddleware.startListening({
     actionCreator: connectionStringsActions.editConnectionModalOpened,
     effect: (action) => {
-        if (!window.location.href.includes("connectionStrings")) {
+        if (!getIsConnectionStringsPage()) {
             return;
         }
 
@@ -25,7 +25,7 @@ connectionStringsUpdateUrlMiddleware.startListening({
 connectionStringsUpdateUrlMiddleware.startListening({
     actionCreator: connectionStringsActions.editConnectionModalClosed,
     effect: () => {
-        if (!window.location.href.includes("connectionStrings")) {
+        if (!getIsConnectionStringsPage()) {
             return;
         }
 
@@ -33,3 +33,5 @@ connectionStringsUpdateUrlMiddleware.startListening({
         history.pushState(null, null, url);
     },
 });
+
+const getIsConnectionStringsPage = () => window.location.href.includes("settings/connectionStrings");
