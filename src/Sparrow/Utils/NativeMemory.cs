@@ -112,21 +112,18 @@ namespace Sparrow.Utils
             }
         }
 
-        public static void Free(byte* ptr, long size, ThreadStats stats)
-        {
-            Debug.Assert(ptr != null);
-
-            UpdateMemoryStatsForThread(stats, size);
-            Interlocked.Add(ref _totalAllocatedMemory, -size);
-
-            Marshal.FreeHGlobal((IntPtr)ptr);
-        }
-
         public static void Free(byte* ptr, long size)
         {
             Debug.Assert(ptr != null);
             Interlocked.Add(ref _totalAllocatedMemory, -size);
             Marshal.FreeHGlobal((IntPtr)ptr);
+        }
+
+        public static void Free(byte* ptr, long size, ThreadStats stats)
+        {
+            Free(ptr, size);
+
+            UpdateMemoryStatsForThread(stats, size);
         }
 
         public static byte* AllocateMemory(long size)
@@ -153,25 +150,9 @@ namespace Sparrow.Utils
         public static byte* AllocateMemory(long size, out ThreadStats thread)
         {
             thread = ThreadAllocations.Value;
-
-            // Allocating when there isn't enough commit charge available is dangerous, on Linux, the OOM
-            // will try to kill us. On Windows, we might get into memory allocation failures that are not
-            // fun, so let's try to avoid it explicitly.
-            // This is not expected to be called frequently, since we are caching the memory used here
-
-            LowMemoryNotification.AssertNotAboutToRunOutOfMemory();
-
-            try
-            {
-                var ptr = (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
-                thread.Allocations += size;
-                Interlocked.Add(ref _totalAllocatedMemory, size);
-                return ptr;
-            }
-            catch (OutOfMemoryException e)
-            {
-                return ThrowFailedToAllocate(size, thread, e);
-            }
+            var ptr = AllocateMemory(size);
+            thread.Allocations += size;
+            return ptr;
         }
 
         public static void IncrementLuceneManagedAllocations(long size)
