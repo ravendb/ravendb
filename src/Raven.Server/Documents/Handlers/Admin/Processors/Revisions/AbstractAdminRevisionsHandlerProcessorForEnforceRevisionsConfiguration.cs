@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
         public override async ValueTask ExecuteAsync()
         {
-            var token = RequestHandler.CreateTimeLimitedBackgroundOperationToken();
+            var token = RequestHandler.CreateBackgroundOperationToken();
             var operationId = RequestHandler.GetLongQueryString("operationId", false) ?? GetNextOperationId();
 
             TOperationParameters parameters;
