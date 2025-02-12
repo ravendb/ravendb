@@ -16,6 +16,7 @@ import HuggingFaceSettings from "components/pages/database/settings/connectionSt
 import OllamaSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OllamaSettings";
 import OnnxSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OnnxSettings";
 import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
+import MistralaiAiSettings from "./aiFields/MistralaiAiSettings";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -43,6 +44,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
     // const { forCurrentDatabase } = useAppUrls();
 
     const formValues = useWatch({ control });
+    const { connectorType } = formValues;
 
     const handleGenerateIdentifier = () => {
         setValue("identifier", getGeneratedIdentifier(formValues.name));
@@ -115,6 +117,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                                 { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
                                 { label: "ONNX (local)", value: "onnxSettings", icon: "onnx" },
                                 { label: "OpenAI", value: "openAiSettings", icon: "openai" },
+                                { label: "Mistral AI", value: "mistralaiAiSettings", icon: "mistralai" },
                             ] satisfies SelectOptionWithIcon<FormData["connectorType"]>[]
                         }
                         isDisabled={isUsedByAnyTask}
@@ -125,16 +128,13 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     />
                 </div>
 
-                {formValues.connectorType === "azureOpenAiSettings" && (
-                    <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />
-                )}
-                {formValues.connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {formValues.connectorType === "huggingFaceSettings" && (
-                    <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />
-                )}
-                {formValues.connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {formValues.connectorType === "onnxSettings" && <OnnxSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {formValues.connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "azureOpenAiSettings" && <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "huggingFaceSettings" && <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "onnxSettings" && <OnnxSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "mistralaiAiSettings" && <MistralaiAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
 
                 {isUsedByAnyTask && (
                     <RichAlert variant="info">
@@ -297,6 +297,29 @@ const schema = yupObjectSchema<FormData>({
             }),
         organizationId: yup.string().nullable(),
         projectId: yup.string().nullable(),
+    }),
+    mistralaiAiSettings: yup.object({
+        apiKey: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "mistralaiAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        endpoint: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "mistralaiAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        model: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "mistralaiAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
     }),
 });
 

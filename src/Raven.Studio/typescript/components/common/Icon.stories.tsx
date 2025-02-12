@@ -314,6 +314,7 @@ const allIconNames = exhaustiveStringTuple<IconName>()(
     "merge",
     "metrics",
     "minus",
+    "mistralai",
     "nested-document-property",
     "new-counter",
     "new-database",

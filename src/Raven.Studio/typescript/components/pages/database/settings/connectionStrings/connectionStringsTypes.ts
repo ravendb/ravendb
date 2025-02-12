@@ -117,7 +117,8 @@ export interface AiConnection extends ConnectionBase {
         | "huggingFaceSettings"
         | "ollamaSettings"
         | "onnxSettings"
-        | "openAiSettings";
+        | "openAiSettings"
+        | "mistralaiAiSettings";
     azureOpenAiSettings?: {
         apiKey?: string;
         endpoint?: string;
@@ -156,6 +157,11 @@ export interface AiConnection extends ConnectionBase {
         model?: string;
         organizationId?: string;
         projectId?: string;
+    };
+    mistralaiAiSettings?: {
+        apiKey?: string;
+        endpoint?: string;
+        model?: string;
     };
 }
 

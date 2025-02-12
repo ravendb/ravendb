@@ -265,6 +265,14 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       ProjectId: connection.openAiSettings.projectId,
                   }
                 : null,
+        MistralAiSettings:
+            connection.connectorType === "mistralaiAiSettings"
+                ? {
+                      ApiKey: connection.mistralaiAiSettings.apiKey,
+                      Endpoint: connection.mistralaiAiSettings.endpoint,
+                      Model: connection.mistralaiAiSettings.model,
+                  }
+                : null,
     };
 }
 

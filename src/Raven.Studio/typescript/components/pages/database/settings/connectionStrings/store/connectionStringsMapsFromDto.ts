@@ -355,6 +355,9 @@ export function mapAiConnectionsFromDto(
         if (connection.OpenAiSettings) {
             return "openAiSettings";
         }
+        if (connection.MistralAiSettings) {
+            return "mistralaiAiSettings";
+        }
         return null;
     };
 
@@ -404,6 +407,11 @@ export function mapAiConnectionsFromDto(
                     model: connection.OpenAiSettings?.Model,
                     organizationId: connection.OpenAiSettings?.OrganizationId,
                     projectId: connection.OpenAiSettings?.ProjectId,
+                },
+                mistralaiAiSettings: {
+                    apiKey: connection.MistralAiSettings?.ApiKey,
+                    endpoint: connection.MistralAiSettings?.Endpoint,
+                    model: connection.MistralAiSettings?.Model,
                 },
             }) satisfies AiConnection
     );

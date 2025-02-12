@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1024 1024">
+  <defs>
+    <style>
+      .cls-1 {
+        fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <!-- Generator: Adobe Illustrator 28.6.0, SVG Export Plug-In . SVG Version: 1.2.0 Build 709)  -->
+  <g>
+    <g id="Layer_1">
+      <path class="cls-1" d="M102,803.3V220.5h229.1v107.6h147.9v107.6h66v-107.6h147.9v-107.6h229.1v255.2h-.2v67.6h.2v260.1h-167.7v-.2h-61.4v-220h-66.4v110.1h-229.1v-110.1h-66.2v220H102ZM203.5,260.5h87.7v67.6h-87.7v-67.6ZM203.5,368.1v67.6h235.5v-67.6h-235.5ZM882,328.1h-87.7v-67.6h87.7v67.6ZM882,368.1v67.6h-235.5v-67.6h235.5ZM291.1,583.4h-87.7v69.9h87.7v-69.9ZM203.4,693.4h87.7v69.9h-87.7v-69.9ZM586.5,583.4h-87.7v70.1h87.7v-70.1ZM794.3,583.4h87.7v70.1h-87.7v-70.1ZM882,693.4h-87.7v70.1h87.7v-70.1ZM881.7,475.7H203.5v67.6h678.3v-67.6Z"/>
+    </g>
+  </g>
+</svg>
