@@ -1863,7 +1863,6 @@ namespace Raven.Server.Documents.Revisions
             {
                 hasMore = false;
                 ids.Clear();
-                token.Delay();
                 sw.Restart();
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -1907,15 +1906,17 @@ namespace Raven.Server.Documents.Revisions
                         }
                     }
 
-                    var moreWork = true;
-                    while (moreWork)
+                    if (ids.Count > 0)
                     {
-                        token.Delay();
-                        var cmd = createCommand(ids, result, token);
-                        await _database.TxMerger.Enqueue(cmd);
-                        moreWork = cmd.MoreWork;
+                        var moreWork = true;
+                        while (moreWork)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            var cmd = createCommand(ids, result, token);
+                            await _database.TxMerger.Enqueue(cmd);
+                            moreWork = cmd.MoreWork;
+                        }
                     }
-
                 }
             }
         }
@@ -1952,6 +1953,8 @@ namespace Raven.Server.Documents.Revisions
 
         internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, out bool moreWork)
         {
+            moreWork = false;
+
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
             {
@@ -1960,7 +1963,6 @@ namespace Raven.Server.Documents.Revisions
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Tried to delete revisions for '{id}' but no revisions found.");
-                    moreWork = false;
                     return 0;
                 }
 
