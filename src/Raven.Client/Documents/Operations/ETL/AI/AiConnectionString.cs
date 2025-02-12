@@ -35,7 +35,8 @@ public sealed class AiConnectionString : ConnectionString
             OllamaSettings,
             OnnxSettings,
             GoogleSettings,
-            HuggingFaceSettings
+            HuggingFaceSettings,
+            MistralAiSettings
         }.Where(s => s != null).ToList();
 
         foreach (var setting in settings)
@@ -192,6 +193,7 @@ public sealed class AiConnectionString : ConnectionString
         json[nameof(OnnxSettings)] = OnnxSettings?.ToJson();
         json[nameof(GoogleSettings)] = GoogleSettings?.ToJson();
         json[nameof(HuggingFaceSettings)] = HuggingFaceSettings?.ToJson();
+        json[nameof(MistralAiSettings)] = MistralAiSettings?.ToJson();
 
         return json;
     }
