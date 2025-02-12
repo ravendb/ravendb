@@ -1026,7 +1026,8 @@ namespace Raven.Client.Util
 
         internal sealed class IncludeSupport(string fromAlias) : JavascriptConversionExtension
         {
-            public List<string> IncludeFunctions;
+            public List<string> IncludeComplexFunctions;
+            public List<string> IncludeSimpleFunctions;
             public bool HasInclude;
             public readonly string Alias = fromAlias;
 
@@ -1049,7 +1050,14 @@ namespace Raven.Client.Util
                 var replacedBody = ReplaceParameter(body, parameter, Alias);
                 var replaced = replacedBody.CompileToJavascript(context.Options);
 
-                (IncludeFunctions ??= new List<string>()).Add(replaced);
+                if (body is MemberExpression)
+                {
+                    (IncludeSimpleFunctions ??= new List<string>()).Add(replaced);
+                }
+                else
+                {
+                    (IncludeComplexFunctions ??= new List<string>()).Add(replaced);
+                }
                 HasInclude = true;
                 context.PreventDefault();
             }
