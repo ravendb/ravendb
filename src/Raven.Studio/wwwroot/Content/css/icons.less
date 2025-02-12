@@ -157,6 +157,7 @@
     .make-icon-color(storage, @color-3-3, @color-3-3);
     .make-icon-color(stats-running-queries, @color-4, @color-4);
     .make-icon-color(replication-stats, @color-4-1, @color-4-1);
+    
     // AI section
     .icon-ai::before {
         background: linear-gradient(135.89deg, #2fb4d2, #6972ee);
@@ -165,10 +166,16 @@
         -webkit-text-fill-color: transparent;
     }
 
-    .level-1 {
-        .make-icon-color(manage-connection-strings, @color-4, @color-4);
-        .make-icon-color(manage-ongoing-tasks, @color-4-1, @color-4-1);
-        .make-icon-color(replication-stats, @color-4-2, @color-4-2);
+    .ai-hub {
+        &.icon-manage-connection-strings::before {
+            color: @color-4;
+        }
+        &.icon-manage-ongoing-tasks::before {
+            color: @color-4-1;
+        }
+        &.icon-replication-stats::before {
+            color: @color-4-2;
+        }
     }
 
     //Manage server section

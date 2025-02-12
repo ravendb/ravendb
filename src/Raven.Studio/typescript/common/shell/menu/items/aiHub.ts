@@ -13,7 +13,7 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             moduleId: reactUtils.bridgeToReact(AiConnectionStrings.default, "nonShardedView"),
             title: 'AI Connection Strings',
             nav: true,
-            css: 'icon-manage-connection-strings',
+            css: 'icon-manage-connection-strings ai-hub',
             dynamicHash: appUrls.aiConnectionStrings
         }),
         new leafMenuItem({
@@ -22,7 +22,7 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             title: 'AI Tasks',
             nav: true,
-            css: 'icon-manage-ongoing-tasks',
+            css: 'icon-manage-ongoing-tasks ai-hub',
             dynamicHash: appUrls.aiTasks
             
         }),
@@ -32,7 +32,7 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             shardingMode: "singleShard",
             title: 'AI Tasks Stats',
             nav: true,
-            css: 'icon-replication-stats',
+            css: 'icon-replication-stats ai-hub',
             dynamicHash: appUrls.aiTasksStats
         }),
     ];
