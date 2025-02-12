@@ -113,6 +113,8 @@ function LicenseTable(props: LicenseTableProps) {
 
     const isDeveloperOrEnterprise = licenseType === "Developer" || licenseType === "Enterprise";
 
+    const isAgpl = licenseType === "None" || licenseType === "Invalid";
+
     return (
         <>
             <div className="px-4 pb-4">
@@ -153,19 +155,40 @@ function LicenseTable(props: LicenseTableProps) {
                         </tr>
                         {showUpgradeButton && (
                             <tr>
-                                <th></th>
-                                <th className={classNames({ "bg-current": columns.length !== 4 })}></th>
-                                <th colSpan={columns.length < 4 ? columns.length - 1 : 2} className="px-3">
-                                    <Button
-                                        color="primary"
-                                        className="w-100 rounded-pill"
-                                        onClick={upgradeLicenseBtnHandler}
-                                    >
-                                        <Icon icon="upgrade-arrow" />
-                                        Upgrade license
-                                    </Button>
-                                </th>
-                                {columns.length >= 4 && <th className="bg-current"></th>}
+                                {isAgpl ? (
+                                    <>
+                                        <th></th>
+                                        <th className="bg-current"></th>
+                                        <th></th>
+                                        <th colSpan={columns.length - 2} className="px-3">
+                                            <Button
+                                                color="primary"
+                                                className="w-100 rounded-pill"
+                                                onClick={upgradeLicenseBtnHandler}
+                                            >
+                                                <Icon icon="upgrade-arrow" />
+                                                Upgrade license
+                                            </Button>
+                                        </th>
+                                        <th></th>
+                                    </>
+                                ) : (
+                                    <>
+                                        <th></th>
+                                        <th className={classNames({ "bg-current": columns.length !== 4 })}></th>
+                                        <th colSpan={columns.length < 4 ? columns.length - 1 : 2} className="px-3">
+                                            <Button
+                                                color="primary"
+                                                className="w-100 rounded-pill"
+                                                onClick={upgradeLicenseBtnHandler}
+                                            >
+                                                <Icon icon="upgrade-arrow" />
+                                                Upgrade license
+                                            </Button>
+                                        </th>
+                                        {columns.length >= 4 && <th className="bg-current"></th>}
+                                    </>
+                                )}
                             </tr>
                         )}
                     </thead>
@@ -252,6 +275,7 @@ function LicenseTable(props: LicenseTableProps) {
 }
 
 const availableEverywhere = {
+    agpl: { value: true },
     community: { value: true },
     professional: { value: true },
     enterprise: { value: true },
@@ -265,11 +289,16 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         items: [
             {
                 name: "Eligible for Commercial Use",
+                agpl: { value: true },
+                community: { value: true },
+                professional: { value: true },
+                enterprise: { value: true },
+                developer: { value: false },
                 fieldInLicense: null,
-                ...availableEverywhere,
             },
             {
                 name: "Number of databases",
+                agpl: { value: Infinity },
                 community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -278,6 +307,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Single database size",
+                agpl: { value: Infinity },
                 community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -297,6 +327,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         items: [
             {
                 name: "Max cluster size",
+                agpl: { value: "1" },
                 community: { value: "3" },
                 professional: { value: "5" },
                 enterprise: { value: Infinity },
@@ -306,6 +337,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Max cores in cluster",
+                agpl: { value: 3 },
                 community: { value: 3 },
                 professional: { value: 40 },
                 enterprise: { value: Infinity },
@@ -314,7 +346,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Max cluster memory usage",
-
+                agpl: { value: "6" },
                 community: { value: "6" },
                 professional: { value: "240" },
                 enterprise: { value: Infinity },
@@ -334,6 +366,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Highly available tasks",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -342,6 +375,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Dynamic database distribution",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -361,6 +395,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Static indexes per database",
+                agpl: { value: Infinity },
                 community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -369,6 +404,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Static indexes per cluster",
+                agpl: { value: Infinity },
                 community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -377,6 +413,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Auto indexes per database",
+                agpl: { value: Infinity },
                 community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -385,6 +422,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Auto indexes per cluster",
+                agpl: { value: Infinity },
                 community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -413,6 +451,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Additional Assemblies from NuGet",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -431,6 +470,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Index Cleanup",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -450,6 +490,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Multi-node sharding",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -458,6 +499,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Max replication factor",
+                agpl: { value: 1 },
                 community: { value: 1 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -482,6 +524,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Rollups & Retention",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -501,6 +544,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "SNMP",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -509,6 +553,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Monitoring Endpoints",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -517,6 +562,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "OpenTelemetry",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -546,6 +592,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Default revisions configuration",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -554,6 +601,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Max number of revisions to keep",
+                agpl: { value: 2 },
                 community: { value: 2 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -562,6 +610,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Max revisions retention time (days)",
+                agpl: { value: 45 },
                 community: { value: 45 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -575,6 +624,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Min refresh frequency (hrs)",
+                agpl: { value: 36 },
                 community: { value: 36 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -583,6 +633,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Min expiration frequency (hrs)",
+                agpl: { value: 36 },
                 community: { value: 36 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -596,6 +647,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Documents Compression",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -604,6 +656,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "TCP Compression",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -618,6 +671,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         items: [
             {
                 name: "Immediate",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -626,6 +680,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Delayed",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -634,6 +689,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Filtered",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -642,6 +698,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Replication Sink",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -650,6 +707,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Replication Hub",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -669,6 +727,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Cloud & Remote",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -677,6 +736,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Encrypted Backups",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -685,6 +745,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Snapshot Backups",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -693,6 +754,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Periodic Backups",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -707,6 +769,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         items: [
             {
                 name: "RavenDB ETL",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -715,6 +778,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "SQL ETL",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -723,6 +787,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "OLAP ETL",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -731,6 +796,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Elasticsearch ETL",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -739,6 +805,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "PostgreSQL Protocol Support",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -747,6 +814,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Power BI",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -755,6 +823,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "ETL to Kafka",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -763,6 +832,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "ETL to RabbitMQ",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -771,6 +841,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "ETL to Azure Queue Storage",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -779,6 +850,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Kafka Sink",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -787,6 +859,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "RabbitMQ Sink",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -811,6 +884,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Read-Only Certificates",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -819,6 +893,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Encryption in transit",
+                agpl: { value: "TLS 1.3 & X.509" },
                 community: { value: "TLS 1.3 & X.509" },
                 professional: { value: "TLS 1.3 & X.509" },
                 enterprise: { value: "TLS 1.3 & X.509" },
@@ -827,6 +902,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Storage encryption",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -846,6 +922,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Concurrent Data Subscriptions",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -854,6 +931,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Revisions in Subscriptions",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -862,6 +940,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Subscriptions per database",
+                agpl: { value: 3 },
                 community: { value: 3 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -870,6 +949,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Subscriptions per cluster",
+                agpl: { value: 15 },
                 community: { value: 15 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -884,6 +964,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         items: [
             {
                 name: "Backups",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -892,6 +973,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "External Replications",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -900,6 +982,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Custom Sorters",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -908,6 +991,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Custom Analyzers",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -922,6 +1006,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         items: [
             {
                 name: "Data Archival",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
@@ -935,6 +1020,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Custom Sorters per database",
+                agpl: { value: 1 },
                 community: { value: 1 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -943,6 +1029,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Custom Sorters per cluster",
+                agpl: { value: 5 },
                 community: { value: 5 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -956,6 +1043,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Custom Analyzers per database",
+                agpl: { value: 1 },
                 community: { value: 1 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -964,6 +1052,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Custom Analyzers per cluster",
+                agpl: { value: 5 },
                 community: { value: 5 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -972,6 +1061,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Client Configuration",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -980,6 +1070,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Studio Configuration",
+                agpl: { value: false },
                 community: { value: false },
                 professional: { value: true },
                 enterprise: { value: true },
@@ -990,13 +1081,18 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
     },
 ];
 
-type LicenseColumn = "community" | "professional" | "enterprise" | "developer";
+type LicenseColumn = "agpl" | "community" | "professional" | "enterprise" | "developer";
 
 function getColumns(license: Raven.Server.Commercial.LicenseType): {
     columns: LicenseColumn[];
     current: LicenseColumn;
 } {
     switch (license) {
+        case "None":
+            return {
+                columns: ["agpl", "community", "professional", "enterprise"],
+                current: "agpl",
+            };
         case "Developer":
             return {
                 columns: ["community", "professional", "enterprise", "developer"],
@@ -1111,6 +1207,7 @@ interface FeatureAvailabilityItem {
     name: string;
 
     fieldInLicense: DisplayableLicenseField;
+    agpl: ValueData;
     community: ValueData;
     professional: ValueData;
     enterprise: ValueData;
