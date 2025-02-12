@@ -57,7 +57,7 @@ namespace SlowTests.Issues
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             database.DocumentsStorage.RevisionsStorage.SizeLimitInBytes = 0;
 
-            await WaitWithTimeoutAsync(() => EnforceConfiguration(store), timeout: TimeSpan.FromSeconds(15));
+            await EnforceConfigurationWithTimeout(store);
 
             await AssertRevisionsCountAsync(store, "Users/1", 1);
 
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
             };
             await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
-            await WaitWithTimeoutAsync(() => EnforceConfiguration(store), timeout: TimeSpan.FromSeconds(15));
+            await EnforceConfigurationWithTimeout(store);
 
             await AssertRevisionsCountAsync(store, "Users/1", 1);
             await AssertRevisionsCountAsync(store, "Users/2", 1);
@@ -117,13 +117,14 @@ namespace SlowTests.Issues
             await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            database.DocumentsStorage.RevisionsStorage.SizeLimitInBytes = 1024 * 32;
+            var sizeInBytes = 1024 * 32;
+            database.DocumentsStorage.RevisionsStorage.SizeLimitInBytes = sizeInBytes;
 
             for (int i = 0; i < 10; i++)
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company { Id = "Companies/1", Name = GenerateLargeRandomString(1024) });
+                    await session.StoreAsync(new Company { Id = "Companies/1", Name = GenRandomString(1024) });
                     await session.SaveChangesAsync();
                 }
             }
@@ -141,7 +142,7 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Id = "Users/2", Name = GenerateLargeRandomString(32 * 1024) });
+                    await session.StoreAsync(new User { Id = "Users/2", Name = GenRandomString(sizeInBytes /2) });
                     await session.SaveChangesAsync();
                 }
             }
@@ -150,29 +151,13 @@ namespace SlowTests.Issues
             await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // enforce
-            await WaitWithTimeoutAsync(() => EnforceConfiguration(store, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Users", "Companies" }), timeout: TimeSpan.FromSeconds(15));
+            await EnforceConfigurationWithTimeout(store, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Users", "Companies" });
 
             await AssertRevisionsCountAsync(store, "Companies/1", 5);
             await AssertRevisionsCountAsync(store, "Users/2", 5);
 
             await AssertRevisionsCountAsync(store, "Users/1", 5); // Fail
 
-        }
-
-        public static string GenerateLargeRandomString(int sizeInBytes)
-        {
-            int length = sizeInBytes / 2; // Each char is 2 bytes
-            Random random = new Random();
-            StringBuilder stringBuilder = new StringBuilder(length);
-
-            for (int i = 0; i < length; i++)
-            {
-                // Generate a random lowercase letter from 'a' to 'z'
-                char randomChar = (char)random.Next('a', 'z' + 1);
-                stringBuilder.Append(randomChar);
-            }
-
-            return stringBuilder.ToString();
         }
 
         private static async Task AssertRevisionsCountAsync(DocumentStore store, string id, int expectedCount)
@@ -184,29 +169,12 @@ namespace SlowTests.Issues
             }
         }
 
-        private async Task EnforceConfiguration(DocumentStore store, HashSet<string> collections = null)
+        private async Task EnforceConfigurationWithTimeout(DocumentStore store, HashSet<string> collections = null, long timeout = 15_000)
         {
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-            using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeout)))
+            using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, cts.Token, db.DatabaseShutdown))
                 await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: false, collections, token: token);
-        }
-
-        private static async Task WaitWithTimeoutAsync(Func<Task> act, TimeSpan timeout)
-        {
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                var task = act();
-                var timeoutTask = Task.Delay(timeout, cancellationTokenSource.Token);
-                if (await Task.WhenAny(task, timeoutTask) == task)
-                {
-                    await cancellationTokenSource.CancelAsync(); // Cancel delay task if operation completes within timeout
-                    await task; // Propagate any exceptions thrown by the task
-                }
-                else
-                {
-                    throw new TimeoutException("The operation has timed out.");
-                }
-            }
         }
 
         private class User
