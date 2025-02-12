@@ -1813,11 +1813,7 @@ namespace Raven.Server.Documents.Revisions
             HashSet<string> collections,
             OperationCancelToken token) where TOperationResult : OperationResult
         {
-            if (collections == null)
-            {
-                collections = new HashSet<string>() { null };
-            }
-            else
+            if (collections != null)
             {
                 if (collections.Comparer?.Equals(StringComparer.OrdinalIgnoreCase) == false)
                     throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
@@ -1831,9 +1827,9 @@ namespace Raven.Server.Documents.Revisions
 
             var parameters = new Parameters
             {
-                Before = DateTime.MinValue, 
-                MinimalDate = DateTime.MinValue, 
-                EtagBarrier = _documentsStorage.GenerateNextEtag(), 
+                Before = DateTime.MinValue,
+                MinimalDate = DateTime.MinValue,
+                EtagBarrier = _documentsStorage.GenerateNextEtag(),
                 OnProgress = onProgress
             };
 
@@ -1843,21 +1839,8 @@ namespace Raven.Server.Documents.Revisions
             // send initial progress
             parameters.OnProgress?.Invoke(result);
 
-            foreach (var collection in collections)
-            {
-                await PerformRevisionsOperationOnSingleCollectionAsync(collection, ids, sw, createCommand, result, parameters, token);
-            }
+            var tablesLastScannedEtags = new Dictionary<string, long>();
 
-        }
-
-        private async Task PerformRevisionsOperationOnSingleCollectionAsync<TOperationResult>(
-            string collection, List<string> ids, Stopwatch sw, 
-            Func<List<string>, TOperationResult, OperationCancelToken, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
-            TOperationResult result,
-            Parameters parameters, OperationCancelToken token)
-            where TOperationResult : OperationResult
-        {
-            parameters.LastScannedEtag = parameters.EtagBarrier;
             var hasMore = true;
             while (hasMore)
             {
@@ -1870,74 +1853,93 @@ namespace Raven.Server.Documents.Revisions
                 {
                     using (ctx.OpenReadTransaction())
                     {
-                        var table = GetRevisionsTable(ctx, collection, parameters.LastScannedEtag);
-                        if (table == null)
-                        {
-                            /*  there is no collection named like that, or that collection doesn't have any revisions, 
-                                but we won't throw here because this will fail the whole operation, 
-                                so we'll just skip this collection.
-                             */
-                            return;
-                        }
+                        var tables = GetRevisionsTables(ctx, collections, parameters.EtagBarrier, tablesLastScannedEtags);
 
-                        foreach (var tvr in table)
+                        foreach (var (collection, table) in tables)
                         {
-                            token.ThrowIfCancellationRequested();
-
-                            var state = ShouldProcessNextRevisionId(ctx, ref tvr.Reader, parameters, result, out var id);
-                            if (state == NextRevisionIdResult.Break)
-                                break;
-                            if (state == NextRevisionIdResult.Continue)
+                            foreach (var tvr in table)
                             {
+                                token.ThrowIfCancellationRequested();
+
+                                var state = ShouldProcessNextRevisionId(ctx, ref tvr.Reader, parameters, result, out var id);
+                                tablesLastScannedEtags[collection] = parameters.LastScannedEtag;
+                                if (state == NextRevisionIdResult.Break)
+                                    break;
+                                if (state == NextRevisionIdResult.Continue)
+                                {
+                                    if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
+                                    {
+                                        hasMore = true;
+                                        break;
+                                    }
+                                    else
+                                        continue;
+                                }
+
+                                ids.Add(id);
+
                                 if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
                                 {
                                     hasMore = true;
                                     break;
                                 }
-
-                                continue;
                             }
 
-                            ids.Add(id);
-
-                            if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
+                            if (ids.Count != 0)
                             {
-                                hasMore = true;
-                                break;
+                                var moreWork = true;
+                                while (moreWork)
+                                {
+                                    token.Delay();
+                                    var cmd = createCommand(ids, result, token);
+                                    await _database.TxMerger.Enqueue(cmd);
+                                    moreWork = cmd.MoreWork;
+                                }
+                                ids.Clear();
                             }
                         }
                     }
 
-                    var moreWork = true;
-                    while (moreWork)
-                    {
-                        token.Delay();
-                        var cmd = createCommand(ids, result, token);
-                        await _database.TxMerger.Enqueue(cmd);
-                        moreWork = cmd.MoreWork;
-                    }
 
                 }
             }
         }
 
-        private IEnumerable<TableValueHolder> GetRevisionsTable(DocumentsOperationContext context, string collection, long lastScannedEtag)
+        private List<(string TableName, IEnumerable<TableValueHolder> Items)> GetRevisionsTables(DocumentsOperationContext context, HashSet<string> collections, long etagBarrier, Dictionary<string, long> tableEtags)
         {
-            if (collection == null)
+            var collectionsTables = new List<(string, IEnumerable<TableValueHolder>)>();
+
+            if (collections == null)
             {
                 var revisions = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-                return revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
-            }
+                if (tableEtags.TryGetValue(string.Empty, out var lastEtag) == false)
+                    tableEtags[string.Empty] = lastEtag = etagBarrier;
 
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
-            var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
-            var collectionRevisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
-            if (collectionRevisions != null) // there are existing revisions for that collection
+                var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastEtag - 1);
+                collectionsTables.Add((string.Empty, table));
+            }
+            else
             {
-                return collectionRevisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastScannedEtag);
+                foreach (var collection in collections)
+                {
+                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false) ?? new CollectionName(collection);
+                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                    var revisions = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+                    if (revisions == null) // there is no revisions for that collection
+                    {
+                        continue;
+                    }
+
+                    if (tableEtags.TryGetValue(collection, out var lastEtag) == false)
+                        tableEtags[collection] = lastEtag = etagBarrier;
+
+                    var table = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], lastEtag - 1);
+
+                    collectionsTables.Add((collection, table));
+                }
             }
 
-            return null;
+            return collectionsTables;
         }
 
 
