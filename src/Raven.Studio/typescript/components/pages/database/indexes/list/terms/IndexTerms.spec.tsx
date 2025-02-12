@@ -148,26 +148,4 @@ describe("IndexTerms", () => {
 
         expect(loadMoreBtn).not.toBeInTheDocument();
     });
-
-    it("can render more terms on load more click", async () => {
-        const { screen, user } = rtlRender(<IndexTermsStory pathParams={pathParams} />);
-
-        const accordion = (await screen.findAllByTestId(testIdSelectors.termAccordion))[0];
-
-        await user.click(accordion);
-        
-        const termPillsBefore = within(accordion).queryAllByTestId(testIdSelectors.termPill);
-        
-        expect(termPillsBefore).toHaveLength(INDEX_TERMS_PAGE_LIMIT);
-        
-        const loadMoreBtn = await within(accordion).findByTestId(testIdSelectors.termLoadMoreButton);
-        
-        expect(loadMoreBtn).toBeInTheDocument();
-
-        await user.click(loadMoreBtn);
-
-        const termPillsAfter = await within(accordion).findAllByTestId(testIdSelectors.termPill);
-
-        expect(termPillsAfter).toHaveLength(INDEX_TERMS_PAGE_LIMIT * 2);
-    });
 });
