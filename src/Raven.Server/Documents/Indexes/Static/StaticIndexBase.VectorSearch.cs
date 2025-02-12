@@ -2,15 +2,18 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
 using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.VectorSearch;
+using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
 
@@ -461,21 +464,26 @@ public partial class AbstractStaticIndexBase
 
         VectorValue CreateVectorValue(object valueToProcess)
         {
-            if (IsNullValue(valueToProcess))
-                return VectorValue.Null;
-
-            var str = valueToProcess switch
-            {
-                LazyStringValue lsv => lsv,
-                LazyCompressedStringValue lcsv => lcsv,
-                string s => s,
-                LazyJsString ljs => ljs.ToString(),
-                JsString js => js.ToString(),
-                _ => throw new NotSupportedException("Only strings are supported, but got: " + valueToProcess.GetType().FullName)
-            };
-
-            return GenerateEmbeddings.FromText(allocator, indexField.Vector, str);
+            return IsNullValue(valueToProcess) 
+                ? VectorValue.Null 
+                : GenerateEmbeddings.FromText(allocator, indexField.Vector, GetStringFromObject(valueToProcess));
         }
+    }
+
+    private static string GetStringFromObject(object valueToProcess)
+    {
+        if (IsNullValue(valueToProcess))
+            return null;
+        
+        return valueToProcess switch
+        {
+            LazyStringValue lsv => lsv,
+            LazyCompressedStringValue lcsv => lcsv,
+            string s => s,
+            LazyJsString ljs => ljs.ToString(),
+            JsString js => js.ToString(),
+            _ => throw new NotSupportedException("Only strings are supported, but got: " + valueToProcess.GetType().FullName)
+        };
     }
 
     /// <summary>
@@ -500,5 +508,57 @@ public partial class AbstractStaticIndexBase
     private static bool IsNullValue(object value)
     {
         return value is null or DynamicNullObject or DynamicJsNull or JsNull;
+    }
+    
+    public object LoadVector(string fieldName, string path)
+    {
+        var currentIndexingScope = CurrentIndexingScope.Current;
+        var relatedDocument = ReadRelatedDocument(currentIndexingScope, out var embeddingDocument) as DynamicBlittableJson;
+        if (relatedDocument == null)
+            return VectorValue.Null;
+        
+        var vectorField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
+        var currentAiModel = vectorField.Vector.AiIntegrationTaskName ?? currentIndexingScope.Index.Configuration.DefaultAiTask;
+
+        if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, relatedDocument.BlittableJson, currentAiModel, out var aiResult))
+        {
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, (BlittableJsonReaderObject)aiResult, path, out var vectorValue))
+            {
+                if (IsNullValue(vectorValue))
+                    return VectorValue.Null;
+                
+                if (vectorValue is BlittableJsonReaderArray bjra)
+                {
+                    var attachmentNames = new string[bjra.Length];
+                    for (var i = 0; i < bjra.Length; i++)
+                        attachmentNames[i] = GetStringFromObject(bjra[i]);
+
+                    var attachments = currentIndexingScope.LoadAttachments(embeddingDocument, attachmentNames);
+                    if (attachments is null)
+                        return VectorValue.Null;
+
+                    return VectorFromEmbedding(vectorField, attachments.Select(x => x.GetContentAsStream()), isAutoIndex: false);
+                }
+
+                if (IsExplicitString(vectorValue))
+                {
+                    var singleAttachmentName = GetStringFromObject(vectorValue);
+                    var attachment = currentIndexingScope.LoadAttachment(embeddingDocument, singleAttachmentName);
+                    return attachment is null 
+                        ? VectorValue.Null 
+                        : VectorFromEmbedding(vectorField, attachment.GetContentAsStream(), isAutoIndex: false);
+                }
+            }
+        }
+        
+        return VectorValue.Null;
+    }
+    
+    private dynamic ReadRelatedDocument(CurrentIndexingScope scope, out string embeddingDocument)
+    {
+        var id = (string)scope.Source.GetId().ToString();
+        embeddingDocument = AiHelper.GetDocumentEmbeddingsId(id);
+        var collectionName = AiHelper.GetDocumentEmbeddingsCollectionName(scope.SourceCollection);
+        return LoadDocument(embeddingDocument, collectionName);
     }
 }

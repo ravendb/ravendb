@@ -48,6 +48,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     break;
                 case "this.CreateVector":
                 case "CreateVector":
+                case "this.LoadVector":
+                case "LoadVector":    
                     Methods.HasCreateVector = true;
                     break;
             }

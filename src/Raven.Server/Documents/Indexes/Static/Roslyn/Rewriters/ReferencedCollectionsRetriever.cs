@@ -13,22 +13,28 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var loadDocument = node.Expression.ToString();
+            
+            if (loadDocument is "this.CreateVector" or "CreateVector")
+                CreateReferencedCollections();
+            
             if (loadDocument != "this.LoadDocument" && loadDocument != "LoadDocument")
                 return base.VisitInvocationExpression(node);
 
             if (node.ArgumentList.Arguments.Count <= 1)
                 return base.VisitInvocationExpression(node);
 
-            var collectionLiteral = node.ArgumentList.Arguments[node.ArgumentList.Arguments.Count - 1].Expression as LiteralExpressionSyntax;
-            if (collectionLiteral == null)
+            if (node.ArgumentList.Arguments[^1].Expression is not LiteralExpressionSyntax collectionLiteral)
                 return base.VisitInvocationExpression(node);
 
-            if (ReferencedCollections == null)
-                ReferencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
+            CreateReferencedCollections();
             ReferencedCollections.Add(collectionLiteral.Token.Value.ToString());
 
             return base.VisitInvocationExpression(node);
+        }
+        
+        private void CreateReferencedCollections()
+        {
+            ReferencedCollections ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
     }
 }

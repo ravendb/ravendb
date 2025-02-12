@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -20,6 +21,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
@@ -871,6 +873,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
 
+                if (mapRewriter.HasVectorField)
+                {
+                    //todo: maciej
+                   // Debug.Assert(mapRewriter.ReferencedCollections != null);
+                   // mapRewriter.ReferencedCollections.Add(AiHelper.GetDocumentEmbeddingsCollectionName(collectionName));
+                }
+                
                 if (mapRewriter.ReferencedCollections != null)
                 {
                     foreach (var referencedCollection in mapRewriter.ReferencedCollections)
@@ -880,6 +889,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
                 }
 
+                
+                
                 if (mapRewriter.HasLoadCompareExchangeValue)
                     results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddCompareExchangeReferenceToCollection)).Invoke(collection).AsExpressionStatement());
             }

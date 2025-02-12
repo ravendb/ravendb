@@ -50,7 +50,7 @@ namespace Raven.Server.Dashboard
         public long SnowflakeEtlCount { get; set; }
         
         public long AiEtlCount { get; set; }
-
+        
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

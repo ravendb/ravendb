@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 /// </summary>
 public sealed class VectorFieldRewriter : CSharpSyntaxRewriter
 {
-    public static readonly VectorFieldRewriter Instance = new();
+    public bool HasVectorField { get; private set; }
     
     public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
     {
@@ -22,7 +22,9 @@ public sealed class VectorFieldRewriter : CSharpSyntaxRewriter
         switch (expression)
         {
             case $"this.{nameof(StaticIndexBase.CreateVector)}":
+            case $"this.{nameof(StaticIndexBase.LoadVector)}":
             case $"{nameof(StaticIndexBase.CreateVector)}":
+            case $"{nameof(StaticIndexBase.LoadVector)}":
                 var parent = GetAnonymousObjectMemberDeclaratorSyntax(node);
                 var name = parent.NameEquals.Name.Identifier.Text;
 
@@ -30,6 +32,7 @@ public sealed class VectorFieldRewriter : CSharpSyntaxRewriter
                 var variable = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, identifier);
 
                 var arguments = node.ArgumentList.Arguments.Insert(0, SyntaxFactory.Argument(variable));
+                HasVectorField = true;
                 return node.WithArgumentList(SyntaxFactory.ArgumentList(arguments));
         }
 
