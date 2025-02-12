@@ -16,11 +16,13 @@ public interface IVectorFieldFactory<T>
     /// Defines the text field that vector search will be performed on.
     /// </summary>
     /// <param name="fieldName">Name of the document field containing text data.</param>
-    public IVectorEmbeddingTextField WithText(string fieldName);
+    /// <param name="etlConfigName"></param>
+    public IVectorEmbeddingTextField WithText(string fieldName, string etlConfigName = null);
     
     /// <inheritdoc cref="WithText(string,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
     /// <param name="propertySelector">Path to the document field containing text data.</param>
-    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector);
+    /// /// <param name="etlConfigName"></param>
+    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector, string etlConfigName = null);
     
     /// <summary>
     /// Defines the embedding field that vector search will be performed on.
@@ -80,6 +82,7 @@ public interface IVectorEmbeddingFieldFactoryAccessor
     internal VectorEmbeddingType SourceQuantizationType { get; set; }
     internal VectorEmbeddingType DestinationQuantizationType { get; set; } 
     internal bool IsBase64Encoded { get; set; }
+    internal string EtlConfigName { get; set; }
 }
 
 internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, IVectorField, IVectorEmbeddingField, IVectorEmbeddingTextField, IVectorEmbeddingFieldFactoryAccessor
@@ -89,21 +92,24 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
     public VectorEmbeddingType SourceQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
     public VectorEmbeddingType DestinationQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
     public bool IsBase64Encoded { get; set; }
+    public string EtlConfigName { get; set; }
     
-    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector)
+    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector, string etlConfigName)
     {
         FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
+        EtlConfigName = etlConfigName;
         
         return this;
     }
     
-    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName)
+    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName, string etlConfigName)
     {
         FieldName = fieldName;
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
+        EtlConfigName = etlConfigName;
         
         return this;
     }

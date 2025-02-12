@@ -65,6 +65,11 @@ public class RavenDB_22076 : RavenTestBase
                     factory => factory.ByText("aaaa")).ToString();
                 
                 Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField), $p0)", q7);
+
+                var q8 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName").TargetQuantization(VectorEmbeddingType.Int8),
+                    factory => factory.ByText("aaaa")).ToString();
+                
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField, EtlConfigName), $p0)", q8);
             }
         }
     }
@@ -160,6 +165,10 @@ public class RavenDB_22076 : RavenTestBase
                 var q6 = session.Query<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByBase64("aaaa==")).ToString();
                 
                 Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0)", q6);
+                
+                var q7 = session.Query<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName"), factory => factory.ByText("SomeText")).ToString();
+                
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField, EtlConfigName), $p0)", q7);
             }
         }
     }
@@ -431,6 +440,22 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void Temp(Options options)
+    {
+        const string etlConfigName = "EtlConfigName";
+        const string queriedText = "some text";
+        
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                _ = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, etlConfigName), factory => factory.ByText(queriedText)).ToList();
+            }
+        }
+    }
+
     [RavenFact(RavenTestCategory.None)]
     public void TestDefaultVectorEmbeddingType()
     {
@@ -443,6 +468,7 @@ public class RavenDB_22076 : RavenTestBase
         public float[] EmbeddingSingles { get; set; }
         public sbyte[] EmbeddingSBytes { get; set; }
         public byte[] EmbeddingBinary { get; set; }
+        public string TextualValue { get; set; }
     }
 
     private class DummyIndexJs : AbstractJavaScriptIndexCreationTask
