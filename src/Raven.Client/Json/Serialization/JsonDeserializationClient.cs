@@ -7,6 +7,7 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
@@ -15,7 +16,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -310,7 +310,7 @@ namespace Raven.Client.Json.Serialization
         
         public static readonly Func<BlittableJsonReaderObject, SnowflakeEtlConfiguration> SnowflakeEtlConfiguration = GenerateJsonDeserializationRoutine<SnowflakeEtlConfiguration>();
         
-        public static readonly Func<BlittableJsonReaderObject, AiEtlConfiguration> AiEtlConfiguration = GenerateJsonDeserializationRoutine<AiEtlConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, AiIntegrationConfiguration> AiIntegrationConfiguration = GenerateJsonDeserializationRoutine<AiIntegrationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ElasticSearchConnectionString> ElasticSearchConnectionString = GenerateJsonDeserializationRoutine<ElasticSearchConnectionString>();
 

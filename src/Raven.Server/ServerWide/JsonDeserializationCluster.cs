@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -38,6 +37,8 @@ using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Sparrow.Json;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Server.ServerWide.Commands.AI;
 
 namespace Raven.Server.ServerWide
 {
@@ -127,7 +128,7 @@ namespace Raven.Server.ServerWide
         
         public static readonly Func<BlittableJsonReaderObject, SnowflakeEtlConfiguration> SnowflakeEtlConfiguration = GenerateJsonDeserializationRoutine<SnowflakeEtlConfiguration>();
         
-        public static readonly Func<BlittableJsonReaderObject, AiEtlConfiguration> AiEtlConfiguration = GenerateJsonDeserializationRoutine<AiEtlConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, AiIntegrationConfiguration> AiIntegrationConfiguration = GenerateJsonDeserializationRoutine<AiIntegrationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, AddOrUpdateCompareExchangeCommand.CompareExchangeResult> CompareExchangeResult = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeCommand.CompareExchangeResult>();
 
@@ -243,14 +244,14 @@ namespace Raven.Server.ServerWide
             [nameof(AddQueueEtlCommand)] = GenerateJsonDeserializationRoutine<AddQueueEtlCommand>(),
             [nameof(AddQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
             [nameof(AddSnowflakeEtlCommand)] = GenerateJsonDeserializationRoutine<AddSnowflakeEtlCommand>(),
-            [nameof(AddAiEtlCommand)] = GenerateJsonDeserializationRoutine<AddAiEtlCommand>(),
+            [nameof(AddAiIntegrationCommand)] = GenerateJsonDeserializationRoutine<AddAiIntegrationCommand>(),
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(UpdateOlapEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateOlapEtlCommand>(),
             [nameof(UpdateElasticSearchEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateElasticSearchEtlCommand>(),
             [nameof(UpdateQueueEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueEtlCommand>(),
             [nameof(UpdateSnowflakeEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSnowflakeEtlCommand>(),
-            [nameof(UpdateAiEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateAiEtlCommand>(),
+            [nameof(UpdateAiIntegrationCommand)] = GenerateJsonDeserializationRoutine<UpdateAiIntegrationCommand>(),
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
             [nameof(UpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationStateCommand>(),
             [nameof(ShardedUpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<ShardedUpdateExternalReplicationStateCommand>(),

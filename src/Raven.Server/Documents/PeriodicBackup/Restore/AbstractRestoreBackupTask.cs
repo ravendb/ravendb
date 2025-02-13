@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -459,9 +458,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
             }
 
-            if (databaseRecord.AiEtls != null)
+            if (databaseRecord.AiIntegrations != null)
             {
-                foreach (var task in databaseRecord.AiEtls)
+                foreach (var task in databaseRecord.AiIntegrations)
                 {
                     task.Disabled = true;
                 }
@@ -613,7 +612,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures;
                     databaseRecord.SnowflakeEtls = smugglerDatabaseRecord.SnowflakeEtls;
                     databaseRecord.SnowflakeConnectionStrings = smugglerDatabaseRecord.SnowflakeConnectionStrings;
-                    databaseRecord.AiEtls = smugglerDatabaseRecord.AiEtls;
+                    databaseRecord.AiIntegrations = smugglerDatabaseRecord.AiIntegrations;
                 };
             }
 

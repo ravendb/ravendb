@@ -1,6 +1,6 @@
-﻿using Raven.Client.Documents.Operations.ConnectionStrings;
+﻿using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;

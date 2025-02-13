@@ -14,7 +14,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -46,6 +45,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
+using Raven.Client.Documents.Operations.AI;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -502,11 +502,11 @@ namespace Raven.Server.Smuggler.Documents
                             WriteQueueSinks(databaseRecord.QueueSinks);
                         }
 
-                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiEtls))
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiIntegrations))
                         {
                             _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.AiEtls));
-                            WriteAiEtls(databaseRecord.AiEtls);
+                            _writer.WritePropertyName(nameof(databaseRecord.AiIntegrations));
+                            WriteAiIntegrations(databaseRecord.AiIntegrations);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiConnectionStrings))
@@ -892,16 +892,16 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteAiEtls(List<AiEtlConfiguration> aiEtlConfiguration)
+            private void WriteAiIntegrations(List<AiIntegrationConfiguration> aiIntegrationConfigurations)
             {
-                if (aiEtlConfiguration == null)
+                if (aiIntegrationConfigurations == null)
                 {
                     _writer.WriteNull();
                     return;
                 }
                 _writer.WriteStartArray();
                 var first = true;
-                foreach (var etl in aiEtlConfiguration)
+                foreach (var etl in aiIntegrationConfigurations)
                 {
                     if (first == false)
                         _writer.WriteComma();

@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl();
                     break;
                 case EtlType.Ai:
-                    RequestHandler.ServerStore.LicenseManager.AssertCanAddAiEtl();
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddAiIntegration();
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");

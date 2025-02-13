@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
@@ -14,6 +13,7 @@ using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
@@ -664,27 +664,27 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             result.DatabaseRecord.SnowflakeEtlsUpdated = true;
         }
 
-        if (databaseRecord.AiEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.AiEtls))
+        if (databaseRecord.AiIntegrations.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.AiIntegrations))
         {
             if (_log.IsInfoEnabled)
-                _log.Info("Configuring AI ETL configuration from smuggler");
+                _log.Info("Configuring AI Integration configuration from smuggler");
 
-            foreach (var etl in databaseRecord.AiEtls)
+            foreach (var etl in databaseRecord.AiIntegrations)
             {
-                _currentDatabaseRecord?.AiEtls.ForEach(x =>
+                _currentDatabaseRecord?.AiIntegrations.ForEach(x =>
                 {
                     if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
                     {
-                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.AiEtl, _name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.AiIntegration, _name, RaftIdGenerator.DontCareId)));
                     }
                 });
 
                 etl.TaskId = 0;
                 etl.Disabled = true;
-                tasks.Add(_server.SendToLeaderAsync(new AddAiEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
+                tasks.Add(_server.SendToLeaderAsync(new AddAiIntegrationCommand(etl, _name, RaftIdGenerator.DontCareId)));
             }
 
-            result.DatabaseRecord.AiEtlsUpdated = true;
+            result.DatabaseRecord.AiIntegrationsUpdated = true;
         }
 
         if (tasks.Count == 0)

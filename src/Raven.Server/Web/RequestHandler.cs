@@ -879,7 +879,7 @@ namespace Raven.Server.Web
                     return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToAuditJson();
 
                 case EtlType.Ai:
-                    return JsonDeserializationClient.AiEtlConfiguration(configuration).ToAuditJson();
+                    return JsonDeserializationClient.AiIntegrationConfiguration(configuration).ToAuditJson();
             }
 
             return null;

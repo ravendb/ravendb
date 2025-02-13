@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Smuggler
         DataArchival = 1 << 29,
         SnowflakeConnectionStrings = 1 << 30,
         SnowflakeEtls = 1 << 31,
-        AiEtls = 1L << 32,
+        AiIntegrations = 1L << 32,
         AiConnectionStrings = 1L << 33,
     }
 }

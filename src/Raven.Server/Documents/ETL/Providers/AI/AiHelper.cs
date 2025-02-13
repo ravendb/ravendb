@@ -5,8 +5,8 @@ using System.Data.HashFunction.Blake2;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Extensions;
+using Raven.Client.Documents.Operations.AI;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
@@ -50,7 +50,7 @@ public static class AiHelper
     }
 
     [Experimental("SKEXP0001")]
-    public static ITextEmbeddingGenerationService CreateService(AiEtlConfiguration configuration)
+    public static ITextEmbeddingGenerationService CreateService(AiIntegrationConfiguration configuration)
     {
         var kernelBuilder = Kernel.CreateBuilder();
         kernelBuilder.Configure(configuration, isConnectionTest: false, out _);
@@ -59,7 +59,7 @@ public static class AiHelper
     }
 
     [Experimental("SKEXP0001")]
-    public static IServiceProvider CreateServicesForTest(AiEtlConfiguration configuration, out string serviceId)
+    public static IServiceProvider CreateServicesForTest(AiIntegrationConfiguration configuration, out string serviceId)
     {
         var kernelBuilder = Kernel.CreateBuilder();
         kernelBuilder.Configure(configuration, isConnectionTest: true, out serviceId);

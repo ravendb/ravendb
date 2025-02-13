@@ -21,7 +21,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
@@ -63,6 +62,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -2208,12 +2208,12 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case EtlType.Ai:
-                        var aiEtl = JsonDeserializationCluster.AiEtlConfiguration(etlConfiguration);
+                        var aiEtl = JsonDeserializationCluster.AiIntegrationConfiguration(etlConfiguration);
                         aiEtl.Validate(out var aiEtlErr, validateName: false, validateConnection: false);
                         if (ValidateConnectionString(rawRecord, aiEtl.ConnectionStringName, aiEtl.EtlType) == false)
                             aiEtlErr.Add($"Could not find connection string named '{aiEtl.ConnectionStringName}'. Please supply an existing connection string.");
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiEtlErr);
-                        command = new AddAiEtlCommand(aiEtl, databaseName, raftRequestId);
+                        command = new AddAiIntegrationCommand(aiEtl, databaseName, raftRequestId);
                         break;
 
                     default:
@@ -2423,14 +2423,14 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case EtlType.Ai:
-                        var aiEtl = JsonDeserializationCluster.AiEtlConfiguration(etlConfiguration);
-                        aiEtl.Validate(out var aiEtlErr, validateName: false, validateConnection: false);
-                        if (ValidateConnectionString(rawRecord, aiEtl.ConnectionStringName, aiEtl.EtlType) == false)
-                            aiEtlErr.Add($"Could not find connection string named '{aiEtl.ConnectionStringName}'. Please supply an existing connection string.");
+                        var aiIntegration = JsonDeserializationCluster.AiIntegrationConfiguration(etlConfiguration);
+                        aiIntegration.Validate(out var aiIntegrationErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, aiIntegration.ConnectionStringName, aiIntegration.EtlType) == false)
+                            aiIntegrationErr.Add($"Could not find AI connection string named '{aiIntegration.ConnectionStringName}'. Please supply an existing connection string.");
 
-                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiEtlErr);
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiIntegrationErr);
 
-                        command = new UpdateAiEtlCommand(id, aiEtl, databaseName, raftRequestId);
+                        command = new UpdateAiIntegrationCommand(id, aiIntegration, databaseName, raftRequestId);
                         break;
 
                     default:
@@ -2659,7 +2659,7 @@ namespace Raven.Server.ServerWide
 
                     case ConnectionStringType.Ai:
 
-                        var aiEtls = rawRecord.AiEtls;
+                        var aiEtls = rawRecord.AiIntegrations;
 
                         // Don't delete the connection string if used by tasks types: AI ETL
                         if (aiEtls != null)

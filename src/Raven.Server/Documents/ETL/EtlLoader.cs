@@ -8,9 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.ETL
         
         public List<SnowflakeEtlConfiguration> SnowflakeDestinations;
         
-        public List<AiEtlConfiguration> AiEtlDestinations;
+        public List<AiIntegrationConfiguration> AiIntegrationDestinations;
 
         public long GetQueueDestinationCountByBroker(QueueBrokerType brokerType)
         {
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.ETL
 
         public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, record.SnowflakeEtls, record.AiEtls, toRemove: null, null, null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, record.SnowflakeEtls, record.AiIntegrations, toRemove: null, null, null);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.ETL
             List<ElasticSearchEtlConfiguration> newElasticSearchDestinations,
             List<QueueEtlConfiguration> newQueueDestinations,
             List<SnowflakeEtlConfiguration> newSnowflakeDestinations,
-            List<AiEtlConfiguration> newAiDestinations,
+            List<AiIntegrationConfiguration> newAiDestinations,
             List<EtlProcess> toRemove, Dictionary<string, string> responsibleNodes,
             List<string> explanations)
         {
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.ETL
                 ElasticSearchDestinations = _databaseRecord.ElasticSearchEtls;
                 QueueDestinations = _databaseRecord.QueueEtls;
                 SnowflakeDestinations = _databaseRecord.SnowflakeEtls;
-                AiEtlDestinations = _databaseRecord.AiEtls;
+                AiIntegrationDestinations = _databaseRecord.AiIntegrations;
 
                 var processes = new List<EtlProcess>(_processes);
 
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.ETL
                     newProcesses.AddRange(GetRelevantProcesses<SnowflakeEtlConfiguration, SnowflakeConnectionString>(newSnowflakeDestinations, ensureUniqueConfigurationNames));
                 
                 if (newAiDestinations != null && newAiDestinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<AiEtlConfiguration, AiConnectionString>(newAiDestinations, ensureUniqueConfigurationNames));
+                    newProcesses.AddRange(GetRelevantProcesses<AiIntegrationConfiguration, AiConnectionString>(newAiDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.ETL
                 ElasticSearchEtlConfiguration elasticSearchConfig = null;
                 QueueEtlConfiguration queueConfig = null;
                 SnowflakeEtlConfiguration snowflakeConfig = null;
-                AiEtlConfiguration aiConfig = null;
+                AiIntegrationConfiguration aiConfig = null;
 
                 var connectionStringNotFound = false;
 
@@ -314,7 +314,7 @@ namespace Raven.Server.Documents.ETL
                         break;
                     
                     case EtlType.Ai:
-                        aiConfig = config as AiEtlConfiguration;
+                        aiConfig = config as AiIntegrationConfiguration;
                         
                         if (_databaseRecord.AiConnectionStrings.TryGetValue(config.ConnectionStringName, out var aiConnection))
                             aiConfig.Initialize(aiConnection);
@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.ETL
                     if (snowflakeConfig != null)
                         process = new SnowflakeEtl(transform, snowflakeConfig, _database, _serverStore);
                     if (aiConfig != null)
-                        process = new AiEtl(transform, aiConfig, _database, _serverStore);
+                        process = new AiIntegration(transform, aiConfig, _database, _serverStore);
                     yield return process;
                 }
             }
@@ -532,7 +532,7 @@ namespace Raven.Server.Documents.ETL
             var myElasticSearchEtl = new List<ElasticSearchEtlConfiguration>();
             var myQueueEtl = new List<QueueEtlConfiguration>();
             var mySnowflakeEtl = new List<SnowflakeEtlConfiguration>();
-            var myAiEtl = new List<AiEtlConfiguration>();
+            var myAiEtl = new List<AiIntegrationConfiguration>();
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -586,9 +586,9 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            foreach (var config in record.AiEtls)
+            foreach (var config in record.AiIntegrations)
             {
-                if (IsMyEtlTask<AiEtlConfiguration, AiConnectionString>(record, config, ref responsibleNodes, out explanations))
+                if (IsMyEtlTask<AiIntegrationConfiguration, AiConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
                     myAiEtl.Add(config);
                 }
@@ -806,9 +806,9 @@ namespace Raven.Server.Documents.ETL
                         
                         break;
                     }
-                    case AiEtl aiEtl:
+                    case AiIntegration aiEtl:
                     {
-                        AiEtlConfiguration existing = null;
+                        AiIntegrationConfiguration existing = null;
 
                         foreach (var config in myAiEtl)
                         {
@@ -1134,9 +1134,9 @@ namespace Raven.Server.Documents.ETL
                 dict[source] = tombstoneCollections;
             }
             
-            foreach (var config in AiEtlDestinations.Where(config => config.Disabled))
+            foreach (var config in AiIntegrationDestinations.Where(config => config.Disabled))
             {
-                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.AiEtl, config.Name, config.TaskId);
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.AiIntegration, config.Name, config.TaskId);
                 dict[source] = tombstoneCollections;
             }
 

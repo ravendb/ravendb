@@ -5,8 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -363,8 +363,8 @@ namespace Raven.Server.Dashboard
             long amazonSqsEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.AmazonSqs);
 
-            var aiEtlCount = database.EtlLoader.AiEtlDestinations.Count;
-            long aiEtlCountOnNode = GetTaskCountOnNode<AiEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.AiEtlDestinations,
+            var aiEtlCount = database.EtlLoader.AiIntegrationDestinations.Count;
+            long aiEtlCountOnNode = GetTaskCountOnNode<AiIntegrationConfiguration>(database, dbRecord, serverStore, database.EtlLoader.AiIntegrationDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
             
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
@@ -405,7 +405,7 @@ namespace Raven.Server.Dashboard
                 KafkaSinkCount = kafkaSinkCountOnNode,
                 RabbitMqSinkCount = rabbitMqSinkCountOnNode,
                 SnowflakeEtlCount = snowflakeEtlCountOnNode,
-                AiEtlCount = aiEtlCountOnNode,
+                AiIntegrationCount = aiEtlCountOnNode,
             };
         }
 

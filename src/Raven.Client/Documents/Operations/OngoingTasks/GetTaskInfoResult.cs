@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.DataArchival;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -36,7 +37,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         PullReplicationAsHub,
         PullReplicationAsSink,
         QueueSink,
-        AiEtl,
+        AiIntegration,
     }
 
     public enum OngoingTaskState
@@ -415,16 +416,16 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public sealed class OngoingTaskAiEtl : OngoingTask
+    public sealed class OngoingTaskAiIntegration : OngoingTask
     {
-        public OngoingTaskAiEtl()
+        public OngoingTaskAiIntegration()
         {
-            TaskType = OngoingTaskType.AiEtl;
+            TaskType = OngoingTaskType.AiIntegration;
         }
 
         public string ConnectionStringName { get; set; }
 
-        public AiEtlConfiguration Configuration { get; set; }
+        public AiIntegrationConfiguration Configuration { get; set; }
 
         public override DynamicJsonValue ToJson()
         {

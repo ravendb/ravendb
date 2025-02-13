@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations.ETL
             _initialized = true;
         }
 
-        public List<Transformation> Transforms { get; set; } = new List<Transformation>();
+        public virtual List<Transformation> Transforms { get; set; } = new List<Transformation>();
 
         public bool Disabled { get; set; }
         

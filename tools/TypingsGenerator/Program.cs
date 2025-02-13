@@ -14,6 +14,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -22,7 +23,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -581,8 +581,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SnowflakeEtlTable));
 
             // ongoing tasks - AI ETL
-            scripter.AddType(typeof(OngoingTaskAiEtl));
-            scripter.AddType(typeof(AiEtlConfiguration));
+            scripter.AddType(typeof(OngoingTaskAiIntegration));
+            scripter.AddType(typeof(AiIntegrationConfiguration));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

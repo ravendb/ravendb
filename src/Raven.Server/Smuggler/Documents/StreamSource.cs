@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -473,15 +473,15 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.AiEtls), out BlittableJsonReaderArray aiEtls) &&
+                if (reader.TryGet(nameof(databaseRecord.AiIntegrations), out BlittableJsonReaderArray aiEtls) &&
                     aiEtls != null)
                 {
-                    databaseRecord.AiEtls = new List<AiEtlConfiguration>();
+                    databaseRecord.AiIntegrations = new List<AiIntegrationConfiguration>();
                     foreach (BlittableJsonReaderObject etl in aiEtls)
                     {
                         try
                         {
-                            databaseRecord.AiEtls.Add(JsonDeserializationCluster.AiEtlConfiguration(etl));
+                            databaseRecord.AiIntegrations.Add(JsonDeserializationCluster.AiIntegrationConfiguration(etl));
                         }
                         catch (Exception e)
                         {

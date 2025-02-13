@@ -6,12 +6,12 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -912,26 +912,26 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<AiEtlConfiguration> _aiEtls;
+        private List<AiIntegrationConfiguration> _aiIntegrations;
 
-        public List<AiEtlConfiguration> AiEtls
+        public List<AiIntegrationConfiguration> AiIntegrations
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.AiEtls;
+                    return _materializedRecord.AiIntegrations;
 
-                if (_aiEtls == null)
+                if (_aiIntegrations == null)
                 {
-                    _aiEtls = [];
-                    if (_record.TryGet(nameof(DatabaseRecord.AiEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    _aiIntegrations = [];
+                    if (_record.TryGet(nameof(DatabaseRecord.AiIntegrations), out BlittableJsonReaderArray bjra) && bjra != null)
                     {
                         foreach (BlittableJsonReaderObject element in bjra)
-                            _aiEtls.Add(JsonDeserializationCluster.AiEtlConfiguration(element));
+                            _aiIntegrations.Add(JsonDeserializationCluster.AiIntegrationConfiguration(element));
                     }
                 }
 
-                return _aiEtls;
+                return _aiIntegrations;
             }
         }
 

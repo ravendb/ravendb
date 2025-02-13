@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
 
@@ -9,7 +9,7 @@ public class MistralAiConnectorForTesting : BaseAiConnectorForTesting<MistralAiC
     private const string Endpoint = "https://api.mistral.ai/v1/embeddings";
     private const string Model = "mistral-embed";
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.ETL.AI.AiConnectorType.MistralAi);
+    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.MistralAi);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

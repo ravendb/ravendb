@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
 
@@ -10,7 +10,7 @@ public sealed class AzureOpenAiConnectorForTesting : BaseAiConnectorForTesting<A
     private const string EnvironmentVariableDeploymentName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_NAME";
     private const string Model = "text-embedding-ada-002";
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.ETL.AI.AiConnectorType.AzureOpenAi);
+    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.AzureOpenAi);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

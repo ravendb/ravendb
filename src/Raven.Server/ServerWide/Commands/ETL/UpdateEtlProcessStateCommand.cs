@@ -82,7 +82,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             if (TryGetMatchingConfiguration(record.SnowflakeEtls, out var snowflakeEtlConfiguration))
                 return snowflakeEtlConfiguration;
 
-            if (TryGetMatchingConfiguration(record.AiEtls, out var aiEtlConfiguration))
+            if (TryGetMatchingConfiguration(record.AiIntegrations, out var aiEtlConfiguration))
                 return aiEtlConfiguration;
 
             return null;

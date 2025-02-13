@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
 
@@ -8,7 +8,7 @@ public class OllamaConnectorForTesting : BaseAiConnectorForTesting<OllamaConnect
     private const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_HUGGINGFACE_URI";
     private const string Model = "mistral-nemo:latest";
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.ETL.AI.AiConnectorType.Ollama);
+    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

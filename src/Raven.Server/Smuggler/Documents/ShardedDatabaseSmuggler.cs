@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -153,11 +152,11 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            foreach (var aiEtl in databaseRecord.AiEtls)
+            foreach (var aiEtl in databaseRecord.AiIntegrations)
             {
                 if (string.IsNullOrEmpty(aiEtl.MentorNode) == false)
                 {
-                    AddMentorNodeWarning(DatabaseRecordItemType.AiEtls, aiEtl.Name);
+                    AddMentorNodeWarning(DatabaseRecordItemType.AiIntegrations, aiEtl.Name);
                     aiEtl.MentorNode = null;
                 }
             }

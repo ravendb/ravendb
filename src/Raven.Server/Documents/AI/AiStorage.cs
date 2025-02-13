@@ -8,7 +8,7 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.ServerWide.Context;
@@ -37,7 +37,7 @@ public class AiStorage
         return document;
     }
 
-    public ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlConfiguration configuration, string value,
+    public ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, AiIntegrationConfiguration configuration, string value,
         out string valueEmbeddingsDocumentId)
     {
         valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, AiHelper.CalculateValueHash(value));
@@ -56,7 +56,7 @@ public class AiStorage
         return new ValueEmbeddingsDocument(document);
     }
 
-    public string AddOrUpdateValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlEmbeddingItemValue item, DateTime lastModified)
+    public string AddOrUpdateValueEmbeddingsDocument(DocumentsOperationContext context, AiIntegrationEmbeddingItemValue item, DateTime lastModified)
     {
         Debug.Assert((item.EmbeddingValue.IsEmpty && item.ValueEmbeddingsSourceAttachmentName != null) ||
                      (item.EmbeddingValue.IsEmpty == false && item.ValueEmbeddingsSourceAttachmentName == null));

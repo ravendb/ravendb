@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
-using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
 #pragma warning disable SKEXP0001
 
@@ -9,7 +9,7 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 
 public interface IAiConnectorForTesting
 {
-    AiEtlConfiguration GetEtlConfiguration();
+    AiIntegrationConfiguration GetEtlConfiguration();
     Lazy<bool> CanConnect { get; }
     Lazy<AiConnectorType> AiConnectorType { get; }
 }
@@ -21,7 +21,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
     internal static T CreateNewInstance(string prefixName) => new() { NamePrefix = new Lazy<string>(prefixName) };
 
-    private readonly Lazy<AiEtlConfiguration> _aiEtlConfiguration;
+    private readonly Lazy<AiIntegrationConfiguration> _aiIntegrationConfiguration;
 
     public Lazy<bool> CanConnect { get; }
 
@@ -31,7 +31,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
     protected BaseAiConnectorForTesting()
     {
-        _aiEtlConfiguration = new Lazy<AiEtlConfiguration>(GetEtlConfiguration);
+        _aiIntegrationConfiguration = new Lazy<AiIntegrationConfiguration>(GetEtlConfiguration);
         CanConnect = new Lazy<bool>(CanConnectInternal);
     }
 
@@ -65,11 +65,11 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
         return connectionString;
     }
 
-    public AiEtlConfiguration GetEtlConfiguration()
+    public AiIntegrationConfiguration GetEtlConfiguration()
     {
         var connectionString = GetAiConnectionString();
 
-        return new AiEtlConfiguration
+        return new AiIntegrationConfiguration
         {
             Name = EtlTaskName.Value,
             ConnectionStringName = ConnectionStringName.Value,
@@ -81,7 +81,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
     {
         try
         {
-            var services = AiHelper.CreateServicesForTest(_aiEtlConfiguration.Value, out string serviceId);
+            var services = AiHelper.CreateServicesForTest(_aiIntegrationConfiguration.Value, out string serviceId);
             var embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
                 .GenerateEmbeddingsAsync(AiHelper.TestValuesList).Result;
 

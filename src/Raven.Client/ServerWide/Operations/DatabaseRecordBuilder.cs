@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -224,13 +224,13 @@ public sealed class DatabaseRecordBuilder :
         return this;
     }
 
-    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddAiEtl(AiEtlConfiguration configuration)
+    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddAiIntegration(AiIntegrationConfiguration configuration)
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        _databaseRecord.AiEtls ??= [];
-        _databaseRecord.AiEtls.Add(configuration);
+        _databaseRecord.AiIntegrations ??= [];
+        _databaseRecord.AiIntegrations.Add(configuration);
 
         return this;
     }
@@ -742,5 +742,5 @@ public interface IEtlConfigurationBuilder
     
     IEtlConfigurationBuilder AddSnowflakeEtl(SnowflakeEtlConfiguration configuration);
 
-    IEtlConfigurationBuilder AddAiEtl(AiEtlConfiguration configuration);
+    IEtlConfigurationBuilder AddAiIntegration(AiIntegrationConfiguration configuration);
 }

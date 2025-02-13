@@ -3,16 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Newtonsoft.Json.Linq;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
-using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
@@ -26,29 +21,29 @@ public class RavenDB_23556 : RavenTestBase
     {
     }
 
-    private const string DefaultConnectionStringName = "connection string name";
-    private const string DefaultEmbeddingEtlName = "someETLConfigurationName";
+    private const string DefaultConnectionStringName = "Local AI connection";
+    private const string DefaultAiIntegrationTaskName = "localAiTask";
 
-    private static (AiEtlConfiguration EtlConfiguration, AiConnectionString connectionString) RegisterEtl(
+    private static (AiIntegrationConfiguration EtlConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
         IDocumentStore store,
         EtlTestBase etl,
-        string etlName = DefaultEmbeddingEtlName,
+        string aiIntegrationName = DefaultAiIntegrationTaskName,
         string connectionStringName = DefaultConnectionStringName,
-        List<string> pathsToProcess = null,
-        string transformationName = "CoolName",
-        string script = "",
-        List<string> collectionNames = null)
+        List<string> embeddingsPaths = null,
+        string script = null,
+        string collectionName = null)
     {
-        pathsToProcess ??= ["Name"];
-        collectionNames ??= ["Dtos"];
-        // todo handle lack of transforms
-        var configuration = new AiEtlConfiguration()
+        var configuration = new AiIntegrationConfiguration()
         {
-            Name = etlName,
-            AllowEtlOnNonEncryptedChannel = true,
+            Name = aiIntegrationName,
             ConnectionStringName = connectionStringName,
-            PathsToProcess = pathsToProcess,
-            Transforms = [new Transformation { Collections = collectionNames, Name = transformationName, Script = script }]
+            EmbeddingsPaths = embeddingsPaths ?? (string.IsNullOrEmpty(script) ? ["Name"] : null),
+            Collection = collectionName ?? "Dtos",
+            EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new AiEmbeddingsTransformation()
+            {
+                Script = script
+            }
+            : null,
         };
 
         var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -59,7 +54,7 @@ public class RavenDB_23556 : RavenTestBase
 
     private void AssertEmbeddingsForPath(
         IDocumentStore store,
-        AiEtlConfiguration etlConfiguration,
+        AiIntegrationConfiguration integrationConfiguration,
         string path,
         string[] inputValues,
         string docId)
@@ -74,7 +69,7 @@ public class RavenDB_23556 : RavenTestBase
         {
             //Assert if value is in embedding cache
             var hashOfInput = AiHelper.CalculateValueHash(inputValue);
-            var embeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(etlConfiguration.NormalizedConnectionName, hashOfInput);
+            var embeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(integrationConfiguration.NormalizedConnectionName, hashOfInput);
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
             Assert.NotNull(embeddingCacheDocument);
 
@@ -90,7 +85,7 @@ public class RavenDB_23556 : RavenTestBase
             Assert.NotNull(documentEmbeddings);
 
             // Assert if contains current ETL result
-            var currentEtlObject = documentEmbeddings[etlConfiguration.Name];
+            var currentEtlObject = documentEmbeddings[integrationConfiguration.Name];
             Assert.NotNull(currentEtlObject);
 
             // Assert if ETL result contains current path
@@ -98,7 +93,7 @@ public class RavenDB_23556 : RavenTestBase
             Assert.NotNull(currentPathObject);
 
             // Assert if current path contain embedding of current input value
-            var expectedAttachmentNameInEmbeddingsDocument = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(etlConfiguration.Name, path) + sourceAttachmentName;
+            var expectedAttachmentNameInEmbeddingsDocument = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationConfiguration.Name, path) + sourceAttachmentName;
             var attachmentsByEtlPath = currentPathObject.Select(att => att.ToString()).ToList();
             Assert.Equal(inputValues.Length, attachmentsByEtlPath.Count); // <- this checks if we've all embeddings
             Assert.Contains(expectedAttachmentNameInEmbeddingsDocument, attachmentsByEtlPath);
@@ -123,7 +118,7 @@ public class RavenDB_23556 : RavenTestBase
         }
 
         var etlDone = Etl.WaitForEtlToComplete(store);
-        var (etlConfig, connection) = RegisterEtl(store, Etl, pathsToProcess: ["Name", "SubDto.Name"]);
+        var (etlConfig, connection) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Name", "SubDto.Name"]);
         etlDone.Wait(TimeSpan.FromSeconds(10));
 
         AssertEmbeddingsForPath(store, etlConfig, "Name", ["Name1"], id);
@@ -157,7 +152,7 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterEtl(store, Etl);
+            var (configuration, _) = RegisterAiIntegration(store, Etl);
             etlDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto.Id);
         }
@@ -177,7 +172,7 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterEtl(store, Etl, pathsToProcess: ["Names"]);
+            var (configuration, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Names"]);
             etlDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "Names", ["Name1", "Name2", "Name3"], dto.Id);
         }
@@ -199,7 +194,7 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterEtl(store, Etl, pathsToProcess: ["SubDto.Name"]);
+            var (configuration, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["SubDto.Name"]);
             etlDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "SubDto.Name", ["Subname1"], dto.Id);
         }
@@ -221,7 +216,7 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterEtl(store, Etl, pathsToProcess: ["SubDtos.Name"]);
+            var (configuration, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["SubDtos.Name"]);
             etlDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "SubDtos.Name", ["Subname1", "Subname2"], dto.Id);
         }
@@ -243,13 +238,13 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterEtl(store, Etl, pathsToProcess: ["Name"]);
+            var (configuration, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Name"]);
             etlDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto1.Id);
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto2.Id);
 
             var db = await GetDatabase(store.Database);
-            var etlProcess = (AiEtl)db.EtlLoader.Processes.First();
+            var etlProcess = (AiIntegration)db.EtlLoader.Processes.First();
             var stats = etlProcess.GetPerformanceStats();
 
             Assert.Equal(2, stats.Length);
@@ -273,7 +268,7 @@ public class RavenDB_23556 : RavenTestBase
             }
             
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterEtl(store, Etl);
+            var (configuration, _) = RegisterAiIntegration(store, Etl);
             var embeddingDocName = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, AiHelper.CalculateValueHash("Name1"));
             
             etlDone.Wait(TimeSpan.FromSeconds(10));
@@ -320,7 +315,7 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterEtl(store, Etl);
+            var (configuration, _) = RegisterAiIntegration(store, Etl);
             etlDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto.Id);
             
@@ -352,7 +347,7 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (etlConfig, _) = RegisterEtl(store, Etl, pathsToProcess: ["Age"]);
+            var (etlConfig, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Age"]);
             etlDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, etlConfig, "Age", ["21"], dto.Id);
         }
@@ -373,7 +368,7 @@ public class RavenDB_23556 : RavenTestBase
 
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (etlConfig, _) = RegisterEtl(store, Etl);
+            var (etlConfig, _) = RegisterAiIntegration(store, Etl);
             etlDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, etlConfig, "Name", ["SomeName"], dto.Id);
 
@@ -397,12 +392,12 @@ public class RavenDB_23556 : RavenTestBase
                 session.Store(dto);
                 session.SaveChanges();
                 var etlDone = Etl.WaitForEtlToComplete(store);
-                RegisterEtl(store, Etl);
+                RegisterAiIntegration(store, Etl);
                 etlDone.Wait(TimeSpan.FromSeconds(10));
 
                 var db = await GetDatabase(store.Database);
 
-                var etlProcess = (AiEtl)db.EtlLoader.Processes.First();
+                var etlProcess = (AiIntegration)db.EtlLoader.Processes.First();
 
                 var stats = etlProcess.GetPerformanceStats();
 
@@ -434,12 +429,12 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterEtl(store, Etl);
+            var (configuration, _) = RegisterAiIntegration(store, Etl);
             etlDone.Wait(TimeSpan.FromSeconds(100));
 
             var db = await GetDatabase(store.Database);
 
-            var etlProcess = (AiEtl)db.EtlLoader.Processes.First();
+            var etlProcess = (AiIntegration)db.EtlLoader.Processes.First();
 
             var stats = etlProcess.GetPerformanceStats();
 
@@ -470,12 +465,12 @@ public class RavenDB_23556 : RavenTestBase
             }
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            RegisterEtl(store, Etl);
+            RegisterAiIntegration(store, Etl);
             etlDone.Wait(TimeSpan.FromSeconds(10));
 
             var db = await GetDatabase(store.Database);
 
-            var etlProcess = (AiEtl)db.EtlLoader.Processes.First();
+            var etlProcess = (AiIntegration)db.EtlLoader.Processes.First();
 
             var stats = etlProcess.GetPerformanceStats();
 
@@ -498,7 +493,7 @@ public class RavenDB_23556 : RavenTestBase
                 session.SaveChanges();
 
                 var etlDone = Etl.WaitForEtlToComplete(store);
-                RegisterEtl(store, Etl);
+                RegisterAiIntegration(store, Etl);
                 etlDone.Wait(TimeSpan.FromSeconds(10));
 
                 etlDone.Reset();
@@ -539,7 +534,7 @@ public class RavenDB_23556 : RavenTestBase
 
 
             var etlDone = Etl.WaitForEtlToComplete(store);
-            RegisterEtl(store, Etl);
+            RegisterAiIntegration(store, Etl);
             etlDone.Wait(TimeSpan.FromSeconds(10));
 
             using (var session = store.OpenSession())
@@ -570,13 +565,20 @@ public class RavenDB_23556 : RavenTestBase
                 session.SaveChanges();
             }
             
-            var configuration = new AiEtlConfiguration()
+            var configuration = new AiIntegrationConfiguration()
             {
-                Name = "someETLConfigurationName",
-                AllowEtlOnNonEncryptedChannel = true,
+                Name = "local-Onnx-AI",
                 ConnectionStringName = connectionStringName,
-                PathsToProcess = [],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "generateEmbeddings({ Foo: this.Name, Bar: 'ConstValue'});" }]
+                Collection = "Dtos",
+                EmbeddingsTransformation = new AiEmbeddingsTransformation
+                {
+                    Script = @"
+embeddings.generate(
+{
+    Foo: this.Name, 
+    Bar: 'ConstValue'
+});"
+                }
             };
             
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -590,9 +592,11 @@ public class RavenDB_23556 : RavenTestBase
             using (var session = store.OpenSession())
             {
                 var fooValueHash = AiHelper.CalculateValueHash(dto.Name);
-                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, fooValueHash);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, fooValueHash);
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
                 
+                WaitForUserToContinueTheTest(store);
+
                 var expectedFooAttachmentName = (string)((dynamic)valueEmbeddingsDocument).Name1;
 
                 var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
@@ -602,7 +606,7 @@ public class RavenDB_23556 : RavenTestBase
                 
                 var barValueHash = AiHelper.CalculateValueHash("ConstValue");
                 
-                valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, barValueHash);
+                valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, barValueHash);
                 valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
                 
                 var expectedBarAttachmentName = (string)((dynamic)valueEmbeddingsDocument).ConstValue;
@@ -663,15 +667,16 @@ public class RavenDB_23556 : RavenTestBase
 
             var etlDone = Etl.WaitForEtlToComplete(store);
 
-            var (configuration, _) = RegisterEtl(store, Etl,
-                pathsToProcess: ["ChunkedName"],
-                script: "this.ChunkedName = splitPlainTextLines(this.Name, 5);");
+            var (configuration, _) = RegisterAiIntegration(store, Etl,
+                script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 5) });");
 
             etlDone.Wait(TimeSpan.FromSeconds(20));
             using (var session = store.OpenSession())
             {
                 var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
                 var documentEmbeddings = session.Load<object>(documentEmbeddingsId);
+
+                WaitForUserToContinueTheTest(store);
 
                 Assert.NotNull(documentEmbeddings);
 

@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.Embeddings;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -15,14 +15,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Handlers.Processors;
 
-internal class AiEtlHandlerProcessorForTestAiConnection<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     private protected string JsonConfigString;
     public AiConnectorType AiConnectorType { get; init; }
 
-    public AiEtlHandlerProcessorForTestAiConnection([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    public AiIntegrationHandlerProcessorForTestAiConnection([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -77,7 +77,7 @@ internal class AiEtlHandlerProcessorForTestAiConnection<TRequestHandler, TOperat
                     throw new ArgumentOutOfRangeException();
             }
 
-            var aiEtlConfiguration = new AiEtlConfiguration { Connection = aiConnectionString };
+            var aiEtlConfiguration = new AiIntegrationConfiguration { Connection = aiConnectionString };
 
             services = AiHelper.CreateServicesForTest(aiEtlConfiguration, out string serviceId);
             var embeddings = await services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId).GenerateEmbeddingsAsync(AiHelper.TestValuesList);

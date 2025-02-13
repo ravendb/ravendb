@@ -143,7 +143,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, TestQueueSinkScript> TestQueueSinkScript = GenerateJsonDeserializationRoutine<TestQueueSinkScript>();
 
-        public static readonly Func<BlittableJsonReaderObject, TestAiEtlScript> TestAiEtlScript = GenerateJsonDeserializationRoutine<TestAiEtlScript>();
+        public static readonly Func<BlittableJsonReaderObject, TestAiIntegrationScript> TestAiIntegrationScript = GenerateJsonDeserializationRoutine<TestAiIntegrationScript>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
 

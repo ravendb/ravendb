@@ -1151,8 +1151,8 @@ namespace Raven.Server.Commercial
                         databaseRecord.SnowflakeEtls.Count > 0)
                         snowflakeEtlCount++;
 
-                    if (databaseRecord.AiEtls != null &&
-                        databaseRecord.AiEtls.Count > 0)
+                    if (databaseRecord.AiIntegrations != null &&
+                        databaseRecord.AiIntegrations.Count > 0)
                         aiEtlCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
@@ -1245,10 +1245,10 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
             }
 
-            if (aiEtlCount > 0 && newLicenseStatus.HasAiEtl == false)
+            if (aiEtlCount > 0 && newLicenseStatus.HasAiIntegration == false)
             {
                 var message = GenerateDetails(aiEtlCount, "AI ETL");
-                throw GenerateLicenseLimit(LimitType.AiEtl, message);
+                throw GenerateLicenseLimit(LimitType.AiIntegration, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
@@ -1616,7 +1616,7 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
         }
 
-        public void AssertCanAddAiEtl()
+        public void AssertCanAddAiIntegration()
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
@@ -1624,7 +1624,7 @@ namespace Raven.Server.Commercial
             // todo: uncomment the code below after license work 
             //if (LicenseStatus.HasAiEtl)
             //    return;
-            //const string message = "Your current license doesn't include the AI ETL feature";
+            //const string message = "Your current license doesn't include the AI Integration feature";
             //throw GenerateLicenseLimit(LimitType.AiEtl, message);
         }
 

@@ -5,11 +5,11 @@ using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -141,7 +141,7 @@ namespace Raven.Client.ServerWide
         
         public List<SnowflakeEtlConfiguration> SnowflakeEtls = new List<SnowflakeEtlConfiguration>();
         
-        public List<AiEtlConfiguration> AiEtls = [];
+        public List<AiIntegrationConfiguration> AiIntegrations = [];
 
         public ClientConfiguration Client;
 
@@ -485,7 +485,7 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Snowflake ETL task with that name");
             if (QueueSinks.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Queue Sink task with that name");
-            if (AiEtls.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+            if (AiIntegrations.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a AI ETL task with that name");
         }
 

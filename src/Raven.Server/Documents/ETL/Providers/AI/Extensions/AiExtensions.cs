@@ -16,10 +16,10 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Embeddings;
 using OllamaSharp;
 using OpenAI;
-using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide;
-using GoogleApiVersion = Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion;
+using GoogleApiVersion = Raven.Client.Documents.Operations.AI.GoogleAIVersion;
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0010
 #pragma warning disable SKEXP0070
@@ -275,7 +275,7 @@ public static class AiExtensions
     [Experimental("SKEXP0001")]
     public static void Configure(
         this IKernelBuilder kernelBuilder,
-        AiEtlConfiguration configuration,
+        AiIntegrationConfiguration configuration,
         bool isConnectionTest,
         out string resolvedServiceId)
     {
@@ -298,7 +298,7 @@ public static class AiExtensions
                 {
                     Endpoint = new Uri(openAiSettings.Endpoint),
                     ProjectId = openAiSettings.ProjectId,
-                    UserAgentApplicationId = $"RavenDB/{ServerVersion.Version}/{nameof(AiEtl)}"
+                    UserAgentApplicationId = $"RavenDB/{ServerVersion.Version}/{nameof(AiIntegration)}"
                 };
                 var openAIClient = new OpenAIClient(apiKey, openAiOptions);
 

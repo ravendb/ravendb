@@ -137,9 +137,9 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
 
-                case OngoingTaskType.AiEtl:
+                case OngoingTaskType.AiIntegration:
 
-                    var aiEtl = record?.AiEtls?.Find(x => x.TaskId == TaskId);
+                    var aiEtl = record?.AiIntegrations?.Find(x => x.TaskId == TaskId);
                     if (aiEtl != null)
                     {
                         aiEtl.Disabled = Disable;

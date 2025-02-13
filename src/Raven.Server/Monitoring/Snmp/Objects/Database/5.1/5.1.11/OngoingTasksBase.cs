@@ -60,7 +60,7 @@ public abstract class OngoingTasksBase : DatabaseBase<Integer32>
     
     protected internal static int GetNumberOfSnowflakeEtls(RawDatabaseRecord database) => database.SnowflakeEtls?.Count(x => x.Disabled == false) ?? 0;
     
-    protected internal static int GetNumberOfAiEtls(RawDatabaseRecord database) => database.AiEtls?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfAiIntegrations(RawDatabaseRecord database) => database.AiIntegrations?.Count(x => x.Disabled == false) ?? 0;
 
     protected internal static int GetNumberOfSubscriptions(TransactionOperationContext context, RawDatabaseRecord database)
     {

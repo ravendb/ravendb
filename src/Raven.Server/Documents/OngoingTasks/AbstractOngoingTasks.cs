@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -137,13 +137,13 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
     }
 
-    private IEnumerable<OngoingTaskAiEtl> GetAiEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskAiIntegration> GetAiIntegrationsTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
-        if (databaseRecord.AiEtls == null || databaseRecord.AiEtls.Count == 0)
+        if (databaseRecord.AiIntegrations == null || databaseRecord.AiIntegrations.Count == 0)
             yield break;
 
-        foreach (var aiEtl in databaseRecord.AiEtls)
-            yield return CreateAiEtlTaskInfo(clusterTopology, databaseRecord, aiEtl);
+        foreach (var aiEtl in databaseRecord.AiIntegrations)
+            yield return CreateAiIntegrationTaskInfo(clusterTopology, databaseRecord, aiEtl);
     }
 
     public IEnumerable<OngoingTask> GetAllTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
@@ -184,7 +184,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         foreach (var task in GetQueueSinkTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in GetAiEtlTasks(clusterTopology, databaseRecord))
+        foreach (var task in GetAiIntegrationsTasks(clusterTopology, databaseRecord))
             yield return task;
     }
 
@@ -308,13 +308,13 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                     return null;
 
                 return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
-            case OngoingTaskType.AiEtl:
+            case OngoingTaskType.AiIntegration:
 
                 var aiEtl = taskName != null
-                    ? databaseRecord.AiEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                    : databaseRecord.AiEtls?.Find(x => x.TaskId == taskId);
+                    ? databaseRecord.AiIntegrations.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.AiIntegrations?.Find(x => x.TaskId == taskId);
 
-                return CreateAiEtlTaskInfo(clusterTopology, databaseRecord, aiEtl);
+                return CreateAiIntegrationTaskInfo(clusterTopology, databaseRecord, aiEtl);
             default:
                 return null;
         }
@@ -634,14 +634,14 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         };
     }
 
-    private OngoingTaskAiEtl CreateAiEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
-        AiEtlConfiguration configuration)
+    private OngoingTaskAiIntegration CreateAiIntegrationTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
+        AiIntegrationConfiguration configuration)
     {
         databaseRecord.AiConnectionStrings.TryGetValue(configuration.ConnectionStringName, out var connection);
         var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, configuration, out var tag, out var error);
         var taskState = OngoingTasksHandler.GetEtlTaskState(configuration);
 
-        return new OngoingTaskAiEtl
+        return new OngoingTaskAiIntegration
         {
             TaskId = configuration.TaskId,
             TaskName = configuration.Name,

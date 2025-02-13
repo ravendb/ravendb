@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
 
@@ -9,7 +9,7 @@ public class OpenAiConnectorForTesting : BaseAiConnectorForTesting<OpenAiConnect
     private const string Endpoint = "https://api.openai.com/v1/embeddings";
     private const string Model = "text-embedding-ada-002";
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.ETL.AI.AiConnectorType.OpenAi);
+    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

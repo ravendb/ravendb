@@ -6,10 +6,10 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -555,7 +555,7 @@ namespace Raven.Server.Documents.ETL
                 }
             }
             
-            else if (currentItem is AiEtlItem)
+            else if (currentItem is AiIntegrationItem)
             {
                 if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.MaxNumberOfExtractedDocuments)
                 {
@@ -1430,13 +1430,13 @@ namespace Raven.Server.Documents.ETL
                     }
                     
                 case EtlType.Ai:
-                    using (var aiEtl = new AiEtl(testScript.Configuration.Transforms[0], testScript.Configuration as AiEtlConfiguration, database, database.ServerStore))
+                    using (var aiEtl = new AiIntegration(testScript.Configuration.Transforms[0], testScript.Configuration as AiIntegrationConfiguration, database, database.ServerStore))
                     using (aiEtl.EnterTestMode(out debugOutput))
                     {
                         aiEtl.EnsureThreadAllocationStats();
 
-                        var aiEtlItem = new AiEtlItem(document, docCollection);
-                        var results = aiEtl.Transform([aiEtlItem], context, new AiEtlStatsScope(new EtlRunStats()), new EtlProcessState());
+                        var aiEtlItem = new AiIntegrationItem(document, docCollection);
+                        var results = aiEtl.Transform([aiEtlItem], context, new AiIntegrationStatsScope(new EtlRunStats()), new EtlProcessState());
 
                         var result  = aiEtl.RunTest(results, context);
                         result.DebugOutput = debugOutput;
