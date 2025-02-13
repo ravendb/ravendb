@@ -11,7 +11,7 @@ public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
     private string _name;
     private string Identifier => _name ??= Connection?.Name;
 
-    public AiConnectorType AiConnectorType { get; set; }
+    public AiConnectorType AiConnectorType => Connection?.GetActiveProvider() ?? AiConnectorType.None;
 
     public List<string> PathsToProcess { get; set; }
 
