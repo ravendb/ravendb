@@ -36,45 +36,34 @@ class licenseModel {
     }
 
     static formattedExpiration = ko.pureComputed(() => {
-        const result =  licenseModel.formattedExpirationProvider(licenseModel.licenseStatus());
-        if (!result ) {
-            return null;
-        }
-
-        return `${result.formattedDate} <br /><small class="${result.timeClass}">(${result.relativeTime})</small>`;
-    });
-
-    static formattedExpirationProvider(licenseStatus: LicenseStatus): { formattedDate: string; timeClass: string; relativeTime: string } {
+        const licenseStatus = licenseModel.licenseStatus();
         if (!licenseStatus || !licenseStatus.SubscriptionExpiration) {
             return null;
         }
 
         const dateFormat = "YYYY MMMM Do";
-        const expiration = moment(licenseStatus.SubscriptionExpiration);
-        const now = moment();
-        const month = 1 as const;
-        const nextMonth = moment().add(month, 'month');
+        const expiration = moment.utc(licenseStatus.SubscriptionExpiration);
+        const now = moment.utc();
+        const nextMonth = moment.utc().add(1, 'month');
         if (now.isBefore(expiration)) {
             const relativeDurationClass = nextMonth.isBefore(expiration) ? "" : "text-warning";
 
             const fromDuration = generalUtils.formatDurationByDate(expiration, true);
-            return {
-                formattedDate: expiration.format(dateFormat),
-                timeClass: relativeDurationClass, 
-                relativeTime: fromDuration
-            }
+            return `${expiration.format(dateFormat)} UTC ${this.getLicenseInfoIcon({ date: expiration, isExpired: false })}<br /><small class="${relativeDurationClass}">(${fromDuration})</small>`;
         }
 
         const expiredClass = licenseStatus.Expired ? "text-danger" : "";
         const duration = generalUtils.formatDurationByDate(expiration, true);
-        return {
-            formattedDate: expiration.format(dateFormat),
-            timeClass: expiredClass,
-            relativeTime: duration
-        }
-       
+
+        return `${expiration.format(dateFormat)} UTC ${this.getLicenseInfoIcon({ date: expiration, isExpired: true })}<br /><Small class="${expiredClass}">(${duration})</Small>`;
+    });
+
+    static getLicenseInfoIcon({ date, isExpired, isSmall = true }: { date: moment.Moment, isExpired: boolean, isSmall?: boolean }): string {
+        return `<i class="icon-info text-info"
+            title="Your license ${isExpired ? "has expired on" : "will expire at the end of"} ${date.format("YYYY-MM-DD")} UTC, which ${isExpired ? "was" : "is"} ${date.local().format("YYYY-MM-DD HH:mm:ss")} your local time."
+            style="font-size: ${isSmall ? "16px" : undefined}">
+        </i>`;
     }
-    
         
     static generateLicenseRequestUrl(limitType: Raven.Client.Exceptions.Commercial.LimitType = null): string {
         let url = `${licenseModel.baseUrl}?`;

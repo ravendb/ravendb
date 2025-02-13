@@ -11,6 +11,7 @@ import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
+import moment from "moment";
 
 export default {
     title: "Pages/About Page",
@@ -31,6 +32,8 @@ interface AboutPageStoryProps {
     isIsv: boolean;
     cloud: boolean;
     supportStatus: Raven.Server.Commercial.Status;
+    subscriptionExpiration: string;
+    expired: boolean;
 }
 
 function commonInit(props: AboutPageStoryProps) {
@@ -45,6 +48,8 @@ function commonInit(props: AboutPageStoryProps) {
         Type: props.licenseType,
         IsIsv: props.isIsv,
         IsCloud: props.cloud,
+        SubscriptionExpiration: props.subscriptionExpiration,
+        Expired: props.expired,
     });
     license.with_Support({
         Status: props.supportStatus,
@@ -78,6 +83,8 @@ const defaultArgs: AboutPageStoryProps = {
     latestServerBuildNumber: undefined,
     licenseServerConnection: true,
     securityClearance: "ClusterAdmin",
+    subscriptionExpiration: moment.utc().add(2, "month").format(),
+    expired: false,
 };
 
 const render = (props: AboutPageStoryProps) => {
@@ -208,5 +215,22 @@ export const UsingLatestVersion: StoryObj<AboutPageStoryProps> = {
         latestServerBuildNumber: ClusterStubs.serverVersion().BuildVersion,
         cloud: false,
         supportStatus: "NoSupport",
+    },
+};
+
+export const ExpiredLicense: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        subscriptionExpiration: moment.utc().subtract(1, "month").format(),
+        expired: true,
+    },
+};
+
+export const AboutToExpireLicense: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        subscriptionExpiration: moment.utc().add(3, "days").format(),
     },
 };

@@ -1,4 +1,4 @@
-﻿import { Button, Card, CardBody, Col, Row, UncontrolledTooltip } from "reactstrap";
+﻿import { Button, Card, CardBody, Col, PopoverBody, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
@@ -17,6 +17,8 @@ import licenseModel from "models/auth/licenseModel";
 import useConfirm from "components/common/ConfirmDialog";
 import useUniqueId from "components/hooks/useUniqueId";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import moment from "moment";
+import genUtils = require("common/generalUtils");
 
 interface LicenseSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
@@ -33,8 +35,6 @@ export function LicenseSummary(props: LicenseSummaryProps) {
 
     const licenseStatus = useAppSelector(licenseSelectors.status);
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
-    const isIsv = useAppSelector(licenseSelectors.statusValue("IsIsv"));
-    const expiration = licenseModel.formattedExpirationProvider(licenseStatus);
 
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
@@ -57,24 +57,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                             {licenseModel.licenseTypeTextProvider(licenseStatus)}
                         </span>
                     </OverallInfoItem>
-                    {expiration && (
-                        <OverallInfoItem icon="calendar" label={isIsv ? "Updates Expiration" : "Expires"}>
-                            {expiration.formattedDate}
-                            <br />
-                            <small className={expiration.timeClass}>{expiration.relativeTime}</small>
-                            {isCloud && (
-                                <>
-                                    <UncontrolledTooltip target="cloudRenewalTooltip">
-                                        Cloud licenses are automatically renewed
-                                    </UncontrolledTooltip>
-                                    <small>
-                                        <Icon icon="info" className="text-info" id="cloudRenewalTooltip" />
-                                    </small>
-                                </>
-                            )}
-                        </OverallInfoItem>
-                    )}
-
+                    <LicenseExpiration />
                     <OverallInfoItem icon="raven" label="License server">
                         <ConnectivityStatusComponent
                             refreshing={refreshing}
@@ -311,4 +294,65 @@ function LicenseTooltip(props: {
     }
 
     return <UncontrolledTooltip target={target}>{msg}</UncontrolledTooltip>;
+}
+
+function LicenseExpiration() {
+    const subscriptionExpiration = useAppSelector(licenseSelectors.statusValue("SubscriptionExpiration"));
+    const isIsv = useAppSelector(licenseSelectors.statusValue("IsIsv"));
+
+    if (!subscriptionExpiration) {
+        return null;
+    }
+
+    return (
+        <OverallInfoItem icon="calendar" label={isIsv ? "Updates Expiration" : "Expires"}>
+            <LicenseExpirationDetails />
+        </OverallInfoItem>
+    );
+}
+
+function LicenseExpirationDetails() {
+    const isExpired = useAppSelector(licenseSelectors.statusValue("Expired"));
+    const subscriptionExpiration = useAppSelector(licenseSelectors.statusValue("SubscriptionExpiration"));
+    const subscriptionExpirationUtc = moment.utc(subscriptionExpiration);
+
+    const dateFormat = "YYYY MMMM Do";
+    const nextMonth = moment.utc().add(1, "month");
+    const duration = genUtils.formatDurationByDate(subscriptionExpirationUtc, true);
+
+    return (
+        <div>
+            {subscriptionExpirationUtc.format(dateFormat)} UTC <Icon icon="info" color="info" id="utc-info" />
+            <br />
+            <LicenseExpirationInfoPopover date={subscriptionExpirationUtc} />
+            <small
+                className={classNames({
+                    "text-warning": !isExpired && subscriptionExpirationUtc.isBefore(nextMonth),
+                    "text-danger": isExpired,
+                })}
+            >
+                {duration}
+            </small>
+        </div>
+    );
+}
+
+function LicenseExpirationInfoPopover({ date }: { date: moment.Moment }) {
+    const isExpired = useAppSelector(licenseSelectors.statusValue("Expired"));
+    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+
+    return (
+        <UncontrolledPopover target="utc-info" placement="top" trigger="hover" className="bs5">
+            <PopoverBody>
+                Your license {isExpired ? "has expired on" : "will expire at the end of"} {date.format("YYYY-MM-DD")}{" "}
+                UTC, which {isExpired ? "was" : "is"} {date.local().format("YYYY-MM-DD HH:mm:ss")} your local time.
+                {isCloud && (
+                    <div>
+                        <br />
+                        <Icon icon="cloud" /> Cloud licenses are automatically renewed.
+                    </div>
+                )}
+            </PopoverBody>
+        </UncontrolledPopover>
+    );
 }
