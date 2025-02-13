@@ -8,6 +8,12 @@ export default {
     title: "Bits/Database location selector - multiple",
     component: MultipleDatabaseLocationSelector,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=8-10520&t=ipd4AuT8v0is7yTp-4",
+        },
+    },
 } satisfies Meta<typeof MultipleDatabaseLocationSelector>;
 
 const Template = (args: { allContexts: DatabaseActionContexts[] }) => {

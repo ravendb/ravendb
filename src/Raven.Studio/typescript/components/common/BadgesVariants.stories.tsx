@@ -9,6 +9,12 @@ export default {
     title: "Bits/Badges",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Badge,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=3-16074",
+        },
+    },
 } satisfies Meta<typeof Badge>;
 
 const colors = [

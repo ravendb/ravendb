@@ -28,6 +28,12 @@ export default {
     title: "Bits/Rich Panel",
     decorators: [withStorybookContexts, withBootstrap5],
     component: RichPanel,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=13-215",
+        },
+    },
 } satisfies Meta<typeof RichPanel>;
 
 const Template = (args: { withCheckbox: boolean }) => {

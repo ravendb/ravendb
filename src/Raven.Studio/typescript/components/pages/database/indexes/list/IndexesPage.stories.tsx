@@ -10,6 +10,12 @@ import { mockStore } from "test/mocks/store/MockStore";
 export default {
     title: "Pages/Indexes/List of Indexes",
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/wSIR2FKhW7kVwB5fgGd0Yu/Pages---Indexes?node-id=0-1&t=qGnZmjtUc3YpZW9G-1",
+        },
+    },
 } satisfies Meta;
 
 function commonInit() {

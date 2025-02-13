@@ -7,6 +7,12 @@ export default {
     title: "Bits/EmptySet",
     component: EmptySet,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=8-6692",
+        },
+    },
 } satisfies Meta<typeof EmptySet>;
 
 export function EmptySets() {

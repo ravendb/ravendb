@@ -30,6 +30,7 @@ const config: StorybookConfig = {
         "@storybook/addon-interactions",
         "@storybook/addon-webpack5-compiler-swc",
         "@storybook/addon-a11y",
+        "@storybook/addon-designs",
     ],
 
     framework: {

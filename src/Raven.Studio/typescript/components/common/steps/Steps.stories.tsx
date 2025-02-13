@@ -10,6 +10,12 @@ export default {
     title: "Bits/Steps",
     component: Steps,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=15-507",
+        },
+    },
 } satisfies Meta<typeof Steps>;
 
 export function StepsExample() {

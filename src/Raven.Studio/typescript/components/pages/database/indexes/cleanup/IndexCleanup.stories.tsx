@@ -8,6 +8,12 @@ import { mockStore } from "test/mocks/store/MockStore";
 export default {
     title: "Pages/Indexes/Index Cleanup",
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/LNQwPn3xNueVK0Wd8U303B/Pages---Index-Cleanup?node-id=0-1&t=6ZsbOaaaRqnEJeXm-1",
+        },
+    },
 } satisfies Meta<typeof IndexCleanup>;
 
 function commonInit() {

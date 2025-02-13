@@ -8,6 +8,12 @@ import { mockServices } from "test/mocks/services/MockServices";
 export default {
     title: "Pages/Databases/Create Database/Create Database",
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/qRXxVe9VARbMIfMjin9fr8/Pages---Databases?node-id=14-3203",
+        },
+    },
 } satisfies Meta;
 
 interface DefaultCreateDatabaseProps {

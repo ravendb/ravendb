@@ -20,6 +20,12 @@ export default {
         licenseType: licenseArgType,
         supportStatus: supportStatusArgType,
     },
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/UTQSMvlXfMGANNKJvjfcUg/Pages---About?node-id=460-2357&t=NCFKh71z3moKzBcg-1",
+        },
+    },
 } satisfies Meta<AboutPageStoryProps>;
 
 interface AboutPageStoryProps {

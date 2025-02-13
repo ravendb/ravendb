@@ -9,6 +9,12 @@ export default {
     title: "Pages/Settings/Data Archival",
     component: DataArchival,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/5ryt9Wtcj14naThD3rzLFf/Pages---Data-Archival?node-id=2-7067&t=jWUQ1v9wdlLOItCv-1",
+        },
+    },
 } satisfies Meta<typeof DataArchival>;
 
 function commonInit() {

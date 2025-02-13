@@ -9,6 +9,12 @@ export default {
     title: "Pages/Manage Server/Admin Js Console",
     component: AdminJsConsole,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/XFQqcQsHYWWbPh2j2nvBpz/Pages---JS-Console?node-id=0-1&t=nCIcWOrA16wILr0q-1",
+        },
+    },
 } satisfies Meta<typeof AdminJsConsole>;
 
 export const DefaultAdminJSConsole: StoryObj<typeof AdminJsConsole> = {

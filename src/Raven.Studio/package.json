@@ -24,6 +24,7 @@
         "@hookform/devtools": "^4.3.1",
         "@storybook/addon-a11y": "^8.4.7",
         "@storybook/addon-actions": "^8.4.7",
+        "@storybook/addon-designs": "^8.2.0",
         "@storybook/addon-essentials": "^8.4.7",
         "@storybook/addon-interactions": "^8.4.7",
         "@storybook/addon-links": "^8.4.7",

@@ -8,6 +8,12 @@ export default {
     title: "Bits/DatePicker",
     component: DatePicker,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=8-4805",
+        },
+    },
 } satisfies Meta<typeof DatePicker>;
 
 function DatePickerWithShownValue(args: ComponentProps<typeof DatePicker>) {

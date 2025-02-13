@@ -27,6 +27,12 @@ export default {
     args: {
         isDefaultValid: true,
     },
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=8-2111",
+        },
+    },
 } satisfies Meta;
 
 export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {

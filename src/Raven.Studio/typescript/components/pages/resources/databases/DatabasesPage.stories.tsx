@@ -12,6 +12,12 @@ export default {
     title: "Pages/Databases",
     component: DatabasesPage,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/qRXxVe9VARbMIfMjin9fr8/Pages---Databases?node-id=0-1",
+        },
+    },
 } satisfies Meta<typeof DatabasesPage>;
 
 function commonInit() {

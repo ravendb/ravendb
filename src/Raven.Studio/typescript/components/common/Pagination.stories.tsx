@@ -7,6 +7,12 @@ export default {
     title: "Bits/Pagination",
     decorators: [withStorybookContexts, withBootstrap5],
     component: DefaultPagination,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=10-101",
+        },
+    },
 } satisfies Meta<typeof DefaultPagination>;
 
 export function Pagination() {

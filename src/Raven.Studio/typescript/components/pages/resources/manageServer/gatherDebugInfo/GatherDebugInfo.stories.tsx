@@ -9,6 +9,12 @@ export default {
     title: "Pages/Manage Server/Gather Debug Info",
     component: GatherDebugInfo,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/Pnq4o0bS339PuDPeeVmRUZ/Pages---Gather-Debug-Info?node-id=0-1&t=Fy6eq722sNuFRbIu-1",
+        },
+    },
 } satisfies Meta<typeof GatherDebugInfo>;
 
 export const DefaultGatherDebugInfo: StoryObj<typeof GatherDebugInfo> = {

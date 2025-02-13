@@ -6,6 +6,12 @@ import { Icon } from "./Icon";
 export default {
     title: "Bits/Sort",
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=8-3858&t=ipd4AuT8v0is7yTp-4",
+        },
+    },
 };
 
 type SortBy = "Alphabetically" | "Creation date";

@@ -8,6 +8,12 @@ export default {
     title: "Bits/Database location selector - single",
     component: SingleDatabaseLocationSelector,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=8-10558&t=ipd4AuT8v0is7yTp-4",
+        },
+    },
 } satisfies Meta<typeof SingleDatabaseLocationSelector>;
 
 const Template = (args: { locations: databaseLocationSpecifier[] }) => {

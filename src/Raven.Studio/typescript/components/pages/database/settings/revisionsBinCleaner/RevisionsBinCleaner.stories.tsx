@@ -9,6 +9,12 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 export default {
     title: "Pages/Settings/Revisions Bin Cleaner",
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/e2ooHVeo8xL6Wiat9XkV2Z/Pages---Revisions-Bin-Cleaner?node-id=2-7067&t=kyGqLSt1d9OvlGEX-1",
+        },
+    },
 } satisfies Meta;
 
 interface RevisionsBinCleanerStoryArgs {

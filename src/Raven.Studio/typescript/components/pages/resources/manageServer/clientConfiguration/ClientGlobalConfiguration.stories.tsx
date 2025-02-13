@@ -9,6 +9,12 @@ export default {
     title: "Pages/Manage Server/Client Configuration",
     component: ClientGlobalConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/8zWwTsYS1o5I6s45geEqkR/Pages---Server-Wide-Client-Configuration?node-id=0-1&t=x3mR1kxCy6YdHHdJ-1",
+        },
+    },
 } satisfies Meta<typeof ClientGlobalConfiguration>;
 
 function commonInit() {

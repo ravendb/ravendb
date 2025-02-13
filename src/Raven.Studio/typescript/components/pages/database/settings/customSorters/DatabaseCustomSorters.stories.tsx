@@ -15,6 +15,12 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 export default {
     title: "Pages/Settings/Custom Sorters",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/e0kjbARVzD4eMxxDYbGkxD/Pages---Custom-Sorters?node-id=0-1&t=uDvB4lF19QvLn5la-1",
+        },
+    },
 } satisfies Meta;
 
 interface DefaultDatabaseCustomSortersProps {

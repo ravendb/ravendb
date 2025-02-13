@@ -8,6 +8,12 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 export default {
     title: "Pages/Documents/Identities",
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/wSVoBtBHbk3qPgeYZ69co1/Pages---Identities?node-id=0-1&t=4iEd4mFqhniULAiu-1",
+        },
+    },
 } satisfies Meta<typeof DocumentIdentities>;
 
 interface DocumentIdentitiesStoryArgs {

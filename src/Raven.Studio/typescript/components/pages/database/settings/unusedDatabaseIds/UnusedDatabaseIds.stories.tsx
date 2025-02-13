@@ -8,6 +8,12 @@ import { mockServices } from "test/mocks/services/MockServices";
 export default {
     title: "Pages/Settings/Unused Database IDs",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/j1zbg58w7AV02xYepTvW0W/Pages---Unused-Database-IDs?node-id=0-1&t=KhvkOq4Kt9aIss7U-1",
+        },
+    },
 } satisfies Meta;
 
 interface UnusedDatabaseIdsStoryArgs {

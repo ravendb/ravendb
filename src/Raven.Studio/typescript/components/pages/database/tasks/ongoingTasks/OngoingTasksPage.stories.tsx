@@ -24,6 +24,12 @@ export default {
     title: "Pages/Tasks/Ongoing Tasks",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
     excludeStories: /Template$/,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/Dym4dtdwQ0j4mg9nmC4ZDI/Pages---Ongoing-Tasks?node-id=0-1&t=p61ns0HrN2R1ZUAu-1",
+        },
+    },
 } satisfies Meta;
 
 function commonInit() {

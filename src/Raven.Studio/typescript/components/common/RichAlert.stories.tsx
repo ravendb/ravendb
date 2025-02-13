@@ -7,6 +7,12 @@ export default {
     title: "Bits/Rich Alert",
     component: RichAlert,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=12-18",
+        },
+    },
 };
 
 const colors = [

@@ -6,6 +6,12 @@ import { boundCopy } from "../utils/common";
 export default {
     title: "Bits/Progress circle",
     component: ProgressCircle,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=11-46",
+        },
+    },
 } satisfies Meta<typeof ProgressCircle>;
 
 const Template = () => {

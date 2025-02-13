@@ -8,6 +8,12 @@ export default {
     title: "Bits/Feature Not Available",
     component: FeatureNotAvailable,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=479-1178",
+        },
+    },
 } satisfies Meta<typeof FeatureNotAvailable>;
 
 export const Default: StoryObj<typeof FeatureNotAvailable> = {

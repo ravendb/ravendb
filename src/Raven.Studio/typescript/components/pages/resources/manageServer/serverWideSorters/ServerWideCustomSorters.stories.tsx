@@ -9,6 +9,12 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 export default {
     title: "Pages/Manage Server/Server-Wide Sorters",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/XQZ5bMEDkhXfDfoDyfcFdW/Pages---Server-Wide-Sorters?node-id=0-1&t=UvOZXHSoP6QvT2Zx-1",
+        },
+    },
 } satisfies Meta;
 
 interface DefaultServerWideCustomSortersProps {

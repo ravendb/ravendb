@@ -12,6 +12,12 @@ export default {
         licenseType: licenseArgType,
         databaseAccess: databaseAccessArgType,
     },
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/fbVInhrQXVWIkiz87rzZYc/Pages---Document-Compression?node-id=0-1&t=MMtfJckScMcT0jwB-1",
+        },
+    },
 } satisfies Meta;
 
 interface DefaultDocumentCompressionProps {

@@ -17,6 +17,12 @@ export default {
     argTypes: {
         licenseType: licenseArgType,
     },
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=3-8192",
+        },
+    },
 } satisfies Meta;
 
 interface FloatingButtonProps {

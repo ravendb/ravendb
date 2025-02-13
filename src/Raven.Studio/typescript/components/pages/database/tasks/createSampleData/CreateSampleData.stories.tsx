@@ -12,6 +12,12 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 export default {
     title: "Pages/Tasks/Create Sample Data",
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/tSoMz2uSItXBt0WTCvXcez/Pages---Create-Sample-Data?node-id=0-1&t=0iX4Jm86LTsJdv4f-1",
+        },
+    },
 } satisfies Meta;
 
 function commonInit(): MockTasksService {

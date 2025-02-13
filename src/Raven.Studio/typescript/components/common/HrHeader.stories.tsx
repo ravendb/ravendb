@@ -7,6 +7,12 @@ export default {
     title: "Bits/HrHeader",
     component: HrHeader,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=8-7701",
+        },
+    },
 } satisfies Meta<typeof HrHeader>;
 
 export function HrHeaders() {

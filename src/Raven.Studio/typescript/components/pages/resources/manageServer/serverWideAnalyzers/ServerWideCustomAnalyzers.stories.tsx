@@ -9,6 +9,12 @@ import ServerWideCustomAnalyzers from "components/pages/resources/manageServer/s
 export default {
     title: "Pages/Manage Server/Server-Wide Analyzers",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/4EoOO9Zbhiga5CaDFc89Xm/Pages---Server-Wide-Analyzers?node-id=0-1&t=GqrWgI7Qe9PJgbbu-1",
+        },
+    },
 } satisfies Meta;
 
 interface DefaultServerWideCustomAnalyzersProps {

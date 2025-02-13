@@ -7,6 +7,12 @@ export default {
     title: "Bits/Spinners",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Spinner,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=15-506",
+        },
+    },
 } satisfies Meta<typeof Spinner>;
 
 export function allSpinners() {

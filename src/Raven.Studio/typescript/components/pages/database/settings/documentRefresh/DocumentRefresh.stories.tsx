@@ -9,6 +9,12 @@ export default {
     title: "Pages/Settings/Document Refresh",
     component: DocumentRefresh,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ssFxatayCcSNuKleFLSmJF/Pages---Document-Refresh?node-id=0-1&t=KDWyAbAgFZGgcHnN-1",
+        },
+    },
 } satisfies Meta<typeof DocumentRefresh>;
 
 function commonInit(hasConfiguration: boolean) {

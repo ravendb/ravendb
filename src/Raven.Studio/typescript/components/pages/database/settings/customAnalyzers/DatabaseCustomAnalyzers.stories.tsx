@@ -15,6 +15,12 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 export default {
     title: "Pages/Settings/Custom Analyzers",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/uuIJ929TxEi7fFp6ScMFSw/Pages---Custom-Analyzers?node-id=0-1&t=CnxtojsYEkFb9xAf-1",
+        },
+    },
 } satisfies Meta;
 
 interface DefaultDatabaseCustomAnalyzersProps {

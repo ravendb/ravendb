@@ -13,6 +13,12 @@ import { Icon } from "./Icon";
 export default {
     title: "Bits/Location Distribution",
     component: LocationDistribution,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=8-10663",
+        },
+    },
 } satisfies Meta<typeof LocationDistribution>;
 
 const Template = (args: { withSummary: boolean; withLegend: boolean }) => {

@@ -11,6 +11,12 @@ export default {
     argTypes: {
         securityClearance: securityClearanceArgType,
     },
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/xN3y9G7Pv4eTd7kVdrUtLQ/Pages---Database-Record?node-id=0-1&t=1iorEaSrk2c9vDX7-1",
+        },
+    },
 } satisfies Meta;
 
 interface DefaultDatabaseRecordProps {

@@ -8,6 +8,12 @@ export default {
     title: "Bits/Buttons",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Button,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=3-17352",
+        },
+    },
 } satisfies Meta<typeof Button>;
 
 const colors = [

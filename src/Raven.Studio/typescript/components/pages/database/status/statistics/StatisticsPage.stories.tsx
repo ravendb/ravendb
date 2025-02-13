@@ -15,6 +15,12 @@ export default {
     component: StatisticsPage,
     decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/5Vd2voS4sWQUih0Ximpl1y/Pages---Stats?node-id=0-1&t=bhYAMAOjsskNGNvb-1",
+        },
+    },
 } satisfies Meta<typeof StatisticsPage>;
 
 export const StatisticsTemplate = (args: { db: DatabaseSharedInfo; stats?: IndexStats[] }) => {

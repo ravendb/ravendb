@@ -10,6 +10,12 @@ export default {
     argTypes: {
         databaseAccess: databaseAccessArgType,
     },
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/5d0deYLNJimwts5zvCDy1H/Pages---Document-Revisions?node-id=349-2135",
+        },
+    },
 } satisfies Meta;
 
 interface DefaultRevertRevisionsProps {

@@ -8,6 +8,12 @@ export default {
     title: "Bits/NodeSet",
     component: NodeSet,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=9-1968",
+        },
+    },
 } satisfies Meta<typeof NodeSet>;
 
 export function NodeSets() {

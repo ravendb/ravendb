@@ -8,6 +8,12 @@ export default {
     title: "Pages/Settings/Studio Configuration",
     component: StudioDatabaseConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/oLRwBtzo0fN6pVBccyK2kb/Pages---Studio-Configuration?node-id=0-1&t=R8lX6pqEzDWm0R6u-1",
+        },
+    },
 } satisfies Meta<typeof StudioDatabaseConfiguration>;
 
 function commonInit() {

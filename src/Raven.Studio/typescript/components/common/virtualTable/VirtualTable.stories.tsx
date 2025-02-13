@@ -41,6 +41,12 @@ const queryCommandResult: pagedResultExtended<document> = selector(require("../.
 export default {
     title: "Bits/Virtual Table",
     decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=15-838",
+        },
+    },
 } satisfies Meta;
 
 export const VirtualTableStory: StoryObj = {
