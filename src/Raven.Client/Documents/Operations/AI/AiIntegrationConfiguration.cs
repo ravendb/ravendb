@@ -47,7 +47,14 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
         get
         {
             if (EmbeddingsTransformation == null)
-                return _transforms ??= new List<Transformation>(0);
+                return _transforms ??= new List<Transformation>()
+                {
+                    new Transformation
+                    {
+                        Name = "embeddings-from-paths",
+                        Collections = [Collection]
+                    }
+                };
 
             return _transforms ??=
             [
