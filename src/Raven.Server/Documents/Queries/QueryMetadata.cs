@@ -2501,6 +2501,7 @@ function execute(doc, args){
             private void HandleVector(string methodName, List<QueryExpression> arguments, bool withoutAlias, BlittableJsonReaderObject parameters)
             {
                 QueryFieldName fieldName;
+                string aiIntegrationTaskName = null;
 
                 if (_metadata.IsDynamic == false)
                 {
@@ -2525,6 +2526,9 @@ function execute(doc, args){
                         var embeddingType = QueryMethod.GetMethodType(materializedMethodName);
                         embedding = MethodTypeToEmbeddingType(embeddingType);
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(embeddingMethod.Arguments, materializedMethodName, parameters);
+
+                        if (embeddingMethod.Arguments.Count == 2 && embeddingMethod.Arguments[1] is ValueExpression valueExpression)
+                            aiIntegrationTaskName = valueExpression.Token.Value;
                     }
                     else
                     {
@@ -2539,7 +2543,8 @@ function execute(doc, args){
                     {
                         SourceFieldName = fieldName, 
                         DestinationEmbeddingType = embedding.Destination, 
-                        SourceEmbeddingType = embedding.Source
+                        SourceEmbeddingType = embedding.Source,
+                        AiIntegrationTaskName = aiIntegrationTaskName
                     };
                     
                     _metadata.AddWhereField(new(AutoIndexField.GetVectorAutoIndexFieldName(fieldName, vectorOptions), false), parameters, exact: _insideExact > 0, vector: vectorOptions);

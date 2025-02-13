@@ -27,7 +27,7 @@ public static class GenerateEmbeddings
     private static readonly ConstructorInfo BertOnnxTextEmbeddingGenerationServiceCtor;
 
     // Dimensions (buffer size) from internals of SmartComponents.
-    private const int F32Size = 1536;
+    public const int F32Size = 1536;
 
     private static SessionOptions OnnxSessionOptions;
 

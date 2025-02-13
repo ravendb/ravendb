@@ -48,7 +48,7 @@ public sealed class VectorSearchToken : WhereToken
             var methodName = Constants.VectorSearch.ConfigurationToMethodName(_sourceQuantizationType, _targetQuantizationType);
             
             if (_sourceQuantizationType is VectorEmbeddingType.Text && _etlConfigName != null)
-                writer.Append($"{methodName}({FieldName}, {_etlConfigName})");
+                writer.Append($"{methodName}({FieldName}, '{_etlConfigName}')");
             else
                 writer.Append($"{methodName}({FieldName})");
         }

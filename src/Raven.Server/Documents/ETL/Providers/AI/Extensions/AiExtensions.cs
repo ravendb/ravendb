@@ -16,6 +16,7 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Embeddings;
 using OllamaSharp;
 using OpenAI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide;
@@ -272,26 +273,37 @@ public static class AiExtensions
         return builder;
     }
 
-    [Experimental("SKEXP0001")]
+    public static void Configure(this IKernelBuilder kernelBuilder, AiConnectionString connectionString, bool isConnectionTest)
+    {
+        var connectorType = connectionString.GetActiveProvider();
+        ConfigureInternal(kernelBuilder, connectorType, connectionString, isConnectionTest, out _);
+    }
+    
     public static void Configure(
         this IKernelBuilder kernelBuilder,
         AiIntegrationConfiguration configuration,
         bool isConnectionTest,
         out string resolvedServiceId)
     {
+        ConfigureInternal(kernelBuilder, configuration.AiConnectorType ,configuration.Connection, isConnectionTest, out resolvedServiceId);
+    }
+
+    private static void ConfigureInternal(this IKernelBuilder kernelBuilder, AiConnectorType connectorType, AiConnectionString connectionString, bool isConnectionTest,
+        out string resolvedServiceId)
+    {
+        var errors = new List<string>();
+        if (connectionString.Validate(ref errors) == false)
+            throw new InvalidOperationException($"Connection string is invalid due to the following errors:{Environment.NewLine}" +
+                                                $" - {string.Join($"{Environment.NewLine} - ", errors)}");
+        
         resolvedServiceId = isConnectionTest
             ? AiHelper.ServiceIdentifiers.GenerateTestId()
             : AiHelper.ServiceIdentifiers.Production;
-
-        var errors = new List<string>();
-        if (configuration.Connection.Validate(ref errors) == false)
-            throw new InvalidOperationException($"Connection string is invalid due to the following errors:{Environment.NewLine}" +
-                                                $" - {string.Join($"{Environment.NewLine} - ", errors)}");
-
-        switch (configuration.AiConnectorType)
+        
+        switch (connectorType)
         {
             case AiConnectorType.OpenAi:
-                var openAiSettings = configuration.Connection.OpenAiSettings;
+                var openAiSettings = connectionString.OpenAiSettings;
 
                 var apiKey = new ApiKeyCredential(openAiSettings.ApiKey);
                 var openAiOptions = new OpenAIClientOptions
@@ -309,7 +321,7 @@ public static class AiExtensions
                 break;
 
             case AiConnectorType.AzureOpenAi:
-                var azureOpenAiSettings = configuration.Connection.AzureOpenAiSettings;
+                var azureOpenAiSettings = connectionString.AzureOpenAiSettings;
 
                 if (isConnectionTest)
                     kernelBuilder.AddTransientAzureOpenAiEmbeddingGeneration(
@@ -330,7 +342,7 @@ public static class AiExtensions
                 break;
 
             case AiConnectorType.Ollama:
-                var ollamaSettings = configuration.Connection.OllamaSettings;
+                var ollamaSettings = connectionString.OllamaSettings;
                 var ollamaApiConfig = new OllamaApiClient.Configuration { Uri = new Uri(ollamaSettings.Uri), Model = ollamaSettings.Model };
 
                 var ollamaApiClient = new OllamaApiClient(ollamaApiConfig);
@@ -342,7 +354,7 @@ public static class AiExtensions
                 break;
 
             case AiConnectorType.Onnx:
-                var onnxSettings = configuration.Connection.OnnxSettings;
+                var onnxSettings = connectionString.OnnxSettings;
                 if (isConnectionTest)
                     kernelBuilder.AddTransientCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), onnxSettings.Dimensions, resolvedServiceId);
                 else
@@ -350,7 +362,7 @@ public static class AiExtensions
                 break;
 
             case AiConnectorType.Google:
-                var googleSettings = configuration.Connection.GoogleSettings;
+                var googleSettings = connectionString.GoogleSettings;
 
                 HttpClient httpClient = null;
                 if (googleSettings.Dimensions.HasValue)
@@ -392,7 +404,7 @@ public static class AiExtensions
                 break;
 
             case AiConnectorType.HuggingFace:
-                var huggingFaceSettings = configuration.Connection.HuggingFaceSettings;
+                var huggingFaceSettings = connectionString.HuggingFaceSettings;
                 var huggingFaceUri = string.IsNullOrWhiteSpace(huggingFaceSettings.Endpoint) ? null : new Uri(huggingFaceSettings.Endpoint);
 
                 if (isConnectionTest)
@@ -410,7 +422,7 @@ public static class AiExtensions
                 break;
 
             case AiConnectorType.MistralAi:
-                var mistralSettings = configuration.Connection.MistralAiSettings;
+                var mistralSettings = connectionString.MistralAiSettings;
                 var mistralUri = new Uri(mistralSettings.Endpoint);
 
                 if (isConnectionTest)
@@ -429,9 +441,9 @@ public static class AiExtensions
 
 
             default:
-                throw new NotSupportedException($"'{configuration.AiConnectorType}' provider is not supported");
+                throw new NotSupportedException($"'{connectorType}' provider is not supported");
         }
-
+        
         if (isConnectionTest)
             kernelBuilder.Services.AddLogging(configure =>
             {

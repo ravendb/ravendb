@@ -1715,6 +1715,7 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
                 EtlLoader?.HandleDatabaseRecordChange(record);
                 SubscriptionStorage?.HandleDatabaseRecordChange();
+                AiStorage?.HandleDatabaseRecordChange(record);
             }
             finally
             {

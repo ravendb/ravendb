@@ -2,15 +2,18 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Documents.Attachments;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -26,6 +29,9 @@ public class AiStorage
     public AiStorage([NotNull] DocumentsStorage documentsStorage)
     {
         _documentsStorage = documentsStorage ?? throw new ArgumentNullException(nameof(documentsStorage));
+#pragma warning disable SKEXP0001
+        Services = new Dictionary<string, ITextEmbeddingGenerationService>();
+#pragma warning restore SKEXP0001
     }
 
     public Document GetDocumentEmbeddings(DocumentsOperationContext context, string sourceDocumentId, out string documentEmbeddingsId)
@@ -138,6 +144,34 @@ public class AiStorage
                     [Constants.Documents.Metadata.Expires] = lastModified.AddMonths(3)
                 }
             };
+        }
+    }
+
+#pragma warning disable SKEXP0001
+    public Dictionary<string, ITextEmbeddingGenerationService> Services;
+#pragma warning restore SKEXP0001
+
+    public void HandleDatabaseRecordChange(DatabaseRecord record)
+    {
+        if (record == null)
+            return;
+
+        foreach (var connectionStringKvp in record.AiConnectionStrings)
+        {
+            var connectionStringName = connectionStringKvp.Key;
+            var connectionString = connectionStringKvp.Value;
+            
+            if (Services.ContainsKey(connectionStringName))
+                continue;
+            
+            var kernelBuilder = Kernel.CreateBuilder();
+            kernelBuilder.Configure(connectionString, isConnectionTest: false);
+            var kernel = kernelBuilder.Build();
+#pragma warning disable SKEXP0001
+            var service = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
+#pragma warning restore SKEXP0001
+            
+            Services.Add(connectionStringName, service);
         }
     }
 }

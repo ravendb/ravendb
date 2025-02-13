@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -17,6 +18,7 @@ using Lucene.Net.Analysis.Standard;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
@@ -655,7 +657,26 @@ public static class CoraxQueryBuilder
                 ValueTokenType.String => value.ToString(),
                 _ => throw new NotSupportedException("Vector.Search() on " + valueType)
             };
-            transformedEmbedding = GenerateEmbeddings.FromText(builderParameters.Allocator, vectorOptions, valueAsString);
+
+            var aiIntegrationTaskName = vectorOptions.AiIntegrationTaskName;
+
+            if (aiIntegrationTaskName != null)
+            {
+                // try get from cache first
+                var hash = AiHelper.CalculateValueHash(valueAsString);
+                var id = AiHelper.GetValueEmbeddingsDocumentId(aiIntegrationTaskName, hash);
+
+                using (builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    var valueEmbeddingsDocument = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.Get(context, id);
+                    
+                    if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.Services.TryGetValue(aiIntegrationTaskName, out var service) == false)
+                        throw new Exception();
+                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size);
+                }
+            }
+            else
+                transformedEmbedding = GenerateEmbeddings.FromText(builderParameters.Allocator, vectorOptions, valueAsString);
         }
         else if (value is string s)
         {

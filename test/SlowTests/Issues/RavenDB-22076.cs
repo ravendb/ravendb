@@ -9,6 +9,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Vector;
@@ -69,7 +71,7 @@ public class RavenDB_22076 : RavenTestBase
                 var q8 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName").TargetQuantization(VectorEmbeddingType.Int8),
                     factory => factory.ByText("aaaa")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField, EtlConfigName), $p0)", q8);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField, 'EtlConfigName'), $p0)", q8);
             }
         }
     }
@@ -168,7 +170,7 @@ public class RavenDB_22076 : RavenTestBase
                 
                 var q7 = session.Query<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName"), factory => factory.ByText("SomeText")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField, EtlConfigName), $p0)", q7);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField, 'EtlConfigName'), $p0)", q7);
             }
         }
     }
@@ -444,14 +446,32 @@ public class RavenDB_22076 : RavenTestBase
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void Temp(Options options)
     {
-        const string etlConfigName = "EtlConfigName";
+        const string connectionStringName = "connection string name";
         const string queriedText = "some text";
         
         using (var store = GetDocumentStore(options))
         {
+            var configuration = new AiEtlConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AiConnectorType = AiConnectorType.Onnx,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                PathsToProcess = [],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "this.ChunkedName = splitPlainTextLines(this.Name, 5);" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
             using (var session = store.OpenSession())
             {
-                _ = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, etlConfigName), factory => factory.ByText(queriedText)).ToList();
+                _ = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, connectionStringName), factory => factory.ByText(queriedText)).ToList();
             }
         }
     }

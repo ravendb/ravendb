@@ -163,7 +163,7 @@ public sealed class AiConnectionString : ConnectionString
         return result;
     }
 
-    internal AiConnectorType GetActiveProvider()
+    public AiConnectorType GetActiveProvider()
     {
         if (OpenAiSettings != null)
             return AiConnectorType.OpenAi;

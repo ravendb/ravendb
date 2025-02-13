@@ -3,10 +3,17 @@ using System.Collections.Generic;
 using System.Data.HashFunction;
 using System.Data.HashFunction.Blake2;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
+using Corax.Utils;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel;
-using Raven.Server.Documents.ETL.Providers.AI.Extensions;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Server.Documents.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Extensions;
+using Raven.Server.Documents.Indexes.VectorSearch;
+using Raven.Server.Documents.OngoingTasks;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
@@ -47,6 +54,27 @@ public static class AiHelper
     public static string GetValueEmbeddingsDocumentId(string connectionString, string hash)
     {
         return $"embeddings/{connectionString}/{hash}";
+    }
+    
+#pragma warning disable SKEXP0001
+    public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, string textValue, int dimensions)
+#pragma warning restore SKEXP0001
+    {
+        // generate embedding via service
+
+        var embedding = service.GenerateEmbeddingAsync(textValue).GetAwaiter().GetResult();
+
+        // enqueue embedding to be cached in background
+        
+        
+
+        // return embedding
+        
+        var memoryScope = allocator.Allocate(dimensions, out Memory<byte> memory);
+            
+        MemoryMarshal.AsBytes(embedding.Span).CopyTo(memory.Span);
+
+        return new VectorValue(memoryScope, memory, dimensions);
     }
 
     [Experimental("SKEXP0001")]
