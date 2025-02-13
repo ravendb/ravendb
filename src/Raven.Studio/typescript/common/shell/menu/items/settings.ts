@@ -332,7 +332,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Tombstones',
             nav: true,
             shardingMode: "singleShard",
-            css: 'icon-revisions-bin',
+            css: 'icon-tombstones',
             dynamicHash: appUrls.tombstonesState,
             requiredAccess: "Operator",
             search: {
