@@ -189,7 +189,6 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
         var services = AiHelper.CreateServicesForTest(
             new AiEtlConfiguration
             {
-                AiConnectorType = AiConnectorType.Onnx,
                 Connection = new AiConnectionString { OnnxSettings = new OnnxSettings()}
             }, out string serviceId);
 

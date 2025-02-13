@@ -77,7 +77,7 @@ internal class AiEtlHandlerProcessorForTestAiConnection<TRequestHandler, TOperat
                     throw new ArgumentOutOfRangeException();
             }
 
-            var aiEtlConfiguration = new AiEtlConfiguration { AiConnectorType = AiConnectorType, Connection = aiConnectionString };
+            var aiEtlConfiguration = new AiEtlConfiguration { Connection = aiConnectionString };
 
             services = AiHelper.CreateServicesForTest(aiEtlConfiguration, out string serviceId);
             var embeddings = await services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId).GenerateEmbeddingsAsync(AiHelper.TestValuesList);

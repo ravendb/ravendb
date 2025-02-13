@@ -45,7 +45,6 @@ public class RavenDB_23556 : RavenTestBase
         var configuration = new AiEtlConfiguration()
         {
             Name = etlName,
-            AiConnectorType = AiConnectorType.Onnx,
             AllowEtlOnNonEncryptedChannel = true,
             ConnectionStringName = connectionStringName,
             PathsToProcess = pathsToProcess,
@@ -574,7 +573,6 @@ public class RavenDB_23556 : RavenTestBase
             var configuration = new AiEtlConfiguration()
             {
                 Name = "someETLConfigurationName",
-                AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 PathsToProcess = [],

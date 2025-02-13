@@ -71,7 +71,6 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
         return new AiEtlConfiguration
         {
-            AiConnectorType = AiConnectorType.Value,
             Name = EtlTaskName.Value,
             ConnectionStringName = ConnectionStringName.Value,
             Connection = connectionString
