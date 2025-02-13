@@ -9,8 +9,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Vector;
@@ -444,21 +444,31 @@ public class RavenDB_22076 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void Temp(Options options)
+    public void TestEmbeddingsGenerationForQuerying(Options options)
     {
-        const string connectionStringName = "connection string name";
-        const string queriedText = "some text";
+        const string connectionStringName = "ConnectionStringName";
+        const string queriedText = "fruit";
         
         using (var store = GetDocumentStore(options))
         {
-            var configuration = new AiEtlConfiguration()
+            var dto1 = new Dto() { TextualValue = "apple" };
+            var dto2 = new Dto() { TextualValue = "computer" };
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto1);
+                session.Store(dto2);
+                
+                session.SaveChanges();
+            }
+            
+            var configuration = new AiIntegrationConfiguration()
             {
                 Name = "someETLConfigurationName",
-                AiConnectorType = AiConnectorType.Onnx,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                PathsToProcess = [],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "this.ChunkedName = splitPlainTextLines(this.Name, 5);" }]
+                EmbeddingsPaths = ["TextualValue"],
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -471,7 +481,60 @@ public class RavenDB_22076 : RavenTestBase
             
             using (var session = store.OpenSession())
             {
-                _ = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, connectionStringName), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, connectionStringName), factory => factory.ByText(queriedText)).ToList();
+                
+                Assert.Single(result);
+                Assert.Equal(dto1.TextualValue, result[0].TextualValue);
+                
+                result = session.Query<Dto>().VectorSearch(x => x.WithField(d => d.TextualValue), factory => factory.ByText(queriedText)).ToList();
+            }
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestFetchingEmbeddingFromCache(Options options)
+    {
+        const string connectionStringName = "ConnectionStringName";
+        const string queriedText = "fruit";
+        
+        using (var store = GetDocumentStore(options))
+        {
+            var dto1 = new Dto() { TextualValue = queriedText };
+            var dto2 = new Dto() { TextualValue = "computer" };
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto1);
+                session.Store(dto2);
+                
+                session.SaveChanges();
+            }
+            
+            var configuration = new AiIntegrationConfiguration()
+            {
+                Name = "someETLConfigurationName",
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                EmbeddingsPaths = ["TextualValue"],
+                Collection = "Dtos",
+                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+            
+            using (var session = store.OpenSession())
+            {
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, connectionStringName), factory => factory.ByText(queriedText)).ToList();
+                
+                Assert.Single(result);
+                Assert.Equal(dto1.TextualValue, result[0].TextualValue);
             }
         }
     }

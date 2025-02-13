@@ -13,8 +13,10 @@ using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
+using Lextm.SharpSnmpLib;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
@@ -32,6 +34,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Spatial4n.Shapes;
+using ArgumentException = System.ArgumentException;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxConstants = Corax.Constants;
@@ -662,17 +665,14 @@ public static class CoraxQueryBuilder
 
             if (aiIntegrationTaskName != null)
             {
-                // try get from cache first
-                var hash = AiHelper.CalculateValueHash(valueAsString);
-                var id = AiHelper.GetValueEmbeddingsDocumentId(aiIntegrationTaskName, hash);
-
                 using (builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    var valueEmbeddingsDocument = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.Get(context, id);
-                    
-                    if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.Services.TryGetValue(aiIntegrationTaskName, out var service) == false)
-                        throw new Exception();
-                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size);
+                    if (TryGetEmbeddingFromCache(context, valueAsString, aiIntegrationTaskName, out transformedEmbedding) == false)
+                    {
+                        if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.Services.TryGetValue(aiIntegrationTaskName, out var service) == false)
+                            throw new ArgumentException($"Couldn't find {aiIntegrationTaskName} AI task.");
+                        transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size);
+                    } 
                 }
             }
             else
@@ -787,6 +787,38 @@ public static class CoraxQueryBuilder
             };
 
             PortableExceptions.Throw<InvalidDataException>($"Vector field `{fieldName}` has {storedDimensions} dimensions, but the vector passed to vector.search() has {inputDimensions} dimensions.");
+        }
+
+        bool TryGetEmbeddingFromCache(DocumentsOperationContext context, string valueAsString, string aiIntegrationTaskName, out VectorValue transformedEmbedding)
+        {
+            transformedEmbedding = new VectorValue();
+            
+            var hash = AiHelper.CalculateValueHash(valueAsString);
+            var id = AiHelper.GetValueEmbeddingsDocumentId(aiIntegrationTaskName, hash);
+            
+            using (context.OpenReadTransaction())
+            {
+                var valueEmbeddingsDocument = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.Get(context, id);
+
+                if (valueEmbeddingsDocument != null)
+                {
+                    if (valueEmbeddingsDocument.Data.TryGet(valueAsString, out string attachmentName))
+                    {
+                        var attachment = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachment(context, id,
+                            attachmentName, AttachmentType.Document, null);
+
+                        context.Allocator.Allocate((int)attachment.Size, out Memory<byte> memory);
+
+                        attachment.Stream.Read(memory.Span);
+
+                        transformedEmbedding = new VectorValue(null, memory);
+                        
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 

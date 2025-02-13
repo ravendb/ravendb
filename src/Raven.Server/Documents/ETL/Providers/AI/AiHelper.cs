@@ -49,7 +49,6 @@ public static class AiHelper
     {
         return $"{etlTaskName}_{path}_";
     }
-
     
     public static string GetValueEmbeddingsDocumentId(string connectionString, string hash)
     {
@@ -60,11 +59,9 @@ public static class AiHelper
     public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, string textValue, int dimensions)
 #pragma warning restore SKEXP0001
     {
-        // generate embedding via service
-
         var embedding = service.GenerateEmbeddingAsync(textValue).GetAwaiter().GetResult();
 
-        // enqueue embedding to be cached in background
+        // todo enqueue embedding to be cached in background
         
         
 
