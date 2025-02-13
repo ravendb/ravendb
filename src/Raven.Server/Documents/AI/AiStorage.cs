@@ -40,7 +40,7 @@ public class AiStorage
     public ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlConfiguration configuration, string value,
         out string valueEmbeddingsDocumentId)
     {
-        valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.Name, AiHelper.CalculateValueHash(value));
+        valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, AiHelper.CalculateValueHash(value));
         
         var valueEmbeddingsDocument = GetValueEmbeddingsDocument(context, valueEmbeddingsDocumentId);
 
@@ -56,13 +56,13 @@ public class AiStorage
         return new ValueEmbeddingsDocument(document);
     }
 
-    public string AddOrUpdateValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlEmbeddingItemValue item)
+    public string AddOrUpdateValueEmbeddingsDocument(DocumentsOperationContext context, AiEtlEmbeddingItemValue item, DateTime lastModified)
     {
-        Debug.Assert((item.EmbeddingValue.IsEmpty && item.ValueEmbeddingsAttachmentName != null) ||
-                     (item.EmbeddingValue.IsEmpty == false && item.ValueEmbeddingsAttachmentName == null));
+        Debug.Assert((item.EmbeddingValue.IsEmpty && item.ValueEmbeddingsSourceAttachmentName != null) ||
+                     (item.EmbeddingValue.IsEmpty == false && item.ValueEmbeddingsSourceAttachmentName == null));
 
         var document = GetValueEmbeddingsDocument(context, item.ValueEmbeddingsDocumentId);
-        string attachmentName = item.ValueEmbeddingsAttachmentName ?? Guid.NewGuid().ToString();
+        string attachmentName = item.ValueEmbeddingsSourceAttachmentName ?? Guid.NewGuid().ToString();
 
         if (item.EmbeddingValue.IsEmpty == false)
         {
@@ -134,7 +134,8 @@ public class AiStorage
                 [textualValue] = attachmentName,
                 [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
-                    [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.EmbeddingsCollection
+                    [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.EmbeddingsCollection,
+                    [Constants.Documents.Metadata.Expires] = lastModified.AddMonths(3)
                 }
             };
         }

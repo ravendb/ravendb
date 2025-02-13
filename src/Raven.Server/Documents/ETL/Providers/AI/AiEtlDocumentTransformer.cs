@@ -1,18 +1,34 @@
 using System;
+using System.Buffers.Text;
+using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Corax;
+using Corax.Utils;
 using Jint;
 using Jint.Native;
 using Jint.Runtime.Interop;
 using Microsoft.SemanticKernel.Text;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.AI;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
@@ -73,7 +89,7 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
         return _currentRun ?? Enumerable.Empty<AiEtlEmbeddingItem>();
     }
 
-    public override void Transform(AiEtlItem item, AiEtlStatsScope stats, EtlProcessState state)
+ public override void Transform(AiEtlItem item, AiEtlStatsScope stats, EtlProcessState state)
     {
         Current = item;
         _currentRun ??= new AiEtlScriptRun();
@@ -82,7 +98,7 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
         {
             var deletedItem = new AiEtlEmbeddingItem() { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, IsDelete = true };
             
-            _currentRun.Deletes.Add(deletedItem);
+            _currentRun.Removals.Add(deletedItem);
             
             return;
         }
@@ -101,33 +117,127 @@ internal sealed class AiEtlDocumentTransformer : EtlTransformer<AiEtlItem, AiEtl
         
         foreach (var fieldName in _configuration.PathsToProcess)
         {
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var fieldValue) == false)
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var value) == false)
                 continue;
 
-            if (aiEtlEmbeddingItem.Values.TryGetValue(fieldName, out var values) == false)
-                aiEtlEmbeddingItem.Values[fieldName] = values = new List<AiEtlEmbeddingItemValue>();
-
-            switch (fieldValue)
-            {
-                case LazyStringValue lsv:
-                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lsv });
-                    break;
-                case LazyCompressedStringValue lcsv:
-                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lcsv });
-                    break;
-                case BlittableJsonReaderArray bjra:
-                {
-                    foreach (var textualValue in bjra)
-                        values.Add(new AiEtlEmbeddingItemValue() { TextualValue = (LazyStringValue)textualValue });
-                    break;
-                }
-                default:
-                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = fieldValue.ToString() });
-                    break;
-            }
+            ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Values, fieldName, out _);
+            container ??= new();
+            WriteValueToEmbeddings(container, value);
         }
             
         _currentRun.Additions.Add(aiEtlEmbeddingItem);
+    }
+
+    private void WriteValueToEmbeddings(List<AiEtlEmbeddingItemValue> values, object value)
+    {
+        var valueType = ConverterBase.GetValueTypeUnlikely(value);
+        switch (valueType)
+        {
+            case ConverterBase.ValueType.Double:
+            case ConverterBase.ValueType.Numeric:
+            case ConverterBase.ValueType.Enum:
+            case ConverterBase.ValueType.Boolean:
+            case ConverterBase.ValueType.String:
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = value.ToString() });
+                break;
+            
+            case ConverterBase.ValueType.Char:
+                if (value is char c)
+                    values.Add(new AiEtlEmbeddingItemValue() { TextualValue = char.ToString(c)});
+                break;
+
+            case ConverterBase.ValueType.LazyCompressedString:
+            case ConverterBase.ValueType.LazyString:
+                LazyStringValue lazyStringValue = valueType == ConverterBase.ValueType.LazyCompressedString
+                    ? ((LazyCompressedStringValue)value).ToLazyStringValue()
+                    : (LazyStringValue)value;
+                
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = lazyStringValue});
+                break;
+            
+            case ConverterBase.ValueType.DateTime:
+                var dateTime = (DateTime)value;
+                var dateAsBytes = dateTime.GetDefaultRavenFormat();
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = dateAsBytes});
+                break;
+
+            case ConverterBase.ValueType.DateTimeOffset:
+                var dateTimeOffset = (DateTimeOffset)value;
+                var dateTimeOffsetBytes = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = dateTimeOffsetBytes});
+                break;
+
+            case ConverterBase.ValueType.TimeSpan:
+            {
+                var timeSpan = (TimeSpan)value;
+                Span<byte> buffer = stackalloc byte[256];
+                if (Utf8Formatter.TryFormat(timeSpan, buffer, out var bytesWritten, new('c')) == false)
+                    throw new Exception($"Cannot convert {timeSpan} to a string");
+
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = Encodings.Utf8.GetString(buffer[..bytesWritten])});
+                break;
+            }
+            case ConverterBase.ValueType.DateOnly:
+                var dateOnly = ((DateOnly)value);
+                var dateOnlyTextual = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = dateOnlyTextual});
+                break;
+            
+            case ConverterBase.ValueType.TimeOnly:
+                var timeOnly = ((TimeOnly)value);
+                var timeOnlyTextual = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = timeOnlyTextual});
+                break;
+            
+            case ConverterBase.ValueType.Convertible:
+                var iConvertible = (IConvertible)value;
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = iConvertible.ToString(CultureInfo.InvariantCulture)});
+                break;
+            
+            case ConverterBase.ValueType.Enumerable:
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+                var iterator = (IEnumerable)value;
+                foreach (var item in iterator)
+                    WriteValueToEmbeddings(values, item);
+                break;
+
+            case ConverterBase.ValueType.DynamicJsonObject:
+                var valueAsJson = (DynamicBlittableJson)value;
+                values.Add(new AiEtlEmbeddingItemValue() { TextualValue = valueAsJson.ToString()});
+                break;
+
+            case ConverterBase.ValueType.Dictionary:
+            case ConverterBase.ValueType.ConvertToJson:
+            {
+                var val = TypeConverter.ToBlittableSupportedType(value);
+                if (val is not DynamicJsonValue json)
+                {
+                    WriteValueToEmbeddings(values, val);
+                    return;
+                }
+
+                using (var result = Context.ReadObject(json, "index field as json"))
+                    WriteValueToEmbeddings(values, result);
+                break;
+            }
+
+            case ConverterBase.ValueType.BlittableJsonObject:
+                var bjo = (BlittableJsonReaderObject)value;
+                values.Add(new(){TextualValue =  bjo.ToString()});
+                break;
+            
+            case ConverterBase.ValueType.DynamicNull:
+            case ConverterBase.ValueType.Null:
+                values.Add(new(){TextualValue = $"null"});
+                break;
+            
+            case ConverterBase.ValueType.EmptyString:
+                values.Add(new(){TextualValue = $""});
+                break;
+            
+            default:
+                throw new NotSupportedException(valueType + " is not a supported type for AI ETL");
+        }
     }
     
 #pragma warning disable SKEXP0050

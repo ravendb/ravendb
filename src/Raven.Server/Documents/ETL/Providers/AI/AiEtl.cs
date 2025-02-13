@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
@@ -17,8 +20,10 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 #pragma warning disable SKEXP0001
@@ -89,8 +94,13 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
     {
         _service ??= AiHelper.CreateService(Configuration);
 
-        var aiEtlScriptRun = (AiEtlScriptRun)items;
-
+        if (items is not AiEtlScriptRun aiEtlScriptRun)
+        {
+            Debug.Assert(items != null && items!.GetType()!.FullName!.StartsWith("System.Linq.EmptyPartition")
+                , $"items != null && items!.GetType()!.FullName!.StartsWith('System.Linq.EmptyPartition'): {items!.GetType()!.FullName!}");
+            return 0;
+        }
+        
         int processed = 0;
 
         using (_missingEmbeddingsHolder)
@@ -106,9 +116,9 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
                         var valueEmbeddingsDocument = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, value.TextualValue, out var valueEmbeddingsDocumentId);
 
                         value.ValueEmbeddingsDocumentId = valueEmbeddingsDocumentId;
-                        value.ValueEmbeddingsAttachmentName = valueEmbeddingsDocument?.GetAttachmentNameForValue(value.TextualValue);
+                        value.ValueEmbeddingsSourceAttachmentName = valueEmbeddingsDocument?.GetAttachmentNameForValue(value.TextualValue);
                         
-                        if (value.ValueEmbeddingsAttachmentName == null)
+                        if (value.ValueEmbeddingsSourceAttachmentName == null)
                             _missingEmbeddingsHolder.Add(value.TextualValue, value);
                     }
                 }
@@ -203,97 +213,172 @@ public sealed class AiEtl : EtlProcess<AiEtlItem, AiEtlEmbeddingItem, AiEtlConfi
 
     private sealed class MergedPutEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
     {
-        private readonly AiEtlScriptRun _items;
-        private readonly string _configurationName;
+        /// <summary>
+        /// Contains ETL result
+        /// </summary>
+        private readonly AiEtlScriptRun _taskResults;
+        private readonly string _aiEtlTaskName;
         private readonly DocumentDatabase _database;
         public DocumentsStorage.PutOperationResults PutResult;
         
-        public MergedPutEmbeddingsCommand(AiEtlScriptRun items, string configurationName, DocumentDatabase database)
+        public MergedPutEmbeddingsCommand(AiEtlScriptRun taskResults, string aiEtlTaskName, DocumentDatabase database)
         {
-            _items = items;
-            _configurationName = configurationName;
+            _taskResults = taskResults;
+            _aiEtlTaskName = aiEtlTaskName;
             _database = database;
+        }
+
+        //We need to remove all attachments from this ETL task (but not all of them, as they may be loaded from other tasks.)
+        //So, if the embeddingsDocument exists, let's gather the attachments currently used by it.
+        private Dictionary<string, List<string>> LoadNamesOfExistingAttachmentsOfThisTransformer(Document embeddingsDocument)
+        {
+            var destination = new Dictionary<string, List<string>>();
+        
+            if (embeddingsDocument == null)
+                return destination;
+            
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingsDocument, _aiEtlTaskName, out var etlEmbeddingsByPathObject)
+                && etlEmbeddingsByPathObject is BlittableJsonReaderObject etlEmbeddingsByPath)
+            {
+                //For each property under ETL name
+                foreach (var path in etlEmbeddingsByPath.GetPropertyNames())
+                {
+                    // We need to read the property at it is, since it may contain dots, etc and BlittableJsonTraverserHelper detects them as nested properties.
+                    if (etlEmbeddingsByPath.TryGetMember(path, out var attachmentsArrayObject) == false)
+                        continue;
+        
+                    if (attachmentsArrayObject is not BlittableJsonReaderArray array) 
+                        continue; // this should never happen unless user manually modifies the embeddings document
+                            
+                    ref var currentRemoval = ref CollectionsMarshal.GetValueRefOrAddDefault(destination, path, out _);
+                    currentRemoval ??= new(array.Length);
+                            
+                    foreach (var item in array.Items)
+                        currentRemoval.Add(item.ToString());
+                }
+            }
+            
+            return destination;
+        }
+
+        private DynamicJsonValue CreateNewDocument(string collectionName, DynamicJsonValue embeddingsDocumentModification)
+        {
+            return new DynamicJsonValue
+            {
+                [_aiEtlTaskName] = embeddingsDocumentModification,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
+                {
+                    // todo cache
+                    [Constants.Documents.Metadata.Collection] = AiHelper.GetDocumentEmbeddingsCollectionName(collectionName),
+                }
+            };
+        }
+
+        private BlittableJsonReaderObject GetModifiedCurrentDocument(Document embeddingsDocument, DynamicJsonValue embeddingsDocumentModification)
+        {
+            embeddingsDocument.Data.Modifications = new DynamicJsonValue
+            {
+                [_aiEtlTaskName] = embeddingsDocumentModification
+            };
+
+            return embeddingsDocument.Data;
+        }
+
+        private BlittableJsonReaderObject GetReader(DocumentsOperationContext context, object document, string documentId, out bool isNewDocument)
+        {
+            if (document is DynamicJsonValue newDocument)
+            {
+                isNewDocument = true;
+                return context.ReadObject(newDocument, documentId);
+            }
+            
+            PortableExceptions.ThrowIfNot<InvalidCastException>(document is BlittableJsonReaderObject, $"Unexpected document type: {document.GetType().FullName}");
+
+            isNewDocument = false;
+            return context.ReadObject((BlittableJsonReaderObject)document, documentId);
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            var now = _database.Time.GetUtcNow();
+            var operationStartDate = _database.Time.GetUtcNow();
+            // Key: Transformer input
+            // Value: Attachment name of embedding 
+            var localEmbeddingCache = new Dictionary<string, string>();
             
-            // textual value -> attachment name
-            var embeddingsTracker = new Dictionary<string, string>();
-            
-            foreach (var item in _items.Additions)
+            // For each of processed document
+            foreach (var document in _taskResults.Additions)
             {
-                var configDjv = new DynamicJsonValue();
+                // Modifications of embeddings document
+                var embeddingsDocumentModification = new DynamicJsonValue();
                 
-                foreach (var kvp in item.Values)
+                // Load the embeddings document (if it exists) to track which attachments need to be removed (on update)
+                using var embeddingsDocument = _database.AiStorage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);
+                var currentAttachmentsOfEmbeddingsFromThisTransformer = LoadNamesOfExistingAttachmentsOfThisTransformer(embeddingsDocument);
+                
+                foreach (var embeddingsByPath in document.Values)
                 {
-                    var valuePath = kvp.Key;
-                    var values = kvp.Value;
-
-                    var attachmentNamesDja = new DynamicJsonArray();
+                    var currentPath = embeddingsByPath.Key;
+                    var generatedEmbeddings = embeddingsByPath.Value;
+                    var prefix = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(_aiEtlTaskName, currentPath);
+                    var namesOfNewAttachments = new DynamicJsonArray();
                     
-                    foreach (var value in values)
+                    foreach (var embedding in generatedEmbeddings)
                     {
-                        if (embeddingsTracker.TryGetValue(value.TextualValue, out var attachmentName) == false)
-                        {
-                            attachmentName = _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, value);
-                            embeddingsTracker.Add(value.TextualValue, attachmentName);
-                        }
-                        
-                        value.ValueEmbeddingsAttachmentName = attachmentName;
-                        attachmentNamesDja.Add(attachmentName);
+                        ref var attachmentName = ref CollectionsMarshal.GetValueRefOrAddDefault(localEmbeddingCache, embedding.TextualValue, out _);
+                        attachmentName ??= _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, embedding, operationStartDate);
+                        embedding.ValueEmbeddingsSourceAttachmentName = attachmentName;
+                        embedding.SetPrefix(prefix);
+                        namesOfNewAttachments.Add(embedding.ValueEmbeddingsDestinationAttachmentName);
                     }
                     
-                    configDjv[valuePath] = attachmentNamesDja;
+                    embeddingsDocumentModification[currentPath] = namesOfNewAttachments;
                 }
 
-                var documentEmbeddings = _database.AiStorage.GetDocumentEmbeddings(context, item.DocumentId, out string documentEmbeddingsId);
-
-                DynamicJsonValue documentDjv;
+                object documentToProcess = embeddingsDocument is null 
+                    ? CreateNewDocument(document.DocumentCollectionName, embeddingsDocumentModification) 
+                    : GetModifiedCurrentDocument(embeddingsDocument, embeddingsDocumentModification);
                 
-                if (documentEmbeddings == null)
+                using (var reader = GetReader(context, documentToProcess, embeddingsDocumentId, out var isNewDocument))
                 {
-                    documentDjv = new DynamicJsonValue
+                    //Update the document
+                    _database.DocumentsStorage.Put(context, embeddingsDocumentId, null, reader);
+                    
+                    //Insert new embeddings
+                    foreach (var embeddingsByPath in document.Values)
                     {
-                        [_configurationName] = configDjv,
-                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
+                        var namesOfCurrentAttachments = currentAttachmentsOfEmbeddingsFromThisTransformer.GetValueOrDefault(embeddingsByPath.Key);
+                        foreach (var embedding in embeddingsByPath.Value)
                         {
-                            // todo cache
-                            [Constants.Documents.Metadata.Collection] = AiHelper.GetDocumentEmbeddingsCollectionName(item.DocumentCollectionName),
-                            [Constants.Documents.Metadata.Expires] = now.AddMonths(3)
-                        }
-                    };
-                }
-                else
-                    documentDjv = documentEmbeddings.Data.Modifications;
-                
-                documentDjv[_configurationName] = configDjv;
-                
-                using (var bjro = context.ReadObject(documentDjv, documentEmbeddingsId))
-                {
-                    // todo change vector?
-                    _database.DocumentsStorage.Put(context, documentEmbeddingsId, null, bjro);
-
-                    foreach (var kvp in item.Values)
-                    {
-                        foreach (var itemValue in kvp.Value)
-                        {
-                            _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, itemValue.ValueEmbeddingsDocumentId, itemValue.ValueEmbeddingsAttachmentName,
-                                documentEmbeddingsId, itemValue.ValueEmbeddingsAttachmentName, null, AttachmentType.Document);
+                            //When true:
+                            //  This embedding is already in the embeddings document. Therefore, we do not have to insert it again.
+                            //  At the same time, we are removing it from the list of attachments to remove (essentially a no-op on attachment storage in case of an update).
+                            if (namesOfCurrentAttachments?.Remove(embedding.ValueEmbeddingsDestinationAttachmentName) == true)
+                                continue; 
+                            
+                            _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, embedding.ValueEmbeddingsDocumentId, embedding.ValueEmbeddingsSourceAttachmentName, embeddingsDocumentId, embedding.ValueEmbeddingsDestinationAttachmentName, null, AttachmentType.Document);
                         }
                     }
+                    
+                    //Remove old embeddings
+                    foreach (var embeddingsByPath in currentAttachmentsOfEmbeddingsFromThisTransformer)
+                    {
+                        foreach (var attachmentToRemove in embeddingsByPath.Value)
+                        {
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, embeddingsDocumentId, attachmentToRemove, null, out _, extractCollectionName: false);
+                        }
+                    }
+                    
                 }
+                
             }
-
-            foreach (var item in _items.Deletes)
+            
+            foreach (var item in _taskResults.Removals)
             {
                 var documentEmbeddingsToDeleteId = AiHelper.GetDocumentEmbeddingsId(item.DocumentId);
-
                 _database.DocumentsStorage.Delete(context, documentEmbeddingsToDeleteId, DocumentFlags.None);
             }
             
-            return _items.Additions.Count + _items.Deletes.Count;
+            return _taskResults.Additions.Count + _taskResults.Removals.Count;
         }
         
         public void Dispose()

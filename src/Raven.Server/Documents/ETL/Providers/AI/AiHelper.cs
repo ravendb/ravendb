@@ -38,9 +38,15 @@ public static class AiHelper
         return $"{sourceCollectionName}/embeddings";
     }
 
-    public static string GetValueEmbeddingsDocumentId(string configurationName, string hash)
+    public static string GetPrefixForAttachmentInEmbeddingsDocument(string etlTaskName, string path)
     {
-        return $"embeddings/{configurationName}/{hash}";
+        return $"{etlTaskName}_{path}_";
+    }
+
+    
+    public static string GetValueEmbeddingsDocumentId(string connectionString, string hash)
+    {
+        return $"embeddings/{connectionString}/{hash}";
     }
 
     [Experimental("SKEXP0001")]

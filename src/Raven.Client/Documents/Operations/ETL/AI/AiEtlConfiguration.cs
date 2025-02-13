@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
 
 public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
 {
+    
     private string _name;
     private string Identifier => _name ??= Connection?.Name;
 
@@ -17,6 +19,16 @@ public sealed class AiEtlConfiguration : EtlConfiguration<AiConnectionString>
     public override string GetDefaultTaskName() => Identifier;
 
     public override EtlType EtlType => EtlType.Ai;
+
+    private string _normalizedConnectionName;
+    public string NormalizedConnectionName
+    {
+        get
+        {
+            _normalizedConnectionName ??= string.Join(string.Empty, ConnectionStringName.ToLowerInvariant().Where(x => char.IsWhiteSpace(x) == false));
+            return _normalizedConnectionName;
+        }
+    } 
 
     public override bool UsingEncryptedCommunicationChannel()
     {

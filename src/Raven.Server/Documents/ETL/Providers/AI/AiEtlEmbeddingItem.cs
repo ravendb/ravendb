@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
@@ -17,6 +18,16 @@ public class AiEtlEmbeddingItemValue
 {
     public string TextualValue { get; set; }
     public string ValueEmbeddingsDocumentId { get; set; }
-    public string ValueEmbeddingsAttachmentName { get; set; }
+
+    public void SetPrefix(string prefix)
+    {
+        Debug.Assert(ValueEmbeddingsSourceAttachmentName is not null, "ValueEmbeddingsSourceAttachmentName is not null");
+        ValueEmbeddingsDestinationAttachmentName = $"{prefix}{ValueEmbeddingsSourceAttachmentName}";
+    }
+    
+    public string ValueEmbeddingsSourceAttachmentName { get; set; }
+
+    public string ValueEmbeddingsDestinationAttachmentName { get; private set; }
+    
     public ReadOnlyMemory<float> EmbeddingValue { get; set; }
 }
