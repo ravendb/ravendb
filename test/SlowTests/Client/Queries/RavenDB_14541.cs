@@ -673,7 +673,7 @@ namespace SlowTests.Client.Queries
                         });
 
                     var error = Assert.Throws<InvalidOperationException>(() => query.ToList());
-                    Assert.Equal("result of an Include can only be assigned to the discard symbol (_)", error.Message);
+                    Assert.Equal("The result of an Include can only be assigned to the discard symbol (_)", error.Message);
                 }
             }
         }
@@ -696,7 +696,7 @@ namespace SlowTests.Client.Queries
                         });
 
                     var error = Assert.Throws<InvalidOperationException>(() => query.ToList());
-                    Assert.Equal("result of an Include can only be assigned to the discard symbol (_)", error.Message);
+                    Assert.Equal("The result of an Include can only be assigned to the discard symbol (_)", error.Message);
                 }
             }
         }
@@ -719,7 +719,7 @@ namespace SlowTests.Client.Queries
                         _ = query.ToList();
                     }
                 });
-                Assert.Equal("result of an Include can only be assigned to the discard symbol (_)", error.Message);
+                Assert.Equal("The result of an Include can only be assigned to the discard symbol (_)", error.Message);
             }
         }
 
@@ -782,7 +782,6 @@ namespace SlowTests.Client.Queries
         {
             using (var session = store.OpenSession())
             {
-
                 session.Store(new Address { CountryState = "states/1#zip07", City = "new-york", StateId = "states/1",
                     Company = "Companies/Raven"});
                 session.Store(new Address { CountryState = "states/2#zip05", City = "haifa", StateId = "states/2",

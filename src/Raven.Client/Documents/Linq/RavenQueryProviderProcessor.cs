@@ -2736,10 +2736,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         HandleSelectId(GetSelectPath(field.Member));
                         continue;
                     }
+
                     if (LinqPathProvider.IsIncludeCall(mce))
                     {
-                        var discardName = field.Member.Name;
-                        if (ProcessIncludeCall(mce, discardName, lambdaExpression, memberInitExpression))
+                        var name = field.Member.Name;
+                        if (TryProcessIncludeCall(mce, name, lambdaExpression, memberInitExpression))
                             continue;
                         return;
                     }
@@ -2830,8 +2831,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (LinqPathProvider.IsIncludeCall(mce))
                     {
-                        var discardName = newExpression.Members[index].Name;
-                        if (ProcessIncludeCall(mce, discardName, lambdaExpression, newExpression))
+                        var name = newExpression.Members[index].Name;
+                        if (TryProcessIncludeCall(mce, name, lambdaExpression, newExpression))
                             continue;
                         return;
                     }
@@ -2857,30 +2858,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private bool ProcessIncludeCall(MethodCallExpression mce, string discardName, LambdaExpression lambdaExpression, Expression memberInitOrNewExpression)
+        private bool TryProcessIncludeCall(MethodCallExpression mce, string name, LambdaExpression lambdaExpression, Expression memberInitOrNewExpression)
         {
-            if (discardName.All(c => c == '_') == false)
-                throw new InvalidOperationException("result of an Include can only be assigned to the discard symbol (_)");
+            AssertNameForInclude(name);
 
-            if (mce.Arguments[0] is UnaryExpression unaryExpr && unaryExpr.Operand is LambdaExpression lambdaExpr)
-            {
-                if (lambdaExpr.Body is MemberExpression memberExpr)
-                {
-                    string fieldName = memberExpr.Member.Name;
-                    DocumentQuery.Include(fieldName);
-                    return true;
-                }
-
-                if (FromAlias == null)
-                {
-                    AddFromAlias(lambdaExpression?.Parameters[0].Name);
-                }
-
-                _declareBuilder ??= new();
-                AddReturnStatementToOutputFunction(memberInitOrNewExpression);
+            if ((mce.Arguments[0] is UnaryExpression unaryExpr && unaryExpr.Operand is LambdaExpression lambdaExpr) == false) 
                 return false;
+
+            if (lambdaExpr.Body is MemberExpression memberExpr)
+            {
+                string fieldName = memberExpr.Member.Name;
+                DocumentQuery.Include(fieldName);
+                return true;
             }
 
+            if (FromAlias == null)
+            {
+                AddFromAlias(lambdaExpression?.Parameters[0].Name);
+            }
+
+            _declareBuilder ??= new();
+            AddReturnStatementToOutputFunction(memberInitOrNewExpression);
             return false;
         }
 
@@ -3065,10 +3063,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (includeMethodCall != null && includeIndex != -1 && expression.Members != null)
             {
                 var name = expression.Members[includeIndex].Name;
-                if (name.All(c => c == '_') == false)
-                {
-                    throw new InvalidOperationException("result of an Include can only be assigned to the discard symbol (_)");
-                }
+                AssertNameForInclude(name);
 
                 if (includeMethodCall.Arguments[0] is UnaryExpression unaryExpr &&
                     unaryExpr.Operand is LambdaExpression lambdaExpr)
@@ -3149,11 +3144,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (_includeSupport.HasInclude)
                 {
                     _includeSupport.HasInclude = false;
-                    if (name.All(c => c == '_') == false)
-                    {
-                        throw new InvalidOperationException("result of an Include can only be assigned to the discard symbol (_)");
-                    }
+                    AssertNameForInclude(name);
                 }
+
                 if (loadSupport.HasLoad && shouldUseLoadToken)
                 {
                     HandleLoad(arg, loadSupport, name, js, wrapper);
@@ -3386,7 +3379,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private string TranslateSelectBodyToJs(Expression expression)
         {
             var sb = new StringBuilder();
-          
+
             if (expression is NewExpression newExpression)
             {
                 sb.Append("{ ");
@@ -3408,6 +3401,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         AddJsProjection(name, newExpression.Arguments[index], sb, index != 0);
                     }
                 }
+
                 sb.Append(" }");
             }
 
@@ -3442,8 +3436,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         AddJsProjection(name, field.Expression, sb, index != 0);
                     }
-
                 }
+
                 sb.Append(" }");
             }
 
@@ -3469,14 +3463,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
 
                 sb.Append(script);
-                if (expression is MemberExpression)
+                if (expression is MemberExpression && anyInclude && containsDot)
                 {
-                    if (anyInclude && containsDot)
-                    {
-                        sb.Append('}');
-                    }
+                    sb.Append('}');
                 }
             }
+
             return sb.ToString();
         }
 
@@ -3491,10 +3483,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_includeSupport?.HasInclude == true)
             {
-                if (name.All(c => c == '_') == false)
-                {
-                    throw new InvalidOperationException("result of an Include can only be assigned to the discard symbol (_)");
-                }
+                AssertNameForInclude(name);
+
                 _jsProjectionNames.Remove(name);
                 _includeSupport.HasInclude = false;
                 if (_includeSupport?.IncludeSimpleFunctions != null)
@@ -3534,6 +3524,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             sb.Append(name).Append(" : ").Append(script);
+        }
+
+        private void AssertNameForInclude(string name)
+        {
+            if (string.IsNullOrEmpty(name) || !name.All(c => c == '_'))
+            {
+                throw new InvalidOperationException("The result of an Include can only be assigned to the discard symbol (_)");
+            }
         }
 
         private static bool IsRawCall(MethodCallExpression mce)

@@ -1040,8 +1040,10 @@ namespace Raven.Client.Util
 
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
                     return;
+
                 if (methodCallExpression.Arguments.Count != 1)
                     return;
+
                 if (methodCallExpression.Arguments[0] is not UnaryExpression { Operand: LambdaExpression le })
                     return;
 
