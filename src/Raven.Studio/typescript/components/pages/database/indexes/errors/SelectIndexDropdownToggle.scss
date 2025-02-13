@@ -7,4 +7,9 @@
     &.show .select-index-errors-toggle {
         background-color: bs5variables.$panel-bg-1-var !important;
     }
+
+    .custom-dropdown-menu {
+        max-height: 400px;
+        overflow-y: auto;
+    }
 }

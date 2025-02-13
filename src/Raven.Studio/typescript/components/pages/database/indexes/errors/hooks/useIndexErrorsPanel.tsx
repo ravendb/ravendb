@@ -90,7 +90,7 @@ function IndexErrorsModalTitle({ shardNumber, nodeTag }: IndexErrorsModalTitlePr
             Clear errors for <Icon icon="node" color="node" margin="m-0" /> <strong>{nodeTag}</strong>{" "}
             {shardNumber != null && (
                 <>
-                    <Icon icon="shard" color="shard" margin="m-0" /> <strong>${shardNumber}</strong>
+                    <Icon icon="shard" color="shard" margin="m-0" /> <strong>#{shardNumber}</strong>
                 </>
             )}
         </span>
@@ -106,14 +106,21 @@ function IndexErrorsModalBody({ selectedErrors }: IndexErrorsModalBodyProps) {
         <div>
             {selectedErrors.length === 0 ? (
                 <>
-                    Errors will be cleared for <strong>ALL</strong> indexes.
+                    <span>
+                        Errors will be cleared for <strong>ALL</strong> indexes.{" "}
+                    </span>
+                    {selectedErrors.length === 0 && (
+                        <span>
+                            If you want to clear errors for <b>specific indexes</b>, select them in dropdown.
+                        </span>
+                    )}
                 </>
             ) : (
                 <>
                     You&#39;re clearing errors for <b>{selectedErrors.length}</b> indexes:
                     <ul>
                         {selectedErrors.map((error) => (
-                            <li>
+                            <li title={error} className="text-truncate">
                                 <b>{error}</b>
                             </li>
                         ))}

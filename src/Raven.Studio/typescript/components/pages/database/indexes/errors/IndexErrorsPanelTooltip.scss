@@ -1,0 +1,15 @@
+@use "Content/scss/sizes";
+
+.index-errors-details-tooltip {
+    max-width: 600px;
+
+    &__container {
+        display: flex;
+        gap: sizes.$gutter-md;
+        justify-content: space-between;
+
+        time {
+            text-wrap: nowrap;
+        }
+    }
+}

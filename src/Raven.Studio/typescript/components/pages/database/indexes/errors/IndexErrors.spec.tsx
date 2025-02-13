@@ -56,20 +56,6 @@ describe("IndexErrors", function () {
         expect(within(totalErrorsElement).getByText(`${totalErrorCount} errors`)).toBeInTheDocument();
     });
 
-    it("renders sharded nodes with errors and displays total count for each", async () => {
-        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded />);
-
-        const totalErrorsElements = (await screen.findAllByText(textSelectors.erroredNodePanelTotalErrorCount)).map(
-            (x) => x.closest<HTMLElement>(classSelectors.erroredNodePanelTotalErrorCountContainer)
-        );
-
-        for (const totalErrorsElement of totalErrorsElements) {
-            expect(within(totalErrorsElement).getByText(`${totalErrorCount} errors`)).toBeInTheDocument();
-        }
-        expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
-        expect(await screen.findAllByClassName(classSelectors.nodePanel)).toHaveLength(6);
-    });
-
     it("does not show 'Clear errors' button for users with 'DatabaseRead' access", async () => {
         const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />);
 

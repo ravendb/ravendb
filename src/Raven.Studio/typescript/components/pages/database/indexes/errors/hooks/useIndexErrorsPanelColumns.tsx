@@ -6,12 +6,14 @@ import CellDocumentValue from "components/common/virtualTable/cells/CellDocument
 import { useAppUrls } from "hooks/useAppUrls";
 import { CellWithCopy, CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { Button } from "reactstrap";
+import { Button, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import IndexErrorsModal from "components/pages/database/indexes/errors/IndexErrorsModal";
 import useBoolean from "hooks/useBoolean";
+import useUniqueId from "hooks/useUniqueId";
+import React from "react";
 
-const defaultCellSize = 90 / 5;
+const defaultCellSize = 95 / 5;
 
 export function useIndexErrorsPanelColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
@@ -21,7 +23,7 @@ export function useIndexErrorsPanelColumns(availableWidth: number) {
         {
             header: "Show",
             cell: CellValueButtonWrapper,
-            size: getSize(10),
+            size: 70,
         },
         {
             header: "Index Name",
@@ -40,14 +42,14 @@ export function useIndexErrorsPanelColumns(availableWidth: number) {
         {
             header: "Date",
             accessorKey: "LocalTime",
-            cell: CellWithCopyWrapper,
+            cell: CellValueRelativeTimeWrapper,
             size: getSize(defaultCellSize),
         },
         {
             header: "Action",
             accessorKey: "Action",
             cell: CellValueWrapper,
-            size: getSize(defaultCellSize),
+            size: getSize(defaultCellSize / 2),
             filterFn: "arrIncludesSome",
             enableColumnFilter: false,
         },
@@ -55,7 +57,7 @@ export function useIndexErrorsPanelColumns(availableWidth: number) {
             header: "Error",
             accessorKey: "Error",
             cell: CellWithCopyWrapper,
-            size: getSize(defaultCellSize),
+            size: getSize(defaultCellSize * 1.5),
         },
     ];
 
@@ -68,7 +70,9 @@ type HyperLinkDocumentCellValueProps = Pick<
 >;
 
 const HyperLinkDocumentCellValue = ({ getValue }: HyperLinkDocumentCellValueProps) => {
-    return <CellDocumentValue value={getValue()} databaseName="test" hasHyperlinkForIds />;
+    const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds />;
 };
 
 type HyperlinkIndexCellValueProps = Pick<
@@ -121,6 +125,29 @@ const CellValueButtonWrapper = (args: CellValueButtonWrapperProps) => {
                 dataLength={args.table.options.data.length}
                 getRow={args.table.getRow}
             />
+        </>
+    );
+};
+
+type CellValueRelativeTimeWrapperProps = CellContext<IndexErrorPerDocument, IndexErrorPerDocument["LocalTime"]>;
+
+const CellValueRelativeTimeWrapper = ({ getValue, row }: CellValueRelativeTimeWrapperProps) => {
+    const relativeTimeId = useUniqueId(`relative-time`);
+    const rowData = row.original;
+
+    return (
+        <>
+            <CellValue id={relativeTimeId} value={getValue()} />
+            <UncontrolledTooltip innerClassName="index-errors-details-tooltip" autohide={false} target={relativeTimeId}>
+                <div className="index-errors-details-tooltip__container">
+                    <b>UTC: </b>
+                    <time>{rowData.Timestamp}</time>
+                </div>
+                <div className="index-errors-details-tooltip__container">
+                    <b>Relative: </b>
+                    <time>{rowData.RelativeTime}</time>
+                </div>
+            </UncontrolledTooltip>
         </>
     );
 };

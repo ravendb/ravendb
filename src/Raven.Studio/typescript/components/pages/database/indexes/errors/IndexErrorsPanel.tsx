@@ -10,7 +10,7 @@ import {
     RichPanelStatus,
 } from "components/common/RichPanel";
 import { Icon } from "components/common/Icon";
-import { Button, Collapse } from "reactstrap";
+import { Button, Collapse, UncontrolledTooltip } from "reactstrap";
 import moment from "moment/moment";
 import genUtils from "common/generalUtils";
 import { useIndexErrorsPanel } from "components/pages/database/indexes/errors/hooks/useIndexErrorsPanel";
@@ -21,6 +21,10 @@ import { useResizeObserver } from "hooks/useResizeObserver";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { AsyncStateStatus, UseAsyncReturn } from "react-async-hook";
+import { LazyLoad } from "components/common/LazyLoad";
+import useBoolean from "hooks/useBoolean";
+import useUniqueId from "hooks/useUniqueId";
+import "./IndexErrorsPanelTooltip.scss";
 
 export interface IndexErrorsPanelProps {
     errorItem: ErrorInfoItem;
@@ -30,10 +34,7 @@ export interface IndexErrorsPanelProps {
 
 export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
     const { table, asyncFetchAllErrorCount, errorItem } = props;
-
-    const ref = useRef<HTMLDivElement>();
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
-    const { width } = useResizeObserver({ ref });
 
     const {
         handleClearErrors,
@@ -60,7 +61,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                                 </span>
                                 {errorItem.location.shardNumber != null && (
                                     <span className="d-flex align-items-center justify-content-center gap-1">
-                                        <Icon icon="shard" color="shard" margin="m-0" /> $
+                                        <Icon icon="shard" color="shard" margin="m-0" /> #
                                         {errorItem.location.shardNumber}
                                     </span>
                                 )}
@@ -106,7 +107,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                             </span>
                             {errorItem.location.shardNumber != null && (
                                 <span className="d-flex align-items-center justify-content-center gap-1">
-                                    <Icon icon="shard" color="shard" margin="m-0" /> ${errorItem.location.shardNumber}
+                                    <Icon icon="shard" color="shard" margin="m-0" /> #{errorItem.location.shardNumber}
                                 </span>
                             )}
                         </RichPanelName>
@@ -120,51 +121,15 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                         </RichPanelActions>
                     )}
                 </RichPanelHeader>
-                {!isLoading && hasErrors && (
-                    <>
-                        <RichPanelDetails>
-                            <RichPanelDetailItem>
-                                <Button
-                                    onClick={togglePanelCollapsed}
-                                    title={panelCollapsed ? "Expand errors details" : "Collapse errors details"}
-                                    className="btn-toggle-panel rounded-pill"
-                                >
-                                    <Icon icon={panelCollapsed ? "unfold" : "fold"} margin="m-0" />
-                                </Button>
-                            </RichPanelDetailItem>
-                            <RichPanelDetailItem>
-                                <span className="text-danger">
-                                    <Icon icon="warning" />
-                                    Total count
-                                </span>
-                                <div className="value">{errorItem.totalErrorCount} errors</div>
-                            </RichPanelDetailItem>
-                            <RichPanelDetailItem>
-                                <span>
-                                    <Icon icon="clock" />
-                                    Most recent
-                                </span>
-                                <div className="value">
-                                    {newestDate ? moment(newestDate).format(genUtils.dateFormat) : ""}
-                                </div>
-                            </RichPanelDetailItem>
-                        </RichPanelDetails>
-                        <Collapse isOpen={!panelCollapsed}>
-                            <RichPanelDetails>
-                                <div ref={ref} className="w-100">
-                                    <IndexErrorsPanelTable
-                                        status={asyncFetchErrorDetails.status}
-                                        refresh={asyncFetchErrorDetails.execute}
-                                        indexErrors={mappedIndexErrors}
-                                        isLoading={asyncFetchErrorDetails.loading}
-                                        width={width}
-                                        table={table}
-                                    />
-                                </div>
-                            </RichPanelDetails>
-                        </Collapse>
-                    </>
-                )}
+                <IndexErrorsPanelDetailsStatus
+                    hasErrors={hasErrors}
+                    errorItem={errorItem}
+                    mappedIndexErrors={mappedIndexErrors}
+                    isLoading={isLoading}
+                    asyncFetchErrorDetails={asyncFetchErrorDetails}
+                    newestDate={newestDate}
+                    table={table}
+                />
             </div>
         </RichPanel>
     );
@@ -175,6 +140,7 @@ interface IndexErrorsPanelStatusProps {
     hasErrors: boolean;
     status: AsyncStateStatus;
 }
+
 function IndexErrorsPanelStatus({ isLoading, hasErrors, status }: IndexErrorsPanelStatusProps) {
     if (isLoading) {
         return (
@@ -190,6 +156,101 @@ function IndexErrorsPanelStatus({ isLoading, hasErrors, status }: IndexErrorsPan
 
     if (status === "success") {
         return <RichPanelStatus color="success">OK</RichPanelStatus>;
+    }
+
+    return null;
+}
+
+interface IndexErrorsPanelDetailsStatusProps {
+    isLoading: boolean;
+    errorItem: ErrorInfoItem;
+    newestDate?: Date;
+    mappedIndexErrors: IndexErrorPerDocument[];
+    table: Table<IndexErrorPerDocument>;
+    asyncFetchErrorDetails: UseAsyncReturn<Raven.Client.Documents.Indexes.IndexErrors[]>;
+    hasErrors: boolean;
+}
+
+function IndexErrorsPanelDetailsStatus({
+    isLoading,
+    errorItem,
+    newestDate,
+    asyncFetchErrorDetails,
+    mappedIndexErrors,
+    hasErrors,
+    table,
+}: IndexErrorsPanelDetailsStatusProps) {
+    const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
+    const ref = useRef<HTMLDivElement>();
+    const { width } = useResizeObserver({ ref });
+    const mostRecentDateId = useUniqueId("most-recent-date");
+
+    if (hasErrors || isLoading) {
+        return (
+            <>
+                <RichPanelDetails>
+                    <LazyLoad active={isLoading} className="d-flex">
+                        <RichPanelDetailItem>
+                            <Button
+                                onClick={togglePanelCollapsed}
+                                title={panelCollapsed ? "Expand errors details" : "Collapse errors details"}
+                                className="btn-toggle-panel rounded-pill"
+                            >
+                                <Icon icon={panelCollapsed ? "unfold" : "fold"} margin="m-0" />
+                            </Button>
+                        </RichPanelDetailItem>
+                        <RichPanelDetailItem>
+                            <span className="text-danger">
+                                <Icon icon="warning" />
+                                Total count
+                            </span>
+                            <div className="value">{errorItem.totalErrorCount} errors</div>
+                        </RichPanelDetailItem>
+                        <RichPanelDetailItem id={mostRecentDateId}>
+                            <span>
+                                <Icon icon="clock" />
+                                Most recent
+                            </span>
+                            <div className="value">
+                                {newestDate ? moment(newestDate).format(genUtils.dateFormat) : ""}
+                            </div>
+                        </RichPanelDetailItem>
+                    </LazyLoad>
+                </RichPanelDetails>
+                <Collapse isOpen={!panelCollapsed}>
+                    <RichPanelDetails>
+                        <div ref={ref} className="w-100">
+                            <IndexErrorsPanelTable
+                                status={asyncFetchErrorDetails.status}
+                                refresh={asyncFetchErrorDetails.execute}
+                                indexErrors={mappedIndexErrors}
+                                isLoading={asyncFetchErrorDetails.loading}
+                                width={width}
+                                table={table}
+                            />
+                        </div>
+                    </RichPanelDetails>
+                </Collapse>
+                {!isLoading && (
+                    <UncontrolledTooltip
+                        innerClassName="index-errors-details-tooltip"
+                        autohide={false}
+                        target={mostRecentDateId}
+                    >
+                        <div className="index-errors-details-tooltip__container">
+                            <b>UTC: </b>
+                            <time className="index-errors-details-tooltip__date">
+                                {moment.utc(newestDate).toISOString()}
+                            </time>
+                        </div>
+                        <div className="index-errors-details-tooltip__container">
+                            <b>Relative: </b>
+                            <time>{moment(newestDate).fromNow()}</time>
+                        </div>
+                    </UncontrolledTooltip>
+                )}
+            </>
+        );
     }
 
     return null;
