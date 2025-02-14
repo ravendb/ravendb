@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -41,7 +43,8 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
 
     private List<Transformation> _transforms;
 
-    // TODO arek [Jsonignore] ?
+    [JsonDeserializationIgnore]
+    [JsonIgnore]
     [Obsolete($"AI Integration configuration doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
     public override List<Transformation> Transforms
     {
@@ -69,7 +72,7 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
         }
         set
         {
-            _transforms = value;
+            throw new NotSupportedException($"AI Integration configuration doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.");
         }
     }
 
