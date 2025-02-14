@@ -17,7 +17,9 @@ public interface IAiConnectorForTesting
 public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
     where T : BaseAiConnectorForTesting<T>, new()
 {
-    public static T Instance => field ??= new T();
+    private static T _instance;
+
+    public static T Instance => _instance ??= new T();
 
     internal static T CreateNewInstance(string prefixName) => new() { NamePrefix = new Lazy<string>(prefixName) };
 
@@ -35,14 +37,14 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
         CanConnect = new Lazy<bool>(CanConnectInternal);
     }
 
-    private Lazy<string> EtlTaskName => new(() =>
+    private Lazy<string> AiIntegrationTaskName => new(() =>
     {
         var prefix = string.Empty;
 
         if (string.IsNullOrWhiteSpace(NamePrefix?.Value) == false)
             prefix = $"{NamePrefix.Value}_";
 
-        return $"{prefix}{AiConnectorType.Value.ToString()}_EtlTask";
+        return $"{prefix}{AiConnectorType.Value.ToString()}_AiIntegrationTask";
     });
 
     private Lazy<string> ConnectionStringName => new(() =>
@@ -71,7 +73,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
         return new AiIntegrationConfiguration
         {
-            Name = EtlTaskName.Value,
+            Name = AiIntegrationTaskName.Value,
             ConnectionStringName = ConnectionStringName.Value,
             Connection = connectionString
         };
