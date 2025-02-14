@@ -2,6 +2,7 @@ const lodash = require("lodash");
 const knockout = require("knockout");
 require("knockout-postbox");
 const jquery = require("jquery");
+const ROP = require("@juggle/resize-observer")
 
 global._ = lodash;
 global.ko = knockout;
@@ -70,3 +71,12 @@ Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
     configurable: true,
     value: 500,
 });
+
+Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+    configurable: true,
+    value: 500,
+});
+
+if (!window.ResizeObserver) {
+  window.ResizeObserver = ROP.ResizeObserver;
+}
