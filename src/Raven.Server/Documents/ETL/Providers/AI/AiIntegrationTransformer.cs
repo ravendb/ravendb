@@ -2,6 +2,7 @@ using System;
 using System.Buffers.Text;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.ETL.Providers.AI;
 internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationItem, AiIntegrationEmbeddingItem, AiIntegrationStatsScope, AiIntegrationPerformanceOperation>
 {
     private readonly AiIntegrationConfiguration _configuration;
-    private AiEmbeddingsScriptRun _currentRun;
+    private AiEmbeddingsTransformationRun _currentRun;
     private PatchRequest _mainScript;
     private AiIntegrationStatsScope _stats;
     
@@ -96,43 +97,56 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
  public override void Transform(AiIntegrationItem item, AiIntegrationStatsScope stats, EtlProcessState state)
     {
         Current = item;
-        _currentRun ??= new AiEmbeddingsScriptRun();
+        _currentRun ??= new AiEmbeddingsTransformationRun();
 
         if (item.IsDelete)
         {
-            var deletedItem = new AiIntegrationEmbeddingItem() { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, IsDelete = true };
+            var deletedItem = new AiIntegrationEmbeddingItem { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, IsDelete = true };
             
             _currentRun.Removals.Add(deletedItem);
             
             return;
         }
 
-        if (_configuration.EmbeddingsPaths == null || _configuration.EmbeddingsPaths.Count == 0)
+        if (_configuration.EmbeddingsTransformation != null)
         {
+            Debug.Assert(_configuration.EmbeddingsTransformation.Script != null, "_configuration.EmbeddingsTransformation.Script != null");
+
             DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document });
-            
+
             return;
         }
 
-        var aiEtlEmbeddingItem = new AiIntegrationEmbeddingItem()
+        if (_configuration.EmbeddingsPaths is { Count: > 0 })
         {
-            DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiIntegrationEmbeddingItemValue>>()
-        };
-        
-        foreach (var fieldName in _configuration.EmbeddingsPaths)
-        {
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, fieldName, out var value) == false)
-                continue;
+            var aiEtlEmbeddingItem = new AiIntegrationEmbeddingItem
+            {
+                DocumentId = Current.DocumentId,
+                DocumentCollectionName = Current.Collection,
+                Values = new Dictionary<string, List<AiIntegrationEmbeddingItemValue>>()
+            };
 
-            ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Values, fieldName, out _);
-            container ??= new();
-            WriteValueToEmbeddings(container, value);
+            foreach (var path in _configuration.EmbeddingsPaths)
+            {
+                if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, path, out var value) == false)
+                    continue;
+
+                ref var embeddingValues = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Values, path, out _);
+                embeddingValues ??= new();
+
+                CollectEmbeddingValues(ref embeddingValues, value);
+            }
+
+            _currentRun.Additions.Add(aiEtlEmbeddingItem);
+
+            return;
         }
-            
-        _currentRun.Additions.Add(aiEtlEmbeddingItem);
+
+        throw new InvalidOperationException(
+            $"Cannot create embeddings because neither {nameof(_configuration.EmbeddingsTransformation)} nor {nameof(_configuration.EmbeddingsPaths)} were specified in the configuration of AI Integration task");
     }
 
-    private void WriteValueToEmbeddings(List<AiIntegrationEmbeddingItemValue> values, object value)
+    private void CollectEmbeddingValues(ref List<AiIntegrationEmbeddingItemValue> values, object value)
     {
         var valueType = ConverterBase.GetValueTypeUnlikely(value);
         switch (valueType)
@@ -202,7 +216,7 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
                 RuntimeHelpers.EnsureSufficientExecutionStack();
                 var iterator = (IEnumerable)value;
                 foreach (var item in iterator)
-                    WriteValueToEmbeddings(values, item);
+                    CollectEmbeddingValues(ref values, item);
                 break;
 
             case ConverterBase.ValueType.DynamicJsonObject:
@@ -216,12 +230,12 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (val is not DynamicJsonValue json)
                 {
-                    WriteValueToEmbeddings(values, val);
+                    CollectEmbeddingValues(ref values, val);
                     return;
                 }
 
                 using (var result = Context.ReadObject(json, "index field as json"))
-                    WriteValueToEmbeddings(values, result);
+                    CollectEmbeddingValues(ref values, result);
                 break;
             }
 

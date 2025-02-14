@@ -41,6 +41,7 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
 
     private List<Transformation> _transforms;
 
+    // TODO arek [Jsonignore] ?
     [Obsolete($"AI Integration configuration doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
     public override List<Transformation> Transforms
     {
@@ -74,13 +75,30 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
 
     public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
     {
-        // TODO arek
-
-        //base.Validate(out errors, validateName, validateConnection);
+        if (validateConnection && Initialized == false)
+            throw new InvalidOperationException("AI Integration configuration must be initialized");
 
         errors = new List<string>();
 
-        return true;
+        if (validateName && string.IsNullOrEmpty(Name))
+            errors.Add($"{nameof(Name)} of AI Integration configuration cannot be empty");
+
+        if (TestMode == false && string.IsNullOrEmpty(ConnectionStringName))
+            errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
+
+        if (validateConnection && TestMode == false)
+            Connection.Validate(ref errors);
+
+        if (string.IsNullOrEmpty(Collection))
+            errors.Add($"{nameof(Collection)} must be provided");
+
+        if ((EmbeddingsPaths is null || EmbeddingsPaths.Count == 0) &&
+            (EmbeddingsTransformation is null || string.IsNullOrEmpty(EmbeddingsTransformation.Script)))
+        {
+            errors.Add($"Configuration must have either {nameof(EmbeddingsPaths)} or {nameof(EmbeddingsTransformation)} script specified");
+        }
+
+        return errors.Count == 0;
     }
 
     public override bool UsingEncryptedCommunicationChannel()

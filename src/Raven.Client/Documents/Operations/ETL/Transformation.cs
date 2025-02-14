@@ -358,7 +358,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
                 var collections = GetCollectionsFromScript();
 
-                if (type != EtlType.Ai && (collections == null || collections.Length == 0))
+                if (collections == null || collections.Length == 0)
                 {
                     var actualScript = Script;
 

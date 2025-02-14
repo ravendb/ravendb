@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.ETL
 {
     public abstract class EtlConfiguration<T> : IDynamicJsonValueConvertible, IDatabaseTask where T : ConnectionString
     {
-        private bool _initialized;
+        protected bool Initialized;
 
         public long TaskId { get; set; }
 
@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Operations.ETL
         public void Initialize(T connectionString)
         {
             Connection = connectionString;
-            _initialized = true;
+            Initialized = true;
         }
 
         public virtual List<Transformation> Transforms { get; set; } = new List<Transformation>();
@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.ETL
         
         public virtual bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
         {
-            if (validateConnection && _initialized == false)
+            if (validateConnection && Initialized == false)
                 throw new InvalidOperationException("ETL configuration must be initialized");
 
             errors = new List<string>();

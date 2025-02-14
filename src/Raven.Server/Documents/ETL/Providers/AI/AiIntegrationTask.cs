@@ -94,7 +94,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
     {
         _service ??= AiHelper.CreateService(Configuration);
 
-        if (items is not AiEmbeddingsScriptRun aiEtlScriptRun)
+        if (items is not AiEmbeddingsTransformationRun aiEtlScriptRun)
         {
             Debug.Assert(items != null && items!.GetType()!.FullName!.StartsWith("System.Linq.EmptyPartition")
                 , $"items != null && items!.GetType()!.FullName!.StartsWith('System.Linq.EmptyPartition'): {items!.GetType()!.FullName!}");
@@ -215,12 +215,12 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         /// <summary>
         /// Contains ETL result
         /// </summary>
-        private readonly AiEmbeddingsScriptRun _taskResults;
+        private readonly AiEmbeddingsTransformationRun _taskResults;
         private readonly string _aiIntegrationTaskName;
         private readonly DocumentDatabase _database;
         public DocumentsStorage.PutOperationResults PutResult;
         
-        public MergedPutEmbeddingsCommand(AiEmbeddingsScriptRun taskResults, string aiIntegrationTaskName, DocumentDatabase database)
+        public MergedPutEmbeddingsCommand(AiEmbeddingsTransformationRun taskResults, string aiIntegrationTaskName, DocumentDatabase database)
         {
             _taskResults = taskResults;
             _aiIntegrationTaskName = aiIntegrationTaskName;
