@@ -25,13 +25,26 @@ public class AiStorage
     private const string EmbeddingAttachmentContentType = "application/octet-stream";
 
     private readonly DocumentsStorage _documentsStorage;
+    
+#pragma warning disable SKEXP0001
+    private Dictionary<string, ITextEmbeddingGenerationService> _servicesByTaskName;
+    private Dictionary<string, ITextEmbeddingGenerationService> _servicesByConnectionStringName;
+#pragma warning restore SKEXP0001
 
     public AiStorage([NotNull] DocumentsStorage documentsStorage)
     {
         _documentsStorage = documentsStorage ?? throw new ArgumentNullException(nameof(documentsStorage));
 #pragma warning disable SKEXP0001
-        Services = new Dictionary<string, ITextEmbeddingGenerationService>();
+        _servicesByConnectionStringName = new Dictionary<string, ITextEmbeddingGenerationService>();
+        _servicesByTaskName = new Dictionary<string, ITextEmbeddingGenerationService>();
 #pragma warning restore SKEXP0001
+    }
+
+#pragma warning disable SKEXP0001
+    public bool TryGetServiceByTaskName(string taskName, out ITextEmbeddingGenerationService service)
+#pragma warning restore SKEXP0001
+    {
+        return _servicesByTaskName.TryGetValue(taskName, out service);
     }
 
     public Document GetDocumentEmbeddings(DocumentsOperationContext context, string sourceDocumentId, out string documentEmbeddingsId)
@@ -146,11 +159,7 @@ public class AiStorage
             };
         }
     }
-
-#pragma warning disable SKEXP0001
-    public Dictionary<string, ITextEmbeddingGenerationService> Services;
-#pragma warning restore SKEXP0001
-
+    
     public void HandleDatabaseRecordChange(DatabaseRecord record)
     {
         if (record == null)
@@ -161,7 +170,7 @@ public class AiStorage
             var connectionStringName = connectionStringKvp.Key;
             var connectionString = connectionStringKvp.Value;
             
-            if (Services.ContainsKey(connectionStringName))
+            if (_servicesByConnectionStringName.ContainsKey(connectionStringName))
                 continue;
             
             var kernelBuilder = Kernel.CreateBuilder();
@@ -171,7 +180,17 @@ public class AiStorage
             var service = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
 #pragma warning restore SKEXP0001
             
-            Services.Add(connectionStringName, service);
+            _servicesByConnectionStringName[connectionStringName] = service;
+        }
+
+        foreach (var aiIntegrationConfiguration in record.AiIntegrations)
+        {
+            var aiIntegrationName = aiIntegrationConfiguration.Name;
+            var connectionStringName = aiIntegrationConfiguration.ConnectionStringName;
+
+            var service = _servicesByConnectionStringName[connectionStringName];
+
+            _servicesByTaskName[aiIntegrationName] = service;
         }
     }
 }

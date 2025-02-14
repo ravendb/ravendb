@@ -653,30 +653,37 @@ public static class CoraxQueryBuilder
             PortableExceptions.Throw<InvalidDataException>($"Cannot find `{fieldName}` field in the index.");
 
         VectorValue transformedEmbedding;
-        if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Text)
+        
+        var aiIntegrationTaskName = vectorOptions.AiIntegrationTaskName;
+
+        if (aiIntegrationTaskName != null)
         {
             var valueAsString = valueType switch
             {
                 ValueTokenType.String => value.ToString(),
                 _ => throw new NotSupportedException("Vector.Search() on " + valueType)
             };
-
-            var aiIntegrationTaskName = vectorOptions.AiIntegrationTaskName;
-
-            if (aiIntegrationTaskName != null)
+            
+            using (builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                if (TryGetEmbeddingFromCache(context, valueAsString, aiIntegrationTaskName, out transformedEmbedding) == false)
                 {
-                    if (TryGetEmbeddingFromCache(context, valueAsString, aiIntegrationTaskName, out transformedEmbedding) == false)
-                    {
-                        if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.Services.TryGetValue(aiIntegrationTaskName, out var service) == false)
-                            throw new ArgumentException($"Couldn't find {aiIntegrationTaskName} AI task.");
-                        transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size);
-                    } 
-                }
+                    if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.TryGetServiceByTaskName(aiIntegrationTaskName, out var service) == false)
+                        throw new ArgumentException($"Couldn't find {aiIntegrationTaskName} AI task.");
+                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size);
+                } 
             }
-            else
-                transformedEmbedding = GenerateEmbeddings.FromText(builderParameters.Allocator, vectorOptions, valueAsString);
+        }
+        
+        else if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Text)
+        {
+            var valueAsString = valueType switch
+            {
+                ValueTokenType.String => value.ToString(),
+                _ => throw new NotSupportedException("Vector.Search() on " + valueType)
+            };
+            
+            transformedEmbedding = GenerateEmbeddings.FromText(builderParameters.Allocator, vectorOptions, valueAsString);
         }
         else if (value is string s)
         {

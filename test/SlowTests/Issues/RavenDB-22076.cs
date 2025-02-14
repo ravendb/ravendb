@@ -446,6 +446,7 @@ public class RavenDB_22076 : RavenTestBase
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestEmbeddingsGenerationForQuerying(Options options)
     {
+        const string aiTaskName = "AiTaskName";
         const string connectionStringName = "ConnectionStringName";
         const string queriedText = "fruit";
         
@@ -464,11 +465,11 @@ public class RavenDB_22076 : RavenTestBase
             
             var configuration = new AiIntegrationConfiguration()
             {
-                Name = "someETLConfigurationName",
+                Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 EmbeddingsPaths = ["TextualValue"],
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
+                Collection = "Dtos"
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -481,12 +482,10 @@ public class RavenDB_22076 : RavenTestBase
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, connectionStringName), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, aiTaskName), factory => factory.ByText(queriedText)).ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
-                
-                result = session.Query<Dto>().VectorSearch(x => x.WithField(d => d.TextualValue), factory => factory.ByText(queriedText)).ToList();
             }
         }
     }
@@ -495,6 +494,7 @@ public class RavenDB_22076 : RavenTestBase
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestFetchingEmbeddingFromCache(Options options)
     {
+        const string aiTaskName = "AiTaskName";
         const string connectionStringName = "ConnectionStringName";
         const string queriedText = "fruit";
         
@@ -513,12 +513,11 @@ public class RavenDB_22076 : RavenTestBase
             
             var configuration = new AiIntegrationConfiguration()
             {
-                Name = "someETLConfigurationName",
+                Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 EmbeddingsPaths = ["TextualValue"],
-                Collection = "Dtos",
-                Transforms = [new Transformation { Collections = ["Dtos"], Name = "CoolName", Script = "" }]
+                Collection = "Dtos"
             };
 
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
@@ -531,10 +530,61 @@ public class RavenDB_22076 : RavenTestBase
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, connectionStringName), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, aiTaskName), factory => factory.ByText(queriedText)).ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestEmbeddingGenerationWhenQueryingStaticIndex(Options options)
+    {
+        const string aiTaskName = "AiTaskName";
+        const string connectionStringName = "ConnectionStringName";
+        const string queriedText = "fruit";
+        
+        using (var store = GetDocumentStore(options))
+        {
+            var dto1 = new Dto() { TextualValue = "apple" };
+            var dto2 = new Dto() { TextualValue = "computer" };
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto1);
+                session.Store(dto2);
+
+                session.SaveChanges();
+            }
+            
+            var configuration = new AiIntegrationConfiguration()
+            {
+                Name = aiTaskName,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                EmbeddingsPaths = ["TextualValue"],
+                Collection = "Dtos"
+            };
+            
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+
+            var index = new SomeIndex(aiTaskName);
+            index.Execute(store);
+            Indexes.WaitForIndexing(store);
+            
+            using (var session = store.OpenSession())
+            {
+                var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText)).ToList();
+                
+                Assert.Single(result);
             }
         }
     }
@@ -652,6 +702,27 @@ public class RavenDB_22076 : RavenTestBase
             };
 
             Fields = new Dictionary<string, IndexFieldOptions>() { {"Sbytes", new IndexFieldOptions(){Vector = new(){Dimensions = 22, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Int8}}}};
+        }
+    }
+
+    private class SomeIndex : AbstractIndexCreationTask<Dto>
+    {
+        public class IndexEntry
+        {
+            public object TextualValueVector { get; set; }
+        }
+
+        public SomeIndex()
+        {
+            
+        }
+        
+        public SomeIndex(string aiTaskName)
+        {
+            Map = dtos => from dto in dtos
+                select new IndexEntry { TextualValueVector = LoadVector("TextualValue") };
+            
+            Vector("TextualValueVector", factory => factory.AiIntegrationTaskName(aiTaskName));
         }
     }
 }

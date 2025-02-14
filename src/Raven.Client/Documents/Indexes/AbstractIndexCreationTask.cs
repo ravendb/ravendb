@@ -241,8 +241,7 @@ namespace Raven.Client.Documents.Indexes
         /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{float}})"/>
         public object CreateVector(IEnumerable<string> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
-        public object LoadVector(string name) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-
+        public object LoadVector(string path) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions

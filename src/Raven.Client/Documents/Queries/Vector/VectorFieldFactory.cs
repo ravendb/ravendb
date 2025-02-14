@@ -16,13 +16,12 @@ public interface IVectorFieldFactory<T>
     /// Defines the text field that vector search will be performed on.
     /// </summary>
     /// <param name="fieldName">Name of the document field containing text data.</param>
-    /// <param name="etlConfigName"></param>
-    public IVectorEmbeddingTextField WithText(string fieldName, string etlConfigName = null);
+    /// <param name="aiTaskName">Name of the AI task that will be used to generate embedding for queried text.</param>
+    public IVectorEmbeddingTextField WithText(string fieldName, string aiTaskName = null);
     
     /// <inheritdoc cref="WithText(string,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
     /// <param name="propertySelector">Path to the document field containing text data.</param>
-    /// /// <param name="etlConfigName"></param>
-    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector, string etlConfigName = null);
+    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector, string aiTaskName = null);
     
     /// <summary>
     /// Defines the embedding field that vector search will be performed on.

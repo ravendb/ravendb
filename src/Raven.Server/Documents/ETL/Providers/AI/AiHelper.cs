@@ -50,9 +50,9 @@ public static class AiHelper
         return $"{etlTaskName}_{path}_";
     }
     
-    public static string GetValueEmbeddingsDocumentId(string connectionString, string hash)
+    public static string GetValueEmbeddingsDocumentId(string connectionStringName, string hash)
     {
-        return $"embeddings/{connectionString}/{hash}";
+        return $"embeddings/{connectionStringName}/{hash}";
     }
     
 #pragma warning disable SKEXP0001
@@ -63,9 +63,6 @@ public static class AiHelper
 
         // todo enqueue embedding to be cached in background
         
-        
-
-        // return embedding
         
         var memoryScope = allocator.Allocate(dimensions, out Memory<byte> memory);
             
