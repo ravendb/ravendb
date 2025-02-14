@@ -13,10 +13,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var loadDocument = node.Expression.ToString();
-            
-            if (loadDocument is "this.CreateVector" or "CreateVector")
-                CreateReferencedCollections();
-            
+
             if (loadDocument != "this.LoadDocument" && loadDocument != "LoadDocument")
                 return base.VisitInvocationExpression(node);
 
@@ -32,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return base.VisitInvocationExpression(node);
         }
         
-        private void CreateReferencedCollections()
+        public void CreateReferencedCollections()
         {
             ReferencedCollections ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }

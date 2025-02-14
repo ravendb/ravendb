@@ -559,6 +559,6 @@ public partial class AbstractStaticIndexBase
         var id = (string)scope.Source.GetId().ToString();
         embeddingDocument = AiHelper.GetDocumentEmbeddingsId(id);
         var collectionName = AiHelper.GetDocumentEmbeddingsCollectionName(scope.SourceCollection);
-        return LoadDocument(embeddingDocument, collectionName);
+        return LoadDocument(embeddingDocument, collectionName.ToLowerInvariant());
     }
 }

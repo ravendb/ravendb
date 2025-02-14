@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 _selectManyRewriter,
                 SelectManyRewriter.SelectMethodOnProperties,
                 SpatialFieldRewriter.Instance,
-                new VectorFieldRewriter(), //todo
+                //new VectorFieldRewriter(), //todo we don't know which collection we should load here
                 ConditionalAccessExpressionRewriter.Instance,               
                 CoalesceRewriter.Instance,
                 InitializerExpressionRewriter.Instance,

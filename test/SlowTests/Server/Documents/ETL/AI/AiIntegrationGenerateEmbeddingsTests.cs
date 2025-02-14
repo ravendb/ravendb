@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,97 +13,10 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Server.Documents.ETL.AI;
 
-public class RavenDB_23556 : RavenTestBase
+public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : AiIntegrationTestBase(output)
 {
-    public RavenDB_23556(ITestOutputHelper output) : base(output)
-    {
-    }
-
-    private const string DefaultConnectionStringName = "Local AI connection";
-    private const string DefaultAiIntegrationTaskName = "localAiTask";
-
-    private static (AiIntegrationConfiguration EtlConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
-        IDocumentStore store,
-        EtlTestBase etl,
-        string aiIntegrationName = DefaultAiIntegrationTaskName,
-        string connectionStringName = DefaultConnectionStringName,
-        List<string> embeddingsPaths = null,
-        string script = null,
-        string collectionName = null)
-    {
-        var configuration = new AiIntegrationConfiguration()
-        {
-            Name = aiIntegrationName,
-            ConnectionStringName = connectionStringName,
-            EmbeddingsPaths = embeddingsPaths ?? (string.IsNullOrEmpty(script) ? ["Name"] : null),
-            Collection = collectionName ?? "Dtos",
-            EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new AiEmbeddingsTransformation()
-            {
-                Script = script
-            }
-            : null,
-        };
-
-        var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
-        etl.AddEtl(store, configuration, connectionString);
-
-        return (configuration, connectionString);
-    }
-
-    private void AssertEmbeddingsForPath(
-        IDocumentStore store,
-        AiIntegrationConfiguration integrationConfiguration,
-        string path,
-        string[] inputValues,
-        string docId)
-    {
-        using var session = store.OpenSession();
-        session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
-
-        var source = session.Load<Dto>(docId);
-        Assert.NotNull(source);
-
-        foreach (var inputValue in inputValues)
-        {
-            //Assert if value is in embedding cache
-            var hashOfInput = AiHelper.CalculateValueHash(inputValue);
-            var embeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(integrationConfiguration.NormalizedConnectionName, hashOfInput);
-            var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
-            Assert.NotNull(embeddingCacheDocument);
-
-            //Assert if current key is properly persisted with an embedding 
-            var sourceAttachmentName = embeddingCacheDocument[inputValue]?.ToString();
-            Assert.NotNull(sourceAttachmentName); // Checks if current embedding cache has the embedding
-            var attachmentsExistsInEmbeddingCache = session.Advanced.Attachments.Exists(embeddingsDocumentId, sourceAttachmentName);
-            Assert.True(attachmentsExistsInEmbeddingCache);
-
-            //Assert if embeddings document exists
-            var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(docId);
-            var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;
-            Assert.NotNull(documentEmbeddings);
-
-            // Assert if contains current ETL result
-            var currentEtlObject = documentEmbeddings[integrationConfiguration.Name];
-            Assert.NotNull(currentEtlObject);
-
-            // Assert if ETL result contains current path
-            var currentPathObject = currentEtlObject[path] as JArray;
-            Assert.NotNull(currentPathObject);
-
-            // Assert if current path contain embedding of current input value
-            var expectedAttachmentNameInEmbeddingsDocument = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationConfiguration.Name, path) + sourceAttachmentName;
-            var attachmentsByEtlPath = currentPathObject.Select(att => att.ToString()).ToList();
-            Assert.Equal(inputValues.Length, attachmentsByEtlPath.Count); // <- this checks if we've all embeddings
-            Assert.Contains(expectedAttachmentNameInEmbeddingsDocument, attachmentsByEtlPath);
-
-            // Assert if the referenced document exists
-            var attachmentExistsInEmbeddingsDocument = session.Advanced.Attachments.Exists(documentEmbeddingsId, expectedAttachmentNameInEmbeddingsDocument);
-            Assert.True(attachmentExistsInEmbeddingsDocument);
-        }
-    }
-
     [RavenFact(RavenTestCategory.Etl)]
     public void CanSingleDocumentHasTwoEmbeddings()
     {
@@ -554,7 +467,7 @@ public class RavenDB_23556 : RavenTestBase
     public void TestTransformation()
     {
         const string connectionStringName = "connection string name";
-        
+        const string aiIntegrationName = "local-Onnx-AI";
         var dto = new Dto { Name = "Name1" };
 
         using (var store = GetDocumentStore())
@@ -567,7 +480,7 @@ public class RavenDB_23556 : RavenTestBase
             
             var configuration = new AiIntegrationConfiguration()
             {
-                Name = "local-Onnx-AI",
+                Name = aiIntegrationName,
                 ConnectionStringName = connectionStringName,
                 Collection = "Dtos",
                 EmbeddingsTransformation = new AiEmbeddingsTransformation
@@ -625,22 +538,22 @@ embeddings.generate(
                 var attachmentNamesForFooProperty = attachmentNamesForFooPropertyJArray.ToObject<string[]>();
                 
                 Assert.Single(attachmentNamesForFooProperty);
-                Assert.Equal(expectedFooAttachmentName, attachmentNamesForFooProperty[0]);
+                Assert.Equal(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationName, "Foo") + expectedFooAttachmentName, attachmentNamesForFooProperty[0]);
                 
                 
                 var attachmentNamesForBarPropertyJArray = (JArray)configurationValues.Bar;
                 var attachmentNamesForBarProperty = attachmentNamesForBarPropertyJArray.ToObject<string[]>();
                 
                 Assert.Single(attachmentNamesForBarProperty);
-                Assert.Equal(expectedBarAttachmentName, attachmentNamesForBarProperty[0]);
+                Assert.Equal(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationName, "Bar") + expectedBarAttachmentName, attachmentNamesForBarProperty[0]);
 
                 attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
                 var attachmentNamesStringList = attachmentNames.Select(x => x.Name).ToList();
                 
                 Assert.Equal(2, attachmentNames.Length);
                 Assert.NotEqual(expectedFooAttachmentName, expectedBarAttachmentName);
-                Assert.Contains(expectedFooAttachmentName, attachmentNamesStringList);
-                Assert.Contains(expectedBarAttachmentName, attachmentNamesStringList);
+                Assert.Contains(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationName, "Foo") + expectedFooAttachmentName, attachmentNamesStringList);
+                Assert.Contains(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationName, "Bar") + expectedBarAttachmentName, attachmentNamesStringList);
             }
         }
     }

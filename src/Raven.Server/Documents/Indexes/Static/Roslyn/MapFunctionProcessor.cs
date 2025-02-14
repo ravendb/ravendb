@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             CollectionRetriever = collectionRetriever;
             _refCollectionsRetriever = new ReferencedCollectionsRetriever();
             _compareExchangeReferenceDetector = new CompareExchangeReferenceDetectorRewriter();
-            _vectorFieldRewriter = new VectorFieldRewriter();
+            _vectorFieldRewriter = new VectorFieldRewriter(_refCollectionsRetriever ,CollectionRetriever as CollectionNameRetriever);
         }
 
         public HashSet<string> ReferencedCollections => _refCollectionsRetriever.ReferencedCollections;
@@ -44,13 +44,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 DynamicLambdaExpressionsRewriter.Instance,
                 RecurseRewriter.Instance,
                 SpatialFieldRewriter.Instance,
-                _vectorFieldRewriter,
                 ConditionalAccessExpressionRewriter.Instance,
                 CoalesceRewriter.Instance,
                 InitializerExpressionRewriter.Instance,
                 NullRewriter.Instance,
                 IsRewriter.Instance,
-                NoTrackingRewriter.Instance
+                NoTrackingRewriter.Instance,
+                _vectorFieldRewriter,
             })
             {
                 node = rewriter.Visit(node);
