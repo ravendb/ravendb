@@ -135,7 +135,7 @@ export const CompactDatabaseAuto: StoryFn<typeof DatabasesPage> = () => {
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
-    return <DatabasesPage compact={value.name} />;
+    return <DatabasesPage queryParams={{ compact: value.name }} />;
 };
 
 function assignNodeType(tag: string): databaseGroupNodeType {

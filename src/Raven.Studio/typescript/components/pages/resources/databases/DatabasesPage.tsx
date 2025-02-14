@@ -23,17 +23,12 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import CreateDatabase, { CreateDatabaseMode } from "./partials/create/CreateDatabase";
 
 interface DatabasesPageProps {
-    activeDatabase?: string;
-    toggleSelectAll?: () => void;
-}
-
-interface DatabasesPageProps {
     compact?: string;
     shard?: number;
     restore?: boolean;
 }
 
-export function DatabasesPage(props: DatabasesPageProps) {
+export function DatabasesPage(props: ReactProps<any, DatabasesPageProps>) {
     const databases = useAppSelector(databaseSelectors.allDatabases);
     const nodeTags = useAppSelector(clusterSelectors.allNodeTags);
     const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
@@ -90,13 +85,13 @@ export function DatabasesPage(props: DatabasesPageProps) {
     }, []);
 
     useEffect(() => {
-        if (props.compact) {
-            const toCompact = databases.find((x) => x.name === props.compact);
+        if (props?.queryParams?.compact) {
+            const toCompact = databases.find((x) => x.name === props?.queryParams?.compact);
             if (toCompact) {
-                dispatch(compactDatabase(toCompact, props.shard));
+                dispatch(compactDatabase(toCompact, props?.queryParams?.shard));
             }
         }
-        if (props.restore) {
+        if (props?.queryParams?.restore) {
             setCreateDatabaseMode("fromBackup");
         }
 
@@ -105,7 +100,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
             trigger: false,
             replace: true,
         });
-    }, [props.compact, props.restore, databases, dispatch, props.shard]);
+    }, [props?.queryParams?.compact, props?.queryParams?.restore, databases, dispatch, props?.queryParams?.shard]);
 
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 

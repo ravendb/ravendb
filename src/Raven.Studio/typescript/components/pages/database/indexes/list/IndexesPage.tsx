@@ -42,9 +42,7 @@ interface IndexesPageProps {
     isImportOpen?: boolean;
 }
 
-export function IndexesPage(props: IndexesPageProps) {
-    const { stale, indexName: indexToHighlight, isImportOpen = false } = props;
-
+export function IndexesPage(props: ReactProps<any, IndexesPageProps>) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const { reportEvent } = useEventsCollector();
@@ -85,7 +83,7 @@ export function IndexesPage(props: IndexesPageProps) {
         globalIndexingStatus,
         isImportIndexModalOpen,
         toggleIsImportIndexModalOpen,
-    } = useIndexesPage(stale, isImportOpen);
+    } = useIndexesPage(props?.queryParams?.stale, props?.queryParams?.isImportOpen);
 
     const deleteSelectedIndexes = () => {
         reportEvent("indexes", "delete-selected");
@@ -142,7 +140,7 @@ export function IndexesPage(props: IndexesPageProps) {
     const indexesPageListCommonProps: Omit<IndexesPageListProps, "indexes"> = {
         replacements,
         selectedIndexes,
-        indexToHighlight,
+        indexToHighlight: props?.queryParams?.indexName,
         globalIndexingStatus,
         resetIndexData,
         swapSideBySideData,
