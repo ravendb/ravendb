@@ -70,7 +70,7 @@ public sealed class UpdateAiIntegrationCommand : UpdateEtlCommand<AiIntegrationC
         }
         catch (Exception e)
         {
-            throw new RachisApplyException("Failed to validate AI ETL configuration", e);
+            throw new RachisApplyException("Failed to validate AI Integration configuration", e);
         }
     }
 }

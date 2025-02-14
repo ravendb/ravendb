@@ -9,7 +9,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL.AI;
+namespace SlowTests.Server.Documents.AI;
 
 public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrationTestBase(output)
 {
@@ -204,7 +204,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
-        
+
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, IndexByFieldTwoFields>().Count(x => x.Vector2 == null);
@@ -212,7 +212,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
             nullElements = session.Query<Dto, IndexByFieldTwoFields>().Count(x => x.Vector == null);
             Assert.Equal(0, nullElements);
-            
+
             var byVector = session.Query<Dto, IndexByFieldTwoFields>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByEmbedding(embeddingAsArrayV1))
@@ -254,22 +254,22 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         public IndexByName()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("Name") };
+                          select new { Vector = LoadVector("Name") };
 
             Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName(DefaultAiIntegrationTaskName));
-            SearchEngineType = global::Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
-    
+
     private class IndexByNames : AbstractIndexCreationTask<Dto>
     {
         public IndexByNames()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("Names") };
+                          select new { Vector = LoadVector("Names") };
 
             Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName(DefaultAiIntegrationTaskName));
-            SearchEngineType = global::Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
 
@@ -279,11 +279,11 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         public IndexByFieldTwoFields()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("Name"), Vector2 = LoadVector("Names") };
+                          select new { Vector = LoadVector("Name"), Vector2 = LoadVector("Names") };
 
             Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName("V1"));
             Vector(nameof(Dto.Vector2), factory => factory.AiIntegrationTaskName("V2"));
-            SearchEngineType = global::Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
 

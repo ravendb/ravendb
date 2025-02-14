@@ -57,15 +57,15 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
                 using (SetSkipValueIfShardedDbOnX86(databaseMode, ref skipMessageCopy))
                 using (SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting, skipMessageCopy))
                 {
-                    var aiEtlConfiguration = aiConnectionStringForTesting.GetEtlConfiguration();
+                    var aiIntegrationConfiguration = aiConnectionStringForTesting.GetEtlConfiguration();
 
                     if (Data == null || Data.Length == 0)
                     {
-                        yield return [options, aiEtlConfiguration];
+                        yield return [options, aiIntegrationConfiguration];
                         continue;
                     }
 
-                    yield return new object[] { options, aiEtlConfiguration }.Concat(Data).ToArray();
+                    yield return new object[] { options, aiIntegrationConfiguration }.Concat(Data).ToArray();
                 }
             }
         }

@@ -17,11 +17,11 @@ using Xunit;
 using Xunit.Abstractions;
 #pragma warning disable SKEXP0001
 
-namespace SlowTests.Server.Documents.ETL.AI;
+namespace SlowTests.Server.Documents.AI;
 
-public class AiIntegrationTests : RavenTestBase
+public class AiIntegrationTaskTests : RavenTestBase
 {
-    public AiIntegrationTests(ITestOutputHelper output) : base(output)
+    public AiIntegrationTaskTests(ITestOutputHelper output) : base(output)
     {
     }
 
@@ -50,19 +50,13 @@ public class AiIntegrationTests : RavenTestBase
             var putConnectionStringResult = store.Maintenance.Send(operation);
             Assert.NotNull(putConnectionStringResult.RaftCommandIndex);
 
-            var transformation = new Transformation
-            {
-                Name = "TransformationForTestingPurposes",
-                Script = "loadToWhatever(){}",
-                Collections = ["Orders"]
-            };
 
-            var aiEtlConfiguration = new AiIntegrationConfiguration
+            var aiTaskConfiguration = new AiIntegrationConfiguration
             {
-                Name = "EtlForTestingPurposes",
+                Name = "AiIntegrationTaskForTestingPurposes",
                 ConnectionStringName = "ConnectionStringForTestingPurposes",
                 EmbeddingsPaths = ["Lines"],
-                Transforms = [transformation],
+                Collection = "Orders"
             };
 
             var database = await GetDatabase(store.Database);
@@ -71,10 +65,10 @@ public class AiIntegrationTests : RavenTestBase
                 var testScript = new TestAiIntegrationScript
                 {
                     DocumentId = "orders/1-A",
-                    Configuration = aiEtlConfiguration
+                    Configuration = aiTaskConfiguration
                 };
 
-                var testResult = AiIntegration.TestScript(testScript, database, database.ServerStore, context);
+                var testResult = AiIntegrationTask.TestScript(testScript, database, database.ServerStore, context);
                 Assert.NotNull(testResult);
             }
         }

@@ -240,7 +240,7 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
                 break;
             
             default:
-                throw new NotSupportedException(valueType + " is not a supported type for AI ETL");
+                throw new NotSupportedException(valueType + " is not a supported type for AI Integration");
         }
     }
     

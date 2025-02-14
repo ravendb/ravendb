@@ -13,7 +13,7 @@ internal sealed class ShardedAiIntegrationHandlerProcessorForPostScriptTest : Ab
 {
     public ShardedAiIntegrationHandlerProcessorForPostScriptTest([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-        throw new NotSupportedInShardingException("AI ETLs are currently not supported in sharding");
+        throw new NotSupportedInShardingException("AI Integrations are currently not supported in sharding");
     }
 
     protected override TestAiIntegrationScript GetTestEtlScript(BlittableJsonReaderObject json) => JsonDeserializationServer.TestAiIntegrationScript(json);

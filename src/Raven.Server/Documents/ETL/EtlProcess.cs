@@ -1430,7 +1430,7 @@ namespace Raven.Server.Documents.ETL
                     }
                     
                 case EtlType.Ai:
-                    using (var aiEtl = new AiIntegration(testScript.Configuration.Transforms[0], testScript.Configuration as AiIntegrationConfiguration, database, database.ServerStore))
+                    using (var aiEtl = new AiIntegrationTask(testScript.Configuration.Transforms[0], testScript.Configuration as AiIntegrationConfiguration, database, database.ServerStore))
                     using (aiEtl.EnterTestMode(out debugOutput))
                     {
                         aiEtl.EnsureThreadAllocationStats();

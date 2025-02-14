@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.ETL
                     if (snowflakeConfig != null)
                         process = new SnowflakeEtl(transform, snowflakeConfig, _database, _serverStore);
                     if (aiConfig != null)
-                        process = new AiIntegration(transform, aiConfig, _database, _serverStore);
+                        process = new AiIntegrationTask(transform, aiConfig, _database, _serverStore);
                     yield return process;
                 }
             }
@@ -806,7 +806,7 @@ namespace Raven.Server.Documents.ETL
                         
                         break;
                     }
-                    case AiIntegration aiEtl:
+                    case AiIntegrationTask aiEtl:
                     {
                         AiIntegrationConfiguration existing = null;
 

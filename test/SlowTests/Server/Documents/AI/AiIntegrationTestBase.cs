@@ -13,20 +13,20 @@ using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL.AI;
+namespace SlowTests.Server.Documents.AI;
 
 public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTestBase(output)
 {
     protected const string DefaultConnectionStringName = "Local AI connection";
     protected const string DefaultAiIntegrationTaskName = "localAiTask";
     protected ByteStringContext _allocator;
-    
+
     protected float[] GenerateEmbeddingForTextViaOnnx(string text)
     {
         _allocator ??= new(SharedMultipleUseFlag.None);
         return MemoryMarshal.Cast<byte, float>(GenerateEmbeddings.FromText(_allocator, VectorOptions.DefaultText, text).GetEmbedding()).ToArray();
     }
-    
+
     protected static (AiIntegrationConfiguration EtlConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
         IDocumentStore store,
         EtlTestBase etl,

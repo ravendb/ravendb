@@ -1247,7 +1247,7 @@ namespace Raven.Server.Commercial
 
             if (aiEtlCount > 0 && newLicenseStatus.HasAiIntegration == false)
             {
-                var message = GenerateDetails(aiEtlCount, "AI ETL");
+                var message = GenerateDetails(aiEtlCount, "AI Integration");
                 throw GenerateLicenseLimit(LimitType.AiIntegration, message);
             }
 

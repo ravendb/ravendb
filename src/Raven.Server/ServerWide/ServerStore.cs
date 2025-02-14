@@ -2661,7 +2661,7 @@ namespace Raven.Server.ServerWide
 
                         var aiEtls = rawRecord.AiIntegrations;
 
-                        // Don't delete the connection string if used by tasks types: AI ETL
+                        // Don't delete the connection string if used by tasks types: AI Integration
                         if (aiEtls != null)
                         {
                             foreach (var aiEtlTask in aiEtls)

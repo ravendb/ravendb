@@ -30,7 +30,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
-public sealed class AiIntegration : EtlProcess<AiIntegrationItem, AiIntegrationEmbeddingItem, AiIntegrationConfiguration, AiConnectionString, AiIntegrationStatsScope, AiIntegrationPerformanceOperation>
+public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrationEmbeddingItem, AiIntegrationConfiguration, AiConnectionString, AiIntegrationStatsScope, AiIntegrationPerformanceOperation>
 {
     private ITextEmbeddingGenerationService _service;
 
@@ -38,7 +38,7 @@ public sealed class AiIntegration : EtlProcess<AiIntegrationItem, AiIntegrationE
 
     public const string AiTaskTag = "AI Integration";
 
-    public AiIntegration(Transformation transformation, AiIntegrationConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+    public AiIntegrationTask(Transformation transformation, AiIntegrationConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, AiTaskTag)
     {
         Metrics = new EtlMetricsCountersManager();
