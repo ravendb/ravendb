@@ -16,18 +16,18 @@ export default function IndexErrorsAboutView() {
                     data is corrupted or missing. When the error rate exceeds a certain threshold, the index state is
                     marked as <i>Error</i>, and queries cannot be made to it.
                 </p>
-                <p>This view lists the current index errors for all indexes across all cluster nodes.</p>
+                <p>This view lists the current index errors for all indexes across all cluster nodes:</p>
                 <ul>
                     <li>
-                        <strong>Filter viewed indexes:</strong>
+                        <strong>Filter viewed indexes</strong>
                         <br />
                         You can filter the list of viewed indexes by specific indexes or by action.
                         <br />
-                        The action refers to the part of the indexing process where the error occurred, such as map,
-                        reduce, or analyzer.
+                        The action refers to the part of the indexing process where the error occurred, such as{" "}
+                        <i>map</i>,<i>reduce</i>, or <i>analyzer</i>.
                     </li>
                     <li className="mt-1">
-                        <strong>Clear errors:</strong>
+                        <strong>Clear errors</strong>
                         <br />
                         You can clear errors for selected indexes.
                         <br />
