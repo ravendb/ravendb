@@ -2484,15 +2484,20 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public (int ActualSize, int AllocatedSize, bool IsCompressed)? GetRevisionMetrics(DocumentsOperationContext context, string changeVector)
+        public bool GetRevisionMetrics(DocumentsOperationContext context, string changeVector,out (int ActualSize, int AllocatedSize, bool IsCompressed) metrics)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
 
             using (Slice.From(context.Allocator, changeVector, out var cv))
             {
                 if (table.ReadByKey(cv, out TableValueReader tvr) == false)
-                    return null;
-                return GetMetrics(table, tvr);
+                {
+                    metrics = default;
+                    return false;
+                }
+
+                metrics = GetMetrics(table, tvr);
+                return true;
             }
         }
 

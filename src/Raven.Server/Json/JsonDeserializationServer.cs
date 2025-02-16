@@ -244,8 +244,6 @@ namespace Raven.Server.Json
 
             public static readonly Func<BlittableJsonReaderObject, ReorderDatabaseMembersOperation.Parameters> MembersOrder = GenerateJsonDeserializationRoutine<ReorderDatabaseMembersOperation.Parameters>();
 
-            public static readonly Func<BlittableJsonReaderObject, RevisionsHandler.GetRevisionsSizeParameters> GetRevisionsSizeParameters = GenerateJsonDeserializationRoutine<RevisionsHandler.GetRevisionsSizeParameters>();
-
             public static readonly Func<BlittableJsonReaderObject, ToggleDatabasesStateOperation.Parameters> DisableDatabaseToggleParameters = GenerateJsonDeserializationRoutine<ToggleDatabasesStateOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, SetIndexesLockOperation.Parameters> SetIndexLockParameters = GenerateJsonDeserializationRoutine<SetIndexesLockOperation.Parameters>();
