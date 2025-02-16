@@ -107,17 +107,18 @@ function IndexErrorsModalBody({ selectedErrors }: IndexErrorsModalBodyProps) {
             {selectedErrors.length === 0 ? (
                 <>
                     <span>
-                        Errors will be cleared for <strong>ALL</strong> indexes.{" "}
+                        Errors will be cleared for <strong>ALL</strong> indexes. <br />
                     </span>
                     {selectedErrors.length === 0 && (
                         <span>
-                            If you want to clear errors for <b>specific indexes</b>, select them in dropdown.
+                            To clear errors for <b>specific indexes</b>, select them in the dropdown.
                         </span>
                     )}
                 </>
             ) : (
                 <>
-                    You&#39;re clearing errors for <b>{selectedErrors.length}</b> indexes:
+                    You&#39;re clearing errors for <b>{selectedErrors.length}</b>{" "}
+                    {selectedErrors.length === 1 ? "index" : "indexes"}:
                     <ul>
                         {selectedErrors.map((error) => (
                             <li title={error} className="text-truncate">
@@ -128,8 +129,8 @@ function IndexErrorsModalBody({ selectedErrors }: IndexErrorsModalBodyProps) {
                 </>
             )}
             <RichAlert variant="info" className="mt-3">
-                While the current indexing errors will be cleared, an index with an <b>Error state</b> will not be set
-                back to <b>Normal</b> state.
+                While the current indexing errors will be cleared, an index in an <b>Error state</b> will not be set
+                back to the <b>Normal</b> state.
             </RichAlert>
         </div>
     );

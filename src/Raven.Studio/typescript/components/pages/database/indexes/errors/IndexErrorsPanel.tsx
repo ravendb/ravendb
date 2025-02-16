@@ -114,7 +114,12 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                     </RichPanelInfo>
                     {!isLoading && hasErrors && hasDatabaseWriteAccess && (
                         <RichPanelActions>
-                            <Button disabled={isLoading} color="warning" onClick={handleClearErrors}>
+                            <Button
+                                disabled={isLoading}
+                                color="warning"
+                                onClick={handleClearErrors}
+                                title="Click to clear errors from the selected indexes"
+                            >
                                 <Icon icon="trash" />
                                 Clear errors
                             </Button>

@@ -12,14 +12,29 @@ export default function IndexErrorsAboutView() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    Maintaining multiple indexes can lower performance. Every time data is inserted, updated, or
-                    deleted, the corresponding indexes need to be updated as well, which can lead to increased write
-                    latency.
+                    An indexing error can occur during indexing if the indexing function is malformed or if the document
+                    data is corrupted or missing. When the error rate exceeds a certain threshold, the index state is
+                    marked as <i>Error</i>, and queries cannot be made to it.
                 </p>
-                <p className="mb-0">
-                    To counter these performance issues, RavenDB recommends a set of actions to optimize the number of
-                    indexes. Note that you need to update the index reference in your application.
-                </p>
+                <p>This view lists the current index errors for all indexes across all cluster nodes.</p>
+                <ul>
+                    <li>
+                        <strong>Filter viewed indexes:</strong>
+                        <br />
+                        You can filter the list of viewed indexes by specific indexes or by action.
+                        <br />
+                        The action refers to the part of the indexing process where the error occurred, such as map,
+                        reduce, or analyzer.
+                    </li>
+                    <li className="mt-1">
+                        <strong>Clear errors:</strong>
+                        <br />
+                        You can clear errors for selected indexes.
+                        <br />
+                        Note that clearing errors only removes the errors; the index state will not change. It will
+                        remain in an <b>Error</b> state and will not be set back to the <b>Normal</b> state.
+                    </li>
+                </ul>
             </AccordionItemWrapper>
         </AboutViewAnchored>
     );

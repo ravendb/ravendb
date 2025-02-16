@@ -24,22 +24,26 @@ export default function IndexErrorsActions({
 }: FilterIndexErrorProps) {
     return (
         <div className="hstack flex-wrap align-items-end gap-2 mb-3 justify-content-end">
-            <SelectIndexErrorsDropdown
-                indexesList={erroredIndexNames}
-                isLoading={isLoading}
-                filters={filters}
-                setFilters={setFilters}
-                dropdownTypeLabelText="indexes"
-                dropdownType="IndexName"
-            />
-            <SelectIndexErrorsDropdown
-                indexesList={erroredActionNames}
-                isLoading={isLoading}
-                filters={filters}
-                setFilters={setFilters}
-                dropdownTypeLabelText="actions"
-                dropdownType="Action"
-            />
+            <div title="Select indexes to view">
+                <SelectIndexErrorsDropdown
+                    indexesList={erroredIndexNames}
+                    isLoading={isLoading}
+                    filters={filters}
+                    setFilters={setFilters}
+                    dropdownTypeLabelText="indexes"
+                    dropdownType="IndexName"
+                />
+            </div>
+            <div title="Select indexes to view by action">
+                <SelectIndexErrorsDropdown
+                    indexesList={erroredActionNames}
+                    isLoading={isLoading}
+                    filters={filters}
+                    setFilters={setFilters}
+                    dropdownTypeLabelText="actions"
+                    dropdownType="Action"
+                />
+            </div>
             <ButtonWithSpinner onClick={refresh} icon="refresh" isSpinning={isLoading} color="primary">
                 Refresh
             </ButtonWithSpinner>
