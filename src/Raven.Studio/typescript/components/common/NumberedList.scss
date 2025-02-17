@@ -1,0 +1,43 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.numbered-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0 !important;
+    position: relative;
+
+    &::before {
+        content: "";
+        position: absolute;
+        left: sizes.$gutter-xs;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background-color: colors.$border-color-light-var;
+    }
+}
+
+.numbered-list-item {
+    position: relative;
+    margin-bottom: sizes.$gutter-sm;
+    padding-left: sizes.$gutter-md;
+
+    &:last-of-type {
+        margin-bottom: 0;
+    }
+
+    .dot-number {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: absolute;
+        left: 0;
+        padding: sizes.$gutter-xs;
+        width: sizes.$gutter-sm;
+        height: sizes.$gutter-sm;
+        background-color: colors.$well-bg-var;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-pill;
+    }
+}
