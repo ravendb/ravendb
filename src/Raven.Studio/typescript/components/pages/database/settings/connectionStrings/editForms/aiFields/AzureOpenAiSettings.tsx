@@ -5,11 +5,37 @@ import {
     ConnectionFormData,
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
+import { useAsyncCallback } from "react-async-hook";
 import { Label, UncontrolledPopover, PopoverBody } from "reactstrap";
+import { FlexGrow } from "components/common/FlexGrow";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
+import { useServices } from "components/hooks/useServices";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<ConnectionFormData<AiConnection>>();
+    const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const formValues = useWatch({ control });
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger("azureOpenAiSettings");
+        if (!isValid) {
+            return;
+        }
+
+        return tasksService.testAiConnectionString(databaseName, "AzureOpenAi", {
+            ApiKey: formValues.azureOpenAiSettings.apiKey,
+            Endpoint: formValues.azureOpenAiSettings.endpoint,
+            Model: formValues.azureOpenAiSettings.model,
+            DeploymentName: formValues.azureOpenAiSettings.deploymentName,
+            Dimensions: formValues.azureOpenAiSettings.dimensions,
+        });
+    });
 
     return (
         <>
@@ -82,6 +108,18 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     disabled={isUsedByAnyTask}
                 />
             </div>
+            <div className="d-flex mb-2">
+                <FlexGrow />
+                <ButtonWithSpinner
+                    color="secondary"
+                    icon="rocket"
+                    onClick={asyncTest.execute}
+                    isSpinning={asyncTest.loading}
+                >
+                    Test connection
+                </ButtonWithSpinner>
+            </div>
+            {asyncTest.result && <ConnectionTestResult testResult={asyncTest.result} />}
         </>
     );
 }

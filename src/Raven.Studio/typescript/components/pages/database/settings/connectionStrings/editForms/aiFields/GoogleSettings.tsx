@@ -1,18 +1,42 @@
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
+import { FlexGrow } from "components/common/FlexGrow";
 import { FormSelect, FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
 import { SelectOption } from "components/common/select/Select";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useServices } from "components/hooks/useServices";
 import {
     ConnectionFormData,
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import { useFormContext } from "react-hook-form";
+import { useAppSelector } from "components/store";
+import { useAsyncCallback } from "react-async-hook";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Label, UncontrolledPopover, PopoverBody } from "reactstrap";
 
 type FormData = ConnectionFormData<AiConnection>;
 
 export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
+    const { control, trigger } = useFormContext<FormData>();
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const formValues = useWatch({ control });
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger("googleSettings");
+        if (!isValid) {
+            return;
+        }
+
+        return tasksService.testAiConnectionString(databaseName, "Google", {
+            AiVersion: formValues.googleSettings.aiVersion,
+            ApiKey: formValues.googleSettings.apiKey,
+            Model: formValues.googleSettings.model,
+        });
+    });
 
     return (
         <>
@@ -58,6 +82,18 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 </Label>
                 <FormInput control={control} name="googleSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
+            <div className="d-flex mb-2">
+                <FlexGrow />
+                <ButtonWithSpinner
+                    color="secondary"
+                    icon="rocket"
+                    onClick={asyncTest.execute}
+                    isSpinning={asyncTest.loading}
+                >
+                    Test connection
+                </ButtonWithSpinner>
+            </div>
+            {asyncTest.result && <ConnectionTestResult testResult={asyncTest.result} />}
         </>
     );
 }

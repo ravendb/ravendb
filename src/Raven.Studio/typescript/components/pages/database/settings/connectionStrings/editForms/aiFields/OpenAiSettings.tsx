@@ -1,17 +1,43 @@
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
+import { FlexGrow } from "components/common/FlexGrow";
 import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useServices } from "components/hooks/useServices";
 import {
     ConnectionFormData,
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import { useFormContext } from "react-hook-form";
+import { useAppSelector } from "components/store";
+import { useAsyncCallback } from "react-async-hook";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Label, UncontrolledPopover, PopoverBody } from "reactstrap";
 
 type FormData = ConnectionFormData<AiConnection>;
 
 export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
+    const { control, trigger } = useFormContext<FormData>();
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const formValues = useWatch({ control });
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger("openAiSettings");
+        if (!isValid) {
+            return;
+        }
+
+        return tasksService.testAiConnectionString(databaseName, "OpenAi", {
+            ApiKey: formValues.openAiSettings.apiKey,
+            Endpoint: formValues.openAiSettings.endpoint,
+            Model: formValues.openAiSettings.model,
+            OrganizationId: formValues.openAiSettings.organizationId,
+            ProjectId: formValues.openAiSettings.projectId,
+        });
+    });
 
     return (
         <>
@@ -81,6 +107,18 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 </Label>
                 <FormInput control={control} name="openAiSettings.projectId" type="text" />
             </div>
+            <div className="d-flex mb-2">
+                <FlexGrow />
+                <ButtonWithSpinner
+                    color="secondary"
+                    icon="rocket"
+                    onClick={asyncTest.execute}
+                    isSpinning={asyncTest.loading}
+                >
+                    Test connection
+                </ButtonWithSpinner>
+            </div>
+            {asyncTest.result && <ConnectionTestResult testResult={asyncTest.result} />}
         </>
     );
 }

@@ -1,21 +1,22 @@
-// import commandBase = require("commands/commandBase");
-// import database = require("models/resources/database");
-// import endpoints = require("endpoints");
+import commandBase = require("commands/commandBase");
+import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
-// class testAiCommand extends commandBase {
-//     // TODO rebase and generate Raven.Server.Documents.ETL.Providers.AI.Test.TestAiEtlScript
-//     constructor(private db: database | string, private payload: Raven.Server.Documents.ETL.Providers.AI.Test.TestAiIntegrationScript {
-//         super();
-//     }  
+class testAiCommand extends commandBase {
+    constructor(
+        private db: database | string,
+        private payload: Raven.Server.Documents.ETL.Providers.AI.Test.TestAiIntegrationScript
+    ) {
+        super();
+    }
 
-//     execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.ElasticSearchEtlTestScriptResult> {
-//         const url = endpoints.databases.elasticSearchEtl.adminEtlElasticsearchTest;
+    execute(): JQueryPromise<TODO> {
+        const url = endpoints.databases.aiIntegration.adminAiTest;
 
-//         return this.post<Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.ElasticSearchEtlTestScriptResult>(url, JSON.stringify(this.payload), this.db)
-//             .fail((response: JQueryXHR) => {
-//                 this.reportError(`Failed to test Elasticsearch ETL`, response.responseText, response.statusText);
-//             });
-//     }
-// }
+        return this.post<TODO>(url, JSON.stringify(this.payload), this.db).fail((response: JQueryXHR) => {
+            this.reportError(`Failed to test AI`, response.responseText, response.statusText);
+        });
+    }
+}
 
-// export = testAiCommand;
+export = testAiCommand;

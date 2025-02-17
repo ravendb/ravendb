@@ -4,13 +4,37 @@ import {
     ConnectionFormData,
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Label, UncontrolledPopover, PopoverBody } from "reactstrap";
+import { FlexGrow } from "components/common/FlexGrow";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
+import { useServices } from "components/hooks/useServices";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAsyncCallback } from "react-async-hook";
 
 type FormData = ConnectionFormData<AiConnection>;
 
 export default function MistralaiAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control } = useFormContext<FormData>();
+    const { control, trigger } = useFormContext<FormData>();
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const formValues = useWatch({ control });
+
+    const asyncTest = useAsyncCallback(async () => {
+        const isValid = await trigger("mistralaiAiSettings");
+        if (!isValid) {
+            return;
+        }
+
+        return tasksService.testAiConnectionString(databaseName, "MistralAi", {
+            ApiKey: formValues.mistralaiAiSettings.apiKey,
+            Endpoint: formValues.mistralaiAiSettings.endpoint,
+            Model: formValues.mistralaiAiSettings.model,
+        });
+    });
 
     return (
         <>
@@ -44,6 +68,18 @@ export default function MistralaiAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                 </Label>
                 <FormInput control={control} name="mistralaiAiSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
+            <div className="d-flex mb-2">
+                <FlexGrow />
+                <ButtonWithSpinner
+                    color="secondary"
+                    icon="rocket"
+                    onClick={asyncTest.execute}
+                    isSpinning={asyncTest.loading}
+                >
+                    Test connection
+                </ButtonWithSpinner>
+            </div>
+            {asyncTest.result && <ConnectionTestResult testResult={asyncTest.result} />}
         </>
     );
 }
