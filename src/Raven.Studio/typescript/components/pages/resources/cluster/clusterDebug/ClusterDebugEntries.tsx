@@ -4,10 +4,10 @@ import { Icon } from "components/common/Icon";
 import { Badge } from "reactstrap";
 import classNames from "classnames";
 import { nodeData } from "./ClusterDebugSummary";
-import { ClusterDebugEntry, entriesData } from "components/pages/cluster/clusterDebug/ClusterDebugEntry";
+import { ClusterDebugEntry, entriesData } from "components/pages/resources/cluster/clusterDebug/ClusterDebugEntry";
 import "./ClusterDebugEntries.scss";
 import useBoolean from "hooks/useBoolean";
-import ClusterDebugPagination from "components/pages/cluster/clusterDebug/ClusterDebugPagination";
+import ClusterDebugPagination from "components/pages/resources/cluster/clusterDebug/ClusterDebugPagination";
 
 const showNodeIcon = (type: "Leader" | "Member") => (
     <Icon icon={type === "Leader" ? "node-leader" : "cluster-member"} color="node" />

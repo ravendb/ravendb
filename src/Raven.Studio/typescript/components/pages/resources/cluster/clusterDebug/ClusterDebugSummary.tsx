@@ -5,7 +5,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import ProgressBarWithTrackingPoint from "components/common/ProgressBarWithTrackingPoint";
 import "./ClusterDebugSummary.scss";
 import classNames from "classnames";
-import useId from "hooks/useId";
+import useUniqueId from "hooks/useUniqueId";
 
 interface NodeData {
     name: string;
@@ -120,7 +120,7 @@ const nodeColumnHeader = (node: NodeData) => {
 };
 
 export default function ClusterDebugSummary() {
-    const failedCommitTooltipId = useId("failedCommitTooltip");
+    const failedCommitTooltipId = useUniqueId("failedCommitTooltip");
     return (
         <>
             <Table dark bordered responsive className="mb-1 rounded-1 overflow-hidden">

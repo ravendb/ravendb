@@ -3,9 +3,9 @@ import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
-import ClusterDebugAboutView from "components/pages/cluster/clusterDebug/ClusterDebugAboutView";
-import ClusterDebugSummary from "components/pages/cluster/clusterDebug/ClusterDebugSummary";
-import ClusterDebugEntries from "components/pages/cluster/clusterDebug/ClusterDebugEntries";
+import ClusterDebugAboutView from "components/pages/resources/cluster/clusterDebug/ClusterDebugAboutView";
+import ClusterDebugSummary from "components/pages/resources/cluster/clusterDebug/ClusterDebugSummary";
+import ClusterDebugEntries from "components/pages/resources/cluster/clusterDebug/ClusterDebugEntries";
 
 interface ClusterDebugProps {}
 
