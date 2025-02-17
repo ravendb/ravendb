@@ -394,6 +394,7 @@ namespace Raven.Client
                         public const string BoostPropertyName = "$boost";
                         
                         public const string VectorPropertyName = "$vector";
+                        public const string LoadVectorPropertyName = "$loadvector";
                     }
                 }
 

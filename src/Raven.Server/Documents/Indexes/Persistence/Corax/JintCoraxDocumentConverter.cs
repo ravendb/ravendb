@@ -255,8 +255,31 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
                     var underlyingValue = valueJsv.IsString() ? valueJsv.AsString() : (object)valueJsv;
     
-                    var indexField = AbstractStaticIndexBase.RetrieveVectorField(field.Name, underlyingValue);
+                    var indexField = AbstractStaticIndexBase.RetrieveCreateVectorField(field.Name, underlyingValue);
                     object objectForIndexing = AbstractStaticIndexBase.CreateVector(indexField, underlyingValue, isAutoIndex: false);
+                    InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
+                    shouldProcessAsBlittable = false;
+                    return;
+                }
+
+                if (objectValue.HasOwnProperty(JavaScriptFieldName.LoadVectorPropertyName) &&
+                    objectValue.TryGetValue(JavaScriptFieldName.LoadVectorPropertyName, out var loadVector))
+                {
+                    PortableExceptions.ThrowIf<InvalidDataException>(loadVector.IsObject() == false);
+                    var obj = loadVector.AsObject();
+                    JsValue valueJsv = null;
+                    if (obj.HasOwnProperty(JavaScriptFieldName.ValuePropertyName) == false 
+                        || obj.TryGetValue(JavaScriptFieldName.ValuePropertyName, out valueJsv) == false)
+                    {
+                        PortableExceptions.Throw<InvalidDataException>("Name field doesn't exist but is required.");
+                    }
+                    
+                    PortableExceptions.ThrowIfNot<ArgumentException>(valueJsv.IsString(), $"'loadVector' requires a string value of the path to the vector.");
+                    
+                    var path = valueJsv.AsString();
+                    
+                    var indexField = AbstractStaticIndexBase.RetrieveLoadVectorField(field.Name);
+                    object objectForIndexing = AbstractStaticIndexBase.LoadVector(indexField, path);
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
                     shouldProcessAsBlittable = false;
                     return;

@@ -32,7 +32,7 @@ public partial class AbstractStaticIndexBase
         return currentIndexingScope != null && currentIndexingScope.Index.IsOnBeforeExecuteIndexing;
     }
 
-    internal static IndexField RetrieveVectorField(string fieldName, object value)
+    internal static IndexField RetrieveCreateVectorField(string fieldName, object value)
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
         var fieldExists = currentIndexingScope.Index.Definition.IndexFields.TryGetValue(fieldName, out var indexField);
@@ -83,7 +83,7 @@ public partial class AbstractStaticIndexBase
         if (IsDictionaryTrainingPhase(currentIndexingScope) || IsNullValue(value))
             return VectorValue.Null;
 
-        var indexField = RetrieveVectorField(fieldName, value);
+        var indexField = RetrieveCreateVectorField(fieldName, value);
         var vector = indexField!.Vector!.SourceEmbeddingType switch
         {
             VectorEmbeddingType.Text => VectorFromText(indexField, value),
@@ -509,15 +509,26 @@ public partial class AbstractStaticIndexBase
     {
         return value is null or DynamicNullObject or DynamicJsNull or JsNull;
     }
-    
+
+    public static IndexField RetrieveLoadVectorField(string fieldName)
+    {
+        return CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
+    }
+
     public object LoadVector(string fieldName, string path)
     {
+        var vectorField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
+        return LoadVector(vectorField, path);
+    }
+    
+    public static object LoadVector(IndexField vectorField, string path)
+    {
         var currentIndexingScope = CurrentIndexingScope.Current;
-        var relatedDocument = ReadRelatedDocument(currentIndexingScope, out var embeddingDocument) as DynamicBlittableJson;
+        var relatedDocument = LoadVectorDocument(out var embeddingDocument) as DynamicBlittableJson;
         if (relatedDocument == null)
             return VectorValue.Null;
         
-        var vectorField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
+
         var currentAiModel = vectorField.Vector.AiIntegrationTaskName ?? currentIndexingScope.Index.Configuration.DefaultAiTask;
 
         if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, relatedDocument.BlittableJson, currentAiModel, out var aiResult))
@@ -554,11 +565,12 @@ public partial class AbstractStaticIndexBase
         return VectorValue.Null;
     }
     
-    private dynamic ReadRelatedDocument(CurrentIndexingScope scope, out string embeddingDocument)
+    private static dynamic LoadVectorDocument(out string embeddingDocument)
     {
+        var scope = CurrentIndexingScope.Current;
         var id = (string)scope.Source.GetId().ToString();
         embeddingDocument = AiHelper.GetDocumentEmbeddingsId(id);
         var collectionName = AiHelper.GetDocumentEmbeddingsCollectionName(scope.SourceCollection);
-        return LoadDocument(embeddingDocument, collectionName.ToLowerInvariant());
+        return scope.LoadDocument(null, embeddingDocument, collectionName.ToLowerInvariant());
     }
 }

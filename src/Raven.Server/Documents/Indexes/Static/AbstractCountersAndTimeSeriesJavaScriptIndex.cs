@@ -6,6 +6,7 @@ using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -144,9 +145,12 @@ function map() {{
 
                 collectionNames.UnionWith(mapReferencedCollections[i].ReferencedCollections);
 
+                if (mapReferencedCollections[i].HasLoadVector)
+                    collectionNames.Add(new CollectionName(AiHelper.GetDocumentEmbeddingsCollectionName(mapCollection)));
+
                 if (mapReferencedCollections[i].HasCompareExchangeReferences)
                     CollectionsWithCompareExchangeReferences.Add(mapCollection);
-
+                
                 list.Add(operation);
             }
         }

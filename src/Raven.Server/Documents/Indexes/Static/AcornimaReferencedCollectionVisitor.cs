@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using Acornima.Ast;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public sealed class AcornimaReferencedCollectionVisitor : AcornimaVisitor
     {
         public readonly HashSet<CollectionName> ReferencedCollection = new HashSet<CollectionName>();
-
+        public bool HasLoadVector { get; private set; }
         public bool HasCompareExchangeReferences { get; private set; }
 
         public override void VisitCallExpression(CallExpression callExpression)
@@ -34,7 +35,12 @@ namespace Raven.Server.Documents.Indexes.Static
                             }
                         }
                         break;
-
+                    case JavaScriptIndex.LoadVector:
+                        PortableExceptions.ThrowIf<ArgumentException>(callExpression.Arguments.Count != 1, $"loadVector method is expecting one argument, the path to the vector in ai integration tasks. e.g. loadVector('path') but was invoked with {callExpression.Arguments.Count} arguments.");
+                        HasLoadVector = true;
+                        
+                        break;
+                        
                     case JavaScriptIndex.CmpXchg:
                         HasCompareExchangeReferences = true;
                         break;

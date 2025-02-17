@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                     var fieldValue = property.Value;
                                     if (IsBoostExpression(fieldValue))
                                         HasBoostedFields = true;
-                                    if (IsCreateVectorExpression(fieldValue))
+                                    if (IsVectorExpression(fieldValue))
                                         HasVectorFields = true;
                                 }
                             }
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             if (ce.Arguments[0] is ObjectExpression oe)
                                 AddObjectFieldsToIndexFields(oe);
                         }
-                        else if (IsCreateVectorExpression(ce))
+                        else if (IsVectorExpression(ce))
                         {
                             HasVectorFields = true;
                             HasDynamicReturns = true;
@@ -197,9 +197,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "boost";
             }
             
-            static bool IsCreateVectorExpression(Node expression)
+            static bool IsVectorExpression(Node expression)
             {
-                return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "createVector";
+                return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name is "createVector" or "loadVector";
             }
             
             static bool IsArrowFunctionExpressionWithObjectExpressionBody(CallExpression callExpression, out ObjectExpression oea)

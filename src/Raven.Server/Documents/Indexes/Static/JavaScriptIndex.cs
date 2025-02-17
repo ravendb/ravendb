@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
@@ -22,6 +23,7 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
+using Sparrow;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -31,6 +33,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public const string NoTracking = "noTracking";
 
         public const string Load = "load";
+        public const string LoadVector = "loadVector";
 
         public const string CmpXchg = "cmpxchg";
 
@@ -121,6 +124,10 @@ function map(name, lambda) {
                 operation.Analyze(_engine);
 
                 var referencedCollections = mapReferencedCollections[i].ReferencedCollections;
+                
+                if (mapReferencedCollections[i].HasLoadVector)
+                    referencedCollections.Add(new(AiHelper.GetDocumentEmbeddingsCollectionName(mapCollection)));
+
                 if (referencedCollections.Count > 0)
                 {
                     if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
@@ -134,7 +141,7 @@ function map(name, lambda) {
 
                 if (mapReferencedCollections[i].HasCompareExchangeReferences)
                     CollectionsWithCompareExchangeReferences.Add(mapCollection);
-
+                
                 list.Add(operation);
             }
         }
@@ -357,6 +364,7 @@ function map(name, lambda) {
         {
             _engine.ExecuteWithReset(code);
 
+            
             var javascriptParser = new Parser(DefaultParserOptions);
             var program = javascriptParser.ParseScript(code);
 
@@ -368,7 +376,8 @@ function map(name, lambda) {
             return new MapMetadata
             {
                 ReferencedCollections = loadVisitor.ReferencedCollection,
-                HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences
+                HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences,
+                HasLoadVector = loadVisitor.HasLoadVector
             };
         }
 
@@ -489,7 +498,7 @@ function map(name, lambda) {
 
             return DynamicJsNull.ImplicitNull;
         }
-
+        
         private JsValue LoadCompareExchangeValue(JsValue self, JsValue[] args)
         {
             if (args.Length != 1)
@@ -591,6 +600,10 @@ function boost(value, boost) {
 function createVector(value) {
     return { $vector: { $value: value } }
 }
+
+function loadVector(value) {
+    return { $loadvector: { $value: value } }
+}
 ";
 
         protected readonly IndexDefinition Definition;
@@ -614,6 +627,8 @@ function createVector(value) {
             public HashSet<CollectionName> ReferencedCollections;
 
             public bool HasCompareExchangeReferences;
+
+            public bool HasLoadVector;
         }
     }
 }

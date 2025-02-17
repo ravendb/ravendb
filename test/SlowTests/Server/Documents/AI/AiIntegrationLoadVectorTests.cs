@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Indexes;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -14,7 +16,12 @@ namespace SlowTests.Server.Documents.AI;
 public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexSingleVectorGeneratedByEtl()
+    public void CanIndexSingleVectorGeneratedByEtl() => CanIndexSingleVectorGeneratedByEtlBase<IndexByName>();
+
+    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    public void CanIndexSingleVectorGeneratedByEtlJs() => CanIndexSingleVectorGeneratedByEtlBase<IndexByNameJs>();
+
+    private void CanIndexSingleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore();
         var embeddingAsArray = GenerateEmbeddingForTextViaOnnx("Joe");
@@ -28,13 +35,13 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             id = dto.Id;
         }
 
-        var index = new IndexByName();
+        var index = new TIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
-
+        
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByName>().Count(x => x.Vector == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(1, nullElements);
         }
 
@@ -43,16 +50,14 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         (var etl, _) = RegisterAiIntegration(store, Etl);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
-        WaitForUserToContinueTheTest(store);
-
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByName>().Count(x => x.Vector == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(0, nullElements);
 
-            var byVector = session.Query<Dto, IndexByName>()
+            var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByEmbedding(embeddingAsArray))
                 .ToList();
@@ -74,10 +79,10 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByName>().Count(x => x.Vector == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(0, nullElements);
 
-            var byVector = session.Query<Dto, IndexByName>()
+            var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByEmbedding(embeddingAsArray))
                 .ToList();
@@ -89,7 +94,12 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
     }
 
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexMultipleVectorGeneratedByEtl()
+    public void CanIndexMultipleVectorGeneratedByEtl() => CanIndexMultipleVectorGeneratedByEtlBase<IndexByNames>();
+
+    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    public void CanIndexMultipleVectorGeneratedByEtlJs() => CanIndexMultipleVectorGeneratedByEtlBase<IndexByNamesJs>();
+
+    private void CanIndexMultipleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore();
         var embeddingAsArray = GenerateEmbeddingForTextViaOnnx("Joe");
@@ -103,13 +113,13 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             id = dto.Id;
         }
 
-        var index = new IndexByNames();
+        var index = new TIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
 
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByNames>().Count(x => x.Vector == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(1, nullElements);
         }
 
@@ -123,10 +133,10 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByNames>().Count(x => x.Vector == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(0, nullElements);
 
-            var byVector = session.Query<Dto, IndexByNames>().VectorSearch(f => f.WithField(s => s.Vector),
+            var byVector = session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByEmbedding(embeddingAsArray))
                 .ToList();
 
@@ -147,10 +157,10 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByNames>().Count(x => x.Vector == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(0, nullElements);
 
-            var byVector = session.Query<Dto, IndexByNames>()
+            var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByEmbedding(embeddingAsArray))
                 .ToList();
@@ -163,7 +173,12 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
 
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexVectorFromTwoDifferentEtl()
+    public void CanIndexVectorFromTwoDifferentEtl() => CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFields>();
+
+    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    public void CanIndexVectorFromTwoDifferentEtlJs() => CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFieldsJs>();
+
+    private void CanIndexVectorFromTwoDifferentEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         const string embeddingEtlName = "V1";
         const string embeddingEtlName2 = "V2";
@@ -182,16 +197,16 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             id = dto.Id;
         }
 
-        var index = new IndexByFieldTwoFields();
+        var index = new TIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
 
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByFieldTwoFields>().Count(x => x.Vector == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(1, nullElements);
 
-            nullElements = session.Query<Dto, IndexByFieldTwoFields>().Count(x => x.Vector2 == null);
+            nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector2 == null);
             Assert.Equal(1, nullElements);
         }
 
@@ -207,13 +222,13 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByFieldTwoFields>().Count(x => x.Vector2 == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector2 == null);
             Assert.Equal(1, nullElements);
 
-            nullElements = session.Query<Dto, IndexByFieldTwoFields>().Count(x => x.Vector == null);
+            nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(0, nullElements);
 
-            var byVector = session.Query<Dto, IndexByFieldTwoFields>()
+            var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByEmbedding(embeddingAsArrayV1))
                 .ToList();
@@ -228,25 +243,24 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {
-            var nullElements = session.Query<Dto, IndexByFieldTwoFields>().Count(x => x.Vector2 == null);
+            var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector2 == null);
             Assert.Equal(0, nullElements);
 
-            nullElements = session.Query<Dto, IndexByFieldTwoFields>().Count(x => x.Vector == null);
+            nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(0, nullElements);
 
-            var byVector = session.Query<Dto, IndexByFieldTwoFields>().VectorSearch(f => f.WithField(s => s.Vector),
+            var byVector = session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByEmbedding(embeddingAsArrayV1))
                 .ToList();
             Assert.Single(byVector);
 
-            byVector = session.Query<Dto, IndexByFieldTwoFields>().VectorSearch(f => f.WithField(s => s.Vector2),
+            byVector = session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector2),
                     v => v.ByEmbedding(embeddingAsArrayV2))
                 .ToList();
             Assert.Single(byVector);
         }
 
         AssertEmbeddingsForPath(store, etl2, "Names", ["Jimmy"], id);
-        WaitForUserToContinueTheTest(store);
     }
 
     private class IndexByName : AbstractIndexCreationTask<Dto>
@@ -254,9 +268,29 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         public IndexByName()
         {
             Map = dtos => from dto in dtos
-                          select new { Vector = LoadVector("Name") };
+                select new { Vector = LoadVector("Name") };
 
             Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName(DefaultAiIntegrationTaskName));
+            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+        }
+    }
+
+    private class IndexByNameJs : AbstractJavaScriptIndexCreationTask
+    {
+        public IndexByNameJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (doc) {{
+                return {{
+                    Id: id(doc),
+                    Vector: loadVector('Name'),
+                }};
+            }})"
+            };
+
+            Fields = new Dictionary<string, IndexFieldOptions>();
+            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationTaskName = DefaultAiIntegrationTaskName } });
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -266,9 +300,29 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         public IndexByNames()
         {
             Map = dtos => from dto in dtos
-                          select new { Vector = LoadVector("Names") };
+                select new { Vector = LoadVector("Names") };
 
             Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName(DefaultAiIntegrationTaskName));
+            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+        }
+    }
+
+    private class IndexByNamesJs : AbstractJavaScriptIndexCreationTask
+    {
+        public IndexByNamesJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (doc) {{
+                return {{
+                    Id: id(doc),
+                    Vector: loadVector('Names'),
+                }};
+            }})"
+            };
+
+            Fields = new Dictionary<string, IndexFieldOptions>();
+            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationTaskName = DefaultAiIntegrationTaskName } });
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -279,10 +333,33 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         public IndexByFieldTwoFields()
         {
             Map = dtos => from dto in dtos
-                          select new { Vector = LoadVector("Name"), Vector2 = LoadVector("Names") };
+                select new { Vector = LoadVector("Name"), Vector2 = LoadVector("Names") };
 
             Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName("V1"));
             Vector(nameof(Dto.Vector2), factory => factory.AiIntegrationTaskName("V2"));
+            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+        }
+    }
+
+    private class IndexByFieldTwoFieldsJs : AbstractJavaScriptIndexCreationTask
+    {
+        public IndexByFieldTwoFieldsJs()
+        {
+            Maps = new HashSet<string>()
+            {
+                $@"map('Dtos', function (doc) {{
+                return {{
+                    Id: id(doc),
+                    Vector: loadVector('Name'),
+                    Vector2: loadVector('Names')
+                }};
+            }})"
+            };
+
+            Fields = new Dictionary<string, IndexFieldOptions>();
+            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationTaskName = "V1" } });
+            Fields.Add("Vector2", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationTaskName = "V2" } });
+
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
