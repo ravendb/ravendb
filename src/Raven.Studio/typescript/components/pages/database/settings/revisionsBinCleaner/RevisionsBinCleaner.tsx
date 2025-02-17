@@ -186,6 +186,7 @@ export default function RevisionsBinCleaner() {
                                                 disabled={
                                                     !hasDatabaseAdminAccess ||
                                                     formState.isSubmitting ||
+                                                    !formValues.isRevisionsBinCleanerEnabled ||
                                                     !formValues.isRefreshFrequencyEnabled
                                                 }
                                                 placeholder="Default (300)"
