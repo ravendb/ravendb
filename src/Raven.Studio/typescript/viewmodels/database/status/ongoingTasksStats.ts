@@ -1804,6 +1804,8 @@ class ongoingTasksStats extends shardViewModelBase {
                 return "Kafka Sink";
             case "RabbitQueueSink":
                 return "RabbitMQ Sink";
+            case "Ai":
+                return "AI ETL";
             default:
                 throw new Error("Unknown stats type: " + type);
         }
