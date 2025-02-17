@@ -61,17 +61,17 @@ export default function CertificatesUploadModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-success">
+        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-primary">
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleUpload)}>
                     <ModalBody>
-                        <div className="text-center">
-                            <Icon icon="upload" className="fs-1" margin="m-0" />
+                        <div className="text-center mb-3">
+                            <Icon icon="upload" className="fs-1" color="primary" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
                             <Button close onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())} />
                         </div>
-                        <div className="text-center lead">Upload client certificate</div>
+                        <div className="text-center lead mb-3">Upload client certificate</div>
                         <FormGroup>
                             <Label>Name</Label>
                             <FormInput type="text" control={control} name="name" />
@@ -79,12 +79,10 @@ export default function CertificatesUploadModal() {
                         <CertificatesSecurityClearanceField />
                         <CertificatesFileField
                             infoPopoverBody={
-                                <ul>
-                                    <li>
-                                        Select a <strong>.pfx file</strong> with single or multiple certificates.
-                                    </li>
-                                    <li>All certificates will be imported under a single name.</li>
-                                </ul>
+                                <div>
+                                    Select a <strong>.pfx file</strong> with single or multiple certificates. All
+                                    certificates will be imported under a single name.
+                                </div>
                             }
                         />
                         <FormGroup>
@@ -106,11 +104,11 @@ export default function CertificatesUploadModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="success"
+                            color="primary"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >
-                            Upload
+                            Upload certificate
                         </ButtonWithSpinner>
                     </ModalFooter>
                 </Form>

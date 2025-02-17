@@ -104,6 +104,8 @@ $token-important: $color-2-2;
 
 $developer: #c7ff6b;
 
+$twofactor: #5537c4;
+
 // Blue Theme
 @if $theme == "blue" {
     $black: #172138;
@@ -439,6 +441,7 @@ $theme-colors: (
     "enterprise": $enterprise,
     "developer": $developer,
     "cloud": $brand-cloud,
+    "2fa": $twofactor,
 ) !default;
 
 // scss-docs-end theme-colors-map

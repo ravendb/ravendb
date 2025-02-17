@@ -105,7 +105,9 @@ export default function CertificatesAuthEnabled() {
                             Manage certificates
                         </DropdownToggle>
                         <DropdownMenu>
-                            <DropdownItem header>Client</DropdownItem>
+                            <DropdownItem header className="small-label">
+                                Client
+                            </DropdownItem>
                             <DropdownItem onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}>
                                 <Icon icon="certificate" addon="plus" />
                                 Generate client certificate
@@ -115,7 +117,9 @@ export default function CertificatesAuthEnabled() {
                                 Upload client certificate
                             </DropdownItem>
                             <DropdownItem divider />
-                            <DropdownItem header>Server</DropdownItem>
+                            <DropdownItem header className="small-label">
+                                Server
+                            </DropdownItem>
                             <ConditionalPopover
                                 conditions={[
                                     {
@@ -165,7 +169,6 @@ export default function CertificatesAuthEnabled() {
                 <div className="hstack gap-2 mt-2 flex-wrap">
                     <div className="flex-grow">
                         <span className="small-label">Filter by name/thumbprint</span>
-
                         <div className="clearable-input">
                             <Input
                                 onChange={(x) => nameOrThumbprintFilterInputHandleChange(x.target.value)}

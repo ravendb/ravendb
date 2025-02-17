@@ -1,5 +1,5 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import { FormCheckbox, FormInput } from "components/common/Form";
+import { FormCheckbox, FormInput, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useServices } from "components/hooks/useServices";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
@@ -15,6 +15,7 @@ import RichAlert from "components/common/RichAlert";
 import { useAsync } from "react-async-hook";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import classNames from "classnames";
 
 export default function CertificatesReplaceServerModal() {
     const dispatch = useAppDispatch();
@@ -50,12 +51,12 @@ export default function CertificatesReplaceServerModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-success">
+        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-warning">
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleReplace)}>
                     <ModalBody>
-                        <div className="text-center">
-                            <Icon icon="refresh" className="fs-1" margin="m-0" />
+                        <div className="text-center mb-3">
+                            <Icon icon="refresh" className="fs-1" color="warning" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
                             <Button
@@ -63,19 +64,23 @@ export default function CertificatesReplaceServerModal() {
                                 onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
                             />
                         </div>
-                        <div className="text-center lead">Replace server certificates (cluster-wide)</div>
+                        <div className="text-center lead mb-3">Replace server certificates (cluster-wide)</div>
                         <LazyLoad active={asyncGetClusterDomains.loading}>
-                            <RichAlert variant="info" className="my-2">
-                                Replace all server certificates in the cluster without shutting down the servers. The
-                                update will happen when all nodes of the cluster confirm the replacement, or when there
-                                are 3 days left for expiration.
-                                <br />
-                                <br />
-                                Please verify that the new certificate contains all of the following domain names in the
-                                CN or ASN properties of the certificate:
-                                <ul className="mt-2">
-                                    {asyncGetClusterDomains.result?.map((domain, idx) => <li key={idx}>{domain}</li>)}
-                                </ul>
+                            <RichAlert title="" variant="info" className="my-2">
+                                <span>
+                                    Replace all server certificates in the cluster without shutting down the servers.
+                                    The update will happen when all nodes of the cluster confirm the replacement, or
+                                    when there are 3 days left for expiration.
+                                </span>
+                                <div className={classNames(asyncGetClusterDomains.result?.length ? "" : "d-none")}>
+                                    Please verify that the new certificate contains all of the following domain names in
+                                    the CN or ASN properties of the certificate:
+                                    <ul className="mt-2">
+                                        {asyncGetClusterDomains.result?.map((domain, idx) => (
+                                            <li key={idx}>{domain}</li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </RichAlert>
                         </LazyLoad>
                         <CertificatesFileField infoPopoverBody="Certificate file cannot be password protected." />
@@ -84,17 +89,15 @@ export default function CertificatesReplaceServerModal() {
                             <FormInput type="password" control={control} name="certificatePassphrase" passwordPreview />
                         </FormGroup>
                         <FormGroup>
-                            <FormCheckbox control={control} name="isReplaceImmediately">
+                            <FormSwitch control={control} name="isReplaceImmediately">
                                 Replace immediately
-                            </FormCheckbox>
+                            </FormSwitch>
                         </FormGroup>
                         {formValues.isReplaceImmediately && (
-                            <RichAlert variant="info">
-                                If &apos;Replace immediately&apos; is specified, RavenDB will replace the certificate by
-                                force, even if some nodes are not responding. In that case, you will have to manually
-                                replace the certificate in those nodes.
-                                <br />
-                                Use with care.
+                            <RichAlert variant="warning">
+                                If Replace immediately is specified, RavenDB will replace certificate by force, even if
+                                some nodes are not responding. In that case, you will have to manually replace the
+                                certificate in those nodes. <strong>Use with care.</strong>
                             </RichAlert>
                         )}
                     </ModalBody>
@@ -108,11 +111,11 @@ export default function CertificatesReplaceServerModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="success"
+                            color="warning"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >
-                            Replace
+                            Replace certificate
                         </ButtonWithSpinner>
                     </ModalFooter>
                 </Form>

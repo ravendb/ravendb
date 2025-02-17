@@ -6,6 +6,7 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
     RichPanelStatus,
+    RichPanelNameMultiLine,
 } from "components/common/RichPanel";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { useAppSelector } from "components/store";
@@ -16,7 +17,7 @@ export default function CertificatesWellKnownList() {
     const wellKnownIssuers = useAppSelector(certificatesSelectors.wellKnownIssuers);
 
     return (
-        <div className="vstack gap-2">
+        <div className="vstack mt-3">
             <WellKnownItem
                 title="Well known admin certificates defined by system administrator"
                 wellKnownThumbprints={wellKnownAdminCerts}
@@ -60,10 +61,9 @@ function WellKnownItem({ title, wellKnownThumbprints }: WellKnownItemProps) {
             <div className="flex-grow">
                 <RichPanelHeader>
                     <div>
-                        <RichPanelName className="d-flex align-items-center w-100">
-                            <Icon icon="certificate" color="primary" />
+                        <RichPanelNameMultiLine className="d-flex align-items-center w-100">
                             {title}
-                        </RichPanelName>
+                        </RichPanelNameMultiLine>
                         {wellKnownThumbprints.join(", ")}
                     </div>
                 </RichPanelHeader>

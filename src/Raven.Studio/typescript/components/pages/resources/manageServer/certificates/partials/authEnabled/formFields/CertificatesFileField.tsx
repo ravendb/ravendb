@@ -36,7 +36,7 @@ export default function CertificatesFileField({ infoPopoverBody }: { infoPopover
                 </span>
                 <InputGroupText>
                     <label htmlFor="filePicker" className="cursor-pointer">
-                        <Icon icon="document" />
+                        <Icon icon="folder" />
                         <span>Browse</span>
                     </label>
                 </InputGroupText>

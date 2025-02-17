@@ -1,5 +1,5 @@
 import copyToClipboard from "common/copyToClipboard";
-import { FormSelect, FormCheckbox, FormInput } from "components/common/Form";
+import { FormSelect, FormInput, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import RichAlert from "components/common/RichAlert";
 import { SelectOption } from "components/common/select/Select";
@@ -16,7 +16,7 @@ import { QRCode } from "qrcodejs";
 import { useRef, ElementRef, useState, useEffect } from "react";
 import { useAsync } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
-import { FormGroup, Label, Collapse, Button } from "reactstrap";
+import { FormGroup, Label, Collapse, Button, InputGroup } from "reactstrap";
 
 export default function Certificates2FAField({ editingCert }: { editingCert?: CertificateItem }) {
     const { manageServerService } = useServices();
@@ -107,43 +107,45 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
                 </FormGroup>
             ) : (
                 <FormGroup>
-                    <FormCheckbox control={control} name="isRequire2FA">
+                    <FormSwitch control={control} name="isRequire2FA">
                         Require two-factor authentication
-                    </FormCheckbox>
+                    </FormSwitch>
                 </FormGroup>
             )}
             {"twoFactorAction" in formValues && formValues.twoFactorAction === "delete" && (
-                <RichAlert variant="warning">
-                    Two-Factor authentication (2FA) will be disabled for this certificate.
+                <RichAlert variant="warning" className="mb-3">
+                    Two-factor authentication (2FA) will be disabled for this certificate.
                 </RichAlert>
             )}
             <Collapse isOpen={formValues.isRequire2FA}>
                 <FormGroup>
                     <Label>Authentication Key</Label>
-                    <FormInput
-                        type="text"
-                        control={control}
-                        name="authenticationKey"
-                        addon={
-                            <Button
-                                onClick={() =>
-                                    copyToClipboard.copy(
-                                        formValues.authenticationKey,
-                                        "Authentication Key was copied to clipboard."
-                                    )
-                                }
-                                color="link"
-                            >
-                                <Icon icon="copy" margin="m-0" />
-                            </Button>
-                        }
-                        disabled
-                    />
+                    <InputGroup>
+                        <FormInput
+                            type="text"
+                            control={control}
+                            name="authenticationKey"
+                            disabled
+                            className="border-top-right-radius-none border-bottom-right-radius-none"
+                        />
+                        <Button
+                            onClick={() =>
+                                copyToClipboard.copy(
+                                    formValues.authenticationKey,
+                                    "Authentication key was copied to clipboard"
+                                )
+                            }
+                            color="secondary"
+                            title="Copy authentication key to clipboard"
+                        >
+                            <Icon icon="copy" margin="m-0" />
+                        </Button>
+                    </InputGroup>
                 </FormGroup>
                 <FormGroup>
-                    <Label>QR Code:</Label>
+                    <Label>QR Code</Label>
                     <br />
-                    <div ref={qrContainerRef} className="qrcode" />
+                    <div ref={qrContainerRef} className="qrcode rounded-2 overflow-hidden" />
                 </FormGroup>
             </Collapse>
         </>

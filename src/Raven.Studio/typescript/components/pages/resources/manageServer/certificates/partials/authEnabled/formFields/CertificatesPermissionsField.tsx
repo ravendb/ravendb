@@ -11,7 +11,11 @@ import { CertificatesEditFormData } from "components/pages/resources/manageServe
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { useAppSelector } from "components/store";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
-import { Collapse, FormGroup, Card, CardHeader, Button, CardBody } from "reactstrap";
+import { Collapse, FormGroup, Card, CardHeader, Button, CardBody, Label } from "reactstrap";
+import { HStack } from "components/common/HStack";
+import { FlexGrow } from "components/common/FlexGrow";
+import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
+import React from "react";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -32,7 +36,7 @@ export default function CertificatesPermissionsField() {
 
     return (
         <>
-            Database Permissions
+            <Label>Database Permissions</Label>
             <AccessToAllDatabasesInfo securityClearance={formValues.securityClearance} />
             <Collapse isOpen={formValues.securityClearance === "ValidUser"}>
                 <FormGroup>
@@ -57,19 +61,16 @@ export default function CertificatesPermissionsField() {
                 </FormGroup>
                 <FormGroup className="vstack gap-2">
                     {permissionsFieldArray.fields.map((field, idx) => (
-                        <Card key={field.id} className="rounded">
-                            <CardHeader className="d-flex justify-content-between p-1">
-                                <div>{field.databaseName}</div>
-                                <Button color="link" onClick={() => permissionsFieldArray.remove(idx)}>
-                                    <Icon icon="trash" margin="m-0" className="text-danger" />
-                                </Button>
-                            </CardHeader>
-                            <CardBody className="d-flex gap-2 p-1 well rounded">
+                        <Card key={field.id} className="hstack rounded px-3 py-1 well">
+                            {field.databaseName}
+                            <FlexGrow />
+                            <HStack className="gap-3">
                                 <FormRadio
                                     control={control}
                                     name={`databasePermissions.${idx}.accessLevel`}
                                     value="Admin"
                                     className="text-success"
+                                    color="secondary"
                                 >
                                     Admin
                                 </FormRadio>
@@ -78,26 +79,43 @@ export default function CertificatesPermissionsField() {
                                     name={`databasePermissions.${idx}.accessLevel`}
                                     value="ReadWrite"
                                     className="text-warning"
+                                    color="secondary"
                                 >
                                     Read/Write
                                 </FormRadio>
                                 <ConditionalPopover
                                     conditions={{
                                         isActive: !hasReadOnlyCertificates,
-                                        message: <LicenseRestrictedBadge licenseRequired="Professional +" />,
+                                        message: (
+                                            <LicenseRestrictedMessage>
+                                                Current license doesn&apos;t include
+                                                <br />
+                                                <strong className="text-info">
+                                                    <Icon icon="access-read" margin="m-0" /> Read-only certificates
+                                                </strong>
+                                            </LicenseRestrictedMessage>
+                                        ),
                                     }}
                                 >
                                     <FormRadio
                                         control={control}
                                         name={`databasePermissions.${idx}.accessLevel`}
                                         value="Read"
-                                        className="text-danger"
+                                        className="text-info"
+                                        color="secondary"
                                         disabled={!hasReadOnlyCertificates}
                                     >
                                         Read
                                     </FormRadio>
                                 </ConditionalPopover>
-                            </CardBody>
+                            </HStack>
+                            <Button
+                                color="link"
+                                className="px-0 ms-3"
+                                onClick={() => permissionsFieldArray.remove(idx)}
+                            >
+                                <Icon icon="trash" margin="m-0" className="text-danger" />
+                            </Button>
                         </Card>
                     ))}
                 </FormGroup>

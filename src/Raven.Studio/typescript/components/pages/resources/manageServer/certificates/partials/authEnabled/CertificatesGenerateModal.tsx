@@ -77,17 +77,17 @@ export default function CertificatesGenerateModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-success">
+        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-primary">
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleGenerate)}>
                     <ModalBody>
-                        <div className="text-center">
-                            <Icon icon="magic-wand" className="fs-1" margin="m-0" />
+                        <div className="text-center mb-3">
+                            <Icon icon="certificate" addon="plus" color="primary" className="fs-1" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
                             <Button close onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())} />
                         </div>
-                        <div className="text-center lead">Generate client certificate</div>
+                        <div className="text-center lead mb-3">Generate client certificate</div>
                         <FormGroup>
                             <Label>Name</Label>
                             <FormInput type="text" control={control} name="name" />
@@ -112,11 +112,11 @@ export default function CertificatesGenerateModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="success"
+                            color="primary"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >
-                            Generate
+                            Generate certificate
                         </ButtonWithSpinner>
                     </ModalFooter>
                 </Form>

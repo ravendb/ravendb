@@ -9,6 +9,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelName,
+    RichPanelNameMultiLine,
     RichPanelStatus,
 } from "components/common/RichPanel";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -112,8 +113,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
             <div className="flex-grow">
                 <RichPanelHeader>
                     <div>
-                        <RichPanelName className="d-flex align-items-center">
-                            <Icon icon="certificate" color="primary" />
+                        <RichPanelNameMultiLine className="d-flex align-items-center">
                             {certificate.Name ?? "<empty name>"}
                             {isServerCert && (
                                 <Badge
@@ -137,7 +137,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             )}
                             {has2fa && (
                                 <Badge
-                                    color="faded-info"
+                                    color="2fa"
                                     className="ms-1 fs-6"
                                     pill
                                     title="This is the certificate which requires two-factor authentication"
@@ -145,7 +145,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     2FA
                                 </Badge>
                             )}
-                        </RichPanelName>
+                        </RichPanelNameMultiLine>
                         {certificate.Thumbprints.join(", ")}
                     </div>
                     <RichPanelActions>
@@ -200,7 +200,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                     <RichPanelDetailItem
                         label={
                             <>
-                                <Icon icon="star" />
+                                <Icon icon="check" />
                                 Valid from
                             </>
                         }
@@ -235,7 +235,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         <RichPanelDetailItem
                             label={
                                 <>
-                                    <Icon icon="user" />
+                                    <Icon icon="refresh" />
                                     Auto renewal date
                                 </>
                             }
@@ -243,8 +243,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             {moment.utc(serverCertificateRenewalDate).format("YYYY-MM-DD")}
                             <ButtonWithSpinner
                                 color="link"
-                                size="sm"
-                                className="fs-6"
+                                size="xs"
                                 title="Renew this server certificate"
                                 onClick={handleRenewServerCertificate}
                                 icon="refresh"

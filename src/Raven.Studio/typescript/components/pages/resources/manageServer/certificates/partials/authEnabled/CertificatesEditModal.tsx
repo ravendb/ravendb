@@ -64,17 +64,17 @@ export default function CertificatesEditModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-success">
+        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-primary">
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleEdit)}>
                     <ModalBody>
-                        <div className="text-center">
-                            <Icon icon="edit" className="fs-1" margin="m-0" />
+                        <div className="text-center mb-3">
+                            <Icon icon="certificate" addon="edit" className="fs-1" color="primary" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
                             <Button close onClick={() => dispatch(certificatesActions.editModalClosed())} />
                         </div>
-                        <div className="text-center lead">Edit client certificate</div>
+                        <div className="text-center lead mb-3">Edit client certificate</div>
                         <FormGroup>
                             <Label>Name</Label>
                             <Input type="text" value={certificate.Name} disabled />
@@ -98,7 +98,8 @@ export default function CertificatesEditModal() {
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >
-                            Edit
+                            <Icon icon="save" />
+                            Save changes
                         </ButtonWithSpinner>
                     </ModalFooter>
                 </Form>

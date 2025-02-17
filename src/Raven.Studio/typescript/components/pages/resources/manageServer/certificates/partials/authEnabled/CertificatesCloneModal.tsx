@@ -79,17 +79,17 @@ export default function CertificatesCloneModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-success">
+        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-primary">
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleClone)}>
                     <ModalBody>
-                        <div className="text-center">
-                            <Icon icon="magic-wand" className="fs-1" margin="m-0" />
+                        <div className="text-center mb-3">
+                            <Icon icon="copy" className="fs-1" color="primary" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
                             <Button close onClick={() => dispatch(certificatesActions.cloneModalClosed())} />
                         </div>
-                        <div className="text-center lead">Clone client certificate</div>
+                        <div className="text-center lead mb-3">Clone client certificate</div>
                         <FormGroup>
                             <Label>Name</Label>
                             <FormInput type="text" control={control} name="name" />
@@ -114,11 +114,11 @@ export default function CertificatesCloneModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="success"
+                            color="primary"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >
-                            Clone
+                            Clone certificate
                         </ButtonWithSpinner>
                     </ModalFooter>
                 </Form>
