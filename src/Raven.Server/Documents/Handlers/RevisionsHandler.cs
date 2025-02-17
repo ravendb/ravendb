@@ -220,13 +220,14 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (Database.DocumentsStorage.RevisionsStorage.GetRevisionMetrics(context, changeVector, out var metrics) == false)
+                var metrics = Database.DocumentsStorage.RevisionsStorage.GetRevisionMetrics(context, changeVector);
+                if (metrics.HasValue == false)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return;
                 }
 
-                size = new RevisionSizeDetails(changeVector, metrics);
+                size = new RevisionSizeDetails(changeVector, metrics.Value);
             }
             
 
