@@ -42,8 +42,10 @@ $gutter-xl: decimal-round(($gutter-lg * $gutter-ratio), 1);
 $gutter-sm: decimal-round((math.div($gutter, $gutter-ratio)), 1);
 $gutter-xs: decimal-round((math.div($gutter-sm, $gutter-ratio)), 1);
 $gutter-xxs: decimal-round((math.div($gutter-xs, $gutter-ratio)), 1);
+$gutter-xxxs: decimal-round((math.div($gutter-xxs, $gutter-ratio)), 1);
 
 $gutters: (
+    xxxs: $gutter-xxxs,
     xxs: $gutter-xxs,
     xs: $gutter-xs,
     sm: $gutter-sm,

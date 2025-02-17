@@ -9,6 +9,7 @@ import {
     RichPanelHeader,
     RichPanelInfo,
     RichPanelName,
+    RichPanelNameMultiLine,
     RichPanelSelect,
 } from "./RichPanel";
 import React from "react";
@@ -37,7 +38,7 @@ export default {
     },
 } satisfies Meta<typeof RichPanel>;
 
-const Template = (args: { withCheckbox: boolean }) => {
+const Template = (args: { withCheckbox: boolean; withMultiLineHeader: boolean }) => {
     const { value: checked, toggle: toggleCheckbox } = useBoolean(false);
     const { value: open, toggle: toggleOpen } = useBoolean(false);
 
@@ -50,7 +51,14 @@ const Template = (args: { withCheckbox: boolean }) => {
                             <Checkbox toggleSelection={toggleCheckbox} selected={checked} />
                         </RichPanelSelect>
                     )}
-                    <RichPanelName>This is header</RichPanelName>
+                    {args.withMultiLineHeader ? (
+                        <div>
+                            <RichPanelNameMultiLine>This is header</RichPanelNameMultiLine>
+                            <span>BCD2B71A3021A644E94768CCEFF7BE56E2006144</span>
+                        </div>
+                    ) : (
+                        <RichPanelName>This is header</RichPanelName>
+                    )}
                 </RichPanelInfo>
                 <RichPanelActions>
                     <Button variant="secondary">Actions are placed here</Button>
@@ -154,10 +162,19 @@ export const Panel = boundCopy(Template);
 
 Panel.args = {
     withCheckbox: false,
+    withMultiLineHeader: false,
 };
 
 export const PanelWithCheckbox = boundCopy(Template);
 
 PanelWithCheckbox.args = {
     withCheckbox: true,
+    withMultiLineHeader: false,
+};
+
+export const PanelWithMultiLineHeader = boundCopy(Template);
+
+PanelWithMultiLineHeader.args = {
+    withCheckbox: false,
+    withMultiLineHeader: true,
 };

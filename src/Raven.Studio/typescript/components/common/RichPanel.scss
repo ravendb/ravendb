@@ -133,6 +133,9 @@
         }
 
         .rich-panel-detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: sizes.$gutter-xxxs;
             margin: bs5variables.$gutter-xs math.div(bs5variables.$gutter, 2);
 
             .btn-toggle-panel {
@@ -145,6 +148,9 @@
         }
 
         .rich-panel-detail-item-sm {
+            display: flex;
+            flex-direction: column;
+            gap: sizes.$gutter-xxxs;
             margin: bs5variables.$gutter-xs math.div(bs5variables.$gutter, 2);
             font-size: bs5variables.$font-size-sm;
         }

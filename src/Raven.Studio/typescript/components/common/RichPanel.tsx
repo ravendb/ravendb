@@ -107,6 +107,15 @@ export function RichPanelName(props: RichPanelNameProps) {
     );
 }
 
+export function RichPanelNameMultiLine(props: RichPanelNameProps) {
+    const { children, className, ...rest } = props;
+    return (
+        <h4 className={classNames("rich-panel-name d-flex", className)} {...rest}>
+            {children}
+        </h4>
+    );
+}
+
 interface RichPanelDetailItemProps {
     id?: string;
     size?: string;
