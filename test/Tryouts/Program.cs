@@ -24,6 +24,7 @@ using NLog;
 using RachisTests;
 using SlowTests.Server;
 using SlowTests.SlowTests.MailingList;
+using SlowTests.Server.Documents.AI;
 
 namespace Tryouts;
 
@@ -47,7 +48,7 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new RavenDB_23556(testOutputHelper))
+                using (var test = new AiIntegrationGenerateEmbeddingsTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
 

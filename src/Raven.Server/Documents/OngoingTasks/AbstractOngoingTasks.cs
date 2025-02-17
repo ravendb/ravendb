@@ -310,11 +310,14 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                 return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
             case OngoingTaskType.AiIntegration:
 
-                var aiEtl = taskName != null
+                var aiIntegrationTask = taskName != null
                     ? databaseRecord.AiIntegrations.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
                     : databaseRecord.AiIntegrations?.Find(x => x.TaskId == taskId);
 
-                return CreateAiIntegrationTaskInfo(clusterTopology, databaseRecord, aiEtl);
+                if (aiIntegrationTask == null)
+                    return null;
+
+                return CreateAiIntegrationTaskInfo(clusterTopology, databaseRecord, aiIntegrationTask);
             default:
                 return null;
         }

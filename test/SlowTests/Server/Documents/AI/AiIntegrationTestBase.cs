@@ -6,6 +6,8 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow.Server;
@@ -27,30 +29,39 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
         return MemoryMarshal.Cast<byte, float>(GenerateEmbeddings.FromText(_allocator, VectorOptions.DefaultText, text).GetEmbedding()).ToArray();
     }
 
-    protected static (AiIntegrationConfiguration EtlConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
+    protected static (AiIntegrationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
         IDocumentStore store,
-        EtlTestBase etl,
         string aiIntegrationName = DefaultAiIntegrationTaskName,
         string connectionStringName = DefaultConnectionStringName,
         List<string> embeddingsPaths = null,
         string script = null,
         string collectionName = null)
     {
-        var configuration = new AiIntegrationConfiguration()
+        var configuration = new AiIntegrationConfiguration
         {
             Name = aiIntegrationName,
             ConnectionStringName = connectionStringName,
             EmbeddingsPaths = embeddingsPaths ?? (string.IsNullOrEmpty(script) ? ["Name"] : null),
             Collection = collectionName ?? "Dtos",
-            EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new AiEmbeddingsTransformation()
+            EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new AiEmbeddingsTransformation
             {
                 Script = script
             }
             : null,
         };
 
-        var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
-        etl.AddEtl(store, configuration, connectionString);
+        return RegisterAiIntegration(store, configuration);
+    }
+
+    protected static (AiIntegrationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
+        IDocumentStore store, AiIntegrationConfiguration configuration)
+    {
+        var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, OnnxSettings = new OnnxSettings() };
+
+        var putResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
+        Assert.NotNull(putResult.RaftCommandIndex);
+
+        store.Maintenance.Send(new AddAiIntegrationOperation(configuration));
 
         return (configuration, connectionString);
     }

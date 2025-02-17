@@ -2,11 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
@@ -17,7 +14,7 @@ namespace SlowTests.Server.Documents.AI;
 
 public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : AiIntegrationTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void CanSingleDocumentHasTwoEmbeddings()
     {
         using var store = GetDocumentStore();
@@ -30,14 +27,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             id = dto.Id;
         }
 
-        var etlDone = Etl.WaitForEtlToComplete(store);
-        var (etlConfig, connection) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Name", "SubDto.Name"]);
-        etlDone.Wait(TimeSpan.FromSeconds(10));
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        var (etlConfig, connection) = RegisterAiIntegration(store, embeddingsPaths: ["Name", "SubDto.Name"]);
+        aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
         AssertEmbeddingsForPath(store, etlConfig, "Name", ["Name1"], id);
         AssertEmbeddingsForPath(store, etlConfig, "SubDto.Name", ["Name1"], id);
 
-        etlDone.Reset();
+        aiTaskDone.Reset();
         using (var session = store.OpenSession())
         {
             var dto = session.Load<Dto>(id);
@@ -46,13 +43,13 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             session.SaveChanges();
         }
 
-        etlDone.Wait(TimeSpan.FromSeconds(10));
+        aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
         AssertEmbeddingsForPath(store, etlConfig, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, etlConfig, "SubDto.Name", ["Name1"], id);
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestDocumentsWithSingleValue()
     {
         using (var store = GetDocumentStore())
@@ -64,14 +61,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, Etl);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = RegisterAiIntegration(store);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto.Id);
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestDocumentsWithListOfValues()
     {
         using (var store = GetDocumentStore())
@@ -84,14 +81,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Names"]);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = RegisterAiIntegration(store, embeddingsPaths: ["Names"]);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "Names", ["Name1", "Name2", "Name3"], dto.Id);
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestDocumentsWithNestedPropertyPath()
     {
         using (var store = GetDocumentStore())
@@ -106,14 +103,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["SubDto.Name"]);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = RegisterAiIntegration(store, embeddingsPaths: ["SubDto.Name"]);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "SubDto.Name", ["Subname1"], dto.Id);
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestDocumentsWithNestedArrayPropertyPath()
     {
         using (var store = GetDocumentStore())
@@ -128,14 +125,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["SubDtos.Name"]);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = RegisterAiIntegration(store, embeddingsPaths: ["SubDtos.Name"]);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "SubDtos.Name", ["Subname1", "Subname2"], dto.Id);
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public async Task TestIfEmbeddingsAreGeneratedOnlyOnceInSameBatch()
     {
         using (var store = GetDocumentStore())
@@ -150,9 +147,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 await session.SaveChangesAsync();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Name"]);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = RegisterAiIntegration(store, embeddingsPaths: ["Name"]);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto1.Id);
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto2.Id);
 
@@ -166,7 +163,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestIfEmbeddingsAreGeneratedOnlyOnceInDifferentBatches()
     {
         using (var store = GetDocumentStore())
@@ -180,11 +177,11 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, Etl);
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = RegisterAiIntegration(store);
             var embeddingDocName = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, AiHelper.CalculateValueHash("Name1"));
 
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
             //Assert document exists
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto1.Id);
@@ -195,13 +192,13 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 expectedChangeVector = session.Advanced.GetChangeVectorFor(session.Load<object>(embeddingDocName));
             }
 
-            etlDone.Reset();
+            aiTaskDone.Reset();
             using (var session = store.OpenSession())
             {
                 session.Store(dto2);
                 session.SaveChanges();
             }
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
             using (var session = store.OpenSession())
             {
@@ -214,7 +211,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestDocumentsWithSingleValueWithUpdate()
     {
         using (var store = GetDocumentStore())
@@ -227,12 +224,12 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, Etl);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = RegisterAiIntegration(store);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto.Id);
 
-            etlDone.Reset();
+            aiTaskDone.Reset();
             using (var session = store.OpenSession())
             {
                 var loadDoc = session.Load<Dto>(dto.Id);
@@ -240,13 +237,13 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
                 dto = loadDoc;
             }
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
             AssertEmbeddingsForPath(store, configuration, "Name", ["updated"], dto.Id);
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestHandlingOfNonStringValues()
     {
         using (var store = GetDocumentStore())
@@ -259,14 +256,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (etlConfig, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Age"]);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (etlConfig, _) = RegisterAiIntegration(store, embeddingsPaths: ["Age"]);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, etlConfig, "Age", ["21"], dto.Id);
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestIfFieldsToIncludeAreRespected()
     {
         using (var store = GetDocumentStore())
@@ -280,9 +277,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (etlConfig, _) = RegisterAiIntegration(store, Etl);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (etlConfig, _) = RegisterAiIntegration(store);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, etlConfig, "Name", ["SomeName"], dto.Id);
 
             using (var session = store.OpenSession())
@@ -293,7 +290,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public async Task TestIfModificationOfNonProcessedFieldsTriggersEtl()
     {
         using (var store = GetDocumentStore())
@@ -304,9 +301,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             {
                 session.Store(dto);
                 session.SaveChanges();
-                var etlDone = Etl.WaitForEtlToComplete(store);
-                RegisterAiIntegration(store, Etl);
-                etlDone.Wait(TimeSpan.FromSeconds(10));
+                var aiTaskDone = Etl.WaitForEtlToComplete(store);
+                RegisterAiIntegration(store);
+                aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
                 var db = await GetDatabase(store.Database);
 
@@ -314,19 +311,19 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
 
                 var stats = etlProcess.GetPerformanceStats();
 
-                etlDone.Reset();
+                aiTaskDone.Reset();
 
                 dto.Age = 37;
                 session.SaveChanges();
 
-                etlDone.Wait(TimeSpan.FromSeconds(10));
+                aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
                 var etlStats2 = etlProcess.GetPerformanceStats();
             }
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public async Task TestIfDefaultBatchSizeIsRespected()
     {
         const string connectionStringName = "AI Connection String Name";
@@ -341,9 +338,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 }
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, Etl);
-            etlDone.Wait(TimeSpan.FromSeconds(100));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = RegisterAiIntegration(store);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(100));
 
             var db = await GetDatabase(store.Database);
 
@@ -355,7 +352,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public async Task TestIfCustomBatchSizeIsRespected()
     {
         const string connectionStringName = "AI Connection String Name";
@@ -377,9 +374,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 }
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            RegisterAiIntegration(store, Etl);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            RegisterAiIntegration(store);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
             var db = await GetDatabase(store.Database);
 
@@ -391,7 +388,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestDocumentDeletes()
     {
         var dto1 = new Dto { Name = "Name1" };
@@ -405,16 +402,16 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.Store(dto2);
                 session.SaveChanges();
 
-                var etlDone = Etl.WaitForEtlToComplete(store);
-                RegisterAiIntegration(store, Etl);
-                etlDone.Wait(TimeSpan.FromSeconds(10));
+                var aiTaskDone = Etl.WaitForEtlToComplete(store);
+                RegisterAiIntegration(store);
+                aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
-                etlDone.Reset();
+                aiTaskDone.Reset();
 
                 session.Delete(dto1);
                 session.SaveChanges();
 
-                etlDone.Wait(TimeSpan.FromSeconds(10));
+                aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             }
 
             var documentEmbeddingsId1 = AiHelper.GetDocumentEmbeddingsId(dto1.Id);
@@ -432,7 +429,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
     }
 
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestDocumentExpiration()
     {
         var dto = new Dto { Name = "Name1" };
@@ -446,9 +443,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
-            RegisterAiIntegration(store, Etl);
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            RegisterAiIntegration(store);
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
             using (var session = store.OpenSession())
             {
@@ -463,7 +460,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestTransformation()
     {
         const string connectionStringName = "connection string name";
@@ -478,29 +475,16 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.SaveChanges();
             }
 
-            var configuration = new AiIntegrationConfiguration()
-            {
-                Name = aiIntegrationName,
-                ConnectionStringName = connectionStringName,
-                Collection = "Dtos",
-                EmbeddingsTransformation = new AiEmbeddingsTransformation
-                {
-                    Script = @"
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+
+            var (configuration, _) = RegisterAiIntegration(store, aiIntegrationName: aiIntegrationName, script: @"
 embeddings.generate(
 {
     Foo: this.Name, 
     Bar: 'ConstValue'
-});"
-                }
-            };
+});");
 
-            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
-
-            var etlDone = Etl.WaitForEtlToComplete(store);
-
-            Etl.AddEtl(store, configuration, connectionString);
-
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
             using (var session = store.OpenSession())
             {
@@ -562,7 +546,7 @@ embeddings.generate(
     private record Test(string Id, string Expires);
 
 #pragma warning disable SKEXP0050
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestChunkingInTransformation()
     {
         const string plainTextToChunk =
@@ -578,12 +562,12 @@ embeddings.generate(
                 session.SaveChanges();
             }
 
-            var etlDone = Etl.WaitForEtlToComplete(store);
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
-            var (configuration, _) = RegisterAiIntegration(store, Etl,
+            var (configuration, _) = RegisterAiIntegration(store,
                 script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 5) });");
 
-            etlDone.Wait(TimeSpan.FromSeconds(20));
+            aiTaskDone.Wait(TimeSpan.FromSeconds(20));
             using (var session = store.OpenSession())
             {
                 var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(dto.Id);

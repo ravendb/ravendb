@@ -15,9 +15,9 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
     private string _name;
     private string Identifier => _name ??= Connection?.Name;
 
+    [JsonDeserializationIgnore]
+    [JsonIgnore]
     public AiConnectorType AiConnectorType => Connection?.GetActiveProvider() ?? AiConnectorType.None;
-
-    public List<string> PathsToProcess { get; set; }
 
     public override string GetDestination() => Identifier;
     public override string GetDefaultTaskName() => Identifier;

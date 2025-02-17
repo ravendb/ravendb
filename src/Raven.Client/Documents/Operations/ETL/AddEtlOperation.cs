@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations.ETL
             return new AddEtlCommand(conventions, _configuration);
         }
 
-        private sealed class AddEtlCommand : RavenCommand<AddEtlOperationResult>, IRaftCommand
+        internal sealed class AddEtlCommand : RavenCommand<AddEtlOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly EtlConfiguration<T> _configuration;

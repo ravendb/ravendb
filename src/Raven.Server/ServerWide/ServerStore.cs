@@ -2208,12 +2208,12 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case EtlType.Ai:
-                        var aiEtl = JsonDeserializationCluster.AiIntegrationConfiguration(etlConfiguration);
-                        aiEtl.Validate(out var aiEtlErr, validateName: false, validateConnection: false);
-                        if (ValidateConnectionString(rawRecord, aiEtl.ConnectionStringName, aiEtl.EtlType) == false)
-                            aiEtlErr.Add($"Could not find connection string named '{aiEtl.ConnectionStringName}'. Please supply an existing connection string.");
-                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiEtlErr);
-                        command = new AddAiIntegrationCommand(aiEtl, databaseName, raftRequestId);
+                        var aiIntegration = JsonDeserializationCluster.AiIntegrationConfiguration(etlConfiguration);
+                        aiIntegration.Validate(out var aiIntegrationErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, aiIntegration.ConnectionStringName, aiIntegration.EtlType) == false)
+                            aiIntegrationErr.Add($"Could not find connection string named '{aiIntegration.ConnectionStringName}'. Please supply an existing connection string.");
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiIntegrationErr);
+                        command = new AddAiIntegrationCommand(aiIntegration, databaseName, raftRequestId);
                         break;
 
                     default:

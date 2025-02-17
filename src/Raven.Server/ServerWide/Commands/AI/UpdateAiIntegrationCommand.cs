@@ -51,17 +51,34 @@ public sealed class UpdateAiIntegrationCommand : UpdateEtlCommand<AiIntegrationC
                     "This will ensure all documents are processed with consistent settings and maintain data integrity.");
             }
 
-            var differences = oldConfig.Connection.Compare(Configuration.Connection);
-            if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration))
+            if (oldConfig.ConnectionStringName != Configuration.ConnectionStringName)
             {
-                throw new RachisApplyException(
-                    $"Cannot update AI Integration task '{Configuration.Name}' because it contains critical changes in the connection settings that would affect the structure or creation process of embeddings. " +
-                    $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
-                    $"To proceed with these changes:{Environment.NewLine}" +
-                    $"1. Delete the existing Integration task{Environment.NewLine}" +
-                    $"2. Create a new Integration task with your desired settings{Environment.NewLine}" +
-                    "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
-                    "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
+                var oldConnectionStringConfig = oldConfig.Connection;
+
+                if (oldConnectionStringConfig == null && record.AiConnectionStrings.TryGetValue(oldConfig.ConnectionStringName, out oldConnectionStringConfig) == false)
+                {
+                    throw new RachisApplyException($"Could not find AI connection string named '{oldConfig.ConnectionStringName}' in the database record");
+                }
+
+                var newConnectionStringConfig = Configuration.Connection;
+
+                if (newConnectionStringConfig == null && record.AiConnectionStrings.TryGetValue(Configuration.ConnectionStringName, out newConnectionStringConfig) == false)
+                {
+                    throw new RachisApplyException($"Could not find AI connection string named '{Configuration.ConnectionStringName}' in the database record");
+                }
+
+                var differences = oldConnectionStringConfig.Compare(newConnectionStringConfig);
+                if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration))
+                {
+                    throw new RachisApplyException(
+                        $"Cannot update AI Integration task '{Configuration.Name}' because it contains critical changes in the connection settings that would affect the structure or creation process of embeddings. " +
+                        $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
+                        $"To proceed with these changes:{Environment.NewLine}" +
+                        $"1. Delete the existing Integration task{Environment.NewLine}" +
+                        $"2. Create a new Integration task with your desired settings{Environment.NewLine}" +
+                        "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
+                        "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
+                }
             }
         }
         catch (Exception e) when (ClusterStateMachine.ExpectedException(e))

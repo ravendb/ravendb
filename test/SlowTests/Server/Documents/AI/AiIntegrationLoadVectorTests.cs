@@ -47,7 +47,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        (var etl, _) = RegisterAiIntegration(store, Etl);
+        (var etl, _) = RegisterAiIntegration(store);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
@@ -125,7 +125,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        (var etl, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Names"]);
+        (var etl, _) = RegisterAiIntegration(store, embeddingsPaths: ["Names"]);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
 
@@ -212,7 +212,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        (var etl, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Name"], aiIntegrationName: embeddingEtlName);
+        (var etl, _) = RegisterAiIntegration(store, embeddingsPaths: ["Name"], aiIntegrationName: embeddingEtlName);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
         AssertEmbeddingsForPath(store, etl, "Name", ["Joe"], id);
 
@@ -237,7 +237,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         }
 
         etlStatus.Reset();
-        (var etl2, _) = RegisterAiIntegration(store, Etl, embeddingsPaths: ["Names"], aiIntegrationName: embeddingEtlName2);
+        (var etl2, _) = RegisterAiIntegration(store, embeddingsPaths: ["Names"], aiIntegrationName: embeddingEtlName2);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
         Indexes.WaitForIndexing(store);

@@ -127,6 +127,9 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                         case OngoingTaskType.QueueSink:
                             Result = JsonDeserializationClient.GetOngoingTaskQueueSinkResult(response);
                             break;
+                        case OngoingTaskType.AiIntegration:
+                            Result = JsonDeserializationClient.GetOngoingTaskAiIntegrationResult(response);
+                            break;
                         default:
                             throw new ArgumentOutOfRangeException(nameof(_type), _type, "Unknown task type");
                     }

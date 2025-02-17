@@ -117,6 +117,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                             if (snowflakeEtl != null)
                                 _deletingEtl = (snowflakeEtl.Name, snowflakeEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
                             break;
+                        case OngoingTaskType.AiIntegration:
+                            var aiIntegrationTasks = rawRecord.AiIntegrations;
+                            var aiIntegrationTask = aiIntegrationTasks?.Find(x => x.TaskId == id);
+                            if (aiIntegrationTask != null)
+                                _deletingEtl = (aiIntegrationTask.Name, aiIntegrationTask.Transforms.Select(x => x.Name).ToList());
+                            break;
                     }
                 }
             }
