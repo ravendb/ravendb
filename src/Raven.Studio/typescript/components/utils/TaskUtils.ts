@@ -111,6 +111,8 @@ export default class TaskUtils {
                 return "SnowflakeEtl";
             case "Queue":
                 return "QueueEtl";
+            case "Ai":
+                return "AiEtl";
             default:
                 throw new Error("Unknown etl type mapping: " + etlType);
         }

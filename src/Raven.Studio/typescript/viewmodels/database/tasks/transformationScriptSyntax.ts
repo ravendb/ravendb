@@ -69,7 +69,7 @@ class transformationScriptSyntax extends dialogViewModelBase {
                 sampleText = transformationScriptSyntax.amazonSqsEtlSampleText;
                 break;
             case "Ai":
-                sampleText = "TODO"; // TODO kalczur - add AI sample
+                sampleText = transformationScriptSyntax.aiEtlSampleText;
                 break;
             default:
                 genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
@@ -265,6 +265,10 @@ loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
 //    Source: '/registrations/direct-signup'
 //});
 `;
+
+aiEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.aiEtlSampleText);
+
+static readonly aiEtlSampleText =`generateEmbeddings({ Bar: 'ConstValue'});`;
     
     
     

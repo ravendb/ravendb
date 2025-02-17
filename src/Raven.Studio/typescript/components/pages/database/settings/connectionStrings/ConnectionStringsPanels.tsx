@@ -1,7 +1,7 @@
+import "./ConnectionStringsPanels.scss";
 import { HrHeader } from "components/common/HrHeader";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
-import React from "react";
 import { useDispatch } from "react-redux";
 import Button from "react-bootstrap/Button";
 import ConnectionStringsPanel from "./ConnectionStringsPanel";
@@ -24,7 +24,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType }
     }
 
     return (
-        <div className="mb-4">
+        <div className="mb-4 connection-strings-panels">
             <HrHeader
                 right={
                     hasDatabaseAdminAccess && (

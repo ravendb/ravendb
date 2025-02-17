@@ -1,4 +1,4 @@
-<div class="content-margin edit-elastic-search-task edit-ongoing-task" data-bind="css: { 'test-mode': enableTestArea }">
+<div class="content-margin edit-ai-etl-task" data-bind="css: { 'test-mode': enableTestArea }">
     <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
         <div class="flex-horizontal gap-2">
             <i class="icon-ai-etl"></i>
@@ -28,7 +28,7 @@
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
                                     <input type="text" class="form-control" id="taskName"
-                                           placeholder="Enter a descriptive name for the Elasticsearch ETL task (optional)" data-bind="textInput: taskName">
+                                           placeholder="Enter a descriptive name for the AI task (optional)" data-bind="textInput: taskName">
                                 </div>
                             </div>
                             <div class="form-group">
@@ -69,10 +69,6 @@
                                 </div>
                             </div>
                             <div data-bind="compose: $root.taskResponsibleNodeSectionView"></div>
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <button data-bind="click: $root.toggleIsNewConnectionStringOpen">Create a new AI connection string</button>
-                            </div>
                             <div data-bind="if: $root.isNewConnectionStringOpen()">
                                 <div data-bind="react: $root.newConnectionStringView"></div>
                             </div>
@@ -93,32 +89,14 @@
                                     <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    <!-- <div>
-                        <div data-bind="if: createNewConnectionString">
-                            <div class="panel-addon" data-bind="with: testConnectionResult">
-                                <div class="padding bg-success small" data-bind="visible: Success">
-                                    <div>Successfully connected</div>
-                                </div>
-                                <div data-bind="if: !Success">
-                                    <div class="padding bg-danger small">
-                                        <h2>Connection test failed!</h2>
-                                        <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                                        <div>
-                                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="panel-addon" data-bind="visible: $root.connectionStringsNames().length === 0 && !$root.createNewConnectionString()">
-                            <div class="padding bg-warning small">
-                                <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <button class="btn btn-default" data-bind="click: $root.toggleIsNewConnectionStringOpen">
+                                    <i class="icon-plus"></i> Create a new AI connection string
+                                </button>
                             </div>
                         </div>
                     </div>
-                </div> -->
             </form>
             <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasAiEtl }">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
@@ -190,7 +168,7 @@
                         </div>
                     </div>
                     <div class="margin-bottom-sm margin-top-sm">
-                        <div class="flex-horizontal margin-bottom-sm">
+                        <div class="flex-horizontal margin-bottom-sm" data-bind="visible: transformScriptCollections().length === 0">
                             <div class="flex-grow">
                                 <div class="dropdown btn-block flex-grow">
                                     <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
@@ -217,7 +195,7 @@
                             </div>
                         </div>
                         <div data-bind="visible: transformScriptCollections().length" class="margin-top-sm">
-                            <label><strong>Collections Selected:</strong></label>
+                            <label><strong>Collection Selected:</strong></label>
                             <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
                                 <li>
                                     <div class="name" data-bind="text: $data"></div>

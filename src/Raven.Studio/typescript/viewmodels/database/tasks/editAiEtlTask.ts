@@ -448,16 +448,16 @@ class aiEtlTask extends shardViewModelBase {
     
     toggleTestArea() {
         if (!this.enableTestArea()) {
-            let hasErrors = false;
+            // let hasErrors = false;
 
             // validate global form - but only 'enterTestModeValidationGroup'
-            if (!this.isValid(this.editedAiEtl().enterTestModeValidationGroup)) {
-                hasErrors = true;
-            }
+            // if (!this.isValid(this.editedAiEtl().enterTestModeValidationGroup)) {
+            //     hasErrors = true;
+            // }
             
-            if (!hasErrors) {
+            // if (!hasErrors) {
                 this.enableTestArea(true);
-            }
+            // }
         } else {
             this.enableTestArea(false);
         }
@@ -561,10 +561,6 @@ class aiEtlTask extends shardViewModelBase {
                 result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
             } else {
                 result = filteredOptions;
-            }
-
-            if (!_.includes(this.editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskElasticSearchTransformationModel.applyToAllCollectionsText)) {
-                result.unshift(ongoingTaskElasticSearchTransformationModel.applyToAllCollectionsText);
             }
 
             return result;
