@@ -21,7 +21,7 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         return "Index";
     }
     
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiEtl) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration) {
         super();
 
         this.update(dto);
@@ -68,7 +68,7 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiEtl) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration) {
         super.update(dto);
         
         const configuration = dto.Configuration;
@@ -85,7 +85,8 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         }
     }
     
-    toDto(): Raven.Client.Documents.Operations.ETL.AI.AiEtlConfiguration {
+    // TODO kalczur
+    toDto(): Raven.Client.Documents.Operations.AI.AiIntegrationConfiguration {
         return {
             TaskId: this.taskId,
             Name: this.taskName(),
@@ -96,23 +97,28 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),
             Transforms: this.transformationScripts().map(x => x.toDto()),
-            AiConnectorType: "AzureOpenAi", // TODO kalczur
-            PathsToProcess: []
+            AiConnectorType: "AzureOpenAi", 
+            PathsToProcess: [],
+            Collection: "",
+            EmbeddingsPaths: [],
+            EmbeddingsTransformation: {
+                Script: ""
+            },
+            NormalizedConnectionName: ""
         };
-        
     }
     
     static empty(): ongoingTaskAiEtlEditModel {
         return new ongoingTaskAiEtlEditModel(
             {
                 TaskName: "",
-                TaskType: "AiEtl",
+                TaskType: "AiIntegration",
                 TaskState: "Enabled",
                 TaskConnectionStatus: "Active",
                 Configuration: {
                     Transforms: [],
                 }
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiEtl);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration);
        }
 }
 

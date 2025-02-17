@@ -99,7 +99,7 @@ export default function AiTasks() {
         [definitionCache]
     );
 
-    const aiEtls = tasks.tasks.filter((x) => x.shared.taskType === "AiEtl") as OngoingTaskAmazonSqsEtlInfo[];
+    const aiEtls = tasks.tasks.filter((x) => x.shared.taskType === "AiIntegration") as OngoingTaskAmazonSqsEtlInfo[];
 
     const getSelectedTaskShardedInfos = () =>
         [...aiEtls].filter((x) => selectedTaskIds.includes(x.shared.taskId)).map((x) => x.shared);

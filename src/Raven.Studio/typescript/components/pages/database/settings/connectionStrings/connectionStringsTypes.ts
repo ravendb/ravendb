@@ -4,7 +4,7 @@ import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.Qu
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import AzureQueueStorageConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings;
 import AmazonSqsConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings;
-import AiConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.AI.AiConnectionString;
+import AiConnectionSettingsDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
 
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
@@ -127,7 +127,7 @@ export interface AiConnection extends ConnectionBase {
         dimensions?: number;
     };
     googleSettings?: {
-        aiVersion?: Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion;
+        aiVersion?: Raven.Client.Documents.Operations.AI.GoogleAIVersion;
         apiKey?: string;
         model?: string;
     };
@@ -146,7 +146,7 @@ export interface AiConnection extends ConnectionBase {
         maximumTokens?: number;
         normalizeEmbeddings?: boolean;
         padToken?: string;
-        poolingMode?: Raven.Client.Documents.Operations.ETL.AI.OnnxEmbeddingPoolingMode;
+        poolingMode?: Raven.Client.Documents.Operations.AI.OnnxEmbeddingPoolingMode;
         sepToken?: string;
         unicodeNormalization?: System.Text.NormalizationForm;
         unknownToken?: string;

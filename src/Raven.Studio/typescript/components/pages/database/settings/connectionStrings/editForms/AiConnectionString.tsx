@@ -225,7 +225,7 @@ const schema = yupObjectSchema<FormData>({
         dimensions: yup.number().nullable().integer().positive(),
     }),
     googleSettings: yup.object({
-        aiVersion: yup.string<Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion>().nullable(),
+        aiVersion: yup.string<Raven.Client.Documents.Operations.AI.GoogleAIVersion>().nullable(),
         apiKey: yup
             .string()
             .nullable()
@@ -274,7 +274,7 @@ const schema = yupObjectSchema<FormData>({
         maximumTokens: yup.number().nullable(),
         normalizeEmbeddings: yup.boolean().nullable(),
         padToken: yup.string().nullable(),
-        poolingMode: yup.string<Raven.Client.Documents.Operations.ETL.AI.OnnxEmbeddingPoolingMode>().nullable(),
+        poolingMode: yup.string<Raven.Client.Documents.Operations.AI.OnnxEmbeddingPoolingMode>().nullable(),
         sepToken: yup.string().nullable(),
         unicodeNormalization: yup.string<System.Text.NormalizationForm>().nullable(),
         unknownToken: yup.string().nullable(),

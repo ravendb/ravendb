@@ -112,7 +112,7 @@ export default class TaskUtils {
             case "Queue":
                 return "QueueEtl";
             case "Ai":
-                return "AiEtl";
+                return "AiIntegration";
             default:
                 throw new Error("Unknown etl type mapping: " + etlType);
         }

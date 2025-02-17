@@ -6,13 +6,13 @@ import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "comp
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditAiEtlInfoHub() {
-    const hasAiEtl = useAppSelector(licenseSelectors.statusValue("HasAiEtl"));
+    const hasAiIntegration = useAppSelector(licenseSelectors.statusValue("HasAiIntegration"));
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
             {
                 featureName: defaultFeatureAvailability[0].featureName,
-                value: hasAiEtl,
+                value: hasAiIntegration,
             },
         ],
     });
@@ -20,7 +20,7 @@ export function EditAiEtlInfoHub() {
     const docsLink = "#"; // TODO
 
     return (
-        <AboutViewFloating defaultOpen={hasAiEtl ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasAiIntegration ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -32,11 +32,11 @@ export function EditAiEtlInfoHub() {
                 <hr />
                 <div className="small-label mb-2">useful links</div>
                 <a href={docsLink} target="_blank">
-                    <Icon icon="newtab" /> Docs - AI ETL
+                    <Icon icon="newtab" /> Docs - AI Integration
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasAiEtl}
+                isUnlimited={hasAiIntegration}
                 data={featureAvailability}
             />
         </AboutViewFloating>

@@ -32,7 +32,7 @@ class aiTaskTestMode {
     testDelete = ko.observable<boolean>(false);
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
     db: database;
-    configurationProvider: () => Raven.Client.Documents.Operations.ETL.AI.AiEtlConfiguration;
+    configurationProvider: () => Raven.Client.Documents.Operations.AI.AiIntegrationConfiguration;
 
     validationGroup: KnockoutValidationGroup;
     validateParent: () => boolean;
@@ -59,7 +59,7 @@ class aiTaskTestMode {
 
     constructor(db: database,
                 validateParent: () => boolean,
-                configurationProvider: () => Raven.Client.Documents.Operations.ETL.AI.AiEtlConfiguration) {
+                configurationProvider: () => Raven.Client.Documents.Operations.AI.AiIntegrationConfiguration) {
         this.db = db;
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;
@@ -197,7 +197,7 @@ class aiEtlTask extends shardViewModelBase {
 
     showEditTransformationArea: KnockoutComputed<boolean>;
    
-    hasAiEtl = licenseModel.getStatusValue("HasAiEtl");
+    hasAiIntegration = licenseModel.getStatusValue("HasAiIntegration");
     infoHubView: ReactInKnockout<typeof EditAiEtlInfoHub.EditAiEtlInfoHub>;
 
     isNewConnectionStringOpen = ko.observable<boolean>(false);
@@ -249,7 +249,7 @@ class aiEtlTask extends shardViewModelBase {
             // 1. Editing an Existing task
             this.isAddingNewEtlTask(false);
 
-            getOngoingTaskInfoCommand.forAiEtl(this.db, args.taskId)
+            getOngoingTaskInfoCommand.forAiIntegration(this.db, args.taskId)
                 .execute()
                 .done((result) => {
                     this.editedAiEtl(new ongoingTaskAiEtlEditModel(result));
@@ -424,7 +424,7 @@ class aiEtlTask extends shardViewModelBase {
                 .map(x => x.name());
             
         const dto = this.editedAiEtl().toDto();
-        saveEtlTaskCommand.forAiEtl(this.db, dto, scriptsToReset)
+        saveEtlTaskCommand.forAiIntegration(this.db, dto, scriptsToReset)
             .execute()
             .done(() => {
                 this.dirtyFlag().reset();

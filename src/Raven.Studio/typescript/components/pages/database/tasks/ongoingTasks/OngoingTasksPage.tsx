@@ -826,7 +826,7 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         amazonSqsEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "AmazonSqsQueueEtl"
         ) as OngoingTaskAmazonSqsEtlInfo[],
-        aiEtls: filteredTasks.filter((x) => x.shared.taskType === "AiEtl") as OngoingTaskAmazonSqsEtlInfo[],
+        aiEtls: filteredTasks.filter((x) => x.shared.taskType === "AiIntegration") as OngoingTaskAmazonSqsEtlInfo[],
         kafkaSinks: filteredTasks.filter((x) => x.shared.taskType === "KafkaQueueSink") as OngoingTaskKafkaSinkInfo[],
         rabbitMqSinks: filteredTasks.filter(
             (x) => x.shared.taskType === "RabbitQueueSink"

@@ -65,6 +65,7 @@ using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.AI.Test;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
@@ -580,9 +581,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TestRelationalDatabaseEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>));
             scripter.AddType(typeof(SnowflakeEtlTable));
 
-            // ongoing tasks - AI ETL
+            // ongoing tasks - AI Integration
             scripter.AddType(typeof(OngoingTaskAiIntegration));
             scripter.AddType(typeof(AiIntegrationConfiguration));
+            scripter.AddType(typeof(TestAiIntegrationScript));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

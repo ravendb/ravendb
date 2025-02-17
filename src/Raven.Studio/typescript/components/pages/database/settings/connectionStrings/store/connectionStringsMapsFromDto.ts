@@ -22,7 +22,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
-type AiConnectionStringDto = Raven.Client.Documents.Operations.ETL.AI.AiConnectionString;
+type AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
 
 type OngoingTaskForConnection = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {
     ConnectionStringName?: string;
@@ -67,7 +67,7 @@ function getConnectionStringUsedTasks(
             filteredTasks = tasks.filter((task) => task.BrokerType === "AmazonSqs");
             break;
         case "Ai":
-            filteredTasks = tasks.filter((task) => task.TaskType === "AiEtl");
+            filteredTasks = tasks.filter((task) => task.TaskType === "AiIntegration");
             break;
         default:
             assertUnreachable(connectionType);

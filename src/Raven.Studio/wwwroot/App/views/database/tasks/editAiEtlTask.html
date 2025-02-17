@@ -3,7 +3,7 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-ai-etl"></i>
             <h2 data-bind="text: $root.isAddingNewEtlTask() ? 'New AI' : 'Edit AI'" class="mb-0"></h2>
-            <span class="badge license-restricted-badge enterprise" data-bind="if: !hasAiEtl">Enterprise</span>
+            <span class="badge license-restricted-badge enterprise" data-bind="if: !hasAiIntegration">Enterprise</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
     </div>
@@ -12,7 +12,7 @@
             <form class="flex-form" data-bind="submit: saveEtl" autocomplete="off">
                 <div class="flex-header">
                     <span data-placement="right" data-toggle="tooltip" data-html="true" data-animation="true"
-                        data-bind="tooltipText: $root.hasAiEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        data-bind="tooltipText: $root.hasAiIntegration ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
                         <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
                             <i class="icon-save"></i><span>Save</span>
                         </button>
@@ -21,7 +21,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasAiEtl }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
                     <div data-bind="with: editedAiEtl">
                         <div class="panel-body">
                             <div class="form-group margin-top" data-bind="validationElement: taskName">
@@ -98,7 +98,7 @@
                         </div>
                     </div>
             </form>
-            <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasAiEtl }">
+            <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
                     <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea">
@@ -107,7 +107,7 @@
                 </div> 
             </div>
             <!-- The transformation scripts -->
-            <div class="etl-list" data-bind="with: editedAiEtl, css: { 'pe-none item-disabled': !$root.hasAiEtl }">
+            <div class="etl-list" data-bind="with: editedAiEtl, css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
                 <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
                     <i class="icon-lg icon-empty-set"></i>
                     <h3 class="margin-top margin-top-sm"
@@ -148,7 +148,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.hasAiEtl }">
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
             <div class="flex-grow">
                 <div class="panel padding" data-bind="if: $root.showEditTransformationArea">
                     <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
@@ -259,7 +259,7 @@
             </div>
         </div>
     </div>
-    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.hasAiEtl }">
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
         <div class="absolute-center text-center z-1" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
             <i class="icon-info icon-xl"></i>
             Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button

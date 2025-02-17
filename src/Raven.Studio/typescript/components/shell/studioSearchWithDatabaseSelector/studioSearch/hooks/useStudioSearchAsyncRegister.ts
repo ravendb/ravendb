@@ -103,7 +103,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                             return null;
                         }
                     }
-                    case "AiEtl":
+                    case "AiIntegration":
                         return getUrlFromProvider(appUrl.forEditAiEtl);
                     default:
                         assertUnreachable(taskType);

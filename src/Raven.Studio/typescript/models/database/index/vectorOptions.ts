@@ -46,7 +46,8 @@ class vectorOptions {
             SourceEmbeddingType: this.sourceEmbeddingType(),
             DestinationEmbeddingType: this.destinationEmbeddingType(),
             NumberOfCandidatesForIndexing: this.numberOfCandidatesForIndexing(),
-            NumberOfEdges: this.numberOfEdges()
+            NumberOfEdges: this.numberOfEdges(),
+            AiIntegrationTaskName: null // TODO kalczur
         };
     }
 
@@ -56,7 +57,8 @@ class vectorOptions {
             SourceEmbeddingType: "Single",
             DestinationEmbeddingType: "Single",
             NumberOfCandidatesForIndexing: null,
-            NumberOfEdges: null
+            NumberOfEdges: null,
+            AiIntegrationTaskName: null // TODO kalczur
         }
     }
     

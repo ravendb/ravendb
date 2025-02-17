@@ -880,7 +880,7 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
     "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" | 
     "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "AmazonSqsQueueEtl" |
-    "KafkaQueueSink" | "RabbitQueueSink" | "AiEtl";
+    "KafkaQueueSink" | "RabbitQueueSink" | "AiIntegration";
 
 type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage" | "AmazonSqs" | "Ai";
 
