@@ -26,7 +26,7 @@ public class CoraxDocumentTrainSourceEnumerator
         if (table == null)
             yield break;
         
-        state.InitializeState(table);
+        state.InitializeState(table, table.NumberOfEntries);
         
         foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.CollectionEtagsSlice], state.DocumentSkip, seek: state.CurrentKey))
         {
@@ -44,7 +44,10 @@ public class CoraxDocumentTrainSourceEnumerator
     public IEnumerable<Document> GetDocumentsForDictionaryTraining(DocumentsOperationContext context, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
     {
         var table = new Table(_documentsStorage.DocsSchema, context.Transaction.InnerTransaction);
-        state.InitializeState(table);
+
+        var numberOfEntries = table.GetNumberOfEntriesFor(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice]);
+
+        state.InitializeState(table, numberOfEntries);
         foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice], state.DocumentSkip, state.CurrentKey))
         {
             state.CurrentKey = key;
@@ -75,12 +78,12 @@ public class CoraxDocumentTrainSourceState : PulsedEnumerationState<Document>
         Token = token;
     }
 
-    public void InitializeState(Table documentsTable)
+    public void InitializeState(Table documentsTable, long numberOfEntries)
     {
         if (_initialized)
             return;
         _initialized = true;
-        DocumentSkip = documentsTable.NumberOfEntries < _takeLimit ? 1 : documentsTable.NumberOfEntries / _takeLimit;
+        DocumentSkip = numberOfEntries < _takeLimit ? 1 : numberOfEntries / _takeLimit;
         Take = _takeLimit;
     }
     
