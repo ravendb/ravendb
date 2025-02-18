@@ -1,5 +1,6 @@
 
 type EditPeriodicBackupTaskSourceView = "Backups" | "OngoingTasks";
+type EditAiTaskSourceView = "AiTasks" | "OngoingTasks";
 
 // Interface
 interface computedAppUrls {

@@ -699,8 +699,17 @@ class appUrl {
 
     static forEditAiEtl(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
+
+        const sourceViewPart = "&sourceView=" + appUrl.getAiTaskSourceView();
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editAiEtlTask?" + databasePart + taskPart;
+        return "#databases/tasks/editAiEtlTask?" + databasePart + sourceViewPart + taskPart;
+    }
+
+    static getAiTaskSourceView(): EditAiTaskSourceView {
+        if (window.location.href.includes("/ai/")) {
+            return "AiTasks";
+        }
+        return "OngoingTasks";
     }
 
     static forSampleData(db: database): string {

@@ -204,6 +204,8 @@ class aiEtlTask extends shardViewModelBase {
     isNewConnectionStringOpen = ko.observable<boolean>(false);
     newConnectionStringView: ReactInKnockout<typeof EditConnectionStrings.default>;
 
+    sourceView = ko.observable<EditAiTaskSourceView>();
+
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("useConnectionString",
@@ -240,9 +242,11 @@ class aiEtlTask extends shardViewModelBase {
         }))
     }
 
-    activate(args: any) {
+    activate(args: { taskId?: number, sourceView: EditAiTaskSourceView }) {
         super.activate(args);
         const deferred = $.Deferred<void>();
+
+        this.sourceView(args.sourceView);
         
         this.loadPossibleMentors();
 
@@ -439,7 +443,11 @@ class aiEtlTask extends shardViewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.db));
+        if (this.sourceView() === "AiTasks") {
+            router.navigate(appUrl.forAiTasks(this.db));
+        } else {
+            router.navigate(appUrl.forOngoingTasks(this.db));
+        }
     }
 
     syntaxHelp() {
