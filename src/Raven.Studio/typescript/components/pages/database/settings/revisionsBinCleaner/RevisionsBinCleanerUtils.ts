@@ -8,7 +8,7 @@ function mapToDto(dto: RevisionsBinCleanerFormData): RevisionsBinConfiguration {
         MinimumEntriesAgeToKeepInMin: dto.isMinimumEntriesAgeToKeepEnabled
             ? moment.duration(dto.minimumEntriesAgeToKeep, "seconds").asMinutes()
             : 0,
-        RefreshFrequencyInSec: dto.isRefreshFrequencyEnabled ? dto.refreshFrequencyInSec : 300,
+        CleanerFrequencyInSec: dto.isCleanerFrequencyInSecEnabled ? dto.cleanerFrequencyInSec : 300,
     };
 }
 
@@ -18,8 +18,8 @@ function mapToFormData(dto: RevisionsBinConfiguration): RevisionsBinCleanerFormD
             isRevisionsBinCleanerEnabled: false,
             isMinimumEntriesAgeToKeepEnabled: false,
             minimumEntriesAgeToKeep: null,
-            isRefreshFrequencyEnabled: false,
-            refreshFrequencyInSec: null,
+            isCleanerFrequencyInSecEnabled: false,
+            cleanerFrequencyInSec: null,
         };
     }
 
@@ -29,8 +29,8 @@ function mapToFormData(dto: RevisionsBinConfiguration): RevisionsBinCleanerFormD
         minimumEntriesAgeToKeep: dto.MinimumEntriesAgeToKeepInMin
             ? moment.duration(dto.MinimumEntriesAgeToKeepInMin, "minutes").asSeconds() // minimumEntriesAgeToKeep are in minutes, so we need format minutes to seconds
             : null,
-        isRefreshFrequencyEnabled: dto.RefreshFrequencyInSec !== 300,
-        refreshFrequencyInSec: dto.RefreshFrequencyInSec !== 300 ? dto.RefreshFrequencyInSec : null,
+        isCleanerFrequencyInSecEnabled: dto.CleanerFrequencyInSec !== 300,
+        cleanerFrequencyInSec: dto.CleanerFrequencyInSec !== 300 ? dto.CleanerFrequencyInSec : null,
     };
 }
 

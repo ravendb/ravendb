@@ -13,7 +13,7 @@ export default function useRevisionsBinCleanerFormSideEffects(
                 case "isRevisionsBinCleanerEnabled": {
                     if (!values.isRevisionsBinCleanerEnabled) {
                         setValue("isMinimumEntriesAgeToKeepEnabled", false, { shouldValidate: true });
-                        setValue("isRefreshFrequencyEnabled", false, { shouldValidate: true });
+                        setValue("isCleanerFrequencyInSecEnabled", false, { shouldValidate: true });
                     }
                     break;
                 }
@@ -27,9 +27,9 @@ export default function useRevisionsBinCleanerFormSideEffects(
                     }
                     break;
                 }
-                case "isRefreshFrequencyEnabled": {
-                    if (!values.isRefreshFrequencyEnabled) {
-                        setValue("refreshFrequencyInSec", null, { shouldValidate: true });
+                case "isCleanerFrequencyInSecEnabled": {
+                    if (!values.isCleanerFrequencyInSecEnabled) {
+                        setValue("cleanerFrequencyInSec", null, { shouldValidate: true });
                     }
                 }
             }

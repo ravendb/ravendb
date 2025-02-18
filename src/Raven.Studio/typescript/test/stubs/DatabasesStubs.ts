@@ -969,7 +969,7 @@ return docs[0];`,
         return {
             Disabled: false,
             MinimumEntriesAgeToKeepInMin: 1,
-            RefreshFrequencyInSec: 5 * TimeInSeconds.Minute,
+            CleanerFrequencyInSec: 5 * TimeInSeconds.Minute,
         };
     }
 }
