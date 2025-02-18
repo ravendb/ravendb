@@ -10,22 +10,22 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { useAppUrls } from "hooks/useAppUrls";
 import { getTermsFields, getTermsLoadedAmount } from "components/pages/database/indexes/list/terms/termsUtils";
 
-export type termsForField = {
+export type TermsForField = {
     name: string;
     terms: string[];
     fromValue: string;
-    type: fieldType;
+    type: FieldType;
     hasMoreTerms: boolean;
     loadError: string;
 };
 
-export type fieldType = "static" | "dynamic";
+export type FieldType = "static" | "dynamic";
 
 export const INDEX_TERMS_PAGE_LIMIT = 800;
 
 export function useIndexTerms(indexName: string) {
     const { forCurrentDatabase: urls } = useAppUrls();
-    const [indexTerms, setIndexTerms] = React.useState<termsForField[]>([]);
+    const [indexTerms, setIndexTerms] = React.useState<TermsForField[]>([]);
     const { indexesService } = useServices();
     const activeDb = useAppSelector(databaseSelectors.activeDatabase);
     const locations = DatabaseUtils.getLocations(activeDb);
@@ -49,7 +49,7 @@ export function useIndexTerms(indexName: string) {
         }
     );
 
-    const loadTerms = useAsyncCallback<termsForField>(async (indexName: string, termsForField) => {
+    const loadTerms = useAsyncCallback<TermsForField>(async (indexName: string, termsForField) => {
         try {
             const indexTerms = await indexesService.getIndexTerms(
                 indexName,

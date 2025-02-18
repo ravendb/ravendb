@@ -20,7 +20,7 @@ import { LoadingView } from "components/common/LoadingView";
 import useBoolean from "hooks/useBoolean";
 import {
     INDEX_TERMS_PAGE_LIMIT,
-    termsForField,
+    TermsForField,
     useIndexTerms,
 } from "components/pages/database/indexes/list/terms/useIndexTerms";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -64,9 +64,9 @@ export default function IndexTerms({ pathParams }: ReactProps) {
 }
 
 interface IndexTermsAccordionsProps {
-    field: termsForField;
+    field: TermsForField;
     indexName: string;
-    loadMore: UseAsyncReturn<termsForField, [fieldName: string]>;
+    loadMore: UseAsyncReturn<TermsForField, [fieldName: string]>;
 }
 
 function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordionsProps) {
@@ -130,7 +130,7 @@ interface IndexTermItemProps {
     indexName: string;
     term: string;
     index: number;
-    field: termsForField;
+    field: TermsForField;
     fieldTerms: string[];
 }
 

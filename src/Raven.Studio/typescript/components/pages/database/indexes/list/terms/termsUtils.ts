@@ -1,6 +1,6 @@
-import { fieldType, termsForField } from "components/pages/database/indexes/list/terms/useIndexTerms";
+import { FieldType, TermsForField } from "components/pages/database/indexes/list/terms/useIndexTerms";
 
-const createTermsForField = (fieldName: string, type: fieldType): termsForField => {
+const createTermsForField = (fieldName: string, type: FieldType): TermsForField => {
     return {
         fromValue: null,
         name: fieldName,
@@ -11,7 +11,7 @@ const createTermsForField = (fieldName: string, type: fieldType): termsForField 
     };
 };
 
-const getTermsLoadedAmount = (indexTerms: termsForField[]) => {
+const getTermsLoadedAmount = (indexTerms: TermsForField[]) => {
     return indexTerms.reduce((acc, curr) => acc + curr.terms.length, 0);
 };
 
