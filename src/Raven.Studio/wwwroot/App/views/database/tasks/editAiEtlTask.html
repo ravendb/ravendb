@@ -163,15 +163,19 @@
                                 <li><a href="#" data-bind="click: _.partial(embeddingsSource, 'script')"><span>Script</span></a></li>
                                 <li><a href="#" data-bind="click: _.partial(embeddingsSource, 'paths')"><span>Path</span></a></li>
                             </ul>
-                            <span class="help-block" data-bind="validationMessage: embeddingsSource"></span>
                         </div>
                     </div>
     
-                    <div data-bind="if: embeddingsSource() === 'path'">
+                    <div data-bind="if: embeddingsSource() === 'paths'">
                         <div class="form-group">
                             <label for="embeddingsPathSelect"><strong>Embeddings Paths:</strong></label>
                             <div class="flex-horizontal gap-1">
-                                <input type="text" class="form-control" placeholder="Enter Embeddings Path" data-bind="textInput: inputEmbeddingsPath" />
+                                <div class="flex-grow">
+                                    <input type="text" class="form-control" placeholder="Enter Embeddings Path" data-bind="textInput: inputEmbeddingsPath" />
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: embeddingsPaths">
+                                        <div class="help-block" data-bind="validationMessage: embeddingsPaths"></div>
+                                    </div>
+                                </div>
                                 <div>
                                     <button class="btn btn-info" data-bind="click: addEmbeddingsPath, enable: inputEmbeddingsPath()">
                                         <i class="icon-plus"></i><span>Add path</span>

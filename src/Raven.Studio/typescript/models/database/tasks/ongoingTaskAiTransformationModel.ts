@@ -3,6 +3,8 @@ import genUtils = require("common/generalUtils");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import jsonUtil = require("common/jsonUtil");
 
+type EmbeddingsSource = "script" | "paths";
+
 class ongoingTaskAiTransformationModel {
     name = ko.observable<string>("not-empty");
     script = ko.observable<string>();
@@ -14,7 +16,7 @@ class ongoingTaskAiTransformationModel {
 
     inputCollection = ko.observable<string>();
     
-    embeddingsSource = ko.observable<"script" | "paths">("script");
+    embeddingsSource = ko.observable<EmbeddingsSource>("script");
     embeddingsSourceLabel: KnockoutComputed<string>;
     
     inputEmbeddingsPath = ko.observable<string>("");
@@ -28,8 +30,8 @@ class ongoingTaskAiTransformationModel {
 
     dirtyFlag: () => DirtyFlag;
 
-    constructor(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean) {
-        this.update(dto, isNew, resetScript);
+    constructor(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean, embeddingsSource: EmbeddingsSource, embeddingsPaths: string[]) {
+        this.update(dto, isNew, resetScript, embeddingsSource, embeddingsPaths);
 
         this.initObservables();
         this.initValidation();
@@ -75,7 +77,7 @@ class ongoingTaskAiTransformationModel {
                 Name: name || "",
                 Script: "",
                 DocumentIdPostfix: null
-            }, true, false);
+            }, true, false, "script", []);
     }
 
     toDto(): Raven.Client.Documents.Operations.ETL.Transformation {
@@ -101,7 +103,7 @@ class ongoingTaskAiTransformationModel {
         this.transformScriptCollections.extend({
             validation: [
                 {
-                    validator: () => this.applyScriptForAllCollections() || this.transformScriptCollections().length > 0,
+                    validator: () => this.transformScriptCollections().length > 0,
                     message: "At least one collection is required"
                 }
             ]
@@ -110,16 +112,17 @@ class ongoingTaskAiTransformationModel {
         this.embeddingsPaths.extend({
             validation: [
                 {
-                    validator: () => this.embeddingsSource() === "paths" && this.embeddingsPaths().length > 0,
+                    onlyIf: () => this.embeddingsSource() === "paths",
+                    validator: () => this.embeddingsPaths().length > 0,
                     message: "At least one path is required"
                 }
             ]
         });
 
         this.validationGroup = ko.validatedObservable({
-            name: this.name,
             script: this.script,
-            transformScriptCollections: this.transformScriptCollections
+            transformScriptCollections: this.transformScriptCollections,
+            embeddingsPaths: this.embeddingsPaths
         });
     }
 
@@ -157,9 +160,11 @@ class ongoingTaskAiTransformationModel {
         $(".collection-list li").first().addClass("blink-style");
     }
 
-    update(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean): void {
+    update(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean, embeddingsSource: EmbeddingsSource, embeddingsPaths: string[]): void {
         this.name(dto.Name);
         this.script(dto.Script);
+        this.embeddingsSource(embeddingsSource ?? "script");
+        this.embeddingsPaths(embeddingsPaths ?? []);
         
         this.transformScriptCollections(dto.Collections || []);
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);

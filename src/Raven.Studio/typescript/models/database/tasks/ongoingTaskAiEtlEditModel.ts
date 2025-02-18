@@ -76,9 +76,9 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             this.manualChooseMentor(!!configuration.MentorNode);
             this.pinMentorNode(configuration.PinToMentorNode);
             this.mentorNode(configuration.MentorNode);
-            
+
             if (configuration.Transforms) {
-                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskAiTransformationModel(x, false, false)));
+                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskAiTransformationModel(x, false, false, configuration.EmbeddingsPaths?.length ? "paths" : "script", configuration.EmbeddingsPaths ?? [])));
             }
         }
     }

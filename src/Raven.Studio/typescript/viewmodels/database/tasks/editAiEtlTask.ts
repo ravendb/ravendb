@@ -492,13 +492,13 @@ class aiEtlTask extends shardViewModelBase {
         }
 
         if (transformation.isNew()) {
-            const newTransformationItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, false);
+            const newTransformationItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, false, transformation.embeddingsSource(), transformation.embeddingsPaths());
             newTransformationItem.name(transformation.name());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedAiEtl().transformationScripts.push(newTransformationItem);
         } else {
             const oldItem = this.editedAiEtl().transformationScripts().find(x => x.name() === transformation.name());
-            const newItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, transformation.resetScript());
+            const newItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, transformation.resetScript(), transformation.embeddingsSource(), transformation.embeddingsPaths());
 
             if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
                 newItem.dirtyFlag().forceDirty();
@@ -535,7 +535,7 @@ class aiEtlTask extends shardViewModelBase {
     editTransformationScript(model: ongoingTaskAiTransformationModel) {
         this.makeSureSandboxIsVisible();
         this.transformationScriptSelectedForEdit(model);
-        this.editedTransformationScriptSandbox(new ongoingTaskAiTransformationModel(model.toDto(), false, model.resetScript()));
+        this.editedTransformationScriptSandbox(new ongoingTaskAiTransformationModel(model.toDto(), false, model.resetScript(), model.embeddingsSource(), model.embeddingsPaths()));
 
         $('.edit-ai-task .js-test-area [data-toggle="tooltip"]').tooltip();
     }
