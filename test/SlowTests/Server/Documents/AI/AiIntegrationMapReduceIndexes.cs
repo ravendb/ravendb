@@ -24,7 +24,7 @@ public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegra
         new SimpleMapReduceIndex().Execute(store);
         
         var etlDone = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(store, Etl, embeddingsPaths: ["Description"]);
+        RegisterAiIntegration(store, embeddingsPaths: ["Description"]);
         etlDone.Wait(TimeSpan.FromSeconds(10));
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())

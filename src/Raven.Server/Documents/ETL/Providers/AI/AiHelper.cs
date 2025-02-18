@@ -14,6 +14,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Extensions;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.OngoingTasks;
 using Sparrow.Server;
+using VectorEmbeddingType = Voron.Data.Graphs.VectorEmbeddingType;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
 
@@ -71,7 +72,7 @@ public static class AiHelper
             
         MemoryMarshal.AsBytes(embedding.Span).CopyTo(memory.Span);
 
-        return new VectorValue(memoryScope, memory, dimensions);
+        return new VectorValue(memoryScope, memory, VectorEmbeddingType.Single, dimensions);
     }
 
     [Experimental("SKEXP0001")]

@@ -818,7 +818,9 @@ public static class CoraxQueryBuilder
 
                         attachment.Stream.Read(memory.Span);
 
-                        transformedEmbedding = new VectorValue(null, memory);
+                        var allocator = builderParameters.Allocator;
+
+                        transformedEmbedding = new VectorValue(allocator, memory, Voron.Data.Graphs.VectorEmbeddingType.Single);
                         
                         return true;
                     }
