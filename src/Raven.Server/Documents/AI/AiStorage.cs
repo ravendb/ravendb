@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,7 +10,6 @@ using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -25,19 +25,27 @@ public class AiStorage
     private const string EmbeddingAttachmentContentType = "application/octet-stream";
 
     private readonly DocumentsStorage _documentsStorage;
+    private static DocumentDatabase _database;
     
 #pragma warning disable SKEXP0001
     private Dictionary<string, ITextEmbeddingGenerationService> _servicesByTaskName;
     private Dictionary<string, ITextEmbeddingGenerationService> _servicesByConnectionStringName;
 #pragma warning restore SKEXP0001
-
-    public AiStorage([NotNull] DocumentsStorage documentsStorage)
+    private static Dictionary<string, string> _taskNameToNormalizedConnectionStringName;
+    
+    private static ConcurrentQueue<EmbeddingCacheItem> _embeddingsQueue;
+    
+    public AiStorage([NotNull] DocumentDatabase database)
     {
-        _documentsStorage = documentsStorage ?? throw new ArgumentNullException(nameof(documentsStorage));
+        _database = database;
+        _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(_documentsStorage));
 #pragma warning disable SKEXP0001
         _servicesByConnectionStringName = new Dictionary<string, ITextEmbeddingGenerationService>();
         _servicesByTaskName = new Dictionary<string, ITextEmbeddingGenerationService>();
 #pragma warning restore SKEXP0001
+        
+        _embeddingsQueue = new ConcurrentQueue<EmbeddingCacheItem>();
+        _taskNameToNormalizedConnectionStringName = new Dictionary<string, string>();
     }
 
 #pragma warning disable SKEXP0001
@@ -87,7 +95,7 @@ public class AiStorage
         {
             if (document == null)
             {
-                var djv = CreateDocument(item.TextualValue, attachmentName);
+                var djv = CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, lastModified);
 
                 using (var json = context.ReadObject(djv, item.ValueEmbeddingsDocumentId))
                     PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, attachmentName);
@@ -109,7 +117,7 @@ public class AiStorage
 
         if (document == null)
         {
-            var djv = CreateDocument(item.TextualValue, attachmentName);
+            var djv = CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, lastModified);
 
             using (var json = context.ReadObject(djv, item.ValueEmbeddingsDocumentId))
                 PutValueEmbeddingsDocumentFromAttachment(json, attachment, attachmentName);
@@ -145,19 +153,24 @@ public class AiStorage
             _documentsStorage.AttachmentsStorage.PutAttachment(context, item.ValueEmbeddingsDocumentId, attachmentName, attachment.ContentType,
                 attachment.Base64Hash.ToString(), null, attachment.Stream);
         }
-
-        DynamicJsonValue CreateDocument(string textualValue, string attachmentName)
+    }
+    
+    public static DynamicJsonValue CreateValueEmbeddingsDocument(string textualValue, string attachmentName, DateTime lastModified)
+    {
+        return new DynamicJsonValue
         {
-            return new DynamicJsonValue
+            [textualValue] = attachmentName,
+            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
             {
-                [textualValue] = attachmentName,
-                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.EmbeddingsCollection,
-                    [Constants.Documents.Metadata.Expires] = lastModified.AddMonths(3)
-                }
-            };
-        }
+                [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.EmbeddingsCollection,
+                [Constants.Documents.Metadata.Expires] = lastModified.AddMonths(3)
+            }
+        };
+    }
+
+    public static string GetConnectionStringNameByTaskName(string taskName)
+    {
+        return _taskNameToNormalizedConnectionStringName[taskName];
     }
     
     public void HandleDatabaseRecordChange(DatabaseRecord record)
@@ -191,6 +204,36 @@ public class AiStorage
             var service = _servicesByConnectionStringName[connectionStringName];
 
             _servicesByTaskName[aiIntegrationName] = service;
+            
+            // todo use normalized name
+            _taskNameToNormalizedConnectionStringName[aiIntegrationName] = connectionStringName;
         }
+    }
+
+    public static void CacheEmbeddings()
+    {
+        var payload = new List<EmbeddingCacheItem>();
+        
+        while (_embeddingsQueue.TryDequeue(out var item))
+            payload.Add(item);
+        
+        var putEmbeddingsCommand = new AiIntegrationTask.MergedCacheEmbeddingsCommand(payload, _database);
+        
+        _database.TxMerger.EnqueueSync(putEmbeddingsCommand);
+    }
+
+    public static void EnqueueEmbeddingToCache(string connectionStringName, string textualValue, ReadOnlyMemory<float> embedding)
+    {
+        var newItem = new EmbeddingCacheItem() { EmbeddingValue = embedding, TextualValue = textualValue, ConnectionStringName = connectionStringName };
+        
+        _embeddingsQueue.Enqueue(newItem);
+    }
+
+    public class EmbeddingCacheItem
+    {
+        public ReadOnlyMemory<float> EmbeddingValue;
+        public string TextualValue;
+        // Name of the connection string used for embedding generation 
+        public string ConnectionStringName;
     }
 }

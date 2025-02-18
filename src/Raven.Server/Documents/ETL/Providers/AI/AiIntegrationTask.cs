@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Util;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Providers.AI.Test;
@@ -151,6 +152,11 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         }
         
         return processed;
+    }
+
+    public static void CacheEmbeddings()
+    {
+        //var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(aiEtlScriptRun, Configuration.Name, Database);
     }
 
     protected override AiIntegrationStatsScope CreateScope(EtlRunStats stats)
@@ -401,6 +407,59 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
             {
                 throw new NotImplementedException();
             }
+        }
+    }
+
+    public sealed class MergedCacheEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+    {
+        private List<AiStorage.EmbeddingCacheItem> _embeddingItems;
+        private readonly DocumentDatabase _database;
+        private readonly DocumentsStorage _documentsStorage;
+        
+        public MergedCacheEmbeddingsCommand(List<AiStorage.EmbeddingCacheItem> embeddingItems, DocumentDatabase database)
+        {
+            _embeddingItems = embeddingItems;
+            _database = database;
+            _documentsStorage = database.DocumentsStorage;
+        }
+        
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            var operationStartDate = _database.Time.GetUtcNow();
+            
+            foreach (var item in _embeddingItems)
+            {
+                string attachmentName = Guid.NewGuid().ToString();
+
+                using (var stream = new MemoryStream(MemoryMarshal.Cast<float, byte>(item.EmbeddingValue.Span).ToArray()))
+                {
+                    var hash = AttachmentsStorageHelper.CalculateHash(context, stream);
+
+                    var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(item.ConnectionStringName, hash);
+                    
+                    var valueEmbeddingsDocumentJsonDjv = AiStorage.CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, operationStartDate);
+                    
+                    using (var json = context.ReadObject(valueEmbeddingsDocumentJsonDjv, valueEmbeddingsDocumentId))
+                    {
+                        _documentsStorage.Put(context, valueEmbeddingsDocumentId, null, json);
+                    }
+                    
+                    _documentsStorage.AttachmentsStorage.PutAttachment(context, valueEmbeddingsDocumentId, attachmentName, "application/octet-stream", hash, null,
+                        stream);
+                }
+            }
+            
+            return 0;
+        }
+
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 }

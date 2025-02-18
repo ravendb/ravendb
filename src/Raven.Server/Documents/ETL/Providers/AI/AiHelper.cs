@@ -56,13 +56,16 @@ public static class AiHelper
     }
     
 #pragma warning disable SKEXP0001
-    public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, string textValue, int dimensions)
+    public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, string textValue, int dimensions, string aiTaskName)
 #pragma warning restore SKEXP0001
     {
         var embedding = service.GenerateEmbeddingAsync(textValue).GetAwaiter().GetResult();
 
-        // todo enqueue embedding to be cached in background
+        var connectionStringName = AiStorage.GetConnectionStringNameByTaskName(aiTaskName);
         
+        AiStorage.EnqueueEmbeddingToCache(connectionStringName, textValue, embedding);
+        // for test
+        AiStorage.CacheEmbeddings();
         
         var memoryScope = allocator.Allocate(dimensions, out Memory<byte> memory);
             

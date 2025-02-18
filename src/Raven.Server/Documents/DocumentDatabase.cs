@@ -180,7 +180,7 @@ namespace Raven.Server.Documents
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
-                AiStorage = new AiStorage(DocumentsStorage);
+                AiStorage = new AiStorage(this);
                 IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);

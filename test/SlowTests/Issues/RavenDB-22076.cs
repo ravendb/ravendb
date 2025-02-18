@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Vector;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Tests.Infrastructure;
@@ -487,6 +488,8 @@ public class RavenDB_22076 : RavenTestBase
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
             }
+            
+            WaitForUserToContinueTheTest(store);
         }
     }
     
@@ -534,6 +537,53 @@ public class RavenDB_22076 : RavenTestBase
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestIfIncorrectTaskNameInQueryThrows(Options options)
+    {
+        const string aiTaskName = "AiTaskName";
+        const string connectionStringName = "ConnectionStringName";
+        const string queriedText = "fruit";
+
+        using (var store = GetDocumentStore(options))
+        {
+            var dto1 = new Dto() { TextualValue = queriedText };
+            var dto2 = new Dto() { TextualValue = "computer" };
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto1);
+                session.Store(dto2);
+
+                session.SaveChanges();
+            }
+
+            var configuration = new AiIntegrationConfiguration()
+            {
+                Name = aiTaskName,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                EmbeddingsPaths = ["TextualValue"],
+                Collection = "Dtos"
+            };
+
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+
+            using (var session = store.OpenSession())
+            {
+                var ex = Assert.Throws<RavenException>(() => session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, "NotExistingTask"), factory => factory.ByText(queriedText)).ToList());
+                
+                Assert.Contains("Couldn't find NotExistingTask AI task.", ex.Message);
             }
         }
     }

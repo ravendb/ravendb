@@ -670,7 +670,7 @@ public static class CoraxQueryBuilder
                 {
                     if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.TryGetServiceByTaskName(aiIntegrationTaskName, out var service) == false)
                         throw new ArgumentException($"Couldn't find {aiIntegrationTaskName} AI task.");
-                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size);
+                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size, aiIntegrationTaskName);
                 } 
             }
         }
