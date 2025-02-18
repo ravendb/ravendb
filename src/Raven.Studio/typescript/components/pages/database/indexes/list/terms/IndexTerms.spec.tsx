@@ -81,7 +81,7 @@ describe("IndexTerms", () => {
         );
 
         const accordions = screen.queryAllByTestId(testIdSelectors.termAccordion);
-        const noFieldsText = await screen.findByText("No fields were found.");
+        const noFieldsText = await screen.findByText("No fields were found");
 
         expect(accordions).toHaveLength(0);
         expect(noFieldsText).toBeInTheDocument();

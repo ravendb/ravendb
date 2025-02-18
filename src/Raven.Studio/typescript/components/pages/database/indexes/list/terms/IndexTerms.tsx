@@ -25,6 +25,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { EmptySet } from "components/common/EmptySet";
 import { LoadError } from "components/common/LoadError";
+import { HStack } from "components/common/HStack";
 
 export default function IndexTerms({ pathParams }: ReactProps) {
     const indexName = pathParams[0];
@@ -39,17 +40,19 @@ export default function IndexTerms({ pathParams }: ReactProps) {
         <div className="index-terms content-margin">
             <Row>
                 <Col className="d-flex align-items-center gap-2">
-                    <Icon icon="terms" margin="m-0" />
-                    <span>
+                    <h3 className="mb-0">
+                        <Icon icon="terms" />
                         Index terms for <a href={editUrl}>{indexName}</a>
-                    </span>
-                    <Badge color="primary">{termsLoadedAmount} loaded</Badge>
+                    </h3>
+                    <Badge color="primary" className="rounded-pill">
+                        {termsLoadedAmount} loaded
+                    </Badge>
                 </Col>
             </Row>
-            <Row className="mt-4">
+            <Row className="mt-3">
                 {asyncGetIndexEntriesFields.loading && <LoadingView />}
                 {!asyncGetIndexEntriesFields.loading && indexTerms.length === 0 && (
-                    <EmptySet iconSize="lg">No fields were found.</EmptySet>
+                    <EmptySet iconSize="lg">No fields were found</EmptySet>
                 )}
                 {indexTerms.map((field) => (
                     <IndexTermsAccordions key={field.name} field={field} indexName={indexName} loadMore={loadMore} />
@@ -70,7 +73,7 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
         <UncontrolledAccordion
             key={field.name}
             data-testid="term-accordion"
-            className="bs5 mt-3 accordion-inside-modal"
+            className="bs5 mt-1 accordion-inside-modal"
             id={field.name}
             stayOpen
             flush
@@ -80,12 +83,17 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                 <AccordionHeader targetId={field.name}>
                     <div className="d-flex align-items-center gap-2">
                         <span className="m-0">{field.name}</span>
-                        {field.type === "dynamic" && (
-                            <Badge data-testid="term-dynamic-field" color="muted">
-                                Dynamic field
+                        <HStack className="gap-1">
+                            {field.type === "dynamic" && (
+                                <Badge data-testid="term-dynamic-field" color="light" className="rounded-pill">
+                                    Dynamic field
+                                </Badge>
+                            )}
+                            <Badge pill>
+                                {field.terms.length}
+                                {field.hasMoreTerms ? "+" : ""}
                             </Badge>
-                        )}
-                        <Badge pill>{field.terms.length}{field.hasMoreTerms ? '+' : ''}</Badge>
+                        </HStack>
                     </div>
                 </AccordionHeader>
                 <AccordionBody accordionId={field.name}>
@@ -103,7 +111,7 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                         ))}
                     </div>
                     {field.hasMoreTerms && (
-                        <span className="d-flex justify-content-center mt-4">
+                        <span className="d-flex justify-content-center mt-4 mb-2">
                             <ButtonWithSpinner
                                 data-testid="term-load-more-btn"
                                 color="primary"
@@ -111,6 +119,7 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                                 isSpinning={loadMore.loading}
                                 disabled={loadMore.loading}
                                 onClick={() => loadMore.execute(field.name)}
+                                className="rounded-pill"
                             >
                                 Load more
                             </ButtonWithSpinner>

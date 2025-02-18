@@ -54,10 +54,12 @@ export default function IndexTermsPreviewModal({
                         disabled={!canNavigateToPreviousTerm}
                         className="rounded-pill"
                     >
+                        <Icon icon="arrow-thin-left" />
                         Previous
                     </Button>
                     <Button onClick={navigateToNextTerm} disabled={!canNavigateToNextTerm} className="rounded-pill">
                         Next
+                        <Icon icon="arrow-thin-right" margin="ms-1" />
                     </Button>
                 </div>
                 <Button className="rounded-pill" color="primary" onClick={toggleModal} type="button">
