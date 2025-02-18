@@ -748,6 +748,7 @@ namespace Sparrow.Server
         /// This list keeps all the segments already instantiated in order to release them after context finalization. 
         /// </summary>
         private readonly List<SegmentInformation> _wholeSegments;
+        private readonly int _initialAllocationBlockSize;
         private int _allocationBlockSize;
 
         internal long _totalAllocated, _currentlyAllocated;
@@ -778,6 +779,7 @@ namespace Sparrow.Server
                 throw new ArgumentException($"It is not a good idea to allocate chunks of less than the {nameof(ByteStringContext.MinBlockSizeInBytes)} value of {ByteStringContext.MinBlockSizeInBytes}");
 
             _lowMemoryFlag = lowMemoryFlag;
+            _initialAllocationBlockSize = allocationBlockSize;
             _allocationBlockSize = allocationBlockSize;
 
             _wholeSegments = new List<SegmentInformation>();
@@ -823,6 +825,7 @@ namespace Sparrow.Server
                 stack?.Clear();
             }
             _internalReadyToUseMemorySegments.Clear();// memory here will be released from _wholeSegments
+            _allocationBlockSize = _initialAllocationBlockSize;
 
             _externalStringPool.Clear();
             _externalFastPoolCount = 0;
