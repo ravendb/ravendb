@@ -20,7 +20,7 @@ export interface ConnectionStringsUrlParameters {
     type?: StudioEtlType;
 }
 
-export default function ConnectionStrings(props: ReactProps<any, ConnectionStringsUrlParameters>) {
+export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps<ConnectionStringsUrlParameters>) {
     const { hasNone: hasNoneInLicense } = useConnectionStringsLicense();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -30,8 +30,8 @@ export default function ConnectionStrings(props: ReactProps<any, ConnectionStrin
     useEffect(() => {
         dispatch(
             connectionStringsActions.urlParametersLoaded({
-                name: props?.queryParams?.name,
-                type: props?.queryParams?.type,
+                name: queryParams?.name,
+                type: queryParams?.type,
             })
         );
         dispatch(connectionStringsActions.fetchData(databaseName));

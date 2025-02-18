@@ -1002,10 +1002,16 @@ interface ReactDirtyFlag {
     setIsDirty: (isDirty: boolean, customDialog?: () => JQueryPromise<confirmDialogResult>) => void;
 }
 
-interface ReactProps<PathParams = any, QueryParams = Record<string, unknown>> {
-    pathParams?: PathParams;
-    queryParams?: QueryParams;
-    location?: databaseLocationSpecifier
+interface ReactQueryParamsProps<T extends Record<string, any>> {
+    queryParams?: T
+}
+
+interface ReactPathParamsProps {
+    pathParams?: string[]
+}
+
+interface ReactLocationProps {
+    location: databaseLocationSpecifier;
 }
 
 interface ReactInKnockoutOptions<T> {
