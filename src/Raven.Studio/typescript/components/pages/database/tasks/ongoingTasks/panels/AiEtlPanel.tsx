@@ -34,7 +34,6 @@ function Details(props: AiEtlPanelProps & { canEdit: boolean }) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Ai", data.shared.connectionStringName);
 
-    // TODO kalczur
     return (
         <RichPanelDetails>
             <ConnectionStringItem

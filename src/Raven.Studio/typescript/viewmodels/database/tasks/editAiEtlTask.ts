@@ -6,7 +6,7 @@ import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTa
 import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
-import ongoingTaskElasticSearchEtlTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
+import ongoingTaskAiTransformationModel = require("models/database/tasks/ongoingTaskAiTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -16,8 +16,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
-import ongoingTaskElasticSearchTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
+import testAiCommand = require("commands/database/tasks/testAiCommand");
 import prismjs = require("prismjs");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
@@ -32,7 +31,7 @@ class aiTaskTestMode {
     testDelete = ko.observable<boolean>(false);
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
     db: database;
-    configurationProvider: () => Raven.Client.Documents.Operations.AI.AiIntegrationConfiguration;
+    configurationProvider: () => AiIntegrationConfiguration;
 
     validationGroup: KnockoutValidationGroup;
     validateParent: () => boolean;
@@ -47,8 +46,8 @@ class aiTaskTestMode {
     loadedDocument = ko.observable<string>();
     loadedDocumentId = ko.observable<string>();
 
-    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.IndexSummary>([]);
     debugOutput = ko.observableArray<string>([]);
+    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.AI.Test.AiIntegrationTestScriptResult>([]);
 
     // all kinds of alerts:
     transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
@@ -59,7 +58,7 @@ class aiTaskTestMode {
 
     constructor(db: database,
                 validateParent: () => boolean,
-                configurationProvider: () => Raven.Client.Documents.Operations.AI.AiIntegrationConfiguration) {
+                configurationProvider: () => AiIntegrationConfiguration) {
         this.db = db;
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;
@@ -136,24 +135,26 @@ class aiTaskTestMode {
 
             eventsCollector.default.reportEvent("ai-etl", "test-script");
 
-            new testElasticSearchEtlCommand(this.db, dto)
+            new testAiCommand(this.db, dto)
                 .execute()
                 .done(simulationResult => {
-                    const summaryFormatted =  simulationResult.Summary.map(x => ({
-                        Commands: x.Commands.map((cmd: string) => cmd.replace(/\r\n/g, "\n")),
-                        IndexName: x.IndexName
-                    }));
+                    console.log('kalczur ', simulationResult);
+                    // TODO kalczur
+                    // const summaryFormatted =  simulationResult.Summary.map(x => ({
+                    //     Commands: x.Commands.map((cmd: string) => cmd.replace(/\r\n/g, "\n")),
+                    //     IndexName: x.IndexName
+                    // }));
                     
-                    this.testResults(summaryFormatted);
+                    // this.testResults(summaryFormatted);
                     
-                    this.debugOutput(simulationResult.DebugOutput);
-                    this.transformationErrors(simulationResult.TransformationErrors);
+                    // this.debugOutput(simulationResult.DebugOutput);
+                    // this.transformationErrors(simulationResult.TransformationErrors);
 
-                    if (this.warningsCount()) {
-                        $('.test-container a[href="#warnings"]').tab('show');
-                    } else {
-                        $('.test-container a[href="#testResults"]').tab('show');
-                    }
+                    // if (this.warningsCount()) {
+                    //     $('.test-container a[href="#warnings"]').tab('show');
+                    // } else {
+                    //     $('.test-container a[href="#testResults"]').tab('show');
+                    // }
 
                     this.testAlreadyExecuted(true);
                 })
@@ -169,7 +170,7 @@ class aiEtlTask extends shardViewModelBase {
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     static readonly scriptNamePrefix = "Script_";
-    static isApplyToAll = ongoingTaskElasticSearchTransformationModel.isApplyToAll;
+    static isApplyToAll = ongoingTaskAiTransformationModel.isApplyToAll;
     
     enableTestArea = ko.observable<boolean>(false);
     test: aiTaskTestMode;    
@@ -177,8 +178,8 @@ class aiEtlTask extends shardViewModelBase {
     editedAiEtl = ko.observable<ongoingTaskAiEtlEditModel>();
     isAddingNewEtlTask = ko.observable<boolean>(true);
 
-    transformationScriptSelectedForEdit = ko.observable<ongoingTaskElasticSearchEtlTransformationModel>();
-    editedTransformationScriptSandbox = ko.observable<ongoingTaskElasticSearchEtlTransformationModel>();
+    transformationScriptSelectedForEdit = ko.observable<ongoingTaskAiTransformationModel>();
+    editedTransformationScriptSandbox = ko.observable<ongoingTaskAiTransformationModel>();
 
     possibleMentors = ko.observableArray<string>([]);
     connectionStringsNames = ko.observableArray<string>([]);
@@ -264,7 +265,7 @@ class aiEtlTask extends shardViewModelBase {
             this.isAddingNewEtlTask(true);
             this.editedAiEtl(ongoingTaskAiEtlEditModel.empty());
 
-            this.editedTransformationScriptSandbox(ongoingTaskElasticSearchEtlTransformationModel.empty(this.findNameForNewTransformation()));
+            this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.findNameForNewTransformation()));
 
             deferred.resolve();
         }
@@ -286,7 +287,7 @@ class aiEtlTask extends shardViewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        $('.edit-elastic-search-task [data-toggle="tooltip"]').tooltip();
+        $('.edit-ai-task [data-toggle="tooltip"]').tooltip();
     }
 
     toggleIsNewConnectionStringOpen() {
@@ -332,11 +333,11 @@ class aiEtlTask extends shardViewModelBase {
 
             // override transforms - use only current transformation
             const transformationScriptDto = this.editedTransformationScriptSandbox().toDto();
-            transformationScriptDto.Name = "Script_1"; // assign fake name
+            transformationScriptDto.Name = "Configuration"; // assign fake name
             dto.Transforms = [transformationScriptDto];
 
             if (!dto.Name) {
-                dto.Name = "Test Elasticsearch Task"; // assign fake name
+                dto.Name = "Test AI Task"; // assign fake name
             }
             return dto;
         };
@@ -473,7 +474,7 @@ class aiEtlTask extends shardViewModelBase {
 
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
-        this.editedTransformationScriptSandbox(ongoingTaskElasticSearchEtlTransformationModel.empty(this.findNameForNewTransformation()));
+        this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.findNameForNewTransformation()));
     }
 
     cancelEditedTransformation() {
@@ -491,13 +492,13 @@ class aiEtlTask extends shardViewModelBase {
         }
 
         if (transformation.isNew()) {
-            const newTransformationItem = new ongoingTaskElasticSearchEtlTransformationModel(transformation.toDto(), false, false);
+            const newTransformationItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, false);
             newTransformationItem.name(transformation.name());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedAiEtl().transformationScripts.push(newTransformationItem);
         } else {
             const oldItem = this.editedAiEtl().transformationScripts().find(x => x.name() === transformation.name());
-            const newItem = new ongoingTaskElasticSearchEtlTransformationModel(transformation.toDto(), false, transformation.resetScript());
+            const newItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, transformation.resetScript());
 
             if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
                 newItem.dirtyFlag().forceDirty();
@@ -522,7 +523,7 @@ class aiEtlTask extends shardViewModelBase {
         return aiEtlTask.scriptNamePrefix + (maxNumber + 1);
     }
 
-    removeTransformationScript(model: ongoingTaskElasticSearchEtlTransformationModel) {
+    removeTransformationScript(model: ongoingTaskAiTransformationModel) {
         this.editedAiEtl().transformationScripts.remove(x => model.name() === x.name());
         
         if (this.transformationScriptSelectedForEdit() === model) {
@@ -531,16 +532,16 @@ class aiEtlTask extends shardViewModelBase {
         }
     }
 
-    editTransformationScript(model: ongoingTaskElasticSearchEtlTransformationModel) {
+    editTransformationScript(model: ongoingTaskAiTransformationModel) {
         this.makeSureSandboxIsVisible();
         this.transformationScriptSelectedForEdit(model);
-        this.editedTransformationScriptSandbox(new ongoingTaskElasticSearchEtlTransformationModel(model.toDto(), false, model.resetScript()));
+        this.editedTransformationScriptSandbox(new ongoingTaskAiTransformationModel(model.toDto(), false, model.resetScript()));
 
-        $('.edit-elastic-search-task .js-test-area [data-toggle="tooltip"]').tooltip();
+        $('.edit-ai-task .js-test-area [data-toggle="tooltip"]').tooltip();
     }
     
     private makeSureSandboxIsVisible() {
-        const $editArea = $(".edit-elastic-search-task");
+        const $editArea = $(".edit-ai-task");
         if ($editArea.scrollTop() > 300) {
             $editArea.scrollTop(0);
         }

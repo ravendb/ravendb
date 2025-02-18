@@ -99,10 +99,10 @@
                     </div>
             </form>
             <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
-                <div class="flex-grow"><h3>Transform Scripts</h3></div>
+                <div class="flex-grow"><h3>Embeddings configuration</h3></div>
                 <div>
-                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea">
-                        <i class="icon-plus"></i><span>Add Transformation Script</span>
+                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea, visible: editedAiEtl().transformationScripts().length === 0">
+                        <i class="icon-plus"></i><span>Add Embeddings Configuration</span>
                     </button>
                 </div> 
             </div>
@@ -111,7 +111,7 @@
                 <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
                     <i class="icon-lg icon-empty-set"></i>
                     <h3 class="margin-top margin-top-sm"
-                        data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No Transformation Scripts have been defined
+                        data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No Embeddings Configurations have been defined
                     </h3>
                 </div>
                 <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
@@ -150,31 +150,66 @@
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
             <div class="flex-grow">
-                <div class="panel padding" data-bind="if: $root.showEditTransformationArea">
-                    <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
-                        <label class="control-label"><strong>Name:</strong></label>
-                        <div class="flex-grow margin-left">
-                            <input type="text" class="form-control" placeholder="Enter script name" autocomplete="off"
-                                   data-bind="textInput: name, disable: $root.enableTestArea() || !isNew()" />
+                <div class="panel padding" data-bind="if: $root.showEditTransformationArea()">
+
+                    <div class="form-group">
+                        <label class="control-label">Embeddings Source:</label>
+                        <div class="flex-grow">
+                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: embeddingsSourceLabel">
+                                <span data-bind="text: embeddingsSourceLabel() || 'Select a embeddings source'"></span>
+                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: _.partial(embeddingsSource, 'script')"><span>Script</span></a></li>
+                                <li><a href="#" data-bind="click: _.partial(embeddingsSource, 'paths')"><span>Path</span></a></li>
+                            </ul>
+                            <span class="help-block" data-bind="validationMessage: embeddingsSource"></span>
                         </div>
                     </div>
-                    <label><strong>Script:</strong></label>
-                    <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
-                    <div data-bind="validationElement: script">
+    
+                    <div data-bind="if: embeddingsSource() === 'path'">
+                        <div class="form-group">
+                            <label for="embeddingsPathSelect"><strong>Embeddings Paths:</strong></label>
+                            <div class="flex-horizontal gap-1">
+                                <input type="text" class="form-control" placeholder="Enter Embeddings Path" data-bind="textInput: inputEmbeddingsPath" />
+                                <div>
+                                    <button class="btn btn-info" data-bind="click: addEmbeddingsPath, enable: inputEmbeddingsPath()">
+                                        <i class="icon-plus"></i><span>Add path</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="margin-top-sm" data-bind="if: embeddingsPaths().length > 0">
+                                <ul class="well collection-list" data-bind="foreach: embeddingsPaths">
+                                    <li>
+                                        <div class="name" data-bind="text: $data"></div>
+                                        <a title="Remove collection" href="#" data-bind="click: $parent.removeEmbeddingsPath.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div data-bind="if: embeddingsSource() === 'script'">
+                        <label><strong>Script:</strong></label>
+                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
+                        <div data-bind="validationElement: script">
                             <pre class="form-control editor"
-                                 data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
-                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
-                            <div class="help-block" data-bind="validationMessage: script"></div>
+                            data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                                <div class="help-block" data-bind="validationMessage: script"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="margin-bottom-sm margin-top-sm">
-                        <div class="flex-horizontal margin-bottom-sm" data-bind="visible: transformScriptCollections().length === 0">
-                            <div class="flex-grow">
-                                <div class="dropdown btn-block flex-grow">
-                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
-                                           data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                        <div class="margin-bottom-sm margin-top-sm">
+                        <div class="margin-bottom-sm" data-bind="visible: transformScriptCollections().length === 0">
+                            <label><strong>Collection:</strong></label>
+                            <div class="flex-horizontal">
+                                <div class="flex-grow">
+                                    <div class="dropdown btn-block flex-grow">
+                                        <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
+                                        data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                        <ul class="dropdown-menu" role="menu" style="display: none;"
                                         data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
                                         <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
                                             <a role="menuitem" tabindex="-1" href="#">
@@ -192,10 +227,11 @@
                                 <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()">
                                     <i class="icon-plus"></i><span>Add Collection</span>
                                 </button>
+                                </div>
                             </div>
                         </div>
                         <div data-bind="visible: transformScriptCollections().length" class="margin-top-sm">
-                            <label><strong>Collection Selected:</strong></label>
+                            <label><strong>Collection:</strong></label>
                             <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
                                 <li>
                                     <div class="name" data-bind="text: $data"></div>
@@ -295,7 +331,7 @@
             </div>
             <div role="tabpanel" class="tab-pane fade" id="warnings">
                 <div class="transformation-errors" data-bind="visible: transformationErrors().length">
-                    <h3>Transformation Script Errors:</h3>
+                    <h3>Errors:</h3>
                     <div data-bind="foreach: transformationErrors">
                         <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
                     </div>
@@ -323,5 +359,3 @@
         </div>
     </div>
 </div>
-
-<div class="backdrop" data-bind="click: $root.toggleTestArea"></div>

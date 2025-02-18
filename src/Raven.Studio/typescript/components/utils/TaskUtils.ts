@@ -132,6 +132,8 @@ export default class TaskUtils {
                 return "Snowflake";
             case "QueueEtl":
                 return "Queue";
+            case "AiIntegration":
+                return "Ai";
             default:
                 throw new Error("Unsupported task type: " + taskType);
         }

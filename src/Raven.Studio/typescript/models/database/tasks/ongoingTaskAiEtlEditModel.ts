@@ -1,20 +1,20 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
-import ongoingTaskElasticSearchEtlTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
+import ongoingTaskAiTransformationModel = require("models/database/tasks/ongoingTaskAiTransformationModel");
 
 class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
     connectionStringName = ko.observable<string>();
 
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
     
-    transformationScripts = ko.observableArray<ongoingTaskElasticSearchEtlTransformationModel>([]);
+    transformationScripts = ko.observableArray<ongoingTaskAiTransformationModel>([]);
     
     validationGroup: KnockoutValidationGroup;
     enterTestModeValidationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
 
     get studioTaskType(): StudioTaskType {
-        return "ElasticSearchEtl";
+        return "AiIntegration";
     }
 
     get destinationType(): TaskDestinationType {
@@ -50,8 +50,6 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             required: true
         });
 
-       
-        
         this.transformationScripts.extend({
             validation: [
                 {
@@ -80,13 +78,21 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             this.mentorNode(configuration.MentorNode);
             
             if (configuration.Transforms) {
-                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskElasticSearchEtlTransformationModel(x, false, false)));
+                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskAiTransformationModel(x, false, false)));
             }
         }
     }
     
-    // TODO kalczur
-    toDto(): Raven.Client.Documents.Operations.AI.AiIntegrationConfiguration {
+    toDto(): AiIntegrationConfiguration {
+        // only one transformation is supported
+        const transformation = this.transformationScripts()[0];
+
+        const EmbeddingsTransformation: Raven.Client.Documents.Operations.AI.AiEmbeddingsTransformation = transformation.embeddingsSource() === "script" ? {
+            Script: transformation.script(),
+        } : null;
+
+        const EmbeddingsPaths: string[] = transformation.embeddingsSource() === "paths" ? transformation.embeddingsPaths() : [];
+
         return {
             TaskId: this.taskId,
             Name: this.taskName(),
@@ -96,15 +102,10 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             Disabled: this.taskState() === "Disabled",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),
-            Transforms: this.transformationScripts().map(x => x.toDto()),
-            AiConnectorType: "AzureOpenAi", 
-            PathsToProcess: [],
-            Collection: "",
-            EmbeddingsPaths: [],
-            EmbeddingsTransformation: {
-                Script: ""
-            },
-            NormalizedConnectionName: ""
+            Transforms: [transformation.toDto()],
+            Collection: transformation.transformScriptCollections()[0],
+            EmbeddingsPaths,
+            EmbeddingsTransformation
         };
     }
     

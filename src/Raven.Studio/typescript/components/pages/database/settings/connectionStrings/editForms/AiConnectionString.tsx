@@ -17,6 +17,7 @@ import OllamaSettings from "components/pages/database/settings/connectionStrings
 import OnnxSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OnnxSettings";
 import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
 import MistralaiAiSettings from "./aiFields/MistralaiAiSettings";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -40,8 +41,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
 
     const { control, handleSubmit, setValue } = form;
 
-    // TODO kalczur
-    // const { forCurrentDatabase } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
 
     const formValues = useWatch({ control });
     const { connectorType } = formValues;
@@ -144,8 +144,10 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     </RichAlert>
                 )}
 
-                {/* TODO kalczur add urlProvider */}
-                <ConnectionStringUsedByTasks tasks={initialConnection.usedByTasks} urlProvider={() => () => "#"} />
+                <ConnectionStringUsedByTasks
+                    tasks={initialConnection.usedByTasks}
+                    urlProvider={forCurrentDatabase.editAiEtl}
+                />
             </Form>
         </FormProvider>
     );

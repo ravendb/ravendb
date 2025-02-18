@@ -144,7 +144,6 @@ export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
     url: string;
 }
 
-// TODO kalczur
 export interface OngoingTaskAiEtlSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
     destinations: string[];

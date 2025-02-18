@@ -585,6 +585,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskAiIntegration));
             scripter.AddType(typeof(AiIntegrationConfiguration));
             scripter.AddType(typeof(TestAiIntegrationScript));
+            scripter.AddType(typeof(AiIntegrationTestScriptResult));
+            scripter.AddType(typeof(AiConnectorType));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

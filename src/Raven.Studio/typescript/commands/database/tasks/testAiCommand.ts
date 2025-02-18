@@ -10,10 +10,10 @@ class testAiCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<TODO> {
+    execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.AI.Test.AiIntegrationTestScriptResult> {
         const url = endpoints.databases.aiIntegration.adminAiTest;
 
-        return this.post<TODO>(url, JSON.stringify(this.payload), this.db).fail((response: JQueryXHR) => {
+        return this.post<Raven.Server.Documents.ETL.Providers.AI.Test.AiIntegrationTestScriptResult>(url, JSON.stringify(this.payload), this.db).fail((response: JQueryXHR) => {
             this.reportError(`Failed to test AI`, response.responseText, response.statusText);
         });
     }
