@@ -1,3 +1,4 @@
+import "../../tasks/ongoingTasks/OngoingTaskPage.scss";
 import { compareSets } from "common/typeUtils";
 import { EmptySet } from "components/common/EmptySet";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -153,7 +154,7 @@ export default function AiTasks() {
     };
 
     return (
-        <div className="content-padding">
+        <div className="content-padding ongoing-tasks-page">
             {progressEnabled && <OngoingTaskProgressProvider onEtlProgress={onEtlProgress} />}
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>

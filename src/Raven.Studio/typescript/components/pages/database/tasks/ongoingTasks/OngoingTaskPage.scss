@@ -2,6 +2,15 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
+.ongoing-tasks-page {
+    .icon-ai-etl::before {
+        background: linear-gradient(135.89deg, #2fb4d2, #6972ee);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+}
+
 .change-vector-popover {
     .change-vector-grid {
         display: grid;
