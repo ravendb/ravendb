@@ -1553,7 +1553,7 @@ class aiTasksStats extends shardViewModelBase {
             if (!_.isObject(importedData)) {
                 messagePublisher.reportError("Invalid replication stats file format", undefined, undefined);
             } else {
-                this.etlData = importedData.Etl;
+                this.etlData = importedData.Etl.filter(x => x.EtlType === "Ai");
 
                 this.fillCache();
                 this.prepareBrush();
@@ -1643,7 +1643,7 @@ class aiTasksStats extends shardViewModelBase {
         } else {
             const detailedDatabaseName = DatabaseUtils.default.formatNameForFile(this.db.name, this.location);
 
-            exportFileName = `OngoingTasksStats of ${detailedDatabaseName} ${moment().format("YYYY-MM-DD HH-mm")}`;
+            exportFileName = `AiTasksStats of ${detailedDatabaseName} ${moment().format("YYYY-MM-DD HH-mm")}`;
         }
 
         const keysToIgnore: Array<keyof performanceBaseWithCache> = ["StartedAsDate", "CompletedAsDate"];
