@@ -71,9 +71,16 @@ namespace Raven.Embedded
             await StartServerInternalAsync().ConfigureAwait(false);
         }
 
-        public void StartServer(ServerOptions? options = null)
+
+        private CancellationToken _shutdownToken;
+        private CancellationTokenRegistration _shutdownRegistration;
+
+        // Solution 1: Pass a shutdown token to start
+        public void StartServer(ServerOptions? options = null, CancellationToken shutdownToken)
         {
             _serverOptions = options ??= ServerOptions.Default;
+            _shutdownToken = shutdownToken;
+            _shutdownRegistration = shutdownToken.Register(()=>{this.Dispose()})
 
             if (options.Security != null)
             {
@@ -102,6 +109,12 @@ namespace Raven.Embedded
 
             var task = StartServerInternalAsync();
             GC.KeepAlive(task); // make sure that we aren't allowing to elide the call
+        }
+
+        // Solution 2: Add a STop method that allow graceful termination AND forceful termination via cancellation
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            // Run code from the Dispose and ensure ShutdownServerProcess is invoked with a cancellation token
         }
 
         private Task StartServerInternalAsync()
@@ -192,7 +205,7 @@ namespace Raven.Embedded
             return (await server.Value.WithCancellation(token).ConfigureAwait(false)).ServerUrl;
         }
 
-        private void ShutdownServerProcess(Process process)
+        private void ShutdownServerProcess(Process process, CancellationToken cancellationToken) // Solution B
         {
             if (process == null || process.HasExited)
                 return;
@@ -211,8 +224,10 @@ namespace Raven.Embedded
                     {
                         inputStream.WriteLine("shutdown no-confirmation");
                     }
+                    using var cts = CancellationTokenSource.CreateLinkedToken(_shutdownToken); // token from solution B
+                    cts.CancelAfter((int)_serverOptions!.GracefulShutdownTimeout.TotalMilliseconds);
 
-                    if (process.WaitForExit((int)_serverOptions!.GracefulShutdownTimeout.TotalMilliseconds))
+                    if (process.WaitForExitAsync(cts.Token).GetAwaiter().GetResult();
                         return;
                 }
                 catch (Exception e)
