@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
 
         protected override async Task DoWork()
         {
-            await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(_configuration.RefreshFrequencyInSec));
+            await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(_configuration.CleanerFrequencyInSec));
 
             await ExecuteCleanup(_configuration);
         }
@@ -82,8 +82,7 @@ namespace Raven.Server.Documents
             config ??= _configuration;
 
             if (config == null ||
-                config.MinimumEntriesAgeToKeepInMin == null ||
-                config.MinimumEntriesAgeToKeepInMin.Value == int.MaxValue ||
+                config.MinimumEntriesAgeToKeepInMin == int.MaxValue ||
                 CancellationToken.IsCancellationRequested)
             {
                 if (Logger.IsInfoEnabled)
@@ -93,7 +92,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                var before = _documentDatabase.Time.GetUtcNow() - TimeSpan.FromMinutes(config.MinimumEntriesAgeToKeepInMin.Value < 0 ? 0 : config.MinimumEntriesAgeToKeepInMin.Value);
+                var before = _documentDatabase.Time.GetUtcNow() - TimeSpan.FromMinutes(int.Max(0, config.MinimumEntriesAgeToKeepInMin));
 
                 while (CancellationToken.IsCancellationRequested == false)
                 {
