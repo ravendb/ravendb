@@ -430,6 +430,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(Configuration)] = Configuration?.ToJson();
             return json;
         }

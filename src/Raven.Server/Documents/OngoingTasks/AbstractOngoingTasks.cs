@@ -142,8 +142,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         if (databaseRecord.AiIntegrations == null || databaseRecord.AiIntegrations.Count == 0)
             yield break;
 
-        foreach (var aiEtl in databaseRecord.AiIntegrations)
-            yield return CreateAiIntegrationTaskInfo(clusterTopology, databaseRecord, aiEtl);
+        foreach (var aiIntegration in databaseRecord.AiIntegrations)
+            yield return CreateAiIntegrationTaskInfo(clusterTopology, databaseRecord, aiIntegration);
     }
 
     public IEnumerable<OngoingTask> GetAllTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
