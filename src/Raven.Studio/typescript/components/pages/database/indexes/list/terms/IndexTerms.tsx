@@ -18,11 +18,7 @@ import queryUtil from "common/queryUtil";
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import { LoadingView } from "components/common/LoadingView";
 import useBoolean from "hooks/useBoolean";
-import {
-    INDEX_TERMS_PAGE_LIMIT,
-    TermsForField,
-    useIndexTerms,
-} from "components/pages/database/indexes/list/terms/useIndexTerms";
+import { TermsForField, useIndexTerms } from "components/pages/database/indexes/list/terms/useIndexTerms";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import IndexTermsPreviewModal from "components/pages/database/indexes/list/terms/IndexTermsPreviewModal";
 import { useAppSelector } from "components/store";
@@ -89,7 +85,7 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                                 Dynamic field
                             </Badge>
                         )}
-                        <Badge pill>{field.hasMoreTerms ? `${INDEX_TERMS_PAGE_LIMIT}+` : field.terms.length}</Badge>
+                        <Badge pill>{field.terms.length}{field.hasMoreTerms ? '+' : ''}</Badge>
                     </div>
                 </AccordionHeader>
                 <AccordionBody accordionId={field.name}>
