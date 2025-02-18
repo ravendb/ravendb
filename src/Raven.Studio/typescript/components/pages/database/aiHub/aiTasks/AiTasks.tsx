@@ -189,7 +189,7 @@ export default function AiTasks() {
                             <div key="ai-etls">
                                 <HrHeader className="ai-etl" count={aiEtls.length}>
                                     <Icon icon="ai-etl" />
-                                    AI ETL
+                                    AI
                                 </HrHeader>
 
                                 {aiEtls.map((x) => (

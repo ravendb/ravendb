@@ -295,7 +295,7 @@ class aiEtlTask extends shardViewModelBase {
     }
 
     /**************************************************************/
-    /*** General AI ETl Model / Page Actions Region ***/
+    /*** General AI Model / Page Actions Region ***/
     /**************************************************************/
 
     private getAllConnectionStrings() {
