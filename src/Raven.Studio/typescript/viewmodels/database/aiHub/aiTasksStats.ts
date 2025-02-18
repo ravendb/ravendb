@@ -1273,7 +1273,7 @@ class aiTasksStats extends shardViewModelBase {
     private getTaskTypeDescription(type: ongoingTaskStatType): string {
         switch (type) {
             case "Ai":
-                return "AI ETL"
+                return "AI"
             default:
                 throw new Error("Unknown stats type: " + type);
         }
