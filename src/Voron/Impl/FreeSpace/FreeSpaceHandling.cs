@@ -24,7 +24,7 @@ namespace Voron.Impl.FreeSpace
             public ushort StartBits = NumberOfPagesInSection;
             public ushort EndBits = NumberOfPagesInSection;
 
-            private ushort Padding = 0;
+            private ushort Reserved = 0;
         }
 
         static FreeSpaceHandling()
