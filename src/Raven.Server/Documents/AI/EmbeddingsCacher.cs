@@ -23,12 +23,13 @@ public class EmbeddingsCacher : BackgroundWorkBase
     private readonly ConcurrentQueue<EmbeddingCacheItem> _embeddingsQueue;
     private readonly SemaphoreSlim _semaphore;
     
+    public bool IsStarted { get; set; }
+    
     public EmbeddingsCacher(DocumentDatabase database, RavenLogger logger, CancellationToken shutdown) : base(database.Name, logger, shutdown)
     {
         _database = database;
         _embeddingsQueue = new ConcurrentQueue<EmbeddingCacheItem>();
-        _semaphore = new SemaphoreSlim(0, 1);
-        Start();
+        _semaphore = new SemaphoreSlim(1, 1);
     }
 
     protected override async Task DoWork()
@@ -38,9 +39,9 @@ public class EmbeddingsCacher : BackgroundWorkBase
         await CacheEmbeddings();
     }
     
-    public void EnqueueEmbeddingToCache(string connectionStringName, string textualValue, ReadOnlyMemory<float> embedding)
+    public void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embedding)
     {
-        var newItem = new EmbeddingCacheItem() { EmbeddingValue = embedding, TextualValue = textualValue, ConnectionStringName = connectionStringName };
+        var newItem = new EmbeddingCacheItem() { EmbeddingValue = embedding, TextualValue = textualValue, ConnectionStringIdentifier = connectionStringIdentifier };
         
         _embeddingsQueue.Enqueue(newItem);
         _semaphore.Release();
@@ -85,7 +86,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
                 {
                     var hash = AttachmentsStorageHelper.CalculateHash(context, stream);
 
-                    var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(item.ConnectionStringName, hash);
+                    var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(item.ConnectionStringIdentifier, hash);
                     
                     var valueEmbeddingsDocumentJsonDjv = AiStorage.CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, operationStartDate);
                     
@@ -118,6 +119,6 @@ public class EmbeddingsCacher : BackgroundWorkBase
         public ReadOnlyMemory<float> EmbeddingValue;
         public string TextualValue;
         // Name of the connection string used for embedding generation 
-        public string ConnectionStringName;
+        public AiConnectionStringIdentifier ConnectionStringIdentifier;
     }
 }

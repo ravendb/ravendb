@@ -194,13 +194,7 @@ public class AiStorage
             
             _servicesByConnectionStringIdentifier[connectionStringIdentifier] = service;
         }
-
-        if (record.AiIntegrations.Count == 0)
-        {
-            _embeddingsCacher.Stop();
-            return;
-        }
-
+        
         // todo skip disabled tasks?
         foreach (var aiIntegrationConfiguration in record.AiIntegrations)
         {
@@ -211,11 +205,21 @@ public class AiStorage
 
             _servicesByIntegrationTaskIdentifier[aiIntegrationIdentifier] = service;
             
-            // todo use normalized name
             _taskIdentifierToConnectionStringIdentifier[aiIntegrationIdentifier] = connectionStringIdentifier;
+        }
+
+        if (_embeddingsCacher.IsStarted)
+        {
+            if (record.AiIntegrations.Count == 0)
+            {
+                _embeddingsCacher.Stop();
+                _embeddingsCacher.IsStarted = false;
+            }
+            return;
         }
         
         _embeddingsCacher.Start();
+        _embeddingsCacher.IsStarted = true;
     }
 
     public void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embeddingValue)

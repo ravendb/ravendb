@@ -472,11 +472,14 @@ public class RavenDB_22076 : RavenTestBase
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
                 EmbeddingsPaths = ["TextualValue"],
-                Collection = "Dtos"
+                Collection = "Dtos",
+                Identifier = "ai-task-identifier"
             };
 
-            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings(), Identifier = "connection-string-identifier" };
 
+            var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
+            
             var etlDone = Etl.WaitForEtlToComplete(store);
 
             Etl.AddEtl(store, configuration, connectionString);
@@ -485,14 +488,17 @@ public class RavenDB_22076 : RavenTestBase
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, aiTaskName), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, configuration.Identifier), factory => factory.ByText(queriedText)).ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
 
                 var hash = AiHelper.CalculateValueHash(queriedText);
-                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringName, hash);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringIdentifier, hash);
                 
+                WaitForUserToContinueTheTest(store);
+                
+                // todo wait for cacher
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
                 Assert.NotNull(valueEmbeddingsDocument);
@@ -626,6 +632,8 @@ public class RavenDB_22076 : RavenTestBase
             };
             
             var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            
+            var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
 
             var etlDone = Etl.WaitForEtlToComplete(store);
 
@@ -647,7 +655,7 @@ public class RavenDB_22076 : RavenTestBase
                 WaitForUserToContinueTheTest(store);
                 
                 var hash = AiHelper.CalculateValueHash(queriedText);
-                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringName, hash);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringIdentifier, hash);
                 
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 

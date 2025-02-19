@@ -58,11 +58,8 @@ public static class AiHelper
 #pragma warning restore SKEXP0001
     {
         var embedding = service.GenerateEmbeddingAsync(textValue).GetAwaiter().GetResult();
-
         
         aiStorage.EnqueueEmbeddingToCache(connectionStringIdentifier, textValue, embedding);
-        // for test
-        AiStorage.CacheEmbeddings();
         
         var memoryScope = allocator.Allocate(dimensions, out Memory<byte> memory);
             
