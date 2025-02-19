@@ -25,27 +25,26 @@ public class AiStorage
     private const string EmbeddingAttachmentContentType = "application/octet-stream";
 
     private readonly DocumentsStorage _documentsStorage;
-    private static DocumentDatabase _database;
     
 #pragma warning disable SKEXP0001
-    private Dictionary<AiIntegrationIdentifier, ITextEmbeddingGenerationService> _servicesByIntegrationTaskIdentifier;
-    private Dictionary<AiConnectionStringIdentifier, ITextEmbeddingGenerationService> _servicesByConnectionStringIdentifier;
+    private readonly Dictionary<AiIntegrationIdentifier, ITextEmbeddingGenerationService> _servicesByIntegrationTaskIdentifier;
+    private readonly Dictionary<AiConnectionStringIdentifier, ITextEmbeddingGenerationService> _servicesByConnectionStringIdentifier;
 #pragma warning restore SKEXP0001
     private static Dictionary<AiIntegrationIdentifier, AiConnectionStringIdentifier> _taskIdentifierToConnectionStringIdentifier;
     
-    private static ConcurrentQueue<EmbeddingCacheItem> _embeddingsQueue;
+    private readonly EmbeddingsCacher _embeddingsCacher;
     
     public AiStorage([NotNull] DocumentDatabase database)
     {
-        _database = database;
         _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(_documentsStorage));
 #pragma warning disable SKEXP0001
         _servicesByConnectionStringIdentifier = new();
         _servicesByIntegrationTaskIdentifier = new ();
 #pragma warning restore SKEXP0001
         
-        _embeddingsQueue = new ConcurrentQueue<EmbeddingCacheItem>();
-        _taskIdentifierToConnectionStringIdentifier = new();
+        _taskIdentifierToConnectionStringIdentifier = new Dictionary<AiIntegrationIdentifier, AiConnectionStringIdentifier>();
+
+        _embeddingsCacher = new EmbeddingsCacher(database, database.Loggers.GetLogger<EmbeddingsCacher>(), database.DatabaseShutdown);
     }
 
 #pragma warning disable SKEXP0001
@@ -196,6 +195,13 @@ public class AiStorage
             _servicesByConnectionStringIdentifier[connectionStringIdentifier] = service;
         }
 
+        if (record.AiIntegrations.Count == 0)
+        {
+            _embeddingsCacher.Stop();
+            return;
+        }
+
+        // todo skip disabled tasks?
         foreach (var aiIntegrationConfiguration in record.AiIntegrations)
         {
             var aiIntegrationIdentifier = new AiIntegrationIdentifier(aiIntegrationConfiguration.Identifier);
@@ -208,32 +214,12 @@ public class AiStorage
             // todo use normalized name
             _taskIdentifierToConnectionStringIdentifier[aiIntegrationIdentifier] = connectionStringIdentifier;
         }
+        
+        _embeddingsCacher.Start();
     }
 
-    public static void CacheEmbeddings()
+    public void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embeddingValue)
     {
-        var payload = new List<EmbeddingCacheItem>();
-        
-        while (_embeddingsQueue.TryDequeue(out var item))
-            payload.Add(item);
-        
-        var putEmbeddingsCommand = new AiIntegrationTask.MergedCacheEmbeddingsCommand(payload, _database);
-        
-        _database.TxMerger.EnqueueSync(putEmbeddingsCommand);
-    }
-
-    public static void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embedding)
-    {
-        var newItem = new EmbeddingCacheItem() { EmbeddingValue = embedding, TextualValue = textualValue, ConnectionStringIdentifier = connectionStringIdentifier };
-        
-        _embeddingsQueue.Enqueue(newItem);
-    }
-
-    public class EmbeddingCacheItem
-    {
-        public ReadOnlyMemory<float> EmbeddingValue;
-        public string TextualValue;
-        // Name of the connection string used for embedding generation 
-        public AiConnectionStringIdentifier ConnectionStringIdentifier;
+        _embeddingsCacher.EnqueueEmbeddingToCache(connectionStringIdentifier, textualValue, embeddingValue);
     }
 }

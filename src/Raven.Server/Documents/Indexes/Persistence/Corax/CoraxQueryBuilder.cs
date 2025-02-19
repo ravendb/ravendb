@@ -673,7 +673,10 @@ public static class CoraxQueryBuilder
                 {
                     if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.TryGetServiceByIntegrationIdentifier(aiIntegrationIdentifier, out var service) == false)
                         throw new ArgumentException($"Couldn't find {aiIntegrationIdentifier} AI task.");
-                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size, connectionStringIdentifier);
+
+                    var aiStorage = builderParameters.DocumentsContext.DocumentDatabase.AiStorage;
+                    
+                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, aiStorage, valueAsString, GenerateEmbeddings.F32Size, connectionStringIdentifier);
                 } 
             }
         }

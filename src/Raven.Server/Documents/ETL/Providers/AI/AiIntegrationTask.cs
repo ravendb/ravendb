@@ -156,11 +156,6 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         return processed;
     }
 
-    public static void CacheEmbeddings()
-    {
-        //var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(aiEtlScriptRun, Configuration.Name, Database);
-    }
-
     protected override AiIntegrationStatsScope CreateScope(EtlRunStats stats)
     {
         return new AiIntegrationStatsScope(stats);
@@ -347,16 +342,16 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                 
                 using (var reader = GetReader(context, documentToProcess, embeddingsDocumentId, out var isNewDocument))
                 {
-                    //Update the document
+                    // Update the document
                     _database.DocumentsStorage.Put(context, embeddingsDocumentId, null, reader);
                     
-                    //Insert new embeddings
+                    // Insert new embeddings
                     foreach (var embeddingsByPath in document.Values)
                     {
                         var namesOfCurrentAttachments = currentAttachmentsOfEmbeddingsFromThisTransformer.GetValueOrDefault(embeddingsByPath.Key);
                         foreach (var embedding in embeddingsByPath.Value)
                         {
-                            //When true:
+                            // When true:
                             //  This embedding is already in the embeddings document. Therefore, we do not have to insert it again.
                             //  At the same time, we are removing it from the list of attachments to remove (essentially a no-op on attachment storage in case of an update).
                             if (namesOfCurrentAttachments?.Remove(embedding.ValueEmbeddingsDestinationAttachmentName) == true)
@@ -366,7 +361,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                         }
                     }
                     
-                    //Remove old embeddings
+                    // Remove old embeddings
                     foreach (var embeddingsByPath in currentAttachmentsOfEmbeddingsFromThisTransformer)
                     {
                         foreach (var attachmentToRemove in embeddingsByPath.Value)
@@ -374,9 +369,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                             _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, embeddingsDocumentId, attachmentToRemove, null, out _, extractCollectionName: false);
                         }
                     }
-                    
                 }
-                
             }
             
             foreach (var item in _taskResults.Removals)
@@ -409,59 +402,6 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
             {
                 throw new NotImplementedException();
             }
-        }
-    }
-
-    public sealed class MergedCacheEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
-    {
-        private List<AiStorage.EmbeddingCacheItem> _embeddingItems;
-        private readonly DocumentDatabase _database;
-        private readonly DocumentsStorage _documentsStorage;
-        
-        public MergedCacheEmbeddingsCommand(List<AiStorage.EmbeddingCacheItem> embeddingItems, DocumentDatabase database)
-        {
-            _embeddingItems = embeddingItems;
-            _database = database;
-            _documentsStorage = database.DocumentsStorage;
-        }
-        
-        protected override long ExecuteCmd(DocumentsOperationContext context)
-        {
-            var operationStartDate = _database.Time.GetUtcNow();
-            
-            foreach (var item in _embeddingItems)
-            {
-                string attachmentName = Guid.NewGuid().ToString();
-
-                using (var stream = new MemoryStream(MemoryMarshal.Cast<float, byte>(item.EmbeddingValue.Span).ToArray()))
-                {
-                    var hash = AttachmentsStorageHelper.CalculateHash(context, stream);
-
-                    var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(item.ConnectionStringIdentifier, hash);
-                    
-                    var valueEmbeddingsDocumentJsonDjv = AiStorage.CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, operationStartDate);
-                    
-                    using (var json = context.ReadObject(valueEmbeddingsDocumentJsonDjv, valueEmbeddingsDocumentId))
-                    {
-                        _documentsStorage.Put(context, valueEmbeddingsDocumentId, null, json);
-                    }
-                    
-                    _documentsStorage.AttachmentsStorage.PutAttachment(context, valueEmbeddingsDocumentId, attachmentName, "application/octet-stream", hash, null,
-                        stream);
-                }
-            }
-            
-            return 0;
-        }
-
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Dispose()
-        {
-            throw new NotImplementedException();
         }
     }
 }

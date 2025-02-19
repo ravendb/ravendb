@@ -7,12 +7,9 @@ using System.Runtime.InteropServices;
 using Corax.Utils;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel;
-using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Extensions;
-using Raven.Server.Documents.Indexes.VectorSearch;
-using Raven.Server.Documents.OngoingTasks;
 using Sparrow.Server;
 using VectorEmbeddingType = Voron.Data.Graphs.VectorEmbeddingType;
 
@@ -57,13 +54,13 @@ public static class AiHelper
     }
     
 #pragma warning disable SKEXP0001
-    public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, string textValue, int dimensions, AiConnectionStringIdentifier connectionStringIdentifier)
+    public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, AiStorage aiStorage, string textValue, int dimensions, AiConnectionStringIdentifier connectionStringIdentifier)
 #pragma warning restore SKEXP0001
     {
         var embedding = service.GenerateEmbeddingAsync(textValue).GetAwaiter().GetResult();
 
         
-        AiStorage.EnqueueEmbeddingToCache(connectionStringIdentifier, textValue, embedding);
+        aiStorage.EnqueueEmbeddingToCache(connectionStringIdentifier, textValue, embedding);
         // for test
         AiStorage.CacheEmbeddings();
         

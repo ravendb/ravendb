@@ -37,7 +37,7 @@ public class RabbitMqConnectionString : IDisposable
         if (_connection != null)
             return envConnectionString;
 
-        throw new InvalidOperationException($"Can't create connection for Kafka instance. Provided url: {envConnectionString}", ex);
+        throw new InvalidOperationException($"Can't create connection for RabbitMQ instance. Provided url: {envConnectionString}", ex);
 
         IConnection CreateConnection(string connectionString, out Exception exception)
         {

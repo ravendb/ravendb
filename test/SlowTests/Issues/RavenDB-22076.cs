@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
@@ -17,6 +18,7 @@ using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -487,9 +489,14 @@ public class RavenDB_22076 : RavenTestBase
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
+
+                var hash = AiHelper.CalculateValueHash(queriedText);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringName, hash);
+                
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+
+                Assert.NotNull(valueEmbeddingsDocument);
             }
-            
-            WaitForUserToContinueTheTest(store);
         }
     }
     
@@ -632,9 +639,19 @@ public class RavenDB_22076 : RavenTestBase
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText)).ProjectInto<Dto>().ToList();
                 
                 Assert.Single(result);
+                Assert.Equal(dto1.TextualValue, result[0].TextualValue);
+                
+                WaitForUserToContinueTheTest(store);
+                
+                var hash = AiHelper.CalculateValueHash(queriedText);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringName, hash);
+                
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+
+                Assert.NotNull(valueEmbeddingsDocument);
             }
         }
     }
