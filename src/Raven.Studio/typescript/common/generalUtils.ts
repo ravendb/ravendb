@@ -2,7 +2,7 @@
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
 import React = require("react");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 import modelsCommon = require("components/models/common");
 
 type AtLeastOne<T> = [T, ...T[]];
@@ -566,7 +566,7 @@ class genUtils {
                            internalCallback: (result: { isValid: boolean, message: string } | boolean) => void) => {
                                             func(val, params, (currentValue, result) => {
                                                    if (currentValue === val) {
-                                                       if (typeUtils.isBoolean(result)) {
+                                                       if (lodashReplacement.isBoolean(result)) {
                                                            internalCallback(result);
                                                        } else if (result) {
                                                            internalCallback({ isValid: false, message: result});
@@ -794,6 +794,26 @@ class genUtils {
         const isDevBuildNumber = (num: number) => num >= 40 && num < 90;
         return !isDevBuildNumber(latestVersion.BuildNumber) && latestVersion.BuildNumber > serverVersion.BuildVersion;
     }
-} 
+    
+    static compareSets<T extends string | number>(set1: T[], set2: T[]): boolean {
+        if (Array.isArray(set1) === false || Array.isArray(set2) === false) {
+            return false;
+        }
+        
+        if (set1.length !== set2.length) {
+            return false;
+        }
+        
+        const sortedSet1 = lodashReplacement.sortBy(set1, x => x);
+        const sortedSet2 = lodashReplacement.sortBy(set2, x => x);
+        
+        for (let i = 0; i < sortedSet1.length; i++) {
+            if (sortedSet1[i] !== sortedSet2[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
 
 export = genUtils;

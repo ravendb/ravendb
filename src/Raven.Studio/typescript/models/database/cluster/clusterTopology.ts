@@ -1,6 +1,6 @@
 
 import clusterNode = require("models/database/cluster/clusterNode");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class clusterTopology {
     leader = ko.observable<string>();
@@ -31,7 +31,7 @@ class clusterTopology {
         const watchers = this.mapNodes("Watcher", topologyDto.Watchers, dto.Status, dto.NodeLicenseDetails);
 
         this.nodes(_.concat<clusterNode>(members, promotables, watchers));
-        this.nodes(typeUtils.sortBy(this.nodes(), x => x.tag().toUpperCase()));
+        this.nodes(lodashReplacement.sortBy(this.nodes(), x => x.tag().toUpperCase()));
 
         this.membersCount = ko.pureComputed(() => {
             const nodes = this.nodes();

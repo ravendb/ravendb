@@ -8,7 +8,7 @@ import models = require("models/database/settings/databaseSettingsModels");
 import genUtils = require("common/generalUtils");
 import messagePublisher = require("common/messagePublisher");
 import getServerSettingsCommand = require("commands/maintenance/getServerSettingsCommand");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class serverSettings extends viewModelBase {
 
@@ -176,7 +176,7 @@ class serverSettings extends viewModelBase {
             .done((result: Raven.Server.Config.SettingsResult) => {
                 const settingsEntries = result.Settings.map(x => models.settingsEntry.getEntry(x));
 
-                this.allEntries(typeUtils.sortBy(settingsEntries, x => x.keyName()));
+                this.allEntries(lodashReplacement.sortBy(settingsEntries, x => x.keyName()));
             });
     }
     

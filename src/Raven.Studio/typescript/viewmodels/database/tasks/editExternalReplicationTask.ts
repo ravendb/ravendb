@@ -13,7 +13,7 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
 import licenseModel = require("models/auth/licenseModel");
 import EditExternalReplicationInfoHub = require("viewmodels/database/tasks/EditExternalReplicationInfoHub");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 class editExternalReplicationTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editExternalReplicationTask.html");
@@ -106,7 +106,7 @@ class editExternalReplicationTask extends shardViewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
-                this.ravenEtlConnectionStringsDetails(typeUtils.sortBy(connectionStrings, x => x.Name.toUpperCase()));
+                this.ravenEtlConnectionStringsDetails(lodashReplacement.sortBy(connectionStrings, x => x.Name.toUpperCase()));
             });
     }
 

@@ -1,6 +1,6 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class changeVectorUtils {
 
@@ -20,7 +20,7 @@ class changeVectorUtils {
         let tokens = input.split(",")
                           .map(cvEntry => changeVectorUtils.parseChangeVectorEntry(cvEntry));
         
-        tokens = typeUtils.sortBy(tokens, x => x.tag);
+        tokens = lodashReplacement.sortBy(tokens, x => x.tag);
 
         return tokens;
     }

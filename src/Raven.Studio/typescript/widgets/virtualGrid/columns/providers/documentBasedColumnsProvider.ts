@@ -18,7 +18,7 @@ import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import generalUtils = require("common/generalUtils");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 type columnOptionsDto = {
     extraClass?: (item: document) => string;
@@ -59,12 +59,12 @@ class documentBasedColumnsProvider {
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
     constructor(db: database | string, gridController: virtualGridController<document>, opts: documentBasedColumnsProviderOpts) {
-        this.showRowSelectionCheckbox = typeUtils.isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
+        this.showRowSelectionCheckbox = lodashReplacement.isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
         this.db = db;
         this.gridController = gridController;
-        this.enableInlinePreview = typeUtils.isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
-        this.showSelectAllCheckbox = typeUtils.isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
-        this.createHyperlinks = typeUtils.isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
+        this.enableInlinePreview = lodashReplacement.isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
+        this.showSelectAllCheckbox = lodashReplacement.isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
+        this.createHyperlinks = lodashReplacement.isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
         this.columnOptions = opts.columnOptions;
         this.customInlinePreview = opts.customInlinePreview || documentBasedColumnsProvider.showPreview;
         this.collectionTracker = collectionsTracker.default;

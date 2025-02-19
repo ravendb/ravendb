@@ -8,7 +8,7 @@ import getIndexesErrorCountCommand = require("commands/database/index/getIndexes
 import indexErrorInfoModel = require("models/database/index/indexErrorInfoModel");
 import getIndexesErrorCommand = require("commands/database/index/getIndexesErrorCommand");
 import moment = require("moment");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 type nameAndCount = {
     name: string;
@@ -66,7 +66,7 @@ class indexErrors extends shardViewModelBase {
             });
             
             const mappedResult = Array.from(result.entries()).map(([name, count]) => ({ name, count }));
-            return typeUtils.sortBy(mappedResult, x => x.name.toLocaleLowerCase());
+            return lodashReplacement.sortBy(mappedResult, x => x.name.toLocaleLowerCase());
         });
         
         this.erroredActionNames = ko.pureComputed(() => {
@@ -84,7 +84,7 @@ class indexErrors extends shardViewModelBase {
             })
             
             const mappedResult = Array.from(result.entries()).map(([name, count]) => ({ name, count }));
-            return typeUtils.sortBy(mappedResult, x => x.name.toLocaleLowerCase());
+            return lodashReplacement.sortBy(mappedResult, x => x.name.toLocaleLowerCase());
         });
     }
     

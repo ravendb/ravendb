@@ -5,7 +5,7 @@ import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntr
 import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/saveTimeSeriesCommand");
 import popoverUtils = require("common/popoverUtils");
 import moment = require("moment");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class editTimeSeriesEntry extends dialogViewModelBase {
     
@@ -108,7 +108,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             } else {
                 // for a new timeseries
                 const possibleValuesCount = timeSeriesEntryModel.numberOfPossibleValues;
-                const possibleValuesNames = typeUtils.range(0, possibleValuesCount).map(idx => "Value #" + idx);
+                const possibleValuesNames = lodashReplacement.range(0, possibleValuesCount).map(idx => "Value #" + idx);
                 return possibleValuesNames[idx];
             }
         });

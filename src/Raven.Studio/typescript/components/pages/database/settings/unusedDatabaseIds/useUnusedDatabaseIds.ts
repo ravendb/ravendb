@@ -6,7 +6,7 @@ import { useAppSelector } from "components/store";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { useState } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
-import { compareSets } from "common/typeUtils";
+import genUtils from "common/generalUtils";
 
 interface LocationStats {
     databaseId: string;
@@ -46,7 +46,7 @@ export function useUnusedDatabaseIds() {
             },
         }
     );
-    const isDirty = !compareSets(asyncGetUnusedIds.result, unusedIds);
+    const isDirty = !genUtils.compareSets(asyncGetUnusedIds.result, unusedIds);
     useDirtyFlag(isDirty);
 
     const asyncGetStats = useAsync(async () => {

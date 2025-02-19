@@ -12,7 +12,7 @@ import getGlobalClientConfigurationCommand = require("commands/resources/getGlob
 import genUtils = require("common/generalUtils");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class identity {
     prefix = ko.observable<string>();
@@ -190,7 +190,7 @@ class identities extends shardViewModelBase {
                         mappedIdentities.filter(x => x.prefix().toLocaleLowerCase().includes(this.filter().toLocaleLowerCase())) :
                         mappedIdentities;
 
-                    filteredIdentities = typeUtils.sortBy(filteredIdentities, x => x.prefix());
+                    filteredIdentities = lodashReplacement.sortBy(filteredIdentities, x => x.prefix());
 
                     task.resolve({
                         totalResultCount: filteredIdentities.length,

@@ -1,7 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import d3 = require("d3");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 interface graphNode extends d3.layout.partition.Node {
     name: string;
@@ -168,7 +168,7 @@ class timingsChart {
     
     private convertHierarchy(name: string, data: Raven.Client.Documents.Queries.Timings.QueryTimings): graphNode {
         const mappedTimings = Object.entries(data.Timings || []).map(([key, value]) => this.convertHierarchy(key, value));
-        const remainingTime = data.DurationInMs - typeUtils.sumBy(mappedTimings, x => x.duration);
+        const remainingTime = data.DurationInMs - lodashReplacement.sumBy(mappedTimings, x => x.duration);
         
         let children: Array<graphNode> = null;
         if (data.Timings) {

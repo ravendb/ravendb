@@ -16,7 +16,7 @@ import popoverUtils = require("common/popoverUtils");
 import genUtils = require("common/generalUtils");
 import messagePublisher = require("common/messagePublisher");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 type viewModeType = "summaryMode" | "editMode";
 
@@ -375,7 +375,7 @@ class databaseSettings extends shardViewModelBase {
                     return models.settingsEntry.getEntry(rawEntry);
                 });
 
-                this.allEntries(typeUtils.sortBy(settingsEntries, x => x.keyName()));
+                this.allEntries(lodashReplacement.sortBy(settingsEntries, x => x.keyName()));
             });
     }
     
@@ -397,7 +397,7 @@ class databaseSettings extends shardViewModelBase {
                 return { key: entry.keyName(), value: entry.effectiveValue() };
             });
 
-        const settingsToSaveSorted = typeUtils.sortBy(settingsToSave, x => x.key);
+        const settingsToSaveSorted = lodashReplacement.sortBy(settingsToSave, x => x.key);
       
         const settingsToSaveObject = settingsToSaveSorted.reduce((acc, item) => {
             acc[item.key] = item.value;

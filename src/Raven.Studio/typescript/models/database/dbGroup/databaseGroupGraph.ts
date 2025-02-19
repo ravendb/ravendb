@@ -5,7 +5,7 @@ import webcola = require("webcola");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import icomoonHelpers = require("common/helpers/view/icomoonHelpers");
 import TaskUtils = require("components/utils/TaskUtils");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 abstract class layoutable {
     x: number;
@@ -683,7 +683,7 @@ class databaseGroupGraph {
 
         _.pullAll(this.data.databaseNodes, dbsToDelete);
 
-        typeUtils.sortBy(this.data.databaseNodes, x => x.tag);
+        lodashReplacement.sortBy(this.data.databaseNodes, x => x.tag);
 
         // clear current status
         this.data.databaseNodes.forEach(node => {

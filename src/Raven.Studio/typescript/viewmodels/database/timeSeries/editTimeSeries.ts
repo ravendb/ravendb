@@ -23,7 +23,7 @@ import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import popoverUtils = require("common/popoverUtils");
 import moment = require("moment");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class timeSeriesInfo {
     name = ko.observable<string>();
@@ -145,7 +145,7 @@ class editTimeSeries extends viewModelBase {
             const aggregationsCount = aggregationColumnNames.length;
             
             if (definedNamedValues) {
-                const columnNames = typeUtils.range(0, columnsCount)
+                const columnNames = lodashReplacement.range(0, columnsCount)
                     .map(idx => aggregationColumnNames[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")");
                 
                 for (let i = 0; i < Math.min(columnsCount, definedNamedValues.length * aggregationsCount); i++) {
@@ -154,7 +154,7 @@ class editTimeSeries extends viewModelBase {
                 return columnNames;
             } else {
                 if (columnsCount > aggregationsCount) {
-                    return typeUtils.range(0, columnsCount)
+                    return lodashReplacement.range(0, columnsCount)
                         .map(idx => aggregationColumnNames[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")");
                 } else {
                     return aggregationColumnNames;
@@ -168,7 +168,7 @@ class editTimeSeries extends viewModelBase {
     private getValuesNamesToUse(possibleValuesCount: number, timeSeriesName?: string): string[] {
         const definedNamedValues = this.getDefinedNamedValues(timeSeriesName);
             
-        const valuesNamesToUse = typeUtils.range(0, possibleValuesCount).map(idx => "Value #" + idx);
+        const valuesNamesToUse = lodashReplacement.range(0, possibleValuesCount).map(idx => "Value #" + idx);
 
         if (definedNamedValues) {
             for (let i = 0; i < Math.min(possibleValuesCount, definedNamedValues.length); i++) {

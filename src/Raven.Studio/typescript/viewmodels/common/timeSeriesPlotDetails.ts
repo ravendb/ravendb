@@ -5,7 +5,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import colorsManager = require("common/colorsManager");
 import genUtils = require("common/generalUtils");
 import moment = require("moment");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 interface graphData {
     pointSeries: graphSeries<dataPoint>[];
@@ -93,7 +93,7 @@ abstract class timeSeriesContainer<T> {
     abstract getClosestItems(pointInTime: Date): Array<closestItem<T>>;
     
     protected getSeriesValuesNames(valuesCount: number, dto: timeSeriesQueryResultDto) {
-        const seriesValuesName = typeUtils.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
+        const seriesValuesName = lodashReplacement.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
 
         if (dto && dto["@metadata"] && dto["@metadata"]["@timeseries-named-values"]) {
             const namedValues = dto["@metadata"]["@timeseries-named-values"];
@@ -333,7 +333,7 @@ class timeSeriesPlotDetails extends viewModelBase {
         _.bindAll(this, "getColor", "getColorClass");
 
         this.colorClassScale = d3.scale.ordinal<string>()
-            .range(typeUtils.range(1, 11).map(x => "color-" + x));
+            .range(lodashReplacement.range(1, 11).map(x => "color-" + x));
     }
     
     isEqual(other: timeSeriesPlotDetails) {

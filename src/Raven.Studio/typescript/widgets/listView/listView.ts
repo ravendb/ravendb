@@ -2,7 +2,7 @@
 
 import listViewController = require("widgets/listView/listViewController");
 import virtualListRow = require("widgets/listView/virtualListRow");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 /**
  * This list view is optimized to handle following lists:
@@ -261,7 +261,7 @@ class listView<T> {
             parent.removeChild(parent.childNodes[i]);
         }
 
-        children = typeUtils.sortBy(children, x => parseInt(x.style.top));
+        children = lodashReplacement.sortBy(children, x => parseInt(x.style.top));
         
         children.forEach(c => {
             parent.appendChild(c);

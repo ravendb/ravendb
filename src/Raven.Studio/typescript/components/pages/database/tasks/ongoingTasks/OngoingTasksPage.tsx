@@ -61,8 +61,8 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { compareSets } from "common/typeUtils";
 import RichAlert from "components/common/RichAlert";
+import genUtils from "common/generalUtils";
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -186,7 +186,7 @@ export function OngoingTasksPage() {
     useEffect(() => {
         const updatedSelectedTaskIds = selectedTaskIds.filter((id) => filteredDatabaseTaskIds.includes(id));
 
-        if (!compareSets(updatedSelectedTaskIds, selectedTaskIds)) {
+        if (!genUtils.compareSets(updatedSelectedTaskIds, selectedTaskIds)) {
             setSelectedTaskIds(updatedSelectedTaskIds);
         }
     }, [filteredDatabaseTaskIds, selectedTaskIds]);

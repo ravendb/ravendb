@@ -1,6 +1,6 @@
-import { compareSets, isBoolean, range } from "./typeUtils";
+import { isBoolean, range } from "./lodashReplacement";
 
-describe("typeUtils", () => {
+describe("lodashReplacement", () => {
     describe("isBoolean", () => {
         it("should return true for booleans", () => {
             expect(isBoolean(true)).toBe(true);
@@ -33,22 +33,6 @@ describe("typeUtils", () => {
             expect(range(5, 0)).toEqual([5, 4, 3, 2, 1]);
             expect(range(5, 0, -2)).toEqual([5, 3, 1]);
             expect(range(5, 0, -3)).toEqual([5, 2]);
-        });
-    });
-
-    describe("compareSets", () => {
-        it("should return true if the sets are equal", () => {
-            expect(compareSets([], [])).toBe(true);
-            expect(compareSets([1, 2, 3], [1, 2, 3])).toBe(true);
-            expect(compareSets([3, 2, 1], [1, 2, 3])).toBe(true);
-        });
-
-        it("should return false if the sets are not equal", () => {
-            expect(compareSets([], null)).toBe(false);
-            expect(compareSets([], undefined)).toBe(false);
-            expect(compareSets([1, 1], [1, 2])).toBe(false);
-            expect(compareSets([1, 2], [1, 2, 3])).toBe(false);
-            expect(compareSets([1, 2, 3], [1, 2])).toBe(false);
         });
     });
 });

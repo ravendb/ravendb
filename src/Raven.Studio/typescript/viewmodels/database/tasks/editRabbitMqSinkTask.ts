@@ -21,7 +21,7 @@ import queueSinkSyntax = require("viewmodels/database/tasks/queueSinkSyntax");
 import patchDebugActions = require("viewmodels/database/patch/patchDebugActions");
 import licenseModel = require("models/auth/licenseModel");
 import EditRabbitMqSinkTaskInfoHub = require("./EditRabbitMqSinkTaskInfoHub");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class rabbitMqTaskTestMode {
     db: KnockoutObservable<database>;
@@ -211,7 +211,7 @@ class editRabbitMqSinkTask extends viewModelBase {
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const queueConnectionStrings = Object.values(result.QueueConnectionStrings);
                 const rabbitMqStrings = queueConnectionStrings.filter(x => x.BrokerType === "RabbitMq");
-                this.rabbitMqConnectionStringsDetails(typeUtils.sortBy(rabbitMqStrings, x => x.Name.toUpperCase()));
+                this.rabbitMqConnectionStringsDetails(lodashReplacement.sortBy(rabbitMqStrings, x => x.Name.toUpperCase()));
             });
     }
 

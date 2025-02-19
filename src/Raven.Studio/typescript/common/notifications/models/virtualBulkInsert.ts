@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
 import groupedVirtualNotification = require("common/notifications/models/groupedVirtualNotification");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class virtualBulkInsert extends groupedVirtualNotification<virtualBulkOperationItem> {
     
@@ -52,7 +52,7 @@ class virtualBulkInsert extends groupedVirtualNotification<virtualBulkOperationI
             this.operations.unshift(item);
         }
         
-        const totalItemsCount = typeUtils.sumBy(this.operations(), x => x.totalItemsProcessed);
+        const totalItemsCount = lodashReplacement.sumBy(this.operations(), x => x.totalItemsProcessed);
         this.message(pluralizeHelpers.pluralize(this.operations().length, "bulk insert", "bulk inserts")
             + " to database " + this.database.name
             + " completed successfully. "

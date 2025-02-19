@@ -4,7 +4,7 @@ import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 
 import sqlColumn = require("models/database/tasks/sql/sqlColumn");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 
 class sqlMigration {
 
@@ -419,7 +419,7 @@ class sqlMigration {
     }
     
     getSelectedTablesCount() {
-        return typeUtils.sumBy(this.tables(), t => t.checked() ? 1 : 0);
+        return lodashReplacement.sumBy(this.tables(), t => t.checked() ? 1 : 0);
     }
 
     private detectManyToMany() {

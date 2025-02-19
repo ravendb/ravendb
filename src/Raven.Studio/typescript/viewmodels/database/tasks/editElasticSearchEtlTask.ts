@@ -27,7 +27,7 @@ import prismjs = require("prismjs");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
 import EditElasticSearchEtlInfoHub = require("viewmodels/database/tasks/EditElasticSearchEtlInfoHub");
-import typeUtils = require("common/typeUtils");
+import lodashReplacement = require("common/lodashReplacement");
 class elasticSearchTaskTestMode {
 
     documentId = ko.observable<string>();
@@ -293,7 +293,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.ElasticSearchConnectionStrings);
-                this.elasticSearchEtlConnectionStringsNames(typeUtils.sortBy(connectionStringsNames, x => x.toUpperCase()));
+                this.elasticSearchEtlConnectionStringsNames(lodashReplacement.sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
     }
 
