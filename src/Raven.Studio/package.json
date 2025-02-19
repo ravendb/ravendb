@@ -22,6 +22,7 @@
     "private": true,
     "devDependencies": {
         "@hookform/devtools": "^4.3.1",
+        "@juggle/resize-observer": "^3.4.0",
         "@storybook/addon-a11y": "^8.4.7",
         "@storybook/addon-actions": "^8.4.7",
         "@storybook/addon-essentials": "^8.4.7",
@@ -103,7 +104,6 @@
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",
-        "@juggle/resize-observer": "^3.4.0",
         "@reduxjs/toolkit": "^2.2.6",
         "@tanstack/react-table": "^8.19.3",
         "@tanstack/react-virtual": "^3.8.3",
