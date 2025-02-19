@@ -733,8 +733,11 @@ class editIndex extends shardViewModelBase {
         this.editedIndex().additionalSources().forEach(x => additionalSourcesDto[x.name()] = x.code());
         
         const additionalAssembliesDto = this.editedIndex().additionalAssemblies().map(x => x.toDto());
-
-        new getIndexFieldsFromMapCommand(this.db, map, additionalSourcesDto, additionalAssembliesDto)
+        
+        const indexConfigurationDto = {} as dictionary<string>;
+        this.editedIndex().configuration().forEach(x => indexConfigurationDto[x.key()] = x.value());
+        
+        new getIndexFieldsFromMapCommand(this.db, map, additionalSourcesDto, additionalAssembliesDto, indexConfigurationDto)
             .execute()
             .done((fields: resultsDto<string>) => {
                 this.fieldNames(fields.Results.filter(x => !IndexUtils.default.FieldsToHideOnUi.includes(x)));

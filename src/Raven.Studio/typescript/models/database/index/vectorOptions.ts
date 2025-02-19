@@ -28,6 +28,7 @@ class vectorOptions {
         this.destinationEmbeddingType(dto.DestinationEmbeddingType as VectorEmbeddingTypeWithoutText);
         this.numberOfCandidatesForIndexing(dto.NumberOfCandidatesForIndexing);
         this.numberOfEdges(dto.NumberOfEdges);
+        this.aiIntegrationIdentifier(dto.AiIntegrationIdentifier);
 
         this.initValidation()
         this.initObservables()

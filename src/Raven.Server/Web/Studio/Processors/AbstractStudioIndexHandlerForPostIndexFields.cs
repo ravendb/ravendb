@@ -34,6 +34,7 @@ internal abstract class AbstractStudioIndexHandlerForPostIndexFields<TRequestHan
 
                 json.TryGet(nameof(IndexDefinition.AdditionalSources), out BlittableJsonReaderObject additionalSourcesJson);
                 json.TryGet(nameof(IndexDefinition.AdditionalAssemblies), out BlittableJsonReaderArray additionalAssembliesArray);
+                json.TryGet(nameof(IndexDefinition.Configuration), out BlittableJsonReaderObject indexConfigurationJson);
 
                 var indexDefinition = new IndexDefinition
                 {
@@ -43,7 +44,8 @@ internal abstract class AbstractStudioIndexHandlerForPostIndexFields<TRequestHan
                             map
                         },
                     AdditionalSources = ConvertToAdditionalSources(additionalSourcesJson),
-                    AdditionalAssemblies = ConvertToAdditionalAssemblies(additionalAssembliesArray)
+                    AdditionalAssemblies = ConvertToAdditionalAssemblies(additionalAssembliesArray),
+                    Configuration = ConvertToIndexConfiguration(indexConfigurationJson)
                 };
 
                 try
@@ -107,6 +109,16 @@ internal abstract class AbstractStudioIndexHandlerForPostIndexFields<TRequestHan
         }
 
         return result;
+    }
+
+    private static IndexConfiguration ConvertToIndexConfiguration(BlittableJsonReaderObject json)
+    {
+        if (json == null || json.Count == 0)
+            return null;
+        
+        var indexConfiguration = new IndexConfiguration();
+        indexConfiguration.FillFromBlittableJson(json);
+        return indexConfiguration;
     }
 
     private static AdditionalAssembly GetAssembly(BlittableJsonReaderObject json)
