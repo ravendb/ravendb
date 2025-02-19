@@ -27,7 +27,6 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
     private void CanIndexSingleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore();
-        var embeddingAsArray = GenerateEmbeddingForTextViaOnnx("Joe");
 
         string id;
         using (var session = store.OpenSession())
@@ -63,7 +62,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
             var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByEmbedding(embeddingAsArray))
+                    v => v.ByText("joe"))
                 .ToList();
 
             Assert.Single(byVector);
@@ -91,7 +90,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
             var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByEmbedding(embeddingAsArray))
+                    v => v.ByEmbedding("Joe"))
                 .ToList();
 
             Assert.Empty(byVector);
@@ -109,7 +108,6 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
     private void CanIndexMultipleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore();
-        var embeddingAsArray = GenerateEmbeddingForTextViaOnnx("Joe");
 
         string id;
         using (var session = store.OpenSession())
@@ -146,7 +144,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Assert.Equal(0, nullElements);
 
             var byVector = session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByEmbedding(embeddingAsArray))
+                    v => v.ByText("Joe"))
                 .ToList();
 
             Assert.Single(byVector);
@@ -174,7 +172,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
             var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByEmbedding(embeddingAsArray))
+                    v => v.ByText("Joe"))
                 .ToList();
 
             Assert.Empty(byVector);
@@ -196,8 +194,6 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         const string embeddingEtlName2 = "V2";
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using var store = GetDocumentStore();
-        var embeddingAsArrayV1 = GenerateEmbeddingForTextViaOnnx("Joe");
-        var embeddingAsArrayV2 = GenerateEmbeddingForTextViaOnnx("Jimmy");
 
 
         string id;
@@ -242,7 +238,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
             var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByEmbedding(embeddingAsArrayV1))
+                    v => v.ByText("Joe"))
                 .ToList();
 
             Assert.Single(byVector);
@@ -262,12 +258,12 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Assert.Equal(0, nullElements);
 
             var byVector = session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByEmbedding(embeddingAsArrayV1))
+                    v => v.ByText("Joe"))
                 .ToList();
             Assert.Single(byVector);
 
             byVector = session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector2),
-                    v => v.ByEmbedding(embeddingAsArrayV2))
+                    v => v.ByText("Jimmy"))
                 .ToList();
             Assert.Single(byVector);
         }
@@ -347,8 +343,8 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Map = dtos => from dto in dtos
                 select new { Vector = LoadVector("Name"), Vector2 = LoadVector("Names") };
 
-            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationIndentifier("V1"));
-            Vector(nameof(Dto.Vector2), factory => factory.AiIntegrationIndentifier("V2"));
+            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier("V1")));
+            Vector(nameof(Dto.Vector2), factory => factory.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier("V2")));
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }

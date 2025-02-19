@@ -669,7 +669,7 @@ public static class CoraxQueryBuilder
 
             using (builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                if (TryGetEmbeddingFromCache(context, valueAsString, connectionStringIdentifier, out transformedEmbedding) == false)
+                if (TryGetEmbeddingFromCache(context, builderParameters.Allocator, valueAsString, connectionStringIdentifier, out transformedEmbedding) == false)
                 {
                     if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.TryGetServiceByIntegrationIdentifier(aiIntegrationIdentifier, out var service) == false)
                         throw new ArgumentException($"Couldn't find {aiIntegrationIdentifier} AI task.");
@@ -799,31 +799,28 @@ public static class CoraxQueryBuilder
             PortableExceptions.Throw<InvalidDataException>($"Vector field `{fieldName}` has {storedDimensions} dimensions, but the vector passed to vector.search() has {inputDimensions} dimensions.");
         }
 
-        bool TryGetEmbeddingFromCache(DocumentsOperationContext context, string valueAsString, AiConnectionStringIdentifier aiConnectionStringIdentifier, out VectorValue transformedEmbedding)
+        bool TryGetEmbeddingFromCache(DocumentsOperationContext documentContext, ByteStringContext embeddingContext, string valueAsString, AiConnectionStringIdentifier aiConnectionStringIdentifier, out VectorValue transformedEmbedding)
         {
             transformedEmbedding = new VectorValue();
             
             var hash = AiHelper.CalculateValueHash(valueAsString);
             var id = AiHelper.GetValueEmbeddingsDocumentId(aiConnectionStringIdentifier, hash);
             
-            using (context.OpenReadTransaction())
+            using (documentContext.OpenReadTransaction())
             {
-                var valueEmbeddingsDocument = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.Get(context, id);
+                var valueEmbeddingsDocument = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.Get(documentContext, id);
 
                 if (valueEmbeddingsDocument != null)
                 {
                     if (valueEmbeddingsDocument.Data.TryGet(valueAsString, out string attachmentName))
                     {
-                        var attachment = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachment(context, id,
+                        var attachment = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachment(documentContext, id,
                             attachmentName, AttachmentType.Document, null);
 
-                        context.Allocator.Allocate((int)attachment.Size, out Memory<byte> memory);
+                        var memScope = embeddingContext.Allocate((int)attachment.Size, out Memory<byte> memory);
 
-                        attachment.Stream.Read(memory.Span);
-
-                        var allocator = builderParameters.Allocator;
-
-                        transformedEmbedding = new VectorValue(allocator, memory, Voron.Data.Graphs.VectorEmbeddingType.Single);
+                        attachment.Stream.ReadExactly(memory.Span);
+                        transformedEmbedding = new VectorValue(memScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Single);
                         
                         return true;
                     }

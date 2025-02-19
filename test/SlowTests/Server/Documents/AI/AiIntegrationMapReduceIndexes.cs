@@ -2,6 +2,8 @@
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,7 +32,7 @@ public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegra
         using (var session = store.OpenSession())
         {
             var result = session.Query<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>().VectorSearch(f => f.WithField(s => s.Vector),
-                v => v.ByEmbedding(GenerateEmbeddingForTextViaOnnx("car"))).ToList();
+                v => v.ByText("car")).ToList();
             Assert.Equal(1, result.Count);
         }        
     }
@@ -52,7 +54,7 @@ public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegra
                 group result by result.Name into g
                 select new Result() { Name = g.Key, Vector = CreateVector(g.Select(p => p.Vector)) };
 
-            Vector("Vector", f => f.AiIntegrationIndentifier(DefaultAiIntegrationTaskName));
+            Vector("Vector", f => f.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName)));
         }
         
         public class Result
