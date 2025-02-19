@@ -209,8 +209,6 @@ class aiEtlTask extends shardViewModelBase {
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("useConnectionString",
-            "removeTransformationScript",
-            "cancelEditedTransformation",
             "saveEditedTransformation",
             "syntaxHelp",
             "toggleTestArea",
@@ -492,12 +490,6 @@ class aiEtlTask extends shardViewModelBase {
         this.transformationScriptSelectedForEdit(null);
         this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.findNameForNewTransformation()));
     }
-
-    cancelEditedTransformation() {
-        this.editedTransformationScriptSandbox(null);
-        this.transformationScriptSelectedForEdit(null);
-        this.enableTestArea(false);
-    }
     
     saveEditedTransformation() {
         this.enableTestArea(false);
@@ -524,7 +516,6 @@ class aiEtlTask extends shardViewModelBase {
         }
 
         this.editedAiEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
-        this.editedTransformationScriptSandbox(null);
     }
 
     private findNameForNewTransformation() {
@@ -537,15 +528,6 @@ class aiEtlTask extends shardViewModelBase {
             .map(x => _.toInteger(x))) || 0;
 
         return aiEtlTask.scriptNamePrefix + (maxNumber + 1);
-    }
-
-    removeTransformationScript(model: ongoingTaskAiTransformationModel) {
-        this.editedAiEtl().transformationScripts.remove(x => model.name() === x.name());
-        
-        if (this.transformationScriptSelectedForEdit() === model) {
-            this.editedTransformationScriptSandbox(null);
-            this.transformationScriptSelectedForEdit(null);
-        }
     }
 
     editTransformationScript(model: ongoingTaskAiTransformationModel) {

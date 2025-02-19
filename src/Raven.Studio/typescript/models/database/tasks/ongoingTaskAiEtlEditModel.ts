@@ -67,6 +67,7 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         });
 
         this.validationGroup = ko.validatedObservable({
+            taskName: this.taskName,
             connectionStringName: this.connectionStringName,
             transformationScripts: this.transformationScripts,
             mentorNode: this.mentorNode
