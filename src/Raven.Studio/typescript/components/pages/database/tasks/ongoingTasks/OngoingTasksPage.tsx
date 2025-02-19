@@ -3,6 +3,7 @@ import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./partials/OngoingTasksReducer";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
+    OngoingTaskAiEtlInfo,
     OngoingTaskAmazonSqsEtlInfo,
     OngoingTaskAzureQueueStorageEtlInfo,
     OngoingTaskElasticSearchEtlInfo,
@@ -826,7 +827,7 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         amazonSqsEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "AmazonSqsQueueEtl"
         ) as OngoingTaskAmazonSqsEtlInfo[],
-        aiEtls: filteredTasks.filter((x) => x.shared.taskType === "AiIntegration") as OngoingTaskAmazonSqsEtlInfo[],
+        aiEtls: filteredTasks.filter((x) => x.shared.taskType === "AiIntegration") as OngoingTaskAiEtlInfo[],
         kafkaSinks: filteredTasks.filter((x) => x.shared.taskType === "KafkaQueueSink") as OngoingTaskKafkaSinkInfo[],
         rabbitMqSinks: filteredTasks.filter(
             (x) => x.shared.taskType === "RabbitQueueSink"

@@ -4,6 +4,8 @@
     RichPanelInfo,
     RichPanelName,
     RichPanelActions,
+    RichPanelDetailItem,
+    RichPanelDetails,
 } from "components/common/RichPanel";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
@@ -19,6 +21,7 @@ import useConfirm from "components/common/ConfirmDialog";
 import useUniqueId from "components/hooks/useUniqueId";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import copyToClipboard from "common/copyToClipboard";
 
 interface ConnectionStringsPanelProps {
     connection: Connection;
@@ -95,6 +98,23 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                         </RichPanelActions>
                     )}
                 </RichPanelHeader>
+
+                {"identifier" in connection && (
+                    <RichPanelDetails className="p-0">
+                        <RichPanelDetailItem label="Identifier">
+                            {connection.identifier}
+                            <Button
+                                color="link"
+                                onClick={() =>
+                                    copyToClipboard.copy(connection.identifier, "Identifier copied to clipboard")
+                                }
+                                size="xs"
+                            >
+                                <Icon icon="copy-to-clipboard" />
+                            </Button>
+                        </RichPanelDetailItem>
+                    </RichPanelDetails>
+                )}
             </div>
         </RichPanel>
     );

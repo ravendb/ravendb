@@ -31,6 +31,7 @@ import {
     OngoingTaskReplicationHubNodeInfoDetails,
     OngoingInternalReplicationNodeInfo,
     OngoingTaskAmazonSqsEtlSharedInfo,
+    OngoingTaskAiEtlSharedInfo,
 } from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
@@ -39,6 +40,7 @@ import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.O
 import genUtils from "common/generalUtils";
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl;
 import OngoingTaskSnowflakeEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
+import OngoingTaskAiIntegrationListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration;
 import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
@@ -457,6 +459,18 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 changeVectorForNextBatchStartingPointPerShard: incoming.ChangeVectorForNextBatchStartingPointPerShard,
                 changeVectorForNextBatchStartingPoint: incoming.ChangeVectorForNextBatchStartingPoint,
             };
+            return result;
+        }
+        case "AiIntegration": {
+            const incoming = task as OngoingTaskAiIntegrationListView;
+
+            // noinspection UnnecessaryLocalVariableJS
+            const result: OngoingTaskAiEtlSharedInfo = {
+                ...commonProps,
+                identifier: incoming.Configuration.Identifier,
+                connectionStringName: incoming.ConnectionStringName,
+            };
+
             return result;
         }
     }

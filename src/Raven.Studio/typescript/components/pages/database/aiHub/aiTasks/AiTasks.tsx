@@ -9,7 +9,7 @@ import { StickyHeader } from "components/common/StickyHeader";
 import useBoolean from "components/hooks/useBoolean";
 import useInterval from "components/hooks/useInterval";
 import { useServices } from "components/hooks/useServices";
-import { OngoingTaskInfo, OngoingTaskSharedInfo, OngoingTaskAmazonSqsEtlInfo } from "components/models/tasks";
+import { OngoingTaskInfo, OngoingTaskSharedInfo, OngoingTaskAiEtlInfo } from "components/models/tasks";
 import { useAppSelector } from "components/store";
 import TaskUtils from "components/utils/TaskUtils";
 import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
@@ -100,7 +100,7 @@ export default function AiTasks() {
         [definitionCache]
     );
 
-    const aiEtls = tasks.tasks.filter((x) => x.shared.taskType === "AiIntegration") as OngoingTaskAmazonSqsEtlInfo[];
+    const aiEtls = tasks.tasks.filter((x) => x.shared.taskType === "AiIntegration") as OngoingTaskAiEtlInfo[];
 
     const getSelectedTaskShardedInfos = () =>
         [...aiEtls].filter((x) => selectedTaskIds.includes(x.shared.taskId)).map((x) => x.shared);

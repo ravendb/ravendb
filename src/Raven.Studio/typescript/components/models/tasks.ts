@@ -146,7 +146,7 @@ export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
 
 export interface OngoingTaskAiEtlSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
-    destinations: string[];
+    identifier: string;
 }
 
 export type OngoingTaskKafkaEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;

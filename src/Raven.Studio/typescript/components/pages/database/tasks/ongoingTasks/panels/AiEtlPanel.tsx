@@ -10,23 +10,26 @@ import {
     OngoingTaskStatus,
     useTasksOperations,
 } from "../../shared/shared";
-import { OngoingTaskAmazonSqsEtlInfo } from "components/models/tasks";
+import { OngoingTaskAiEtlInfo } from "components/models/tasks";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
     RichPanelActions,
+    RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
     RichPanelSelect,
 } from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
-import { Collapse, Input } from "reactstrap";
+import { Button, Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import copyToClipboard from "common/copyToClipboard";
+import { Icon } from "components/common/Icon";
 
-type AiEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskAmazonSqsEtlInfo>;
+type AiEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskAiEtlInfo>;
 
 function Details(props: AiEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
@@ -34,8 +37,24 @@ function Details(props: AiEtlPanelProps & { canEdit: boolean }) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Ai", data.shared.connectionStringName);
 
+    const identifier = data.shared.identifier;
+
     return (
         <RichPanelDetails>
+            {identifier && (
+                <RichPanelDetails className="p-0">
+                    <RichPanelDetailItem label="Identifier">
+                        {identifier}
+                        <Button
+                            color="link"
+                            onClick={() => copyToClipboard.copy(identifier, "Identifier copied to clipboard")}
+                            size="xs"
+                        >
+                            <Icon icon="copy-to-clipboard" />
+                        </Button>
+                    </RichPanelDetailItem>
+                </RichPanelDetails>
+            )}
             <ConnectionStringItem
                 connectionStringDefined
                 canEdit={canEdit}
