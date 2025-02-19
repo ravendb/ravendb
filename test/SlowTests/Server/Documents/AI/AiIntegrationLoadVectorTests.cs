@@ -4,12 +4,15 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.Documents.QueueSink.Commands.BatchQueueSinkScriptCommand;
 
 namespace SlowTests.Server.Documents.AI;
 
@@ -47,11 +50,12 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        (var etl, _) = RegisterAiIntegration(store);
+        var (config, connectionString) = RegisterAiIntegration(store);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
+        
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -65,7 +69,10 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Assert.Single(byVector);
         }
 
-        AssertEmbeddingsForPath(store, etl, "Name", ["Joe"], id);
+        var aiIntegrationIdentifier = new AiIntegrationIdentifier(config.Identifier);
+        var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
+
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Joe"], id);
         using (var session = store.OpenSession())
         {
             var load = session.Load<Dto>(id);
@@ -90,7 +97,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Assert.Empty(byVector);
         }
 
-        AssertEmbeddingsForPath(store, etl, "Name", ["sdklfjklsadjkl;assdjaskll"], id);
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["sdklfjklsadjkl;assdjaskll"], id);
     }
 
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
@@ -125,12 +132,14 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        (var etl, _) = RegisterAiIntegration(store, embeddingsPaths: ["Names"]);
+        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Names"]);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
-
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
+
+        WaitForUserToContinueTheTest(store);
+
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -143,7 +152,10 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Assert.Single(byVector);
         }
 
-        AssertEmbeddingsForPath(store, etl, "Names", ["Joe", "Jimmy"], id);
+        var aiIntegrationIdentifier = new AiIntegrationIdentifier(config.Identifier);
+        var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
+
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Joe", "Jimmy"], id);
         using (var session = store.OpenSession())
         {
             var load = session.Load<Dto>(id);
@@ -168,7 +180,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Assert.Empty(byVector);
         }
 
-        AssertEmbeddingsForPath(store, etl, "Names", ["sdklfjklsadjkl;assdjaskll"], id);
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["sdklfjklsadjkl;assdjaskll"], id);
     }
 
 
@@ -212,9 +224,9 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        (var etl, _) = RegisterAiIntegration(store, embeddingsPaths: ["Name"], aiIntegrationName: embeddingEtlName);
+        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Name"], aiIntegrationName: embeddingEtlName);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
-        AssertEmbeddingsForPath(store, etl, "Name", ["Joe"], id);
+        AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
 
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
@@ -237,7 +249,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         }
 
         etlStatus.Reset();
-        (var etl2, _) = RegisterAiIntegration(store, embeddingsPaths: ["Names"], aiIntegrationName: embeddingEtlName2);
+        var (config2, connectionString2) = RegisterAiIntegration(store, embeddingsPaths: ["Names"], aiIntegrationName: embeddingEtlName2);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
         Indexes.WaitForIndexing(store);
@@ -260,7 +272,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Assert.Single(byVector);
         }
 
-        AssertEmbeddingsForPath(store, etl2, "Names", ["Jimmy"], id);
+        AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config2.Identifier), new AiConnectionStringIdentifier(connectionString2.Identifier), "Names", ["Jimmy"], id);
     }
 
     private class IndexByName : AbstractIndexCreationTask<Dto>
@@ -270,7 +282,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Map = dtos => from dto in dtos
                 select new { Vector = LoadVector("Name") };
 
-            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName(DefaultAiIntegrationTaskName));
+            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName)));
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -290,7 +302,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             };
 
             Fields = new Dictionary<string, IndexFieldOptions>();
-            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationTaskName = DefaultAiIntegrationTaskName } });
+            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationIdentifier = AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName) } });
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -302,7 +314,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Map = dtos => from dto in dtos
                 select new { Vector = LoadVector("Names") };
 
-            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName(DefaultAiIntegrationTaskName));
+            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName)));
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -322,7 +334,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             };
 
             Fields = new Dictionary<string, IndexFieldOptions>();
-            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationTaskName = DefaultAiIntegrationTaskName } });
+            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationIdentifier = AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName) } });
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -335,8 +347,8 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             Map = dtos => from dto in dtos
                 select new { Vector = LoadVector("Name"), Vector2 = LoadVector("Names") };
 
-            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationTaskName("V1"));
-            Vector(nameof(Dto.Vector2), factory => factory.AiIntegrationTaskName("V2"));
+            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationIndentifier("V1"));
+            Vector(nameof(Dto.Vector2), factory => factory.AiIntegrationIndentifier("V2"));
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -357,8 +369,8 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
             };
 
             Fields = new Dictionary<string, IndexFieldOptions>();
-            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationTaskName = "V1" } });
-            Fields.Add("Vector2", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationTaskName = "V2" } });
+            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationIdentifier = AiIntegrationConfiguration.GenerateIdentifier("V1") } });
+            Fields.Add("Vector2", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationIdentifier = AiIntegrationConfiguration.GenerateIdentifier("V2") } });
 
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }

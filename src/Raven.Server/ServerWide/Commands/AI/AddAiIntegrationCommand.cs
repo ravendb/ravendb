@@ -1,5 +1,8 @@
-﻿using Raven.Client.Documents.Operations.AI;
+﻿using System;
+using System.Linq;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.ETL;
 
 namespace Raven.Server.ServerWide.Commands.AI;
@@ -18,6 +21,54 @@ public sealed class AddAiIntegrationCommand : AddEtlCommand<AiIntegrationConfigu
 
     public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
     {
+        try
+        {
+            if (string.IsNullOrEmpty(Configuration.Identifier))
+                Configuration.Identifier = Configuration.GenerateIdentifier();
+        }
+        catch (Exception e)
+        {
+            throw new RachisApplyException("Failed to generate AI integration task identifier", e);
+        }
+
+        InClusterValidation(record);
+
         Add(ref record.AiIntegrations, record, etag);
+    }
+
+    private void InClusterValidation(DatabaseRecord databaseRecord)
+    {
+        try
+        {
+            if (databaseRecord == null)
+                throw new RachisApplyException("Failed to get database record, but it is required for further validation");
+
+            if (string.IsNullOrWhiteSpace(Configuration.Identifier))
+                throw new RachisApplyException("Integration task identifier must be set, but it is not");
+
+            if (Configuration.ValidateIdentifier(out var errors) == false)
+                throw new RachisApplyException($"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
+
+            var isUpdate = databaseRecord.AiIntegrations.Any(x => x.Name == Configuration.Name);
+                
+            var identifierConflicts = databaseRecord?.AiIntegrations
+                .Where(x => x.Identifier == Configuration.Identifier && x.Name != Configuration.Name)
+                .ToArray();
+
+            if (identifierConflicts.Length > 0)
+                throw new RachisApplyException(
+                    $"Can't {(isUpdate ? "update" : "create")} AI Integration task: '{Configuration.Name}'. " +
+                    $"The identifier '{Configuration.Identifier}' is already used by " +
+                    $"AI task{(identifierConflicts.Length > 1 ? "s" : "")} " +
+                    $"'{string.Join("', '", identifierConflicts.Select(x => x.Name))}'");
+        }
+        catch (Exception e) when (ClusterStateMachine.ExpectedException(e))
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            throw new RachisApplyException("Failed to validate AI connection string", e);
+        }
     }
 }

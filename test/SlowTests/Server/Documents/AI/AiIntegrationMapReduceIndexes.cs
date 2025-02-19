@@ -52,7 +52,7 @@ public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegra
                 group result by result.Name into g
                 select new Result() { Name = g.Key, Vector = CreateVector(g.Select(p => p.Vector)) };
 
-            Vector("Vector", f => f.AiIntegrationTaskName(DefaultAiIntegrationTaskName));
+            Vector("Vector", f => f.AiIntegrationIndentifier(DefaultAiIntegrationTaskName));
         }
         
         public class Result

@@ -57,9 +57,9 @@ public sealed class VectorOptionsFactory
         return this;
     }    
     
-    public VectorOptionsFactory AiIntegrationTaskName(string aiIntegrationTaskName)
+    public VectorOptionsFactory AiIntegrationIndentifier(string aiIntegrationTaskName)
     {
-        _vectorOptions.AiIntegrationTaskName = aiIntegrationTaskName;
+        _vectorOptions.AiIntegrationIdentifier = aiIntegrationTaskName;
         return this;
     }
 }

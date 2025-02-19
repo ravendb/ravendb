@@ -218,11 +218,11 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
                     $"Cannot update connection string '{ConnectionString.Name}' because it contains changes that would affect the structure or creation process of embeddings. " +
                     $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
                     $"To proceed with these changes:{Environment.NewLine}" +
-                    $"1. Delete the existing ETL task{(etlsUsingConnection.Length == 1 ? "" : "s")}{Environment.NewLine}" +
+                    $"1. Delete the existing AI Integration task{(etlsUsingConnection.Length == 1 ? "" : "s")}{Environment.NewLine}" +
                     $"2. {(etlsUsingConnection.Length == 1 ?
-                        "After deleting the ETL task, you can either update this connection string or create a new one with your desired settings" :
-                        $"Create a new connection string with your desired settings, as this connection string is used by ETL tasks: '{etlNames}'")}{Environment.NewLine}" +
-                    $"3. Create a new ETL task using the {(etlsUsingConnection.Length == 1 ? "updated or new" : "new")} connection string{Environment.NewLine}" +
+                        "After deleting the AI Integration task, you can either update this connection string or create a new one with your desired settings" :
+                        $"Create a new connection string with your desired settings, as this connection string is used by AI Integration tasks: '{etlNames}'")}{Environment.NewLine}" +
+                    $"3. Create a new AI Integration task using the {(etlsUsingConnection.Length == 1 ? "updated or new" : "new")} connection string{Environment.NewLine}" +
                     "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
                     "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
             }

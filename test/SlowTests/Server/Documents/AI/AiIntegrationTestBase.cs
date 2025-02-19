@@ -50,6 +50,8 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
             : null,
         };
 
+        configuration.Identifier = configuration.GenerateIdentifier();
+
         return RegisterAiIntegration(store, configuration);
     }
 
@@ -57,6 +59,8 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
         IDocumentStore store, AiIntegrationConfiguration configuration)
     {
         var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, OnnxSettings = new OnnxSettings() };
+
+        connectionString.Identifier = connectionString.GenerateIdentifier();
 
         var putResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
         Assert.NotNull(putResult.RaftCommandIndex);
@@ -68,7 +72,8 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
 
     protected void AssertEmbeddingsForPath(
         IDocumentStore store,
-        AiIntegrationConfiguration integrationConfiguration,
+        AiIntegrationIdentifier integrationIdentifier,
+        AiConnectionStringIdentifier connectionStringIdentifier,
         string path,
         string[] inputValues,
         string docId)
@@ -83,7 +88,7 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
         {
             //Assert if value is in embedding cache
             var hashOfInput = AiHelper.CalculateValueHash(inputValue);
-            var embeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(integrationConfiguration.NormalizedConnectionName, hashOfInput);
+            var embeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringIdentifier, hashOfInput);
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
             Assert.NotNull(embeddingCacheDocument);
 
@@ -99,7 +104,7 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
             Assert.NotNull(documentEmbeddings);
 
             // Assert if contains current ETL result
-            var currentEtlObject = documentEmbeddings[integrationConfiguration.Name];
+            var currentEtlObject = documentEmbeddings[integrationIdentifier.Value];
             Assert.NotNull(currentEtlObject);
 
             // Assert if ETL result contains current path
@@ -107,7 +112,7 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
             Assert.NotNull(currentPathObject);
 
             // Assert if current path contain embedding of current input value
-            var expectedAttachmentNameInEmbeddingsDocument = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationConfiguration.Name, path) + sourceAttachmentName;
+            var expectedAttachmentNameInEmbeddingsDocument = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, path) + sourceAttachmentName;
             var attachmentsByEtlPath = currentPathObject.Select(att => att.ToString()).ToList();
             Assert.Equal(inputValues.Length, attachmentsByEtlPath.Count); // <- this checks if we've all embeddings
             Assert.Contains(expectedAttachmentNameInEmbeddingsDocument, attachmentsByEtlPath);

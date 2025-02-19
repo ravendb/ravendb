@@ -46,25 +46,24 @@ public static class AiHelper
         return $"{sourceCollectionName}/embeddings";
     }
 
-    public static string GetPrefixForAttachmentInEmbeddingsDocument(string etlTaskName, string path)
+    public static string GetPrefixForAttachmentInEmbeddingsDocument(AiIntegrationIdentifier aiIntegrationIdentifier, string path)
     {
-        return $"{etlTaskName}_{path}_";
+        return $"{aiIntegrationIdentifier.Value}_{path}_";
     }
     
-    public static string GetValueEmbeddingsDocumentId(string connectionStringName, string hash)
+    public static string GetValueEmbeddingsDocumentId(AiConnectionStringIdentifier aiConnectionStringIdentifier, string hash)
     {
-        return $"embeddings/{connectionStringName}/{hash}";
+        return $"embeddings/{aiConnectionStringIdentifier.Value}/{hash}";
     }
     
 #pragma warning disable SKEXP0001
-    public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, string textValue, int dimensions, string aiTaskName)
+    public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, string textValue, int dimensions, AiConnectionStringIdentifier connectionStringIdentifier)
 #pragma warning restore SKEXP0001
     {
         var embedding = service.GenerateEmbeddingAsync(textValue).GetAwaiter().GetResult();
 
-        var connectionStringName = AiStorage.GetConnectionStringNameByTaskName(aiTaskName);
         
-        AiStorage.EnqueueEmbeddingToCache(connectionStringName, textValue, embedding);
+        AiStorage.EnqueueEmbeddingToCache(connectionStringIdentifier, textValue, embedding);
         // for test
         AiStorage.CacheEmbeddings();
         

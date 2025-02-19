@@ -567,7 +567,7 @@ public partial class AbstractStaticIndexBase
             return new object[]{VectorValue.Null};
         
 
-        var currentAiModel = vectorField.Vector.AiIntegrationTaskName ?? currentIndexingScope.Index.Configuration.DefaultAiTask;
+        var currentAiModel = vectorField.Vector.AiIntegrationIdentifier ?? currentIndexingScope.Index.Configuration.DefaultAiTask;
 
         if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, relatedDocument.BlittableJson, currentAiModel, out var aiResult))
         {

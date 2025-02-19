@@ -1923,9 +1923,9 @@ namespace Raven.Server.Json
 
                 writer.WriteComma();
                 
-                writer.WritePropertyName(nameof(options.Vector.AiIntegrationTaskName));
-                if (options.Vector.AiIntegrationTaskName is not null)
-                    writer.WriteString(options.Vector.AiIntegrationTaskName);
+                writer.WritePropertyName(nameof(options.Vector.AiIntegrationIdentifier));
+                if (options.Vector.AiIntegrationIdentifier is not null)
+                    writer.WriteString(options.Vector.AiIntegrationIdentifier);
                 else
                     writer.WriteNull();
                 

@@ -21,7 +21,7 @@ public sealed class AutoVectorOptions : VectorOptions
         SourceFieldName = options.SourceFieldName;
         NumberOfCandidatesForIndexing = options.NumberOfCandidatesForIndexing;
         NumberOfEdges = options.NumberOfEdges;
-        AiIntegrationTaskName = options.AiIntegrationTaskName;
+        AiIntegrationIdentifier = options.AiIntegrationIdentifier;
     }
 
     public override bool Equals(object obj)

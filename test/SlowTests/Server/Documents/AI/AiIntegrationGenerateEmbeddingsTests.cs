@@ -28,11 +28,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
 
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
-        var (etlConfig, connection) = RegisterAiIntegration(store, embeddingsPaths: ["Name", "SubDto.Name"]);
+        var (config, connection) = RegisterAiIntegration(store, embeddingsPaths: ["Name", "SubDto.Name"]);
         aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
-        AssertEmbeddingsForPath(store, etlConfig, "Name", ["Name1"], id);
-        AssertEmbeddingsForPath(store, etlConfig, "SubDto.Name", ["Name1"], id);
+        var aiIntegrationIdentifier = new AiIntegrationIdentifier(config.Identifier);
+        var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
+
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], id);
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "SubDto.Name", ["Name1"], id);
 
         aiTaskDone.Reset();
         using (var session = store.OpenSession())
@@ -45,8 +48,8 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
 
         aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
-        AssertEmbeddingsForPath(store, etlConfig, "Name", ["Updated"], id);
-        AssertEmbeddingsForPath(store, etlConfig, "SubDto.Name", ["Name1"], id);
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Updated"], id);
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "SubDto.Name", ["Name1"], id);
     }
 
     [RavenFact(RavenTestCategory.AiIntegration)]
@@ -62,9 +65,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store);
+            var (config, connectionString) = RegisterAiIntegration(store);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto.Id);
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Name1"], dto.Id);
         }
     }
 
@@ -82,9 +85,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, embeddingsPaths: ["Names"]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Names"]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            AssertEmbeddingsForPath(store, configuration, "Names", ["Name1", "Name2", "Name3"], dto.Id);
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Names", ["Name1", "Name2", "Name3"], dto.Id);
         }
     }
 
@@ -104,9 +107,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, embeddingsPaths: ["SubDto.Name"]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["SubDto.Name"]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            AssertEmbeddingsForPath(store, configuration, "SubDto.Name", ["Subname1"], dto.Id);
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "SubDto.Name", ["Subname1"], dto.Id);
         }
     }
 
@@ -126,9 +129,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, embeddingsPaths: ["SubDtos.Name"]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["SubDtos.Name"]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            AssertEmbeddingsForPath(store, configuration, "SubDtos.Name", ["Subname1", "Subname2"], dto.Id);
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "SubDtos.Name", ["Subname1", "Subname2"], dto.Id);
         }
     }
 
@@ -148,10 +151,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store, embeddingsPaths: ["Name"]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Name"]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto1.Id);
-            AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto2.Id);
+
+            var aiIntegrationIdentifier = new AiIntegrationIdentifier(config.Identifier);
+            var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
+
+            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], dto1.Id);
+            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], dto2.Id);
 
             var db = await GetDatabase(store.Database);
             var etlProcess = (AiIntegrationTask)db.EtlLoader.Processes.First();
@@ -178,13 +185,16 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store);
-            var embeddingDocName = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, AiHelper.CalculateValueHash("Name1"));
+            var (config, connectionString) = RegisterAiIntegration(store);
+            var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
+
+            var embeddingDocName = AiHelper.GetValueEmbeddingsDocumentId(aiConnectionStringIdentifier, AiHelper.CalculateValueHash("Name1"));
 
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
             //Assert document exists
-            AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto1.Id);
+            var aiIntegrationIdentifier = new AiIntegrationIdentifier(config.Identifier);
+            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], dto1.Id);
 
             string expectedChangeVector;
             using (var session = store.OpenSession())
@@ -206,8 +216,8 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 Assert.Equal(expectedChangeVector, changeVectorAfterUpdate);
             }
 
-            AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto1.Id);
-            AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto2.Id);
+            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], dto1.Id);
+            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], dto2.Id);
         }
     }
 
@@ -225,9 +235,13 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (configuration, _) = RegisterAiIntegration(store);
+            var (config, connectionString) = RegisterAiIntegration(store);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            AssertEmbeddingsForPath(store, configuration, "Name", ["Name1"], dto.Id);
+            
+            var aiIntegrationIdentifier = new AiIntegrationIdentifier(config.Identifier);
+            var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
+
+            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], dto.Id);
 
             aiTaskDone.Reset();
             using (var session = store.OpenSession())
@@ -239,7 +253,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
-            AssertEmbeddingsForPath(store, configuration, "Name", ["updated"], dto.Id);
+            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["updated"], dto.Id);
         }
     }
 
@@ -257,9 +271,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (etlConfig, _) = RegisterAiIntegration(store, embeddingsPaths: ["Age"]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Age"]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            AssertEmbeddingsForPath(store, etlConfig, "Age", ["21"], dto.Id);
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Age", ["21"], dto.Id);
         }
     }
 
@@ -278,9 +292,9 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
 
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (etlConfig, _) = RegisterAiIntegration(store);
+            var (config, connectionString) = RegisterAiIntegration(store);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            AssertEmbeddingsForPath(store, etlConfig, "Name", ["SomeName"], dto.Id);
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["SomeName"], dto.Id);
 
             using (var session = store.OpenSession())
             {
@@ -477,7 +491,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
-            var (configuration, _) = RegisterAiIntegration(store, aiIntegrationName: aiIntegrationName, script: @"
+            var (configuration, connectionString) = RegisterAiIntegration(store, aiIntegrationName: aiIntegrationName, script: @"
 embeddings.generate(
 {
     Foo: this.Name, 
@@ -489,7 +503,7 @@ embeddings.generate(
             using (var session = store.OpenSession())
             {
                 var fooValueHash = AiHelper.CalculateValueHash(dto.Name);
-                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, fooValueHash);
+                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(new AiConnectionStringIdentifier(connectionString.Identifier), fooValueHash);
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
                 WaitForUserToContinueTheTest(store);
@@ -503,7 +517,9 @@ embeddings.generate(
 
                 var barValueHash = AiHelper.CalculateValueHash("ConstValue");
 
-                valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, barValueHash);
+                WaitForUserToContinueTheTest(store);
+
+                valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(new AiConnectionStringIdentifier(connectionString.Identifier), barValueHash);
                 valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
                 var expectedBarAttachmentName = (string)((dynamic)valueEmbeddingsDocument).ConstValue;
@@ -516,28 +532,30 @@ embeddings.generate(
                 var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
                 var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
 
-                var configurationValues = ((dynamic)embeddingsDocument)[configuration.Name];
+                var aiIntegrationIdentifier = new AiIntegrationIdentifier(configuration.Identifier);
+
+                var configurationValues = ((dynamic)embeddingsDocument)[aiIntegrationIdentifier.Value];
 
                 var attachmentNamesForFooPropertyJArray = (JArray)configurationValues.Foo;
                 var attachmentNamesForFooProperty = attachmentNamesForFooPropertyJArray.ToObject<string[]>();
 
                 Assert.Single(attachmentNamesForFooProperty);
-                Assert.Equal(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationName, "Foo") + expectedFooAttachmentName, attachmentNamesForFooProperty[0]);
+                Assert.Equal(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationIdentifier, "Foo") + expectedFooAttachmentName, attachmentNamesForFooProperty[0]);
 
 
                 var attachmentNamesForBarPropertyJArray = (JArray)configurationValues.Bar;
                 var attachmentNamesForBarProperty = attachmentNamesForBarPropertyJArray.ToObject<string[]>();
 
                 Assert.Single(attachmentNamesForBarProperty);
-                Assert.Equal(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationName, "Bar") + expectedBarAttachmentName, attachmentNamesForBarProperty[0]);
+                Assert.Equal(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationIdentifier, "Bar") + expectedBarAttachmentName, attachmentNamesForBarProperty[0]);
 
                 attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
                 var attachmentNamesStringList = attachmentNames.Select(x => x.Name).ToList();
 
                 Assert.Equal(2, attachmentNames.Length);
                 Assert.NotEqual(expectedFooAttachmentName, expectedBarAttachmentName);
-                Assert.Contains(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationName, "Foo") + expectedFooAttachmentName, attachmentNamesStringList);
-                Assert.Contains(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationName, "Bar") + expectedBarAttachmentName, attachmentNamesStringList);
+                Assert.Contains(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationIdentifier, "Foo") + expectedFooAttachmentName, attachmentNamesStringList);
+                Assert.Contains(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationIdentifier, "Bar") + expectedBarAttachmentName, attachmentNamesStringList);
             }
         }
     }

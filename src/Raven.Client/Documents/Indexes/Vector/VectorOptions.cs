@@ -20,7 +20,7 @@ public class VectorOptions
         DestinationEmbeddingType = options.DestinationEmbeddingType;
         NumberOfCandidatesForIndexing = options.NumberOfCandidatesForIndexing;
         NumberOfEdges = options.NumberOfEdges;
-        AiIntegrationTaskName = options.AiIntegrationTaskName;
+        AiIntegrationIdentifier = options.AiIntegrationIdentifier;
     }
     
     internal static readonly VectorOptions Default = new()
@@ -56,7 +56,7 @@ public class VectorOptions
     
     public int? NumberOfEdges { get; set; }
     
-    public string AiIntegrationTaskName { get; set; }
+    public string AiIntegrationIdentifier { get; set; }
 
     [Conditional("DEBUG")]
     internal void ValidateDebug() => Validate();
@@ -97,7 +97,7 @@ public class VectorOptions
                && options.DestinationEmbeddingType == DestinationEmbeddingType
                && options.NumberOfEdges == NumberOfEdges
                && options.NumberOfCandidatesForIndexing == NumberOfCandidatesForIndexing
-               && options.AiIntegrationTaskName == AiIntegrationTaskName;
+               && options.AiIntegrationIdentifier == AiIntegrationIdentifier;
     }
 
     public override int GetHashCode()
@@ -109,7 +109,7 @@ public class VectorOptions
             hashCode = (hashCode * 397) ^ (Dimensions ?? 0).GetHashCode();
             hashCode = (hashCode * 397) ^ (NumberOfEdges ?? 0).GetHashCode();
             hashCode = (hashCode * 397) ^ (NumberOfCandidatesForIndexing ?? 0).GetHashCode();
-            hashCode = (hashCode * 397) ^ (AiIntegrationTaskName ?? string.Empty).GetHashCode();
+            hashCode = (hashCode * 397) ^ (AiIntegrationIdentifier ?? string.Empty).GetHashCode();
             
             return hashCode;
         }

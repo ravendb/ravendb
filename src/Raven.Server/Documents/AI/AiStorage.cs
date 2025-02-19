@@ -28,10 +28,10 @@ public class AiStorage
     private static DocumentDatabase _database;
     
 #pragma warning disable SKEXP0001
-    private Dictionary<string, ITextEmbeddingGenerationService> _servicesByTaskName;
-    private Dictionary<string, ITextEmbeddingGenerationService> _servicesByConnectionStringName;
+    private Dictionary<AiIntegrationIdentifier, ITextEmbeddingGenerationService> _servicesByIntegrationTaskIdentifier;
+    private Dictionary<AiConnectionStringIdentifier, ITextEmbeddingGenerationService> _servicesByConnectionStringIdentifier;
 #pragma warning restore SKEXP0001
-    private static Dictionary<string, string> _taskNameToNormalizedConnectionStringName;
+    private static Dictionary<AiIntegrationIdentifier, AiConnectionStringIdentifier> _taskIdentifierToConnectionStringIdentifier;
     
     private static ConcurrentQueue<EmbeddingCacheItem> _embeddingsQueue;
     
@@ -40,19 +40,19 @@ public class AiStorage
         _database = database;
         _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(_documentsStorage));
 #pragma warning disable SKEXP0001
-        _servicesByConnectionStringName = new Dictionary<string, ITextEmbeddingGenerationService>();
-        _servicesByTaskName = new Dictionary<string, ITextEmbeddingGenerationService>();
+        _servicesByConnectionStringIdentifier = new();
+        _servicesByIntegrationTaskIdentifier = new ();
 #pragma warning restore SKEXP0001
         
         _embeddingsQueue = new ConcurrentQueue<EmbeddingCacheItem>();
-        _taskNameToNormalizedConnectionStringName = new Dictionary<string, string>();
+        _taskIdentifierToConnectionStringIdentifier = new();
     }
 
 #pragma warning disable SKEXP0001
-    public bool TryGetServiceByTaskName(string taskName, out ITextEmbeddingGenerationService service)
+    public bool TryGetServiceByIntegrationIdentifier(AiIntegrationIdentifier taskIdentifier, out ITextEmbeddingGenerationService service)
 #pragma warning restore SKEXP0001
     {
-        return _servicesByTaskName.TryGetValue(taskName, out service);
+        return _servicesByIntegrationTaskIdentifier.TryGetValue(taskIdentifier, out service);
     }
 
     public Document GetDocumentEmbeddings(DocumentsOperationContext context, string sourceDocumentId, out string documentEmbeddingsId)
@@ -64,10 +64,10 @@ public class AiStorage
         return document;
     }
 
-    public ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, AiIntegrationConfiguration configuration, string value,
+    public ValueEmbeddingsDocument GetValueEmbeddingsDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, string value,
         out string valueEmbeddingsDocumentId)
     {
-        valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(configuration.NormalizedConnectionName, AiHelper.CalculateValueHash(value));
+        valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringIdentifier, AiHelper.CalculateValueHash(value));
         
         var valueEmbeddingsDocument = GetValueEmbeddingsDocument(context, valueEmbeddingsDocumentId);
 
@@ -168,9 +168,9 @@ public class AiStorage
         };
     }
 
-    public static string GetConnectionStringNameByTaskName(string taskName)
+    public static AiConnectionStringIdentifier GetConnectionStringIdentifierByIntegrationIdentifier(AiIntegrationIdentifier integrationIdentifier)
     {
-        return _taskNameToNormalizedConnectionStringName[taskName];
+        return _taskIdentifierToConnectionStringIdentifier[integrationIdentifier];
     }
     
     public void HandleDatabaseRecordChange(DatabaseRecord record)
@@ -180,10 +180,10 @@ public class AiStorage
 
         foreach (var connectionStringKvp in record.AiConnectionStrings)
         {
-            var connectionStringName = connectionStringKvp.Key;
+            var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionStringKvp.Value.Identifier);
             var connectionString = connectionStringKvp.Value;
             
-            if (_servicesByConnectionStringName.ContainsKey(connectionStringName))
+            if (_servicesByConnectionStringIdentifier.ContainsKey(connectionStringIdentifier))
                 continue;
             
             var kernelBuilder = Kernel.CreateBuilder();
@@ -193,20 +193,20 @@ public class AiStorage
             var service = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
 #pragma warning restore SKEXP0001
             
-            _servicesByConnectionStringName[connectionStringName] = service;
+            _servicesByConnectionStringIdentifier[connectionStringIdentifier] = service;
         }
 
         foreach (var aiIntegrationConfiguration in record.AiIntegrations)
         {
-            var aiIntegrationName = aiIntegrationConfiguration.Name;
-            var connectionStringName = aiIntegrationConfiguration.ConnectionStringName;
+            var aiIntegrationIdentifier = new AiIntegrationIdentifier(aiIntegrationConfiguration.Identifier);
+            var connectionStringIdentifier = new AiConnectionStringIdentifier(record.AiConnectionStrings[aiIntegrationConfiguration.ConnectionStringName].Identifier);
 
-            var service = _servicesByConnectionStringName[connectionStringName];
+            var service = _servicesByConnectionStringIdentifier[connectionStringIdentifier];
 
-            _servicesByTaskName[aiIntegrationName] = service;
+            _servicesByIntegrationTaskIdentifier[aiIntegrationIdentifier] = service;
             
             // todo use normalized name
-            _taskNameToNormalizedConnectionStringName[aiIntegrationName] = connectionStringName;
+            _taskIdentifierToConnectionStringIdentifier[aiIntegrationIdentifier] = connectionStringIdentifier;
         }
     }
 
@@ -222,9 +222,9 @@ public class AiStorage
         _database.TxMerger.EnqueueSync(putEmbeddingsCommand);
     }
 
-    public static void EnqueueEmbeddingToCache(string connectionStringName, string textualValue, ReadOnlyMemory<float> embedding)
+    public static void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embedding)
     {
-        var newItem = new EmbeddingCacheItem() { EmbeddingValue = embedding, TextualValue = textualValue, ConnectionStringName = connectionStringName };
+        var newItem = new EmbeddingCacheItem() { EmbeddingValue = embedding, TextualValue = textualValue, ConnectionStringIdentifier = connectionStringIdentifier };
         
         _embeddingsQueue.Enqueue(newItem);
     }
@@ -234,6 +234,6 @@ public class AiStorage
         public ReadOnlyMemory<float> EmbeddingValue;
         public string TextualValue;
         // Name of the connection string used for embedding generation 
-        public string ConnectionStringName;
+        public AiConnectionStringIdentifier ConnectionStringIdentifier;
     }
 }

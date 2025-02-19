@@ -114,7 +114,9 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                     
                     foreach (var value in values)
                     {
-                        var valueEmbeddingsDocument = Database.AiStorage.GetValueEmbeddingsDocument(context, Configuration, value.TextualValue, out var valueEmbeddingsDocumentId);
+                        var connectionStringIdentifier = new AiConnectionStringIdentifier(Configuration.Connection.Identifier);
+
+                        var valueEmbeddingsDocument = Database.AiStorage.GetValueEmbeddingsDocument(context, connectionStringIdentifier, value.TextualValue, out var valueEmbeddingsDocumentId);
 
                         value.ValueEmbeddingsDocumentId = valueEmbeddingsDocumentId;
                         value.ValueEmbeddingsSourceAttachmentName = valueEmbeddingsDocument?.GetAttachmentNameForValue(value.TextualValue);
@@ -146,7 +148,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                 }
             }
             
-            var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(aiEtlScriptRun, Configuration.Name, Database);
+            var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(aiEtlScriptRun, new AiIntegrationIdentifier(Configuration.Identifier), Database);
 
             Database.TxMerger.EnqueueSync(putEmbeddingsCommand);
         }
@@ -222,14 +224,14 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         /// Contains ETL result
         /// </summary>
         private readonly AiEmbeddingsTransformationRun _taskResults;
-        private readonly string _aiIntegrationTaskName;
+        private readonly AiIntegrationIdentifier _aiIntegrationIdentifier;
         private readonly DocumentDatabase _database;
         public DocumentsStorage.PutOperationResults PutResult;
         
-        public MergedPutEmbeddingsCommand(AiEmbeddingsTransformationRun taskResults, string aiIntegrationTaskName, DocumentDatabase database)
+        public MergedPutEmbeddingsCommand(AiEmbeddingsTransformationRun taskResults, AiIntegrationIdentifier aiIntegrationIdentifier, DocumentDatabase database)
         {
             _taskResults = taskResults;
-            _aiIntegrationTaskName = aiIntegrationTaskName;
+            _aiIntegrationIdentifier = aiIntegrationIdentifier;
             _database = database;
         }
 
@@ -242,7 +244,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
             if (embeddingsDocument == null)
                 return destination;
             
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingsDocument, _aiIntegrationTaskName, out var etlEmbeddingsByPathObject)
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingsDocument, _aiIntegrationIdentifier.Value, out var etlEmbeddingsByPathObject)
                 && etlEmbeddingsByPathObject is BlittableJsonReaderObject etlEmbeddingsByPath)
             {
                 //For each property under ETL name
@@ -270,7 +272,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         {
             return new DynamicJsonValue
             {
-                [_aiIntegrationTaskName] = embeddingsDocumentModification,
+                [_aiIntegrationIdentifier.Value] = embeddingsDocumentModification,
                 [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
                 {
                     // todo cache
@@ -283,7 +285,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         {
             embeddingsDocument.Data.Modifications = new DynamicJsonValue
             {
-                [_aiIntegrationTaskName] = embeddingsDocumentModification
+                [_aiIntegrationIdentifier.Value] = embeddingsDocumentModification
             };
 
             return embeddingsDocument.Data;
@@ -324,7 +326,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                 {
                     var currentPath = embeddingsByPath.Key;
                     var generatedEmbeddings = embeddingsByPath.Value;
-                    var prefix = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(_aiIntegrationTaskName, currentPath);
+                    var prefix = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(_aiIntegrationIdentifier, currentPath);
                     var namesOfNewAttachments = new DynamicJsonArray();
                     
                     foreach (var embedding in generatedEmbeddings)
@@ -435,7 +437,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                 {
                     var hash = AttachmentsStorageHelper.CalculateHash(context, stream);
 
-                    var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(item.ConnectionStringName, hash);
+                    var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(item.ConnectionStringIdentifier, hash);
                     
                     var valueEmbeddingsDocumentJsonDjv = AiStorage.CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, operationStartDate);
                     

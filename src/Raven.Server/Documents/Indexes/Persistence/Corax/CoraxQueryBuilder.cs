@@ -20,6 +20,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -654,23 +655,25 @@ public static class CoraxQueryBuilder
 
         VectorValue transformedEmbedding;
         
-        var aiIntegrationTaskName = vectorOptions.AiIntegrationTaskName;
-
-        if (aiIntegrationTaskName != null)
+        if (vectorOptions.AiIntegrationIdentifier != null)
         {
+            var aiIntegrationIdentifier = new AiIntegrationIdentifier(vectorOptions.AiIntegrationIdentifier);
+
             var valueAsString = valueType switch
             {
                 ValueTokenType.String => value.ToString(),
                 _ => throw new NotSupportedException("Vector.Search() on " + valueType)
             };
-            
+
+            var connectionStringIdentifier = AiStorage.GetConnectionStringIdentifierByIntegrationIdentifier(aiIntegrationIdentifier); // TODO michal
+
             using (builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                if (TryGetEmbeddingFromCache(context, valueAsString, aiIntegrationTaskName, out transformedEmbedding) == false)
+                if (TryGetEmbeddingFromCache(context, valueAsString, connectionStringIdentifier, out transformedEmbedding) == false)
                 {
-                    if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.TryGetServiceByTaskName(aiIntegrationTaskName, out var service) == false)
-                        throw new ArgumentException($"Couldn't find {aiIntegrationTaskName} AI task.");
-                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size, aiIntegrationTaskName);
+                    if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.TryGetServiceByIntegrationIdentifier(aiIntegrationIdentifier, out var service) == false)
+                        throw new ArgumentException($"Couldn't find {aiIntegrationIdentifier} AI task.");
+                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, valueAsString, GenerateEmbeddings.F32Size, connectionStringIdentifier);
                 } 
             }
         }
@@ -796,12 +799,12 @@ public static class CoraxQueryBuilder
             PortableExceptions.Throw<InvalidDataException>($"Vector field `{fieldName}` has {storedDimensions} dimensions, but the vector passed to vector.search() has {inputDimensions} dimensions.");
         }
 
-        bool TryGetEmbeddingFromCache(DocumentsOperationContext context, string valueAsString, string aiIntegrationTaskName, out VectorValue transformedEmbedding)
+        bool TryGetEmbeddingFromCache(DocumentsOperationContext context, string valueAsString, AiConnectionStringIdentifier aiConnectionStringIdentifier, out VectorValue transformedEmbedding)
         {
             transformedEmbedding = new VectorValue();
             
             var hash = AiHelper.CalculateValueHash(valueAsString);
-            var id = AiHelper.GetValueEmbeddingsDocumentId(aiIntegrationTaskName, hash);
+            var id = AiHelper.GetValueEmbeddingsDocumentId(aiConnectionStringIdentifier, hash);
             
             using (context.OpenReadTransaction())
             {
