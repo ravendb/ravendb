@@ -28,7 +28,20 @@
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
                                     <input type="text" class="form-control" id="taskName"
-                                           placeholder="Enter a descriptive name for the AI task (optional)" data-bind="textInput: taskName">
+                                           placeholder="Enter a descriptive name for the AI task" data-bind="textInput: taskName, event: { blur: generateIdentifierOnNameBlur }">
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: identifier">
+                                <label for="identifier" class="control-label">
+                                    Identifier <i class="icon-info text-info" title="A unique identifier used in document paths. If not specified, will be auto-generated from the task name."></i>
+                                </label>
+                                <div class="flex-horizontal w-100">
+                                    <div class="flex-grow">
+                                        <input type="text" class="form-control" id="identifier" placeholder="Enter identifier (optional)" data-bind="textInput: identifier">
+                                    </div>
+                                    <button class="btn btn-default" data-bind="click: generateIdentifier">
+                                        <i class="icon-refresh"></i> Regenerate
+                                    </button>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -76,7 +89,7 @@
                                 <label class="control-label">Connection String</label>
                                 <div class="flex-grow">
                                     <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
-                                            data-bind="textInput: connectionStringName, disable: $root.connectionStringsNames().length === 0">
+                                            data-bind="textInput: connectionStringName, disable: $root.connectionStringsNames().length === 0 || !$root.isAddingNewEtlTask()">
                                         <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     </button>
@@ -89,7 +102,7 @@
                                     <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" data-bind="visible: $root.isAddingNewEtlTask()">
                                 <label class="control-label">&nbsp;</label>
                                 <button class="btn btn-default" data-bind="click: $root.toggleIsNewConnectionStringOpen">
                                     <i class="icon-plus"></i> Create a new AI connection string
@@ -98,55 +111,6 @@
                         </div>
                     </div>
             </form>
-            <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
-                <div class="flex-grow"><h3>Embeddings configuration</h3></div>
-                <div>
-                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea, visible: editedAiEtl().transformationScripts().length === 0">
-                        <i class="icon-plus"></i><span>Add Embeddings Configuration</span>
-                    </button>
-                </div> 
-            </div>
-            <!-- The transformation scripts -->
-            <div class="etl-list" data-bind="with: editedAiEtl, css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
-                <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
-                    <i class="icon-lg icon-empty-set"></i>
-                    <h3 class="margin-top margin-top-sm"
-                        data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No Embeddings Configurations have been defined
-                    </h3>
-                </div>
-                <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
-                    <div class="panel panel-hover item" data-bind="css: { active: $data === $root.transformationScriptSelectedForEdit() }">
-                        <div class="padding padding-sm">
-                            <div class="flex-horizontal">
-                                <div class="flex-grow info">
-                                    <div class="transformer-name" title="Transformation script name">
-                                        <span data-bind="text: name"></span>
-                                        <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
-                                    </div>
-                                    <div class="collections">
-                                        Collections:
-                                        <span class="etl-collections" title="The Collections transformed"
-                                              data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length">
-                                            <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
-                                        </span>
-                                        <span class="etl-collections" data-bind="visible: applyScriptForAllCollections" title="The Collections transformed">
-                                            <span>All collections</span>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="actions">
-                                    <button type="button" data-bind="click: $root.editTransformationScript.bind($root, $data)"
-                                            class="btn btn-default"><i class="icon-edit" title="Edit script"></i>
-                                    </button>
-                                    <button type="button" data-bind="click: $root.removeTransformationScript"
-                                            class="btn btn-danger"><i class="icon-trash" title="Delete script"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
             <div class="flex-grow">
@@ -246,15 +210,9 @@
                     </div>
                     <div class="toggle margin-top-sm margin-bottom-sm" data-bind="visible: !isNew() && !$root.enableTestArea()">
                         <input id="reset" type="checkbox" data-bind="checked: resetScript">
-                        <label for="reset">Apply script to documents from beginning of time (Reset)</label>
+                        <label for="reset">Regenerate embeddings for all documents</label>
                     </div>
                     <div class="flex-horizontal margin-top-sm">
-                        <div data-bind="visible: !$root.enableTestArea()">
-                            <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
-                                <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
-                            </button>
-                            <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
-                        </div>
                         <div class="flex-separator"></div>
                         <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test script area">
                             <i class="icon-rocket"></i> <span>Test script</span>

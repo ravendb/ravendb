@@ -53,7 +53,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             </div>
             <div className="mb-2">
                 <Label>
-                    Endpoint <OptionalLabel />
+                    Endpoint
                     <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     <UncontrolledPopover target="endpoint" trigger="hover" className="bs5">
                         <PopoverBody>The service endpoint that the client will send requests to.</PopoverBody>

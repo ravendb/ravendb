@@ -10,7 +10,7 @@ class vectorOptions {
     destinationEmbeddingType = ko.observable<VectorEmbeddingTypeWithoutText>();
     numberOfCandidatesForIndexing = ko.observable<number>();
     numberOfEdges = ko.observable<number>();
-    aiIntegrationTaskName = ko.observable<string>();
+    aiIntegrationIdentifier = ko.observable<string>();
 
     sourceEmbeddingTypes = common.exhaustiveStringTuple<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>()(
         "Single", "Int8", "Text", "Binary"
@@ -38,6 +38,7 @@ class vectorOptions {
             this.destinationEmbeddingType,
             this.numberOfCandidatesForIndexing,
             this.numberOfEdges,
+            this.aiIntegrationIdentifier
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
@@ -48,7 +49,7 @@ class vectorOptions {
             DestinationEmbeddingType: this.destinationEmbeddingType(),
             NumberOfCandidatesForIndexing: this.numberOfCandidatesForIndexing(),
             NumberOfEdges: this.numberOfEdges(),
-            AiIntegrationTaskName: this.aiIntegrationTaskName()
+            AiIntegrationIdentifier: this.aiIntegrationIdentifier()
         };
     }
 
@@ -59,7 +60,7 @@ class vectorOptions {
             DestinationEmbeddingType: "Single",
             NumberOfCandidatesForIndexing: null,
             NumberOfEdges: null,
-            AiIntegrationTaskName: null
+            AiIntegrationIdentifier: null
         }
     }
     

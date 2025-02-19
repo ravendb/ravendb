@@ -65,6 +65,8 @@ class ongoingTaskAiTransformationModel {
             this.resetScript,
             this.applyScriptForAllCollections,
             this.transformScriptCollections,
+            this.embeddingsSource,
+            this.embeddingsPaths
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 

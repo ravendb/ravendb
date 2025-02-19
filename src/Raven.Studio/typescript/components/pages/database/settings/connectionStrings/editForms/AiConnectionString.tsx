@@ -18,6 +18,7 @@ import OnnxSettings from "components/pages/database/settings/connectionStrings/e
 import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
 import MistralaiAiSettings from "./aiFields/MistralaiAiSettings";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import TaskUtils from "components/utils/TaskUtils";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -47,7 +48,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
     const { connectorType } = formValues;
 
     const handleGenerateIdentifier = () => {
-        setValue("identifier", getGeneratedIdentifier(formValues.name));
+        setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
     };
 
     const isUsedByAnyTask = !!initialConnection.usedByTasks?.length;
@@ -153,41 +154,6 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
     );
 }
 
-// copied from AiConnectionString.cs
-function getGeneratedIdentifier(name: string): string {
-    if (!name || name.trim().length === 0) {
-        return null;
-    }
-
-    let result = "";
-    let lastWasHyphen = false;
-
-    // Normalize to FormD to separate letters from their diacritics
-    for (const c of name.normalize("NFD")) {
-        // Check if character is a-z, 0-9
-        if ((c >= "a" && c <= "z") || (c >= "0" && c <= "9")) {
-            result += c;
-            lastWasHyphen = false;
-        }
-        // Check if character is A-Z
-        else if (c >= "A" && c <= "Z") {
-            result += c.toLowerCase();
-            lastWasHyphen = false;
-        }
-        // Add hyphen for any other character if we haven't just added one
-        else if (!lastWasHyphen && result.length > 0) {
-            result += "-";
-            lastWasHyphen = true;
-        }
-    }
-
-    // Trim any trailing hyphens
-    result = result.replace(/-+$/, "");
-
-    // Return default identifier if empty
-    return result.length === 0 ? "AiConnectionStringIdentifier" : result;
-}
-
 const schema = yupObjectSchema<FormData>({
     name: yup.string().nullable().required(),
     identifier: yup
@@ -209,7 +175,13 @@ const schema = yupObjectSchema<FormData>({
                 is: "azureOpenAiSettings",
                 then: (schema) => schema.trim().required(),
             }),
-        endpoint: yup.string().nullable(),
+        endpoint: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "azureOpenAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
         model: yup
             .string()
             .nullable()
@@ -245,7 +217,13 @@ const schema = yupObjectSchema<FormData>({
     }),
     huggingFaceSettings: yup.object({
         apiKey: yup.string().nullable(),
-        endpoint: yup.string().nullable(),
+        endpoint: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "huggingFaceSettings",
+                then: (schema) => schema.trim().required(),
+            }),
         model: yup
             .string()
             .nullable()
@@ -289,7 +267,13 @@ const schema = yupObjectSchema<FormData>({
                 is: "openAiSettings",
                 then: (schema) => schema.trim().required(),
             }),
-        endpoint: yup.string().nullable(),
+        endpoint: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "openAiSettings",
+                then: (schema) => schema.trim().required(),
+            }),
         model: yup
             .string()
             .nullable()

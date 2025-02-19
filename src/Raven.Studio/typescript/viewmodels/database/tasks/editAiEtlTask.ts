@@ -258,6 +258,14 @@ class aiEtlTask extends shardViewModelBase {
                 .execute()
                 .done((result) => {
                     this.editedAiEtl(new ongoingTaskAiEtlEditModel(result));
+                    this.editTransformationScript(new ongoingTaskAiTransformationModel(
+                        result.Configuration.Transforms[0],
+                        false,
+                        true,
+                        result.Configuration.EmbeddingsPaths?.length > 0 ? "paths" : "script",
+                        result.Configuration.EmbeddingsPaths)
+                    );
+
                     deferred.resolve();
                 })
                 .fail(() => {

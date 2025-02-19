@@ -1,8 +1,10 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
 import ongoingTaskAiTransformationModel = require("models/database/tasks/ongoingTaskAiTransformationModel");
+import TaskUtils = require("components/utils/TaskUtils");
 
 class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
+    identifier = ko.observable<string>();
     connectionStringName = ko.observable<string>();
 
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
@@ -34,17 +36,22 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         
         this.dirtyFlag = new ko.DirtyFlag([ 
             this.taskName,
+            this.identifier,
             this.taskState,
             this.connectionStringName,
             this.mentorNode,
             this.pinMentorNode,
             this.manualChooseMentor,
             this.allowEtlOnNonEncryptedChannel
-        ])
+        ]);
     }
     
     initializeValidation() {
         this.initializeMentorValidation();
+
+        this.taskName.extend({
+            required: true
+        });
 
         this.connectionStringName.extend({
             required: true
@@ -66,6 +73,16 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
+    generateIdentifierOnNameBlur() {
+        if (!this.identifier()) {
+            this.generateIdentifier();
+        }
+    }
+
+    generateIdentifier() {
+        this.identifier(TaskUtils.default.getGeneratedIdentifier(this.taskName()));
+    }
+
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration) {
         super.update(dto);
         
@@ -76,9 +93,10 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             this.manualChooseMentor(!!configuration.MentorNode);
             this.pinMentorNode(configuration.PinToMentorNode);
             this.mentorNode(configuration.MentorNode);
+            this.identifier(configuration.Identifier);
 
             if (configuration.Transforms) {
-                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskAiTransformationModel(x, false, false, configuration.EmbeddingsPaths?.length ? "paths" : "script", configuration.EmbeddingsPaths ?? [])));
+                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskAiTransformationModel(x, false, true, configuration.EmbeddingsPaths?.length ? "paths" : "script", configuration.EmbeddingsPaths ?? [])));
             }
         }
     }
@@ -96,6 +114,7 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         return {
             TaskId: this.taskId,
             Name: this.taskName(),
+            Identifier: this.identifier(),
             EtlType: "Ai",
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
@@ -118,6 +137,7 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
                 TaskConnectionStatus: "Active",
                 Configuration: {
                     Transforms: [],
+                    Identifier: ""
                 }
             } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration);
        }
