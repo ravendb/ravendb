@@ -92,7 +92,7 @@ namespace SlowTests.Issues
         {
             RequireFileBasedPager();
 
-            var r = new Random(seed);
+            var random = new Random(seed);
 
             using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
             using (Slice.From(allocator, "PK", out var pk))
@@ -100,9 +100,9 @@ namespace SlowTests.Issues
             using (Slice.From(allocator, "RevisionsIdAndEtag", out var idAndEtagSlice))
             using (Slice.From(allocator, "Table", out var tableName))
             {
-                var etagsIndex = new FixedSizeSchemaIndexDef { Name = etagsSlice, IsGlobal = false, StartIndex = 0 };
-                var idAndEtagIndex = new SchemaIndexDef { StartIndex = 1, Count = 3, Name = idAndEtagSlice };
-                var schema = new TableSchema()
+                var etagsIndex = new FixedSizeSchemaIndexDef { Name = etagsSlice, IsGlobal = false, StartIndex = 0 }; // Index key: [KeyEtag = 0]
+                var idAndEtagIndex = new SchemaIndexDef { StartIndex = 1, Count = 3, Name = idAndEtagSlice }; // Index key: [LowerId = 1, RecordSeparator = 2, Etag = 3]
+                var schema = new TableSchema() // Schema: KeyEtag = 0, LowerId = 1, RecordSeparator = 2, Etag = 3
                     .DefineKey(new SchemaIndexDef { Name = pk, IsGlobal = false, StartIndex = 0, Count = 1 })
                     .DefineFixedSizeIndex(etagsIndex)
                     .DefineIndex(idAndEtagIndex);
@@ -113,46 +113,41 @@ namespace SlowTests.Issues
                     tx.Commit();
                 }
 
-                List<(string Id, long Etag)> entities;
+                List<(string Id, long Etag)> entities = new List<(string Id, long Etag)>();
                 List<(string Id, long Etag)> users;
                 List<(string Id, long Etag)> companies;
 
                 using (var tx = Env.WriteTransaction())
                 {
-                    entities = new List<(string Id, long Etag)>();
                     var usedEtags = new HashSet<long>();
 
                     using var table = tx.OpenTable(schema, tableName);
 
                     for (int i = 1; i < numberOfEntities; i++)
                     {
-                        string id;
-                        long etag;
-                        do
-                        {
-                            etag = r.NextInt64(numberOfEntities * 10);
-                        } while (usedEtags.Contains(etag)); // Keep generating until a unique etag is found
+                        var id = i % 2 == 0 ? $"users/{i}" : $"companies/{i}";
+                        var etag = GetUniqueEtag(); // Get etag that isn't exist in 'usedEtags'
                         usedEtags.Add(etag); // Add the unique etag to the HashSet
-
-                        if (i % 2 == 0)
-                            id = $"users/{i}";
-                        else
-                            id = $"companies/{i}";
-
-                        InsertToTable(tx, table, etag, id);
-
                         entities.Add((id, etag));
+                        InsertToTable(tx, table, etag, id);
                     }
 
                     tx.Commit();
 
-                    entities = entities
-                        .OrderBy(entity => entity.Etag)
-                        .ToList();
-
-                    users = entities.Where(x => x.Id.StartsWith("users/")).ToList();
-                    companies = entities.Where(x => x.Id.StartsWith("companies/")).ToList();
+                    long GetUniqueEtag()
+                    {
+                        long etag;
+                        do
+                        {
+                            etag = random.NextInt64(1, numberOfEntities * 10);
+                        } while (usedEtags.Contains(etag)); // Keep generating until a unique etag is found
+                        return etag;
+                    }
                 }
+
+                entities = entities.OrderBy(entity => entity.Etag).ToList();
+                users = entities.Where(x => x.Id.StartsWith("users/")).ToList();
+                companies = entities.Where(x => x.Id.StartsWith("companies/")).ToList();
 
                 using (var tx = Env.ReadTransaction())
                 {
