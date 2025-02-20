@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.AI;
 public class AiStorage
 {
     private const string EmbeddingAttachmentContentType = "application/octet-stream";
+    private const string AttachmentNameLiteral = "AttachmentName";
 
     private readonly DocumentsStorage _documentsStorage;
     
@@ -44,7 +45,7 @@ public class AiStorage
         
         _taskIdentifierToConnectionStringIdentifier = new Dictionary<AiIntegrationIdentifier, AiConnectionStringIdentifier>();
 
-        _embeddingsCacher = new EmbeddingsCacher(database, database.Loggers.GetLogger<EmbeddingsCacher>(), database.DatabaseShutdown);
+        //_embeddingsCacher = new EmbeddingsCacher(database, database.Loggers.GetLogger<EmbeddingsCacher>(), database.DatabaseShutdown);
     }
 
 #pragma warning disable SKEXP0001
@@ -94,7 +95,7 @@ public class AiStorage
         {
             if (document == null)
             {
-                var djv = CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, lastModified);
+                var djv = CreateValueEmbeddingsDocument(attachmentName, lastModified);
 
                 using (var json = context.ReadObject(djv, item.ValueEmbeddingsDocumentId))
                     PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, attachmentName);
@@ -102,7 +103,7 @@ public class AiStorage
                 return attachmentName;
             }
 
-            document.Inner.Data.Modifications = new DynamicJsonValue(document.Inner.Data) { [item.TextualValue] = attachmentName };
+            document.Inner.Data.Modifications = new DynamicJsonValue(document.Inner.Data) { [AttachmentNameLiteral] = attachmentName };
 
             using (var json = context.ReadObject(document.Inner.Data, item.ValueEmbeddingsDocumentId))
                 PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, attachmentName);
@@ -116,7 +117,7 @@ public class AiStorage
 
         if (document == null)
         {
-            var djv = CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, lastModified);
+            var djv = CreateValueEmbeddingsDocument(attachmentName, lastModified);
 
             using (var json = context.ReadObject(djv, item.ValueEmbeddingsDocumentId))
                 PutValueEmbeddingsDocumentFromAttachment(json, attachment, attachmentName);
@@ -154,11 +155,11 @@ public class AiStorage
         }
     }
     
-    public static DynamicJsonValue CreateValueEmbeddingsDocument(string textualValue, string attachmentName, DateTime lastModified)
+    public static DynamicJsonValue CreateValueEmbeddingsDocument(string attachmentName, DateTime lastModified)
     {
         return new DynamicJsonValue
         {
-            [textualValue] = attachmentName,
+            [AttachmentNameLiteral] = attachmentName,
             [Constants.Documents.Metadata.Key] = new DynamicJsonValue
             {
                 [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.EmbeddingsCollection,
@@ -208,6 +209,7 @@ public class AiStorage
             _taskIdentifierToConnectionStringIdentifier[aiIntegrationIdentifier] = connectionStringIdentifier;
         }
 
+        /*
         if (_embeddingsCacher.IsStarted)
         {
             if (record.AiIntegrations.Count == 0)
@@ -217,9 +219,10 @@ public class AiStorage
             }
             return;
         }
+        */
         
-        _embeddingsCacher.Start();
-        _embeddingsCacher.IsStarted = true;
+        //_embeddingsCacher.Start();
+        //_embeddingsCacher.IsStarted = true;
     }
 
     public void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embeddingValue)

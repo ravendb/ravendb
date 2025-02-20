@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.AI;
 public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : AiIntegrationTestBase(output)
 {
     [RavenFact(RavenTestCategory.AiIntegration)]
-    public void CanSingleDocumentHasTwoEmbeddings()
+    public void CanSingleDocumentHaveTwoEmbeddings()
     {
         using var store = GetDocumentStore();
         string id;
@@ -47,6 +47,8 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
 
         aiTaskDone.Wait(TimeSpan.FromSeconds(10));
+        
+        WaitForUserToContinueTheTest(store);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "SubDto.Name", ["Name1"], id);

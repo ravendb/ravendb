@@ -29,7 +29,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
     {
         _database = database;
         _embeddingsQueue = new ConcurrentQueue<EmbeddingCacheItem>();
-        _semaphore = new SemaphoreSlim(1, 1);
+        _semaphore = new SemaphoreSlim(0, 1);
     }
 
     protected override async Task DoWork()
@@ -88,7 +88,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
 
                     var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(item.ConnectionStringIdentifier, hash);
                     
-                    var valueEmbeddingsDocumentJsonDjv = AiStorage.CreateValueEmbeddingsDocument(item.TextualValue, attachmentName, operationStartDate);
+                    var valueEmbeddingsDocumentJsonDjv = AiStorage.CreateValueEmbeddingsDocument(attachmentName, operationStartDate);
                     
                     using (var json = context.ReadObject(valueEmbeddingsDocumentJsonDjv, valueEmbeddingsDocumentId))
                     {

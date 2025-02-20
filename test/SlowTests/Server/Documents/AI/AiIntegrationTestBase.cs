@@ -21,6 +21,7 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
 {
     protected const string DefaultConnectionStringName = "Local AI connection";
     protected const string DefaultAiIntegrationTaskName = "localAiTask";
+    protected const string AttachmentNameLiteral = "AttachmentName";
     protected ByteStringContext _allocator;
 
     protected float[] GenerateEmbeddingForTextViaOnnx(string text)
@@ -93,7 +94,7 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
             Assert.NotNull(embeddingCacheDocument);
 
             //Assert if current key is properly persisted with an embedding 
-            var sourceAttachmentName = embeddingCacheDocument[inputValue]?.ToString();
+            var sourceAttachmentName = embeddingCacheDocument[AttachmentNameLiteral]?.ToString();
             Assert.NotNull(sourceAttachmentName); // Checks if current embedding cache has the embedding
             var attachmentsExistsInEmbeddingCache = session.Advanced.Attachments.Exists(embeddingsDocumentId, sourceAttachmentName);
             Assert.True(attachmentsExistsInEmbeddingCache);

@@ -59,7 +59,7 @@ public static class AiHelper
     {
         var embedding = service.GenerateEmbeddingAsync(textValue).GetAwaiter().GetResult();
         
-        aiStorage.EnqueueEmbeddingToCache(connectionStringIdentifier, textValue, embedding);
+        //aiStorage.EnqueueEmbeddingToCache(connectionStringIdentifier, textValue, embedding);
         
         var memoryScope = allocator.Allocate(dimensions, out Memory<byte> memory);
             
