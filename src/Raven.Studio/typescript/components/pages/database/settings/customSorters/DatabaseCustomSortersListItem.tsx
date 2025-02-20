@@ -27,10 +27,11 @@ import React from "react";
 import { useState } from "react";
 import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 import { useForm, useWatch, SubmitHandler } from "react-hook-form";
-import { Form, UncontrolledTooltip, Button, Collapse, InputGroup, Label } from "reactstrap";
+import { Form, UncontrolledTooltip, Collapse, InputGroup, Label } from "reactstrap";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import Button from "react-bootstrap/Button";
 
 interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
@@ -206,11 +207,11 @@ function CustomSortersActions({
 
     if (!hasDatabaseAdminAccess) {
         return isEditMode ? (
-            <Button key="preview" onClick={toggleIsEditMode}>
+            <Button variant="secondary" key="preview" onClick={toggleIsEditMode}>
                 <Icon icon="preview-off" margin="m-0" />
             </Button>
         ) : (
-            <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
+            <Button variant="secondary" key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
         );
@@ -224,17 +225,17 @@ function CustomSortersActions({
                     message: "To test, first exit edit mode",
                 }}
             >
-                <Button key="test" onClick={toggleIsTestMode} disabled={isEditMode}>
+                <Button variant="secondary" key="test" onClick={toggleIsTestMode} disabled={isEditMode}>
                     <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
                 </Button>
             </ConditionalPopover>
 
             {isEditMode ? (
                 <>
-                    <Button key="save" type="submit" color="success" disabled={isSubmitting}>
+                    <Button key="save" type="submit" variant="success" disabled={isSubmitting}>
                         <Icon icon="save" /> Save changes
                     </Button>
-                    <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
+                    <Button key="cancel" type="button" variant="secondary" onClick={onDiscard}>
                         <Icon icon="cancel" />
                         Discard
                     </Button>
@@ -247,7 +248,7 @@ function CustomSortersActions({
                             message: "To edit, first exit test mode",
                         }}
                     >
-                        <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
+                        <Button variant="secondary" key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
                             <Icon icon={hasDatabaseAdminAccess ? "edit" : "preview"} margin="m-0" />
                         </Button>
                     </ConditionalPopover>
@@ -262,7 +263,7 @@ function CustomSortersActions({
                             )}
                             <ButtonWithSpinner
                                 key="delete"
-                                color="danger"
+                                variant="danger"
                                 onClick={() => setNameToConfirmDelete(name)}
                                 icon="trash"
                                 isSpinning={asyncDeleteSorter.status === "loading"}

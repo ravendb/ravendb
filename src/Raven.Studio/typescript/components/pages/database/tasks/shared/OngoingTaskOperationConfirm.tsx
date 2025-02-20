@@ -1,14 +1,15 @@
 import React, { ReactNode } from "react";
 import { OngoingTaskSharedInfo } from "components/models/tasks";
 import assertUnreachable from "components/utils/assertUnreachable";
-import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 import { capitalize } from "lodash";
 import { Icon } from "components/common/Icon";
-import classNames = require("classnames");
-import { Modal, ModalBody, Button, ModalFooter } from "reactstrap";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
+import classNames = require("classnames");
+import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
 export type OngoingTaskOperationConfirmType = "enable" | "disable" | "delete";
 
@@ -63,7 +64,7 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                     />
                 </div>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+                    <CloseButton onClick={toggle} />
                 </div>
                 {taskGroups.map((taskGroup, idx) => (
                     <div key={"task-group-" + idx}>
@@ -107,10 +108,10 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                 {warningMessage && <RichAlert variant="warning">{warningMessage}</RichAlert>}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="link-muted">
+                <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
-                <Button color={getTypeColor(type)} onClick={onSubmit} className="rounded-pill">
+                <Button variant={getTypeColor(type)} onClick={onSubmit} className="rounded-pill">
                     <Icon icon={getTypeIcon(type)} />
                     {getInfinitiveForType(type)}
                 </Button>

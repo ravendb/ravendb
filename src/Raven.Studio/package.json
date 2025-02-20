@@ -149,6 +149,7 @@
         "react": "^18.3.1",
         "react-ace": "^12.0.0",
         "react-async-hook": "^4.0.0",
+        "react-bootstrap": "^2.10.9",
         "react-datepicker": "^4.25.0",
         "react-dnd": "^16.0.1",
         "react-dnd-html5-backend": "^16.0.1",

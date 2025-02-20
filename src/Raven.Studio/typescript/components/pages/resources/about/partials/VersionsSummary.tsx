@@ -1,4 +1,4 @@
-﻿import { Button, Card, CardBody, Col, Row } from "reactstrap";
+﻿import { Card, CardBody, Col, Row } from "reactstrap";
 import { OverallInfoItem } from "components/pages/resources/about/partials/common";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
@@ -10,6 +10,7 @@ import { LoadError } from "components/common/LoadError";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import genUtils from "common/generalUtils";
+import Button from "react-bootstrap/Button";
 
 interface VersionsSummaryProps {
     asyncLatestVersion: AsyncState<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>;
@@ -48,7 +49,7 @@ export function VersionsSummary(props: VersionsSummaryProps) {
                         {serverFullVersion}
                     </OverallInfoItem>
                     <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
-                        <Button outline className="rounded-pill" onClick={showChangeLogModal}>
+                        <Button variant="outline-secondary" className="rounded-pill" onClick={showChangeLogModal}>
                             <Icon icon="logs" /> Changelog
                         </Button>
                     </Col>
@@ -65,7 +66,7 @@ export function VersionsSummary(props: VersionsSummaryProps) {
                         <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
                             <ButtonWithSpinner
                                 isSpinning={refreshing}
-                                outline
+                                variant="outline-secondary"
                                 className="rounded-pill"
                                 onClick={checkForUpdates}
                             >
@@ -111,7 +112,7 @@ function LatestVersion(props: {
                 </span>
                 <div className="small text-muted fw-light">
                     {latestVersion}
-                    <Button size="xs" color="link" onClick={showWhatsNewModal} className="fw-bold">
+                    <Button size="xs" variant="link" onClick={showWhatsNewModal} className="fw-bold">
                         What&apos;s new?
                     </Button>
                 </div>

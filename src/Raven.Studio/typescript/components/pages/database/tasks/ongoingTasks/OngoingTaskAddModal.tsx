@@ -1,7 +1,7 @@
 import { CounterBadge } from "components/common/CounterBadge";
 import { HrHeader } from "components/common/HrHeader";
 import React, { ReactNode } from "react";
-import { Modal, ModalBody, Button, Row, Col, UncontrolledTooltip } from "reactstrap";
+import { Modal, ModalBody, Row, Col, UncontrolledTooltip, CloseButton } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -90,7 +90,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
         >
             <ModalBody>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+                    <CloseButton onClick={toggle} />
                 </div>
                 <div className="hstack gap-3 mb-4">
                     <div className="text-center">

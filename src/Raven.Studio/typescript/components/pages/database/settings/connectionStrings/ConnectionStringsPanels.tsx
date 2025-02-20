@@ -3,7 +3,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { useAppSelector } from "components/store";
 import React from "react";
 import { useDispatch } from "react-redux";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import ConnectionStringsPanel from "./ConnectionStringsPanel";
 import { Connection } from "./connectionStringsTypes";
 import { connectionStringsActions } from "./store/connectionStringsSlice";
@@ -29,7 +29,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType }
                 right={
                     hasDatabaseAdminAccess && (
                         <Button
-                            color="info"
+                            variant="info"
                             size="sm"
                             className="rounded-pill"
                             title="Add new credentials"

@@ -3,7 +3,6 @@ import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databas
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
-    Button,
     ButtonGroup,
     Collapse,
     DropdownItem,
@@ -13,6 +12,7 @@ import {
     Spinner,
     UncontrolledDropdown,
 } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import {
     RichPanel,
     RichPanelActions,
@@ -337,6 +337,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                         <RichPanelActions>
                             {isOperatorOrAbove && (
                                 <Button
+                                    variant="secondary"
                                     href={manageGroupUrl}
                                     title="Manage the Database Group"
                                     target={db.currentNode.isRelevant ? undefined : "_blank"}
@@ -352,7 +353,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 <UncontrolledDropdown>
                                     <ButtonGroup>
                                         {isOperatorOrAbove && (
-                                            <Button onClick={onToggleDatabase}>
+                                            <Button variant="secondary" onClick={onToggleDatabase}>
                                                 {db.isDisabled ? (
                                                     <span>
                                                         <Icon icon="database" addon="play2" /> Enable
@@ -429,7 +430,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                     ? "Remove database"
                                                     : "Database cannot be deleted because of the set lock mode"
                                             }
-                                            color={db.lockMode === "Unlock" ? "danger" : "secondary"}
+                                            variant={db.lockMode === "Unlock" ? "danger" : "secondary"}
                                             disabled={db.lockMode !== "Unlock"}
                                         >
                                             {lockChanges && <Spinner size="sm" />}

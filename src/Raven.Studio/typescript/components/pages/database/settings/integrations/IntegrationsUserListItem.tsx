@@ -7,7 +7,7 @@ import {
     RichPanelActions,
     RichPanelDetails,
 } from "components/common/RichPanel";
-import { Button, Collapse, Form, InputGroup, Label } from "reactstrap";
+import { Collapse, Form, InputGroup, Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";
 import { HStack } from "components/common/HStack";
@@ -24,6 +24,7 @@ import { tryHandleSubmit } from "components/utils/common";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import copyToClipboard from "common/copyToClipboard";
+import Button from "react-bootstrap/Button";
 
 interface IntegrationsUserListProps {
     initialUsername: string;
@@ -105,7 +106,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                                 <>
                                     <ButtonWithSpinner
                                         type="submit"
-                                        color="success"
+                                        variant="success"
                                         title="Save credentials"
                                         isSpinning={formState.isSubmitting}
                                         icon="save"
@@ -114,7 +115,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                                     </ButtonWithSpinner>
                                     <Button
                                         type="button"
-                                        color="secondary"
+                                        variant="secondary"
                                         title="Discard changes"
                                         onClick={removeUser}
                                     >
@@ -125,7 +126,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                             ) : (
                                 <ButtonWithSpinner
                                     type="button"
-                                    color="danger"
+                                    variant="danger"
                                     title="Delete credentials"
                                     onClick={onDeleteUser}
                                     isSpinning={asyncDeleteUser.loading}
@@ -160,6 +161,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                                     />
                                 </div>
                                 <ButtonWithSpinner
+                                    variant="secondary"
                                     type="button"
                                     title="Generate a random password"
                                     onClick={asyncGeneratePassword.execute}
@@ -169,6 +171,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                                     Generate password
                                 </ButtonWithSpinner>
                                 <Button
+                                    variant="secondary"
                                     type="button"
                                     title="Copy to clipboard"
                                     onClick={() =>

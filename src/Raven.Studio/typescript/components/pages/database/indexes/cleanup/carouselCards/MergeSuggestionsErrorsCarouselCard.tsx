@@ -7,7 +7,8 @@ import useBoolean from "components/hooks/useBoolean";
 import { MergeSuggestionsError } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { Button, Card, Table } from "reactstrap";
+import { Card, Table } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface MergeSuggestionsErrorsCarouselCardProps {
     errors: MergeSuggestionsError[];
@@ -86,7 +87,7 @@ function ErrorTableRow({ error }: ErrorTableRowProps) {
                     </code>
                 </div>
                 <div className="d-flex justify-content-end">
-                    <Button color="link" size="sm" onClick={toggleIsStackTraceVisible}>
+                    <Button variant="link" size="sm" onClick={toggleIsStackTraceVisible}>
                         {isStackTraceVisible ? (
                             <>
                                 <Icon icon="collapse-vertical" />
@@ -103,7 +104,7 @@ function ErrorTableRow({ error }: ErrorTableRowProps) {
             </td>
             <td>
                 <Button
-                    color="primary"
+                    variant="primary"
                     size="sm"
                     className="rounded-pill"
                     onClick={() =>

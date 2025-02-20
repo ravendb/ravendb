@@ -8,15 +8,7 @@ import useBoolean from "hooks/useBoolean";
 import React, { useCallback, useState } from "react";
 import router from "plugins/router";
 import { RichPanelDetailItem, RichPanelName } from "../../../../common/RichPanel";
-import {
-    Button,
-    ButtonGroup,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    Spinner,
-    UncontrolledDropdown,
-} from "reactstrap";
+import { ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { OngoingTaskOperationConfirmType } from "./OngoingTaskOperationConfirm";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -26,6 +18,7 @@ import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import Button from "react-bootstrap/Button";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -168,17 +161,17 @@ export function OngoingTaskActions(props: OngoingTaskActionsProps) {
     return (
         <div className="actions">
             <ButtonGroup>
-                <Button onClick={toggleDetails} title="Click for details">
+                <Button variant="secondary" onClick={toggleDetails} title="Click for details">
                     <Icon icon="info" margin="m-0" />
                 </Button>
                 {!task.shared.serverWide && (
-                    <Button onClick={onEdit} title="Edit task">
+                    <Button variant="secondary" onClick={onEdit} title="Edit task">
                         <Icon icon="edit" margin="m-0" />
                     </Button>
                 )}
                 {!task.shared.serverWide && (
                     <ButtonWithSpinner
-                        color="danger"
+                        variant="danger"
                         disabled={!canEdit}
                         isSpinning={isDeleting}
                         onClick={() => onTaskOperation("delete", [task.shared])}

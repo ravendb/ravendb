@@ -18,12 +18,13 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
-import { Button, Collapse, Form, InputGroup, Label } from "reactstrap";
+import { Collapse, Form, InputGroup, Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormAceEditor, FormInput } from "components/common/Form";
 import fileImporter from "common/fileImporter";
+import Button from "react-bootstrap/Button";
 
 interface ServerWideCustomAnalyzersListItemProps {
     initialAnalyzer: CustomAnalyzerFormData;
@@ -91,17 +92,17 @@ export default function ServerWideCustomAnalyzersListItem(props: ServerWideCusto
                     <RichPanelActions>
                         {isEditMode ? (
                             <>
-                                <Button key="save" type="submit" color="success" disabled={formState.isSubmitting}>
+                                <Button key="save" type="submit" variant="success" disabled={formState.isSubmitting}>
                                     <Icon icon="save" /> Save changes
                                 </Button>
-                                <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
+                                <Button key="cancel" type="button" variant="secondary" onClick={onDiscard}>
                                     <Icon icon="cancel" />
                                     Discard
                                 </Button>
                             </>
                         ) : (
                             <>
-                                <Button key="edit" onClick={toggleIsEditMode}>
+                                <Button variant="secondary" key="edit" onClick={toggleIsEditMode}>
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                                 {nameToConfirmDelete != null && (
@@ -113,7 +114,7 @@ export default function ServerWideCustomAnalyzersListItem(props: ServerWideCusto
                                 )}
                                 <ButtonWithSpinner
                                     key="delete"
-                                    color="danger"
+                                    variant="danger"
                                     onClick={() => setNameToConfirmDelete(formValues.name)}
                                     icon="trash"
                                     isSpinning={asyncDeleteAnalyzer.status === "loading"}

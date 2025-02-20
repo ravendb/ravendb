@@ -94,7 +94,7 @@ export default function RabbitMqConnectionString({
                 <div className="d-flex mt-4">
                     <FlexGrow />
                     <ButtonWithSpinner
-                        color="secondary"
+                        variant="secondary"
                         icon="rocket"
                         onClick={asyncTest.execute}
                         isSpinning={asyncTest.loading}

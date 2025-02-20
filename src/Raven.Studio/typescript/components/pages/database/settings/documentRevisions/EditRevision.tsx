@@ -1,6 +1,6 @@
 ﻿import { Icon } from "components/common/Icon";
 import React from "react";
-import { Button, Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
@@ -26,6 +26,7 @@ import generalUtils from "common/generalUtils";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import moment from "moment";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
@@ -255,10 +256,10 @@ export default function EditRevision(props: EditRevisionProps) {
                     </RichAlert>
                 </ModalBody>
                 <ModalFooter>
-                    <Button type="button" color="link" className="link-muted" onClick={toggle}>
+                    <Button type="button" variant="link" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
-                    <Button type="submit" color="success" disabled={isLimitExceeded} title="Add this configuration">
+                    <Button type="submit" variant="success" disabled={isLimitExceeded} title="Add this configuration">
                         <Icon icon={getSubmitIcon(taskType)} />
                         {_.startCase(taskType)} config
                     </Button>

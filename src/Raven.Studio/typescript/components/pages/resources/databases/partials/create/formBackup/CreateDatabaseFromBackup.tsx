@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { Button, CloseButton, Form, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Form, ModalBody, ModalFooter } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import Steps from "components/common/steps/Steps";
@@ -35,6 +35,7 @@ import { CreateDatabaseStep, createDatabaseUtils } from "../shared/createDatabas
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useCreateDatabaseShortcuts } from "../shared/useCreateDatabaseShortcuts";
+import Button from "react-bootstrap/Button";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -148,6 +149,7 @@ export default function CreateDatabaseFromBackup({
                     {isFirstStep ? (
                         <Button
                             type="button"
+                            variant="secondary"
                             onClick={changeCreateModeToRegular}
                             className="rounded-pill"
                             disabled={formState.isSubmitting}
@@ -155,7 +157,7 @@ export default function CreateDatabaseFromBackup({
                             <Icon icon="database" addon="star" /> Create new database
                         </Button>
                     ) : (
-                        <Button type="button" onClick={prevStep} className="rounded-pill">
+                        <Button type="button" onClick={prevStep} variant="secondary" className="rounded-pill">
                             <Icon icon="arrow-thin-left" /> Back
                         </Button>
                     )}
@@ -163,7 +165,7 @@ export default function CreateDatabaseFromBackup({
                     {isLastStep ? (
                         <ButtonWithSpinner
                             type="submit"
-                            color="success"
+                            variant="success"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                             icon="rocket"
@@ -171,7 +173,7 @@ export default function CreateDatabaseFromBackup({
                             Finish
                         </ButtonWithSpinner>
                     ) : (
-                        <Button type="button" color="primary" className="rounded-pill" onClick={handleGoNext}>
+                        <Button type="button" variant="primary" className="rounded-pill" onClick={handleGoNext}>
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />
                         </Button>
                     )}

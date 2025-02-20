@@ -8,8 +8,9 @@ import { withPreventDefault } from "components/utils/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import { Badge, Button } from "reactstrap";
+import { Badge } from "reactstrap";
 import { Icon } from "components/common/Icon";
+import Button from "react-bootstrap/Button";
 import {
     selectDatabaseState,
     selectTopLevelState,
@@ -143,7 +144,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         <RichPanelDetails className="flex-wrap pb-1">
             <RichPanelDetailItem>
                 <Button
-                    color="secondary"
+                    variant="secondary"
                     title={panelCollapsed ? "Expand distribution details" : "Collapse distribution details"}
                     onClick={togglePanelCollapsed}
                     className="ms-1 btn-toggle-panel rounded-pill"

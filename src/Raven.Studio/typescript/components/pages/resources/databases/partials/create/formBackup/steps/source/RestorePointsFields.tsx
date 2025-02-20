@@ -1,6 +1,7 @@
 import React from "react";
 import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
-import { Row, Col, Label, Button } from "reactstrap";
+import { Row, Col, Label } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { Icon } from "components/common/Icon";
 
@@ -43,7 +44,7 @@ export default function RestorePointsFields(props: RestorePointsFieldsProps) {
                     {isSharded && (
                         <Button
                             size="sm"
-                            color="shard"
+                            variant="shard"
                             className="rounded-pill"
                             onClick={() => append({ restorePoint: null, nodeTag: "" })}
                         >

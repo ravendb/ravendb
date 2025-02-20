@@ -18,9 +18,10 @@ import IndexUtils from "components/utils/IndexUtils";
 import moment from "moment";
 import React, { useEffect, useMemo, useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 type ExportMode = "database" | "file";
 
@@ -134,7 +135,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
             <Form control={control} onSubmit={handleSubmit(handleExport)}>
                 <ModalBody className="vstack gap-4 position-relative">
                     <div className="position-absolute m-2 end-0 top-0">
-                        <Button close onClick={toggle} />
+                        <CloseButton onClick={toggle} />
                     </div>
 
                     <Icon icon="index-import" color="primary" className="text-center fs-1" margin="m-0" />
@@ -184,12 +185,12 @@ export function ExportIndexes(props: ExportIndexesProps) {
                     </div>
                 </ModalBody>
                 <ModalFooter>
-                    <Button type="button" color="link" title="Cancel" className="link-muted" onClick={toggle}>
+                    <Button type="button" variant="link" title="Cancel" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
                     <ButtonWithSpinner
                         type="submit"
-                        color="success"
+                        variant="success"
                         title="Export indexes"
                         className="rounded-pill"
                         isSpinning={formState.isSubmitting}

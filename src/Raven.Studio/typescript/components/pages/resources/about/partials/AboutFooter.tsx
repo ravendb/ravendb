@@ -1,4 +1,4 @@
-﻿import { Button } from "reactstrap";
+﻿import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import React from "react";
 import feedback from "viewmodels/shell/feedback";
@@ -20,7 +20,7 @@ export function AboutFooter() {
         <div className="hstack align-items-center gap-4 flex-wrap justify-content-center mb-4">
             <div className="hstack">
                 <Button
-                    color="info"
+                    variant="info"
                     className="d-flex rounded-pill align-items-center py-1 ps-3 pe-4"
                     onClick={openSendFeedbackModal}
                 >

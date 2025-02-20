@@ -1,5 +1,6 @@
 import React from "react";
-import { Modal, ModalBody, Button, ModalFooter } from "reactstrap";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "../Icon";
 import IconName from "typings/server/icons";
 
@@ -27,7 +28,7 @@ export default function DeleteCustomAnalyzerConfirm(props: DeleteCustomAnalyzerC
                     <Icon icon={iconName} color="danger" className="fs-1" margin="m-0" />
                 </div>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+                    <CloseButton onClick={toggle} />
                 </div>
                 <div className="text-center lead">
                     You&apos;re about to <span className="text-danger">delete</span> following{" "}
@@ -39,10 +40,10 @@ export default function DeleteCustomAnalyzerConfirm(props: DeleteCustomAnalyzerC
                 </span>
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="link-muted">
+                <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
-                <Button color="danger" onClick={onSubmit} className="rounded-pill">
+                <Button variant="danger" onClick={onSubmit} className="rounded-pill">
                     <Icon icon="trash" />
                     Delete
                 </Button>

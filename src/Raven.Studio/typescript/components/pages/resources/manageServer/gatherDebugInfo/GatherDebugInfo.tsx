@@ -89,7 +89,7 @@ function GatherDebugInfo() {
                                         />
                                         <ButtonWithSpinner
                                             type="submit"
-                                            color="primary"
+                                            variant="primary"
                                             className="rounded-pill align-self-center"
                                             icon="default"
                                             isSpinning={isDownloading}
@@ -100,7 +100,7 @@ function GatherDebugInfo() {
                                             <ButtonWithSpinner
                                                 className="rounded-pill align-self-center"
                                                 icon="cancel"
-                                                color="warning"
+                                                variant="warning"
                                                 isSpinning={abortData.isAborting}
                                                 onClick={abortData.toggleIsConfirmVisible}
                                             >

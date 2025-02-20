@@ -204,7 +204,7 @@ export default function AmazonS3() {
                                     <FlexGrow />
                                     <ButtonWithSpinner
                                         type="button"
-                                        color="secondary"
+                                        variant="secondary"
                                         onClick={asyncTest.execute}
                                         isSpinning={asyncTest.loading}
                                         icon="rocket"

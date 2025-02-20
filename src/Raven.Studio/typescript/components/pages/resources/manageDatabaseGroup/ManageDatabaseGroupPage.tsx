@@ -1,5 +1,5 @@
 ﻿import React, { useCallback } from "react";
-import { Button, Input, Label } from "reactstrap";
+import { Input, Label } from "reactstrap";
 import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownPanel";
 import useUniqueId from "components/hooks/useUniqueId";
 import useBoolean from "hooks/useBoolean";
@@ -17,6 +17,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import Button from "react-bootstrap/Button";
 
 function getDynamicDatabaseDistributionWarning(
     hasDynamicNodesDistribution: boolean,
@@ -100,7 +101,7 @@ export function ManageDatabaseGroupPage() {
 
                     <FlexGrow />
                     {db.isSharded && (
-                        <Button color="shard" onClick={addNewShard}>
+                        <Button variant="shard" onClick={addNewShard}>
                             <Icon icon="shard" addon="plus" />
                             Add Shard
                         </Button>

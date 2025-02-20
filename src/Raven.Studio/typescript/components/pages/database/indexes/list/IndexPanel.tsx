@@ -23,7 +23,6 @@ import {
 } from "components/common/RichPanel";
 import {
     Badge,
-    Button,
     ButtonGroup,
     Collapse,
     DropdownItem,
@@ -34,6 +33,7 @@ import {
     UncontrolledDropdown,
     UncontrolledTooltip,
 } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import assertUnreachable from "components/utils/assertUnreachable";
 import useUniqueId from "components/hooks/useUniqueId";
 import useBoolean from "hooks/useBoolean";
@@ -356,23 +356,25 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
                         <ButtonGroup>
                             {!IndexUtils.isAutoIndex(index) && hasDatabaseWriteAccess && (
-                                <Button href={editUrl} title="Edit index">
+                                <Button variant="secondary" href={editUrl} title="Edit index">
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                             )}
                             {(IndexUtils.isAutoIndex(index) || !hasDatabaseWriteAccess) && (
-                                <Button href={editUrl} title="View index">
+                                <Button href={editUrl} variant="secondary" title="View index">
                                     <Icon icon="preview" margin="m-0" />
                                 </Button>
                             )}
                         </ButtonGroup>
 
                         {localFaultyNodeInfo && (
-                            <Button onClick={() => openFaulty(localFaultyNodeInfo.location)}>Open faulty index</Button>
+                            <Button variant="secondary" onClick={() => openFaulty(localFaultyNodeInfo.location)}>
+                                Open faulty index
+                            </Button>
                         )}
                         {!IndexUtils.isAutoIndex(index) && (
                             <>
-                                <Button title="Export index" onClick={toggleIsExportIndexModalOpen}>
+                                <Button variant="secondary" title="Export index" onClick={toggleIsExportIndexModalOpen}>
                                     <Icon icon="export" margin="m-0" />
                                 </Button>
                                 {isExportIndexModalOpen && (
@@ -390,7 +392,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                     resetIndex={resetIndex}
                                     sideBySideDisabledReason={getSideBySideResetDisabledReason(index)}
                                 />
-                                <Button color="danger" onClick={deleteIndex} title="Delete the index">
+                                <Button variant="danger" onClick={deleteIndex} title="Delete the index">
                                     <Icon icon="trash" margin="m-0" />
                                 </Button>
                             </>
@@ -400,6 +402,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 <RichPanelDetails className="pb-1">
                     <RichPanelDetailItem>
                         <Button
+                            variant="secondary"
                             onClick={togglePanelCollapsed}
                             title={panelCollapsed ? "Expand distribution details" : "Collapse distribution details"}
                             className="btn-toggle-panel rounded-pill"

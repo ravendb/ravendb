@@ -23,7 +23,8 @@ import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { useForm, useWatch, SubmitHandler } from "react-hook-form";
-import { Button, Collapse, Form, InputGroup, Label } from "reactstrap";
+import { Collapse, Form, InputGroup, Label } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface ServerWideCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
@@ -91,17 +92,17 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                     <RichPanelActions>
                         {isEditMode ? (
                             <>
-                                <Button key="save" type="submit" color="success" disabled={formState.isSubmitting}>
+                                <Button key="save" type="submit" variant="success" disabled={formState.isSubmitting}>
                                     <Icon icon="save" /> Save changes
                                 </Button>
-                                <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
+                                <Button key="cancel" type="button" variant="secondary" onClick={onDiscard}>
                                     <Icon icon="cancel" />
                                     Discard
                                 </Button>
                             </>
                         ) : (
                             <>
-                                <Button key="edit" onClick={toggleIsEditMode}>
+                                <Button variant="secondary" key="edit" onClick={toggleIsEditMode}>
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                                 {nameToConfirmDelete != null && (
@@ -113,7 +114,7 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                                 )}
                                 <ButtonWithSpinner
                                     key="delete"
-                                    color="danger"
+                                    variant="danger"
                                     onClick={() => setNameToConfirmDelete(formValues.name)}
                                     icon="trash"
                                     isSpinning={asyncDeleteSorter.status === "loading"}

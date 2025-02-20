@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Button, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Form, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import * as yup from "yup";
@@ -9,6 +9,7 @@ import { collectionsTrackerSelectors } from "components/common/shell/collections
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { FormSwitch } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 interface EnforceConfigurationProps {
     toggle: () => void;
@@ -93,10 +94,10 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                     </RichAlert>
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="link" className="link-muted" onClick={toggle}>
+                    <Button variant="link" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
-                    <Button type="submit" color="warning">
+                    <Button type="submit" variant="warning">
                         <Icon icon="rocket" />
                         Enforce Configuration
                     </Button>

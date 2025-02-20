@@ -3,10 +3,11 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
-import { Button, Modal, ModalBody } from "reactstrap";
+import { CloseButton, Modal, ModalBody } from "reactstrap";
 import useBoolean from "components/hooks/useBoolean";
 import Code from "components/common/Code";
 import copyToClipboard from "common/copyToClipboard";
+import Button from "react-bootstrap/Button";
 
 interface OngoingTaskEtlProgressTooltipProps {
     target: HTMLElement;
@@ -37,7 +38,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                             >
                                 <code>{nodeInfo.details.error}</code>
                             </div>
-                            <Button size="sm" onClick={toggleErrorModal}>
+                            <Button variant="secondary" size="sm" onClick={toggleErrorModal}>
                                 Open error in modal <Icon icon="newtab" margin="ms-1" />
                             </Button>
                         </div>
@@ -52,7 +53,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                 >
                     <ModalBody>
                         <div className="position-absolute m-2 end-0 top-0">
-                            <Button close onClick={toggleErrorModal} />
+                            <CloseButton onClick={toggleErrorModal} />
                         </div>
                         <div className="hstack gap-3 mb-4">
                             <div className="text-center">
@@ -65,7 +66,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                         <div className="text-end">
                             <Button
                                 className="rounded-pill"
-                                color="primary"
+                                variant="primary"
                                 size="xs"
                                 onClick={() =>
                                     copyToClipboard.copy(nodeInfo.details.error, "Copied error message to clipboard")
@@ -93,7 +94,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                             <div className="d-flex align-items-center justify-content-center gap-1">
                                 {transformationScriptProgress.transformationName}
                                 <Button
-                                    color="link"
+                                    variant="link"
                                     className="p-0"
                                     size="xs"
                                     title="Show script preview"
@@ -111,7 +112,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                                         <div className="small-label d-flex align-items-center justify-content-center gap-1">
                                             Transactional Id
                                             <Button
-                                                color="link"
+                                                variant="link"
                                                 className="p-0"
                                                 size="xs"
                                                 onClick={() =>

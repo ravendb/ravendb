@@ -11,7 +11,8 @@ import useBoolean from "components/hooks/useBoolean";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { Button, Collapse } from "reactstrap";
+import { Collapse } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface DatabaseCustomSortersServerWideListItemProps {
     sorter: Raven.Client.Documents.Queries.Sorting.SorterDefinition;
@@ -32,7 +33,7 @@ export default function DatabaseCustomSortersServerWideListItem({
 
                     {hasDatabaseAdminAccess && (
                         <RichPanelActions>
-                            <Button onClick={toggleIsTestMode}>
+                            <Button variant="secondary" onClick={toggleIsTestMode}>
                                 <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
                             </Button>
                         </RichPanelActions>

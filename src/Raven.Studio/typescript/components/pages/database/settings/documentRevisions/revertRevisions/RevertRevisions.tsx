@@ -82,7 +82,7 @@ export default function RevertRevisions() {
                     <div className="d-flex justify-content-between align-items-end">
                         <ButtonWithSpinner
                             type="submit"
-                            color="primary"
+                            variant="primary"
                             icon="revert-revisions"
                             disabled={!formState.isDirty}
                             isSpinning={asyncRevertRevisions.status === "loading"}

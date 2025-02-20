@@ -1,12 +1,6 @@
 ﻿import React from "react";
-import {
-    Button,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    UncontrolledDropdown,
-    UncontrolledTooltip,
-} from "reactstrap";
+import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown, UncontrolledTooltip } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import useUniqueId from "components/hooks/useUniqueId";
 import { useDraggableItem } from "hooks/useDraggableItem";
 import { DatabaseSharedInfo, NodeInfo } from "components/models/databases";
@@ -58,6 +52,7 @@ function PromoteButton({ databaseName, nodeTag }: PromoteButtonProps) {
 
     return (
         <ButtonWithSpinner
+            variant="secondary"
             className="rounded-pill justify-content-center"
             title="Promote to become a member"
             icon="promote"
@@ -80,8 +75,7 @@ export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps)
             <DatabaseGroupActions>
                 <Button
                     size="xs"
-                    color="danger"
-                    outline
+                    variant="outline-danger"
                     disabled={!canDelete}
                     className="rounded-pill"
                     onClick={() => deleteFromGroup(node.tag)}

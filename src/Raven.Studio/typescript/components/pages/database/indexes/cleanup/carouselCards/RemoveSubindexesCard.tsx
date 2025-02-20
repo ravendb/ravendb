@@ -43,7 +43,7 @@ function MainPanel({ surpassing }: RemoveSubindexesCardProps) {
     return (
         <div className="p-2">
             <ButtonWithSpinner
-                color="primary"
+                variant="primary"
                 className="mb-2 rounded-pill"
                 onClick={surpassing.deleteSelected}
                 isSpinning={surpassing.isDeleting}

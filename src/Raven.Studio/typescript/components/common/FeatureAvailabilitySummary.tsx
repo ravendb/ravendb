@@ -3,7 +3,8 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { uniqueId } from "lodash";
 import { ReactNode } from "react";
-import { Button, Table, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+import { Table, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "./Icon";
@@ -112,7 +113,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                                         </div>
 
                                                         <Button
-                                                            color="link"
+                                                            variant="link"
                                                             size="sm"
                                                             href="https://ravendb.net/l/FLDLO4#developer"
                                                             target="_blank"

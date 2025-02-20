@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Modal, ModalBody, ModalFooter, Button, CloseButton } from "reactstrap";
+import { Modal, ModalBody, ModalFooter, CloseButton } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import {
     MultipleDatabaseLocationSelector,
     DatabaseActionContexts,
@@ -65,10 +66,10 @@ export default function BulkDatabaseResetConfirm({
                 </div>
             </ModalBody>
             <ModalFooter>
-                <Button color="link" className="link-muted" onClick={toggle}>
+                <Button variant="link" className="link-muted" onClick={toggle}>
                     Cancel
                 </Button>
-                <Button color="danger" onClick={onSubmit}>
+                <Button variant="danger" onClick={onSubmit}>
                     <Icon icon="reset" /> Restart
                 </Button>
             </ModalFooter>

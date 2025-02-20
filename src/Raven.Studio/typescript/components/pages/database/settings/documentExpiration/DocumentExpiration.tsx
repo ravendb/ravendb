@@ -139,7 +139,7 @@ export default function DocumentExpiration() {
                             <AboutViewHeading title="Document Expiration" icon="document-expiration" />
                             <ButtonWithSpinner
                                 type="submit"
-                                color="primary"
+                                variant="primary"
                                 className="mb-3"
                                 icon="save"
                                 disabled={!formState.isDirty || isLimitWarningVisible}

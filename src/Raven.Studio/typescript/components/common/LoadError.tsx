@@ -1,5 +1,5 @@
-﻿import { Button } from "reactstrap";
-import React from "react";
+﻿import React from "react";
+import Button from "react-bootstrap/Button";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "./Icon";
 import RichAlert from "components/common/RichAlert";
@@ -22,7 +22,7 @@ export function LoadError(props: LoadErrorProps) {
 
                 <FlexGrow />
                 {refresh && (
-                    <Button onClick={refresh}>
+                    <Button variant="secondary" onClick={refresh}>
                         <Icon icon="refresh" /> Refresh
                     </Button>
                 )}

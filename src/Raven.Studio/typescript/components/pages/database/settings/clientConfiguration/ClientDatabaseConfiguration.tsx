@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
-import { Form, Col, Button, Row, Spinner, Input, InputGroup, UncontrolledPopover, Card } from "reactstrap";
+import { Form, Col, Row, Spinner, Input, InputGroup, UncontrolledPopover, Card } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
@@ -120,7 +121,7 @@ export default function ClientDatabaseConfiguration() {
                             <div id="saveClientConfiguration" className="w-fit-content">
                                 <Button
                                     type="submit"
-                                    color="primary"
+                                    variant="primary"
                                     disabled={formState.isSubmitting || !formState.isDirty}
                                 >
                                     {formState.isSubmitting ? (

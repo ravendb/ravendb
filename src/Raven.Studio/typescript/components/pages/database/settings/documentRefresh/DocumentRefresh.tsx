@@ -132,7 +132,7 @@ export default function DocumentRefresh() {
                             <AboutViewHeading title="Document Refresh" icon="expos-refresh" />
                             <ButtonWithSpinner
                                 type="submit"
-                                color="primary"
+                                variant="primary"
                                 className="mb-3"
                                 icon="save"
                                 disabled={!formState.isDirty || isLimitWarningVisible}

@@ -1,4 +1,4 @@
-﻿import { Badge, Button, Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+﻿import { Badge, Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import React, { useEffect } from "react";
 import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -16,6 +16,7 @@ import ConnectionTestError from "components/common/connectionTests/ConnectionTes
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import Button from "react-bootstrap/Button";
 
 type FormData = ConnectionFormData<KafkaConnection>;
 
@@ -116,7 +117,7 @@ export default function KafkaConnectionString({
                         autoComplete="off"
                     />
                     <ButtonWithSpinner
-                        color="secondary"
+                        variant="secondary"
                         icon="rocket"
                         title="Test connection"
                         onClick={asyncTest.execute}
@@ -169,7 +170,10 @@ export default function KafkaConnectionString({
                                         autoComplete="off"
                                     />
                                     {isDeleteUrlVisible(option.key) && (
-                                        <Button color="danger" onClick={() => connectionOptionsFieldArray.remove(idx)}>
+                                        <Button
+                                            variant="danger"
+                                            onClick={() => connectionOptionsFieldArray.remove(idx)}
+                                        >
                                             <Icon icon="trash" margin="m-0" title="Delete" />
                                         </Button>
                                     )}
@@ -179,7 +183,7 @@ export default function KafkaConnectionString({
                     ))}
                 </div>
                 <Button
-                    color="info"
+                    variant="info"
                     className={connectionOptionsFieldArray.fields.length > 0 ? "mt-3" : "mt-1"}
                     onClick={() => connectionOptionsFieldArray.append({ key: null, value: null })}
                 >

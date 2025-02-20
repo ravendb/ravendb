@@ -21,7 +21,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Button, Collapse, Input } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
@@ -29,6 +29,7 @@ import { SubscriptionConnectionsDetailsWithId } from "../OngoingTasksReducer";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -138,7 +139,7 @@ function Details(props: SubscriptionPanelProps) {
             </RichPanelDetailItem>
             <FlexGrow />
             <div>
-                <Button onClick={refreshSubscriptionInfo}>
+                <Button variant="secondary" onClick={refreshSubscriptionInfo}>
                     <Icon icon="refresh" />
                     Refresh
                 </Button>
@@ -198,12 +199,11 @@ function ConnectedClients(props: ConnectedClientsProps) {
                         </div>
                         <div>
                             <Button
-                                color="danger"
+                                variant="outline-danger"
                                 title="Disconnect client from this subscription (unsubscribe client)"
                                 onClick={() => disconnectSubscription(connection.WorkerId)}
                                 size="xs"
                                 className="rounded-pill mt-2"
-                                outline
                             >
                                 <Icon icon="disconnected" />
                                 Disconnect

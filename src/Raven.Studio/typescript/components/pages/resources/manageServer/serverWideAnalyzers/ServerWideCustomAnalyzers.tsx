@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Col, Row } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -11,6 +11,7 @@ import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNo
 import { useCustomAnalyzers } from "components/common/customAnalyzers/useCustomAnalyzers";
 import ServerWideCustomAnalyzersList from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzersList";
 import ServerWideCustomAnalyzersInfoHub from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzersInfoHub";
+import Button from "react-bootstrap/Button";
 
 export default function ServerWideCustomAnalyzers() {
     const { analyzers, setAnalyzers, addNewAnalyzer, removeAnalyzer, mapFromDto } = useCustomAnalyzers();
@@ -46,7 +47,7 @@ export default function ServerWideCustomAnalyzers() {
                         />
                         <div id="newServerWideCustomAnalyzer" className="w-fit-content mt-4">
                             <Button
-                                color="primary"
+                                variant="primary"
                                 className="mb-3"
                                 onClick={addNewAnalyzer}
                                 disabled={!hasServerWideCustomAnalyzers}

@@ -1,6 +1,7 @@
 import { Icon } from "components/common/Icon";
 import React from "react";
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface GatherDebugInfoAbortConfirmProps {
     isOpen: boolean;
@@ -27,10 +28,10 @@ export default function GatherDebugInfoAbortConfirm({ isOpen, toggle, onConfirm 
                 <div className="text-center lead">Do you want to abort package creation?</div>
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="link-muted">
+                <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
-                <Button color="warning" onClick={onSubmit} className="rounded-pill">
+                <Button variant="warning" onClick={onSubmit} className="rounded-pill">
                     <Icon icon="cancel" className="me-1" />
                     Abort
                 </Button>

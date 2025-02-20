@@ -1,10 +1,11 @@
 import React from "react";
-import { Button, ButtonProps, Spinner } from "reactstrap";
+import { Spinner } from "reactstrap";
 import { Icon, IconProps } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
+import Button from "react-bootstrap/Button";
 
-interface ButtonWithSpinnerProps extends ButtonProps {
+interface ButtonWithSpinnerProps extends Button.BtnProps {
     isSpinning: boolean;
     icon?: IconName | IconProps;
     iconMargin?: string;

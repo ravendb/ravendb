@@ -18,7 +18,7 @@ import {
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
 import copyToClipboard from "common/copyToClipboard";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface IndexProgressTooltipProps {
     target: HTMLElement;
@@ -42,7 +42,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                             </span>
                             <Button
                                 className="rounded-pill"
-                                color="primary"
+                                variant="primary"
                                 size="xs"
                                 onClick={() =>
                                     copyToClipboard.copy(

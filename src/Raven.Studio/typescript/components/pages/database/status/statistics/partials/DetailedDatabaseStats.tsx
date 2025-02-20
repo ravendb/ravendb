@@ -2,12 +2,13 @@
 import React from "react";
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
-import { Button, Card, PopoverBody, Table, UncontrolledPopover } from "reactstrap";
+import { Card, PopoverBody, Table, UncontrolledPopover } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { statisticsViewSelectors } from "components/pages/database/status/statistics/store/statisticsViewSlice";
 import copyToClipboard = require("common/copyToClipboard");
+import Button from "react-bootstrap/Button";
 
 interface DetailsBlockProps {
     children: (data: DetailedDatabaseStatistics, location: databaseLocationSpecifier) => JSX.Element;
@@ -97,7 +98,7 @@ export function DetailedDatabaseStats() {
                                         <>
                                             <div id={id} className="d-inline-flex flex-wrap gap-1">
                                                 <Button
-                                                    color="primary"
+                                                    variant="primary"
                                                     size="xs"
                                                     title="Copy to clipboard"
                                                     onClick={() => copyChangeVector(formattedChangeVector)}

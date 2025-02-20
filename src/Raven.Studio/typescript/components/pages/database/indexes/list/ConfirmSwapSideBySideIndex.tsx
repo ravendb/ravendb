@@ -1,5 +1,6 @@
 ﻿import React, { useState } from "react";
-import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import {
     DatabaseActionContexts,
@@ -32,7 +33,7 @@ export function ConfirmSwapSideBySideIndex(props: ConfirmSwapSideBySideIndexProp
                     <Icon icon="index" color="warning" addon="swap" className="fs-1" margin="m-0" />
                 </div>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+                    <CloseButton onClick={toggle} />
                 </div>
                 <div className="text-center lead">
                     You&apos;re about to <span className="text-warning">swap</span> following index
@@ -57,10 +58,10 @@ export function ConfirmSwapSideBySideIndex(props: ConfirmSwapSideBySideIndexProp
                 )}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="link-muted">
+                <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
-                <Button color="warning" onClick={onSubmit} className="rounded-pill">
+                <Button variant="warning" onClick={onSubmit} className="rounded-pill">
                     <Icon icon="swap" />
                     Swap Now
                 </Button>

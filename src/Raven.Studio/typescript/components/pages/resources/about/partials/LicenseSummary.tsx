@@ -1,4 +1,4 @@
-﻿import { Button, Card, CardBody, Col, PopoverBody, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+﻿import { Card, CardBody, Col, PopoverBody, Row, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
@@ -19,6 +19,7 @@ import useUniqueId from "components/hooks/useUniqueId";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import moment from "moment";
 import genUtils = require("common/generalUtils");
+import Button from "react-bootstrap/Button";
 
 interface LicenseSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
@@ -114,7 +115,12 @@ function ConnectivityStatusComponent(props: {
                 </small>
                 <UncontrolledTooltip target={uniqueId}>Exception: {status.result.exception}</UncontrolledTooltip>
             </span>
-            <ButtonWithSpinner isSpinning={refreshing} outline className="mt-2 rounded-pill" onClick={refresh}>
+            <ButtonWithSpinner
+                isSpinning={refreshing}
+                variant="outline-secondary"
+                className="mt-2 rounded-pill"
+                onClick={refresh}
+            >
                 <Icon icon="refresh" title="Click to check connection" /> Test again
             </ButtonWithSpinner>
         </div>
@@ -184,7 +190,7 @@ function LicenseActions(props: LicenseActionsProps) {
                     <React.Fragment key="renew-container">
                         <span id="renew-license-btn">
                             <Button
-                                outline
+                                variant="outline-secondary"
                                 className="rounded-pill"
                                 onClick={renewLicense}
                                 disabled={!isRenewLicenseEnabled}
@@ -206,7 +212,7 @@ function LicenseActions(props: LicenseActionsProps) {
                     <React.Fragment key="replace-container">
                         <span id="replace-license-btn">
                             <Button
-                                outline
+                                variant="outline-secondary"
                                 className="rounded-pill"
                                 onClick={registerLicense}
                                 disabled={!isReplaceLicenseEnabled}
@@ -227,9 +233,9 @@ function LicenseActions(props: LicenseActionsProps) {
                 <span id="force-update-license-btn">
                     <ButtonWithSpinner
                         isSpinning={forcingUpdate}
-                        outline
                         disabled={!isForceUpdateEnabled}
                         className="rounded-pill"
+                        variant="outline-secondary"
                         onClick={forceUpdate}
                     >
                         <Icon icon="force" /> Force Update
@@ -251,7 +257,7 @@ function LicenseActions(props: LicenseActionsProps) {
     return (
         <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
             <Button
-                color="primary"
+                variant="primary"
                 className="rounded-pill"
                 onClick={registerLicense}
                 disabled={!isRegisterLicenseEnabled}

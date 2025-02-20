@@ -18,7 +18,8 @@ import IndexUtils from "components/utils/IndexUtils";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import RichAlert from "components/common/RichAlert";
 
@@ -250,16 +251,16 @@ export function ImportIndexes(props: ImportIndexesProps) {
                     </div>
 
                     <div className="position-absolute m-2 end-0 top-0">
-                        <Button close onClick={toggle} />
+                        <CloseButton onClick={toggle} />
                     </div>
                 </ModalBody>
                 <ModalFooter>
-                    <Button type="button" color="link" className="link-muted" onClick={toggle}>
+                    <Button type="button" variant="link" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
                     <ButtonWithSpinner
                         type="submit"
-                        color="success"
+                        variant="success"
                         title="Import indexes"
                         className="rounded-pill"
                         icon="import"

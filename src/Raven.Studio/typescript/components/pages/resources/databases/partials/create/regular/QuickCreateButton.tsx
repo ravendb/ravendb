@@ -18,6 +18,7 @@ export default function QuickCreateButton({ formValues, isSubmitting, handleQuic
                 onClick={handleQuickCreate}
                 className="rounded-pill me-1"
                 id="quickCreateButton"
+                variant="secondary"
                 icon="star"
                 isSpinning={isSubmitting}
                 title="Quick Create (Ctrl + Enter)"

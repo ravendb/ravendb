@@ -1,5 +1,6 @@
 ﻿import React, { useState } from "react";
-import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import {
     DatabaseActionContexts,
@@ -77,7 +78,7 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
                     <Icon icon="index" color="warning" addon="reset-index" className="fs-1" margin="m-0" />
                 </div>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={closeConfirm} />
+                    <CloseButton onClick={closeConfirm} />
                 </div>
                 <div className="text-center lead">
                     You&apos;re about to <span className="text-warning">reset</span> following{" "}
@@ -118,11 +119,11 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
                 )}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={closeConfirm} className="link-muted">
+                <Button variant="link" onClick={closeConfirm} className="link-muted">
                     Cancel
                 </Button>
                 <Button
-                    color="warning"
+                    variant="warning"
                     onClick={onSubmit}
                     className="rounded-pill"
                     disabled={selectedActionContexts.length === 0}

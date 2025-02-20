@@ -22,12 +22,13 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
-import { Button, Collapse, Form, InputGroup, Label, UncontrolledTooltip } from "reactstrap";
+import { Collapse, Form, InputGroup, Label, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormAceEditor, FormInput } from "components/common/Form";
 import fileImporter from "common/fileImporter";
+import Button from "react-bootstrap/Button";
 
 interface DatabaseCustomAnalyzersListItemProps {
     initialAnalyzer: CustomAnalyzerFormData;
@@ -190,11 +191,11 @@ function CustomAnalyzersActions({
 
     if (!hasDatabaseAdminAccess) {
         return isEditMode ? (
-            <Button key="preview" onClick={toggleIsEditMode}>
+            <Button variant="secondary" key="preview" onClick={toggleIsEditMode}>
                 <Icon icon="preview-off" margin="m-0" />
             </Button>
         ) : (
-            <Button key="edit" onClick={toggleIsEditMode}>
+            <Button variant="secondary" key="edit" onClick={toggleIsEditMode}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
         );
@@ -204,16 +205,16 @@ function CustomAnalyzersActions({
         <>
             {isEditMode ? (
                 <>
-                    <Button key="save" type="submit" color="success" disabled={isSubmitting}>
+                    <Button key="save" type="submit" variant="success" disabled={isSubmitting}>
                         <Icon icon="save" /> Save changes
                     </Button>
-                    <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
+                    <Button key="cancel" type="button" variant="secondary" onClick={onDiscard}>
                         <Icon icon="cancel" /> Discard
                     </Button>
                 </>
             ) : (
                 <>
-                    <Button key="edit" onClick={toggleIsEditMode}>
+                    <Button variant="secondary" key="edit" onClick={toggleIsEditMode}>
                         <Icon icon={hasDatabaseAdminAccess ? "edit" : "preview"} margin="m-0" />
                     </Button>
                     {hasDatabaseAdminAccess && (
@@ -227,7 +228,7 @@ function CustomAnalyzersActions({
                             )}
                             <ButtonWithSpinner
                                 key="delete"
-                                color="danger"
+                                variant="danger"
                                 onClick={() => setNameToConfirmDelete(name)}
                                 icon="trash"
                                 isSpinning={asyncDeleteAnalyzer.status === "loading"}

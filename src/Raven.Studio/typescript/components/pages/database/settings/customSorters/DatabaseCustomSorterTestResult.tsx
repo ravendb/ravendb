@@ -12,8 +12,9 @@ import TableDisplaySettings from "components/common/virtualTable/commonComponent
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { useState } from "react";
-import { Button, Badge } from "reactstrap";
+import { Badge } from "reactstrap";
 import document from "models/database/documents/document";
+import Button from "react-bootstrap/Button";
 
 type TestResultTab = "results" | "diagnostics";
 
@@ -91,6 +92,7 @@ function DatabaseCustomSorterTestResultWithSize({
 
             <div className="d-flex mt-2 gap-2">
                 <Button
+                    variant="secondary"
                     size="sm"
                     className="rounded-pill"
                     onClick={() => setCurrentTab("results")}
@@ -104,6 +106,7 @@ function DatabaseCustomSorterTestResultWithSize({
                 <Button
                     size="sm"
                     className="rounded-pill"
+                    variant="secondary"
                     onClick={() => setCurrentTab("diagnostics")}
                     active={currentTab === "diagnostics"}
                 >

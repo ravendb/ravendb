@@ -7,7 +7,8 @@ import useBoolean from "components/hooks/useBoolean";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import React, { useEffect, useImperativeHandle, useState } from "react";
 import { AsyncStateStatus } from "react-async-hook";
-import { Button, Modal, ModalBody, FormGroup, Label, Input, ModalFooter, CloseButton } from "reactstrap";
+import { Modal, ModalBody, FormGroup, Label, Input, ModalFooter, CloseButton } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 export interface PathSelectorStateRef {
     toggle: () => void;
@@ -70,7 +71,7 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
     return (
         <>
             <Button
-                color="link"
+                variant="link"
                 onClick={toggleIsModalOpen}
                 disabled={disabled}
                 title={selectorTitle || "Select path"}
@@ -90,7 +91,11 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
 
                         <div className="hstack">
                             <strong className="flex-grow">
-                                <Button className="btn-link text-info p-0 border-0" onClick={() => setPathInput("")}>
+                                <Button
+                                    variant="secondary"
+                                    className="btn-link text-info p-0 border-0"
+                                    onClick={() => setPathInput("")}
+                                >
                                     Computer
                                 </Button>
                                 <span className="mx-1">&gt;</span>
@@ -98,6 +103,7 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                                     .filter((x) => x)
                                     .map((part) => (
                                         <Button
+                                            variant="secondary"
                                             key={part}
                                             className="btn-link text-info p-0 border-0"
                                             onClick={() => setPathToDir(part)}
@@ -109,8 +115,8 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                             </strong>
                             {canGoBack && (
                                 <Button
+                                    variant="link"
                                     className="btn-link"
-                                    color="link"
                                     onClick={() => setPathInput(parentDir)}
                                     title="Go back"
                                 >
@@ -144,10 +150,10 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                         </FormGroup>
                     </ModalBody>
                     <ModalFooter className="hstack gap-2 justify-content-end">
-                        <Button color="secondary" onClick={toggleIsModalOpen}>
+                        <Button variant="secondary" onClick={toggleIsModalOpen}>
                             Cancel
                         </Button>
-                        <Button color="primary" onClick={handleSelectWithClose} disabled={disabled}>
+                        <Button variant="primary" onClick={handleSelectWithClose} disabled={disabled}>
                             Select
                         </Button>
                     </ModalFooter>
@@ -189,7 +195,7 @@ function PathList({ fetchStatus, paths, pathInput, setPathInput }: PathSelectorL
     };
 
     return paths.map((path) => (
-        <Button key={path} className="btn-link hstack gap-2" onClick={() => handleItemClick(path)}>
+        <Button key={path} variant="secondary" className="btn-link hstack gap-2" onClick={() => handleItemClick(path)}>
             <Icon icon="folder" color="info" />
             <span className="text-info text-start text-break">{formatPathInList(path, pathInput)}</span>
         </Button>

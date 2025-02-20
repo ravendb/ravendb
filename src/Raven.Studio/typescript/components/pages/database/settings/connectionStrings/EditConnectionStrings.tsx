@@ -1,6 +1,7 @@
 ﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
-import { Button, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
 import RavenConnectionString from "./editForms/RavenConnectionString";
@@ -103,7 +104,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
             <ModalFooter className="mt-2">
                 <Button
                     type="button"
-                    color="link"
+                    variant="link"
                     className="link-muted"
                     onClick={() => dispatch(connectionStringsActions.editConnectionModalClosed())}
                     title="Cancel"
@@ -114,7 +115,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                     <ButtonWithSpinner
                         form="connection-string-form"
                         type="submit"
-                        color="success"
+                        variant="success"
                         title="Save credentials"
                         icon="save"
                         className="rounded-pill"

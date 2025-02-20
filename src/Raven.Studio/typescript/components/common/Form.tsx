@@ -2,7 +2,8 @@ import React, { ComponentProps, ReactNode, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
-import { Button, Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
+import { Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon } from "./toggles/RadioToggle";
 import AceEditor, { AceEditorProps } from "./AceEditor";
@@ -470,7 +471,7 @@ function FormInputGeneral<
                         {addon && <InputGroupText>{addon}</InputGroupText>}
                         {passwordPreview && (
                             <Button
-                                color="link-muted"
+                                variant="link-muted"
                                 onClick={() => setShowPassword(!showPassword)}
                                 className={classNames("input-btn", invalid && "me-3")}
                             >

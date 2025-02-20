@@ -1,5 +1,6 @@
 ﻿import React from "react";
-import { Badge, Button, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { Badge, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -123,7 +124,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                             </div>
                             <Button
                                 type="button"
-                                color="secondary"
+                                variant="secondary"
                                 className="w-fit-content mb-2"
                                 onClick={toggleCredentialsJsonVisible}
                             >
@@ -144,7 +145,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                                 <FlexGrow />
                                 <ButtonWithSpinner
                                     type="button"
-                                    color="secondary"
+                                    variant="secondary"
                                     onClick={asyncTest.execute}
                                     isSpinning={asyncTest.loading}
                                     icon="rocket"

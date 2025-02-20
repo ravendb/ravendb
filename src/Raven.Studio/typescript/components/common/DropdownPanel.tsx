@@ -2,7 +2,7 @@
 import classNames from "classnames";
 import React from "react";
 import { usePopper } from "react-popper";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import useBoolean from "hooks/useBoolean";
 
 interface DropdownPanelProps {
@@ -84,7 +84,12 @@ export function UncontrolledButtonWithDropdownPanel(props: UncontrolledButtonWit
 
     return (
         <React.Fragment>
-            <Button innerRef={setReferenceElement} onClick={togglePopper} className={classNames("dropdown-toggle")}>
+            <Button
+                ref={setReferenceElement}
+                variant="secondary"
+                onClick={togglePopper}
+                className={classNames("dropdown-toggle")}
+            >
                 {buttonText}
             </Button>
 

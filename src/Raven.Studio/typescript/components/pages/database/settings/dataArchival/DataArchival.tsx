@@ -107,7 +107,7 @@ export default function DataArchival() {
                             <div id="saveDataArchival" className="w-fit-content">
                                 <ButtonWithSpinner
                                     type="submit"
-                                    color="primary"
+                                    variant="primary"
                                     className="mb-3"
                                     icon="save"
                                     disabled={!formState.isDirty || !hasDatabaseAdminAccess}

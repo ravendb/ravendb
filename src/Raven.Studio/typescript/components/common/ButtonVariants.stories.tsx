@@ -1,8 +1,8 @@
 ﻿import { Meta } from "@storybook/react";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Button } from "reactstrap";
 import ButtonWithSpinner from "./ButtonWithSpinner";
+import Button from "react-bootstrap/Button";
 
 export default {
     title: "Bits/Buttons",
@@ -99,7 +99,7 @@ function AllButtonColors(props: AllButtonColorsProps) {
     return (
         <div className="hstack gap-1">
             {colors.map((color) => (
-                <Button color={color} size={size} outline={outline} active={active} disabled={disabled}>
+                <Button variant={outline ? `outline-${color}` : color} size={size} active={active} disabled={disabled}>
                     {color}
                 </Button>
             ))}
@@ -111,7 +111,7 @@ function AllButtonWithSpinnerColors({ size }: AllButtonColorsProps) {
     return (
         <div className="hstack gap-1">
             {colors.map((color) => (
-                <ButtonWithSpinner color={color} size={size} isSpinning>
+                <ButtonWithSpinner variant={color} size={size} isSpinning>
                     {color}
                 </ButtonWithSpinner>
             ))}

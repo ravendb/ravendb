@@ -12,7 +12,8 @@ import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.Periodic
 import { loadableData } from "components/models/common";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Button, Spinner } from "reactstrap";
+import { Spinner } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { HrHeader } from "components/common/HrHeader";
 import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "components/common/RichPanel";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -279,6 +280,7 @@ export function BackupsPage() {
                 {hasDatabaseAdminAccess && (
                     <div className="flex-shrink-0 hstack gap-2 mb-4">
                         <Button
+                            variant="secondary"
                             onClick={navigateToRestoreDatabase}
                             title="Navigate to creating a new database from a backup"
                         >
@@ -331,7 +333,7 @@ export function BackupsPage() {
 
                     {hasDatabaseAdminAccess && (
                         <div className="mb-3 flex-shrink-0">
-                            <Button color="primary" title="Backup the database now" onClick={createManualBackup}>
+                            <Button variant="primary" title="Backup the database now" onClick={createManualBackup}>
                                 <Icon icon="backup" /> Create a Backup
                             </Button>
                         </div>
@@ -347,7 +349,7 @@ export function BackupsPage() {
                                 <Button
                                     size="xs"
                                     target="_blank"
-                                    color="link"
+                                    variant="link"
                                     title="Navigate to the Server-Wide Tasks View"
                                     href={serverWideTasksUrl}
                                 >
@@ -365,7 +367,7 @@ export function BackupsPage() {
                     {hasDatabaseWriteAccess && (
                         <div className="mb-3">
                             <Button
-                                color="primary"
+                                variant="primary"
                                 onClick={createNewPeriodicBackupTask}
                                 title="Create an ongoing periodic backup task"
                             >

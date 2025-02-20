@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
-import { Button, Card, Col, Row, UncontrolledPopover } from "reactstrap";
+import { Card, Col, Row, UncontrolledPopover } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import {
     refresh,
@@ -9,6 +9,7 @@ import {
 import { useAppDispatch, useAppSelector } from "components/store";
 import { LoadError } from "components/common/LoadError";
 import { Icon } from "components/common/Icon";
+import Button from "react-bootstrap/Button";
 
 interface EssentialDatabaseStatsComponentProps {
     rawJsonUrl: string;
@@ -34,7 +35,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                 <Col>
                     <h2 className="on-base-background">
                         General Database Stats
-                        <Button color="link" target="_blank" href={rawJsonUrl} title="Show raw output">
+                        <Button variant="link" target="_blank" href={rawJsonUrl} title="Show raw output">
                             <Icon icon="json" margin="m-0" />
                         </Button>
                     </h2>

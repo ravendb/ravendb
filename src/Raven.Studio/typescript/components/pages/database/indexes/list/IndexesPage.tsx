@@ -5,7 +5,6 @@ import IndexUtils from "../../../../utils/IndexUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import "./IndexesPage.scss";
 import {
-    Button,
     Col,
     DropdownItem,
     DropdownMenu,
@@ -14,6 +13,7 @@ import {
     UncontrolledDropdown,
     UncontrolledPopover,
 } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
@@ -183,7 +183,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                 <div id="NewIndexButton">
                                     <UncontrolledDropdown group className="button-dropdown-pill">
                                         <Button
-                                            color="primary"
+                                            variant="primary"
                                             href={newIndexUrl}
                                             disabled={isNewIndexDisabled}
                                             className="button-dropdown-btn"

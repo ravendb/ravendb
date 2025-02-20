@@ -38,7 +38,7 @@ function MainPanel({ unused }: RemoveUnusedIndexesCardProps) {
     return (
         <div className="p-2">
             <ButtonWithSpinner
-                color="primary"
+                variant="primary"
                 className="mb-2 rounded-pill"
                 onClick={unused.deleteSelected}
                 isSpinning={unused.isDeleting}

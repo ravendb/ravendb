@@ -4,7 +4,7 @@ import classNames from "classnames";
 import useBoolean from "components/hooks/useBoolean";
 import { InputItem } from "components/models/common";
 import { Icon } from "../Icon";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import ToggleItemLabel from "components/common/toggles/partials/ToggleItemLabel";
 
 interface MultiCheckboxToggleProps<T extends string | number = string> {
@@ -67,6 +67,7 @@ export function MultiCheckboxToggle<T extends string | number = string>({
                 {selectAll && (
                     <>
                         <Button
+                            variant="secondary"
                             className={classNames("multi-toggle-button", { "clear-selected": !isSelectedAll })}
                             size="sm"
                             onClick={onChangeSelectAll}

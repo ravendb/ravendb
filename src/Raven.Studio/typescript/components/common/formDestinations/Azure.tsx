@@ -121,7 +121,7 @@ export default function Azure() {
                                 <FlexGrow />
                                 <ButtonWithSpinner
                                     type="button"
-                                    color="secondary"
+                                    variant="secondary"
                                     onClick={asyncTest.execute}
                                     isSpinning={asyncTest.loading}
                                     icon="rocket"

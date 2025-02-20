@@ -3,7 +3,6 @@ import { DatabasePanel } from "./partials/DatabasePanel";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { Button } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -21,6 +20,7 @@ import { StickyHeader } from "components/common/StickyHeader";
 import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import CreateDatabase, { CreateDatabaseMode } from "./partials/create/CreateDatabase";
+import Button from "react-bootstrap/Button";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -118,7 +118,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
                     {isOperatorOrAbove && (
                         <>
                             <Button
-                                color="primary"
+                                variant="primary"
                                 onClick={() => setCreateDatabaseMode("regular")}
                                 className="rounded-pill"
                             >
@@ -134,7 +134,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
                         </>
                     )}
                     {showToggleButton && (
-                        <Button color="secondary" className="rounded-pill" onClick={toggleFilterOptions}>
+                        <Button variant="secondary" className="rounded-pill" onClick={toggleFilterOptions}>
                             <Icon icon="filter" />
                             {showFilterOptions ? "Hide Filtering Options" : "Show Filtering Options"}
                         </Button>

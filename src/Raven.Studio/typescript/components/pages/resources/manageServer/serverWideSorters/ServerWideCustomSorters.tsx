@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Button, Col, Row } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -12,6 +12,7 @@ import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNo
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
 import ServerWideCustomSortersInfoHub from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSortersInfoHub";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 export default function ServerWideCustomSorters() {
     const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
@@ -52,7 +53,7 @@ export default function ServerWideCustomSorters() {
                         )}
                         <div id="newServerWideCustomSorter" className="w-fit-content mt-4">
                             <Button
-                                color="primary"
+                                variant="primary"
                                 className="mb-3"
                                 onClick={addNewSorter}
                                 disabled={!hasServerWideCustomSorters}

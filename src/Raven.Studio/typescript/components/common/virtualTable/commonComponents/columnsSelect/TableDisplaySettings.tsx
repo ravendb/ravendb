@@ -1,11 +1,12 @@
 import "./TableDisplaySettings.scss";
 import { Table as TanstackTable } from "@tanstack/react-table";
 import { Checkbox } from "components/common/Checkbox";
-import { Button, Dropdown, DropdownMenu, DropdownToggle } from "reactstrap";
+import { Dropdown, DropdownMenu, DropdownToggle } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useTableDisplaySettings } from "components/common/virtualTable/commonComponents/columnsSelect/useTableDisplaySettings";
 import { ClassNameProps } from "components/models/common";
 import classNames from "classnames";
+import Button from "react-bootstrap/Button";
 
 // TODO Add custom column and reorder with dnd https://issues.hibernatingrhinos.com/issue/RavenDB-22509
 
@@ -53,14 +54,19 @@ export default function TableDisplaySettings<T>({ table, className }: TableColum
                     </div>
                     <hr className="m-0" />
                     <div className="d-flex gap-1 px-3 pt-3 pb-2">
-                        <Button type="button" title="Reset to default" onClick={handlers.handleReset}>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            title="Reset to default"
+                            onClick={handlers.handleReset}
+                        >
                             <Icon icon="reset" />
                             Reset to default
                         </Button>
                         <Button type="button" className="ms-3" title="Close" onClick={handlers.handleCloseDropdown}>
                             Close
                         </Button>
-                        <Button type="button" color="success" title="Apply changes" onClick={handlers.handleSave}>
+                        <Button type="button" variant="success" title="Apply changes" onClick={handlers.handleSave}>
                             <Icon icon="save" />
                             Apply
                         </Button>

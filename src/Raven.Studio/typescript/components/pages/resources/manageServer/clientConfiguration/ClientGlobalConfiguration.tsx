@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { Form, Col, Button, Card, Row, Spinner, InputGroup, UncontrolledPopover } from "reactstrap";
+import { Form, Col, Card, Row, Spinner, InputGroup, UncontrolledPopover } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import {
@@ -91,7 +92,7 @@ export default function ClientGlobalConfiguration() {
                         <div id="saveClientConfiguration" className="w-fit-content mb-3">
                             <Button
                                 type="submit"
-                                color="primary"
+                                variant="primary"
                                 disabled={formState.isSubmitting || !formState.isDirty}
                             >
                                 {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <Icon icon="save" />}

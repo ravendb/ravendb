@@ -2,8 +2,9 @@ import { Getter } from "@tanstack/react-table";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
-import { Button, CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import document from "models/database/documents/document";
+import Button from "react-bootstrap/Button";
 
 interface CellDocumentPreviewProps {
     document: document;
@@ -19,7 +20,7 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
 
     return (
         <>
-            <Button type="button" title="Show preview" color="link" onClick={toggleIsOpen}>
+            <Button type="button" title="Show preview" variant="link" onClick={toggleIsOpen}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
             <Modal toggle={toggleIsOpen} isOpen={isOpen} wrapClassName="bs5" size="lg" centered>
@@ -45,7 +46,7 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
                     </pre>
                 </ModalBody>
                 <ModalFooter>
-                    <Button type="button" onClick={toggleIsOpen}>
+                    <Button type="button" variant="secondary" onClick={toggleIsOpen}>
                         <Icon icon="close" />
                         Close
                     </Button>

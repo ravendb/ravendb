@@ -48,7 +48,7 @@ export default function DatabaseCustomSorterTest({ name }: DatabaseCustomSorterT
     return (
         <Card className="gap-2 p-4">
             <ButtonWithSpinner
-                color="primary"
+                variant="primary"
                 onClick={asyncTest.execute}
                 className="w-fit-content"
                 icon="play"

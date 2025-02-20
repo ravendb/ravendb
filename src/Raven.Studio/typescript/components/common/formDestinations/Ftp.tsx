@@ -157,7 +157,7 @@ export default function Ftp() {
                                 <FlexGrow />
                                 <ButtonWithSpinner
                                     type="button"
-                                    color="secondary"
+                                    variant="secondary"
                                     onClick={asyncTest.execute}
                                     isSpinning={asyncTest.loading}
                                     icon="rocket"

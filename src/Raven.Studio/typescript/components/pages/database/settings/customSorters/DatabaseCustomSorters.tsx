@@ -1,4 +1,4 @@
-﻿import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
+﻿import { Col, Row, UncontrolledPopover } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -19,6 +19,7 @@ import DatabaseCustomSortersServerWideList from "components/pages/database/setti
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 export default function DatabaseCustomSorters() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -88,7 +89,7 @@ export default function DatabaseCustomSorters() {
                 {hasDatabaseAdminAccess && (
                     <>
                         <div id="newCustomSorter" className="w-fit-content">
-                            <Button color="primary" className="mb-3" onClick={addNewSorter} disabled={isLimitReached}>
+                            <Button variant="primary" className="mb-3" onClick={addNewSorter} disabled={isLimitReached}>
                                 <Icon icon="plus" />
                                 Add a custom sorter
                             </Button>

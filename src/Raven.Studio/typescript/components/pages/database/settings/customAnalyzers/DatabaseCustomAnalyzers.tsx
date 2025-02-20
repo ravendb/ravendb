@@ -1,5 +1,6 @@
 ﻿import React from "react";
-import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
+import { Col, Row, UncontrolledPopover } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -79,7 +80,7 @@ export default function DatabaseCustomAnalyzers() {
                         <>
                             <div id="newCustomAnalyzer" className="w-fit-content">
                                 <Button
-                                    color="primary"
+                                    variant="primary"
                                     className="mb-3"
                                     onClick={addNewAnalyzer}
                                     disabled={isLimitReached}

@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useState } from "react";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/partials/NodeInfoComponent";
 import { useDrop } from "react-dnd";
 import { NodeInfo } from "components/models/databases";
@@ -30,16 +30,16 @@ export function ReorderNodesControls(props: ReorderNodesControlsProps) {
     };
 
     return !sortableMode ? (
-        <Button disabled={canSort} onClick={enableReorder}>
+        <Button variant="secondary" disabled={canSort} onClick={enableReorder}>
             <Icon icon="reorder" />
             Reorder nodes
         </Button>
     ) : (
         <>
-            <ButtonWithSpinner color="success" onClick={onSaveClicked} isSpinning={saving} icon="save">
+            <ButtonWithSpinner variant="success" onClick={onSaveClicked} isSpinning={saving} icon="save">
                 Save reorder
             </ButtonWithSpinner>
-            <Button onClick={cancelReorder}>
+            <Button variant="secondary" onClick={cancelReorder}>
                 <Icon icon="cancel" />
                 <span>Cancel</span>
             </Button>

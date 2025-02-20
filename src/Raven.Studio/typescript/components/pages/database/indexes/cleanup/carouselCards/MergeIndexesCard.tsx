@@ -10,7 +10,8 @@ import {
 } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { Card, Table, Button } from "reactstrap";
+import { Card, Table } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface MergeIndexesCardProps {
     mergable: UseIndexCleanupResult["mergable"];
@@ -69,7 +70,7 @@ function MainPanel({ mergable }: MergeIndexesCardProps) {
                     <RichPanelHeader className="px-3 py-2 flex-wrap flex-row gap-3">
                         <div className="mt-1">
                             <Button
-                                color="primary"
+                                variant="primary"
                                 size="sm"
                                 className="rounded-pill"
                                 onClick={() => mergable.navigateToMergeSuggestion(mergableGroup)}

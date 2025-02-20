@@ -1,6 +1,7 @@
 import React, { ComponentProps } from "react";
-import { Collapse, Row, Col, Button } from "reactstrap";
+import { Collapse, Row, Col } from "reactstrap";
 import { EmptySet } from "./EmptySet";
+import Button from "react-bootstrap/Button";
 import { FlexGrow } from "./FlexGrow";
 import { FormRadioToggleWithIcon, FormSelect, FormSelectCreatable } from "./Form";
 import { RadioToggleWithIconInputItem } from "./toggles/RadioToggle";
@@ -97,7 +98,7 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
                             )}
                         </Col>
                         <Col sm="auto" className="d-flex">
-                            <Button color="info" onClick={addAllCollections} disabled={isAddAllCollectionsDisabled}>
+                            <Button variant="info" onClick={addAllCollections} disabled={isAddAllCollectionsDisabled}>
                                 <Icon icon="documents" addon="plus" /> Add all
                             </Button>
                         </Col>
@@ -107,7 +108,7 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
                     <h4 className="m-0">Selected collections</h4>
                     <FlexGrow />
                     {collections.length > 0 && !isReadOnly && (
-                        <Button color="link" size="xs" onClick={removeAllCollections} className="p-0">
+                        <Button variant="link" size="xs" onClick={removeAllCollections} className="p-0">
                             Remove all
                         </Button>
                     )}
@@ -119,7 +120,7 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
                                 <div className="flex-grow-1">{name}</div>
                                 {!isReadOnly && (
                                     <Button
-                                        color="link"
+                                        variant="link"
                                         size="xs"
                                         onClick={() => removeCollection(name)}
                                         className="p-0"

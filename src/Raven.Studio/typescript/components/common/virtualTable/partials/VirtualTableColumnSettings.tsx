@@ -3,7 +3,8 @@ import classNames from "classnames";
 import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
 import { useState, useMemo } from "react";
-import { Button, UncontrolledDropdown, DropdownToggle, DropdownMenu, Label, Input } from "reactstrap";
+import { UncontrolledDropdown, DropdownToggle, DropdownMenu, Label, Input } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 export default function VirtualTableColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
     const [localFilter, setLocalFilter] = useState("");
@@ -46,7 +47,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
             {column.getCanSort() && (
                 <div className="sorting-controls">
                     <Button
-                        color="link"
+                        variant="link"
                         onClick={() => handleSort("asc")}
                         title="Sort A to Z"
                         className={classNames(column.getIsSorted() === "asc" && "active-sorting")}
@@ -54,7 +55,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                         <Icon icon="arrow-thin-top" margin="m-0" />
                     </Button>
                     <Button
-                        color="link"
+                        variant="link"
                         onClick={() => handleSort("desc")}
                         title="Sort Z to A"
                         className={classNames(column.getIsSorted() === "desc" && "active-sorting")}
@@ -89,7 +90,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                                 />
                                 {localFilter && (
                                     <div className="clear-button">
-                                        <Button color="secondary" size="sm" onClick={() => handleFilterChange("")}>
+                                        <Button variant="secondary" size="sm" onClick={() => handleFilterChange("")}>
                                             <Icon icon="clear" margin="m-0" />
                                         </Button>
                                     </div>

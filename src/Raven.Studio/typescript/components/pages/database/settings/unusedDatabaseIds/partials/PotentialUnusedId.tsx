@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface PotentialUnusedIdProps {
     id: string;
@@ -19,7 +19,13 @@ export default function PotentialUnusedId(props: PotentialUnusedIdProps) {
             }}
             popoverPlacement="top"
         >
-            <Button className="rounded-pill" onClick={addUnusedId} title="Copy ID" outline disabled={isAdded}>
+            <Button
+                className="rounded-pill"
+                onClick={addUnusedId}
+                title="Copy ID"
+                variant="outline-secondary"
+                disabled={isAdded}
+            >
                 <strong>{id}</strong>
             </Button>
         </ConditionalPopover>

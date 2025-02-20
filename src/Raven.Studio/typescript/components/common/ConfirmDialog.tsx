@@ -1,8 +1,9 @@
 import { TextColor } from "components/models/common";
-import React, { ReactNode, createContext, useContext, useState, PropsWithChildren, useRef } from "react";
-import { Modal, ModalBody, Button, ModalFooter } from "reactstrap";
+import React, { createContext, PropsWithChildren, ReactNode, useContext, useRef, useState } from "react";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
+import Button from "react-bootstrap/Button";
 
 interface ConfirmOptions {
     title: ReactNode;
@@ -58,16 +59,16 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
                             </div>
                         )}
                         <div className="position-absolute m-2 end-0 top-0">
-                            <Button close onClick={onCancel} />
+                            <CloseButton onClick={onCancel} />
                         </div>
                         <div className="text-center lead">{title}</div>
                         {message}
                     </ModalBody>
                     <ModalFooter>
-                        <Button color="link" onClick={onCancel} className="link-muted">
+                        <Button variant="link" onClick={onCancel} className="link-muted">
                             Cancel
                         </Button>
-                        <Button color={actionColor} onClick={onConfirm} className="rounded-pill">
+                        <Button variant={actionColor} onClick={onConfirm} className="rounded-pill">
                             {confirmIcon && <Icon icon={confirmIcon} />}
                             {confirmText}
                         </Button>

@@ -1,4 +1,4 @@
-﻿import { Button, Col, Row } from "reactstrap";
+﻿import { Col, Row } from "reactstrap";
 import {
     refresh,
     statisticsViewSelectors,
@@ -9,6 +9,7 @@ import React from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import Button from "react-bootstrap/Button";
 
 export function StatsHeader() {
     const dispatch = useAppDispatch();
@@ -21,7 +22,7 @@ export function StatsHeader() {
             <Row>
                 <Col sm="auto">
                     <Button
-                        color="secondary"
+                        variant="secondary"
                         onClick={() => dispatch(toggleDetails())}
                         title="Click to load detailed statistics"
                     >
@@ -32,7 +33,7 @@ export function StatsHeader() {
                 <Col />
                 <Col sm="auto">
                     <ButtonWithSpinner
-                        color="primary"
+                        variant="primary"
                         onClick={() => dispatch(refresh())}
                         title="Click to refresh stats"
                         isSpinning={isRefreshing}

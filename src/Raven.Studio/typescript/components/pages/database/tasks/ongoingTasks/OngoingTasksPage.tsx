@@ -37,7 +37,7 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Button, Row } from "reactstrap";
+import { Row } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
@@ -63,6 +63,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { compareSets } from "common/typeUtils";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -358,7 +359,7 @@ export function OngoingTasksPage() {
                                 />
                             )}
                             <div id="NewTaskButton">
-                                <Button onClick={toggleIsNewTaskModalOpen} color="primary" className="rounded-pill">
+                                <Button onClick={toggleIsNewTaskModalOpen} variant="primary" className="rounded-pill">
                                     <Icon icon="ongoing-tasks" addon="plus" />
                                     Add a Database Task
                                 </Button>
@@ -370,7 +371,7 @@ export function OngoingTasksPage() {
 
                     {isClusterAdminOrClusterNode && (
                         <Button
-                            color="link"
+                            variant="link"
                             size="sm"
                             target="_blank"
                             href={serverWideTasksUrl}

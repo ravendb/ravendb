@@ -5,7 +5,7 @@ import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { PropsWithChildren, useState } from "react";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface CellWithCopyProps extends PropsWithChildren {
     value: unknown;
@@ -37,7 +37,7 @@ export function CellWithCopy({ value, children }: CellWithCopyProps) {
                     </pre>
                     <span className="small-label">Actions</span>
                     <div>
-                        <Button onClick={handleCopyToClipboard} color="primary" title="Copy to clipboard">
+                        <Button onClick={handleCopyToClipboard} size="sm" variant="primary" title="Copy to clipboard">
                             <Icon icon="copy-to-clipboard" margin="m-0" />
                         </Button>
                     </div>

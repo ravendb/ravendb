@@ -1,5 +1,6 @@
 ﻿import React, { useEffect } from "react";
-import { Button, Card, CardBody, Col, Row, UncontrolledTooltip } from "reactstrap";
+import { Card, CardBody, Col, Row, UncontrolledTooltip } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -75,7 +76,7 @@ export default function ConflictResolution() {
                             <>
                                 <div id="saveConflictResolutionScript" className="d-flex w-fit-content gap-3 mb-3">
                                     <ButtonWithSpinner
-                                        color="primary"
+                                        variant="primary"
                                         icon="save"
                                         isSpinning={asyncSave.loading}
                                         onClick={asyncSave.execute}
@@ -97,7 +98,7 @@ export default function ConflictResolution() {
                                     hasDatabaseAdminAccess && (
                                         <div id="addNewScriptButton">
                                             <Button
-                                                color="info"
+                                                variant="info"
                                                 size="sm"
                                                 className="rounded-pill"
                                                 title="Add a new Conflicts Resolution script"

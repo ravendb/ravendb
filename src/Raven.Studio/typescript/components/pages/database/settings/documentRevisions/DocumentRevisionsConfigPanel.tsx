@@ -10,7 +10,8 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { Button, UncontrolledPopover } from "reactstrap";
+import { UncontrolledPopover } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import {
     DocumentRevisionsConfig,
@@ -85,7 +86,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                         {hasDatabaseAdminAccess && (
                             <>
                                 <Button
-                                    color={config.Disabled ? "success" : "secondary"}
+                                    variant={config.Disabled ? "success" : "secondary"}
                                     onClick={onToggle}
                                     title={`Click to ${
                                         config.Disabled ? "enable" : "disable"
@@ -95,12 +96,12 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                     {config.Disabled ? "Enable" : "Disable"}
                                 </Button>
 
-                                <Button color="secondary" onClick={onEdit} title="Edit this revision configuration">
+                                <Button variant="secondary" onClick={onEdit} title="Edit this revision configuration">
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                                 {onDelete && (
                                     <Button
-                                        color="danger"
+                                        variant="danger"
                                         onClick={() => {
                                             reportEvent("revisions", "remove");
                                             onDelete();

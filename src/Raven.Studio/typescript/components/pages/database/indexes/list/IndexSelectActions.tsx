@@ -1,6 +1,7 @@
 ﻿import React, { useState } from "react";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import { Button, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import { DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
@@ -67,7 +68,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                     </div>
                     <div className="hstack gap-2 flex-wrap justify-content-center">
                         <Button
-                            color="primary"
+                            variant="primary"
                             disabled={selectedIndexes.length === 0}
                             onClick={toggleIsExportIndexModalOpen}
                             className="rounded-pill flex-grow-0"
@@ -145,7 +146,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                         </UncontrolledDropdown>
                         <ResetIndexesButton isRounded resetIndex={resetSelectedIndexes} />
                         <Button
-                            color="danger"
+                            variant="danger"
                             disabled={selectedIndexes.length === 0}
                             onClick={deleteSelectedIndexes}
                             className="rounded-pill flex-grow-0"
@@ -154,7 +155,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                             <span>Delete</span>
                         </Button>
                     </div>
-                    <Button onClick={onCancel} color="link">
+                    <Button onClick={onCancel} variant="link">
                         Cancel
                     </Button>
                 </div>

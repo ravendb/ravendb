@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Card, CardBody, Col, InputGroup, Row } from "reactstrap";
+import { Card, CardBody, Col, InputGroup, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import useConfirm from "components/common/ConfirmDialog";
@@ -21,6 +21,7 @@ import ReactAce from "react-ace/lib/ace";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 interface VisibleDocument {
     text: string;
@@ -175,21 +176,21 @@ export default function DatabaseRecord() {
                             {isEditMode ? (
                                 <>
                                     <ButtonWithSpinner
-                                        color="primary"
+                                        variant="primary"
                                         icon="save"
                                         onClick={saveDatabaseRecord}
                                         isSpinning={asyncSaveDatabaseRecord.loading}
                                     >
                                         Save
                                     </ButtonWithSpinner>
-                                    <Button color="secondary" onClick={discardDatabaseRecord}>
+                                    <Button variant="secondary" onClick={discardDatabaseRecord}>
                                         Cancel
                                     </Button>
                                 </>
                             ) : (
                                 <>
                                     <ButtonWithSpinner
-                                        color="primary"
+                                        variant="primary"
                                         onClick={refresh}
                                         isSpinning={asyncGetDatabaseRecord.loading}
                                         icon="refresh"
@@ -197,7 +198,7 @@ export default function DatabaseRecord() {
                                         Refresh
                                     </ButtonWithSpinner>
                                     <Button
-                                        color="secondary"
+                                        variant="secondary"
                                         onClick={toggleEditMode}
                                         disabled={asyncGetDatabaseRecord.loading}
                                     >
@@ -228,7 +229,7 @@ export default function DatabaseRecord() {
                                             </Switch>
                                         )}
                                         <Button
-                                            color="link"
+                                            variant="link"
                                             size="xs"
                                             className="p-0"
                                             onClick={isCollapsed ? expand : collapse}

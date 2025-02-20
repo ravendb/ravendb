@@ -1,4 +1,4 @@
-﻿import { Button, Modal, ModalBody } from "reactstrap";
+﻿import { CloseButton, Modal, ModalBody } from "reactstrap";
 import React from "react";
 import Code from "components/common/Code";
 
@@ -11,7 +11,7 @@ export function EditConflictResolutionSyntaxModal({ toggle }: EditConflictResolu
         <Modal isOpen size="lg" wrapClassName="bs5" toggle={toggle} contentClassName="modal-border bulge-primary">
             <ModalBody>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+                    <CloseButton onClick={toggle} />
                 </div>
                 <h5 className="mb-1">Conflicted documents</h5>
                 <div className="d-flex gap-3 flex-wrap mb-3">

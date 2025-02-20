@@ -120,7 +120,7 @@ export default function DocumentCompression() {
                                         <div id="saveConfigButton" className="w-fit-content">
                                             <ButtonWithSpinner
                                                 type="submit"
-                                                color="primary"
+                                                variant="primary"
                                                 className="mb-3"
                                                 icon="save"
                                                 disabled={!formState.isDirty}

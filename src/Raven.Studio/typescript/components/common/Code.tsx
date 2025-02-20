@@ -4,7 +4,7 @@ import "./Code.scss";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -25,8 +25,6 @@ type Language =
     | "clike"
     | "javascript"
     | "csharp"
-    | "json"
-    | "csharp"
     | "json";
 
 interface CodeProps {
@@ -43,6 +41,7 @@ export default function Code({ code, language, className, elementToCopy }: CodeP
         <div className={classNames("code d-flex flex-grow-1 position-relative", className)}>
             {elementToCopy && (
                 <Button
+                    variant="secondary"
                     className="rounded-pill position-absolute end-gutter-xs top-gutter-xs"
                     size="xs"
                     title="Copy to clipboard"

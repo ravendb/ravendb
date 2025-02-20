@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import {
     Alert,
-    Button,
     Card,
     CardBody,
     CardLink,
@@ -42,6 +41,7 @@ import {
     OffcanvasBody,
     OffcanvasHeader,
 } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 const items = [
     {
@@ -71,7 +71,7 @@ function ModalUsage(args: any) {
 
     return (
         <div>
-            <Button color="danger" onClick={toggle}>
+            <Button variant="danger" onClick={toggle}>
                 Click Me
             </Button>
             <Modal wrapClassName="bs5" fade isOpen={modal} toggle={toggle} {...args}>
@@ -84,10 +84,10 @@ function ModalUsage(args: any) {
                     culpa qui officia deserunt mollit anim id est laborum.
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="primary" onClick={toggle}>
+                    <Button variant="primary" onClick={toggle}>
                         Do Something
                     </Button>{" "}
-                    <Button color="secondary" onClick={toggle}>
+                    <Button variant="secondary" onClick={toggle}>
                         Cancel
                     </Button>
                 </ModalFooter>
@@ -200,7 +200,7 @@ function Example({ direction, ...args }: any) {
             </div>
             <div className="margin-bottom">
                 <h1>Popover</h1>
-                <Button id="Popover1" type="button">
+                <Button variant="secondary" id="Popover1" type="button">
                     Launch Popover
                 </Button>
                 <Popover flip target="Popover1" className="bs5">
@@ -213,7 +213,7 @@ function Example({ direction, ...args }: any) {
             </div>
             <div className="margin-bottom">
                 <div>
-                    <Button color="primary">Open Offcanvas</Button>
+                    <Button variant="primary">Open Offcanvas</Button>
                     <Offcanvas>
                         <OffcanvasHeader>Offcanvas</OffcanvasHeader>
                         <OffcanvasBody>
@@ -386,7 +386,7 @@ function FormExample() {
                         size: 10,
                     }}
                 >
-                    <Button>Submit</Button>
+                    <Button variant="secondary">Submit</Button>
                 </Col>
             </FormGroup>
         </Form>
@@ -984,7 +984,7 @@ To edit settings, press <kbd><kbd>ctrl</kbd> + <kbd>,</kbd></kbd>
                 <CardExample />
                 <AlertExample />
 
-                <Button type="button" color="primary">
+                <Button type="button" variant="primary">
                     TEST
                 </Button>
                 <FormExample />

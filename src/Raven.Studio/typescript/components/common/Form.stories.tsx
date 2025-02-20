@@ -18,7 +18,9 @@ import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Button, Input, InputGroup, InputGroupText, Label } from "reactstrap";
+import { Input, InputGroup, InputGroupText, Label } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { Icon } from "components/common/Icon";
 
 export default {
     title: "Bits/Form",
@@ -155,7 +157,8 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
 
             <div className="input-group">
                 <FormInput type="text" control={control} name="inputText" />
-                <Button color="secondary" icon="rocket" title="Test connection">
+                <Button variant="secondary" title="Test connection">
+                    <Icon icon="rocket" />
                     Test connection
                 </Button>
             </div>

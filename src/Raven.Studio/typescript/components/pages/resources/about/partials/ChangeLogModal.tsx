@@ -1,4 +1,4 @@
-﻿import { Button, Modal, ModalBody, ModalFooter, UncontrolledTooltip } from "reactstrap";
+﻿import { CloseButton, Modal, ModalBody, ModalFooter, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import React, { ReactNode, useState } from "react";
@@ -11,6 +11,7 @@ import genUtils from "common/generalUtils";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import CustomPagination from "components/common/Pagination";
+import Button from "react-bootstrap/Button";
 
 interface ChangelogModalProps {
     mode: "whatsNew" | "changeLog" | "hidden";
@@ -201,20 +202,24 @@ function ModalWrapper(props: { children: ReactNode } & ChangelogModalProps) {
                 </div>
 
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={onClose} />
+                    <CloseButton onClick={onClose} />
                 </div>
                 <div className="text-center lead">{mode === "whatsNew" ? "What's New" : "Changelog"}</div>
                 {children}
             </ModalBody>
             <ModalFooter>
-                <Button color="secondary" outline onClick={onClose} className="rounded-pill px-3">
+                <Button variant="outline-secondary" onClick={onClose} className="rounded-pill px-3">
                     Close
                 </Button>
 
                 {mode === "whatsNew" && (
                     <React.Fragment key="footer-part">
                         <FlexGrow />
-                        <Button color="primary" className="rounded-pill px-3" href={aboutPageUrls.updateInstructions}>
+                        <Button
+                            variant="outline-primary"
+                            className="rounded-pill px-3"
+                            href={aboutPageUrls.updateInstructions}
+                        >
                             Update instructions <Icon icon="newtab" margin="m-0" />
                         </Button>
                     </React.Fragment>

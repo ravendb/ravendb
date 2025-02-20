@@ -1,4 +1,4 @@
-﻿import { Button, Col, Input, Row, Table } from "reactstrap";
+﻿import { Col, Input, Row, Table } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/toggles/RadioToggle";
@@ -7,6 +7,7 @@ import { aboutPageUrls } from "components/pages/resources/about/partials/common"
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "hooks/useRavenLink";
+import Button from "react-bootstrap/Button";
 
 export function LicenseDetails() {
     const licenseId = useAppSelector(licenseSelectors.statusValue("Id"));
@@ -34,7 +35,7 @@ export function LicenseDetails() {
                             Applied
                         </h3>
                         <Button
-                            color="success"
+                            variant="success"
                             className="px-4 rounded-pill"
                             size="lg"
                             href={aboutPageUrls.getLicense}
@@ -128,7 +129,7 @@ function LicenseTable(props: LicenseTableProps) {
                     />
                     {searchText && (
                         <div className="clear-button">
-                            <Button color="secondary" size="sm" onClick={() => onSearchTextChange("")}>
+                            <Button variant="secondary" size="sm" onClick={() => onSearchTextChange("")}>
                                 <Icon icon="clear" margin="m-0" />
                             </Button>
                         </div>
@@ -157,7 +158,7 @@ function LicenseTable(props: LicenseTableProps) {
                                 <th className={classNames({ "bg-current": columns.length !== 4 })}></th>
                                 <th colSpan={columns.length < 4 ? columns.length - 1 : 2} className="px-3">
                                     <Button
-                                        color="primary"
+                                        variant="primary"
                                         className="w-100 rounded-pill"
                                         onClick={upgradeLicenseBtnHandler}
                                     >

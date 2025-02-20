@@ -52,5 +52,32 @@ module.exports = {
                 },
             }
         }
-    }
+    },
+    "no-reactstrap-button-color-prop": {
+        meta: {
+            type: "problem",
+            fixable: "code",
+            schema: [],
+        },
+        create(context) {
+            return {
+                JSXOpeningElement: function(node) {
+                    const nodeName = node.name?.name;
+                    if (nodeName === "Button" || nodeName === "ButtonWithSpinner") {
+                        const colorProp = node?.attributes.find(x => x?.name?.name === "color");
+
+                        if (colorProp) {
+                            context.report({
+                                node: node,
+                                message: "'color' is deprecated since we are migrating to react-bootstrap. Use 'variant' prop.",
+                                fix(fixer) {
+                                    return fixer.replaceText(colorProp.name, "variant");
+                                },
+                            });
+                        }
+                    }
+                },
+            };
+        },
+    },
 };

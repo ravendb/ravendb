@@ -8,7 +8,8 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { Button, Collapse, Form, InputGroup, Label, UncontrolledTooltip } from "reactstrap";
+import { Collapse, Form, InputGroup, Label, UncontrolledTooltip } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { EditConflictResolutionSyntaxModal } from "components/pages/database/settings/conflictResolution/EditConflictResolutionSyntaxModal";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -136,7 +137,7 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                             <Label className="d-flex flex-wrap justify-content-between">
                                 Script
                                 <Button
-                                    color="link"
+                                    variant="link"
                                     size="xs"
                                     onClick={toggleIsSyntaxModalOpen}
                                     className="p-0 align-self-end"
@@ -186,10 +187,10 @@ function PanelActions({
         if (isInEditMode) {
             return (
                 <React.Fragment key="actions-in-edit">
-                    <Button type="submit" color="success" title={isNewUnsaved ? "Add Script" : "Update Script"}>
+                    <Button type="submit" variant="success" title={isNewUnsaved ? "Add Script" : "Update Script"}>
                         <Icon icon="tick" margin="m-0" /> {isNewUnsaved ? "Add" : "Update"}
                     </Button>
-                    <Button type="button" color="secondary" title="Discard changes" onClick={discard}>
+                    <Button type="button" variant="secondary" title="Discard changes" onClick={discard}>
                         <Icon icon="cancel" margin="m-0" /> Discard
                     </Button>
                 </React.Fragment>
@@ -199,7 +200,7 @@ function PanelActions({
                 <React.Fragment key="actions-not-in-edit">
                     <Button
                         type="button"
-                        color="secondary"
+                        variant="secondary"
                         title="Edit this script"
                         onClick={() => dispatch(conflictResolutionActions.edited(configId))}
                     >
@@ -207,7 +208,7 @@ function PanelActions({
                     </Button>
                     <Button
                         type="button"
-                        color="danger"
+                        variant="danger"
                         title="Delete this script"
                         onClick={() => dispatch(conflictResolutionActions.deleted(configId))}
                     >
@@ -222,7 +223,7 @@ function PanelActions({
         return (
             <Button
                 type="button"
-                color="secondary"
+                variant="secondary"
                 title="Hide this script"
                 onClick={() => dispatch(conflictResolutionActions.editDiscarded(configId))}
             >
@@ -233,7 +234,7 @@ function PanelActions({
         return (
             <Button
                 type="button"
-                color="secondary"
+                variant="secondary"
                 title="Show this script"
                 onClick={() => dispatch(conflictResolutionActions.edited(configId))}
             >

@@ -2,7 +2,8 @@ import { FormCheckbox, FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import React, { useEffect, useRef, useState, ElementRef, PropsWithChildren } from "react";
 import { FieldPath, FieldValues, Control } from "react-hook-form";
-import { Row, Col, InputGroup, Button, UncontrolledPopover, PopoverBody } from "reactstrap";
+import { Row, Col, InputGroup, UncontrolledPopover, PopoverBody } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { QRCode } from "qrcodejs";
@@ -111,6 +112,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                             {!isReadOnly && (
                                 <Button
                                     type="button"
+                                    variant="secondary"
                                     title="Regenerate key"
                                     onClick={() => asyncGenerateSecret.execute(true)}
                                 >
@@ -120,6 +122,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                         </InputGroup>
                         <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                             <Button
+                                variant="secondary"
                                 type="button"
                                 title="Copy to clipboard"
                                 onClick={() =>
@@ -138,8 +141,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                             <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                                 <Button
                                     type="button"
-                                    block
-                                    color="primary"
+                                    variant="primary"
                                     size="sm"
                                     onClick={() => fileDownloader.downloadAsTxt(keyText, fileName)}
                                     disabled={!isEncryptionKeyValid}
@@ -153,7 +155,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                             <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                                 <Button
                                     type="button"
-                                    block
+                                    variant="secondary"
                                     size="sm"
                                     onClick={() =>
                                         printEncryptionKey(keyText, fileName, qrContainerRef.current.innerHTML)

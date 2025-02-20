@@ -3,7 +3,8 @@ import genUtils from "common/generalUtils";
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
-import { ButtonGroup, UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem, Button } from "reactstrap";
+import { ButtonGroup, UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { useAppSelector } from "components/store";
 import { documentRevisionsActions } from "./store/documentRevisionsSlice";
 import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
@@ -74,7 +75,7 @@ export default function DocumentRevisionsSelectActions() {
                         </UncontrolledDropdown>
 
                         <Button
-                            color="danger"
+                            variant="danger"
                             onClick={() => dispatch(documentRevisionsActions.selectedConfigsDeleted())}
                             className="rounded-pill flex-grow-0"
                         >
@@ -83,7 +84,7 @@ export default function DocumentRevisionsSelectActions() {
                     </ButtonGroup>
                     <Button
                         onClick={() => dispatch(documentRevisionsActions.allSelectedConfigNamesToggled())}
-                        color="link"
+                        variant="link"
                     >
                         Cancel
                     </Button>

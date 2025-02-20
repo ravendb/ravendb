@@ -6,7 +6,8 @@ import {
     RichPanelName,
     RichPanelActions,
 } from "components/common/RichPanel";
-import { Button, UncontrolledTooltip } from "reactstrap";
+import { UncontrolledTooltip } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { Connection } from "./connectionStringsTypes";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -69,7 +70,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                     {hasDatabaseAdminAccess && (
                         <RichPanelActions>
                             <Button
-                                color="secondary"
+                                variant="secondary"
                                 title="Edit connection string"
                                 onClick={() => dispatch(connectionStringsActions.editConnectionModalOpened(connection))}
                             >
@@ -77,7 +78,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                             </Button>
                             <div id={deleteButtonId}>
                                 <ButtonWithSpinner
-                                    color="danger"
+                                    variant="danger"
                                     title="Delete connection string"
                                     disabled={isDeleteDisabled}
                                     onClick={onDelete}

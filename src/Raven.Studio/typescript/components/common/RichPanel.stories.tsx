@@ -14,7 +14,8 @@ import {
 import React from "react";
 import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
-import { Button, Collapse } from "reactstrap";
+import { Collapse } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import {
     DistributionItem,
     DistributionLegend,
@@ -46,8 +47,8 @@ const Template = (args: { withCheckbox: boolean }) => {
                     <RichPanelName>This is header</RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
-                    <Button>Actions are placed here</Button>
-                    <Button color="shard" onClick={toggleOpen} outline={!open}>
+                    <Button variant="secondary">Actions are placed here</Button>
+                    <Button variant={!open ? "outline-shard" : "shard"} onClick={toggleOpen}>
                         <Icon icon="sharding" margin="m-0" />
                     </Button>
                 </RichPanelActions>

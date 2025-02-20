@@ -5,8 +5,9 @@ import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import React from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { Form, Button } from "reactstrap";
+import { Form } from "reactstrap";
 import * as yup from "yup";
+import Button from "react-bootstrap/Button";
 
 interface UnusedIdsFormProps {
     ids: string[];
@@ -32,7 +33,7 @@ export default function UnusedIdsForm(props: UnusedIdsFormProps) {
         <Form onSubmit={handleSubmit(onAddId)}>
             <div className="d-flex gap-3 my-2">
                 <FormInput control={control} name="id" type="text" placeholder="Enter database ID to add" />
-                <Button type="submit" color="primary" title="Add ID to the list">
+                <Button type="submit" variant="primary" title="Add ID to the list">
                     <Icon icon="plus" /> Add ID
                 </Button>
             </div>
@@ -46,7 +47,7 @@ export default function UnusedIdsForm(props: UnusedIdsFormProps) {
                                 <div className="flex-grow-1">{id}</div>
                                 <div className="d-flex gap-1">
                                     <Button
-                                        color="link"
+                                        variant="link"
                                         size="xs"
                                         onClick={() => copyToClipboard.copy(id, `Copied ${id} vector to clipboard`)}
                                         className="p-0"
@@ -55,7 +56,7 @@ export default function UnusedIdsForm(props: UnusedIdsFormProps) {
                                         <Icon icon="copy-to-clipboard" margin="m-0" />
                                     </Button>
                                     <Button
-                                        color="link"
+                                        variant="link"
                                         size="xs"
                                         onClick={() => removeId(id)}
                                         className="p-0"

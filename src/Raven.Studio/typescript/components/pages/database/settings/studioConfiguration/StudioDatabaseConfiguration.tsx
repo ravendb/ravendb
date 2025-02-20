@@ -98,7 +98,7 @@ export default function StudioDatabaseConfiguration() {
                             <div id="saveStudioConfiguration" className="w-fit-content">
                                 <ButtonWithSpinner
                                     type="submit"
-                                    color="primary"
+                                    variant="primary"
                                     className="mb-3"
                                     icon="save"
                                     disabled={!formState.isDirty}

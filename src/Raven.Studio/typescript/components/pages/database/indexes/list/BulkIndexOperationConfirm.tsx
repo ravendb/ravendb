@@ -1,5 +1,6 @@
 ﻿import React, { ReactNode, useState } from "react";
-import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { IndexSharedInfo } from "components/models/indexes";
 import {
     DatabaseActionContexts,
@@ -77,7 +78,7 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                     />
                 </div>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+                    <CloseButton onClick={toggle} />
                 </div>
                 {indexGroups.map((indexGroup, idx) => (
                     <div key={"indexGroup" + idx}>
@@ -129,10 +130,10 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                 )}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="link-muted">
+                <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
-                <Button color={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
+                <Button variant={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
                     <Icon icon={icon} /> {infinitive}
                 </Button>
             </ModalFooter>

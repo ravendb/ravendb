@@ -1,6 +1,6 @@
 ﻿import React, { ReactNode } from "react";
 import { RichPanelHeader } from "components/common/RichPanel";
-import { Button, Col, Row } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import IconName from "../../../../../../typings/server/icons";
@@ -11,6 +11,7 @@ import licenseModel from "models/auth/licenseModel";
 import { AsyncState } from "react-async-hook";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
+import Button from "react-bootstrap/Button";
 
 const supportImg = require("Content/img/pages/about/support.svg");
 const supportCharacterImg = require("Content/img/pages/about/supportCharacter.svg");
@@ -83,7 +84,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                             Get help and connect with fellow users and RavenDB developers through our community forum.
                         </p>
                         <Button
-                            outline
+                            variant="outline-secondary"
                             href={aboutPageUrls.askCommunity}
                             className="rounded-pill align-self-center px-3"
                             target="_blank"
@@ -117,7 +118,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                             </SupportAdvantage>
                         </Row>
                         <Button
-                            color="success"
+                            variant="success"
                             className="px-4 rounded-pill mt-4"
                             size="lg"
                             href={upgradeLink}
@@ -175,7 +176,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                                         {isPaidSupport && (
                                             <Button
                                                 className="rounded-pill"
-                                                color={isCloud ? "cloud" : "primary"}
+                                                variant={isCloud ? "cloud" : "primary"}
                                                 href={
                                                     isCloud
                                                         ? aboutPageUrls.cloudPortal
@@ -208,7 +209,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                             </Col>
                             <Col>
                                 <Button
-                                    outline
+                                    variant="outline-secondary"
                                     href={aboutPageUrls.askCommunity}
                                     className="rounded-pill align-self-center px-3"
                                     target="_blank"
@@ -226,7 +227,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                                     <br />
                                     <small>We’re here for you 24/7</small>
                                 </div>
-                                <Button href={upgradeLink} color="success" className="px-4 rounded-pill" size="lg">
+                                <Button href={upgradeLink} variant="success" className="px-4 rounded-pill" size="lg">
                                     <Icon icon="upgrade-arrow" /> <strong>Upgrade to Production</strong>
                                 </Button>
                             </div>

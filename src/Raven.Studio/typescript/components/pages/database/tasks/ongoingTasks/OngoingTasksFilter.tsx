@@ -3,7 +3,8 @@ import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxTogg
 import { InputItem } from "components/models/common";
 import { produce } from "immer";
 import React from "react";
-import { Input, Button } from "reactstrap";
+import { Input } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 export type OngoingTaskFilterType = "Replication" | "ETL" | "Sink" | "Backup" | "Subscription";
 
@@ -54,7 +55,7 @@ export default function OngoingTasksFilter(props: OngoingTasksFilterProps) {
                     />
                     {filter.searchText && (
                         <div className="clear-button">
-                            <Button color="secondary" size="sm" onClick={() => onSearchTextChange("")}>
+                            <Button variant="secondary" size="sm" onClick={() => onSearchTextChange("")}>
                                 <Icon icon="clear" margin="m-0" />
                             </Button>
                         </div>

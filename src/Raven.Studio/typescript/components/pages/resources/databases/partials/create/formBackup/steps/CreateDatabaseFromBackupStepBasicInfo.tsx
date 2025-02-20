@@ -1,6 +1,7 @@
 import { Icon } from "components/common/Icon";
 import React, { useEffect } from "react";
-import { Row, Col, Button } from "reactstrap";
+import { Row, Col } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { CreateDatabaseFromBackupFormData } from "../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FormInput } from "components/common/Form";
@@ -44,9 +45,8 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                     <Button
                         active={!isSharded}
                         onClick={() => setValue("basicInfoStep.isSharded", false)}
-                        outline
                         className=" me-2 px-4 pt-3 w-100"
-                        color="node"
+                        variant="outline-node"
                     >
                         <Icon icon="database" margin="m-0" className="fs-2" />
                         <br />
@@ -57,8 +57,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                     <Button
                         active={isSharded}
                         onClick={() => setValue("basicInfoStep.isSharded", true)}
-                        color="shard"
-                        outline
+                        variant="outline-shard"
                         className="px-4 pt-3 w-100"
                     >
                         <Icon icon="sharding" margin="m-0" className="fs-2" />
