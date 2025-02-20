@@ -634,12 +634,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.VectorSearch.MaxNumberOfThreadsForLocalEmbeddingsGeneration", ConfigurationEntryScope.ServerWideOnly)]
         public int MaxNumberOfThreadsForLocalEmbeddingsGeneration { get; set; }
         
-        [Description("TODO")]
-        [DefaultValue("ONNX")]
-        [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultAiTask", ConfigurationEntryScope.ServerWideOnly)]
-        public string DefaultAiTask { get; set; }
-        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

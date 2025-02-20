@@ -346,7 +346,7 @@ public class RavenDB_23464(ITestOutputHelper output) : RavenTestBase(output)
     {
         public LoadVectorCsharpIndexBase()
         {
-            Map = dtos => dtos.Select(d => new { Vector = LoadVector("d.Text") });
+            Map = dtos => dtos.Select(d => new { Vector = LoadVector("etlTaskName", "d.Text") });
         }
     }
 
@@ -403,7 +403,7 @@ public class RavenDB_23464(ITestOutputHelper output) : RavenTestBase(output)
         public LoadVectorCounterIndexBase()
         {
             AddMapForAll(counters => from counter in counters
-                select new { HeartBeat = counter.Value, Name = counter.Name, User = counter.DocumentId, Vector = LoadVector("counter.Name") });
+                select new { HeartBeat = counter.Value, Name = counter.Name, User = counter.DocumentId, Vector = LoadVector("etlTaskName", "counter.Name") });
         }
     }
 
@@ -431,7 +431,7 @@ public class RavenDB_23464(ITestOutputHelper output) : RavenTestBase(output)
                 "HeartRate",
                 timeSeries => from ts in timeSeries
                     from entry in ts.Entries
-                    select new { HeartBeat = entry.Values[0], entry.Timestamp.Date, User = ts.DocumentId, Vector = LoadVector("MyVec") });
+                    select new { HeartBeat = entry.Values[0], entry.Timestamp.Date, User = ts.DocumentId, Vector = LoadVector("etlTaskName", "MyVec") });
         }
     }
 }

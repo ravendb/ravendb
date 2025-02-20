@@ -55,13 +55,5 @@ public sealed class VectorOptionsFactory
     {
         _vectorOptions.NumberOfEdges = numberOfEdges;
         return this;
-    }    
-    
-    public VectorOptionsFactory AiIntegrationIndentifier(string aiIntegrationTaskName)
-    {
-        _vectorOptions.AiIntegrationIdentifier = aiIntegrationTaskName;
-        return this;
     }
 }
-
-

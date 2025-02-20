@@ -49,12 +49,10 @@ public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegra
         public SimpleMapReduceIndex()
         {
             Map = dtos => from dto in dtos
-                select new Result() { Name = dto.Name, Vector = LoadVector("Description") };
+                select new Result() { Name = dto.Name, Vector = LoadVector(AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName), "Description") };
             Reduce = results => from result in results
                 group result by result.Name into g
                 select new Result() { Name = g.Key, Vector = CreateVector(g.Select(p => p.Vector)) };
-
-            Vector("Vector", f => f.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName)));
         }
         
         public class Result

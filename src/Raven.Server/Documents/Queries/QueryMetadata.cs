@@ -2544,7 +2544,6 @@ function execute(doc, args){
                         SourceFieldName = fieldName, 
                         DestinationEmbeddingType = embedding.Destination, 
                         SourceEmbeddingType = embedding.Source,
-                        AiIntegrationIdentifier = aiIntegrationTaskName
                     };
                     
                     _metadata.AddWhereField(new(AutoIndexField.GetVectorAutoIndexFieldName(fieldName, vectorOptions), false), parameters, exact: _insideExact > 0, vector: vectorOptions);

@@ -795,9 +795,7 @@ public class RavenDB_22076 : RavenTestBase
         public SomeIndex(string aiTaskName)
         {
             Map = dtos => from dto in dtos
-                select new IndexEntry { TextualValueVector = LoadVector("TextualValue") };
-            
-            Vector("TextualValueVector", factory => factory.AiIntegrationIndentifier(aiTaskName));
+                select new IndexEntry { TextualValueVector = LoadVector(aiTaskName, "TextualValue") };
         }
     }
 }

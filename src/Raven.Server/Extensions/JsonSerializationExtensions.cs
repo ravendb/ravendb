@@ -82,7 +82,6 @@ namespace Raven.Server.Extensions
                     vector[nameof(VectorOptions.DestinationEmbeddingType)] = kvp.Value.Vector.DestinationEmbeddingType.ToString();
                     vector[nameof(VectorOptions.NumberOfEdges)] = kvp.Value.Vector.NumberOfEdges?.ToString();
                     vector[nameof(VectorOptions.NumberOfCandidatesForIndexing)] = kvp.Value.Vector.NumberOfCandidatesForIndexing?.ToString();
-                    vector[nameof(VectorOptions.AiIntegrationIdentifier)] = kvp.Value.Vector.AiIntegrationIdentifier;
                 }
 
                 var field = new DynamicJsonValue();

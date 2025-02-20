@@ -273,14 +273,6 @@ namespace Raven.Server.Json.Sync
                 else
                     writer.WriteNull();
                 
-                writer.WriteComma();
-                
-                writer.WritePropertyName(nameof(options.Vector.AiIntegrationIdentifier));
-                if (options.Vector.AiIntegrationIdentifier is not null)
-                    writer.WriteString(options.Vector.AiIntegrationIdentifier);
-                else
-                    writer.WriteNull();
-                
                 writer.WriteEndObject();
             }
             else

@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Vector;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Sparrow.Server;
@@ -12,7 +10,6 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static Raven.Server.Documents.QueueSink.Commands.BatchQueueSinkScriptCommand;
 
 namespace SlowTests.Server.Documents.AI;
 
@@ -64,7 +61,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
                 .VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByText("joe"))
                 .ToList();
-
+WaitForUserToContinueTheTest(store);
             Assert.Single(byVector);
         }
 
@@ -276,9 +273,8 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         public IndexByName()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("Name") };
+                select new { Vector = LoadVector("localaitask", "Name") };
 
-            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName)));
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -292,13 +288,11 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
                 $@"map('Dtos', function (doc) {{
                 return {{
                     Id: id(doc),
-                    Vector: loadVector('Name'),
+                    Vector: loadVector('localaitask', 'Name'),
                 }};
             }})"
             };
 
-            Fields = new Dictionary<string, IndexFieldOptions>();
-            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationIdentifier = AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName) } });
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -308,9 +302,8 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         public IndexByNames()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("Names") };
+                select new { Vector = LoadVector("localaitask", "Names") };
 
-            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName)));
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -324,13 +317,11 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
                 $@"map('Dtos', function (doc) {{
                 return {{
                     Id: id(doc),
-                    Vector: loadVector('Names'),
+                    Vector: loadVector('localaitask','Names'),
                 }};
             }})"
             };
 
-            Fields = new Dictionary<string, IndexFieldOptions>();
-            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationIdentifier = AiIntegrationConfiguration.GenerateIdentifier(DefaultAiIntegrationTaskName) } });
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -341,10 +332,9 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         public IndexByFieldTwoFields()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("Name"), Vector2 = LoadVector("Names") };
+                select new { Vector = LoadVector("v1", "Name"), 
+                    Vector2 = LoadVector("v2", "Names") };
 
-            Vector(nameof(Dto.Vector), factory => factory.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier("V1")));
-            Vector(nameof(Dto.Vector2), factory => factory.AiIntegrationIndentifier(AiIntegrationConfiguration.GenerateIdentifier("V2")));
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
@@ -358,16 +348,12 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
                 $@"map('Dtos', function (doc) {{
                 return {{
                     Id: id(doc),
-                    Vector: loadVector('Name'),
-                    Vector2: loadVector('Names')
+                    Vector: loadVector('v1','Name'),
+                    Vector2: loadVector('v2', 'Names')
                 }};
             }})"
             };
-
-            Fields = new Dictionary<string, IndexFieldOptions>();
-            Fields.Add("Vector", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationIdentifier = AiIntegrationConfiguration.GenerateIdentifier("V1") } });
-            Fields.Add("Vector2", new IndexFieldOptions() { Vector = new VectorOptions() { AiIntegrationIdentifier = AiIntegrationConfiguration.GenerateIdentifier("V2") } });
-
+            
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }
