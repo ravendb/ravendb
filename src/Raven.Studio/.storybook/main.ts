@@ -47,6 +47,10 @@ const config: StorybookConfig = {
             };
         }
 
+        // Ensure a shared runtime for all entries
+        config.optimization ??= {};
+        config.optimization.runtimeChunk = "single";
+
         if (typeof config.entry === "object") {
             // the default style is the last one so it's also initial
             config.entry = {
