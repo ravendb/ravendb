@@ -2,13 +2,10 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Util;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.TransactionMerger;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
@@ -26,8 +23,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private static readonly TableSchema BackupStatusTableSchema = new();
 
         private static readonly Slice BackupStatusSlice;
-
-        public SystemTime Time = new SystemTime();
 
         private readonly ServerStore _serverStore;
 
@@ -120,29 +115,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     table.Set(tvb);
                 }
             }
-        }
-
-        public bool DeleteBackupStatusesByTaskIds(string databaseName, string dbId, HashSet<long> taskIds)
-        {
-            try
-            {
-                _serverStore.Engine.TxMerger.EnqueueSync(new DeleteLocalBackupStatusesCommand(taskIds, databaseName, dbId));//TODO stav: does this wait until finish
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(
-                        $"{databaseName}: Deleted local backup statuses for the following ids [{string.Join(",", taskIds)}], because node with db id {dbId} is not responsible anymore and is overdue for a full backup.");
-            }
-            catch (Exception ex)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(
-                        $"{databaseName}: Could not delete the local backup statuses for the following ids [{string.Join(",", taskIds)}]. We will not remove any tombstones.",
-                        ex);
-
-                return false;
-            }
-
-            return true;
         }
 
         public static void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)

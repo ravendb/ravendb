@@ -21,12 +21,15 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
     public override async ValueTask ExecuteAsync()
     {
         var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-        var fetchLocalStatus = RequestHandler.GetBoolValueQueryString("fetchLocalStatus", required: false) ?? false;
+        var type = RequestHandler.GetStringQueryString("type", required: false) ?? StatusType.Cluster.ToString();
 
         if (await RequestHandler.CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
             return;
 
         var taskId = RequestHandler.GetLongQueryString("taskId", required: true);
+
+        if (StatusType.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
+            throw new ArgumentException($"provided '{type}' has to be `{StatusType.Cluster.ToString()}` or '{StatusType.Local.ToString()}'");
 
         using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
@@ -42,7 +45,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
                 foreach (var shardNumber in dbRecord.Sharding.Shards.Keys)
                 {
                     var dbName = ShardHelper.ToShardName(name, shardNumber);
-                    var status = fetchLocalStatus
+                    var status = statusType == StatusType.Local
                         ? BackupUtils.GetLocalBackupStatusBlittable(ServerStore, context, dbName, taskId.Value)
                         : BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, dbName, taskId.Value);
                     
@@ -55,7 +58,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
             }
             else
             {
-                var status = fetchLocalStatus
+                var status = statusType == StatusType.Local
                     ? BackupUtils.GetLocalBackupStatusBlittable(ServerStore, context, name, taskId.Value)
                     : BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, name, taskId.Value);
                 toDispose.Add(status);
@@ -75,5 +78,11 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
             }
 
         }
+    }
+
+    enum StatusType
+    {
+        Local,
+        Cluster
     }
 }
