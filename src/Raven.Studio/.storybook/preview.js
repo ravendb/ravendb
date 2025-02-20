@@ -1,7 +1,4 @@
-﻿import "../wwwroot/Content/css/bs5-styles.scss";
-import "../wwwroot/Content/css/styles.less"
-
-import { overrideViews } from "../typescript/overrides/views";
+﻿import { overrideViews } from "../typescript/overrides/views";
 import { overrideComposition } from "../typescript/overrides/composition";
 import { overrideSystem } from "../typescript/overrides/system";
 
