@@ -25,6 +25,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.EventListener;
 using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -181,6 +182,16 @@ namespace FastTests
             configuration.Logs.MinLevel = LogLevel.Off;
 
             RavenLogManager.Instance.ConfigureLogging(configuration);
+
+            TrafficWatchToLog.Instance.UpdateConfiguration(RavenConfiguration.Default.TrafficWatch);
+            EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration
+            {
+                EventListenerMode = configuration.DebugConfiguration.EventListenerMode,
+                EventTypes = configuration.DebugConfiguration.EventTypes,
+                MinimumDurationInMs = configuration.DebugConfiguration.MinimumDuration.GetValue(TimeUnit.Milliseconds),
+                AllocationsLoggingIntervalInMs = configuration.DebugConfiguration.AllocationsLoggingInterval.GetValue(TimeUnit.Milliseconds),
+                AllocationsLoggingCount = configuration.DebugConfiguration.AllocationsLoggingCount
+            });
         }
 
         protected TestBase(ITestOutputHelper output) : base(output)
