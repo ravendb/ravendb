@@ -324,12 +324,19 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                     var prefix = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(_aiIntegrationIdentifier, currentPath);
                     var namesOfNewAttachments = new DynamicJsonArray();
                     
+                    // todo better handling
+                    var alreadyAddedAttachments = new HashSet<string>();
+                    
                     foreach (var embedding in generatedEmbeddings)
                     {
                         ref var attachmentName = ref CollectionsMarshal.GetValueRefOrAddDefault(localEmbeddingCache, embedding.TextualValue, out _);
                         attachmentName ??= _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, embedding, operationStartDate);
                         embedding.ValueEmbeddingsSourceAttachmentName = attachmentName;
                         embedding.SetPrefix(prefix);
+                        
+                        if (alreadyAddedAttachments.Add(embedding.ValueEmbeddingsDestinationAttachmentName) == false)
+                            continue;
+                        
                         namesOfNewAttachments.Add(embedding.ValueEmbeddingsDestinationAttachmentName);
                     }
                     
@@ -348,9 +355,15 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                     // Insert new embeddings
                     foreach (var embeddingsByPath in document.Values)
                     {
+                        // todo better handling
+                        var alreadyAddedAttachments = new HashSet<string>();
+                        
                         var namesOfCurrentAttachments = currentAttachmentsOfEmbeddingsFromThisTransformer.GetValueOrDefault(embeddingsByPath.Key);
                         foreach (var embedding in embeddingsByPath.Value)
                         {
+                            if (alreadyAddedAttachments.Add(embedding.ValueEmbeddingsSourceAttachmentName) == false)
+                                continue;
+                            
                             // When true:
                             //  This embedding is already in the embeddings document. Therefore, we do not have to insert it again.
                             //  At the same time, we are removing it from the list of attachments to remove (essentially a no-op on attachment storage in case of an update).

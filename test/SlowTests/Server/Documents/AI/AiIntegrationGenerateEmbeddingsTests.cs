@@ -291,8 +291,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.Store(dto);
                 session.SaveChanges();
             }
-
-
+            
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = RegisterAiIntegration(store);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
@@ -479,7 +478,6 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
     [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestTransformation()
     {
-        const string connectionStringName = "connection string name";
         const string aiIntegrationName = "local-Onnx-AI";
         var dto = new Dto { Name = "Name1" };
 
@@ -501,64 +499,10 @@ embeddings.generate(
 });");
 
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-
-            using (var session = store.OpenSession())
-            {
-                var fooValueHash = AiHelper.CalculateValueHash(dto.Name);
-                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(new AiConnectionStringIdentifier(connectionString.Identifier), fooValueHash);
-                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
-
-                WaitForUserToContinueTheTest(store);
-
-                var expectedFooAttachmentName = (string)((dynamic)valueEmbeddingsDocument).Name1;
-
-                var attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
-
-                Assert.Single(attachmentNames);
-                Assert.Equal(expectedFooAttachmentName, attachmentNames[0].Name);
-
-                var barValueHash = AiHelper.CalculateValueHash("ConstValue");
-
-                WaitForUserToContinueTheTest(store);
-
-                valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(new AiConnectionStringIdentifier(connectionString.Identifier), barValueHash);
-                valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
-
-                var expectedBarAttachmentName = (string)((dynamic)valueEmbeddingsDocument).ConstValue;
-
-                attachmentNames = session.Advanced.Attachments.GetNames(valueEmbeddingsDocument);
-
-                Assert.Single(attachmentNames);
-                Assert.Equal(expectedBarAttachmentName, attachmentNames[0].Name);
-
-                var embeddingsDocumentId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
-                var embeddingsDocument = session.Load<object>(embeddingsDocumentId);
-
-                var aiIntegrationIdentifier = new AiIntegrationIdentifier(configuration.Identifier);
-
-                var configurationValues = ((dynamic)embeddingsDocument)[aiIntegrationIdentifier.Value];
-
-                var attachmentNamesForFooPropertyJArray = (JArray)configurationValues.Foo;
-                var attachmentNamesForFooProperty = attachmentNamesForFooPropertyJArray.ToObject<string[]>();
-
-                Assert.Single(attachmentNamesForFooProperty);
-                Assert.Equal(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationIdentifier, "Foo") + expectedFooAttachmentName, attachmentNamesForFooProperty[0]);
-
-
-                var attachmentNamesForBarPropertyJArray = (JArray)configurationValues.Bar;
-                var attachmentNamesForBarProperty = attachmentNamesForBarPropertyJArray.ToObject<string[]>();
-
-                Assert.Single(attachmentNamesForBarProperty);
-                Assert.Equal(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationIdentifier, "Bar") + expectedBarAttachmentName, attachmentNamesForBarProperty[0]);
-
-                attachmentNames = session.Advanced.Attachments.GetNames(embeddingsDocument);
-                var attachmentNamesStringList = attachmentNames.Select(x => x.Name).ToList();
-
-                Assert.Equal(2, attachmentNames.Length);
-                Assert.NotEqual(expectedFooAttachmentName, expectedBarAttachmentName);
-                Assert.Contains(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationIdentifier, "Foo") + expectedFooAttachmentName, attachmentNamesStringList);
-                Assert.Contains(AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(aiIntegrationIdentifier, "Bar") + expectedBarAttachmentName, attachmentNamesStringList);
-            }
+            
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Foo", ["Name1"], dto.Id);
+            
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Bar", ["ConstValue"], dto.Id);
         }
     }
 
@@ -571,6 +515,7 @@ embeddings.generate(
     {
         const string plainTextToChunk =
             "text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk";
+        string[] expectedChunks = ["text to chunk", "text to chunk text", "to chunk text to", "chunk text to chunk"];
 
         var dto = new Dto { Name = plainTextToChunk };
 
@@ -584,25 +529,12 @@ embeddings.generate(
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
-            var (configuration, _) = RegisterAiIntegration(store,
+            var (configuration, connectionString) = RegisterAiIntegration(store,
                 script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 5) });");
-
-            aiTaskDone.Wait(TimeSpan.FromSeconds(20));
-            using (var session = store.OpenSession())
-            {
-                var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
-                var documentEmbeddings = session.Load<object>(documentEmbeddingsId);
-
-                WaitForUserToContinueTheTest(store);
-
-                Assert.NotNull(documentEmbeddings);
-
-                var configurationValues = ((dynamic)documentEmbeddings)[configuration.Name];
-                var attachmentNamesForChunkedNamePropertyJArray = (JArray)configurationValues.ChunkedName;
-                var attachmentNamesForNameProperty = attachmentNamesForChunkedNamePropertyJArray.ToObject<string[]>();
-
-                Assert.Equal(8, attachmentNamesForNameProperty.Length);
-            }
+            
+            aiTaskDone.Wait(TimeSpan.FromSeconds(20000));
+            
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
         }
     }
 #pragma warning restore SKEXP0050
