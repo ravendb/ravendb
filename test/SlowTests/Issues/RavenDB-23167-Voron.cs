@@ -161,7 +161,9 @@ namespace SlowTests.Issues
                     int mid = entities.Count / 2;
                     entity = entities[mid];
                     AssertSeekBackwardForFixedSizeTrees(table, etagsIndex, endEtag: entity.Etag, empty: false, expectedEtag: entity.Etag);
-                    var expectedEtag = entities[mid + 1].Etag == entities[mid].Etag + 1 ? entities[mid].Etag + 1 : entities[mid].Etag;
+                    var expectedEtag = entities[mid].Etag;
+                    if(entities[mid + 1].Etag == entities[mid].Etag + 1)
+                        expectedEtag = entities[mid].Etag + 1;
                     AssertSeekBackwardForFixedSizeTrees(table, etagsIndex, endEtag: entity.Etag + 1, empty: false, expectedEtag: expectedEtag);
 
                     entity = entities.Last();
@@ -176,8 +178,10 @@ namespace SlowTests.Issues
                     mid = users.Count / 2;
                     user = users[mid];
                     AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag, empty: false, expectedEtag: user.Etag);
-                    var userExpectedEtag = users[mid + 1].Etag == users[mid].Etag + 1 ? users[mid].Etag + 1 : users[mid].Etag;
-                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag + 1, empty: false, expectedEtag: userExpectedEtag);
+                    var userExpectedEtag = users[mid].Etag;
+                    if (users[mid + 1].Etag == users[mid].Etag + 1 && users[mid + 1].Id == users[mid].Id)
+                        userExpectedEtag = users[mid].Etag + 1;
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag + 1, empty: false, expectedEtag: userExpectedEtag); //
 
                     user = users.Last();
                     AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag, empty: false, expectedEtag: user.Etag);
@@ -191,7 +195,9 @@ namespace SlowTests.Issues
                     mid = companies.Count / 2;
                     company = companies[mid];
                     AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, company.Id, endEtag: company.Etag, empty: false, expectedEtag: company.Etag);
-                    var companyExpectedEtag = companies[mid + 1].Etag == companies[mid].Etag + 1 ? companies[mid].Etag + 1 : companies[mid].Etag;
+                    var companyExpectedEtag = companies[mid].Etag;
+                    if(companies[mid + 1].Etag == companies[mid].Etag + 1 && companies[mid + 1].Id == companies[mid].Id)
+                        companyExpectedEtag = companies[mid].Etag + 1;
                     AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, company.Id, endEtag: company.Etag + 1, empty: false, expectedEtag: companyExpectedEtag);
 
                     company = companies.Last();
@@ -216,9 +222,15 @@ namespace SlowTests.Issues
             {
                 Assert.NotEmpty(keys);
                 var lastLocalKey = keys[0];
-            
+
                 if (expectedEtag.HasValue)
+                {
+                    if (expectedEtag.Value != lastLocalKey)
+                    {
+
+                    }
                     Assert.Equal(expectedEtag.Value, lastLocalKey);
+                }
                 else
                     Assert.True(endEtag >= lastLocalKey, $"endEtag {endEtag}, lastLocalEtag: {lastLocalKey}");
             }
@@ -247,9 +259,15 @@ namespace SlowTests.Issues
                     var tvr = seekResults[0].Result.Reader;
 
                     var lastLocalEtag = DocumentsStorage.TableValueToEtag((int)TestTable.Etag, ref tvr);
-                    
+
                     if (expectedEtag.HasValue)
+                    {
+                        if (expectedEtag.Value != lastLocalEtag)
+                        {
+
+                        }
                         Assert.Equal(expectedEtag.Value, lastLocalEtag);
+                    }
                     else
                         Assert.True(endEtag >= lastLocalEtag, $"endEtag {endEtag}, lastLocalEtag: {lastLocalEtag}");
                     
