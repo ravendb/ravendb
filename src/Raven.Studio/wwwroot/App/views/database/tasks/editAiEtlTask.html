@@ -129,6 +129,36 @@
                             </ul>
                         </div>
                     </div>
+
+                    <div class="margin-bottom-sm" data-bind="visible: transformScriptCollections().length === 0">
+                        <label><strong>Collection:</strong></label>
+                        <div class="flex-horizontal">
+                            <div class="flex-grow">
+                                <div class="dropdown btn-block flex-grow">
+                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
+                                    data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                                    data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
+                                    <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                        <a role="menuitem" tabindex="-1" href="#">
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                        <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
+                                    </li>
+                                </ul>
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
+                                    <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()">
+                                <i class="icon-plus"></i><span>Add Collection</span>
+                            </button>
+                            </div>
+                        </div>
+                    </div>
     
                     <div data-bind="if: embeddingsSource() === 'paths'">
                         <div class="form-group">
@@ -168,36 +198,8 @@
                             </div>
                         </div>
                     </div>
-                        <div class="margin-bottom-sm margin-top-sm">
-                        <div class="margin-bottom-sm" data-bind="visible: transformScriptCollections().length === 0">
-                            <label><strong>Collection:</strong></label>
-                            <div class="flex-horizontal">
-                                <div class="flex-grow">
-                                    <div class="dropdown btn-block flex-grow">
-                                        <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
-                                        data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
-                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                        <ul class="dropdown-menu" role="menu" style="display: none;"
-                                        data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
-                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
-                                            <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
-                                            </a>
-                                            <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
-                                        </li>
-                                    </ul>
-                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
-                                        <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()">
-                                    <i class="icon-plus"></i><span>Add Collection</span>
-                                </button>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="margin-bottom-sm margin-top-sm">
+                        
                         <div data-bind="visible: transformScriptCollections().length" class="margin-top-sm">
                             <label><strong>Collection:</strong></label>
                             <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
@@ -215,7 +217,7 @@
                     <div class="flex-horizontal margin-top-sm">
                         <div class="flex-separator"></div>
                         <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test script area">
-                            <i class="icon-rocket"></i> <span>Test script</span>
+                            <i class="icon-rocket"></i> <span>Test</span>
                         </button>
                     </div>
                 </div>
