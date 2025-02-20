@@ -49,7 +49,7 @@ namespace Raven.Server.Web.System
             var taskId = GetLongQueryString("taskId", required: true);
 
             if (StatusType.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
-                throw new ArgumentException($"provided '{type}' has to be `{StatusType.Cluster.ToString()}` or '{StatusType.Local.ToString()}'");
+                throw new ArgumentException($"provided '{nameof(type)}' has to be `{StatusType.Cluster.ToString()}` or '{StatusType.Local.ToString()}'");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
