@@ -29,7 +29,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
         var taskId = RequestHandler.GetLongQueryString("taskId", required: true);
 
         if (StatusType.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
-            throw new ArgumentException($"provided '{type}' has to be `{StatusType.Cluster.ToString()}` or '{StatusType.Local.ToString()}'");
+            throw new ArgumentException($"provided '{nameof(type)}' has to be `{StatusType.Cluster.ToString()}` or '{StatusType.Local.ToString()}'");
 
         using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
