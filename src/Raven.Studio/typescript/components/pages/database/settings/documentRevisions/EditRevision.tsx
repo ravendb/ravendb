@@ -206,8 +206,8 @@ export default function EditRevision(props: EditRevisionProps) {
                     <RichAlert variant="primary" title="Summary" className="mt-2">
                         <ul className="m-0 ps-2 vstack gap-1">
                             <li>
-                                A revision will be created anytime a document is created, modified,
-                                {!formValues.isPurgeOnDeleteEnabled && <span> or deleted</span>}.
+                                A revision will be created anytime a document is created
+                                {formValues.isPurgeOnDeleteEnabled ? " or modified." : ", modified, or deleted."}
                             </li>
                             {formValues.isPurgeOnDeleteEnabled ? (
                                 <li>When a document is deleted all its revisions will be removed.</li>
