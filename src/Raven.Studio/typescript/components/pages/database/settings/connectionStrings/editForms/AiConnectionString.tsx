@@ -116,7 +116,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                                 { label: "Google AI", value: "googleSettings", icon: "google-gemini" },
                                 { label: "Hugging Face", value: "huggingFaceSettings", icon: "huggingface" },
                                 { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
-                                { label: "ONNX (local)", value: "onnxSettings", icon: "onnx" },
+                                { label: "Embedded (bge-micro-v2)", value: "onnxSettings", icon: "onnx" },
                                 { label: "OpenAI", value: "openAiSettings", icon: "openai" },
                                 { label: "Mistral AI", value: "mistralaiAiSettings", icon: "mistralai" },
                             ] satisfies SelectOptionWithIcon<FormData["connectorType"]>[]
