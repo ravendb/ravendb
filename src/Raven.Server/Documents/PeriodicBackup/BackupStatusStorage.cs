@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public static PeriodicBackupStatus GetBackupStatus(string databaseName, string dbId, long taskId, TransactionOperationContext context)
+        public static PeriodicBackupStatus GetBackupStatus<T>(string databaseName, string dbId, long taskId, TransactionOperationContext<T> context) where T : RavenTransaction
         {
             PeriodicBackupStatus periodicBackup = null;
             using (var backupStatusBlittable = GetBackupStatusBlittable(context, databaseName, dbId, taskId))
@@ -117,27 +117,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     table.Set(tvb);
                 }
             }
-        }
-
-        public bool DeleteBackupStatusesByTaskIds(string databaseName, string dbId, HashSet<long> taskIds)
-        {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromMinutes(1)))
-            {
-                var table = ctx.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
-                foreach (var taskId in taskIds)
-                {
-                    var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
-                    using (Slice.From(ctx.Allocator, backupKey.ToLowerInvariant(), out Slice key))
-                    {
-                        table.DeleteByKey(key);
-                    }
-                }
-
-                tx.Commit();
-            }
-
-            return true;
         }
 
         public static void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)

@@ -41,16 +41,19 @@ namespace Raven.Server.Web.System
         public async Task GetPeriodicBackupStatus()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var fetchLocalStatus = GetBoolValueQueryString("fetchLocalStatus", required: false) ?? false;
+            var type = GetStringQueryString("type", required: false) ?? StatusType.Cluster.ToString();
 
             if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
                 return;
 
             var taskId = GetLongQueryString("taskId", required: true);
 
+            if (StatusType.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
+                throw new ArgumentException($"provided '{type}' has to be `{StatusType.Cluster.ToString()}` or '{StatusType.Local.ToString()}'");
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var statusBlittable = fetchLocalStatus ? 
+            using (var statusBlittable = statusType == StatusType.Local ? 
                        BackupUtils.GetLocalBackupStatusBlittable(ServerStore, context, name, taskId.Value) :
                        BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, name, taskId.Value))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -60,6 +63,12 @@ namespace Raven.Server.Web.System
                 writer.WriteObject(statusBlittable);
                 writer.WriteEndObject();
             }
+        }
+
+        enum StatusType
+        {
+            Local,
+            Cluster
         }
 
         [RavenAction("/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.Operator)]

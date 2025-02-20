@@ -141,7 +141,7 @@ internal static class BackupUtils
         };
     }
 
-    internal static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
+    internal static PeriodicBackupStatus GetBackupStatusFromCluster<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
     {
         using var statusBlittable = GetBackupStatusFromClusterBlittable(serverStore, context, databaseName, taskId);
 
@@ -569,7 +569,7 @@ internal static class BackupUtils
         }
     }
 
-    public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
+    public static PeriodicBackupStatus GetLocalBackupStatus<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
     {
         var localStatus = BackupStatusStorage.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
         if (localStatus != null)
