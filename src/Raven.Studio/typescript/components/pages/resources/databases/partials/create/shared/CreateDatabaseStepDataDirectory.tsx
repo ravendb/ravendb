@@ -1,6 +1,7 @@
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { InputGroup, InputGroupText, Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import { InputGroup, InputGroupText } from "reactstrap";
 import { FormCheckbox, FormPathSelector } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";

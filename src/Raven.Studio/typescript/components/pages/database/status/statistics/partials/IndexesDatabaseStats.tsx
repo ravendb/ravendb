@@ -2,7 +2,8 @@
 import { withPreventDefault } from "components/utils/common";
 import genUtils from "common/generalUtils";
 import { useEventsCollector } from "hooks/useEventsCollector";
-import { Card, Spinner, Table } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import { Card, Table } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";

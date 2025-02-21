@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import { Icon } from "components/common/Icon";
-import { Card, CardBody, Collapse, Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import { Card, CardBody, Collapse } from "reactstrap";
 import "./CreateSampleData.scss";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsync, useAsyncCallback } from "react-async-hook";

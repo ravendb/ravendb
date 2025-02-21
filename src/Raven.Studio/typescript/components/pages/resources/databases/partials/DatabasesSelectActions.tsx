@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useState } from "react";
-import { ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import { ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { DatabaseSharedInfo } from "components/models/databases";

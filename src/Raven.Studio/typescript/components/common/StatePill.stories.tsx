@@ -2,7 +2,7 @@
 import React from "react";
 import { StatePill } from "./StatePill";
 import { boundCopy } from "../utils/common";
-import { Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Icon } from "./Icon";
 

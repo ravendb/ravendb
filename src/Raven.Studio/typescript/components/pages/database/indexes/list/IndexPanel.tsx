@@ -21,6 +21,7 @@ import {
     RichPanelName,
     RichPanelSelect,
 } from "components/common/RichPanel";
+import Spinner from "react-bootstrap/Spinner";
 import {
     Badge,
     ButtonGroup,
@@ -29,7 +30,6 @@ import {
     DropdownMenu,
     DropdownToggle,
     Input,
-    Spinner,
     UncontrolledDropdown,
     UncontrolledTooltip,
 } from "reactstrap";

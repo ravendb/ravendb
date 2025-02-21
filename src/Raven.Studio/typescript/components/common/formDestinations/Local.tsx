@@ -1,5 +1,6 @@
 ﻿import React from "react";
-import { Card, CardBody, Collapse, Label, Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import { Card, CardBody, Collapse, Label } from "reactstrap";
 import { FormSwitch, FormPathSelector } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";

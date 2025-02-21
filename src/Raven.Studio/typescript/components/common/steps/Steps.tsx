@@ -2,7 +2,7 @@
 import classNames from "classnames";
 import "./Steps.scss";
 import { Icon } from "../Icon";
-import { Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
 
 export interface StepItem {
     label: string;

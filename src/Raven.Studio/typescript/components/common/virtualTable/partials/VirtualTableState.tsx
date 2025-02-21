@@ -1,4 +1,4 @@
-import { Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
 import { EmptySet } from "../../EmptySet";
 
 export interface VirtualTableStateProps {

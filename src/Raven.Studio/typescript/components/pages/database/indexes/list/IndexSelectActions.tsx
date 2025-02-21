@@ -1,6 +1,7 @@
 ﻿import React, { useState } from "react";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import { DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";

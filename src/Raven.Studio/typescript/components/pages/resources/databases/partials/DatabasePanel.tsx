@@ -2,6 +2,7 @@
 import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
+import Spinner from "react-bootstrap/Spinner";
 import {
     ButtonGroup,
     Collapse,
@@ -9,7 +10,6 @@ import {
     DropdownMenu,
     DropdownToggle,
     Input,
-    Spinner,
     UncontrolledDropdown,
 } from "reactstrap";
 import Button from "react-bootstrap/Button";

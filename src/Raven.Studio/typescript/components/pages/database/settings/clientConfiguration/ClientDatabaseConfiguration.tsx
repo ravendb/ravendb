@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
-import { Form, Col, Row, Spinner, Input, InputGroup, UncontrolledPopover, Card } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import { Form, Col, Row, Input, InputGroup, UncontrolledPopover, Card } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitch } from "components/common/Form";
