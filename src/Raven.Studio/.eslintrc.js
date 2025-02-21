@@ -29,6 +29,7 @@ module.exports = {
     "local-rules/mixed-imports": "error",
     "local-rules/no-reactstrap-button-color-prop": "error",
     "local-rules/no-reactstrap-button": "error",
+    "local-rules/no-reactstrap-spinner": "error",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

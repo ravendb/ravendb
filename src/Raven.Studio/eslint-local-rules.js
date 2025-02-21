@@ -162,4 +162,72 @@ module.exports = {
             };
         },
     },
+        "no-reactstrap-spinner": {
+        meta: {
+            type: "problem",
+            fixable: "code",
+            schema: [],
+        },
+        create: function (context) {
+            return {
+                ImportDeclaration(node) {
+                    if (node.source.value !== "reactstrap") {
+                        return;
+                    };
+
+                    const spinnerSpecifiers = node.specifiers.filter(
+                        (specifier) =>
+                            specifier.type === "ImportSpecifier" &&
+                            specifier.imported.name === "Spinner"
+                    );
+
+                    if (spinnerSpecifiers.length === 0) {
+                        return;
+                    }
+
+                    context.report({
+                        node: node,
+                        message: "Spinner import from reactstrap is deprecated. Use 'import Spinner from \"react-bootstrap/Spinner\"' instead.",
+                        fix(fixer) {
+                            const fixes = [];
+                            const sourceCode = context.getSourceCode();
+
+                            if (node.specifiers.length === spinnerSpecifiers.length) {
+                                fixes.push(
+                                    fixer.replaceText(
+                                        node,
+                                        'import Spinner from "react-bootstrap/Spinner";'
+                                    )
+                                );
+                            } else {
+                                spinnerSpecifiers.forEach((specifier) => {
+                                    let [start, end] = specifier.range;
+
+                                    const tokenBefore = sourceCode.getTokenBefore(specifier);
+                                    if (tokenBefore && tokenBefore.value === ",") {
+                                        start = tokenBefore.range[0];
+                                    } else {
+                                        const tokenAfter = sourceCode.getTokenAfter(specifier);
+                                        if (tokenAfter && tokenAfter.value === ",") {
+                                            end = tokenAfter.range[1];
+                                        }
+                                    }
+                                    fixes.push(fixer.removeRange([start, end]));
+                                });
+
+                                fixes.push(
+                                    fixer.insertTextBefore(
+                                        node,
+                                        'import Spinner from "react-bootstrap/Spinner";\n'
+                                    )
+                                );
+                            }
+                            return fixes;
+                        },
+                    });
+                },
+            };
+        },
+    },
+
 };
