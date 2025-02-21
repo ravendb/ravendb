@@ -39,6 +39,10 @@ export default class MockManageServerService extends AutoMockService<ManageServe
         );
     }
 
+    withServerWideStorageReport() {
+        return this.mocks.getSystemStorageReport.mockResolvedValue(ManageServerStubs.serverStorageReport());
+    }
+
     withThrowingGetServerWideCustomAnalyzers() {
         this.mocks.getServerWideCustomAnalyzers.mockRejectedValue(new Error());
     }

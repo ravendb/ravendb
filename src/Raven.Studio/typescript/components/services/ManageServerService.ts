@@ -12,6 +12,7 @@ import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testP
 import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/saveServerWideCustomSorterCommand");
 import saveServerWideCustomAnalyzerCommand from "commands/serverWide/analyzers/saveServerWideCustomAnalyzerCommand";
 import getServerSettingsCommand from "commands/maintenance/getServerSettingsCommand";
+import getSystemStorageReportCommand from "commands/resources/getSystemStorageReportCommand";
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -56,6 +57,10 @@ export default class ManageServerService {
 
     async saveServerWideCustomSorter(...args: ConstructorParameters<typeof saveServerWideCustomSorterCommand>) {
         return new saveServerWideCustomSorterCommand(...args).execute();
+    }
+
+    async getSystemStorageReport() {
+        return new getSystemStorageReportCommand().execute();
     }
 
     async testPeriodicBackupCredentials(

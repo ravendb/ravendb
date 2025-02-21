@@ -1,6 +1,6 @@
 import { composeStories } from "@storybook/react";
 import * as stories from "./DocumentIdentities.stories";
-import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
+import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
 
 const { DocumentIdentitiesStory } = composeStories(stories);

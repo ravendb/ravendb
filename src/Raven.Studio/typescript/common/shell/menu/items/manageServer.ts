@@ -10,6 +10,7 @@ import GatherDebugInfo = require("components/pages/resources/manageServer/gather
 import ServerWideCustomAnalyzers = require("components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers");
 import ServerWideCustomSorters = require("components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSorters");
 import ServerSettings = require("components/pages/resources/manageServer/serverSettings/ServerSettings");
+import StorageReport = require("components/pages/resources/manageServer/storageReport/StorageReport");
 
 export = getManageServerMenuItem;
 
@@ -230,7 +231,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/storageReport',
-            moduleId: require('viewmodels/manage/storageReport'),
+            moduleId: reactUtils.bridgeToReact(StorageReport.default, "nonShardedView"),
             title: 'Storage Report',
             tooltip: "Storage Report",
             nav: true,
