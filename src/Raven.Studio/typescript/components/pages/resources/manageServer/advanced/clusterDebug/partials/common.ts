@@ -1,0 +1,98 @@
+import moment from "moment";
+
+export interface ClusterDebugNodeInfo {
+    term: number;
+    clusterVersion: number;
+    localVersion: number;
+    role: string;
+    lastAppendedTime: string;
+    lastCommitedTime: string;
+    firstEntryIndex: number;
+    lastLogEntryIndex: number;
+    commitIndex: number;
+    queueSize: number;
+    criticalError: Raven.Server.Rachis.RachisConsensus.UnrecoverableClusterError;
+    installingSnapshot: boolean;
+    chocked: boolean;
+    progress: number;
+    connections: Raven.Server.Rachis.RaftDebugView.PeerConnection[];
+}
+
+export function mapRaftDebugView(view: Raven.Server.Rachis.RaftDebugView): ClusterDebugNodeInfo {
+    return {
+        term: view.Term,
+        clusterVersion: view.CommandsVersion.Cluster,
+        localVersion: view.CommandsVersion.Local,
+        role: view.Role,
+        lastAppendedTime: view.Log.LastAppendedTime,
+        lastCommitedTime: view.Log.LastCommitedTime,
+        firstEntryIndex: view.Log.FirstEntryIndex,
+        lastLogEntryIndex: view.Log.LastLogEntryIndex,
+        commitIndex: view.Log.CommitIndex,
+        queueSize: queueSize(view),
+        criticalError: view.Log.CriticalError,
+        installingSnapshot: isInstallingSnapshot(view),
+        chocked: isChoked(view),
+        progress: progress(view),
+        connections: connections(view),
+    };
+}
+
+function isFollower(view: Raven.Server.Rachis.RaftDebugView): view is Raven.Server.Rachis.FollowerDebugView {
+    return view.Role === "Follower";
+}
+
+function isLeader(view: Raven.Server.Rachis.RaftDebugView): view is Raven.Server.Rachis.LeaderDebugView {
+    return view.Role === "Leader";
+}
+
+function connections(view: Raven.Server.Rachis.RaftDebugView): Raven.Server.Rachis.RaftDebugView.PeerConnection[] {
+    if (isFollower(view)) {
+        return [view.ConnectionToLeader];
+    }
+    if (isLeader(view)) {
+        return view.ConnectionToPeers;
+    }
+
+    return [];
+}
+
+function isInstallingSnapshot(view: Raven.Server.Rachis.RaftDebugView) {
+    if (isFollower(view)) {
+        return view.Phase === "Snapshot";
+    }
+    return false;
+}
+
+function progress(view: Raven.Server.Rachis.RaftDebugView) {
+    const first = view.Log.FirstEntryIndex;
+    const last = view.Log.LastLogEntryIndex;
+
+    if (!first && !last) {
+        return 100;
+    }
+
+    const logLength = last - first + 1;
+    const queueLength = queueSize(view);
+
+    return Math.ceil((100 * (logLength - queueLength)) / logLength);
+}
+
+function isChoked(view: Raven.Server.Rachis.RaftDebugView) {
+    const queueSizeCheck = queueSize(view) >= 5;
+
+    const lastCommit = moment.utc(view.Log.LastCommitedTime);
+    const lastCommitAgoInMs = moment.utc().diff(lastCommit);
+    const lastCommitCheck = lastCommitAgoInMs >= 2 * 60 * 1_000; // 2 minutes
+
+    return queueSizeCheck && lastCommitCheck;
+}
+
+function queueSize(view: Raven.Server.Rachis.RaftDebugView) {
+    const log = view.Log;
+    if (log.Logs.length === 0) {
+        return 0;
+    }
+
+    return log.LastLogEntryIndex - log.CommitIndex;
+}

@@ -1,5 +1,7 @@
 import appUrl = require("common/appUrl");
 import durandalRouter = require("plugins/router");
+import reactUtils = require("common/reactUtils");
+import ClusterDebug = require("components/pages/resources/manageServer/advanced/clusterDebug/ClusterDebug");
 
 class debugAdvanced {
     
@@ -45,7 +47,8 @@ class debugAdvanced {
                 },
                 {
                     route: 'admin/settings/debug/advanced/clusterDebug',
-                    moduleId: require('viewmodels/manage/debugAdvancedClusterDebug'),
+                    // forcing bootstrap 3 as this is child router
+                    moduleId: reactUtils.bridgeToReact(ClusterDebug.default, "nonShardedView", false),
                     title: 'Cluster Debug',
                     tabName: "Cluster Debug",
                     nav: true,

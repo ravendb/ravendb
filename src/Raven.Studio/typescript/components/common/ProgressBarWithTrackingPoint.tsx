@@ -1,7 +1,7 @@
 import React from "react";
 import "./ProgressBarWithTrackingPoint.scss";
 import { UncontrolledTooltip } from "reactstrap";
-import useId from "hooks/useId";
+import useUniqueId from "hooks/useUniqueId";
 
 interface ProgressBarWithTrackingPointProps {
     startingPoint: number;
@@ -13,10 +13,6 @@ export default function ProgressBarWithTrackingPoint(props: ProgressBarWithTrack
     const { startingPoint, progress, endingPoint } = props;
     const totalRange = endingPoint - startingPoint;
     const progressPercentage = ((progress - startingPoint) / totalRange) * 100;
-
-    const uniqueTrackingPointStartId = useId("trackingPointStart");
-    const uniqueTrackingPointProgressId = useId("trackingPointProgress");
-    const uniqueTrackingPointEndId = useId("trackingPointEnd");
 
     return (
         <div className="d-inline-block position-relative w-100">
@@ -30,22 +26,9 @@ export default function ProgressBarWithTrackingPoint(props: ProgressBarWithTrack
                     aria-valuemax={endingPoint}
                 ></div>
             </div>
-            <div className="tracking-point tracking-point--start" id={uniqueTrackingPointStartId} />
-            <div
-                className="tracking-point tracking-point--progress"
-                id={uniqueTrackingPointProgressId}
-                style={{ left: `${progressPercentage}%` }}
-            />
-            <div className="tracking-point tracking-point--end" id={uniqueTrackingPointEndId} />
-            <UncontrolledTooltip placement="top" target={uniqueTrackingPointStartId}>
-                {startingPoint}
-            </UncontrolledTooltip>
-            <UncontrolledTooltip placement="top" target={uniqueTrackingPointProgressId}>
-                {progress}
-            </UncontrolledTooltip>
-            <UncontrolledTooltip placement="top" target={uniqueTrackingPointEndId}>
-                {endingPoint}
-            </UncontrolledTooltip>
+            <div className="tracking-point tracking-point--start" />
+            <div className="tracking-point tracking-point--progress" style={{ left: `${progressPercentage}%` }} />
+            <div className="tracking-point tracking-point--end" />
         </div>
     );
 }
