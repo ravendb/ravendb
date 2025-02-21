@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         break;
                     case JavaScriptIndex.LoadVector:
-                        PortableExceptions.ThrowIf<ArgumentException>(callExpression.Arguments.Count != 1, $"loadVector method is expecting one argument, the path to the vector in ai integration tasks. e.g. loadVector('path') but was invoked with {callExpression.Arguments.Count} arguments.");
+                        PortableExceptions.ThrowIf<ArgumentException>(callExpression.Arguments.Count != 2, $"loadVector method is expecting two arguments, the path to the vector in ai integration tasks. e.g. loadVector('aiTaskIdentifier', 'path') but was invoked with {callExpression.Arguments.Count} arguments.");
                         HasLoadVector = true;
                         
                         break;

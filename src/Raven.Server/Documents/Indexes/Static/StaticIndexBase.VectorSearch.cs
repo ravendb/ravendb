@@ -550,26 +550,38 @@ public partial class AbstractStaticIndexBase
 
     public static IndexField RetrieveLoadVectorField(string fieldName)
     {
-        return CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
+        var vectorField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
+        if (vectorField.Id == Corax.Constants.IndexWriter.DynamicField)
+        {
+            var currentIndexingScope = CurrentIndexingScope.Current;
+            currentIndexingScope.DynamicFields ??= new Dictionary<string, IndexField>();
+            if (currentIndexingScope.DynamicFields.TryAdd(fieldName, vectorField))
+                currentIndexingScope.IncrementDynamicFields();
+        }
+
+        return vectorField;
     }
 
-    public object LoadVector(string fieldName, string path)
+    public object LoadVector(string fieldName, string etlTaskName, string path)
     {
-        var vectorField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
-        return LoadVector(vectorField, path);
+        var vectorField = RetrieveLoadVectorField(fieldName);
+        var vectors =  LoadVector(vectorField, etlTaskName, path);
+
+        return (vectorField.Id == Corax.Constants.IndexWriter.DynamicField)
+            ? new CoraxDynamicItem() { FieldName = fieldName, Field = vectorField, Value = vectors }
+            : vectors;
     }
     
-    public static object LoadVector(IndexField vectorField, string path)
+    public static object LoadVector(IndexField vectorField, string aiTaskName, string path)
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
+        currentIndexingScope.Index.IndexFieldsPersistence.SetVectorSourceEtlTaskName(vectorField.Name, aiTaskName);
+        
         var relatedDocument = LoadVectorDocument(out var embeddingDocument) as DynamicBlittableJson;
         if (relatedDocument == null)
             return new object[]{VectorValue.Null};
         
-
-        var currentAiModel = vectorField.Vector.AiIntegrationIdentifier ?? currentIndexingScope.Index.Configuration.DefaultAiTask;
-
-        if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, relatedDocument.BlittableJson, currentAiModel, out var aiResult))
+        if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, relatedDocument.BlittableJson, aiTaskName, out var aiResult))
         {
             if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, (BlittableJsonReaderObject)aiResult, path, out var vectorValue))
             {

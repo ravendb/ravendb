@@ -1245,6 +1245,40 @@ namespace Raven.Server.Documents.Indexes
             foreach (var kvp in vectorDimensionsToAdd)
                 fieldsTree.Add(kvp.Key, kvp.Value.ToString());
         }
+
+        internal Dictionary<string, string> ReadVectorSourceAiTaskIdentifiers()
+        {
+            var vectorSourceAiTaskIdentifiers = new Dictionary<string, string>();
+            using (var tx = _environment.ReadTransaction())
+            {
+                var vectorSourceAiTaskIdentifiersTree = tx.ReadTree(IndexSchema.VectorSourceAiTaskIdentifiers);
+                if (vectorSourceAiTaskIdentifiersTree is null)
+                    return vectorSourceAiTaskIdentifiers;
+                
+                using (var it = vectorSourceAiTaskIdentifiersTree.Iterate(prefetch: false))
+                {
+                    if (it.Seek(Slices.BeforeAllKeys))
+                    {
+                        do
+                        {
+                            var key = it.CurrentKey.ToString();
+                            var valueAsString = it.CreateReaderForCurrent().ToStringValue();
+                            vectorSourceAiTaskIdentifiers.Add(key, valueAsString);
+                        } while (it.MoveNext());
+                    }
+                }
+            }
+
+            return vectorSourceAiTaskIdentifiers;
+        }
+        
+        internal static void WriteVectorSourceAiTaskIdentifiers(RavenTransaction tx, Dictionary<string, string> vectorSourceAiTaskIdentifierToAdd)
+        {
+            var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.VectorSourceAiTaskIdentifiers);
+            
+            foreach (var kvp in vectorSourceAiTaskIdentifierToAdd)
+                fieldsTree.Add(kvp.Key, kvp.Value);
+        }
         
         internal Dictionary<string, VectorEmbeddingType> ReadIndexEmbeddingType()
         {
@@ -1306,6 +1340,7 @@ namespace Raven.Server.Documents.Indexes
 
             public const string VectorDimensionsTree = "VectorDimensions";
             public const string VectorSourceEmbeddingType = "VectorSourceEmbeddingType";
+            public const string VectorSourceAiTaskIdentifiers = "VectorSourceAiTaskIdentifiers";
 
             public static readonly Slice TypeSlice;
 

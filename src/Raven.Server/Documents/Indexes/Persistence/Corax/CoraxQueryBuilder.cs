@@ -18,6 +18,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.AI;
@@ -655,9 +656,9 @@ public static class CoraxQueryBuilder
 
         VectorValue transformedEmbedding;
         
-        if (vectorOptions.AiIntegrationIdentifier != null)
+        if (builderParameters.Index.IndexFieldsPersistence.TryReadVectorSourceEtlTaskName(fieldName, out var vectorSourceEtlTaskName))
         {
-            var aiIntegrationIdentifier = new AiIntegrationIdentifier(vectorOptions.AiIntegrationIdentifier);
+            var aiIntegrationIdentifier = new AiIntegrationIdentifier(vectorSourceEtlTaskName);
 
             var valueAsString = valueType switch
             {

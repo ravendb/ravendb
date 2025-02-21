@@ -267,19 +267,28 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 {
                     PortableExceptions.ThrowIf<InvalidDataException>(loadVector.IsObject() == false);
                     var obj = loadVector.AsObject();
-                    JsValue valueJsv = null;
+                    JsValue pathOfEmbeddingJsv = null;
+                    JsValue nameOfEtlJsv = null;
                     if (obj.HasOwnProperty(JavaScriptFieldName.ValuePropertyName) == false 
-                        || obj.TryGetValue(JavaScriptFieldName.ValuePropertyName, out valueJsv) == false)
+                        || obj.TryGetValue(JavaScriptFieldName.ValuePropertyName, out pathOfEmbeddingJsv) == false)
                     {
-                        PortableExceptions.Throw<InvalidDataException>("Name field doesn't exist but is required.");
+                        PortableExceptions.Throw<InvalidDataException>("Path field doesn't exist but is required.");
                     }
                     
-                    PortableExceptions.ThrowIfNot<ArgumentException>(valueJsv.IsString(), $"'loadVector' requires a string value of the path to the vector.");
+                    if (obj.HasOwnProperty(JavaScriptFieldName.NamePropertyName) == false 
+                        || obj.TryGetValue(JavaScriptFieldName.NamePropertyName, out nameOfEtlJsv) == false)
+                    {
+                        PortableExceptions.Throw<InvalidDataException>("Path field doesn't exist but is required.");
+                    }
                     
-                    var path = valueJsv.AsString();
+                    PortableExceptions.ThrowIfNot<ArgumentException>(pathOfEmbeddingJsv.IsString(), $"'loadVector' requires a string value of the path to the vector.");
+                    PortableExceptions.ThrowIfNot<ArgumentException>(nameOfEtlJsv.IsString(), $"'loadVector' requires a string AI Task of the vector.");
+                    
+                    var etlName = nameOfEtlJsv.AsString();
+                    var path = pathOfEmbeddingJsv.AsString();
                     
                     var indexField = AbstractStaticIndexBase.RetrieveLoadVectorField(field.Name);
-                    object objectForIndexing = AbstractStaticIndexBase.LoadVector(indexField, path);
+                    object objectForIndexing = AbstractStaticIndexBase.LoadVector(indexField, etlName, path);
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
                     shouldProcessAsBlittable = false;
                     return;

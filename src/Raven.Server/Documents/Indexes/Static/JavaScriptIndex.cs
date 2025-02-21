@@ -601,8 +601,8 @@ function createVector(value) {
     return { $vector: { $value: value } }
 }
 
-function loadVector(value) {
-    return { $loadvector: { $value: value } }
+function loadVector(aiTaskIdentifier, pathToEmbedding) {
+    return { $loadvector: { $name: aiTaskIdentifier, $value: pathToEmbedding } }
 }
 ";
 
