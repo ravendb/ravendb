@@ -6,6 +6,7 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { PropsWithChildren, useState } from "react";
 import Button from "react-bootstrap/Button";
+import Popover from "react-bootstrap/Popover";
 
 interface CellWithCopyProps extends PropsWithChildren {
     value: unknown;
@@ -27,8 +28,8 @@ export function CellWithCopy({ value, children }: CellWithCopyProps) {
     return (
         <>
             <div ref={setValuePopover}>{children}</div>
-            <PopoverWithHover target={valuePopover} placement="bottom-start" placementPrefix={null}>
-                <div className="p-2">
+            <PopoverWithHover target={valuePopover} placement="bottom-start">
+                <Popover.Body>
                     <pre
                         style={{ maxHeight: "300px" }}
                         className={classNames("overflow-auto rounded mb-3 p-0 token", typeof value)}
@@ -41,7 +42,7 @@ export function CellWithCopy({ value, children }: CellWithCopyProps) {
                             <Icon icon="copy-to-clipboard" margin="m-0" />
                         </Button>
                     </div>
-                </div>
+                </Popover.Body>
             </PopoverWithHover>
         </>
     );

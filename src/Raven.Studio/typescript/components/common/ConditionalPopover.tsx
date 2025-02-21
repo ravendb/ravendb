@@ -1,7 +1,7 @@
-import React, { ReactNode, PropsWithChildren } from "react";
-import { PopoverBody, UncontrolledPopover } from "reactstrap";
-import useUniqueId from "components/hooks/useUniqueId";
-import { Placement } from "@popperjs/core";
+import { ReactNode, PropsWithChildren, useState } from "react";
+import { Placement } from "react-bootstrap/esm/types";
+import { PopoverWithHover } from "./PopoverWithHover";
+import Popover from "react-bootstrap/Popover";
 
 interface Condition {
     isActive: boolean;
@@ -16,21 +16,20 @@ interface ConditionalPopoverProps extends Required<PropsWithChildren> {
 export function ConditionalPopover(props: ConditionalPopoverProps) {
     const { children, popoverPlacement } = props;
 
-    const containerId = useUniqueId("conditional-popover-");
+    const [target, setTarget] = useState<HTMLElement>();
 
     const conditions = Array.isArray(props.conditions) ? props.conditions : [props.conditions];
     const message = conditions.find((x) => x.isActive)?.message;
 
     return (
         <>
-            <div id={containerId} className="d-flex w-fit-content">
+            <div ref={setTarget} className="d-flex w-fit-content">
                 {children}
             </div>
-
-            {message && (
-                <UncontrolledPopover target={containerId} trigger="hover" placement={popoverPlacement} className="bs5">
-                    <PopoverBody>{message}</PopoverBody>
-                </UncontrolledPopover>
+            {message != null && (
+                <PopoverWithHover target={target} placement={popoverPlacement}>
+                    <Popover.Body>{message}</Popover.Body>
+                </PopoverWithHover>
             )}
         </>
     );

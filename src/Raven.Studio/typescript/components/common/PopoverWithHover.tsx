@@ -1,6 +1,9 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Popover } from "reactstrap";
-import { PopoverProps } from "reactstrap/types/lib/Popover";
+﻿import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import Popover, { PopoverProps } from "react-bootstrap/Popover";
+import Overlay from "react-bootstrap/Overlay";
+import { Placement } from "react-bootstrap/types";
+import classNames from "classnames";
+import useUniqueId from "components/hooks/useUniqueId";
 
 const tooltipContext = {
     currentTarget: null as HTMLDivElement,
@@ -10,7 +13,8 @@ const tooltipContext = {
 interface PopoverWithHoverProps extends PopoverProps {
     rounded?: "true" | null;
     target: HTMLElement;
-    children: JSX.Element | JSX.Element[];
+    children: ReactNode | ReactNode[];
+    placement?: Placement;
 }
 
 function tooltipMutex(target: HTMLDivElement, onClose: () => void) {
@@ -23,11 +27,13 @@ function tooltipMutex(target: HTMLDivElement, onClose: () => void) {
 }
 
 export function PopoverWithHover(props: PopoverWithHoverProps) {
-    const { target, children, ...rest } = props;
+    const { target, children, placement, className, style: propsStyle, ...rest } = props;
 
     const div = target as HTMLDivElement;
     const [open, setOpen] = useState<boolean>(false);
     const overElement = useRef<boolean>(false);
+
+    const popoverId = useUniqueId("popover-");
 
     const cancelHandle = useRef<ReturnType<typeof setTimeout>>(null);
     const showHandle = useRef<ReturnType<typeof setTimeout>>(null);
@@ -104,8 +110,20 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
     }
 
     return (
-        <Popover target={target} popperClassName="bs5" onMouseEnter={onPopoverEnter} isOpen={open} {...rest}>
-            <div onMouseLeave={onPopoverLeave}>{children}</div>
-        </Popover>
+        <Overlay target={target} show={open} placement={placement}>
+            {({ style: overlayStyle, ...props }) => (
+                <Popover
+                    {...props}
+                    {...rest}
+                    style={{ ...overlayStyle, ...propsStyle }}
+                    id={popoverId}
+                    onMouseLeave={onPopoverLeave}
+                    onMouseEnter={onPopoverEnter}
+                    className={classNames("bs5", className)}
+                >
+                    {children}
+                </Popover>
+            )}
+        </Overlay>
     );
 }
