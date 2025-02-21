@@ -17,7 +17,8 @@
         "lint": "eslint typescript/**/*.{tsx,ts}",
         "lint-fix": "eslint typescript/**/*.{tsx,ts} --fix",
         "storybook": "npm run fix-packages && storybook dev -p 6006",
-        "build-storybook": "storybook build"
+        "build-storybook": "storybook build",
+        "test-storybook": "test-storybook"
     },
     "private": true,
     "devDependencies": {
@@ -32,6 +33,7 @@
         "@storybook/react": "^8.4.7",
         "@storybook/react-webpack5": "^8.4.7",
         "@storybook/test": "^8.4.7",
+        "@storybook/test-runner": "^0.21.0",
         "@testing-library/jest-dom": "^6.4.6",
         "@testing-library/react": "^16.0.0",
         "@types/ace": "^0.0.52",
