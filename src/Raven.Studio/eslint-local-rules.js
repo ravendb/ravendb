@@ -1,8 +1,76 @@
+const fixableMeta = {
+    type: "problem",
+    fixable: "code",
+    schema: [],
+};
+
+function createDeprecatedReactstrapImport({ context, name, canFix = true }) {
+    return {
+        ImportDeclaration(node) {
+            if (node.source.value !== "reactstrap") {
+                return;
+            };
+
+            const specifiers = node.specifiers.filter(
+                (specifier) =>
+                    specifier.type === "ImportSpecifier" &&
+                    specifier.imported.name === name
+            );
+
+            if (specifiers.length === 0) {
+                return;
+            }
+
+            const fix = (fixer) => {
+                const fixes = [];
+                const sourceCode = context.getSourceCode();
+
+                if (node.specifiers.length === specifiers.length) {
+                    fixes.push(
+                        fixer.replaceText(
+                            node,
+                            `import ${name} from "react-bootstrap/${name}";`
+                        )
+                    );
+                } else {
+                    specifiers.forEach((specifier) => {
+                        let [start, end] = specifier.range;
+
+                        const tokenBefore = sourceCode.getTokenBefore(specifier);
+                        if (tokenBefore && tokenBefore.value === ",") {
+                            start = tokenBefore.range[0];
+                        } else {
+                            const tokenAfter = sourceCode.getTokenAfter(specifier);
+                            if (tokenAfter && tokenAfter.value === ",") {
+                                end = tokenAfter.range[1];
+                            }
+                        }
+                        fixes.push(fixer.removeRange([start, end]));
+                    });
+
+                    fixes.push(
+                        fixer.insertTextBefore(
+                            node,
+                            `import ${name} from "react-bootstrap/${name}";\n`
+                        )
+                    );
+                }
+                return fixes;
+            };
+
+            context.report({
+                node: node,
+                message: `${name} import from reactstrap is deprecated. Use 'import ${name} from "react-bootstrap/${name}"' instead.`,
+                fix: canFix ? fix : undefined,
+            });
+        },
+    };
+}
+
 module.exports = {
     "no-reactstrap-alert": {
         create: function (context) {
             return {
-               
                 JSXIdentifier: function (node) {
                     if (node.name === "Alert") {
                         context.report({
@@ -15,11 +83,7 @@ module.exports = {
         },
     },
     "mixed-imports": {
-        meta: {
-            type: "problem",
-            fixable: "code",
-            schema: []
-        },
+        meta: fixableMeta,
         create: function (context) {
             return {
                 TSExportAssignment: function (node) {
@@ -53,12 +117,8 @@ module.exports = {
             }
         }
     },
-    "no-reactstrap-button-color-prop": {
-        meta: {
-            type: "problem",
-            fixable: "code",
-            schema: [],
-        },
+    "no-reactstrap-Button-color-prop": {
+        meta: fixableMeta,
         create(context) {
             return {
                 JSXOpeningElement: function(node) {
@@ -95,139 +155,15 @@ module.exports = {
             };
         },
     },
-    "no-reactstrap-button": {
-        meta: {
-            type: "problem",
-            fixable: "code",
-            schema: [],
-        },
-        create: function (context) {
-            return {
-                ImportDeclaration(node) {
-                    if (node.source.value !== "reactstrap") {
-                        return;
-                    }
-
-                    const buttonSpecifiers = node.specifiers.filter(
-                        (specifier) =>
-                            specifier.type === "ImportSpecifier" &&
-                            specifier.imported.name === "Button"
-                    );
-
-                    if (buttonSpecifiers.length === 0) {
-                        return;
-                    }
-
-                    context.report({
-                        node: node,
-                        message: "Button import from reactstrap is deprecated. Use 'import Button from \"react-bootstrap/Button\"' instead.",
-                        fix(fixer) {
-                            const fixes = [];
-                            const sourceCode = context.getSourceCode();
-
-                            if (node.specifiers.length === buttonSpecifiers.length) {
-                                fixes.push(
-                                    fixer.replaceText(
-                                        node,
-                                        'import Button from "react-bootstrap/Button";'
-                                    )
-                                );
-                            } else {
-                                buttonSpecifiers.forEach((specifier) => {
-                                    let [start, end] = specifier.range;
-
-                                    const tokenBefore = sourceCode.getTokenBefore(specifier);
-                                    if (tokenBefore && tokenBefore.value === ",") {
-                                        start = tokenBefore.range[0];
-                                    } else {
-                                        const tokenAfter = sourceCode.getTokenAfter(specifier);
-                                        if (tokenAfter && tokenAfter.value === ",") {
-                                            end = tokenAfter.range[1];
-                                        }
-                                    }
-                                    fixes.push(fixer.removeRange([start, end]));
-                                });
-
-                                fixes.push(
-                                    fixer.insertTextBefore(
-                                        node,
-                                        'import Button from "react-bootstrap/Button";\n'
-                                    )
-                                );
-                            }
-                            return fixes;
-                        },
-                    });
-                },
-            };
-        },
+    "no-reactstrap-Button": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "Button" }),
     },
-        "no-reactstrap-spinner": {
-        meta: {
-            type: "problem",
-            fixable: "code",
-            schema: [],
-        },
-        create: function (context) {
-            return {
-                ImportDeclaration(node) {
-                    if (node.source.value !== "reactstrap") {
-                        return;
-                    };
-
-                    const spinnerSpecifiers = node.specifiers.filter(
-                        (specifier) =>
-                            specifier.type === "ImportSpecifier" &&
-                            specifier.imported.name === "Spinner"
-                    );
-
-                    if (spinnerSpecifiers.length === 0) {
-                        return;
-                    }
-
-                    context.report({
-                        node: node,
-                        message: "Spinner import from reactstrap is deprecated. Use 'import Spinner from \"react-bootstrap/Spinner\"' instead.",
-                        fix(fixer) {
-                            const fixes = [];
-                            const sourceCode = context.getSourceCode();
-
-                            if (node.specifiers.length === spinnerSpecifiers.length) {
-                                fixes.push(
-                                    fixer.replaceText(
-                                        node,
-                                        'import Spinner from "react-bootstrap/Spinner";'
-                                    )
-                                );
-                            } else {
-                                spinnerSpecifiers.forEach((specifier) => {
-                                    let [start, end] = specifier.range;
-
-                                    const tokenBefore = sourceCode.getTokenBefore(specifier);
-                                    if (tokenBefore && tokenBefore.value === ",") {
-                                        start = tokenBefore.range[0];
-                                    } else {
-                                        const tokenAfter = sourceCode.getTokenAfter(specifier);
-                                        if (tokenAfter && tokenAfter.value === ",") {
-                                            end = tokenAfter.range[1];
-                                        }
-                                    }
-                                    fixes.push(fixer.removeRange([start, end]));
-                                });
-
-                                fixes.push(
-                                    fixer.insertTextBefore(
-                                        node,
-                                        'import Spinner from "react-bootstrap/Spinner";\n'
-                                    )
-                                );
-                            }
-                            return fixes;
-                        },
-                    });
-                },
-            };
-        },
+    "no-reactstrap-Spinner": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "Spinner" }),
     },
-
+    "no-reactstrap-UncontrolledTooltip": {
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "UncontrolledTooltip", canFix: false }),
+    },
 };
