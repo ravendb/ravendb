@@ -22,6 +22,10 @@ interface InitialState {
     clearanceFilter: CertificatesClearance[];
     stateFilter: CertificatesState[];
     sortMode: CertificatesSortMode;
+    isGenerateModalOpen: boolean;
+    regenerateModalData: {
+        certificate: CertificateItem;
+    };
 }
 
 const initialState: InitialState = {
@@ -37,6 +41,8 @@ const initialState: InitialState = {
     clearanceFilter: [],
     stateFilter: [],
     sortMode: "Default",
+    isGenerateModalOpen: false,
+    regenerateModalData: null,
 };
 
 export const certificatesSlice = createSlice({
@@ -57,6 +63,17 @@ export const certificatesSlice = createSlice({
         },
         sortModeSet: (state, action: PayloadAction<CertificatesSortMode>) => {
             state.sortMode = action.payload;
+        },
+        isGenerateModalOpenToggled: (state) => {
+            state.isGenerateModalOpen = !state.isGenerateModalOpen;
+        },
+        regenerateModalOpen: (state, action: PayloadAction<CertificateItem>) => {
+            state.regenerateModalData = {
+                certificate: action.payload,
+            };
+        },
+        regenerateModalClosed: (state) => {
+            state.regenerateModalData = null;
         },
     },
     extraReducers: (builder) => {
@@ -115,8 +132,12 @@ const fetchData = createAsyncThunk<
 
     const certificatesDto = await services.manageServerService.getCertificates(true);
 
-    const serverCertificateRenewalDate = await services.manageServerService.getServerCertificateRenewalDate();
     const serverCertificateSetupMode = await services.manageServerService.getServerCertificateSetupMode();
+
+    const serverCertificateRenewalDate =
+        serverCertificateSetupMode === "LetsEncrypt"
+            ? await services.manageServerService.getServerCertificateRenewalDate()
+            : null;
 
     const statsTasks = nodeTags.map(async (tag) => {
         try {

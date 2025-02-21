@@ -110,4 +110,8 @@ export default class MockManageServerService extends AutoMockService<ManageServe
             ManageServerStubs.serverCertificateSetupMode()
         );
     }
+
+    withGenerateTwoFactorSecret(dto?: MockedValue<{ Secret: string }>) {
+        return this.mockResolvedValue(this.mocks.generateTwoFactorSecret, dto, ManageServerStubs.twoFactorSecret());
+    }
 }

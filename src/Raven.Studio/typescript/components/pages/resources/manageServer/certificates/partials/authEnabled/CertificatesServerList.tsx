@@ -1,3 +1,4 @@
+import { EmptySet } from "components/common/EmptySet";
 import { HrHeader } from "components/common/HrHeader";
 import { Icon } from "components/common/Icon";
 import CertificatesListItem from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesListItem";
@@ -16,6 +17,7 @@ export default function CertificatesServerList() {
                 <Icon icon="server" />
                 Server
             </HrHeader>
+            {!filteredCertificates.length && <EmptySet compact>No certificates</EmptySet>}
             {filteredCertificates.map((cert) => (
                 <CertificatesListItem key={cert.Thumbprint} certificate={cert} />
             ))}

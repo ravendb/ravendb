@@ -19,6 +19,7 @@ export type SelectValue = string | number | boolean;
 export interface SelectOption<T = string> {
     value: T;
     label: string;
+    isDisabled?: boolean;
 }
 
 export interface SelectOptionIcon {

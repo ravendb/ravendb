@@ -1,10 +1,9 @@
 import { Icon } from "components/common/Icon";
-import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
+import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
 import Select, {
     OptionWithIconAndSeparator,
     SelectOption,
     SelectOptionWithIconAndSeparator,
-    selectRoundedStyles,
     SingleValueWithIcon,
 } from "components/common/select/Select";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -15,12 +14,20 @@ import { certificatesSelectors } from "components/pages/resources/manageServer/c
 import { CertificatesSortMode } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { debounce } from "lodash";
-import { useEffect, useMemo } from "react";
-import { DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
+import { useEffect, useMemo, useRef } from "react";
+import { Button, DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
+import endpoints from "endpoints";
+import CertificatesGenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
 
+    const exportServerCertFormRef = useRef<HTMLFormElement>(null);
+
+    const isGenerateModalOpen = useAppSelector(certificatesSelectors.isGenerateModalOpen);
+    const hasClusterNodeCertificate = useAppSelector(certificatesSelectors.hasClusterNodeCertificate);
+    const nameOrThumbprintFilter = useAppSelector(certificatesSelectors.nameOrThumbprintFilter);
     const allCertificatesCount = useAppSelector(certificatesSelectors.certificates).length;
     const clearanceFilter = useAppSelector(certificatesSelectors.clearanceFilter);
     const clearanceFilterOptions = useAppSelector(certificatesSelectors.clearanceFilterOptions);
@@ -52,34 +59,66 @@ export default function CertificatesAuthEnabled() {
                 </DropdownToggle>
                 <DropdownMenu>
                     <DropdownItem header>Client</DropdownItem>
-                    <DropdownItem>
+                    <DropdownItem onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}>
                         <Icon icon="certificate" addon="plus" />
                         Generate client certificate
                     </DropdownItem>
+                    {isGenerateModalOpen && <CertificatesGenerateModal />}
                     <DropdownItem>
                         <Icon icon="upload" />
                         Upload client certificate
                     </DropdownItem>
                     <DropdownItem divider />
                     <DropdownItem header>Server</DropdownItem>
-                    <DropdownItem>
-                        <Icon icon="download" />
-                        Export server certificate
-                    </DropdownItem>
-                    <DropdownItem>
-                        <Icon icon="refresh" />
-                        Replace server certificate
-                    </DropdownItem>
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: !hasClusterNodeCertificate,
+                            message: "You need to have a server certificate to export it",
+                        }}
+                    >
+                        <DropdownItem
+                            onClick={exportServerCertFormRef.current?.submit}
+                            disabled={!hasClusterNodeCertificate}
+                        >
+                            <Icon icon="download" />
+                            Export server certificate
+                        </DropdownItem>
+                    </ConditionalPopover>
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: !hasClusterNodeCertificate,
+                            message: "You need to have a server certificate to replace it",
+                        }}
+                    >
+                        <DropdownItem disabled={!hasClusterNodeCertificate}>
+                            <Icon icon="refresh" />
+                            Replace server certificate
+                        </DropdownItem>
+                    </ConditionalPopover>
                 </DropdownMenu>
             </UncontrolledDropdown>
             <div className="hstack gap-2 flex-wrap">
                 <div className="flex-grow">
                     <span className="small-label">Filter by name/thumbprint</span>
-                    <Input
-                        onChange={(x) => debouncedUpdateNameOrThumbprintFilter(x.target.value)}
-                        placeholder="e.g. johndoe.certificate"
-                        className="rounded-pill"
-                    />
+
+                    <div className="clearable-input">
+                        <Input
+                            onChange={(x) => debouncedUpdateNameOrThumbprintFilter(x.target.value)}
+                            placeholder="e.g. johndoe.certificate"
+                            className="rounded-pill pe-4"
+                        />
+                        {nameOrThumbprintFilter && (
+                            <div className="clear-button">
+                                <Button
+                                    color="secondary"
+                                    size="sm"
+                                    onClick={() => dispatch(certificatesActions.nameOrThumbprintFilterSet(""))}
+                                >
+                                    <Icon icon="clear" margin="m-0" />
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <div>
                     <span className="small-label">Filter by database</span>
@@ -89,7 +128,7 @@ export default function CertificatesAuthEnabled() {
                         value={databaseOptions.find((x) => x.value === databaseFilter)}
                         className="rounded-pill"
                         placeholder="Select a database"
-                        styles={selectRoundedStyles}
+                        isRoundedPill
                         isClearable
                     />
                 </div>
@@ -128,13 +167,20 @@ export default function CertificatesAuthEnabled() {
                         className="rounded-pill"
                         placeholder="Select a database"
                         components={{ Option: OptionWithIconAndSeparator, SingleValue: SingleValueWithIcon }}
-                        styles={selectRoundedStyles}
+                        isRoundedPill
                     />
                 </div>
             </div>
 
             <CertificatesServerList />
             <CertificatesClientList />
+
+            {/* This form is used to export server certificate */}
+            <form
+                ref={exportServerCertFormRef}
+                action={endpoints.global.adminCertificates.adminCertificatesExport}
+                className="d-none"
+            />
         </div>
     );
 }

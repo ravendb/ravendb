@@ -145,11 +145,6 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
         shouldUnregister,
     });
 
-    console.log("kalczur ", {
-        value,
-        propsValue: props.value,
-    });
-
     return (
         <div className="position-relative">
             <div className="d-flex flex-grow-1">

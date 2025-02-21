@@ -4,7 +4,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { Card } from "reactstrap";
 
 export default function CertificatesAuthDisabled() {
-    const certificatesDocsLink = useRavenLink({ hash: "S3G2T1" });
+    const certificatesDocsLink = useRavenLink({ hash: "RSFSL5" });
 
     return (
         <Card className="p-4 rounded w-75 m-auto">
@@ -14,7 +14,7 @@ export default function CertificatesAuthDisabled() {
             RavenDB uses certificates to authenticate clients, but the server certificate information has not been set
             up.
             <hr />
-            <b>In order to set up authentication for your server, proceed with the following:</b>
+            <strong>In order to set up authentication for your server, proceed with the following:</strong>
             <ol>
                 <li>
                     Locate the <code>settings.json</code> file in your server directory.

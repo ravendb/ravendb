@@ -120,16 +120,27 @@ const selectFilteredCertificates = createSelector(
     }
 );
 
+const selectHasClusterNodeCertificate = createSelector(
+    (state: RootState) => state.certificates.certificates,
+    (certificates): boolean => {
+        return certificates.some((x) => x.SecurityClearance === "ClusterNode");
+    }
+);
+
 export const certificatesSelectors = {
     certificates: (state: RootState) => state.certificates.certificates,
     filteredCertificates: selectFilteredCertificates,
+    hasClusterNodeCertificate: selectHasClusterNodeCertificate,
     serverCertificateThumbprint: (state: RootState) => state.certificates.serverCertificateThumbprint,
     serverCertificateSetupMode: (state: RootState) => state.certificates.serverCertificateSetupMode,
     serverCertificateRenewalDate: (state: RootState) => state.certificates.serverCertificateRenewalDate,
+    nameOrThumbprintFilter: (state: RootState) => state.certificates.nameOrThumbprintFilter,
     databaseFilter: (state: RootState) => state.certificates.databaseFilter,
     clearanceFilter: (state: RootState) => state.certificates.clearanceFilter,
     clearanceFilterOptions: selectClearanceFilterOptions,
     stateFilter: (state: RootState) => state.certificates.stateFilter,
     stateFilterOptions: selectStateFilterOptions,
     sortMode: (state: RootState) => state.certificates.sortMode,
+    isGenerateModalOpen: (state: RootState) => state.certificates.isGenerateModalOpen,
+    regenerateModalData: (state: RootState) => state.certificates.regenerateModalData,
 };
