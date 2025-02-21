@@ -27,7 +27,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { LoadError } from "components/common/LoadError";
 import { HStack } from "components/common/HStack";
 
-export default function IndexTerms({ pathParams }: ReactProps) {
+export default function IndexTerms({ pathParams }: ReactPathParamsProps) {
     const indexName = pathParams[0];
 
     const { asyncGetIndexEntriesFields, indexTerms, termsLoadedAmount, loadMore, editUrl } = useIndexTerms(indexName);
