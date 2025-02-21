@@ -1,5 +1,5 @@
-import React, { ReactElement, ReactNode } from "react";
 import "./NumberedList.scss";
+import React, { ReactElement, ReactNode } from "react";
 import classNames from "classnames";
 
 interface NumberedListProps {
@@ -9,16 +9,19 @@ interface NumberedListProps {
 
 export function NumberedList(props: NumberedListProps) {
     const { children, className } = props;
+
     return (
         <ol className={classNames("numbered-list", className)}>
             {React.Children.map(children, (child, index) => {
-                if (React.isValidElement(child)) {
-                    const customNumber = child.props.stepKey;
-                    return React.cloneElement(child, {
-                        stepKey: customNumber === undefined ? index + 1 : customNumber,
-                    });
+                if (!React.isValidElement(child)) {
+                    return null;
                 }
-                return child;
+
+                const customNumber = child.props.stepKey;
+
+                return React.cloneElement(child, {
+                    stepKey: customNumber == null ? index + 1 : customNumber,
+                });
             })}
         </ol>
     );
@@ -31,6 +34,7 @@ interface NumberedListItemProps {
 
 export function NumberedListItem(props: NumberedListItemProps) {
     const { stepKey = 0, children } = props;
+
     return (
         <li className="numbered-list-item">
             <span className="dot-number">{stepKey}</span>

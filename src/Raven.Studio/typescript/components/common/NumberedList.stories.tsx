@@ -1,12 +1,6 @@
 import { Meta, StoryObj } from "@storybook/react";
-import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { NumberedList, NumberedListItem } from "components/common/NumberedList";
-import { useState } from "react";
-
-interface NumberedListStoryProps {
-    length: number;
-}
 
 export default {
     title: "Bits/NumberedList",
@@ -16,6 +10,10 @@ export default {
         length: { control: { type: "range", min: 2, max: 10, step: 1 } },
     },
 } satisfies Meta;
+
+interface NumberedListStoryProps {
+    length: number;
+}
 
 export const Default: StoryObj<NumberedListStoryProps> = {
     args: {

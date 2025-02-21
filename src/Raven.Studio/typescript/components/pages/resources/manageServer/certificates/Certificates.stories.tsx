@@ -7,7 +7,7 @@ import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
-    title: "Pages/ManageServer/Certificates",
+    title: "Pages/Manage Server/Certificates",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
