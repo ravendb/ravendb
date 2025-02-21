@@ -36,7 +36,7 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
             if ("twoFactorAction" in values && name === "twoFactorAction") {
-                if (values.twoFactorAction === "leave") {
+                if (values.twoFactorAction === "leave" || values.twoFactorAction === "delete") {
                     setValue("isRequire2FA", false);
                 }
 
@@ -52,6 +52,8 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
         if (formValues.isRequire2FA) {
             const result = await manageServerService.generateTwoFactorSecret();
             setValue("authenticationKey", result.Secret);
+        } else {
+            setValue("authenticationKey", null);
         }
     }, [formValues.isRequire2FA]);
 
