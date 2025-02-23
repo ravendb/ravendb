@@ -150,20 +150,20 @@ namespace Raven.Server.Documents.Replication
             {
                 replicationNodes.Remove(lastEtagPerDestination.Key);
                 minEtag = Math.Min(lastEtagPerDestination.Value.LastEtag, minEtag);
-                switch (lastEtagPerDestination.Key)
+                if (lastProcessedTombstonesInfo != null)
                 {
-                    case PullReplicationAsHub pullReplicationAsHub:
-                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, pullReplicationAsHub.Name, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsHub);
-                        break;
-                    case PullReplicationAsSink pullReplicationAsSink:
-                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, pullReplicationAsSink.Name, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink);
-                        break;
-                    case ExternalReplication externalReplication:
-                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, externalReplication.Name, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication);
-                        break;
-                    case InternalReplication internalReplication:
-                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, internalReplication.NodeTag, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.InternalReplication);
-                        break;
+                    switch (lastEtagPerDestination.Key)
+                    {
+                        case PullReplicationAsSink pullReplicationAsSink:
+                            AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, pullReplicationAsSink.Name, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink);
+                            break;
+                        case ExternalReplication externalReplication and not PullReplicationAsHub:
+                            AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, externalReplication.Name, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication);
+                            break;
+                        case InternalReplication internalReplication:
+                            AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, internalReplication.NodeTag, lastEtagPerDestination.Value.LastEtag, ITombstoneAware.TombstoneDeletionBlockerType.InternalReplication);
+                            break;
+                    }
                 }
             }
 

@@ -391,7 +391,7 @@ namespace Raven.Server.Documents
                     }
                     else
                     {
-                        var newSubscriptionInfo = CreateSubscriptionInfo(subscription, type, tombstoneInfo.Value, collection, numberOfTombstonesLeft);
+                        var newSubscriptionInfo = CreateSubscriptionInfo(type, tombstoneInfo.Value, collection, numberOfTombstonesLeft);
                         PerSubscriptionInfoExtended[key] = newSubscriptionInfo;
                     }
                 }
@@ -400,6 +400,9 @@ namespace Raven.Server.Documents
             private long CalculateRemainingTombstones(LastTombstoneInfo tombstoneInfo, ITombstoneAware.TombstoneType type, DocumentDatabase documentDatabase,
                 string collection)
             {
+                if (tombstoneInfo.Type == ITombstoneAware.TombstoneDeletionBlockerType.Index && type != ITombstoneAware.TombstoneType.Documents)
+                    return 0;
+
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -425,10 +428,6 @@ namespace Raven.Server.Documents
             {
                 SetTombstoneTypes(type, subscriptionInfo, remainingTombstones);
                 subscriptionInfo.NumberOfTombstoneLeft += remainingTombstones;
-                if (subscriptionInfo.CleanupStatus == CleanupStatus.NotBlocking)
-                {
-                    subscriptionInfo.CleanupStatus = subscriptionInfo.NumberOfTombstoneLeft > 0 ? CleanupStatus.Blocking : CleanupStatus.NotBlocking;
-                }
             }
 
             private void SetTombstoneTypes(ITombstoneAware.TombstoneType type, SubscriptionInfoExtended subscriptionInfo, long numberOfTombstoneLeft)
@@ -468,8 +467,6 @@ namespace Raven.Server.Documents
 
                 public long NumberOfTombstoneLeft { get; set; }
 
-                public CleanupStatus CleanupStatus { get; set; }
-
                 public TombstoneTypes Types { get; set; }
             }
 
@@ -487,7 +484,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            private SubscriptionInfoExtended CreateSubscriptionInfo(ITombstoneAware subscription, ITombstoneAware.TombstoneType type, LastTombstoneInfo tombstoneInfo, string collection,
+            private SubscriptionInfoExtended CreateSubscriptionInfo(ITombstoneAware.TombstoneType type, LastTombstoneInfo tombstoneInfo, string collection,
                 long remainingTombstones)
             {
                 var newSubscriptionInfo = new SubscriptionInfoExtended
@@ -497,7 +494,6 @@ namespace Raven.Server.Documents
                     Collection = collection,
                     Etag = tombstoneInfo.Etag,
                     NumberOfTombstoneLeft = remainingTombstones,
-                    CleanupStatus = remainingTombstones > 0 ? CleanupStatus.Blocking : CleanupStatus.NotBlocking,
                     Types = new TombstoneTypes()
                 };
                 SetTombstoneTypes(type, newSubscriptionInfo, remainingTombstones);

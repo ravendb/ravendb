@@ -94,7 +94,7 @@ class tombstonesState extends viewModelBase {
                 new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.NumberOfTombstoneLeft, "Number of tombstones left", "10%", {
                     sortable: "number"
                 }),
-                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => this.formatTombstoneTypes(x.Types), "Tombstone Types", "25%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => this.formatTombstoneTypes(x.Types, x.Process), "Tombstone Types", "25%", {
                     sortable: "string"
                 }),
                 new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.Collection, "Collection", "10%", {
@@ -103,7 +103,8 @@ class tombstonesState extends viewModelBase {
                 new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => this.formatEtag(x.Etag), "Etag", "10%", {
                     sortable: "number", title: (x) => this.getEtagTitle(x.Etag)
                 }),
-                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.CleanupStatus, "CleanupStatus", "15%", {
+                new textColumn<SubscriptionInfoExtended>(subscriptionsGrid, x => x.NumberOfTombstoneLeft > 0 ? "Blocking" : "Not Blocking"
+                    , "CleanupStatus", "15%", {
                     sortable: "string"
                 }),
             ];
@@ -194,9 +195,13 @@ class tombstonesState extends viewModelBase {
         return "Can remove any tombstone";
     }
 
-    private formatTombstoneTypes(types: TombstoneTypes) {
+    private formatTombstoneTypes(types: TombstoneTypes, process: Raven.Server.Documents.ITombstoneAware.TombstoneDeletionBlockerType) {
         if (!types) {
             return '';
+        }
+
+        if (process === 'Index') {
+            return `Documents: ${types.Documents}`;
         }
 
         return `Documents: ${types.Documents}, TimeSeries: ${types.TimeSeries}, Counters: ${types.Counters}`;

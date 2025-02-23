@@ -157,8 +157,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfoExtended.Types));
                             context.Write(writer, info.Value.Types?.ToJson());
                             writer.WriteComma();
-                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfoExtended.CleanupStatus));
-                            writer.WriteString(info.Value.CleanupStatus.ToString());
+                            writer.WritePropertyName("CleanupStatus");
+                            writer.WriteString(info.Value.NumberOfTombstoneLeft > 0 ? "Blocking" : "Not Blocking");
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfoExtended.Process));
                             writer.WriteString(info.Value.Process.ToString());

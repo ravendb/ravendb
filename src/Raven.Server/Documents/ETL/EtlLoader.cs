@@ -1026,7 +1026,6 @@ namespace Raven.Server.Documents.ETL
             else if (value < old.Etag)
             {
                 old.Etag = value;
-                dic[key] = old;
             }
         }
     }
