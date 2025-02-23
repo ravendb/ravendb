@@ -133,7 +133,7 @@ namespace FastTests
                 string responsibleNode = null;
                 var value = WaitForValue(() =>
                 {
-                    var responsibleNode = BackupUtils.GetResponsibleNodeTag(serverStore, databaseName, taskId);
+                    responsibleNode = BackupUtils.GetResponsibleNodeTag(serverStore, databaseName, taskId);
                     return responsibleNode != differentThan;
                 }, true);
 
@@ -271,11 +271,11 @@ namespace FastTests
                 return backupTaskId;
             }
 
-            public void WaitForResponsibleNodeUpdateInCluster(IDocumentStore store, List<RavenServer> nodes, long backupTaskId, string differentThan = null)
+            public void WaitForResponsibleNodeUpdateInCluster(IDocumentStore store, List<RavenServer> nodes, long backupTaskId, string databaseName = null, string differentThan = null)
             {
                 foreach (var server in nodes)
                 {
-                    WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backupTaskId, differentThan);
+                    WaitForResponsibleNodeUpdate(server.ServerStore, databaseName ?? store.Database, backupTaskId, differentThan);
                 }
             }
 

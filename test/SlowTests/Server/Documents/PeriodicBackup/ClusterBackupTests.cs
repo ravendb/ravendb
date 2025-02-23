@@ -2,16 +2,21 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Tests.Infrastructure;
@@ -54,10 +59,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Disabled = false,
                     FullBackupFrequency = "0 0 1 1 *",
                     IncrementalBackupFrequency = "0 0 * * *",
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    }
+                    LocalSettings = new LocalSettings { FolderPath = backupPath }
                 };
                 var taskId = await Backup.UpdateConfigAsync(leader, config, store);
                 var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, store.Database);
@@ -122,6 +124,158 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await WaitForValueAsync(async () =>
                 {
                     status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    return status?.NodeTag == originalNode;
+                }, true, timeout: 70_000);
+                Assert.NotNull(status);
+                Assert.Equal(originalNode, status.NodeTag);
+                Assert.False(status.IsFull, "Backup should be incremental but is full");
+                Assert.NotNull(status.LastIncrementalBackup);
+
+                // assert no new dirs of full backup - original node directory should have a file for full and a file for incremental
+                var dirsAfterSwitchBack = Directory.GetFiles(nodesBackupDir);
+                Assert.Equal(2, dirsAfterSwitchBack.Length);
+
+                // other node directory should only have a file for full
+                dirsAfterSwitchBack = Directory.GetFiles(otherNodeDir[0]);
+                Assert.Equal(1, dirsAfterSwitchBack.Length);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task DontRunFullBackupAgainIfComingBackFromAnotherNodeSharded()
+        {
+            var settings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "0" }, };
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true, customSettings: settings);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 1, shardReplicationFactor: 3, orchestratorReplicationFactor: 3);
+
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Stav" }, "users/1");
+                    await session.SaveChangesAsync();
+                    var exists = await WaitForDocumentInClusterAsync<User>(nodes, store.Database, "users/1", x => x.Name == "Stav", TimeSpan.FromSeconds(10));
+                    Assert.True(exists);
+                }
+
+                var nextBackup = GetTimeUntilBackupNextOccurence("0 0 * * *", DateTime.UtcNow);
+                if (nextBackup < TimeSpan.FromSeconds(10))
+                    await Task.Delay(nextBackup);
+
+                // put backup config
+                var config = new PeriodicBackupConfiguration()
+                {
+                    Disabled = false,
+                    FullBackupFrequency = "0 0 1 1 *",
+                    IncrementalBackupFrequency = "0 0 * * *",
+                    LocalSettings = new LocalSettings { FolderPath = backupPath }
+                };
+
+                var shardName = ShardHelper.ToShardName(store.Database, 0);
+                var taskId = await Sharding.Backup.UpdateConfigAsync(leader, config, store);
+                var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, shardName);
+                var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
+
+                await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: false);
+
+                var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
+
+                // check the backup status
+                await WaitForAssertionAsync(async () =>
+                {
+                    var backupStatus = await store.Maintenance.SendAsync(new GetShardedPeriodicBackupStatusOperation(taskId));
+                    Assert.NotNull(backupStatus?.Statuses.SingleOrDefault().Value);
+                    Assert.Equal(originalNode, backupStatus.Statuses.Single().Value.NodeTag);
+                });
+
+                // assert number of directories
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(1, dirs.Length);
+                var nodesBackupDir = dirs[0];
+
+                var innerDirs = Directory.GetFiles(nodesBackupDir);
+                Assert.Equal(1, innerDirs.Length);
+                Assert.True(innerDirs[0].Contains(originalNode));
+
+                // change responsible node to other node
+                var command = new UpdateResponsibleNodeForTasksCommand(
+                    new UpdateResponsibleNodeForTasksCommand.Parameters()
+                    {
+                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
+                        {
+                            {
+                                shardName,
+                                new List<ResponsibleNodeInfo>()
+                                {
+                                    new ResponsibleNodeInfo() { TaskId = taskId, ResponsibleNode = otherNodeServer.ServerStore.NodeTag }
+                                }
+                            }
+                        }
+                    }, RaftIdGenerator.NewId());
+                var result = await leader.ServerStore.SendToLeaderAsync(command);
+                await leader.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, shardName, differentThan: originalNode);
+
+                // run full backup on new node
+                await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: false);
+
+                // wait until status is updated with new node
+                PeriodicBackupStatus status = null;
+                await WaitForValueAsync(async () =>
+                {
+                    status = (await store.Maintenance.SendAsync(new GetShardedPeriodicBackupStatusOperation(taskId))).Statuses?.SingleOrDefault().Value;
+                    return status?.NodeTag == otherNodeServer.ServerStore.NodeTag;
+                }, true, timeout: 70_000);
+                Assert.NotNull(status);
+                Assert.Equal(otherNodeServer.ServerStore.NodeTag, status.NodeTag);
+                Assert.True(status.IsFull);
+                Assert.NotNull(status.LastFullBackup);
+
+                // assert number of directories grew
+                var otherNodeDir = Directory.GetDirectories(backupPath).Except(dirs).ToArray();
+                Assert.Equal(1, otherNodeDir.Length);
+                Assert.True(otherNodeDir[0].Contains(otherNodeServer.ServerStore.NodeTag));
+
+                // change responsible node back to original
+                command = new UpdateResponsibleNodeForTasksCommand(
+                    new UpdateResponsibleNodeForTasksCommand.Parameters()
+                    {
+                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
+                        {
+                            {
+                                shardName,
+                                new List<ResponsibleNodeInfo>()
+                                {
+                                    new ResponsibleNodeInfo() { TaskId = taskId, ResponsibleNode = originalNode }
+                                }
+                            }
+                        }
+                    }, RaftIdGenerator.NewId());
+                result = await leader.ServerStore.SendToLeaderAsync(command);
+                await leader.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, shardName, differentThan: otherNodeServer.ServerStore.NodeTag);
+
+                // add doc so incremental has something to save
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Stav" }, "users/2");
+                    await session.SaveChangesAsync();
+                    var exists = await WaitForDocumentInClusterAsync<User>(nodes, store.Database, "users/2", x => x.Name == "Stav", TimeSpan.FromSeconds(10));
+                    Assert.True(exists);
+                }
+
+                // run the backup again - should be running incremental this time
+                await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: false);
+                
+                // wait until backup finishes and saves the backup statuses - should be incremental backup and not a full one
+                status = null;
+                await WaitForValueAsync(async () =>
+                {
+                    status = (await store.Maintenance.SendAsync(new GetShardedPeriodicBackupStatusOperation(taskId))).Statuses?.SingleOrDefault().Value;
                     return status?.NodeTag == originalNode;
                 }, true, timeout: 70_000);
                 Assert.NotNull(status);
@@ -254,7 +408,141 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(0, stats.CountOfCompareExchange);
             }
         }
-        
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.CompareExchange | RavenTestCategory.Sharding)]
+        public async Task CompareExchangeTombstonesShouldNotBeCleanedIfNotBackedUpForLocalNodeSharded()
+        {
+            // A does full backup on compare exchanges, backup moves to B, cx deleted, B does full backup on their tombstones, backup moves back to A, A should still have the tombstones to back up
+            // they should not have been deleted by the observer because of A's low index should prevent it
+            var settings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval), "0" }, };
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var incrementalFrequency = "0 0 * * *";
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true, customSettings: settings);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 1, shardReplicationFactor: 3, orchestratorReplicationFactor: 3);
+
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Stav" }, "users/1");
+                    await session.SaveChangesAsync();
+                    var exists = await WaitForDocumentInClusterAsync<User>(nodes, store.Database, "users/1", x => x.Name == "Stav", TimeSpan.FromSeconds(10));
+                    Assert.True(exists);
+                }
+
+                var nextBackup = GetTimeUntilBackupNextOccurence(incrementalFrequency, DateTime.UtcNow);
+                if (nextBackup < TimeSpan.FromSeconds(8))
+                    await Task.Delay(nextBackup);
+
+                // put compare exchanges
+                var cmpxchngRes1 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/1", new User { Name = "Stav1" }, 0));
+                var cmpxchngRes2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/2", new User { Name = "Stav2" }, 0));
+                var cmpxchngRes3 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/3", new User { Name = "Stav3" }, 0));
+                Assert.True(cmpxchngRes1.Successful);
+                Assert.True(cmpxchngRes2.Successful);
+                Assert.True(cmpxchngRes3.Successful);
+
+                var shardName = ShardHelper.ToShardName(store.Database, 0);
+                var stats = store.Maintenance.ForDatabase(store.Database).ForNode("A").ForShard(0).Send(new GetDetailedStatisticsOperation());
+                Assert.Equal(3, stats.CountOfCompareExchange);
+                
+                // node backs up compare exchanges
+                var config = new PeriodicBackupConfiguration()
+                {
+                    Disabled = false,
+                    FullBackupFrequency = "0 0 1 1 *",
+                    IncrementalBackupFrequency = incrementalFrequency,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                };
+                var taskId = await Sharding.Backup.UpdateConfigAsync(leader, config, store);
+                var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, shardName);
+                var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
+                var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
+
+                // first backup will be full
+                await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: false);
+
+                // check the backup status
+                await WaitForAssertionAsync(async () =>
+                {
+                    var backupStatus = (await store.Maintenance.ForShard(0).SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    Assert.NotNull(backupStatus);
+                    Assert.Equal(originalNode, backupStatus.NodeTag);
+                    Assert.True(backupStatus.IsFull);
+                });
+
+                // assert number of directories
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(1, dirs.Length);
+
+                var nodesBackupDir = dirs[0];
+                var originalNodeFiles = Directory.GetFiles(nodesBackupDir);
+                Assert.Equal(1, originalNodeFiles.Length);
+                Assert.True(originalNodeFiles[0].Contains(originalNode));
+
+                // change responsible node to other node
+                var command = new UpdateResponsibleNodeForTasksCommand(
+                    new UpdateResponsibleNodeForTasksCommand.Parameters()
+                    {
+                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
+                        {
+                            {
+                                shardName,
+                                new List<ResponsibleNodeInfo>()
+                                {
+                                    new ResponsibleNodeInfo() { TaskId = taskId, ResponsibleNode = otherNodeServer.ServerStore.NodeTag }
+                                }
+                            }
+                        }
+                    }, RaftIdGenerator.NewId());
+                var result = await leader.ServerStore.SendToLeaderAsync(command);
+                await leader.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, databaseName: shardName, differentThan: originalNode);
+
+                // delete compare exchanges -> tombstones created
+                var delRes1 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("users/1", cmpxchngRes1.Index));
+                var delRes2 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("users/2", cmpxchngRes2.Index));
+                var delRes3 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("users/3", cmpxchngRes3.Index));
+                Assert.True(delRes1.Successful);
+                Assert.True(delRes2.Successful);
+                Assert.True(delRes3.Successful);
+
+                // first backup on new node will be full - this includes the tombstones
+                await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: false);
+
+                PeriodicBackupStatus status = null;
+                // wait until status is updated with new node
+                var res = await WaitForValueAsync(async () =>
+                {
+                    status = (await store.Maintenance.ForShard(0).SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    return status.NodeTag == otherNodeServer.ServerStore.NodeTag;
+                }, true, timeout: 70_000);
+                Assert.Equal(otherNodeServer.ServerStore.NodeTag, status.NodeTag);
+                Assert.True(status.IsFull, "Backup wasn't full");
+                Assert.NotNull(status.LastFullBackup);
+                Assert.True(status.LastRaftIndex.LastEtag >= delRes3.Index, "tombstones raft index is not included in the backup");
+
+                // assert number of directories grew
+                var otherNodeDir = Directory.GetDirectories(backupPath).Except(dirs).ToArray();
+                Assert.Equal(1, otherNodeDir.Length);
+                Assert.True(otherNodeDir[0].Contains(otherNodeServer.ServerStore.NodeTag));
+                var otherNodeFiles = Directory.GetFiles(otherNodeDir[0]);
+                Assert.Equal(1, otherNodeFiles.Length);
+
+                // run cx tombstone cleaner
+                await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
+
+                // tombstones should not have been deleted
+                stats = store.Maintenance.ForDatabase(store.Database).ForNode("A").ForShard(0).Send(new GetDetailedStatisticsOperation());
+                Assert.Equal(3, stats.CountOfCompareExchangeTombstones);
+                Assert.Equal(0, stats.CountOfCompareExchange);
+            }
+        }
+
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeTombstonesShouldNotGatherIndefinitelyAndShouldBeDeletedAfterNextFull()
         {
@@ -373,6 +661,152 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
                     stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
+                    return stats.CountOfCompareExchangeTombstones == 0;
+                }, true);
+                Assert.Equal(0, stats.CountOfCompareExchangeTombstones);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.CompareExchange | RavenTestCategory.Sharding)]
+        public async Task CompareExchangeTombstonesShouldNotGatherIndefinitelyAndShouldBeDeletedAfterNextFullSharded()
+        {
+            // This test checks tombstones don't gather indefinitely because a non-responsible node is stuck with a backup status of low index that won't increase.
+            // Once the non-responsible node is overdue on its full backup, the local status is deleted and tombstones will be deleted.
+
+            var fullBackupFrequency = "*/2 * * * *";
+            var incrementalFrequency = "* * * * *";
+
+            var settings = new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval), "0" },
+                { RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval), 1.ToString()},
+                { RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod), 1000.ToString()}
+            };
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true, customSettings: settings);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 1, shardReplicationFactor: 3, orchestratorReplicationFactor: 3);
+
+            using (var store = GetDocumentStore(options))
+            {
+                // create cx
+                var cmpxchngRes1 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/1", new User { Name = "Stav1" }, 0));
+                var cmpxchngRes2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/2", new User { Name = "Stav2" }, 0));
+                Assert.True(cmpxchngRes1.Successful);
+                Assert.True(cmpxchngRes2.Successful);
+
+                // stabilize test - if next full is very close, wait it out
+                var timeUntilNextOccurence = GetTimeUntilBackupNextOccurence(fullBackupFrequency, DateTime.UtcNow);
+                if (timeUntilNextOccurence < TimeSpan.FromSeconds(20))
+                    await Task.Delay(timeUntilNextOccurence);
+
+                var shardName = ShardHelper.ToShardName(store.Database, 0);
+
+                // setup config with full and incremental freq and do first full backup
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency, incrementalBackupFrequency: incrementalFrequency);
+                var taskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes, store, config, isFullBackup: false);
+
+                var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, shardName);
+                var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
+                var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, shardName);
+
+                await WaitForAssertionAsync(async () =>
+                {
+                    var status = (await store.Maintenance.ForShard(0).SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    Assert.NotNull(status);
+                    Assert.Equal(originalNodeServer.ServerStore.NodeTag, status.NodeTag);
+                    Assert.True(status.IsFull);
+                });
+
+                // delete cx
+                var delRes1 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("users/1", cmpxchngRes1.Index));
+                Assert.True(delRes1.Successful);
+
+                // change responsible node
+                var command = new UpdateResponsibleNodeForTasksCommand(
+                    new UpdateResponsibleNodeForTasksCommand.Parameters()
+                    {
+                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
+                        {
+                            {
+                                shardName,
+                                new List<ResponsibleNodeInfo>()
+                                {
+                                    new ResponsibleNodeInfo() { TaskId = taskId, ResponsibleNode = otherNodeServer.ServerStore.NodeTag }
+                                }
+                            }
+                        }
+                    }, RaftIdGenerator.NewId());
+                var result = await leader.ServerStore.SendToLeaderAsync(command);
+                await leader.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, databaseName: shardName, differentThan: originalNode);
+                await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: false); // don't force full. should happen by itself
+
+                // check cluster backup status is as expected
+                await WaitForAssertionAsync(async () =>
+                {
+                    var status = (await store.Maintenance.ForShard(0).SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    Assert.NotNull(status);
+                    Assert.Equal(otherNodeServer.ServerStore.NodeTag, status.NodeTag);
+                    Assert.True(status.IsFull);
+                });
+
+                // run cleaner
+                await db.TombstoneCleaner.ExecuteCleanup();
+                await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
+
+                // check tombstones not deleted
+                var stats = store.Maintenance.ForDatabase(store.Database).ForShard(0).ForNode("A").Send(new GetDetailedStatisticsOperation());
+                Assert.Equal(1, stats.CountOfCompareExchangeTombstones);
+                Assert.Equal(1, stats.CountOfCompareExchange);
+
+                // delete another cx
+                var delRes2 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("users/2", cmpxchngRes2.Index));
+                Assert.True(delRes2.Successful);
+
+                // run the incremental
+                await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: false);
+
+                await WaitForAssertionAsync(async () =>
+                {
+                    var status = (await store.Maintenance.ForShard(0).SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    Assert.NotNull(status.LastIncrementalBackup);
+                    Assert.False(status.IsFull);
+                });
+                
+                // run the cleaner - this should not delete anything
+                await db.TombstoneCleaner.ExecuteCleanup();
+                await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
+
+                // check local status not null and tombstones not deleted
+                var localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, shardName, taskId);
+                Assert.NotNull(localStatus);
+                Assert.NotNull(localStatus.LastFullBackupInternal);
+
+                stats = store.Maintenance.ForDatabase(store.Database).ForShard(0).ForNode("A").Send(new GetDetailedStatisticsOperation());
+                Assert.Equal(2, stats.CountOfCompareExchangeTombstones);
+                Assert.Equal(0, stats.CountOfCompareExchange);
+
+                // wait until full is overdue on not-responsible
+                await Task.Delay(GetTimeUntilBackupNextOccurence(fullBackupFrequency, localStatus.LastFullBackupInternal ?? DateTime.UtcNow));
+
+                // run cleaner
+                await db.TombstoneCleaner.ExecuteCleanup();
+                await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
+
+                // wait for local backup status to be deleted
+                await WaitForValueAsync(() =>
+                {
+                    localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, shardName, taskId);
+                    return localStatus == null;
+                }, true);
+                Assert.Null(localStatus);
+
+                await WaitForValueAsync(async () =>
+                {
+                    await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
+                    stats = store.Maintenance.ForDatabase(store.Database).ForShard(0).ForNode("A").Send(new GetDetailedStatisticsOperation());
                     return stats.CountOfCompareExchangeTombstones == 0;
                 }, true);
                 Assert.Equal(0, stats.CountOfCompareExchangeTombstones);
@@ -513,6 +947,179 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await WaitForValueAsync(() =>
                 {
                     localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, store.Database, taskId);
+                    return localStatus == null;
+                }, true);
+                Assert.Null(localStatus);
+
+                // wait for tombstones to be deleted
+                await WaitForValueAsync(() =>
+                {
+                    using (dbOriginal.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var count = dbOriginal.DocumentsStorage.GetNumberOfTombstones(context);
+                        return count;
+                    }
+                }, 0);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task TombstonesShouldNotGatherIndefinitelyAndShouldBeDeletedAfterNextFullSharded()
+        {
+            // This test checks tombstones don't gather indefinitely because on a node because the backup moved from it to a different node.
+            // Tombstones on the non-responsible node can't be deleted until it is guaranteed the next backup will be full.
+            // Once the non-responsible node is overdue on its full backup, the local status is deleted and tombstones will be deleted.
+
+            var fullBackupFrequency = "*/2 * * * *";
+            var incrementalFrequency = "* * * * *";
+
+            var settings = new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval), 1.ToString()}
+            };
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true, customSettings: settings);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 1, shardReplicationFactor: 3, orchestratorReplicationFactor: 3);
+
+            using (var store = GetDocumentStore(options))
+            {
+                // create docs
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.Store(new User(), "users/2");
+                    session.SaveChanges();
+                }
+
+                // stabilize test - if next full is very close, wait it out
+                var timeUntilNextOccurence = GetTimeUntilBackupNextOccurence(fullBackupFrequency, DateTime.UtcNow);
+                await Task.Delay(timeUntilNextOccurence);
+
+                // setup config with full and incremental freq and do first full backup
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency, incrementalBackupFrequency: incrementalFrequency);
+                var taskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes[0], store, config, isFullBackup: false);
+
+                var shardName = ShardHelper.ToShardName(store.Database, 0);
+                var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, shardName);
+                var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
+                var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
+                var dbOriginal = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, shardName);
+                var dbOther = await Databases.GetDocumentDatabaseInstanceFor(otherNodeServer, shardName);
+
+                await WaitForAssertionAsync(async () =>
+                {
+                    var status = (await store.Maintenance.ForShard(0).SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    Assert.NotNull(status);
+                    Assert.Equal(originalNodeServer.ServerStore.NodeTag, status.NodeTag);
+                    Assert.True(status.IsFull);
+                });
+
+                // delete doc - create tombstone
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("users/1");
+                    session.SaveChanges();
+                }
+
+                // move backup to another node and wait to finish
+                var command = new UpdateResponsibleNodeForTasksCommand(
+                    new UpdateResponsibleNodeForTasksCommand.Parameters()
+                    {
+                        ResponsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>()
+                        {
+                            {
+                                shardName,
+                                new List<ResponsibleNodeInfo>()
+                                {
+                                    new ResponsibleNodeInfo() { TaskId = taskId, ResponsibleNode = otherNodeServer.ServerStore.NodeTag }
+                                }
+                            }
+                        }
+                    }, RaftIdGenerator.NewId());
+                var result = await leader.ServerStore.SendToLeaderAsync(command);
+                await leader.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId, databaseName: shardName, differentThan: originalNode);
+                await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: false); // don't force full. should happen by itself
+
+                // check cluster backup status is as expected
+                PeriodicBackupStatus status = null;
+                await WaitForAssertionAsync(async () =>
+                {
+                    status = (await store.Maintenance.ForShard(0).SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    Assert.NotNull(status);
+                    Assert.Equal(otherNodeServer.ServerStore.NodeTag, status.NodeTag);
+                    Assert.True(status.IsFull);
+                });
+
+                // run cleaner
+                await dbOriginal.TombstoneCleaner.ExecuteCleanup();
+                await dbOther.TombstoneCleaner.ExecuteCleanup();
+
+                // check tombstone not deleted - we are not yet overdue
+                using (dbOriginal.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombstonesCount = dbOriginal.DocumentsStorage.GetNumberOfTombstones(context);
+                    var docCount = dbOriginal.DocumentsStorage.GetNumberOfDocuments(context);
+                    Assert.Equal(1, docCount);
+                    Assert.Equal(1, tombstonesCount);
+                }
+
+                // delete another doc
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("users/2");
+                    session.SaveChanges();
+                }
+
+                // run the incremental
+                await Task.Delay(GetTimeUntilBackupNextOccurence(incrementalFrequency, status.LastFullBackupInternal ?? DateTime.UtcNow));
+                var res = await WaitForValueAsync(async () =>
+                {
+                    status = (await store.Maintenance.ForShard(0).SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    return status.LastIncrementalBackup != null;
+                }, true, timeout: 70_000);
+                Assert.True(res, $"Incremental hasn't happened");
+                Assert.False(status.IsFull);
+
+                // run cleaner
+                await dbOriginal.TombstoneCleaner.ExecuteCleanup();
+                await dbOther.TombstoneCleaner.ExecuteCleanup();
+
+                // check local status not null and tombstones not deleted
+                var localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, shardName, taskId);
+                Assert.NotNull(localStatus);
+                Assert.NotNull(localStatus.LastFullBackupInternal);
+
+                // on original server not deleted
+                using (dbOriginal.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = dbOriginal.DocumentsStorage.GetNumberOfTombstones(context);
+                    Assert.Equal(2, count);
+                }
+
+                // on responsible node already deleted by incremental
+                using (dbOther.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = dbOther.DocumentsStorage.GetNumberOfTombstones(context);
+                    Assert.Equal(0, count);
+                }
+
+                // wait until full is overdue on not-responsible
+                await Task.Delay(GetTimeUntilBackupNextOccurence(fullBackupFrequency, localStatus.LastFullBackupInternal ?? DateTime.UtcNow));
+
+                // run cleaner
+                await dbOriginal.TombstoneCleaner.ExecuteCleanup();
+                await dbOther.TombstoneCleaner.ExecuteCleanup();
+
+                // wait for local backup status to be deleted
+                await WaitForValueAsync(() =>
+                {
+                    localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, shardName, taskId);
                     return localStatus == null;
                 }, true);
                 Assert.Null(localStatus);
