@@ -749,7 +749,7 @@ namespace Sparrow.Server
         /// </summary>
         private readonly List<SegmentInformation> _wholeSegments;
         private readonly int _initialAllocationBlockSize;
-        private int _allocationBlockSize;
+        public int AllocationBlockSize { get; private set; }
 
         internal long _totalAllocated, _currentlyAllocated;
 
@@ -780,7 +780,7 @@ namespace Sparrow.Server
 
             _lowMemoryFlag = lowMemoryFlag;
             _initialAllocationBlockSize = allocationBlockSize;
-            _allocationBlockSize = allocationBlockSize;
+            AllocationBlockSize = allocationBlockSize;
 
             _wholeSegments = new List<SegmentInformation>();
             _internalReadyToUseMemorySegments = new List<SegmentInformation>();
@@ -825,7 +825,7 @@ namespace Sparrow.Server
                 stack?.Clear();
             }
             _internalReadyToUseMemorySegments.Clear();// memory here will be released from _wholeSegments
-            _allocationBlockSize = _initialAllocationBlockSize;
+            AllocationBlockSize = _initialAllocationBlockSize;
 
             _externalStringPool.Clear();
             _externalFastPoolCount = 0;
@@ -1040,9 +1040,9 @@ namespace Sparrow.Server
             {
                 if (_externalCurrentLeft == 0)
                 {
-                    var tmp = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, _allocationBlockSize * 2);
+                    var tmp = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, AllocationBlockSize * 2);
                     AllocateExternalSegment(tmp);
-                    _allocationBlockSize = tmp;
+                    AllocationBlockSize = tmp;
                 }
 
                 storagePtr = (ByteStringStorage*)_externalCurrent.Current;
@@ -1074,7 +1074,7 @@ namespace Sparrow.Server
             // This is even bigger than the configured allocation block size. There is no reason why we shouldn't
             // allocate it directly. When released (if released) this will be reused as a segment, ensuring that the context
             // could handle that.
-            if (allocationSize > _allocationBlockSize)
+            if (allocationSize > AllocationBlockSize)
             {
                 var segment = GetFromReadyToUseMemorySegments(allocationUnit);
                 if (segment != null)
@@ -1184,8 +1184,8 @@ namespace Sparrow.Server
             }
             else
             {
-                _allocationBlockSize = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, _allocationBlockSize * 2);
-                var toAllocate = Math.Max(_allocationBlockSize, allocationUnit);
+                AllocationBlockSize = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, AllocationBlockSize * 2);
+                var toAllocate = Math.Max(AllocationBlockSize, allocationUnit);
                 _internalCurrent = AllocateSegment(toAllocate);
                 Debug.Assert(_internalCurrent.SizeLeft >= allocationUnit, $"{_internalCurrent.SizeLeft} >= {allocationUnit}");
             }

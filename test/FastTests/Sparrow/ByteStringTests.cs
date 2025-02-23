@@ -1,6 +1,7 @@
 ﻿using System;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -158,6 +159,39 @@ namespace FastTests.Sparrow
                     Assert.Equal(ptrLocation, (long)repeat._pointer);
                     context.Release(ref repeat);
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Memory)]
+        public void CanResetAllocationBlockSize()
+        {
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None))
+            {
+                while (context.AllocationBlockSize == ByteStringContext.DefaultAllocationBlockSizeInBytes)
+                {
+                    context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2, out _);
+                }
+
+                Assert.NotEqual(ByteStringContext.DefaultAllocationBlockSizeInBytes, context.AllocationBlockSize);
+
+                context.Reset();
+
+                Assert.Equal(ByteStringContext.DefaultAllocationBlockSizeInBytes, context.AllocationBlockSize);
+            }
+
+            var blockSizeInBytes = ByteStringContext.MinBlockSizeInBytes * 8;
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, allocationBlockSize: blockSizeInBytes))
+            {
+                while (context.AllocationBlockSize == blockSizeInBytes)
+                {
+                    context.Allocate(blockSizeInBytes / 2, out _);
+                }
+
+                Assert.NotEqual(ByteStringContext.MinBlockSizeInBytes, context.AllocationBlockSize);
+
+                context.Reset();
+
+                Assert.Equal(blockSizeInBytes, context.AllocationBlockSize);
             }
         }
 
