@@ -616,7 +616,8 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (clusterStatus == null)
                         {
                             // existing backup hasn't run yet for the first time, we don't want to delete anything until we have a first status
-                            return 0;
+                            maxEtag = 0;
+                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                         }
 
                         continue;
