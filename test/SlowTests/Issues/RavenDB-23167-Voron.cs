@@ -181,7 +181,7 @@ namespace SlowTests.Issues
                     var userExpectedEtag = users[mid].Etag;
                     if (users[mid + 1].Etag == users[mid].Etag + 1 && users[mid + 1].Id == users[mid].Id)
                         userExpectedEtag = users[mid].Etag + 1;
-                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag + 1, empty: false, expectedEtag: userExpectedEtag); //
+                    AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag + 1, empty: false, expectedEtag: userExpectedEtag);
 
                     user = users.Last();
                     AssertSeekBackward(tx.Allocator, table, idAndEtagIndex, user.Id, endEtag: user.Etag, empty: false, expectedEtag: user.Etag);

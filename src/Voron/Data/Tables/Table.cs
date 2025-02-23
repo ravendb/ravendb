@@ -1442,7 +1442,7 @@ namespace Voron.Data.Tables
             return null;
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice? prefix, Slice last, long skip)
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice? prefix, Slice last, long skip) // V4
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1450,7 +1450,7 @@ namespace Voron.Data.Tables
 
             using (var it = tree.Iterate(true))
             {
-                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
+                if (it.SeekBackward(last) == false)
                     yield break;
 
                 if (prefix != null)
@@ -1484,7 +1484,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last)
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last) // V1 V3
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1492,17 +1492,11 @@ namespace Voron.Data.Tables
 
             using (var it = tree.Iterate(true))
             {
-                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
+                if (it.SeekBackward(last) == false)
                     yield break;
 
                 it.SetRequiredPrefix(prefix);
                 if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
-                {
-                    if (it.MovePrev() == false)
-                        yield break;
-                }
-
-                if (SliceComparer.CompareInline(it.CurrentKey, last) > 0)
                 {
                     if (it.MovePrev() == false)
                         yield break;
@@ -1530,7 +1524,7 @@ namespace Voron.Data.Tables
 
             using (var it = tree.Iterate(true))
             {
-                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
+                if (it.SeekBackward(last) == false)
                     return null;
 
                 it.SetRequiredPrefix(prefix);
@@ -2047,13 +2041,12 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long key, long skip = 0)
+        public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long key, long skip = 0) // V2
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
-                if (it.Seek(key) == false &&
-                    it.SeekToLast() == false)
+                if (it.SeekBackward(key) == false)
                     yield break;
 
                 if (it.Skip(-skip) == false)
@@ -2062,8 +2055,6 @@ namespace Voron.Data.Tables
                 var result = new TableValueHolder();
                 do
                 {
-                    if (it.CurrentKey > key)
-                        continue;
 
                     GetTableValueReader(it, out result.Reader);
                     yield return result;

@@ -11,6 +11,7 @@ namespace Voron.Data
         Slice MaxKey { get; set; }
 
         bool Seek(Slice key);
+        bool SeekBackward(Slice key);
         bool MoveNext();
         bool MovePrev();
         bool Skip(long count);
