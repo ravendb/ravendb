@@ -8,11 +8,12 @@ import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import ServerWideCustomSortersList from "./ServerWideCustomSortersList";
-import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
 import ServerWideCustomSortersInfoHub from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSortersInfoHub";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function ServerWideCustomSorters() {
     const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
@@ -51,20 +52,22 @@ export default function ServerWideCustomSorters() {
                                 To test server-wide sorters, go to the Custom Sorters view in a database
                             </RichAlert>
                         )}
-                        <div id="newServerWideCustomSorter" className="w-fit-content mt-4">
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasServerWideCustomSorters,
+                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                            }}
+                        >
                             <Button
                                 variant="primary"
-                                className="mb-3"
+                                className="mb-3 mt-4"
                                 onClick={addNewSorter}
                                 disabled={!hasServerWideCustomSorters}
                             >
                                 <Icon icon="plus" />
                                 Add a server-wide custom sorter
                             </Button>
-                        </div>
-                        {!hasServerWideCustomSorters && (
-                            <FeatureNotAvailableInYourLicensePopover target="newServerWideCustomSorter" />
-                        )}
+                        </ConditionalPopover>
                         <div className={hasServerWideCustomSorters ? null : "item-disabled pe-none"}>
                             <HrHeader count={sorters.length}>Server-wide custom sorters</HrHeader>
                             <ServerWideCustomSortersList

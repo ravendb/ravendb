@@ -1,4 +1,3 @@
-import React from "react";
 import { Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -7,11 +6,12 @@ import { useServices } from "components/hooks/useServices";
 import { useAsync } from "react-async-hook";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import { useCustomAnalyzers } from "components/common/customAnalyzers/useCustomAnalyzers";
 import ServerWideCustomAnalyzersList from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzersList";
 import ServerWideCustomAnalyzersInfoHub from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzersInfoHub";
 import Button from "react-bootstrap/Button";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function ServerWideCustomAnalyzers() {
     const { analyzers, setAnalyzers, addNewAnalyzer, removeAnalyzer, mapFromDto } = useCustomAnalyzers();
@@ -45,19 +45,22 @@ export default function ServerWideCustomAnalyzers() {
                             icon="server-wide-custom-analyzers"
                             licenseBadgeText={hasServerWideCustomAnalyzers ? null : "Professional +"}
                         />
-                        <div id="newServerWideCustomAnalyzer" className="w-fit-content mt-4">
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasServerWideCustomAnalyzers,
+                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                            }}
+                        >
                             <Button
                                 variant="primary"
-                                className="mb-3"
+                                className="mb-3 mt-4"
                                 onClick={addNewAnalyzer}
                                 disabled={!hasServerWideCustomAnalyzers}
                             >
                                 <Icon icon="plus" /> Add a server-wide custom analyzer
                             </Button>
-                        </div>
-                        {!hasServerWideCustomAnalyzers && (
-                            <FeatureNotAvailableInYourLicensePopover target="newServerWideCustomAnalyzer" />
-                        )}
+                        </ConditionalPopover>
+
                         <div className={hasServerWideCustomAnalyzers ? null : "item-disabled pe-none"}>
                             <HrHeader count={analyzers.length}>Server-wide custom analyzers</HrHeader>
                             <ServerWideCustomAnalyzersList

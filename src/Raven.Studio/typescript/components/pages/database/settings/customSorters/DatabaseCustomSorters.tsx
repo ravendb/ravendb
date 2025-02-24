@@ -1,4 +1,4 @@
-﻿import { Col, Row, UncontrolledPopover } from "reactstrap";
+﻿import { Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -20,6 +20,7 @@ import { useCustomSorters } from "components/common/customSorters/useCustomSorte
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function DatabaseCustomSorters() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -87,20 +88,22 @@ export default function DatabaseCustomSorters() {
             <Col sm={12} lg={8}>
                 <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
                 {hasDatabaseAdminAccess && (
-                    <>
-                        <div id="newCustomSorter" className="w-fit-content">
-                            <Button variant="primary" className="mb-3" onClick={addNewSorter} disabled={isLimitReached}>
-                                <Icon icon="plus" />
-                                Add a custom sorter
-                            </Button>
-                        </div>
-                        {isLimitReached && (
-                            <AddButtonLicensePopover
-                                databaseLimitReachStatus={databaseLimitReachStatus}
-                                upgradeLicenseLink={upgradeLicenseLink}
-                            />
-                        )}
-                    </>
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: isLimitReached,
+                            message: (
+                                <AddButtonLicensePopoverBody
+                                    databaseLimitReachStatus={databaseLimitReachStatus}
+                                    upgradeLicenseLink={upgradeLicenseLink}
+                                />
+                            ),
+                        }}
+                    >
+                        <Button variant="primary" className="mb-3" onClick={addNewSorter} disabled={isLimitReached}>
+                            <Icon icon="plus" />
+                            Add a custom sorter
+                        </Button>
+                    </ConditionalPopover>
                 )}
 
                 <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
@@ -219,18 +222,16 @@ interface AddButtonLicensePopoverProps {
     upgradeLicenseLink: string;
 }
 
-function AddButtonLicensePopover({ databaseLimitReachStatus, upgradeLicenseLink }: AddButtonLicensePopoverProps) {
+function AddButtonLicensePopoverBody({ databaseLimitReachStatus, upgradeLicenseLink }: AddButtonLicensePopoverProps) {
     return (
-        <UncontrolledPopover trigger="hover" target="newCustomSorter" placement="top" className="bs5">
-            <div className="p-3 text-center">
-                <Icon icon={databaseLimitReachStatus === "limitReached" ? "database" : "cluster"} />
-                {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has reached the maximum number of
-                Custom Sorters allowed per {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
-                <br /> Delete unused sorters or{" "}
-                <a href={upgradeLicenseLink} target="_blank">
-                    upgrade your license
-                </a>
-            </div>
-        </UncontrolledPopover>
+        <div className="text-center">
+            <Icon icon={databaseLimitReachStatus === "limitReached" ? "database" : "cluster"} />
+            {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has reached the maximum number of
+            Custom Sorters allowed per {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
+            <br /> Delete unused sorters or{" "}
+            <a href={upgradeLicenseLink} target="_blank">
+                upgrade your license
+            </a>
+        </div>
     );
 }

@@ -1,4 +1,4 @@
-﻿import { Card, CardBody, Col, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+﻿import { Card, CardBody, Col, Row } from "reactstrap";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
@@ -22,6 +22,7 @@ import genUtils = require("common/generalUtils");
 import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface LicenseSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
@@ -340,9 +341,11 @@ function LicenseExpirationDetails() {
 
     return (
         <div>
-            {subscriptionExpirationUtc.format(dateFormat)} UTC <Icon icon="info" color="info" id="utc-info" />
+            {subscriptionExpirationUtc.format(dateFormat)} UTC{" "}
+            <LicenseExpirationInfoPopover date={subscriptionExpirationUtc}>
+                <Icon icon="info" color="info" id="utc-info" />
+            </LicenseExpirationInfoPopover>
             <br />
-            <LicenseExpirationInfoPopover date={subscriptionExpirationUtc} />
             <small
                 className={classNames({
                     "text-warning": !isExpired && subscriptionExpirationUtc.isBefore(nextMonth),
@@ -355,22 +358,27 @@ function LicenseExpirationDetails() {
     );
 }
 
-function LicenseExpirationInfoPopover({ date }: { date: moment.Moment }) {
+function LicenseExpirationInfoPopover({ date, children }: { date: moment.Moment; children: React.ReactNode }) {
     const isExpired = useAppSelector(licenseSelectors.statusValue("Expired"));
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
 
     return (
-        <UncontrolledPopover target="utc-info" placement="top" trigger="hover" className="bs5">
-            <PopoverBody>
-                Your license {isExpired ? "has expired on" : "will expire at the end of"} {date.format("YYYY-MM-DD")}{" "}
-                UTC, which {isExpired ? "was" : "is"} {date.local().format("YYYY-MM-DD HH:mm:ss")} your local time.
-                {isCloud && (
-                    <div>
-                        <br />
-                        <Icon icon="cloud" /> Cloud licenses are automatically renewed.
-                    </div>
-                )}
-            </PopoverBody>
-        </UncontrolledPopover>
+        <PopoverWithHoverWrapper
+            message={
+                <>
+                    Your license {isExpired ? "has expired on" : "will expire at the end of"}{" "}
+                    {date.format("YYYY-MM-DD")} UTC, which {isExpired ? "was" : "is"}{" "}
+                    {date.local().format("YYYY-MM-DD HH:mm:ss")} your local time.
+                    {isCloud && (
+                        <div>
+                            <br />
+                            <Icon icon="cloud" /> Cloud licenses are automatically renewed.
+                        </div>
+                    )}
+                </>
+            }
+        >
+            {children}
+        </PopoverWithHoverWrapper>
     );
 }

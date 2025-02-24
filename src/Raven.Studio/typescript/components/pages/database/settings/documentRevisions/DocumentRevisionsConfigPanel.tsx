@@ -1,4 +1,3 @@
-import React from "react";
 import {
     RichPanel,
     RichPanelStatus,
@@ -10,7 +9,6 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { UncontrolledPopover } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import {
@@ -26,6 +24,7 @@ import { Checkbox } from "components/common/Checkbox";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import generalUtils from "common/generalUtils";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
@@ -174,12 +173,11 @@ function DefaultConfigInfoIcon({ name }: { name: DocumentRevisionsConfigName }) 
         return null;
     }
 
-    const id = "info-" + name.split(" ").join("-");
-
     return (
-        <>
-            <UncontrolledPopover target={id} placement="left" trigger="hover">
-                <ul className="margin-top margin-top-xs">
+        <PopoverWithHoverWrapper
+            placement="left"
+            message={
+                <ul>
                     {name === documentRevisionsConfigNames.defaultConflicts ? (
                         <>
                             <li>
@@ -207,8 +205,9 @@ function DefaultConfigInfoIcon({ name }: { name: DocumentRevisionsConfigName }) 
                         </>
                     )}
                 </ul>
-            </UncontrolledPopover>
-            <Icon id={id} icon="info" />
-        </>
+            }
+        >
+            <Icon icon="info" />
+        </PopoverWithHoverWrapper>
     );
 }

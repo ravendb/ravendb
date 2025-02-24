@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Popover, { PopoverProps } from "react-bootstrap/Popover";
-import Overlay from "react-bootstrap/Overlay";
+import Overlay, { OverlayProps } from "react-bootstrap/Overlay";
 import { Placement } from "react-bootstrap/types";
 import classNames from "classnames";
 import useUniqueId from "components/hooks/useUniqueId";
@@ -10,11 +10,12 @@ const tooltipContext = {
     closeAction: null as () => void,
 };
 
-interface PopoverWithHoverProps extends PopoverProps {
+export interface PopoverWithHoverProps extends PopoverProps {
     rounded?: "true" | null;
     target: HTMLElement;
     children: ReactNode | ReactNode[];
     placement?: Placement;
+    overlayProps?: Omit<OverlayProps, "target" | "show" | "placement" | "children">;
 }
 
 function tooltipMutex(target: HTMLDivElement, onClose: () => void) {
@@ -27,7 +28,7 @@ function tooltipMutex(target: HTMLDivElement, onClose: () => void) {
 }
 
 export function PopoverWithHover(props: PopoverWithHoverProps) {
-    const { target, children, placement, className, style: propsStyle, ...rest } = props;
+    const { target, children, placement, className, style: propsStyle, overlayProps, ...rest } = props;
 
     const div = target as HTMLDivElement;
     const [open, setOpen] = useState<boolean>(false);
@@ -110,7 +111,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
     }
 
     return (
-        <Overlay target={target} show={open} placement={placement}>
+        <Overlay target={target} show={open} placement={placement} {...overlayProps}>
             {({ style: overlayStyle, ...props }) => (
                 <Popover
                     {...props}

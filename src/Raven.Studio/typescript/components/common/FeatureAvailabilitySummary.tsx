@@ -3,7 +3,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { uniqueId } from "lodash";
 import { ReactNode } from "react";
-import { Table, UncontrolledPopover } from "reactstrap";
+import { Table } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
@@ -15,6 +15,7 @@ import appUrl from "common/appUrl";
 import { HrHeader } from "components/common/HrHeader";
 import OverlayTrigger from "react-bootstrap/esm/OverlayTrigger";
 import Tooltip from "react-bootstrap/esm/Tooltip";
+import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
 
 export type AvailabilityValue = boolean | number | string;
 
@@ -97,17 +98,9 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                         <Icon icon="circle-filled" className="license-dot" />
                                         {licenseType === "Developer" ? <span>Dev</span> : licenseType}
                                         {licenseType === "Developer" && (
-                                            <>
-                                                <div className="corner-info" id="DevTooltip">
-                                                    <Icon icon="info" margin="m-0" />
-                                                </div>
-                                                <UncontrolledPopover
-                                                    placement="top"
-                                                    target="DevTooltip"
-                                                    trigger="hover"
-                                                    className="bs5"
-                                                >
-                                                    <div className="p-2 text-center">
+                                            <PopoverWithHoverWrapper
+                                                message={
+                                                    <div className="text-center">
                                                         <div>
                                                             Developer license enables{" "}
                                                             <strong>Enterprise License features</strong> but is{" "}
@@ -123,8 +116,12 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                                             See details <Icon icon="newtab" margin="ms-1" />
                                                         </Button>
                                                     </div>
-                                                </UncontrolledPopover>
-                                            </>
+                                                }
+                                            >
+                                                <div className="corner-info">
+                                                    <Icon icon="info" margin="m-0" />
+                                                </div>
+                                            </PopoverWithHoverWrapper>
                                         )}
                                     </th>
                                 );

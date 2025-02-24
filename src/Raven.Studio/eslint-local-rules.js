@@ -166,6 +166,9 @@ module.exports = {
     "no-reactstrap-UncontrolledTooltip": {
         create: (context) => createDeprecatedReactstrapImport({ context, name: "UncontrolledTooltip", reactBootstrapName: "OverlayTrigger", canFix: false }),
     },
+    "no-reactstrap-UncontrolledPopover": {
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "UncontrolledPopover", reactBootstrapName: "OverlayTrigger", canFix: false }),
+    },
     "no-reactstrap-Badge": {
         meta: fixableMeta,
         create: (context) => createDeprecatedReactstrapImport({ context, name: "Badge" }),

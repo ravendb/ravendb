@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import { Form, Col, Card, Row, InputGroup, UncontrolledPopover } from "reactstrap";
+import { Form, Col, Card, Row, InputGroup } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
@@ -25,9 +25,13 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function ClientGlobalConfiguration() {
+    const popoverContainerRef = useRef<HTMLDivElement>(null);
+
     const { manageServerService } = useServices();
     const asyncGetGlobalClientConfiguration = useAsyncCallback(manageServerService.getGlobalClientConfiguration);
 
@@ -90,40 +94,43 @@ export default function ClientGlobalConfiguration() {
                             title="Server-Wide Client Configuration"
                             licenseBadgeText={hasClientConfiguration ? null : "Professional +"}
                         />
-                        <div id="saveClientConfiguration" className="w-fit-content mb-3">
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasClientConfiguration,
+                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                            }}
+                        >
                             <Button
                                 type="submit"
                                 variant="primary"
                                 disabled={formState.isSubmitting || !formState.isDirty}
+                                className="mb-3"
                             >
                                 {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <Icon icon="save" />}
                                 Save
                             </Button>
-                        </div>
-                        {!hasClientConfiguration && (
-                            <FeatureNotAvailableInYourLicensePopover target="saveClientConfiguration" />
-                        )}
+                        </ConditionalPopover>
                         <div className={hasClientConfiguration ? "" : "item-disabled pe-none"}>
                             <Card className="flex-column p-4">
                                 <div>
                                     <div className="d-flex flex-grow-1">
                                         <div className="md-label">
                                             Identity parts separator{" "}
-                                            <Icon id="SetIdentityPartsSeparator" icon="info" color="info" />
+                                            <PopoverWithHoverWrapper
+                                                message={
+                                                    <>
+                                                        Set the default separator for automatically generated document
+                                                        identity IDs.
+                                                        <br />
+                                                        Use any character except <code>&apos;|&apos;</code> (pipe).
+                                                    </>
+                                                }
+                                                placement="right"
+                                                overlayProps={{ container: popoverContainerRef.current }}
+                                            >
+                                                <Icon icon="info" color="info" />
+                                            </PopoverWithHoverWrapper>
                                         </div>
-                                        <UncontrolledPopover
-                                            target="SetIdentityPartsSeparator"
-                                            trigger="hover"
-                                            container="PopoverContainer"
-                                            placement="right"
-                                        >
-                                            <div className="p-3">
-                                                Set the default separator for automatically generated document identity
-                                                IDs.
-                                                <br />
-                                                Use any character except <code>&apos;|&apos;</code> (pipe).
-                                            </div>
-                                        </UncontrolledPopover>
                                     </div>
                                     <Row>
                                         <Col>
@@ -150,19 +157,20 @@ export default function ClientGlobalConfiguration() {
                                     <div className="d-flex flex-grow-1">
                                         <div className="md-label">
                                             Maximum number of requests per session{" "}
-                                            <Icon id="SetMaximumRequestsPerSession" icon="info" color="info" />
+                                            <PopoverWithHoverWrapper
+                                                message={
+                                                    <>
+                                                        Set this number to restrict the number of requests (
+                                                        <code>Reads</code> & <code>Writes</code>) per session in the
+                                                        client API.
+                                                    </>
+                                                }
+                                                placement="right"
+                                                overlayProps={{ container: popoverContainerRef.current }}
+                                            >
+                                                <Icon icon="info" color="info" />
+                                            </PopoverWithHoverWrapper>
                                         </div>
-                                        <UncontrolledPopover
-                                            target="SetMaximumRequestsPerSession"
-                                            trigger="hover"
-                                            container="PopoverContainer"
-                                            placement="right"
-                                        >
-                                            <div className="p-3">
-                                                Set this number to restrict the number of requests (<code>Reads</code> &{" "}
-                                                <code>Writes</code>) per session in the client API.
-                                            </div>
-                                        </UncontrolledPopover>
                                     </div>
                                     <Row>
                                         <Col>
@@ -196,40 +204,42 @@ export default function ClientGlobalConfiguration() {
                             <Card className="flex-column p-4">
                                 <div className="d-flex flex-grow-1">
                                     <div className="md-label">
-                                        Load Balance Behavior <Icon id="SetSessionContext" icon="info" color="info" />
-                                        <UncontrolledPopover
-                                            target="SetSessionContext"
-                                            trigger="hover"
-                                            container="PopoverContainer"
+                                        Load Balance Behavior{" "}
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                <>
+                                                    <span className="d-inline-block mb-1">
+                                                        Set the Load balance method for <strong>Read</strong> &{" "}
+                                                        <strong>Write</strong> requests.
+                                                    </span>
+                                                    <ul>
+                                                        <li className="mb-1">
+                                                            <code>None</code>
+                                                            <br />
+                                                            <strong>Read</strong> requests - the node the client will
+                                                            target will be based on Read balance behavior configuration.
+                                                            <br />
+                                                            <strong>Write</strong> requests - will be sent to the
+                                                            preferred node.
+                                                        </li>
+                                                        <li className="mb-1">
+                                                            <code>Use session context</code>
+                                                            <br />
+                                                            Sessions that are assigned the same context will have all
+                                                            their <strong>Read & Write</strong> requests routed to the
+                                                            same node.
+                                                            <br />
+                                                            The session context is hashed from a context string (given
+                                                            by the client) and an optional seed.
+                                                        </li>
+                                                    </ul>
+                                                </>
+                                            }
                                             placement="right"
+                                            overlayProps={{ container: popoverContainerRef.current }}
                                         >
-                                            <div className="p-3">
-                                                <span className="d-inline-block mb-1">
-                                                    Set the Load balance method for <strong>Read</strong> &{" "}
-                                                    <strong>Write</strong> requests.
-                                                </span>
-                                                <ul>
-                                                    <li className="mb-1">
-                                                        <code>None</code>
-                                                        <br />
-                                                        <strong>Read</strong> requests - the node the client will target
-                                                        will be based on Read balance behavior configuration.
-                                                        <br />
-                                                        <strong>Write</strong> requests - will be sent to the preferred
-                                                        node.
-                                                    </li>
-                                                    <li className="mb-1">
-                                                        <code>Use session context</code>
-                                                        <br />
-                                                        Sessions that are assigned the same context will have all their{" "}
-                                                        <strong>Read & Write</strong> requests routed to the same node.
-                                                        <br />
-                                                        The session context is hashed from a context string (given by
-                                                        the client) and an optional seed.
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </UncontrolledPopover>
+                                            <Icon icon="info" color="info" />
+                                        </PopoverWithHoverWrapper>
                                     </div>
                                 </div>
                                 <Row>
@@ -252,19 +262,20 @@ export default function ClientGlobalConfiguration() {
                                     <>
                                         <div className="md-label mt-4">
                                             Seed
-                                            <Icon id="SetLoadBalanceSeedBehavior" icon="info" color="info" />
-                                            <UncontrolledPopover
-                                                target="SetLoadBalanceSeedBehavior"
-                                                trigger="hover"
-                                                container="PopoverContainer"
+                                            <PopoverWithHoverWrapper
+                                                message={
+                                                    <>
+                                                        {" "}
+                                                        An optional seed number.
+                                                        <br />
+                                                        Used when hashing the session context.
+                                                    </>
+                                                }
                                                 placement="right"
+                                                overlayProps={{ container: popoverContainerRef.current }}
                                             >
-                                                <div className="p-3">
-                                                    An optional seed number.
-                                                    <br />
-                                                    Used when hashing the session context.
-                                                </div>
-                                            </UncontrolledPopover>
+                                                <Icon icon="info" color="info" />
+                                            </PopoverWithHoverWrapper>
                                         </div>
                                         <Row>
                                             <Col className="hstack gap-3">
@@ -291,22 +302,20 @@ export default function ClientGlobalConfiguration() {
                                 <div className="d-flex flex-grow-1">
                                     <div className="md-label mt-4">
                                         Read Balance Behavior{" "}
-                                        <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
-                                        <UncontrolledPopover
-                                            target="SetReadBalanceBehavior"
-                                            trigger="hover"
-                                            container="PopoverContainer"
-                                            placement="right"
-                                        >
-                                            <div className="p-3">
-                                                <div>
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                <>
                                                     Set the Read balance method the client will use when accessing a
                                                     node with <code>Read</code> requests.
                                                     <br />
                                                     <code>Write</code> requests are sent to the preferred node.
-                                                </div>
-                                            </div>
-                                        </UncontrolledPopover>
+                                                </>
+                                            }
+                                            placement="right"
+                                            overlayProps={{ container: popoverContainerRef.current }}
+                                        >
+                                            <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
+                                        </PopoverWithHoverWrapper>
                                     </div>
                                 </div>
                                 <Row>
@@ -381,7 +390,7 @@ export default function ClientGlobalConfiguration() {
                     </Col>
                 </Row>
             </div>
-            <div id="PopoverContainer"></div>
+            <div ref={popoverContainerRef}></div>
         </Form>
     );
 }

@@ -1,9 +1,8 @@
-﻿import React from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+﻿import { useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import Badge from "react-bootstrap/Badge";
-import { Card, CardBody, Collapse, UncontrolledPopover, PopoverBody, Label } from "reactstrap";
+import { Card, CardBody, Collapse, Label } from "reactstrap";
 import { FormSwitch, FormInput, FormSelectCreatable } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
@@ -13,6 +12,7 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
 import { availableS3Regions } from "components/utils/common";
+import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 
 export default function AmazonS3() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -60,39 +60,35 @@ export default function AmazonS3() {
                                     Use a custom S3 host
                                 </FormSwitch>
                                 {formValues.isUseCustomHost && (
-                                    <>
-                                        <FormSwitch
-                                            control={control}
-                                            name={getName("forcePathStyle")}
-                                            className="w-100"
-                                            color="secondary"
-                                        >
-                                            <span className="d-flex gap-1 align-items-center">
-                                                Force path style
-                                                <Icon icon="info" color="info" id="forcePathStyleTooltip" />
-                                            </span>
-                                        </FormSwitch>
-                                        <UncontrolledPopover
-                                            target="forcePathStyleTooltip"
-                                            trigger="hover"
-                                            placement="top"
-                                            className="bs5"
-                                        >
-                                            <PopoverBody>
-                                                Whether to force path style URLs for S3 objects (e.g.,{" "}
-                                                <code>
-                                                    https://{`{Server-URL}`}/{`{Bucket-Name}`}
-                                                </code>{" "}
-                                                instead of{" "}
-                                                <code>
-                                                    {`{https://`}
-                                                    {`{Bucket-Name}`}.{`{Server-URL}`}
-                                                    {`}`}
-                                                </code>
-                                                )
-                                            </PopoverBody>
-                                        </UncontrolledPopover>
-                                    </>
+                                    <FormSwitch
+                                        control={control}
+                                        name={getName("forcePathStyle")}
+                                        className="w-100"
+                                        color="secondary"
+                                    >
+                                        <span className="d-flex gap-1 align-items-center">
+                                            Force path style
+                                            <PopoverWithHoverWrapper
+                                                message={
+                                                    <>
+                                                        Whether to force path style URLs for S3 objects (e.g.,{" "}
+                                                        <code>
+                                                            https://{`{Server-URL}`}/{`{Bucket-Name}`}
+                                                        </code>{" "}
+                                                        instead of{" "}
+                                                        <code>
+                                                            {`{https://`}
+                                                            {`{Bucket-Name}`}.{`{Server-URL}`}
+                                                            {`}`}
+                                                        </code>
+                                                        )
+                                                    </>
+                                                }
+                                            >
+                                                <Icon icon="info" color="info" />
+                                            </PopoverWithHoverWrapper>
+                                        </span>
+                                    </FormSwitch>
                                 )}
                             </div>
                             <div className="vstack gap-3 mt-2">
@@ -111,7 +107,17 @@ export default function AmazonS3() {
                                 <div className="mb-2">
                                     <Label className="d-flex align-items-center gap-1">
                                         Bucket name
-                                        <Icon icon="info" color="info" id="bucketNameTooltip" margin="m-0" />
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                <>
+                                                    Bucket should be created manually in order for this OLAP to work.
+                                                    You can use the <span className="text-info">Test credentials</span>{" "}
+                                                    button to verify its existence.
+                                                </>
+                                            }
+                                        >
+                                            <Icon icon="info" color="info" margin="m-0" />
+                                        </PopoverWithHoverWrapper>
                                         {asyncTest.result?.Success ? (
                                             <Badge bg="success" pill>
                                                 <Icon icon="check" />
@@ -124,18 +130,6 @@ export default function AmazonS3() {
                                             </Badge>
                                         ) : null}
                                     </Label>
-                                    <UncontrolledPopover
-                                        target="bucketNameTooltip"
-                                        trigger="hover"
-                                        placement="top"
-                                        className="bs5"
-                                    >
-                                        <PopoverBody>
-                                            Bucket should be created manually in order for this OLAP to work. You can
-                                            use the <span className="text-info">Test credentials</span> button to verify
-                                            its existence.
-                                        </PopoverBody>
-                                    </UncontrolledPopover>
                                     <FormInput
                                         control={control}
                                         name={getName("bucketName")}

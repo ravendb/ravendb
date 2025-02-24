@@ -2,9 +2,9 @@ import { FormInput, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Col, Collapse, InputGroup, InputGroupText, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import { Col, Collapse, InputGroup, InputGroupText, Row } from "reactstrap";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
@@ -14,6 +14,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import classNames from "classnames";
 import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
 import RichAlert from "components/common/RichAlert";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
@@ -71,31 +72,36 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     </p>
                     <p>
                         <span>
-                            <Icon id="ShardingInfo" icon="info" color="info" margin="m-0" /> What is sharding?
-                            <UncontrolledPopover target="ShardingInfo" placement="top" trigger="hover" className="bs5">
-                                <PopoverBody>
-                                    <p>
-                                        <strong className="text-shard">
-                                            <Icon icon="sharding" margin="m-0" /> Sharding
-                                        </strong>{" "}
-                                        is a database partitioning technique that breaks up large databases into
-                                        smaller, more manageable pieces called{" "}
-                                        <strong className="text-shard">
-                                            {" "}
-                                            <Icon icon="shard" margin="m-0" />
-                                            shards
-                                        </strong>
-                                        .
-                                    </p>
-                                    <p>
-                                        Each shard contains a subset of the data and can be stored on a separate server,
-                                        allowing for <strong>horizontal scalability and improved performance</strong>.
-                                    </p>
-                                    <a href={docsShardingLink}>
-                                        Learn more <Icon icon="newtab" margin="m-0" />
-                                    </a>
-                                </PopoverBody>
-                            </UncontrolledPopover>
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        <p>
+                                            <strong className="text-shard">
+                                                <Icon icon="sharding" margin="m-0" /> Sharding
+                                            </strong>{" "}
+                                            is a database partitioning technique that breaks up large databases into
+                                            smaller, more manageable pieces called{" "}
+                                            <strong className="text-shard">
+                                                {" "}
+                                                <Icon icon="shard" margin="m-0" />
+                                                shards
+                                            </strong>
+                                            .
+                                        </p>
+                                        <p>
+                                            Each shard contains a subset of the data and can be stored on a separate
+                                            server, allowing for{" "}
+                                            <strong>horizontal scalability and improved performance</strong>.
+                                        </p>
+                                        <a href={docsShardingLink}>
+                                            Learn more <Icon icon="newtab" margin="m-0" />
+                                        </a>
+                                    </>
+                                }
+                            >
+                                <Icon icon="info" color="info" margin="m-0" />
+                            </PopoverWithHoverWrapper>{" "}
+                            What is sharding?
                         </span>
                     </p>
                 </Col>
@@ -105,42 +111,33 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                 <Col lg={{ offset: 2, size: 8 }}>
                     <Row className="pt-2">
                         <Col sm="6" className="d-flex gap-1 align-items-center">
-                            <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
-                            <UncontrolledPopover
-                                target="ReplicationInfo"
-                                placement="right"
-                                trigger="hover"
-                                className="bs5"
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        Add more{" "}
+                                        <strong className="text-node">
+                                            <Icon icon="node" margin="m-0" /> Instance nodes
+                                        </strong>{" "}
+                                        in <a href={appUrl.forCluster()}>Manage cluster</a> view
+                                    </>
+                                }
                             >
-                                <PopoverBody>
-                                    Add more{" "}
-                                    <strong className="text-node">
-                                        <Icon icon="node" margin="m-0" /> Instance nodes
-                                    </strong>{" "}
-                                    in <a href={appUrl.forCluster()}>Manage cluster</a> view
-                                </PopoverBody>
-                            </UncontrolledPopover>
-                            <Icon icon="node" color="node" margin="ms-1" />{" "}
+                                <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" />
+                            </PopoverWithHoverWrapper>{" "}
+                            Available nodes: <Icon icon="node" color="node" margin="ms-1" />{" "}
                             <strong className={classNames({ "text-warning": isReplicationFactorWarning })}>
                                 {maxReplicationFactor}{" "}
                                 {isReplicationFactorWarning && (
-                                    <>
-                                        <Icon id="LicenseWarning" icon="warning" margin="m-0" />
-                                        <UncontrolledPopover
-                                            target="LicenseWarning"
-                                            placement="right"
-                                            trigger="hover"
-                                            className="bs5"
-                                        >
-                                            <PopoverBody>
-                                                <LicenseRestrictedMessage>
-                                                    Your license doesn&apos;t allow replication factor higher than{" "}
-                                                    <strong>{maxReplicationFactorForSharding}</strong> for sharded
-                                                    database.
-                                                </LicenseRestrictedMessage>
-                                            </PopoverBody>
-                                        </UncontrolledPopover>
-                                    </>
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <LicenseRestrictedMessage>
+                                                Your license doesn&apos;t allow replication factor higher than{" "}
+                                                <strong>{maxReplicationFactorForSharding}</strong> for sharded database.
+                                            </LicenseRestrictedMessage>
+                                        }
+                                    >
+                                        <Icon icon="warning" margin="m-0" />
+                                    </PopoverWithHoverWrapper>
                                 )}
                             </strong>
                         </Col>

@@ -1,5 +1,4 @@
-import React from "react";
-import { Row, Col, Label, UncontrolledPopover, PopoverBody } from "reactstrap";
+import { Row, Col, Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
@@ -14,6 +13,7 @@ import RestorePointsFields, {
 } from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
 import moment from "moment";
 import generalUtils from "common/generalUtils";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export default function BackupSourceRavenCloud() {
     const { control } = useFormContext<FormData>();
@@ -66,27 +66,26 @@ export default function BackupSourceRavenCloud() {
 
 function LinkLabel() {
     return (
-        <>
-            <Label className="col-form-label" id="CloudBackupLinkInfo">
+        <PopoverWithHoverWrapper
+            message={
+                <ol className="m-0">
+                    <li>
+                        Login to your <code>RavenDB Cloud Account</code>
+                    </li>
+                    <li>
+                        Go to <code>Backups</code> view
+                    </li>
+                    <li>Select desired Instance and a Backup File</li>
+                    <li>
+                        Click <code>Generate Backup Link</code>
+                    </li>
+                </ol>
+            }
+        >
+            <Label className="col-form-label">
                 Backup Link <Icon icon="info" color="info" margin="m-0" />
             </Label>
-            <UncontrolledPopover target="CloudBackupLinkInfo" trigger="hover" className="bs5">
-                <PopoverBody>
-                    <ol className="m-0">
-                        <li>
-                            Login to your <code>RavenDB Cloud Account</code>
-                        </li>
-                        <li>
-                            Go to <code>Backups</code> view
-                        </li>
-                        <li>Select desired Instance and a Backup File</li>
-                        <li>
-                            Click <code>Generate Backup Link</code>
-                        </li>
-                    </ol>
-                </PopoverBody>
-            </UncontrolledPopover>
-        </>
+        </PopoverWithHoverWrapper>
     );
 }
 

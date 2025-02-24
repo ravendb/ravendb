@@ -1,6 +1,5 @@
-﻿import React from "react";
-import Badge from "react-bootstrap/Badge";
-import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+﻿import Badge from "react-bootstrap/Badge";
+import { Card, CardBody, Collapse, Label } from "reactstrap";
 import { FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -13,6 +12,7 @@ import { mapGlacierToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { availableGlacierRegions } from "components/utils/common";
+import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 
 export default function AmazonGlacier() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -53,7 +53,17 @@ export default function AmazonGlacier() {
                             <div className="mb-2">
                                 <Label className="d-flex align-items-center gap-1">
                                     Vault name
-                                    <Icon icon="info" color="info" id="vaultNameTooltip" margin="m-0" />
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                Vault should be created manually in order for this OLAP to work. You can
+                                                use the <span className="text-info">Test credentials</span> button to
+                                                verify its existence.
+                                            </>
+                                        }
+                                    >
+                                        <Icon icon="info" color="info" margin="m-0" />
+                                    </PopoverWithHoverWrapper>
                                     {asyncTest.result?.Success ? (
                                         <Badge bg="success" pill>
                                             <Icon icon="check" />
@@ -66,18 +76,6 @@ export default function AmazonGlacier() {
                                         </Badge>
                                     ) : null}
                                 </Label>
-                                <UncontrolledPopover
-                                    target="vaultNameTooltip"
-                                    trigger="hover"
-                                    placement="top"
-                                    className="bs5"
-                                >
-                                    <PopoverBody>
-                                        Vault should be created manually in order for this OLAP to work. You can use the{" "}
-                                        <span className="text-info">Test credentials</span> button to verify its
-                                        existence.
-                                    </PopoverBody>
-                                </UncontrolledPopover>
                                 <FormInput
                                     name={getName("vaultName")}
                                     control={control}

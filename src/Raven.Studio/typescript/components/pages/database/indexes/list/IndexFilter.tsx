@@ -1,5 +1,5 @@
 ﻿import { IndexStatus, IndexFilterCriteria, IndexType, IndexGroupBy, IndexSortBy } from "components/models/indexes";
-import { Input, PopoverBody, UncontrolledPopover } from "reactstrap";
+import { Input } from "reactstrap";
 import { produce } from "immer";
 import { Icon } from "components/common/Icon";
 import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
@@ -7,6 +7,7 @@ import { InputItem, SortDirection } from "components/models/common";
 import { Switch } from "components/common/Checkbox";
 import { SortDropdown, SortDropdownRadioList, sortItem } from "components/common/SortDropdown";
 import Button from "react-bootstrap/Button";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface IndexFilterProps {
     filter: IndexFilterCriteria;
@@ -135,22 +136,26 @@ export default function IndexFilter(props: IndexFilterProps) {
                 </SortDropdown>
             </div>
             {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
-            <Switch
-                id="autoRefresh"
-                toggleSelection={() => onFilterValueChange("autoRefresh", !filter.autoRefresh)}
-                selected={filter.autoRefresh}
-                color="info"
-                className="mt-1"
+            <PopoverWithHoverWrapper
+                placement="bottom"
+                message={
+                    <>
+                        Automatically refreshes the list of indexes.
+                        <br />
+                        Might result in list flickering.
+                    </>
+                }
             >
-                <span>Auto refresh is {filter.autoRefresh ? "on" : "off"}</span>
-            </Switch>
-            <UncontrolledPopover target="autoRefresh" trigger="hover" placement="bottom">
-                <PopoverBody>
-                    Automatically refreshes the list of indexes.
-                    <br />
-                    Might result in list flickering.
-                </PopoverBody>
-            </UncontrolledPopover>
+                <Switch
+                    id="autoRefresh"
+                    toggleSelection={() => onFilterValueChange("autoRefresh", !filter.autoRefresh)}
+                    selected={filter.autoRefresh}
+                    color="info"
+                    className="mt-1"
+                >
+                    <span>Auto refresh is {filter.autoRefresh ? "on" : "off"}</span>
+                </Switch>
+            </PopoverWithHoverWrapper>
         </div>
     );
 }

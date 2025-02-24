@@ -1,6 +1,5 @@
-﻿import React from "react";
-import Badge from "react-bootstrap/Badge";
-import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+﻿import Badge from "react-bootstrap/Badge";
+import { Card, CardBody, Collapse, Label } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -12,6 +11,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { mapAzureToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
+import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 
 export default function Azure() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -52,7 +52,18 @@ export default function Azure() {
                             <div className="mb-2">
                                 <Label className="d-flex gap-1 align-items-center">
                                     Storage container{" "}
-                                    <Icon icon="info" color="info" id="storageContainerTooltip" margin="m-0" />
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                Storage container should be created manually in order for this OLAP to
+                                                work. You can use the{" "}
+                                                <span className="text-info">Test credentials</span> button to verify its
+                                                existence.
+                                            </>
+                                        }
+                                    >
+                                        <Icon icon="info" color="info" margin="m-0" />
+                                    </PopoverWithHoverWrapper>
                                     {asyncTest.result?.Success ? (
                                         <Badge bg="success" pill>
                                             <Icon icon="check" />
@@ -65,18 +76,6 @@ export default function Azure() {
                                         </Badge>
                                     ) : null}
                                 </Label>
-                                <UncontrolledPopover
-                                    target="storageContainerTooltip"
-                                    trigger="hover"
-                                    placement="top"
-                                    className="bs5"
-                                >
-                                    <PopoverBody>
-                                        Storage container should be created manually in order for this OLAP to work. You
-                                        can use the <span className="text-info">Test credentials</span> button to verify
-                                        its existence.
-                                    </PopoverBody>
-                                </UncontrolledPopover>
                                 <FormInput
                                     name={getName("storageContainer")}
                                     control={control}

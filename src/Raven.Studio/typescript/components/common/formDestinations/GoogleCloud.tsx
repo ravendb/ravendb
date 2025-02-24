@@ -1,6 +1,5 @@
-﻿import React from "react";
-import Badge from "react-bootstrap/Badge";
-import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+﻿import Badge from "react-bootstrap/Badge";
+import { Card, CardBody, Collapse, Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -15,6 +14,7 @@ import { mapGoogleCloudToDto } from "./utils/formDestinationsMapsToDto";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import useBoolean from "components/hooks/useBoolean";
 import classNames from "classnames";
+import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 
 interface GoogleCloudProps {
     isForNewConnection: boolean;
@@ -61,7 +61,26 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                         <div className="vstack gap-3 mt-2">
                             <div className="mb-2">
                                 <Label className="d-flex align-items-center gap-1">
-                                    Bucket <Icon icon="info" color="info" id="bucketTooltip" margin="m-0" />
+                                    Bucket{" "}
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                Bucket should be created manually in order for this OLAP to work. You
+                                                can use the <span className="text-info">Test credentials</span> button
+                                                to verify its existence.
+                                                <hr className="my-2" />
+                                                <a
+                                                    href="https://cloud.google.com/storage/docs/bucket-naming"
+                                                    target="_blank"
+                                                >
+                                                    <Icon icon="newtab" />
+                                                    Bucket naming guidelines
+                                                </a>
+                                            </>
+                                        }
+                                    >
+                                        <Icon icon="info" color="info" margin="m-0" />
+                                    </PopoverWithHoverWrapper>
                                     {asyncTest.result?.Success ? (
                                         <Badge bg="success" pill>
                                             <Icon icon="check" />
@@ -74,23 +93,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                                         </Badge>
                                     ) : null}
                                 </Label>
-                                <UncontrolledPopover
-                                    target="bucketTooltip"
-                                    trigger="hover"
-                                    placement="top"
-                                    className="bs5"
-                                >
-                                    <PopoverBody>
-                                        Bucket should be created manually in order for this OLAP to work. You can use
-                                        the <span className="text-info">Test credentials</span> button to verify its
-                                        existence.
-                                        <hr className="my-2" />
-                                        <a href="https://cloud.google.com/storage/docs/bucket-naming" target="_blank">
-                                            <Icon icon="newtab" />
-                                            Bucket naming guidelines
-                                        </a>
-                                    </PopoverBody>
-                                </UncontrolledPopover>
+
                                 <FormInput
                                     name={getName("bucketName")}
                                     control={control}

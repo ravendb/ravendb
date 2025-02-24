@@ -21,7 +21,7 @@ import classNames from "classnames";
 import { tryHandleSubmit } from "components/utils/common";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import DocumentsCompressionConfiguration = Raven.Client.ServerWide.DocumentsCompressionConfiguration;
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { SelectOption } from "components/common/select/Select";
@@ -30,6 +30,7 @@ import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import RichAlert from "components/common/RichAlert";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function DocumentCompression() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -116,23 +117,23 @@ export default function DocumentCompression() {
                         <Form onSubmit={handleSubmit(onSave)}>
                             <div className="hstack mb-3">
                                 {hasDatabaseAdminAccess && (
-                                    <>
-                                        <div id="saveConfigButton" className="w-fit-content">
-                                            <ButtonWithSpinner
-                                                type="submit"
-                                                variant="primary"
-                                                className="mb-3"
-                                                icon="save"
-                                                disabled={!formState.isDirty}
-                                                isSpinning={formState.isSubmitting}
-                                            >
-                                                Save
-                                            </ButtonWithSpinner>
-                                        </div>
-                                        {!hasDocumentsCompression && (
-                                            <FeatureNotAvailableInYourLicensePopover target="saveConfigButton" />
-                                        )}
-                                    </>
+                                    <ConditionalPopover
+                                        conditions={{
+                                            isActive: !hasDocumentsCompression,
+                                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                        }}
+                                    >
+                                        <ButtonWithSpinner
+                                            type="submit"
+                                            variant="primary"
+                                            className="mb-3"
+                                            icon="save"
+                                            disabled={!formState.isDirty}
+                                            isSpinning={formState.isSubmitting}
+                                        >
+                                            Save
+                                        </ButtonWithSpinner>
+                                    </ConditionalPopover>
                                 )}
                                 <FlexGrow />
                                 <a href={appUrl.forStatusStorageReport(databaseName)}>

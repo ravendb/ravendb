@@ -4,15 +4,16 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CreateDatabaseRegularFormData as FormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Col, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
 import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 const newDatabaseImg = require("Content/img/createDatabase/new-database.svg");
 
@@ -101,15 +102,17 @@ function IsEncryptedField() {
                 </FormSwitch>
             </ConditionalPopover>
             {hasEncryption && isSecureServer && (
-                <>
-                    <Icon icon="info" color="info" id="encryption-info" margin="ms-1" />
-                    <UncontrolledPopover target="encryption-info" placement="right" trigger="hover">
-                        <PopoverBody>
+                <PopoverWithHoverWrapper
+                    message={
+                        <>
                             Data will be encrypted at the storage engine layer, using <code>XChaCha20-Poly1305</code>{" "}
                             authenticated encryption algorithm.
-                        </PopoverBody>
-                    </UncontrolledPopover>
-                </>
+                        </>
+                    }
+                    placement="right"
+                >
+                    <Icon icon="info" color="info" margin="ms-1" />
+                </PopoverWithHoverWrapper>
             )}
         </div>
     );

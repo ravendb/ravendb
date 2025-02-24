@@ -1,15 +1,6 @@
-﻿import React, { ChangeEvent } from "react";
+﻿import { ChangeEvent } from "react";
 import Badge from "react-bootstrap/Badge";
-import {
-    Card,
-    CardBody,
-    Collapse,
-    InputGroup,
-    InputGroupText,
-    Label,
-    PopoverBody,
-    UncontrolledPopover,
-} from "reactstrap";
+import { Card, CardBody, Collapse, InputGroup, InputGroupText, Label } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -22,6 +13,7 @@ import { mapFtpToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import fileImporter from "common/fileImporter";
+import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 
 export default function Ftp() {
     const { control, trigger, setValue, formState } = useFormContext<FormDestinations>();
@@ -76,7 +68,19 @@ export default function Ftp() {
                             <div className="mb-2">
                                 <Label className="d-flex align-items-center gap-1">
                                     Host
-                                    <Icon icon="info" color="info" id="hostTooltip" margin="m-0" />
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                To specify the server protocol, prepend the host with protocol
+                                                identifier (ftp and ftps are supported). If no protocol is specified the
+                                                default one (<code>ftp://</code>) will be used. You can also enter a
+                                                complete URL e.g.{" "}
+                                                <code>ftp://host.name:port/backup-folder/nested-backup-folder</code>
+                                            </>
+                                        }
+                                    >
+                                        <Icon icon="info" color="info" margin="m-0" />
+                                    </PopoverWithHoverWrapper>
                                     {asyncTest.result?.Success ? (
                                         <Badge bg="success" pill>
                                             <Icon icon="check" />
@@ -89,19 +93,6 @@ export default function Ftp() {
                                         </Badge>
                                     ) : null}
                                 </Label>
-                                <UncontrolledPopover
-                                    target="hostTooltip"
-                                    trigger="hover"
-                                    placement="top"
-                                    className="bs5"
-                                >
-                                    <PopoverBody>
-                                        To specify the server protocol, prepend the host with protocol identifier (ftp
-                                        and ftps are supported). If no protocol is specified the default one (
-                                        <code>ftp://</code>) will be used. You can also enter a complete URL e.g.{" "}
-                                        <code>ftp://host.name:port/backup-folder/nested-backup-folder</code>
-                                    </PopoverBody>
-                                </UncontrolledPopover>
                                 <FormInput
                                     name={getName("url")}
                                     control={control}

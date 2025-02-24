@@ -1,9 +1,8 @@
-﻿import React, { ReactNode } from "react";
+﻿import { ReactNode } from "react";
 import classNames from "classnames";
 import Badge from "react-bootstrap/Badge";
-import { UncontrolledPopover } from "reactstrap";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
-import { uniqueId } from "lodash";
+import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
 
 interface CounterBadgeProps {
     count: number;
@@ -17,30 +16,29 @@ export function CounterBadge(props: CounterBadgeProps) {
     const { count, limit, limitMessage, className, hideNotReached } = props;
 
     const limitReachStatus = getLicenseLimitReachStatus(count, limit);
-    const badgeId = "counterBadge" + uniqueId();
 
     return (
         <>
             {limitReachStatus !== "notReached" ? (
-                <>
+                <PopoverWithHoverWrapper
+                    message={
+                        limitMessage ? (
+                            limitMessage
+                        ) : (
+                            <span>
+                                License limit: <strong>{limit}</strong>
+                            </span>
+                        )
+                    }
+                >
                     <Badge
                         pill
                         bg={limitReachStatus === "limitReached" ? "danger" : "warning"}
                         className={classNames("counter-badge text-dark", className)}
-                        id={badgeId}
                     >
                         {count} / {limit}
                     </Badge>
-                    <UncontrolledPopover target={badgeId} trigger="hover" placement="top" className="bs5">
-                        {limitMessage ? (
-                            limitMessage
-                        ) : (
-                            <div className="p-2">
-                                License limit: <strong>{limit}</strong>
-                            </div>
-                        )}
-                    </UncontrolledPopover>
-                </>
+                </PopoverWithHoverWrapper>
             ) : (
                 <>
                     {!hideNotReached && (

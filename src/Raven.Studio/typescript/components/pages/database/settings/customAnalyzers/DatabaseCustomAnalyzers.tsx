@@ -1,5 +1,4 @@
-﻿import React from "react";
-import { Col, Row, UncontrolledPopover } from "reactstrap";
+﻿import { Col, Row } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -20,6 +19,7 @@ import DatabaseCustomAnalyzersList from "components/pages/database/settings/cust
 import { useCustomAnalyzers } from "components/common/customAnalyzers/useCustomAnalyzers";
 import DatabaseCustomAnalyzersServerWideList from "components/pages/database/settings/customAnalyzers/DatabaseCustomAnalyzersServerWideList";
 import RichAlert from "components/common/RichAlert";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function DatabaseCustomAnalyzers() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -77,24 +77,26 @@ export default function DatabaseCustomAnalyzers() {
                 <Col>
                     <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
                     {hasDatabaseAdminAccess && (
-                        <>
-                            <div id="newCustomAnalyzer" className="w-fit-content">
-                                <Button
-                                    variant="primary"
-                                    className="mb-3"
-                                    onClick={addNewAnalyzer}
-                                    disabled={isLimitReached}
-                                >
-                                    <Icon icon="plus" /> Add a custom analyzer
-                                </Button>
-                                {isLimitReached && (
-                                    <AddButtonLicensePopover
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: isLimitReached,
+                                message: (
+                                    <AddButtonLicensePopoverBody
                                         databaseLimitReachStatus={databaseLimitReachStatus}
                                         upgradeLicenseLink={upgradeLicenseLink}
                                     />
-                                )}
-                            </div>
-                        </>
+                                ),
+                            }}
+                        >
+                            <Button
+                                variant="primary"
+                                className="mb-3"
+                                onClick={addNewAnalyzer}
+                                disabled={isLimitReached}
+                            >
+                                <Icon icon="plus" /> Add a custom analyzer
+                            </Button>
+                        </ConditionalPopover>
                     )}
 
                     <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
@@ -217,18 +219,16 @@ interface AddButtonLicensePopoverProps {
     upgradeLicenseLink: string;
 }
 
-function AddButtonLicensePopover({ databaseLimitReachStatus, upgradeLicenseLink }: AddButtonLicensePopoverProps) {
+function AddButtonLicensePopoverBody({ databaseLimitReachStatus, upgradeLicenseLink }: AddButtonLicensePopoverProps) {
     return (
-        <UncontrolledPopover trigger="hover" target="newCustomAnalyzer" placement="top" className="bs5">
-            <div className="p-3 text-center">
-                <Icon icon={databaseLimitReachStatus === "limitReached" ? "database" : "cluster"} />
-                {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has reached the maximum number of
-                Custom Analyzers allowed per {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
-                <br /> Delete unused analyzers or{" "}
-                <a href={upgradeLicenseLink} target="_blank">
-                    upgrade your license
-                </a>
-            </div>
-        </UncontrolledPopover>
+        <div className="text-center">
+            <Icon icon={databaseLimitReachStatus === "limitReached" ? "database" : "cluster"} />
+            {databaseLimitReachStatus === "limitReached" ? "Database" : "Cluster"} has reached the maximum number of
+            Custom Analyzers allowed per {databaseLimitReachStatus === "limitReached" ? "database" : "cluster"}.
+            <br /> Delete unused analyzers or{" "}
+            <a href={upgradeLicenseLink} target="_blank">
+                upgrade your license
+            </a>
+        </div>
     );
 }
