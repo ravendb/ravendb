@@ -1,6 +1,8 @@
-import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
 import ToggleLimitBadge from "components/common/toggles/partials/ToggleLimitBadge";
 import { InputItem } from "components/models/common";
+import { useState } from "react";
+import Popover from "react-bootstrap/Popover";
 
 interface ToggleItemLabelProps<T extends string | number = string> {
     id: string;
@@ -11,15 +13,11 @@ export default function ToggleItemLabel<T extends string | number = string>({
     id,
     inputItem,
 }: ToggleItemLabelProps<T>) {
+    const [target, setTarget] = useState<HTMLElement>();
+
     return (
-        <ConditionalPopover
-            popoverPlacement={inputItem.popoverPlacement ?? "top"}
-            conditions={{
-                isActive: inputItem.popover != null,
-                message: inputItem.popover,
-            }}
-        >
-            <label htmlFor={id}>
+        <>
+            <label htmlFor={id} ref={setTarget}>
                 <span>{inputItem.label}</span>
                 {inputItem.count !== null && inputItem.limit ? (
                     <ToggleLimitBadge count={inputItem.count} limit={inputItem.limit} />
@@ -27,6 +25,11 @@ export default function ToggleItemLabel<T extends string | number = string>({
                     <span className="multi-toggle-item-count">{inputItem.count}</span>
                 )}
             </label>
-        </ConditionalPopover>
+            {inputItem.popover && (
+                <PopoverWithHover target={target} placement={inputItem.popoverPlacement ?? "top"}>
+                    <Popover.Body>{inputItem.popover}</Popover.Body>
+                </PopoverWithHover>
+            )}
+        </>
     );
 }
