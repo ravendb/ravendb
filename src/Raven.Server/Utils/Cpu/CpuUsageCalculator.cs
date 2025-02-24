@@ -85,6 +85,16 @@ namespace Raven.Server.Utils.Cpu
                 //overflow
                 return LastCpuUsage?.ProcessCpuUsage ?? 0;
             }
+            // If processorTimeDiff is negative (can happen when switching processors or affinity groups),
+            // use the last valid CPU usage value.
+            if (processorTimeDiff < 0)
+            {
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"processorTimeDiff == {processorTimeDiff}, OS: {RuntimeInformation.OSDescription}");
+                }
+                return LastCpuUsage?.ProcessCpuUsage ?? 0;
+            }
 
             if (currentInfo.ActiveCores <= 0)
             {
@@ -104,7 +114,15 @@ namespace Raven.Server.Utils.Cpu
                 processCpuUsage = Math.Min(processCpuUsage, machineCpuUsage);
             }
 
-            return Math.Min(100, processCpuUsage);
+            if (processCpuUsage < 0 && Logger.IsInfoEnabled)
+            {
+                Logger.Info($"processCpuUsage == {processCpuUsage}, OS: {RuntimeInformation.OSDescription}");
+            }
+
+            // final value will be between 0 and 100%.
+            processCpuUsage = Math.Max(0, Math.Min(100, processCpuUsage));
+
+            return processCpuUsage;
         }
 
         public void Dispose()
@@ -160,14 +178,14 @@ namespace Raven.Server.Utils.Cpu
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static ulong GetTime(FileTime fileTime)
         {
-            return ((ulong)fileTime.dwHighDateTime << 32) | (uint)fileTime.dwLowDateTime;
+            return ((ulong)fileTime.dwHighDateTime << 32) | fileTime.dwLowDateTime;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct FileTime
         {
-            public int dwLowDateTime;
-            public int dwHighDateTime;
+            public uint dwLowDateTime;
+            public uint dwHighDateTime;
         }
     }
 
