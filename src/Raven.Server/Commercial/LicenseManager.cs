@@ -1641,15 +1641,12 @@ namespace Raven.Server.Commercial
             {
                 if (startUp)
                     return true;
-                else
-                {
-                    const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
-                    throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
-                }
+                const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
+                throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
             }
 
             {
-                const string details = "Your current license doesn't include the monitoring feature.";
+                const string details = "Your current license doesn't include the OpenTelemetry feature.";
                 var exception = GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
 
                 if (startUp)
