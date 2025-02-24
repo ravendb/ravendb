@@ -1,12 +1,13 @@
 ﻿import { DatabaseLocalInfo } from "components/models/databases";
-import React, { useRef } from "react";
 import genUtils from "common/generalUtils";
-import { UncontrolledTooltip } from "reactstrap";
+import useUniqueId from "components/hooks/useUniqueId";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 export function SizeOnDisk(props: { info: DatabaseLocalInfo }) {
     const { info } = props;
 
-    const divRef = useRef<HTMLDivElement>();
+    const tooltipId = useUniqueId("size-on-disk-tooltip");
 
     if (!info) {
         return null;
@@ -17,16 +18,19 @@ export function SizeOnDisk(props: { info: DatabaseLocalInfo }) {
 
     return (
         <div>
-            <div ref={divRef}>{genUtils.formatBytesToSize(grandTotalSize)}</div>
-            {divRef.current && (
-                <UncontrolledTooltip target={divRef.current}>
-                    Data: <strong>{genUtils.formatBytesToSize(totalSize)}</strong>
-                    <br />
-                    Temp: <strong>{genUtils.formatBytesToSize(tempBufferSize)}</strong>
-                    <br />
-                    Total: <strong>{genUtils.formatBytesToSize(grandTotalSize)}</strong>
-                </UncontrolledTooltip>
-            )}
+            <OverlayTrigger
+                overlay={
+                    <Tooltip id={tooltipId}>
+                        Data: <strong>{genUtils.formatBytesToSize(totalSize)}</strong>
+                        <br />
+                        Temp: <strong>{genUtils.formatBytesToSize(tempBufferSize)}</strong>
+                        <br />
+                        Total: <strong>{genUtils.formatBytesToSize(grandTotalSize)}</strong>
+                    </Tooltip>
+                }
+            >
+                <div>{genUtils.formatBytesToSize(grandTotalSize)}</div>
+            </OverlayTrigger>
         </div>
     );
 }

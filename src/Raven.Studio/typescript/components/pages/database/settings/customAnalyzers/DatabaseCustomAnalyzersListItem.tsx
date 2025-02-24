@@ -22,13 +22,15 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
-import { Collapse, Form, InputGroup, Label, UncontrolledTooltip } from "reactstrap";
+import { Collapse, Form, InputGroup, Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormAceEditor, FormInput } from "components/common/Form";
 import fileImporter from "common/fileImporter";
 import Button from "react-bootstrap/Button";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface DatabaseCustomAnalyzersListItemProps {
     initialAnalyzer: CustomAnalyzerFormData;
@@ -98,12 +100,11 @@ export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAna
                         </RichPanelName>
                     </RichPanelInfo>
                     {serverWideAnalyzerNames.includes(formValues.name) && (
-                        <>
-                            <UncontrolledTooltip target={tooltipId} placement="left">
-                                Override server-wide analyzer
-                            </UncontrolledTooltip>
-                            <Icon id={tooltipId} icon="info" color="info" />
-                        </>
+                        <OverlayTrigger overlay={<Tooltip id={tooltipId}>Override server-wide analyzer</Tooltip>}>
+                            <div className="d-inline-block">
+                                <Icon id={tooltipId} icon="info" color="info" />
+                            </div>
+                        </OverlayTrigger>
                     )}
                     <RichPanelActions>
                         <CustomAnalyzersActions

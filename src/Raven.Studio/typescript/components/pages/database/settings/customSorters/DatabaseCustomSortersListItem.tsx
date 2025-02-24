@@ -27,11 +27,13 @@ import React from "react";
 import { useState } from "react";
 import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 import { useForm, useWatch, SubmitHandler } from "react-hook-form";
-import { Form, UncontrolledTooltip, Collapse, InputGroup, Label } from "reactstrap";
+import { Form, Collapse, InputGroup, Label } from "reactstrap";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import Button from "react-bootstrap/Button";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
@@ -104,12 +106,11 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                         </RichPanelName>
                     </RichPanelInfo>
                     {serverWideSorterNames.includes(formValues.name) && (
-                        <>
-                            <UncontrolledTooltip target={tooltipId} placement="left">
-                                Overrides server-wide sorter
-                            </UncontrolledTooltip>
-                            <Icon id={tooltipId} icon="info" color="info" />
-                        </>
+                        <OverlayTrigger overlay={<Tooltip id={tooltipId}>Overrides server-wide sorter</Tooltip>}>
+                            <div className="d-inline-block">
+                                <Icon id={tooltipId} icon="info" color="info" />
+                            </div>
+                        </OverlayTrigger>
                     )}
                     <RichPanelActions>
                         <CustomSortersActions

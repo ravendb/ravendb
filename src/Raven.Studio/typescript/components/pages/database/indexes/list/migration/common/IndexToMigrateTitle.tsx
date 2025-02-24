@@ -1,11 +1,11 @@
+import "./IndexesImportExport.scss";
 import { Icon } from "components/common/Icon";
 import useUniqueId from "components/hooks/useUniqueId";
 import { IndexSharedInfo } from "components/models/indexes";
 import IndexUtils from "components/utils/IndexUtils";
-import React from "react";
-import { UncontrolledTooltip } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
-import "./IndexesImportExport.scss";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface IndexToMigrateTitleProps {
     index: Raven.Client.Documents.Indexes.IndexDefinition | IndexSharedInfo;
@@ -27,24 +27,32 @@ export default function IndexToMigrateTitle({ index, disabledReason }: IndexToMi
             </div>
             <FlexGrow />
             {disabledReason && (
-                <div id={indexDisabledReasonTooltipId} className="pe-1">
-                    <UncontrolledTooltip target={indexDisabledReasonTooltipId}>{disabledReason}</UncontrolledTooltip>
-                    <Icon icon="warning" color="warning" margin="m-0" id={indexDisabledReasonTooltipId} />
-                </div>
+                <OverlayTrigger overlay={<Tooltip id={indexDisabledReasonTooltipId}>{disabledReason}</Tooltip>}>
+                    <div id={indexDisabledReasonTooltipId} className="pe-1">
+                        <Icon icon="warning" color="warning" margin="m-0" id={indexDisabledReasonTooltipId} />
+                    </div>
+                </OverlayTrigger>
             )}
             <div className="index-legend">
-                <div id={indexLanguageTooltipId}>
-                    <Icon icon={IndexUtils.isCsharpIndex(type) ? "csharp-logo" : "javascript"} margin="m-0" />
-                </div>
-                <UncontrolledTooltip target={indexLanguageTooltipId} placement="top">
-                    <span>{IndexUtils.isCsharpIndex(type) ? <span>C#</span> : <span>JavaScript</span>} index</span>
-                </UncontrolledTooltip>
-                <div id={indexTypeTooltipId}>
-                    <Icon icon={IndexUtils.indexTypeIcon(type)} margin="m-0" />
-                </div>
-                <UncontrolledTooltip target={indexTypeTooltipId} placement="top">
-                    {IndexUtils.formatType(type)}
-                </UncontrolledTooltip>
+                <OverlayTrigger
+                    overlay={
+                        <Tooltip id={indexLanguageTooltipId}>
+                            <span>
+                                {IndexUtils.isCsharpIndex(type) ? <span>C#</span> : <span>JavaScript</span>} index
+                            </span>
+                        </Tooltip>
+                    }
+                >
+                    <div id={indexLanguageTooltipId}>
+                        <Icon icon={IndexUtils.isCsharpIndex(type) ? "csharp-logo" : "javascript"} margin="m-0" />
+                    </div>
+                </OverlayTrigger>
+
+                <OverlayTrigger overlay={<Tooltip id={indexTypeTooltipId}>{IndexUtils.formatType(type)}</Tooltip>}>
+                    <div id={indexTypeTooltipId}>
+                        <Icon icon={IndexUtils.indexTypeIcon(type)} margin="m-0" />
+                    </div>
+                </OverlayTrigger>
             </div>
         </>
     );

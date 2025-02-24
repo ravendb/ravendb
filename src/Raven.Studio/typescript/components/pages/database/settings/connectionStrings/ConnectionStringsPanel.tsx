@@ -1,12 +1,10 @@
-﻿import React from "react";
-import {
+﻿import {
     RichPanel,
     RichPanelHeader,
     RichPanelInfo,
     RichPanelName,
     RichPanelActions,
 } from "components/common/RichPanel";
-import { UncontrolledTooltip } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { Connection } from "./connectionStringsTypes";
@@ -20,6 +18,7 @@ import { useDispatch } from "react-redux";
 import useConfirm from "components/common/ConfirmDialog";
 import useUniqueId from "components/hooks/useUniqueId";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface ConnectionStringsPanelProps {
     connection: Connection;
@@ -76,21 +75,23 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                             >
                                 <Icon icon="edit" margin="m-0" />
                             </Button>
-                            <div id={deleteButtonId}>
-                                <ButtonWithSpinner
-                                    variant="danger"
-                                    title="Delete connection string"
-                                    disabled={isDeleteDisabled}
-                                    onClick={onDelete}
-                                    icon="trash"
-                                    isSpinning={asyncDelete.loading}
-                                />
-                            </div>
-                            {isDeleteDisabled && (
-                                <UncontrolledTooltip target={deleteButtonId}>
-                                    Connection string is being used by an ongoing task
-                                </UncontrolledTooltip>
-                            )}
+                            <ConditionalPopover
+                                conditions={{
+                                    isActive: isDeleteDisabled,
+                                    message: "Connection string is being used by an ongoing task",
+                                }}
+                            >
+                                <div id={deleteButtonId}>
+                                    <ButtonWithSpinner
+                                        variant="danger"
+                                        title="Delete connection string"
+                                        disabled={isDeleteDisabled}
+                                        onClick={onDelete}
+                                        icon="trash"
+                                        isSpinning={asyncDelete.loading}
+                                    />
+                                </div>
+                            </ConditionalPopover>
                         </RichPanelActions>
                     )}
                 </RichPanelHeader>

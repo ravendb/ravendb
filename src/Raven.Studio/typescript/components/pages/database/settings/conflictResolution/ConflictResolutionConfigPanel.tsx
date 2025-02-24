@@ -8,7 +8,7 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { Collapse, Form, InputGroup, Label, UncontrolledTooltip } from "reactstrap";
+import { Collapse, Form, InputGroup, Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { EditConflictResolutionSyntaxModal } from "components/pages/database/settings/conflictResolution/EditConflictResolutionSyntaxModal";
@@ -27,6 +27,8 @@ import * as yup from "yup";
 import { FormAceEditor, FormSelectCreatable } from "components/common/Form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface ConflictResolutionConfigPanelProps {
     initialConfig: ConflictResolutionCollectionConfig;
@@ -79,14 +81,13 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                         <RichPanelName>
                             {formValues.collectionName || "Collection name"}
                             {(initialConfig.isEdited || initialConfig.isNewUnsaved) && (
-                                <>
-                                    <span id={unsavedChangesId} className="text-warning">
+                                <OverlayTrigger
+                                    overlay={<Tooltip id={unsavedChangesId}>The script has not been saved yet</Tooltip>}
+                                >
+                                    <span id={unsavedChangesId} className="text-warning d-inline-block">
                                         *
                                     </span>
-                                    <UncontrolledTooltip target={unsavedChangesId}>
-                                        The script has not been saved yet
-                                    </UncontrolledTooltip>
-                                </>
+                                </OverlayTrigger>
                             )}
                         </RichPanelName>
                     </RichPanelInfo>

@@ -3,7 +3,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { uniqueId } from "lodash";
 import { ReactNode } from "react";
-import { Table, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+import { Table, UncontrolledPopover } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
@@ -13,6 +13,8 @@ import { AccordionItemWrapper } from "./AboutView";
 import RichAlert from "components/common/RichAlert";
 import appUrl from "common/appUrl";
 import { HrHeader } from "components/common/HrHeader";
+import OverlayTrigger from "react-bootstrap/esm/OverlayTrigger";
+import Tooltip from "react-bootstrap/esm/Tooltip";
 
 export type AvailabilityValue = boolean | number | string;
 
@@ -242,12 +244,18 @@ function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeEnable
         if (canBeEnabledInCloud) {
             const cloudOnDemandId = "cloud-on-demand-" + uniqueId();
             return (
-                <>
-                    <Icon id={cloudOnDemandId} icon="upgrade-arrow" margin="m-0" color="success" />
-                    <UncontrolledTooltip target={cloudOnDemandId}>
-                        You can enable this feature in RavenDB Cloud Portal or by contacting support.
-                    </UncontrolledTooltip>
-                </>
+                <OverlayTrigger
+                    placement="top"
+                    overlay={
+                        <Tooltip id={cloudOnDemandId}>
+                            You can enable this feature in RavenDB Cloud Portal or by contacting support.
+                        </Tooltip>
+                    }
+                >
+                    <div className="d-inline-block">
+                        <Icon id={cloudOnDemandId} icon="upgrade-arrow" margin="m-0" color="success" />
+                    </div>
+                </OverlayTrigger>
             );
         } else {
             formattedValue = <Icon icon="cancel" margin="m-0" color="danger" />;
@@ -267,10 +275,13 @@ function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeEnable
         <>
             <div className="overwritten-value">
                 {formattedValue}
-                <Icon id={id} icon="info" color="info" margin="m-0" />
-                <UncontrolledTooltip target={id}>
-                    Default value for your license is {data.value.toString()}.
-                </UncontrolledTooltip>
+                <OverlayTrigger
+                    overlay={<Tooltip id={id}>Default value for your license is {data.value.toString()}.</Tooltip>}
+                >
+                    <div className="d-inline-block">
+                        <Icon id={id} icon="info" color="info" margin="m-0" />
+                    </div>
+                </OverlayTrigger>
             </div>
         </>
     );

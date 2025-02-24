@@ -1,11 +1,13 @@
 ﻿import React, { useCallback, useEffect } from "react";
 import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetList } from "./NodeSet";
 import { Checkbox } from "./Checkbox";
-import { Label, UncontrolledTooltip } from "reactstrap";
+import { Label } from "reactstrap";
 import { Icon } from "./Icon";
 import classNames from "classnames";
 import { produce } from "immer";
 import ActionContextUtils from "components/utils/actionContextUtils";
+import OverlayTrigger from "react-bootstrap/esm/OverlayTrigger";
+import Tooltip from "react-bootstrap/esm/Tooltip";
 
 export type DatabaseActionContexts =
     | {
@@ -233,27 +235,36 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                     <NodeSetList>
                                         {includeOrchestrator && (
                                             <NodeSetItem>
-                                                <Label
-                                                    htmlFor={getUniqueKey(nodeTag, true)}
-                                                    id={getUniqueKey(nodeTag, true) + "Tooltip"}
-                                                    title="Orchestrator"
-                                                >
-                                                    <Icon icon="orchestrator" color="orchestrator" className="ms-1" />
-                                                    <div className="d-flex justify-content-center">
-                                                        <Checkbox
-                                                            id={getUniqueKey(nodeTag, true)}
-                                                            selected={isOrchestratorSelected(nodeTag)}
-                                                            toggleSelection={() => toggleOrchestrator(nodeTag)}
-                                                            color="orchestrator"
-                                                        />
-                                                    </div>
-                                                </Label>
-                                                <UncontrolledTooltip
+                                                <OverlayTrigger
                                                     placement="top"
-                                                    target={getUniqueKey(nodeTag, true) + "Tooltip"}
+                                                    overlay={
+                                                        <Tooltip id={getUniqueKey(nodeTag, true) + "Tooltip"}>
+                                                            Orchestrator
+                                                        </Tooltip>
+                                                    }
                                                 >
-                                                    Orchestrator
-                                                </UncontrolledTooltip>
+                                                    <div className="d-inline-block">
+                                                        <Label
+                                                            htmlFor={getUniqueKey(nodeTag, true)}
+                                                            id={getUniqueKey(nodeTag, true) + "Tooltip"}
+                                                            title="Orchestrator"
+                                                        >
+                                                            <Icon
+                                                                icon="orchestrator"
+                                                                color="orchestrator"
+                                                                className="ms-1"
+                                                            />
+                                                            <div className="d-flex justify-content-center">
+                                                                <Checkbox
+                                                                    id={getUniqueKey(nodeTag, true)}
+                                                                    selected={isOrchestratorSelected(nodeTag)}
+                                                                    toggleSelection={() => toggleOrchestrator(nodeTag)}
+                                                                    color="orchestrator"
+                                                                />
+                                                            </div>
+                                                        </Label>
+                                                    </div>
+                                                </OverlayTrigger>
                                             </NodeSetItem>
                                         )}
 

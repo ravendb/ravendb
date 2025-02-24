@@ -4,7 +4,7 @@ const fixableMeta = {
     schema: [],
 };
 
-function createDeprecatedReactstrapImport({ context, name, canFix = true }) {
+function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = name, canFix = true }) {
     return {
         ImportDeclaration(node) {
             if (node.source.value !== "reactstrap") {
@@ -60,7 +60,7 @@ function createDeprecatedReactstrapImport({ context, name, canFix = true }) {
 
             context.report({
                 node: node,
-                message: `${name} import from reactstrap is deprecated. Use 'import ${name} from "react-bootstrap/${name}"' instead.`,
+                message: `${name} import from reactstrap is deprecated. Use 'import ${reactBootstrapName} from "react-bootstrap/${reactBootstrapName}"' instead.`,
                 fix: canFix ? fix : undefined,
             });
         },
@@ -164,7 +164,7 @@ module.exports = {
         create: (context) => createDeprecatedReactstrapImport({ context, name: "Spinner" }),
     },
     "no-reactstrap-UncontrolledTooltip": {
-        create: (context) => createDeprecatedReactstrapImport({ context, name: "UncontrolledTooltip", canFix: false }),
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "UncontrolledTooltip", reactBootstrapName: "OverlayTrigger", canFix: false }),
     },
     "no-reactstrap-Badge": {
         meta: fixableMeta,

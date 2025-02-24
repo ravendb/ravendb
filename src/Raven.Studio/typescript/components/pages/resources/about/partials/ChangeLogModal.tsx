@@ -1,4 +1,4 @@
-﻿import { CloseButton, Modal, ModalBody, ModalFooter, UncontrolledTooltip } from "reactstrap";
+﻿import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import React, { ReactNode, useState } from "react";
@@ -12,6 +12,8 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import CustomPagination from "components/common/Pagination";
 import Button from "react-bootstrap/Button";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface ChangelogModalProps {
     mode: "whatsNew" | "changeLog" | "hidden";
@@ -95,72 +97,69 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                                 <div className="flex-horizontal">
                                     {!isCloud && (
                                         <React.Fragment key="upgrade-downgrade-info">
-                                            <div
-                                                className="well mx-1 px-3 py-1 small rounded-pill"
-                                                id={downgradeTooltipId}
+                                            <OverlayTrigger
+                                                overlay={
+                                                    <Tooltip id={downgradeTooltipId}>
+                                                        <div className="px-2 py-1">
+                                                            {build.CanDowngradeFollowingUpgrade ? (
+                                                                <>
+                                                                    This update allows you to switch back to the current
+                                                                    version
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    This update doesn&apos;t allow you to switch back to
+                                                                    the current version
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </Tooltip>
+                                                }
                                             >
-                                                {build.CanDowngradeFollowingUpgrade ? (
-                                                    <>
-                                                        <Icon icon="check" color="success" /> Can downgrade
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Icon icon="cancel" color="danger" /> Can&apos;t downgrade
-                                                    </>
-                                                )}
-                                            </div>
-                                            <UncontrolledTooltip
-                                                trigger="hover"
-                                                className="bs5"
-                                                placement="top"
-                                                target={downgradeTooltipId}
-                                            >
-                                                <div className="px-2 py-1">
+                                                <div className="well mx-1 px-3 py-1 small rounded-pill">
                                                     {build.CanDowngradeFollowingUpgrade ? (
                                                         <>
-                                                            This update allows you to switch back to the current version
+                                                            <Icon icon="check" color="success" /> Can downgrade
                                                         </>
                                                     ) : (
                                                         <>
-                                                            This update doesn&apos;t allow you to switch back to the
-                                                            current version
+                                                            <Icon icon="cancel" color="danger" /> Can&apos;t downgrade
                                                         </>
                                                     )}
                                                 </div>
-                                            </UncontrolledTooltip>
-                                            <div
-                                                className="well mx-1 px-3 py-1 small rounded-pill"
-                                                id={upgradeTooltipId}
+                                            </OverlayTrigger>
+                                            <OverlayTrigger
+                                                overlay={
+                                                    <Tooltip id={upgradeTooltipId}>
+                                                        <div className="px-2 py-1">
+                                                            {build.CanUpgrade ? (
+                                                                <>
+                                                                    Your license is eligible for upgrade to this version
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    Your license can&apos;t be used with the target
+                                                                    version. Prior updating, please contact us and
+                                                                    update your license beforehand.
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </Tooltip>
+                                                }
                                             >
-                                                {build.CanUpgrade ? (
-                                                    <>
-                                                        <Icon icon="check" color="success" /> Can upgrade
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Icon icon="license" color="danger" /> Your license needs to be
-                                                        upgraded in order to update
-                                                    </>
-                                                )}
-                                            </div>
-                                            <UncontrolledTooltip
-                                                trigger="hover"
-                                                className="bs5"
-                                                placement="top"
-                                                target={upgradeTooltipId}
-                                            >
-                                                <div className="px-2 py-1">
+                                                <div className="well mx-1 px-3 py-1 small rounded-pill">
                                                     {build.CanUpgrade ? (
-                                                        <>Your license is eligible for upgrade to this version</>
+                                                        <>
+                                                            <Icon icon="check" color="success" /> Can upgrade
+                                                        </>
                                                     ) : (
                                                         <>
-                                                            Your license can&apos;t be used with the target version.
-                                                            Prior updating, please contact us and update your license
-                                                            beforehand.
+                                                            <Icon icon="license" color="danger" /> Your license needs to
+                                                            be upgraded in order to update
                                                         </>
                                                     )}
                                                 </div>
-                                            </UncontrolledTooltip>
+                                            </OverlayTrigger>
                                         </React.Fragment>
                                     )}
                                 </div>

@@ -1,7 +1,7 @@
 import { CounterBadge } from "components/common/CounterBadge";
 import { HrHeader } from "components/common/HrHeader";
-import React, { ReactNode } from "react";
-import { Modal, ModalBody, Row, Col, UncontrolledTooltip, CloseButton } from "reactstrap";
+import { ReactNode } from "react";
+import { Modal, ModalBody, Row, Col, CloseButton } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -11,6 +11,8 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface OngoingTaskAddModalProps {
     subscriptionsDatabaseCount: number;
@@ -291,9 +293,11 @@ function TaskItem(props: TaskItemProps) {
     return (
         <Col xs="6" md="4" className="justify-content-center" title={title}>
             {disabled ? (
-                <div id={target} className={classNames("task-item", className, { "item-disabled": disabled })}>
-                    {children}
-                </div>
+                <OverlayTrigger overlay={<Tooltip id={target}>{disableReason}</Tooltip>}>
+                    <div id={target} className={classNames("task-item", className, { "item-disabled": disabled })}>
+                        {children}
+                    </div>
+                </OverlayTrigger>
             ) : (
                 <a
                     href={href}
@@ -304,7 +308,6 @@ function TaskItem(props: TaskItemProps) {
                     {children}
                 </a>
             )}
-            {disableReason && <UncontrolledTooltip target={target}>{disableReason}</UncontrolledTooltip>}
         </Col>
     );
 }

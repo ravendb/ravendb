@@ -29,7 +29,7 @@ import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 import Badge from "react-bootstrap/Badge";
-import { Collapse, Input, UncontrolledTooltip } from "reactstrap";
+import { Collapse, Input } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -37,6 +37,7 @@ import useUniqueId from "components/hooks/useUniqueId";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
@@ -273,18 +274,20 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                 <RichPanelActions>
                     <OngoingTaskResponsibleNode task={data} />
                     <BackupEncryption encrypted={data.shared.encrypted} />
-                    {isServerWide && (
-                        <UncontrolledTooltip target={statusDropdownId}>
-                            Status can be managed on the Server-Wide Tasks page
-                        </UncontrolledTooltip>
-                    )}
-                    <OngoingTaskStatus
-                        task={data}
-                        canEdit={canEdit}
-                        onTaskOperation={onTaskOperation}
-                        isTogglingState={isTogglingState(data.shared.taskId)}
-                        id={statusDropdownId}
-                    />
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: isServerWide,
+                            message: "Status can be managed on the Server-Wide Tasks page",
+                        }}
+                    >
+                        <OngoingTaskStatus
+                            task={data}
+                            canEdit={canEdit}
+                            onTaskOperation={onTaskOperation}
+                            isTogglingState={isTogglingState(data.shared.taskId)}
+                            id={statusDropdownId}
+                        />
+                    </ConditionalPopover>
 
                     <OngoingTaskActions
                         task={data}
