@@ -203,7 +203,7 @@ function Details(props: PeriodicBackupPanelProps) {
                 {nextBackupHumanized}
                 {backupNowVisible && (
                     <Badge
-                        type="button"
+                        as="button"
                         onClick={onBackupNow}
                         className={classNames("ms-1 rounded-pill backup-now", {
                             "bg-secondary": !neverBackedUp,
