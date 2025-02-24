@@ -98,7 +98,7 @@ public class AiStorage
                 var djv = CreateValueEmbeddingsDocument(attachmentName, lastModified);
 
                 using (var json = context.ReadObject(djv, item.ValueEmbeddingsDocumentId))
-                    PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, attachmentName);
+                    PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, item.UsedBytes, attachmentName);
 
                 return attachmentName;
             }
@@ -106,7 +106,7 @@ public class AiStorage
             document.Inner.Data.Modifications = new DynamicJsonValue(document.Inner.Data) { [AttachmentNameLiteral] = attachmentName };
 
             using (var json = context.ReadObject(document.Inner.Data, item.ValueEmbeddingsDocumentId))
-                PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, attachmentName);
+                PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, item.UsedBytes, attachmentName);
 
             return attachmentName;
         }
@@ -130,14 +130,16 @@ public class AiStorage
             document.Inner.Data.Modifications = new DynamicJsonValue(document.Inner.Data) { [item.TextualValue] = attachment.Name };
 
             using (var json = context.ReadObject(document.Inner.Data, item.ValueEmbeddingsDocumentId))
-                PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, attachmentName);
+                PutValueEmbeddingsDocumentFromEmbeddingValue(json, item.EmbeddingValue, item.UsedBytes, attachmentName);
         }
 
         return attachmentName;
 
-        void PutValueEmbeddingsDocumentFromEmbeddingValue(BlittableJsonReaderObject json, ReadOnlyMemory<float> embeddingValue, string attachmentName)
+        void PutValueEmbeddingsDocumentFromEmbeddingValue(BlittableJsonReaderObject json, ReadOnlyMemory<float> embeddingValue, int usedBytes, string attachmentName)
         {
-            using (var stream = new MemoryStream(MemoryMarshal.Cast<float, byte>(embeddingValue.Span).ToArray()))
+            var embeddingSpan = MemoryMarshal.Cast<float, byte>(embeddingValue.Span)[..usedBytes];
+            
+            using (var stream = new MemoryStream(embeddingSpan.ToArray()))
             {
                 var hash = AttachmentsStorageHelper.CalculateHash(context, stream);
 

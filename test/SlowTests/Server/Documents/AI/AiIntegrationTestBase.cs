@@ -36,7 +36,8 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
         string connectionStringName = DefaultConnectionStringName,
         List<string> embeddingsPaths = null,
         string script = null,
-        string collectionName = null)
+        string collectionName = null,
+        VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
     {
         var configuration = new AiIntegrationConfiguration
         {
@@ -49,6 +50,7 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
                 Script = script
             }
             : null,
+            TargetQuantizationType = targetQuantization,
         };
 
         configuration.Identifier = configuration.GenerateIdentifier();

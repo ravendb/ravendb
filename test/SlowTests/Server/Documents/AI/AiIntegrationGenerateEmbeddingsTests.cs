@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.BulkInsert;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
@@ -505,11 +507,9 @@ embeddings.generate(
             AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Bar", ["ConstValue"], dto.Id);
         }
     }
-
-
+    
     private record Test(string Id, string Expires);
-
-#pragma warning disable SKEXP0050
+    
     [RavenFact(RavenTestCategory.AiIntegration)]
     public void TestChunkingInTransformation()
     {
@@ -532,12 +532,93 @@ embeddings.generate(
             var (configuration, connectionString) = RegisterAiIntegration(store,
                 script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 5) });");
             
-            aiTaskDone.Wait(TimeSpan.FromSeconds(20000));
+            aiTaskDone.Wait(TimeSpan.FromSeconds(20));
             
             AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
         }
     }
-#pragma warning restore SKEXP0050
+
+    [RavenFact(RavenTestCategory.AiIntegration)]
+    public void TestTransformationWithArrayFieldOutput()
+    {
+        var dto = new Dto { Name = "CoolName" };
+        
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+
+            var (configuration, connectionString) = RegisterAiIntegration(store,
+                script: "embeddings.generate({ ArrayField: [this.Name, 'ConstValue'] });");
+            
+            aiTaskDone.Wait(TimeSpan.FromSeconds(20));
+            
+            AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ArrayField", ["CoolName", "ConstValue"], dto.Id);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.AiIntegration)]
+    public void TestQuantizationOfEmbeddingsInTask()
+    {
+        var dto = new Dto { Name = "CoolName" };
+        
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+                
+                var aiTaskDone = Etl.WaitForEtlToComplete(store);
+                
+                var (configuration, connectionString) = RegisterAiIntegration(store,
+                    embeddingsPaths: ["Name"], targetQuantization: VectorEmbeddingType.Binary);
+
+                aiTaskDone.Wait(TimeSpan.FromSeconds(20));
+
+                var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
+                var integrationIdentifier = new AiIntegrationIdentifier(configuration.Identifier);
+
+                AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, "Name", [dto.Name], dto.Id);
+                
+                var hashOfInput = AiHelper.CalculateValueHash(dto.Name);
+                var embeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringIdentifier, hashOfInput);
+                
+                var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
+                Assert.NotNull(embeddingCacheDocument);
+                
+                var sourceAttachmentName = embeddingCacheDocument[AttachmentNameLiteral]?.ToString();
+                Assert.NotNull(sourceAttachmentName);
+                
+                var expectedAttachmentNameInEmbeddingsDocument = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, "Name") + sourceAttachmentName;
+                
+                var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(dto.Id);
+                var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;
+                Assert.NotNull(documentEmbeddings);
+
+                using (var embeddingAttachment = session.Advanced.Attachments.Get(documentEmbeddingsId, expectedAttachmentNameInEmbeddingsDocument))
+                {
+                    Assert.NotNull(embeddingAttachment);
+                    
+                    var buffer = new byte[48];
+
+                    using (var attachmentStream = new MemoryStream(buffer))
+                    {
+                        embeddingAttachment.Stream.CopyTo(attachmentStream);
+
+                        var embeddingValue = attachmentStream.ToArray();
+                        
+                        Assert.NotEmpty(embeddingValue);
+                    }
+                }
+            }
+        }
+    }
 
     private class Dto
     {

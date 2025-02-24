@@ -29,5 +29,10 @@ public class AiIntegrationEmbeddingItemValue
 
     public string ValueEmbeddingsDestinationAttachmentName { get; private set; }
     
+    // In case of quantized embedding we store it in the same memory 
+    // as raw embedding. We slice the right length when writing attachment
+    // based on used bytes
     public ReadOnlyMemory<float> EmbeddingValue { get; set; }
+    
+    public int UsedBytes { get; set; }
 }

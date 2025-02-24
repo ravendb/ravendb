@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -27,6 +28,8 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
     public List<string> EmbeddingsPaths { get; set; }
 
     public AiEmbeddingsTransformation EmbeddingsTransformation { get; set; }
+    
+    public VectorEmbeddingType TargetQuantizationType { get; set; }
 
     private List<Transformation> _transforms;
 
@@ -87,6 +90,9 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
         {
             errors.Add($"Configuration must have either {nameof(EmbeddingsPaths)} or {nameof(EmbeddingsTransformation)} script specified");
         }
+        
+        if (TargetQuantizationType == VectorEmbeddingType.Text)
+            errors.Add($"{nameof(TargetQuantizationType)} cannot be {nameof(VectorEmbeddingType.Text)}");
 
         return errors.Count == 0;
     }
@@ -127,6 +133,7 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
             [nameof(EmbeddingsTransformation.Script)] = EmbeddingsTransformation.Script
         } : null;
         json[nameof(AiConnectorType)] = AiConnectorType;
+        json[nameof(TargetQuantizationType)] = TargetQuantizationType;
 
         return json;
     }

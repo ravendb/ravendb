@@ -8,9 +8,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Util;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Metrics;
@@ -143,8 +145,36 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                     var key = keys[i];
                     var embedding = generatedValues[i];
                     
-                    foreach (var embeddingItem in embeddingsMap[key])
-                        embeddingItem.EmbeddingValue = embedding;
+                    switch (Configuration.TargetQuantizationType)
+                    {
+                        case VectorEmbeddingType.Single:
+                            foreach (var embeddingItem in embeddingsMap[key])
+                            {
+                                embeddingItem.EmbeddingValue = embedding;
+                                embeddingItem.UsedBytes = embedding.Length;
+                            }
+                            break;
+                        case VectorEmbeddingType.Int8:
+                            foreach (var embeddingItem in embeddingsMap[key])
+                            {
+                                var dest = MemoryMarshal.Cast<float, sbyte>(embedding.Span);
+                                VectorQuantizer.TryToInt8(embedding.Span, dest, out int usedBytes);
+                                embeddingItem.EmbeddingValue = embedding;
+                                embeddingItem.UsedBytes = usedBytes;
+                            }
+                            break;
+                        case VectorEmbeddingType.Binary:
+                            foreach (var embeddingItem in embeddingsMap[key])
+                            {
+                                var dest = MemoryMarshal.Cast<float, byte>(embedding.Span);
+                                VectorQuantizer.TryToInt1(embedding.Span, dest, out int usedBytes);
+                                embeddingItem.EmbeddingValue = embedding;
+                                embeddingItem.UsedBytes = usedBytes;
+                            }
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException($"Quantization type {Configuration.TargetQuantizationType} is not supported");
+                    }
                 }
             }
             
