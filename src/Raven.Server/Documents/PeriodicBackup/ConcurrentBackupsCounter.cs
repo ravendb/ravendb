@@ -32,17 +32,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public bool CanRunBackup
-        {
-            get
-            {
-                lock (_locker)
-                {
-                    return _runningBackupsPerDatabase.Count - 1 > 0;
-                }
-            }
-        }
-
         public ConcurrentBackupsCounter(BackupConfiguration backupConfiguration, LicenseManager licenseManager)
         {
             _licenseManager = licenseManager;
@@ -63,6 +52,20 @@ namespace Raven.Server.Documents.PeriodicBackup
             _concurrentDatabaseWakeup = new SemaphoreSlim(numberOfCoresToUse);
             _concurrentBackupsDelay = backupConfiguration.ConcurrentBackupsDelay.AsTimeSpan;
             _skipModifications = skipModifications;
+        }
+
+        public bool CanRunBackup(string databaseName)
+        {
+            lock (_locker)
+            {
+                if (_runningBackupsPerDatabase.TryGetValue(databaseName, out _))
+                {
+                    //  allow to backup all shards of the same database concurrently
+                    return true;
+                }
+
+                return MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count >= 1;
+            }
         }
 
         public void StartBackup(string databaseName, string backupName, Logger logger)
