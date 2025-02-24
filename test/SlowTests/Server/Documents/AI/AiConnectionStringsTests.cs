@@ -6,9 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Test;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -19,9 +20,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI;
 
-public class AiIntegrationTaskTests : RavenTestBase
+public class AiConnectionStringsTests : RavenTestBase
 {
-    public AiIntegrationTaskTests(ITestOutputHelper output) : base(output)
+    public AiConnectionStringsTests(ITestOutputHelper output) : base(output)
     {
     }
 
@@ -68,7 +69,7 @@ public class AiIntegrationTaskTests : RavenTestBase
                     Configuration = aiTaskConfiguration
                 };
 
-                var testResult = AiIntegrationTask.TestScript(testScript, database, database.ServerStore, context);
+                var testResult = EmbeddingsGenerationTask.TestScript(testScript, database, database.ServerStore, context);
                 Assert.NotNull(testResult);
             }
         }

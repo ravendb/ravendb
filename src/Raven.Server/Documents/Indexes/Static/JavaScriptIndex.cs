@@ -15,7 +15,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
-using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
@@ -126,7 +126,7 @@ function map(name, lambda) {
                 var referencedCollections = mapReferencedCollections[i].ReferencedCollections;
                 
                 if (mapReferencedCollections[i].HasLoadVector)
-                    referencedCollections.Add(new(AiHelper.GetDocumentEmbeddingsCollectionName(mapCollection)));
+                    referencedCollections.Add(new(EmbeddingsHelper.GetEmbeddingDocumentCollectionName(mapCollection)));
 
                 if (referencedCollections.Count > 0)
                 {

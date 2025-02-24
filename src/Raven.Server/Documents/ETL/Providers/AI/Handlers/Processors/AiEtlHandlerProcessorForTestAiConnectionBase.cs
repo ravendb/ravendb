@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.Embeddings;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -80,10 +82,10 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
             var aiEtlConfiguration = new AiIntegrationConfiguration { Connection = aiConnectionString };
 
             services = AiHelper.CreateServicesForTest(aiEtlConfiguration, out string serviceId);
-            var embeddings = await services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId).GenerateEmbeddingsAsync(AiHelper.TestValuesList);
+            var embeddings = await services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId).GenerateEmbeddingsAsync(EmbeddingsHelper.TestValuesList);
 
-            if (embeddings.Count != AiHelper.TestValuesList.Count)
-                throw new Exception($"Failed to generate embeddings for test values. Expected '{AiHelper.TestValuesList.Count}' result, but got '{embeddings.Count}'.");
+            if (embeddings.Count != EmbeddingsHelper.TestValuesList.Count)
+                throw new Exception($"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.TestValuesList.Count}' result, but got '{embeddings.Count}'.");
 
             var result = new DynamicJsonValue { [nameof(NodeConnectionTestResult.Success)] = true };
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +14,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Util;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Providers.AI.Test;
@@ -29,20 +29,21 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+
 #pragma warning disable SKEXP0001
 
-namespace Raven.Server.Documents.ETL.Providers.AI;
+namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrationEmbeddingItem, AiIntegrationConfiguration, AiConnectionString, AiIntegrationStatsScope, AiIntegrationPerformanceOperation>
+public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, AiIntegrationConfiguration, AiConnectionString, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
     private ITextEmbeddingGenerationService _service;
 
     private readonly MissingEmbeddingsHolder _missingEmbeddingsHolder = new();
 
-    public const string AiTaskTag = "AI Integration";
+    public const string EmbeddingsTaskTag = "AI/Embeddings Generation";
 
-    public AiIntegrationTask(Transformation transformation, AiIntegrationConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
-        : base(transformation, configuration, database, serverStore, AiTaskTag)
+    public EmbeddingsGenerationTask(Transformation transformation, AiIntegrationConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+        : base(transformation, configuration, database, serverStore, EmbeddingsTaskTag)
     {
         Metrics = new EtlMetricsCountersManager();
     }
@@ -55,12 +56,12 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
 
     protected override IEnumerator<AiIntegrationItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
     {
-        return new DocumentsToAiEmbeddingsItems(docs, collection);
+        return new DocumentsToAiItems(docs, collection);
     }
 
     protected override IEnumerator<AiIntegrationItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
     {
-        return new TombstonesToAiEmbeddingsItems(context, tombstones, collection, trackAttachments);
+        return new TombstonesToAiItems(context, tombstones, collection, trackAttachments);
     }
 
     protected override IEnumerator<AiIntegrationItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
@@ -88,16 +89,16 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         return false;
     }
 
-    protected override EtlTransformer<AiIntegrationItem, AiIntegrationEmbeddingItem, AiIntegrationStatsScope, AiIntegrationPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
-        return new AiIntegrationTransformer(Database, context, Transformation, null, Configuration);
+        return new EmbeddingsGenerationScriptTransformer(Database, context, Transformation, null, Configuration);
     }
 
-    protected override int LoadInternal(IEnumerable<AiIntegrationEmbeddingItem> items, DocumentsOperationContext context, AiIntegrationStatsScope scope)
+    protected override int LoadInternal(IEnumerable<EmbeddingGenerationScriptResult> items, DocumentsOperationContext context, AiIntegrationStatsScope scope)
     {
         _service ??= AiHelper.CreateService(Configuration);
 
-        if (items is not AiEmbeddingsTransformationRun aiEtlScriptRun)
+        if (items is not EmbeddingsGenerationScriptRun embeddingsScriptRun)
         {
             Debug.Assert(items != null && items!.GetType()!.FullName!.StartsWith("System.Linq.EmptyPartition")
                 , $"items != null && items!.GetType()!.FullName!.StartsWith('System.Linq.EmptyPartition'): {items!.GetType()!.FullName!}");
@@ -108,9 +109,9 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
 
         using (_missingEmbeddingsHolder)
         {
-            foreach (var aiEtlEmbeddingItem in aiEtlScriptRun.Additions)
+            foreach (var embeddingItem in embeddingsScriptRun.Additions)
             {
-                foreach (var kvp in aiEtlEmbeddingItem.Values)
+                foreach (var kvp in embeddingItem.Values)
                 {
                     var values = kvp.Value;
                     
@@ -118,13 +119,8 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                     {
                         var connectionStringIdentifier = new AiConnectionStringIdentifier(Configuration.Connection.Identifier);
 
-                        var valueEmbeddingsDocument = Database.AiStorage.GetValueEmbeddingsDocument(context, connectionStringIdentifier, value.TextualValue, out var valueEmbeddingsDocumentId);
-
-                        value.ValueEmbeddingsDocumentId = valueEmbeddingsDocumentId;
-                        value.ValueEmbeddingsSourceAttachmentName = valueEmbeddingsDocument?.GetAttachmentNameForValue(value.TextualValue);
-                        
-                        if (value.ValueEmbeddingsSourceAttachmentName == null)
-                            _missingEmbeddingsHolder.Add(value.TextualValue, value);
+                        if (Database.EmbeddingsStorage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value) == false)
+                            _missingEmbeddingsHolder.Add(value.InputValue, value);
                     }
                 }
 
@@ -150,7 +146,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                         case VectorEmbeddingType.Single:
                             foreach (var embeddingItem in embeddingsMap[key])
                             {
-                                embeddingItem.EmbeddingValue = embedding;
+                                embeddingItem.OutputValue = embedding;
                                 embeddingItem.UsedBytes = embedding.Length;
                             }
                             break;
@@ -159,7 +155,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                             {
                                 var dest = MemoryMarshal.Cast<float, sbyte>(embedding.Span);
                                 VectorQuantizer.TryToInt8(embedding.Span, dest, out int usedBytes);
-                                embeddingItem.EmbeddingValue = embedding;
+                                embeddingItem.OutputValue = embedding;
                                 embeddingItem.UsedBytes = usedBytes;
                             }
                             break;
@@ -168,7 +164,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                             {
                                 var dest = MemoryMarshal.Cast<float, byte>(embedding.Span);
                                 VectorQuantizer.TryToInt1(embedding.Span, dest, out int usedBytes);
-                                embeddingItem.EmbeddingValue = embedding;
+                                embeddingItem.OutputValue = embedding;
                                 embeddingItem.UsedBytes = usedBytes;
                             }
                             break;
@@ -178,7 +174,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                 }
             }
             
-            var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(aiEtlScriptRun, new AiIntegrationIdentifier(Configuration.Identifier), Database);
+            var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(embeddingsScriptRun, new EmbeddingsGenerationTaskIdentifier(Configuration.Identifier), Database);
 
             Database.TxMerger.EnqueueSync(putEmbeddingsCommand);
         }
@@ -199,17 +195,17 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
     private class MissingEmbeddingsHolder : IDisposable
     {
         // missing value -> embeddings
-        private readonly Dictionary<string, List<AiIntegrationEmbeddingItemValue>> _embeddingsMap = new();
+        private readonly Dictionary<string, List<EmbeddingGenerationItem>> _embeddingsMap = new();
         
-        public void Add(string value, AiIntegrationEmbeddingItemValue item)
+        public void Add(string value, EmbeddingGenerationItem item)
         {
             if (_embeddingsMap.ContainsKey(value) == false)
-                _embeddingsMap.Add(value, new List<AiIntegrationEmbeddingItemValue>());
+                _embeddingsMap.Add(value, new List<EmbeddingGenerationItem>());
                 
             _embeddingsMap[value].Add(item);
         }
 
-        public IReadOnlyDictionary<string, List<AiIntegrationEmbeddingItemValue>> GetEmbeddingsMap() => _embeddingsMap;
+        public IReadOnlyDictionary<string, List<EmbeddingGenerationItem>> GetEmbeddingsMap() => _embeddingsMap;
 
         public void Dispose()
         {
@@ -217,7 +213,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         }
     }
 
-    public AiIntegrationTestScriptResult RunTest(IEnumerable<AiIntegrationEmbeddingItem> records, DocumentsOperationContext context)
+    public AiIntegrationTestScriptResult RunTest(IEnumerable<EmbeddingGenerationScriptResult> records, DocumentsOperationContext context)
     {
         var services = AiHelper.CreateServicesForTest(
             new AiIntegrationConfiguration
@@ -230,12 +226,11 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
 
         foreach (var record in records)
         {
-            foreach (var aiEtlEmbeddingItemValue in record.Values.SelectMany(x => x.Value))
+            foreach (var embeddingItemValue in record.Values.SelectMany(x => x.Value))
             {
-                aiEtlEmbeddingItemValue.ValueEmbeddingsDocumentId = record.DocumentId;
-                aiEtlEmbeddingItemValue.EmbeddingValue = embeddingService.GenerateEmbeddingsAsync([aiEtlEmbeddingItemValue.TextualValue]).Result[0];
+                embeddingItemValue.OutputValue = embeddingService.GenerateEmbeddingsAsync([embeddingItemValue.InputValue]).Result[0];
 
-                result.EmbeddingItemValues.Add(aiEtlEmbeddingItemValue);
+                result.EmbeddingItemValues.Add(embeddingItemValue);
             }
         }
 
@@ -248,15 +243,14 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         /// <summary>
         /// Contains ETL result
         /// </summary>
-        private readonly AiEmbeddingsTransformationRun _taskResults;
-        private readonly AiIntegrationIdentifier _aiIntegrationIdentifier;
+        private readonly EmbeddingsGenerationScriptRun _taskResults;
+        private readonly EmbeddingsGenerationTaskIdentifier _embeddingsTaskIdentifier;
         private readonly DocumentDatabase _database;
-        public DocumentsStorage.PutOperationResults PutResult;
         
-        public MergedPutEmbeddingsCommand(AiEmbeddingsTransformationRun taskResults, AiIntegrationIdentifier aiIntegrationIdentifier, DocumentDatabase database)
+        public MergedPutEmbeddingsCommand(EmbeddingsGenerationScriptRun taskResults, EmbeddingsGenerationTaskIdentifier embeddingsTaskIdentifier, DocumentDatabase database)
         {
             _taskResults = taskResults;
-            _aiIntegrationIdentifier = aiIntegrationIdentifier;
+            _embeddingsTaskIdentifier = embeddingsTaskIdentifier;
             _database = database;
         }
 
@@ -269,7 +263,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
             if (embeddingsDocument == null)
                 return destination;
             
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingsDocument, _aiIntegrationIdentifier.Value, out var etlEmbeddingsByPathObject)
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingsDocument, _embeddingsTaskIdentifier.Value, out var etlEmbeddingsByPathObject)
                 && etlEmbeddingsByPathObject is BlittableJsonReaderObject etlEmbeddingsByPath)
             {
                 //For each property under ETL name
@@ -297,11 +291,11 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         {
             return new DynamicJsonValue
             {
-                [_aiIntegrationIdentifier.Value] = embeddingsDocumentModification,
+                [_embeddingsTaskIdentifier.Value] = embeddingsDocumentModification,
                 [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
                 {
                     // todo cache
-                    [Constants.Documents.Metadata.Collection] = AiHelper.GetDocumentEmbeddingsCollectionName(collectionName),
+                    [Constants.Documents.Metadata.Collection] = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collectionName),
                 }
             };
         }
@@ -310,7 +304,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         {
             embeddingsDocument.Data.Modifications = new DynamicJsonValue
             {
-                [_aiIntegrationIdentifier.Value] = embeddingsDocumentModification
+                [_embeddingsTaskIdentifier.Value] = embeddingsDocumentModification
             };
 
             return embeddingsDocument.Data;
@@ -333,10 +327,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             var operationStartDate = _database.Time.GetUtcNow();
-            // Key: Transformer input
-            // Value: Attachment name of embedding 
-            var localEmbeddingCache = new Dictionary<string, string>();
-            
+
             // For each of processed document
             foreach (var document in _taskResults.Additions)
             {
@@ -344,14 +335,14 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                 var embeddingsDocumentModification = new DynamicJsonValue();
                 
                 // Load the embeddings document (if it exists) to track which attachments need to be removed (on update)
-                using var embeddingsDocument = _database.AiStorage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);
+                using var embeddingsDocument = _database.EmbeddingsStorage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);
                 var currentAttachmentsOfEmbeddingsFromThisTransformer = LoadNamesOfExistingAttachmentsOfThisTransformer(embeddingsDocument);
                 
                 foreach (var embeddingsByPath in document.Values)
                 {
                     var currentPath = embeddingsByPath.Key;
                     var generatedEmbeddings = embeddingsByPath.Value;
-                    var prefix = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(_aiIntegrationIdentifier, currentPath);
+                    var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(_embeddingsTaskIdentifier, currentPath);
                     var namesOfNewAttachments = new DynamicJsonArray();
                     
                     // todo better handling
@@ -359,15 +350,13 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                     
                     foreach (var embedding in generatedEmbeddings)
                     {
-                        ref var attachmentName = ref CollectionsMarshal.GetValueRefOrAddDefault(localEmbeddingCache, embedding.TextualValue, out _);
-                        attachmentName ??= _database.AiStorage.AddOrUpdateValueEmbeddingsDocument(context, embedding, operationStartDate);
-                        embedding.ValueEmbeddingsSourceAttachmentName = attachmentName;
-                        embedding.SetPrefix(prefix);
+                        _database.EmbeddingsStorage.AddOrUpdateEmbeddingDocument(context, embedding, operationStartDate);
+                        embedding.SetPrefixForDestinationAttachmentName(prefix);
                         
-                        if (alreadyAddedAttachments.Add(embedding.ValueEmbeddingsDestinationAttachmentName) == false)
+                        if (alreadyAddedAttachments.Add(embedding.DestinationAttachmentName) == false)
                             continue;
                         
-                        namesOfNewAttachments.Add(embedding.ValueEmbeddingsDestinationAttachmentName);
+                        namesOfNewAttachments.Add(embedding.DestinationAttachmentName);
                     }
                     
                     embeddingsDocumentModification[currentPath] = namesOfNewAttachments;
@@ -391,16 +380,17 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
                         var namesOfCurrentAttachments = currentAttachmentsOfEmbeddingsFromThisTransformer.GetValueOrDefault(embeddingsByPath.Key);
                         foreach (var embedding in embeddingsByPath.Value)
                         {
-                            if (alreadyAddedAttachments.Add(embedding.ValueEmbeddingsSourceAttachmentName) == false)
+                            if (alreadyAddedAttachments.Add(embedding.DestinationAttachmentName) == false)
                                 continue;
                             
                             // When true:
                             //  This embedding is already in the embeddings document. Therefore, we do not have to insert it again.
                             //  At the same time, we are removing it from the list of attachments to remove (essentially a no-op on attachment storage in case of an update).
-                            if (namesOfCurrentAttachments?.Remove(embedding.ValueEmbeddingsDestinationAttachmentName) == true)
+                            if (namesOfCurrentAttachments?.Remove(embedding.DestinationAttachmentName) == true)
                                 continue; 
                             
-                            _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, embedding.ValueEmbeddingsDocumentId, embedding.ValueEmbeddingsSourceAttachmentName, embeddingsDocumentId, embedding.ValueEmbeddingsDestinationAttachmentName, null, AttachmentType.Document);
+                            _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, embedding.EmbeddingCacheDocumentId, embedding.InputValueHash
+                                , embeddingsDocumentId, embedding.DestinationAttachmentName, null, AttachmentType.Document);
                         }
                     }
                     
@@ -417,7 +407,7 @@ public sealed class AiIntegrationTask : EtlProcess<AiIntegrationItem, AiIntegrat
             
             foreach (var item in _taskResults.Removals)
             {
-                var documentEmbeddingsToDeleteId = AiHelper.GetDocumentEmbeddingsId(item.DocumentId);
+                var documentEmbeddingsToDeleteId = EmbeddingsHelper.GetEmbeddingDocumentId(item.DocumentId);
                 _database.DocumentsStorage.Delete(context, documentEmbeddingsToDeleteId, DocumentFlags.None);
             }
             

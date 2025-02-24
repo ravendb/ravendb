@@ -18,6 +18,7 @@ using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
@@ -493,8 +494,8 @@ public class RavenDB_22076 : RavenTestBase
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
 
-                var hash = AiHelper.CalculateValueHash(queriedText);
-                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringIdentifier, hash);
+                var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
+                var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash);
                 
                 WaitForUserToContinueTheTest(store);
                 
@@ -654,8 +655,8 @@ public class RavenDB_22076 : RavenTestBase
                 
                 WaitForUserToContinueTheTest(store);
                 
-                var hash = AiHelper.CalculateValueHash(queriedText);
-                var valueEmbeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringIdentifier, hash);
+                var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
+                var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash);
                 
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 

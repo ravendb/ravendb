@@ -36,7 +36,9 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
     [JsonDeserializationIgnore]
     [JsonIgnore]
     [Obsolete($"AI Integration configuration doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
     public override List<Transformation> Transforms
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
     {
         get
         {

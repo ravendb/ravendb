@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NuGet.Packaging;
-using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.AI.Embeddings;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
@@ -39,8 +39,8 @@ internal sealed class VectorFieldRewriter(ReferencedCollectionsRetriever referen
                 
                 IEnumerable<string> names = _collectionNameRetriever switch
                 {
-                    CollectionNameRetriever cnr => cnr!.CollectionNames!.Select(AiHelper.GetDocumentEmbeddingsCollectionName),
-                    CollectionNameRetrieverBase cnrb => cnrb.Collections.Select(n => AiHelper.GetDocumentEmbeddingsCollectionName(n.CollectionName)),
+                    CollectionNameRetriever cnr => cnr!.CollectionNames!.Select(EmbeddingsHelper.GetEmbeddingDocumentCollectionName),
+                    CollectionNameRetrieverBase cnrb => cnrb.Collections.Select(n => EmbeddingsHelper.GetEmbeddingDocumentCollectionName(n.CollectionName)),
                     _ => throw new InvalidOperationException($"Unknown collection name retriever. Got: {_collectionNameRetriever.GetType().FullName}.")
                 };
 

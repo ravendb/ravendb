@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Indexes
         private Dictionary<string, VectorEmbeddingType> _vectorSourceEmbeddingType;
         private Dictionary<string, VectorEmbeddingType> _vectorSourceEmbeddingTypeToWrite;
 
-        private Dictionary<string, string> _vectorSourceAiTaskIdentifiers;
-        private Dictionary<string, string> _vectorSourceAiTaskIdentifiersToWrite;
+        private Dictionary<string, string> _embeddingsGenerationTaskIdentifiers;
+        private Dictionary<string, string> _embeddingsGenerationTaskIdentifiersToWrite;
         
         public IndexFieldsPersistence(Index index)
         {
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes
             
             _vectorFieldsDimensions = _index._indexStorage.ReadVectorDimensions();
             _vectorSourceEmbeddingType = _index._indexStorage.ReadIndexEmbeddingType();
-            _vectorSourceAiTaskIdentifiers = _index._indexStorage.ReadVectorSourceAiTaskIdentifiers();
+            _embeddingsGenerationTaskIdentifiers = _index._indexStorage.ReadVectorSourceAiTaskIdentifiers();
             
             foreach (var indexField in _index.Definition.IndexFields.Values)
             {
@@ -96,30 +96,30 @@ namespace Raven.Server.Documents.Indexes
             return _vectorFieldsDimensions.TryGetValue(fieldName, out dimensions);
         }
 
-        internal bool TryReadVectorSourceEtlTaskName(string fieldName, out string taskName)
+        internal bool TryReadEmbeddingsGenerationTaskIdentifier(string fieldName, out string taskName)
         {
-            return _vectorSourceAiTaskIdentifiers.TryGetValue(fieldName, out taskName);
+            return _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out taskName);
         }
 
-        internal void SetVectorSourceEtlTaskName(string fieldName, string taskName)
+        internal void SetEmbeddingsGenerationTaskName(string fieldName, string taskIdentifier)
         {
-            var isStoredOnDisk = _vectorSourceAiTaskIdentifiers.TryGetValue(fieldName, out var diskStoredSourceEtlTaskName);
+            var isStoredOnDisk = _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out var diskStoredSourceEtlTaskName);
 
-            PortableExceptions.ThrowIf<InvalidOperationException>(isStoredOnDisk && diskStoredSourceEtlTaskName != taskName, $"We are expecting that field {fieldName} has the same ETL task as it was before. However, stored ETL task was {diskStoredSourceEtlTaskName} and current one is {taskName}.");
+            PortableExceptions.ThrowIf<InvalidOperationException>(isStoredOnDisk && diskStoredSourceEtlTaskName != taskIdentifier, $"We are expecting that field {fieldName} has the same ETL task as it was before. However, stored ETL task was {diskStoredSourceEtlTaskName} and current one is {taskIdentifier}.");
 
             var isStoredInRuntime = false;
-            if (_vectorSourceAiTaskIdentifiersToWrite != null)
+            if (_embeddingsGenerationTaskIdentifiersToWrite != null)
             {
-                isStoredInRuntime = _vectorSourceAiTaskIdentifiersToWrite.TryGetValue(fieldName, out var runtimeStoredSourceEtlTaskName);
-                PortableExceptions.ThrowIf<InvalidOperationException>(isStoredInRuntime && runtimeStoredSourceEtlTaskName != taskName,
-                    $"We are expecting that field {fieldName} has the same ETL task as it was before. However, previously ETL task was {runtimeStoredSourceEtlTaskName} and current one is {taskName}.");
+                isStoredInRuntime = _embeddingsGenerationTaskIdentifiersToWrite.TryGetValue(fieldName, out var runtimeStoredSourceEtlTaskName);
+                PortableExceptions.ThrowIf<InvalidOperationException>(isStoredInRuntime && runtimeStoredSourceEtlTaskName != taskIdentifier,
+                    $"We are expecting that field {fieldName} has the same ETL task as it was before. However, previously ETL task was {runtimeStoredSourceEtlTaskName} and current one is {taskIdentifier}.");
             }
             
             if (isStoredOnDisk || isStoredInRuntime)
                 return;
             
-            _vectorSourceAiTaskIdentifiersToWrite ??= new Dictionary<string, string>();
-            _vectorSourceAiTaskIdentifiersToWrite.Add(fieldName, taskName);
+            _embeddingsGenerationTaskIdentifiersToWrite ??= new Dictionary<string, string>();
+            _embeddingsGenerationTaskIdentifiersToWrite.Add(fieldName, taskIdentifier);
         }
 
         internal void SetVectorSourceEmbeddingType(string fieldName, VectorEmbeddingType embeddingType)
@@ -185,8 +185,8 @@ namespace Raven.Server.Documents.Indexes
             if (_vectorSourceEmbeddingTypeToWrite != null)
                 IndexStorage.WriteIndexEmbeddingType(indexContext.Transaction, _vectorSourceEmbeddingTypeToWrite);
             
-            if (_vectorSourceAiTaskIdentifiersToWrite != null)
-                IndexStorage.WriteVectorSourceAiTaskIdentifiers(indexContext.Transaction, _vectorSourceAiTaskIdentifiersToWrite);
+            if (_embeddingsGenerationTaskIdentifiersToWrite != null)
+                IndexStorage.WriteEmbeddingsGenerationTaskIdentifiers(indexContext.Transaction, _embeddingsGenerationTaskIdentifiersToWrite);
 
             indexContext.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
             {
@@ -220,14 +220,14 @@ namespace Raven.Server.Documents.Indexes
                     _vectorSourceEmbeddingTypeToWrite = null;
                 }
 
-                if (_vectorSourceAiTaskIdentifiersToWrite != null)
+                if (_embeddingsGenerationTaskIdentifiersToWrite != null)
                 {
-                    var vectorSourceEtlTaskName = new Dictionary<string, string>(_vectorSourceAiTaskIdentifiers);
-                    foreach (var fieldAiTaskName in _vectorSourceAiTaskIdentifiersToWrite)
+                    var vectorSourceEtlTaskName = new Dictionary<string, string>(_embeddingsGenerationTaskIdentifiers);
+                    foreach (var fieldAiTaskName in _embeddingsGenerationTaskIdentifiersToWrite)
                         vectorSourceEtlTaskName.Add(fieldAiTaskName.Key, fieldAiTaskName.Value);
                     
-                    _vectorSourceAiTaskIdentifiers = vectorSourceEtlTaskName;
-                    _vectorSourceAiTaskIdentifiersToWrite = null;
+                    _embeddingsGenerationTaskIdentifiers = vectorSourceEtlTaskName;
+                    _embeddingsGenerationTaskIdentifiersToWrite = null;
                 }
             };
         }

@@ -8,7 +8,9 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -21,7 +23,6 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
 {
     protected const string DefaultConnectionStringName = "Local AI connection";
     protected const string DefaultAiIntegrationTaskName = "localAiTask";
-    protected const string AttachmentNameLiteral = "AttachmentName";
     protected ByteStringContext _allocator;
 
     protected float[] GenerateEmbeddingForTextViaOnnx(string text)
@@ -75,7 +76,7 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
 
     protected void AssertEmbeddingsForPath(
         IDocumentStore store,
-        AiIntegrationIdentifier integrationIdentifier,
+        EmbeddingsGenerationTaskIdentifier integrationIdentifier,
         AiConnectionStringIdentifier connectionStringIdentifier,
         string path,
         string[] inputValues,
@@ -90,19 +91,16 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
         foreach (var inputValue in inputValues)
         {
             //Assert if value is in embedding cache
-            var hashOfInput = AiHelper.CalculateValueHash(inputValue);
-            var embeddingsDocumentId = AiHelper.GetValueEmbeddingsDocumentId(connectionStringIdentifier, hashOfInput);
+            var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(inputValue);
+            var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput);
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
             Assert.NotNull(embeddingCacheDocument);
 
-            //Assert if current key is properly persisted with an embedding 
-            var sourceAttachmentName = embeddingCacheDocument[AttachmentNameLiteral]?.ToString();
-            Assert.NotNull(sourceAttachmentName); // Checks if current embedding cache has the embedding
-            var attachmentsExistsInEmbeddingCache = session.Advanced.Attachments.Exists(embeddingsDocumentId, sourceAttachmentName);
+            var attachmentsExistsInEmbeddingCache = session.Advanced.Attachments.Exists(embeddingsDocumentId, hashOfInput);
             Assert.True(attachmentsExistsInEmbeddingCache);
 
             //Assert if embeddings document exists
-            var documentEmbeddingsId = AiHelper.GetDocumentEmbeddingsId(docId);
+            var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(docId);
             var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;
             Assert.NotNull(documentEmbeddings);
 
@@ -115,7 +113,7 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
             Assert.NotNull(currentPathObject);
 
             // Assert if current path contain embedding of current input value
-            var expectedAttachmentNameInEmbeddingsDocument = AiHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, path) + sourceAttachmentName;
+            var expectedAttachmentNameInEmbeddingsDocument = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, path) + hashOfInput;
             var attachmentsByEtlPath = currentPathObject.Select(att => att.ToString()).ToList();
             Assert.Equal(inputValues.Length, attachmentsByEtlPath.Count); // <- this checks if we've all embeddings
             Assert.Contains(expectedAttachmentNameInEmbeddingsDocument, attachmentsByEtlPath);

@@ -43,6 +43,8 @@ using CoraxConstants = Corax.Constants;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 using VectorOptions = Raven.Client.Documents.Indexes.Vector.VectorOptions;
+using Raven.Server.Documents.AI.Embeddings;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -656,9 +658,9 @@ public static class CoraxQueryBuilder
 
         VectorValue transformedEmbedding;
         
-        if (builderParameters.Index.IndexFieldsPersistence.TryReadVectorSourceEtlTaskName(fieldName, out var vectorSourceEtlTaskName))
+        if (builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out var embeddingsGenerationTaskIdentifier))
         {
-            var aiIntegrationIdentifier = new AiIntegrationIdentifier(vectorSourceEtlTaskName);
+            var identifier = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
             var valueAsString = valueType switch
             {
@@ -666,18 +668,18 @@ public static class CoraxQueryBuilder
                 _ => throw new NotSupportedException("Vector.Search() on " + valueType)
             };
 
-            var connectionStringIdentifier = AiStorage.GetConnectionStringIdentifierByIntegrationIdentifier(aiIntegrationIdentifier); // TODO michal
+            var connectionStringIdentifier = EmbeddingsStorage.GetConnectionStringIdentifierByIntegrationIdentifier(identifier); // TODO michal
 
             using (builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 if (TryGetEmbeddingFromCache(context, builderParameters.Allocator, valueAsString, connectionStringIdentifier, out transformedEmbedding) == false)
                 {
-                    if (builderParameters.DocumentsContext.DocumentDatabase.AiStorage.TryGetServiceByIntegrationIdentifier(aiIntegrationIdentifier, out var service) == false)
-                        throw new ArgumentException($"Couldn't find {aiIntegrationIdentifier} AI task.");
+                    if (builderParameters.DocumentsContext.DocumentDatabase.EmbeddingsStorage.TryGetServiceByIntegrationIdentifier(identifier, out var service) == false)
+                        throw new ArgumentException($"Couldn't find {identifier} AI task.");
 
-                    var aiStorage = builderParameters.DocumentsContext.DocumentDatabase.AiStorage;
+                    var aiStorage = builderParameters.DocumentsContext.DocumentDatabase.EmbeddingsStorage;
                     
-                    transformedEmbedding = AiHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, aiStorage, valueAsString, GenerateEmbeddings.F32Size, connectionStringIdentifier);
+                    transformedEmbedding = EmbeddingsHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, aiStorage, valueAsString, GenerateEmbeddings.F32Size, connectionStringIdentifier);
                 } 
             }
         }
@@ -807,8 +809,8 @@ public static class CoraxQueryBuilder
         {
             transformedEmbedding = new VectorValue();
             
-            var hash = AiHelper.CalculateValueHash(valueAsString);
-            var id = AiHelper.GetValueEmbeddingsDocumentId(aiConnectionStringIdentifier, hash);
+            var hash = EmbeddingsHelper.CalculateInputValueHash(valueAsString);
+            var id = EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiConnectionStringIdentifier, hash);
             
             using (documentContext.OpenReadTransaction())
             {

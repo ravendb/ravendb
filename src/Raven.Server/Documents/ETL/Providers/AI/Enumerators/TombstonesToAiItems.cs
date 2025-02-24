@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 
-public sealed class TombstonesToAiEmbeddingsItems : IEnumerator<AiIntegrationItem>
+public sealed class TombstonesToAiItems : IEnumerator<AiIntegrationItem>
 {
     private readonly DocumentsOperationContext _context;
     private readonly IEnumerator<Tombstone> _tombstones;
@@ -18,7 +18,7 @@ public sealed class TombstonesToAiEmbeddingsItems : IEnumerator<AiIntegrationIte
     
     public AiIntegrationItem Current { get; private set; }
     
-    public TombstonesToAiEmbeddingsItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+    public TombstonesToAiItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
     {
         _context = context;
         _tombstones = tombstones;

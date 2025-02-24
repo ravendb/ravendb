@@ -1251,7 +1251,7 @@ namespace Raven.Server.Documents.Indexes
             var vectorSourceAiTaskIdentifiers = new Dictionary<string, string>();
             using (var tx = _environment.ReadTransaction())
             {
-                var vectorSourceAiTaskIdentifiersTree = tx.ReadTree(IndexSchema.VectorSourceAiTaskIdentifiers);
+                var vectorSourceAiTaskIdentifiersTree = tx.ReadTree(IndexSchema.EmbeddingsGenerationTaskIdentifiers);
                 if (vectorSourceAiTaskIdentifiersTree is null)
                     return vectorSourceAiTaskIdentifiers;
                 
@@ -1272,9 +1272,9 @@ namespace Raven.Server.Documents.Indexes
             return vectorSourceAiTaskIdentifiers;
         }
         
-        internal static void WriteVectorSourceAiTaskIdentifiers(RavenTransaction tx, Dictionary<string, string> vectorSourceAiTaskIdentifierToAdd)
+        internal static void WriteEmbeddingsGenerationTaskIdentifiers(RavenTransaction tx, Dictionary<string, string> vectorSourceAiTaskIdentifierToAdd)
         {
-            var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.VectorSourceAiTaskIdentifiers);
+            var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.EmbeddingsGenerationTaskIdentifiers);
             
             foreach (var kvp in vectorSourceAiTaskIdentifierToAdd)
                 fieldsTree.Add(kvp.Key, kvp.Value);
@@ -1340,7 +1340,7 @@ namespace Raven.Server.Documents.Indexes
 
             public const string VectorDimensionsTree = "VectorDimensions";
             public const string VectorSourceEmbeddingType = "VectorSourceEmbeddingType";
-            public const string VectorSourceAiTaskIdentifiers = "VectorSourceAiTaskIdentifiers";
+            public const string EmbeddingsGenerationTaskIdentifiers = "EmbeddingGenerationIdentifiers";
 
             public static readonly Slice TypeSlice;
 

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Platform;
 
@@ -42,37 +43,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static string CalculateHash(JsonOperationContext context, MemoryStream stream)
+        public static string CalculateHash(ReadOnlySpan<byte> mem)
         {
-            var initialPosition = stream.Position;
-            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
-            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer cryptoState))
-            {
-                if (cryptoState.Size < (int)Sodium.crypto_generichash_statebytes())
-                    throw new InvalidOperationException("BUG: shouldn't happen, the size of a generic hash state was too large!");
+            Span<byte> hashBuffer = stackalloc byte[Sodium.GenericHashSize];
 
-                InitComputeHash(cryptoState);
+            Sodium.GenericHash(mem, hashBuffer);
 
-                var bufferRead = 0;
-                while (true)
-                {
-                    var count = stream.Read(buffer.Memory.Memory.Span.Slice(bufferRead));
-                    if (count == 0)
-                        break;
-
-                    bufferRead += count;
-
-                    if (bufferRead == buffer.Size)
-                    {
-                        PartialComputeHash(cryptoState, buffer, bufferRead);
-                        bufferRead = 0;
-                    }
-                }
-                stream.Position = initialPosition;
-                PartialComputeHash(cryptoState, buffer, bufferRead);
-                var hash = FinalizeGetHash(cryptoState, buffer);
-                return hash;
-            }
+            return Convert.ToBase64String(hashBuffer);
         }
 
         private static unsafe void InitComputeHash(JsonOperationContext.MemoryBuffer cryptoState)

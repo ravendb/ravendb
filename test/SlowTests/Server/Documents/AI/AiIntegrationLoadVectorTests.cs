@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -65,7 +66,7 @@ WaitForUserToContinueTheTest(store);
             Assert.Single(byVector);
         }
 
-        var aiIntegrationIdentifier = new AiIntegrationIdentifier(config.Identifier);
+        var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Joe"], id);
@@ -147,7 +148,7 @@ WaitForUserToContinueTheTest(store);
             Assert.Single(byVector);
         }
 
-        var aiIntegrationIdentifier = new AiIntegrationIdentifier(config.Identifier);
+        var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Joe", "Jimmy"], id);
@@ -219,7 +220,7 @@ WaitForUserToContinueTheTest(store);
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Name"], aiIntegrationName: embeddingEtlName);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
-        AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
+        AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
 
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
@@ -265,7 +266,7 @@ WaitForUserToContinueTheTest(store);
             Assert.Single(byVector);
         }
 
-        AssertEmbeddingsForPath(store, new AiIntegrationIdentifier(config2.Identifier), new AiConnectionStringIdentifier(connectionString2.Identifier), "Names", ["Jimmy"], id);
+        AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config2.Identifier), new AiConnectionStringIdentifier(connectionString2.Identifier), "Names", ["Jimmy"], id);
     }
 
     private class IndexByName : AbstractIndexCreationTask<Dto>

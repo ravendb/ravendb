@@ -22,6 +22,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
@@ -1430,7 +1431,7 @@ namespace Raven.Server.Documents.ETL
                     }
                     
                 case EtlType.Ai:
-                    using (var aiEtl = new AiIntegrationTask(testScript.Configuration.Transforms[0], testScript.Configuration as AiIntegrationConfiguration, database, database.ServerStore))
+                    using (var aiEtl = new EmbeddingsGenerationTask(testScript.Configuration.Transforms[0], testScript.Configuration as AiIntegrationConfiguration, database, database.ServerStore))
                     using (aiEtl.EnterTestMode(out debugOutput))
                     {
                         aiEtl.EnsureThreadAllocationStats();

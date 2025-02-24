@@ -15,6 +15,7 @@ using Jint.Runtime.Interop;
 using Microsoft.SemanticKernel.Text;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
@@ -28,16 +29,16 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.ETL.Providers.AI;
+namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationItem, AiIntegrationEmbeddingItem, AiIntegrationStatsScope, AiIntegrationPerformanceOperation>
+internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
     private readonly AiIntegrationConfiguration _configuration;
-    private AiEmbeddingsTransformationRun _currentRun;
+    private EmbeddingsGenerationScriptRun _currentRun;
     private PatchRequest _mainScript;
     private AiIntegrationStatsScope _stats;
-    
-    public AiIntegrationTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiIntegrationConfiguration configuration) : base(database, context, null, behaviorFunctions)
+
+    public EmbeddingsGenerationScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiIntegrationConfiguration configuration) : base(database, context, null, behaviorFunctions)
     {
         _configuration = configuration;
         _mainScript = new PatchRequest(transformation.Script, PatchRequestType.AiIntegration);
@@ -46,10 +47,10 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
     public override void Initialize(bool debugMode)
     {
         Database.Scripts.GetScriptRunner(_mainScript, true, out DocumentScript);
-        
+
         if (DocumentScript == null)
             return;
-        
+
         if (debugMode)
             DocumentScript.DebugMode = true;
 
@@ -88,23 +89,23 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
     {
         throw new NotImplementedException();
     }
-    
-    public override IEnumerable<AiIntegrationEmbeddingItem> GetTransformedResults()
+
+    public override IEnumerable<EmbeddingGenerationScriptResult> GetTransformedResults()
     {
-        return _currentRun ?? Enumerable.Empty<AiIntegrationEmbeddingItem>();
+        return _currentRun ?? Enumerable.Empty<EmbeddingGenerationScriptResult>();
     }
 
- public override void Transform(AiIntegrationItem item, AiIntegrationStatsScope stats, EtlProcessState state)
+    public override void Transform(AiIntegrationItem item, AiIntegrationStatsScope stats, EtlProcessState state)
     {
         Current = item;
-        _currentRun ??= new AiEmbeddingsTransformationRun();
+        _currentRun ??= new EmbeddingsGenerationScriptRun();
 
         if (item.IsDelete)
         {
-            var deletedItem = new AiIntegrationEmbeddingItem { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, IsDelete = true };
-            
+            var deletedItem = new EmbeddingGenerationScriptResult { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, IsDelete = true };
+
             _currentRun.Removals.Add(deletedItem);
-            
+
             return;
         }
 
@@ -119,11 +120,11 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
 
         if (_configuration.EmbeddingsPaths is { Count: > 0 })
         {
-            var aiEtlEmbeddingItem = new AiIntegrationEmbeddingItem
+            var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult
             {
                 DocumentId = Current.DocumentId,
                 DocumentCollectionName = Current.Collection,
-                Values = new Dictionary<string, List<AiIntegrationEmbeddingItemValue>>()
+                Values = new Dictionary<string, List<EmbeddingGenerationItem>>()
             };
 
             foreach (var path in _configuration.EmbeddingsPaths)
@@ -146,7 +147,7 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
             $"Cannot create embeddings because neither {nameof(_configuration.EmbeddingsTransformation)} nor {nameof(_configuration.EmbeddingsPaths)} were specified in the configuration of AI Integration task");
     }
 
-    private void CollectEmbeddingValues(ref List<AiIntegrationEmbeddingItemValue> values, object value)
+    private void CollectEmbeddingValues(ref List<EmbeddingGenerationItem> values, object value)
     {
         var valueType = ConverterBase.GetValueTypeUnlikely(value);
         switch (valueType)
@@ -156,12 +157,12 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
             case ConverterBase.ValueType.Enum:
             case ConverterBase.ValueType.Boolean:
             case ConverterBase.ValueType.String:
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = value.ToString() });
+                values.Add(new EmbeddingGenerationItem() { InputValue = value.ToString() });
                 break;
-            
+
             case ConverterBase.ValueType.Char:
                 if (value is char c)
-                    values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = char.ToString(c)});
+                    values.Add(new EmbeddingGenerationItem() { InputValue = char.ToString(c) });
                 break;
 
             case ConverterBase.ValueType.LazyCompressedString:
@@ -169,49 +170,49 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
                 LazyStringValue lazyStringValue = valueType == ConverterBase.ValueType.LazyCompressedString
                     ? ((LazyCompressedStringValue)value).ToLazyStringValue()
                     : (LazyStringValue)value;
-                
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = lazyStringValue});
+
+                values.Add(new EmbeddingGenerationItem() { InputValue = lazyStringValue });
                 break;
-            
+
             case ConverterBase.ValueType.DateTime:
                 var dateTime = (DateTime)value;
                 var dateAsBytes = dateTime.GetDefaultRavenFormat();
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = dateAsBytes});
+                values.Add(new EmbeddingGenerationItem() { InputValue = dateAsBytes });
                 break;
 
             case ConverterBase.ValueType.DateTimeOffset:
                 var dateTimeOffset = (DateTimeOffset)value;
                 var dateTimeOffsetBytes = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = dateTimeOffsetBytes});
+                values.Add(new EmbeddingGenerationItem() { InputValue = dateTimeOffsetBytes });
                 break;
 
             case ConverterBase.ValueType.TimeSpan:
-            {
-                var timeSpan = (TimeSpan)value;
-                Span<byte> buffer = stackalloc byte[256];
-                if (Utf8Formatter.TryFormat(timeSpan, buffer, out var bytesWritten, new('c')) == false)
-                    throw new Exception($"Cannot convert {timeSpan} to a string");
+                {
+                    var timeSpan = (TimeSpan)value;
+                    Span<byte> buffer = stackalloc byte[256];
+                    if (Utf8Formatter.TryFormat(timeSpan, buffer, out var bytesWritten, new('c')) == false)
+                        throw new Exception($"Cannot convert {timeSpan} to a string");
 
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = Encodings.Utf8.GetString(buffer[..bytesWritten])});
-                break;
-            }
+                    values.Add(new EmbeddingGenerationItem() { InputValue = Encodings.Utf8.GetString(buffer[..bytesWritten]) });
+                    break;
+                }
             case ConverterBase.ValueType.DateOnly:
-                var dateOnly = ((DateOnly)value);
+                var dateOnly = (DateOnly)value;
                 var dateOnlyTextual = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = dateOnlyTextual});
+                values.Add(new EmbeddingGenerationItem() { InputValue = dateOnlyTextual });
                 break;
-            
+
             case ConverterBase.ValueType.TimeOnly:
-                var timeOnly = ((TimeOnly)value);
+                var timeOnly = (TimeOnly)value;
                 var timeOnlyTextual = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = timeOnlyTextual});
+                values.Add(new EmbeddingGenerationItem() { InputValue = timeOnlyTextual });
                 break;
-            
+
             case ConverterBase.ValueType.Convertible:
                 var iConvertible = (IConvertible)value;
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = iConvertible.ToString(CultureInfo.InvariantCulture)});
+                values.Add(new EmbeddingGenerationItem() { InputValue = iConvertible.ToString(CultureInfo.InvariantCulture) });
                 break;
-            
+
             case ConverterBase.ValueType.Enumerable:
                 RuntimeHelpers.EnsureSufficientExecutionStack();
                 var iterator = (IEnumerable)value;
@@ -221,82 +222,82 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
 
             case ConverterBase.ValueType.DynamicJsonObject:
                 var valueAsJson = (DynamicBlittableJson)value;
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = valueAsJson.ToString()});
+                values.Add(new EmbeddingGenerationItem() { InputValue = valueAsJson.ToString() });
                 break;
 
             case ConverterBase.ValueType.Dictionary:
             case ConverterBase.ValueType.ConvertToJson:
-            {
-                var val = TypeConverter.ToBlittableSupportedType(value);
-                if (val is not DynamicJsonValue json)
                 {
-                    CollectEmbeddingValues(ref values, val);
-                    return;
-                }
+                    var val = TypeConverter.ToBlittableSupportedType(value);
+                    if (val is not DynamicJsonValue json)
+                    {
+                        CollectEmbeddingValues(ref values, val);
+                        return;
+                    }
 
-                using (var result = Context.ReadObject(json, "index field as json"))
-                    CollectEmbeddingValues(ref values, result);
-                break;
-            }
+                    using (var result = Context.ReadObject(json, "index field as json"))
+                        CollectEmbeddingValues(ref values, result);
+                    break;
+                }
 
             case ConverterBase.ValueType.BlittableJsonObject:
                 var bjo = (BlittableJsonReaderObject)value;
-                values.Add(new(){TextualValue =  bjo.ToString()});
+                values.Add(new() { InputValue = bjo.ToString() });
                 break;
-            
+
             case ConverterBase.ValueType.DynamicNull:
             case ConverterBase.ValueType.Null:
-                values.Add(new(){TextualValue = $"null"});
+                values.Add(new() { InputValue = $"null" });
                 break;
-            
+
             case ConverterBase.ValueType.EmptyString:
-                values.Add(new(){TextualValue = $""});
+                values.Add(new() { InputValue = $"" });
                 break;
-            
+
             default:
                 throw new NotSupportedException(valueType + " is not a supported type for AI Integration");
         }
     }
-    
+
 #pragma warning disable SKEXP0050
     // todo non-default token counter
     private JsValue SplitMarkDownLines(JsValue self, JsValue[] args)
     {
         const string methodSignature = "markdown.splitLines(text, maxTokensPerLine)";
-        
+
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-        
+
         if (args[0].IsString() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
-        
+
         if (args[1].IsNumber() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
-        
+
         var chunks = TextChunker.SplitMarkDownLines(args[0].AsString(), (int)args[1].AsNumber());
-        
+
         var jsChunks = new JsValue[chunks.Count];
         for (var i = 0; i < chunks.Count; i++)
         {
             jsChunks[i] = new JsString(chunks[i]);
         }
-        
+
         var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
 
         return jsArray;
     }
-    
+
     // todo optional params
     private JsValue SplitMarkDownParagraphs(JsValue self, JsValue[] args)
     {
         const string methodSignature = "markdown.splitParagraphs(lines, maxTokensPerLine)";
-        
+
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-        
+
         if (args[0].IsArray() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be of type {typeof(IEnumerable<string>)}");
-        
+
         if (args[1].IsNumber() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
 
@@ -306,58 +307,58 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
         {
             lines.Add(line.AsString());
         }
-        
+
         var chunks = TextChunker.SplitMarkdownParagraphs(lines, (int)args[1].AsNumber());
-        
+
         var jsChunks = new JsValue[chunks.Count];
         for (var i = 0; i < chunks.Count; i++)
         {
             jsChunks[i] = new JsString(chunks[i]);
         }
-        
+
         var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
 
         return jsArray;
     }
-    
+
     // todo non-default token counter
     private JsValue SplitPlainTextLines(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.splitLines(text, maxTokensPerLine)";
-        
+
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-        
+
         if (args[0].IsString() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
-        
+
         if (args[1].IsNumber() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
-        
+
         var chunks = TextChunker.SplitPlainTextLines(args[0].AsString(), (int)args[1].AsNumber());
-        
+
         var jsChunks = new JsValue[chunks.Count];
         for (var i = 0; i < chunks.Count; i++)
         {
             jsChunks[i] = new JsString(chunks[i]);
         }
-        
+
         var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
 
         return jsArray;
     }
-    
+
     // todo optional params
     private JsValue SplitPlainTextParagraphs(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.splitParagraphs(lines, maxTokensPerLine)";
-        
+
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-        
+
         if (args[0].IsArray() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be of type {typeof(IEnumerable<string>)}");
-        
+
         if (args[1].IsNumber() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
 
@@ -367,62 +368,64 @@ internal sealed class AiIntegrationTransformer : EtlTransformer<AiIntegrationIte
         {
             lines.Add(line.AsString());
         }
-        
+
         var chunks = TextChunker.SplitPlainTextParagraphs(lines, (int)args[1].AsNumber());
-        
+
         var jsChunks = new JsValue[chunks.Count];
         for (var i = 0; i < chunks.Count; i++)
         {
             jsChunks[i] = new JsString(chunks[i]);
         }
-        
+
         var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
 
         return jsArray;
     }
-    
+
     private JsValue EmbeddingsGenerate(JsValue self, JsValue[] args)
     {
         const string methodSignature = "embeddings.generate(object)";
-        
+
         if (args.Length != 1)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 1 argument");
-        
+
         if (args[0].IsObject() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be an object");
-        
+
         var mainObj = args[0].AsObject();
-        
-        var aiEtlEmbeddingItem = new AiIntegrationEmbeddingItem()
+
+        var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult()
         {
-            DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, Values = new Dictionary<string, List<AiIntegrationEmbeddingItemValue>>()
+            DocumentId = Current.DocumentId,
+            DocumentCollectionName = Current.Collection,
+            Values = new Dictionary<string, List<EmbeddingGenerationItem>>()
         };
 
         foreach (var propertyKey in mainObj.GetOwnPropertyKeys())
         {
             var propertyName = propertyKey.AsString();
-            
+
             if (aiEtlEmbeddingItem.Values.TryGetValue(propertyName, out var values) == false)
-                aiEtlEmbeddingItem.Values[propertyName] = values = new List<AiIntegrationEmbeddingItemValue>();
-            
+                aiEtlEmbeddingItem.Values[propertyName] = values = new List<EmbeddingGenerationItem>();
+
             mainObj.TryGetValue(propertyKey, out JsValue value);
-            
+
             if (value.IsString())
             {
-                values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = value.AsString() });
+                values.Add(new EmbeddingGenerationItem() { InputValue = value.AsString() });
             }
-            
+
             else if (value.IsArray())
             {
                 var jsArray = value.AsArray();
-                
+
                 foreach (var jsValue in jsArray)
-                    values.Add(new AiIntegrationEmbeddingItemValue() { TextualValue = jsValue.AsString() });
+                    values.Add(new EmbeddingGenerationItem() { InputValue = jsValue.AsString() });
             }
         }
-        
+
         _currentRun.Additions.Add(aiEtlEmbeddingItem);
-        
+
         return JsValue.Null;
     }
 }

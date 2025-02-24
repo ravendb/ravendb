@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Queue;
@@ -364,7 +365,7 @@ namespace Raven.Server.Documents.ETL
                     if (snowflakeConfig != null)
                         process = new SnowflakeEtl(transform, snowflakeConfig, _database, _serverStore);
                     if (aiConfig != null)
-                        process = new AiIntegrationTask(transform, aiConfig, _database, _serverStore);
+                        process = new EmbeddingsGenerationTask(transform, aiConfig, _database, _serverStore);
                     yield return process;
                 }
             }
@@ -806,7 +807,7 @@ namespace Raven.Server.Documents.ETL
                         
                         break;
                     }
-                    case AiIntegrationTask aiEtl:
+                    case EmbeddingsGenerationTask aiEtl:
                     {
                         AiIntegrationConfiguration existing = null;
 

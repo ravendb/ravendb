@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.ETL.Stats
         }
     }
 
-    public sealed class AiIntegrationStatsScope : AbstractEtlStatsScope<AiIntegrationStatsScope, AiIntegrationPerformanceOperation>
+    public sealed class AiIntegrationStatsScope : AbstractEtlStatsScope<AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
     {
         public TimeSpan GenerateEmbeddings { get; set; }
         
@@ -80,14 +80,14 @@ namespace Raven.Server.Documents.ETL.Stats
             return new AiIntegrationStatsScope(stats, start);
         }
 
-        protected override AiIntegrationPerformanceOperation ToPerformanceOperation(string name, AiIntegrationStatsScope scope)
+        protected override EmbeddingsGenerationPerformanceOperation ToPerformanceOperation(string name, AiIntegrationStatsScope scope)
         {
             return scope.ToPerformanceOperation(name);
         }
 
-        public override AiIntegrationPerformanceOperation ToPerformanceOperation(string name)
+        public override EmbeddingsGenerationPerformanceOperation ToPerformanceOperation(string name)
         {
-            var operation = new AiIntegrationPerformanceOperation(Duration)
+            var operation = new EmbeddingsGenerationPerformanceOperation(Duration)
             {
                 Name = name,
                 GenerateEmbeddings = GenerateEmbeddings

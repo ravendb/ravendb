@@ -21,6 +21,10 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide;
 using GoogleApiVersion = Raven.Client.Documents.Operations.AI.GoogleAIVersion;
+using Raven.Server.Documents.AI.Embeddings;
+using Raven.Server.Documents.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
+
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0010
 #pragma warning disable SKEXP0070
@@ -310,7 +314,7 @@ public static class AiExtensions
                 {
                     Endpoint = new Uri(openAiSettings.Endpoint),
                     ProjectId = openAiSettings.ProjectId,
-                    UserAgentApplicationId = $"RavenDB/{ServerVersion.Version}/{nameof(AiIntegrationTask)}"
+                    UserAgentApplicationId = $"RavenDB/{ServerVersion.Version}/{nameof(EmbeddingsGenerationTask)}"
                 };
                 var openAIClient = new OpenAIClient(apiKey, openAiOptions);
 

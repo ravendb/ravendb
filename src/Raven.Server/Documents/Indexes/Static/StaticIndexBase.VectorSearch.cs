@@ -11,7 +11,7 @@ using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
-using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.VectorSearch;
@@ -575,7 +575,7 @@ public partial class AbstractStaticIndexBase
     public static object LoadVector(IndexField vectorField, string aiTaskName, string path)
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
-        currentIndexingScope.Index.IndexFieldsPersistence.SetVectorSourceEtlTaskName(vectorField.Name, aiTaskName);
+        currentIndexingScope.Index.IndexFieldsPersistence.SetEmbeddingsGenerationTaskName(vectorField.Name, aiTaskName);
         
         var relatedDocument = LoadVectorDocument(out var embeddingDocument) as DynamicBlittableJson;
         if (relatedDocument == null)
@@ -619,8 +619,8 @@ public partial class AbstractStaticIndexBase
     {
         var scope = CurrentIndexingScope.Current;
         var id = (string)scope.Source.GetId().ToString();
-        embeddingDocument = AiHelper.GetDocumentEmbeddingsId(id);
-        var collectionName = AiHelper.GetDocumentEmbeddingsCollectionName(scope.SourceCollection);
+        embeddingDocument = EmbeddingsHelper.GetEmbeddingDocumentId(id);
+        var collectionName = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(scope.SourceCollection);
         return scope.LoadDocument(null, embeddingDocument, collectionName.ToLowerInvariant());
     }
 }

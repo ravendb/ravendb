@@ -324,7 +324,7 @@ namespace Raven.Client
 
                 public const string EmptyCollection = "@empty";
 
-                public const string EmbeddingsCollection = "@embeddings";
+                public const string EmbeddingsCacheCollection = "@embeddings-cache";
             }
 
             public sealed class Indexing
