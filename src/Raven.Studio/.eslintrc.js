@@ -32,6 +32,8 @@ module.exports = {
     "local-rules/no-reactstrap-Spinner": "error",
     "local-rules/no-reactstrap-UncontrolledTooltip": "error",
     "local-rules/no-reactstrap-UncontrolledPopover": "error",
+    "local-rules/no-reactstrap-Tooltip": "error",
+    "local-rules/no-reactstrap-Popover": "error",
     "local-rules/no-reactstrap-Badge": "error",
     "local-rules/no-reactstrap-Badge-props": "error",
     "curly": "warn",
