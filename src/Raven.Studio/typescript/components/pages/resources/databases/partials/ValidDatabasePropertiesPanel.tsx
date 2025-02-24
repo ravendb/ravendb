@@ -8,7 +8,7 @@ import { withPreventDefault } from "components/utils/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
 import {
@@ -200,7 +200,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         key="indexing-errors"
                         title="Indexing errors. Click to view the Indexing Errors."
                     >
-                        <Badge color="faded-danger" className="d-flex align-items-center lh-base rounded-pill">
+                        <Badge bg="faded-danger" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingErrorsUrl} target={linksTarget} className="no-decor">
                                 <Icon icon="exclamation" /> {indexingErrors} Indexing errors
                             </a>
@@ -212,7 +212,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         key="indexing-paused"
                         title="Indexing is paused. Click to view the Index List."
                     >
-                        <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
+                        <Badge bg="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingListUrl} target={linksTarget} className="no-decor">
                                 <Icon icon="pause" /> Indexing paused
                             </a>
@@ -221,7 +221,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 )}
                 {indexingDisabled && (
                     <RichPanelDetailItem key="indexing-disabled" title="Indexing is disabled">
-                        <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
+                        <Badge bg="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingListUrl} target={linksTarget} className="no-decor">
                                 <Icon icon="stop" /> Indexing disabled
                             </a>
@@ -234,7 +234,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                             key="alerts"
                             title={db.currentNode.isRelevant ? "Click to view alerts in Notification Center" : ""}
                         >
-                            <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
+                            <Badge bg="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                                 <a
                                     href="#"
                                     onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
@@ -276,7 +276,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                     : ""
                             }
                         >
-                            <Badge color="faded-info" className="d-flex align-items-center lh-base rounded-pill">
+                            <Badge bg="faded-info" className="d-flex align-items-center lh-base rounded-pill">
                                 <a
                                     href="#"
                                     onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
@@ -310,7 +310,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 )}
                 {hasAnyLoadError && (
                     <RichPanelDetailItem key="load-error">
-                        <Badge color="faded-danger" className="d-flex align-items-center lh-base rounded-pill pulse">
+                        <Badge bg="faded-danger" className="d-flex align-items-center lh-base rounded-pill pulse">
                             <Icon icon="danger" /> Database has load errors!
                         </Badge>
                     </RichPanelDetailItem>

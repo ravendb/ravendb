@@ -12,7 +12,7 @@ import TableDisplaySettings from "components/common/virtualTable/commonComponent
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { useState } from "react";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 import document from "models/database/documents/document";
 import Button from "react-bootstrap/Button";
 
@@ -99,7 +99,7 @@ function DatabaseCustomSorterTestResultWithSize({
                     active={currentTab === "results"}
                 >
                     Results
-                    <Badge color="primary" className="ms-1">
+                    <Badge bg="primary" className="ms-1">
                         {result.items.length}
                     </Badge>
                 </Button>
@@ -111,7 +111,7 @@ function DatabaseCustomSorterTestResultWithSize({
                     active={currentTab === "diagnostics"}
                 >
                     Diagnostics
-                    <Badge color="primary" className="ms-1">
+                    <Badge bg="primary" className="ms-1">
                         {result.additionalResultInfo?.Diagnostics?.length}
                     </Badge>
                 </Button>

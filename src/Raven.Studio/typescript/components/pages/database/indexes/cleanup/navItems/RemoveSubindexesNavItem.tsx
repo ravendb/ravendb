@@ -3,7 +3,8 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { UseIndexCleanupResult } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { NavItem, Card, Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { NavItem, Card } from "reactstrap";
 
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
 
@@ -22,7 +23,7 @@ export default function RemoveSubindexesNavItem({ carousel, surpassing }: Remove
                 onClick={() => carousel.setActiveTab(1)}
             >
                 <img src={removeSubindexesImg} alt="Remove subindexes" />
-                <Badge className="rounded-pill fs-5" color={surpassing.data.length !== 0 ? "primary" : "secondary"}>
+                <Badge className="rounded-pill fs-5" bg={surpassing.data.length !== 0 ? "primary" : "secondary"}>
                     {hasIndexCleanup ? surpassing.data.length : "?"}
                 </Badge>
                 <h4 className="text-center">

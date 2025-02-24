@@ -74,7 +74,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
             <LocationSpecificDetails location={nodeInfo.location}>
                 <LocationSpecificDetailsItemsContainer>
                     <LocationSpecificDetailsItem>
-                        <StatePill color={pillColor(index, nodeInfo.details, globalIndexingStatus)}>
+                        <StatePill bg={pillColor(index, nodeInfo.details, globalIndexingStatus)}>
                             {pillText(index, nodeInfo.details, globalIndexingStatus)}
                         </StatePill>
                     </LocationSpecificDetailsItem>

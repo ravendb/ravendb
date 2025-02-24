@@ -1,5 +1,6 @@
 ﻿import React from "react";
-import { Badge, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -53,12 +54,12 @@ export default function Azure() {
                                     Storage container{" "}
                                     <Icon icon="info" color="info" id="storageContainerTooltip" margin="m-0" />
                                     {asyncTest.result?.Success ? (
-                                        <Badge color="success" pill>
+                                        <Badge bg="success" pill>
                                             <Icon icon="check" />
                                             Successfully connected
                                         </Badge>
                                     ) : asyncTest.result?.Error ? (
-                                        <Badge color="danger" pill>
+                                        <Badge bg="danger" pill>
                                             <Icon icon="warning" />
                                             Failed connection
                                         </Badge>

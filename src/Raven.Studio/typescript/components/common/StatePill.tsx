@@ -2,17 +2,17 @@
 import classNames from "classnames";
 
 interface StatePillProps {
-    color?: string;
+    bg?: Badge.RavenBadgeBgVariants;
     children: ReactNode;
 }
 
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 
 export function StatePill(props: StatePillProps) {
-    const { color, children } = props;
+    const { bg = "secondary", children } = props;
 
     return (
-        <Badge color={color} className={classNames("rounded-pill", "text-uppercase", "fs-5")}>
+        <Badge bg={bg} className={classNames("rounded-pill", "text-uppercase", "fs-5")}>
             {children}
         </Badge>
     );

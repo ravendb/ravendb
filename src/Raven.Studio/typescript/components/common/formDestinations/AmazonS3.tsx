@@ -2,7 +2,8 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { FormDestinations } from "./utils/formDestinationsTypes";
-import { Card, CardBody, Collapse, UncontrolledPopover, PopoverBody, Label, Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { Card, CardBody, Collapse, UncontrolledPopover, PopoverBody, Label } from "reactstrap";
 import { FormSwitch, FormInput, FormSelectCreatable } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
@@ -112,12 +113,12 @@ export default function AmazonS3() {
                                         Bucket name
                                         <Icon icon="info" color="info" id="bucketNameTooltip" margin="m-0" />
                                         {asyncTest.result?.Success ? (
-                                            <Badge color="success" pill>
+                                            <Badge bg="success" pill>
                                                 <Icon icon="check" />
                                                 Successfully connected
                                             </Badge>
                                         ) : asyncTest.result?.Error ? (
-                                            <Badge color="danger" pill>
+                                            <Badge bg="danger" pill>
                                                 <Icon icon="warning" />
                                                 Failed connection
                                             </Badge>

@@ -1,6 +1,6 @@
 ﻿import React, { ChangeEvent } from "react";
+import Badge from "react-bootstrap/Badge";
 import {
-    Badge,
     Card,
     CardBody,
     Collapse,
@@ -78,12 +78,12 @@ export default function Ftp() {
                                     Host
                                     <Icon icon="info" color="info" id="hostTooltip" margin="m-0" />
                                     {asyncTest.result?.Success ? (
-                                        <Badge color="success" pill>
+                                        <Badge bg="success" pill>
                                             <Icon icon="check" />
                                             Successfully connected
                                         </Badge>
                                     ) : asyncTest.result?.Error ? (
-                                        <Badge color="danger" pill>
+                                        <Badge bg="danger" pill>
                                             <Icon icon="warning" />
                                             Failed connection
                                         </Badge>

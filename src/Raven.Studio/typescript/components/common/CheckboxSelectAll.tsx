@@ -1,7 +1,7 @@
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionState } from "components/models/common";
 import React from "react";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 
 interface CheckboxSelectAllProps {
     selectionState: SelectionState;
@@ -33,10 +33,10 @@ export default function CheckboxSelectAll({
         >
             <span className="text-uppercase small-label">
                 {selectionState === "Empty" ? (
-                    <span>Select all {allItemsCount ? <Badge color="secondary">{allItemsCount}</Badge> : null}</span>
+                    <span>Select all {allItemsCount ? <Badge bg="secondary">{allItemsCount}</Badge> : null}</span>
                 ) : (
                     <span>
-                        Deselect all {selectedItemsCount ? <Badge color="secondary">{selectedItemsCount}</Badge> : null}
+                        Deselect all {selectedItemsCount ? <Badge bg="secondary">{selectedItemsCount}</Badge> : null}
                     </span>
                 )}
             </span>

@@ -28,7 +28,8 @@ import notificationCenter from "common/notifications/notificationCenter";
 import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
-import { Badge, Collapse, Input, UncontrolledTooltip } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { Collapse, Input, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -212,6 +213,7 @@ function Details(props: PeriodicBackupPanelProps) {
                         })}
                         disabled={!!backupNowBlockReason}
                         title={backupNowBlockReason ?? "Click to trigger the backup task now"}
+                        bg="secondary"
                     >
                         <Icon icon="backup" />
                         <span>{isResponsible && backupNowInProgress ? "Show backup progress" : "Backup now"}</span>

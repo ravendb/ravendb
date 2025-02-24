@@ -3,7 +3,8 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { UseIndexCleanupResult } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { NavItem, Card, Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { NavItem, Card } from "reactstrap";
 
 const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
 
@@ -22,7 +23,7 @@ export default function RemoveUnusedIndexesNavItem({ carousel, unused }: RemoveU
                 onClick={() => carousel.setActiveTab(2)}
             >
                 <img src={removeUnusedImg} alt="Remove unused indexes " />
-                <Badge className="rounded-pill fs-5" color={unused.data.length !== 0 ? "primary" : "secondary"}>
+                <Badge className="rounded-pill fs-5" bg={unused.data.length !== 0 ? "primary" : "secondary"}>
                     {hasIndexCleanup ? unused.data.length : "?"}
                 </Badge>
                 <h4 className="text-center">

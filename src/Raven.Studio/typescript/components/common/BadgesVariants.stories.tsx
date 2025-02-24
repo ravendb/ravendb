@@ -1,7 +1,7 @@
 ﻿import { Meta } from "@storybook/react";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 import IconName from "../../../typings/server/icons";
 import { Icon } from "components/common/Icon";
 
@@ -58,7 +58,7 @@ function AllBadgeColors(props: AllBadgeColorsProps) {
     return (
         <div className="hstack flex-wrap gap-1">
             {colors.map((color) => (
-                <Badge color={color}>
+                <Badge bg={color}>
                     {icon && <Icon icon={icon} />}
                     {color}
                 </Badge>
@@ -76,7 +76,7 @@ function AllBadgeFadedColors(props: AllBadgeFadedColorsProps) {
     return (
         <div className="hstack flex-wrap gap-1">
             {fadedColors.map((color) => (
-                <Badge color={color}>
+                <Badge bg={color}>
                     {icon && <Icon icon={icon} />}
                     {color}
                 </Badge>

@@ -3,7 +3,8 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { UseIndexCleanupResult } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { NavItem, Card, Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { NavItem, Card } from "reactstrap";
 
 const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
 
@@ -22,7 +23,7 @@ export default function UnmergableIndexesNavItem({ carousel, unmergable }: Unmer
                 onClick={() => carousel.setActiveTab(3)}
             >
                 <img src={unmergableIndexesImg} alt="Unmergeable indexes" />
-                <Badge className="rounded-pill fs-5" color={unmergable.data.length !== 0 ? "primary" : "secondary"}>
+                <Badge className="rounded-pill fs-5" bg={unmergable.data.length !== 0 ? "primary" : "secondary"}>
                     {hasIndexCleanup ? unmergable.data.length : "?"}
                 </Badge>
                 <h4 className="text-center">

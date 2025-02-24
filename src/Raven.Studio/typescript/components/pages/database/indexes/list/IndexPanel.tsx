@@ -22,8 +22,8 @@ import {
     RichPanelSelect,
 } from "components/common/RichPanel";
 import Spinner from "react-bootstrap/Spinner";
+import Badge from "react-bootstrap/Badge";
 import {
-    Badge,
     ButtonGroup,
     Collapse,
     DropdownItem,
@@ -459,12 +459,12 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     {(hasReplacement || isReplacement) && (
                         <RichPanelDetailItem>
                             {hasReplacement && (
-                                <Badge pill color="warning" className="ms-3">
+                                <Badge pill bg="warning" className="ms-3">
                                     OLD
                                 </Badge>
                             )}
                             {isReplacement && (
-                                <Badge pill color="warning" className="ms-3">
+                                <Badge pill bg="warning" className="ms-3">
                                     NEW
                                 </Badge>
                             )}

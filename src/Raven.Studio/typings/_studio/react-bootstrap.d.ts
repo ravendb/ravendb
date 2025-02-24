@@ -1,6 +1,7 @@
 /// <reference types="react-bootstrap" />
 import { BsPrefixRefForwardingComponent } from "react-bootstrap/helpers";
 import { ButtonProps, SpinnerProps as ReactBootstrapSpinnerProps } from "react-bootstrap";
+import { BadgeProps } from "react-bootstrap/Badge";
 
 type RavenSizes = "xs"
 
@@ -30,4 +31,42 @@ declare module "react-bootstrap/Button" {
     
     declare const Button: BsPrefixRefForwardingComponent<"button", BtnProps>;
     export = Button;
+}
+
+type RavenBadgeFadedVariants = | "faded-primary"
+  | "faded-secondary"
+  | "faded-success"
+  | "faded-warning"
+  | "faded-danger"
+  | "faded-info"
+  | "faded-progress"
+  | "faded-node"
+  | "faded-shard"
+  | "faded-orchestrator"
+  | "faded-dark"
+  | "faded-light"
+  | "faded-muted"
+  | "faded-developer"
+  | "faded-enterprise"
+  | "faded-professional";
+
+type RavenBadgeVariants = | "node"
+  | "shard"
+  | "cloud"
+  | "progress"
+  | "orchestrator"
+  | "muted"
+  | "developer"
+  | "enterprise"
+  | "professional"
+
+declare module "react-bootstrap/Badge" {
+    export type RavenBadgeBgVariants = BadgeProps["bg"] | RavenBadgeVariants | RavenBadgeFadedVariants
+    
+    export interface RavenBadgeProps extends Omit<BadgeProps, "bg"> {
+        bg?: RavenBadgeBgVariants;
+    }
+    
+    declare const Badge: BsPrefixRefForwardingComponent<"span", RavenBadgeProps>;
+    export = Badge;
 }

@@ -1,10 +1,10 @@
 ﻿import React, { ReactNode, useEffect, useState } from "react";
 import "./AboutView.scss";
+import Badge from "react-bootstrap/Badge";
 import {
     AccordionBody,
     AccordionHeader,
     AccordionItem,
-    Badge,
     PopoverBody,
     UncontrolledAccordion,
     UncontrolledPopover,
@@ -100,7 +100,7 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
                     <div className="hstack flex-wrap gap-1">
                         <h4 className="m-0">{heading}</h4>
                         {pill && (
-                            <Badge color="warning" pill className="text-uppercase accordion-pill">
+                            <Badge bg="warning" pill className="text-uppercase accordion-pill">
                                 <Icon icon={pillIcon} />
                                 {pillText}
                             </Badge>

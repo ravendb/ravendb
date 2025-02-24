@@ -397,7 +397,7 @@ export function FormDatePicker<
     });
 
     return (
-        <div className="position-relative flex-grow-1">
+        <div className="position-relative flex-grow-1 z-2">
             <div className="d-flex flex-grow-1">
                 <InputGroup>
                     <DatePicker

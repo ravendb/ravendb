@@ -1,4 +1,5 @@
-﻿import { Badge, Form, Label } from "reactstrap";
+﻿import Badge from "react-bootstrap/Badge";
+import { Form, Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -72,12 +73,12 @@ export default function RabbitMqConnectionString({
                 <Label className="d-flex align-items-center gap-1">
                     Connection string{" "}
                     {asyncTest.result?.Success ? (
-                        <Badge color="success" pill>
+                        <Badge bg="success" pill>
                             <Icon icon="check" />
                             Successfully connected
                         </Badge>
                     ) : asyncTest.result?.Error ? (
-                        <Badge color="danger" pill>
+                        <Badge bg="danger" pill>
                             <Icon icon="warning" />
                             Failed connection
                         </Badge>

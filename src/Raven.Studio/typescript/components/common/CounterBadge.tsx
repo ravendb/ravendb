@@ -1,6 +1,7 @@
 ﻿import React, { ReactNode } from "react";
 import classNames from "classnames";
-import { Badge, UncontrolledPopover } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { UncontrolledPopover } from "reactstrap";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { uniqueId } from "lodash";
 
@@ -24,7 +25,7 @@ export function CounterBadge(props: CounterBadgeProps) {
                 <>
                     <Badge
                         pill
-                        color={limitReachStatus === "limitReached" ? "danger" : "warning"}
+                        bg={limitReachStatus === "limitReached" ? "danger" : "warning"}
                         className={classNames("counter-badge text-dark", className)}
                         id={badgeId}
                     >
@@ -43,7 +44,7 @@ export function CounterBadge(props: CounterBadgeProps) {
             ) : (
                 <>
                     {!hideNotReached && (
-                        <Badge pill className={className}>
+                        <Badge pill className={className} bg="secondary">
                             {count}
                         </Badge>
                     )}

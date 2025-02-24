@@ -1,4 +1,4 @@
-﻿import { Badge } from "reactstrap";
+﻿import Badge from "react-bootstrap/Badge";
 import React from "react";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
@@ -17,6 +17,7 @@ export default function LicenseRestrictedBadge({ className, licenseRequired }: L
     return (
         <Badge
             className={classNames("ms-2 license-restricted-badge", className, getClassName(licenseRequired, isCloud))}
+            bg="secondary"
         >
             {isCloud ? "Production" : licenseRequired}
         </Badge>

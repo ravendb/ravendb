@@ -166,4 +166,87 @@ module.exports = {
     "no-reactstrap-UncontrolledTooltip": {
         create: (context) => createDeprecatedReactstrapImport({ context, name: "UncontrolledTooltip", canFix: false }),
     },
+    "no-reactstrap-Badge": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "Badge" }),
+    },
+    "no-reactstrap-Badge-props": {
+        meta: fixableMeta,
+        create(context) {
+            const sourceCode = context.getSourceCode();
+
+            function migrateProp(attr, newProp, message) {
+                context.report({
+                    node: attr,
+                    message,
+                    fix(fixer) {
+                        return fixer.replaceText(attr.name, newProp);
+                    },
+                });
+            }
+
+            function removeProp(attr, message) {
+                context.report({
+                    node: attr,
+                    message,
+                    fix(fixer) {
+                        return fixer.remove(attr);
+                    },
+                });
+            }
+
+            return {
+                JSXOpeningElement(node) {
+                    if (node.name?.name !== "Badge") return;
+
+                    let hasBg = false;
+                    node.attributes.forEach(attr => {
+                        if (!attr || !attr.name || !attr.name.name) return;
+                        const propName = attr.name.name;
+                        if (propName === "bg" || propName === "color") {
+                            hasBg = true;
+                        }
+
+                        switch (propName) {
+                            case "color":
+                                migrateProp(
+                                  attr,
+                                  "bg",
+                                  "'color' prop is deprecated. Use 'bg' prop instead.",
+                                );
+                                break;
+                            case "tag":
+                                migrateProp(
+                                  attr,
+                                  "as",
+                                  "'tag' prop is deprecated. Use 'as' prop instead.",
+                                );
+                                break;
+                            case "node":
+                            case "cssModule":
+                            case "innerRef":
+                                removeProp(
+                                  attr,
+                                  `'${propName}' prop is not supported in react-bootstrap Badge.`,
+                                );
+                                break;
+                            default:
+                                break;
+                        }
+                    });
+
+                    if (!hasBg) {
+                        context.report({
+                            node,
+                            message: "'Badge' is missing 'bg' prop, defaulting to 'secondary'.",
+                            fix(fixer) {
+                                const lastToken = sourceCode.getLastToken(node);
+                                return fixer.insertTextBefore(lastToken, " bg=\"secondary\"");
+                            },
+                        });
+                    }
+                },
+            };
+        },
+    },
 };

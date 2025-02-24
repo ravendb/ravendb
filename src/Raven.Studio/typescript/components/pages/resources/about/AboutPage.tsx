@@ -1,5 +1,6 @@
 ﻿import React, { useState } from "react";
-import { Badge, Card, Col, Row, TabContent, TabPane } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { Card, Col, Row, TabContent, TabPane } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import "./AboutPage.scss";
 
@@ -95,7 +96,7 @@ export function AboutPage({ initialChangeLogMode = "hidden" }: AboutPageProps) {
                                     <Icon icon="support" className="circle-border" margin="fs-2 me-2" />
                                     <span className="fs-3">Support plan</span>
                                     {paidSupportAvailable && (
-                                        <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
+                                        <Badge className="rounded-pill py-1 ms-1 align-self-start" bg="primary">
                                             1
                                         </Badge>
                                     )}

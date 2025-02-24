@@ -24,7 +24,7 @@ const Template = () => {
                 <StatePill>
                     <Icon icon="coffee" /> Neutral
                 </StatePill>
-                <StatePill color="primary">
+                <StatePill bg="primary">
                     <Icon icon="raven" /> Primary
                 </StatePill>
             </div>
@@ -33,19 +33,19 @@ const Template = () => {
             <h3>Function</h3>
 
             <div className="hstack gap-2">
-                <StatePill color="secondary">
+                <StatePill bg="secondary">
                     <Icon icon="zombie" /> Secondary
                 </StatePill>
-                <StatePill color="success">
+                <StatePill bg="success">
                     <Icon icon="check" /> Success!
                 </StatePill>
-                <StatePill color="warning">
+                <StatePill bg="warning">
                     <Icon icon="warning" /> Warning
                 </StatePill>
-                <StatePill color="danger">
+                <StatePill bg="danger">
                     <Icon icon="danger" /> Danger
                 </StatePill>
-                <StatePill color="info">
+                <StatePill bg="info">
                     <Icon icon="help" /> Info
                 </StatePill>
             </div>
@@ -54,16 +54,16 @@ const Template = () => {
             <h3>Studio</h3>
 
             <div className="hstack gap-2">
-                <StatePill color="shard">
+                <StatePill bg="shard">
                     <Icon icon="shard" /> Shard
                 </StatePill>
-                <StatePill color="node">
+                <StatePill bg="node">
                     <Icon icon="node" /> Node
                 </StatePill>
-                <StatePill color="orchestrator">
+                <StatePill bg="orchestrator">
                     <Icon icon="orchestrator" /> Orchestrator
                 </StatePill>
-                <StatePill color="progress">
+                <StatePill bg="progress">
                     <Spinner size="xs" className="me-1" /> Progress
                 </StatePill>
             </div>
