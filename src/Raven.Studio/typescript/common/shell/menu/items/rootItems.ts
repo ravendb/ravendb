@@ -1,7 +1,6 @@
 ﻿import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import appUrl = require("common/appUrl");
 import reactUtils = require("common/reactUtils");
-import BootstrapPlaygroundPage = require("components/pages/BootstrapPlaygroundPage");
 import AboutPage = require("components/pages/resources/about/AboutPage");
 import React = require("react");
 
@@ -45,19 +44,6 @@ function whatsNewItem({ isNewVersionAvailable = false, isWhatsNewVisible = false
     });
 }
 
-function bs5Item() {
-    return new leafMenuItem({
-        route: 'bs5',
-        moduleId: reactUtils.bridgeToReact(BootstrapPlaygroundPage.BootstrapPlaygroundPage, "nonShardedView"),
-        title: 'Bootstrap 5',
-        tooltip: "Boostrap 5",
-        nav: false,
-        css: 'icon-info',
-        dynamicHash: () => "#bs5"
-    });
-}
-
-
 function clusterDashboard() {
     const clusterDashboardView = require('viewmodels/resources/clusterDashboard');
     
@@ -77,6 +63,5 @@ function clusterDashboard() {
 export = {
     about: aboutItem,
     whatsNew: whatsNewItem,
-    bs: bs5Item,
     clusterDashboard
 };

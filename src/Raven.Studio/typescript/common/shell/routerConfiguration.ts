@@ -1,7 +1,6 @@
 ﻿import appUrl = require("common/appUrl");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
-
 import getManageServerMenuItem = require("common/shell/menu/items/manageServer");
 import getDatabasesMenuItem = require("common/shell/menu/items/databases");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
@@ -77,7 +76,6 @@ function generateAllMenuItems() {
         getManageServerMenuItem(),
         rootItems.whatsNew(),
         rootItems.about(),
-        rootItems.bs(),
         rootItems.clusterDashboard(),
     ];
 }
