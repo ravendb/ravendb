@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public bool CanRunBackup => _concurrentBackups - 1 > 0;
+        public bool CanRunBackup => _concurrentBackups >= 1;
 
         public ConcurrentBackupsCounter(BackupConfiguration backupConfiguration, LicenseManager licenseManager)
         {

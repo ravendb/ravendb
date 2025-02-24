@@ -3406,28 +3406,40 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Backup.MaxNumberOfConcurrentBackups)] = 1.ToString()
+                }
+            }))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server
+            }))
             {
                 using (var session = store.OpenAsyncSession())
                     await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 1, session);
 
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 Assert.NotNull(database);
 
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
-                    var taskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.InProgress);
+                    var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
 
                     // The backup task is running, and the next backup should be scheduled for the next minute (based on the backup configuration)
                     var taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                     Assert.NotNull(taskBackupInfo);
                     Assert.NotNull(taskBackupInfo.OnGoingBackup);
 
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         AssertNumberOfConcurrentBackups(expectedNumber: 1);
+
+                        Assert.False(server.ServerStore.ConcurrentBackupsCounter.CanRunBackup);
 
                         // Let's delay the backup task to 1 hour
                         var delayDuration = TimeSpan.FromHours(1);
@@ -3435,9 +3447,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         AssertNumberOfConcurrentBackups(expectedNumber: 0);
 
+                        Assert.True(server.ServerStore.ConcurrentBackupsCounter.CanRunBackup);
+
                         void AssertNumberOfConcurrentBackups(int expectedNumber)
                         {
-                            int concurrentBackups = WaitForValue(() => Server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups,
+                            int concurrentBackups = WaitForValue(() => server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups,
                                 expectedVal: expectedNumber,
                                 timeout: Convert.ToInt32(TimeSpan.FromMinutes(1).TotalMilliseconds),
                                 interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
