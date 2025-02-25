@@ -308,4 +308,8 @@ module.exports = {
         meta: fixableMeta,
         create: (context) => createDeprecatedReactstrapImport({ context, name: "ButtonGroup" }),
     },
+    "no-reactstrap-Pagination": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "Pagination" }),
+    },
 };

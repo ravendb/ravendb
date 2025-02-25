@@ -39,6 +39,7 @@ module.exports = {
     "local-rules/no-reactstrap-Collapse": "warn",
     "local-rules/no-reactstrap-Collapse-props": "warn",
     "local-rules/no-reactstrap-ButtonGroup": "warn",
+    "local-rules/no-reactstrap-Pagination": "warn",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',
