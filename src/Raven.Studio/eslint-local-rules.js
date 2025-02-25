@@ -312,4 +312,8 @@ module.exports = {
         meta: fixableMeta,
         create: (context) => createDeprecatedReactstrapImport({ context, name: "Pagination" }),
     },
+    "no-reactstrap-Alert": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "Alert" }),
+    },
 };
