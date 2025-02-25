@@ -141,7 +141,7 @@ namespace Sparrow
         {
             Debug.Assert(size >= 1);
             _factory = factory;
-            _ringBuffer = new LockFreeRingBuffer<T>(size);
+            _ringBuffer = new LockFreeRingBuffer<T>(Math.Max(8, size));
         }
 
         private T CreateInstance()
