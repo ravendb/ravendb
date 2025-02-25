@@ -316,4 +316,8 @@ module.exports = {
         meta: fixableMeta,
         create: (context) => createDeprecatedReactstrapImport({ context, name: "Alert" }),
     },
+    "no-reactstrap-ListGroup": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "ListGroup" }),
+    },
 };

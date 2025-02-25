@@ -2,7 +2,7 @@ import CheckboxSelectAll from "components/common/CheckboxSelectAll";
 import { SelectionState } from "components/models/common";
 import ImportIndexListItem from "components/pages/database/indexes/list/migration/import/ImportIndexListItem";
 import React from "react";
-import { ListGroup } from "reactstrap";
+import ListGroup from "react-bootstrap/ListGroup";
 
 type IndexDefinition = Raven.Client.Documents.Indexes.IndexDefinition;
 
