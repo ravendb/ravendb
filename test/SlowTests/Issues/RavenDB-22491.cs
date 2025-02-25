@@ -11,14 +11,12 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static Raven.Server.Documents.Handlers.RevisionsHandler;
 
 namespace SlowTests.Issues;
 
@@ -74,11 +72,11 @@ public class RavenDB_22491 : RavenTestBase
 
         Assert.True(newSize > oldSize);
 
-        var e1 = await Assert.ThrowsAsync<HttpRequestException>(() => store.Maintenance.SendAsync(new GetRevisionsSizeOperation("Non Existing Change Vector")));
-        Assert.Equal("The change Vector 'Non Existing Change Vector' was not found", e1.Message);
-
-        var e2 = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new GetRevisionsSizeOperation(string.Empty)));
-        Assert.StartsWith("System.ArgumentException: Query string value 'changeVector' must have a non empty value", e2.Message);
+        var result3 = await store.Maintenance.SendAsync(new GetRevisionsSizeOperation("Non Existing Change Vector"));
+        Assert.Null(result3);
+        
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new GetRevisionsSizeOperation(string.Empty)));
+        Assert.StartsWith("System.ArgumentException: Query string value 'changeVector' must have a non empty value", e.Message);
     }
 
     private class User
@@ -117,7 +115,7 @@ public class RavenDB_22491 : RavenTestBase
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/revisions/size?changeVector={UrlEncode(_changeVector)}";
+                url = $"{node.Url}/databases/{node.Database}/revisions/size?changeVector={Uri.EscapeDataString(_changeVector)}";
 
                 return new HttpRequestMessage
                 {
@@ -128,7 +126,10 @@ public class RavenDB_22491 : RavenTestBase
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
-                    throw new HttpRequestException($"The change Vector '{_changeVector}' was not found");
+                {
+                    Result = null;
+                    return;
+                }
 
                 Result = ToResults(response);
             }
