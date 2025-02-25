@@ -41,6 +41,17 @@ module.exports = {
       'warn',
       { props: 'never', children: 'never' },
     ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "react-bootstrap",
+            "message": "Please import individual components, e.g.: import Tooltip from 'react-bootstrap/Tooltip'"
+          }
+        ]
+      }
+    ]
   },
   "settings": {
     "react": {
