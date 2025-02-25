@@ -63,7 +63,13 @@ export default function TableDisplaySettings<T>({ table, className }: TableColum
                             <Icon icon="reset" />
                             Reset to default
                         </Button>
-                        <Button type="button" className="ms-3" title="Close" onClick={handlers.handleCloseDropdown}>
+                        <Button
+                            variant="secondary"
+                            type="button"
+                            className="ms-3"
+                            title="Close"
+                            onClick={handlers.handleCloseDropdown}
+                        >
                             Close
                         </Button>
                         <Button type="button" variant="success" title="Apply changes" onClick={handlers.handleSave}>

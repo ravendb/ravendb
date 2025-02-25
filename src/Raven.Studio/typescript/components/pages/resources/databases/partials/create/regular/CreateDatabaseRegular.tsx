@@ -175,7 +175,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                             <Icon icon="database" addon="arrow-up" /> Restore from backup
                         </Button>
                     ) : (
-                        <Button type="button" onClick={prevStep} className="rounded-pill">
+                        <Button variant="secondary" type="button" onClick={prevStep} className="rounded-pill">
                             <Icon icon="arrow-thin-left" /> Back
                         </Button>
                     )}

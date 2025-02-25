@@ -141,33 +141,40 @@ module.exports = {
         meta: fixableMeta,
         create(context) {
             return {
-                JSXOpeningElement: function(node) {
+                JSXOpeningElement(node) {
                     const nodeName = node.name?.name;
+
                     if (nodeName === "Button" || nodeName === "ButtonWithSpinner") {
-                        const colorProp = node?.attributes.find(x => x?.name?.name === "color");
-                        const outlineProp = node?.attributes.find(x => x?.name?.name === "outline");
+                        const hasVariantProp = node.attributes.some(attr => attr?.name?.name === "variant");
+                        const colorProp = node.attributes.find(attr => attr?.name?.name === "color");
 
-                        if (colorProp?.value?.type === "Literal") {
-                            const colorValue = colorProp.value?.value;
-                            const replacement = outlineProp && colorValue
-                              ? `variant="outline-${colorValue}"`
-                              : "variant";
-
+                        if (!hasVariantProp && !colorProp) {
                             context.report({
-                                node: node,
-                                message: "'color' is deprecated since we are migrating to react-bootstrap. Use 'variant' prop.",
+                                node,
+                                message: "Button is missing 'variant' prop. Defaulting to 'variant=\"secondary\"'.",
                                 fix(fixer) {
-                                    const fixes = [fixer.replaceText(colorProp, replacement)];
-                                    if (outlineProp) {
-                                        fixes.push(fixer.remove(outlineProp));
-                                    }
-                                    return fixes;
+                                    return fixer.insertTextAfter(
+                                        node.name,
+                                        ` variant="secondary"`
+                                    );
+                                },
+                            });
+                        } else if (colorProp?.value?.type === "Literal") {
+                            const colorValue = colorProp.value.value;
+                            context.report({
+                                node: colorProp,
+                                message: `'color' is deprecated. Replace with 'variant="${colorValue}"'.`,
+                                fix(fixer) {
+                                    return fixer.replaceText(
+                                        colorProp,
+                                        `variant="${colorValue}"`
+                                    );
                                 },
                             });
                         } else if (colorProp) {
                             context.report({
-                                node,
-                                message: `'color' is deprecated since we are migrating to react-bootstrap. Use 'variant' prop. Fix cannot be used because color value is not Literal.`,
+                                node: colorProp,
+                                message: `'color' is deprecated, but automatic fix is not possible as value is not Literal.`,
                             });
                         }
                     }
