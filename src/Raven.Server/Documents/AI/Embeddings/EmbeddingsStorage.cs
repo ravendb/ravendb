@@ -1,16 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using Corax.Utils;
 using JetBrains.Annotations;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Extensions;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,33 +25,14 @@ public class EmbeddingsStorage
     private const string EmbeddingAttachmentContentType = "application/octet-stream";
 
     private readonly DocumentsStorage _documentsStorage;
-    
-#pragma warning disable SKEXP0001
-    private readonly Dictionary<EmbeddingsGenerationTaskIdentifier, ITextEmbeddingGenerationService> _servicesByIntegrationTaskIdentifier;
-    private readonly Dictionary<AiConnectionStringIdentifier, ITextEmbeddingGenerationService> _servicesByConnectionStringIdentifier;
-#pragma warning restore SKEXP0001
-    private static Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier> _taskIdentifierToConnectionStringIdentifier;
+
     
     private readonly EmbeddingsCacher _embeddingsCacher;
     
     public EmbeddingsStorage([NotNull] DocumentDatabase database)
     {
         _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(_documentsStorage));
-#pragma warning disable SKEXP0001
-        _servicesByConnectionStringIdentifier = new();
-        _servicesByIntegrationTaskIdentifier = new ();
-#pragma warning restore SKEXP0001
-        
-        _taskIdentifierToConnectionStringIdentifier = new Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier>();
-
-        //_embeddingsCacher = new EmbeddingsCacher(database, database.Loggers.GetLogger<EmbeddingsCacher>(), database.DatabaseShutdown);
-    }
-
-#pragma warning disable SKEXP0001
-    public bool TryGetServiceByIntegrationIdentifier(EmbeddingsGenerationTaskIdentifier taskIdentifier, out ITextEmbeddingGenerationService service)
-#pragma warning restore SKEXP0001
-    {
-        return _servicesByIntegrationTaskIdentifier.TryGetValue(taskIdentifier, out service);
+        _embeddingsCacher = new EmbeddingsCacher(database, database.Loggers.GetLogger<EmbeddingsCacher>(), database.DatabaseShutdown);
     }
 
     public Document GetDocumentEmbeddings(DocumentsOperationContext context, string sourceDocumentId, out string documentEmbeddingsId)
@@ -129,19 +113,6 @@ public class EmbeddingsStorage
             }
         };
     }
-
-    public static AiConnectionStringIdentifier GetConnectionStringIdentifierByIntegrationIdentifier(EmbeddingsGenerationTaskIdentifier integrationIdentifier)
-    {
-        return _taskIdentifierToConnectionStringIdentifier[integrationIdentifier];
-    }
-    
-    
-
-    public void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embeddingValue)
-    {
-        _embeddingsCacher.EnqueueEmbeddingToCache(connectionStringIdentifier, textualValue, embeddingValue);
-    }
-
     public bool ExistsEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, EmbeddingGenerationItem value)
     {
         value.EmbeddingCacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, value.InputValueHash);
@@ -151,55 +122,17 @@ public class EmbeddingsStorage
         return document != null;
     }
 
-    public void HandleDatabaseRecordChange(DatabaseRecord record)
+    public VectorValue GetCachedEmbeddingValue(DocumentsOperationContext documentsContext, string embeddingCacheDocumentId, string valueHash)
     {
-        if (record == null)
-            return;
+        var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(documentsContext, embeddingCacheDocumentId, valueHash, AttachmentType.Document, null);
 
-        foreach (var connectionStringKvp in record.AiConnectionStrings)
-        {
-            var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionStringKvp.Value.Identifier);
-            var connectionString = connectionStringKvp.Value;
+        var stream = attachment.Stream;
 
-            if (_servicesByConnectionStringIdentifier.ContainsKey(connectionStringIdentifier))
-                continue;
+        var len = (int)stream.Length;
+        var allocator = documentsContext.Transaction.InnerTransaction.Allocator;
+        var memScope = allocator.Allocate((int)stream.Length, out Memory<byte> mem);
+        stream.ReadExactly(mem.Span);
 
-            var kernelBuilder = Kernel.CreateBuilder();
-            kernelBuilder.Configure(connectionString, isConnectionTest: false);
-            var kernel = kernelBuilder.Build();
-#pragma warning disable SKEXP0001
-            var service = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
-#pragma warning restore SKEXP0001
-
-            _servicesByConnectionStringIdentifier[connectionStringIdentifier] = service;
-        }
-
-        // todo skip disabled tasks?
-        foreach (var aiIntegrationConfiguration in record.EmbeddingsGenerations)
-        {
-            var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(aiIntegrationConfiguration.Identifier);
-            var connectionStringIdentifier = new AiConnectionStringIdentifier(record.AiConnectionStrings[aiIntegrationConfiguration.ConnectionStringName].Identifier);
-
-            var service = _servicesByConnectionStringIdentifier[connectionStringIdentifier];
-
-            _servicesByIntegrationTaskIdentifier[aiIntegrationIdentifier] = service;
-
-            _taskIdentifierToConnectionStringIdentifier[aiIntegrationIdentifier] = connectionStringIdentifier;
-        }
-
-        /*
-        if (_embeddingsCacher.IsStarted)
-        {
-            if (record.AiIntegrations.Count == 0)
-            {
-                _embeddingsCacher.Stop();
-                _embeddingsCacher.IsStarted = false;
-            }
-            return;
-        }
-        */
-
-        //_embeddingsCacher.Start();
-        //_embeddingsCacher.IsStarted = true;
+        return GenerateEmbeddings.FromArray(allocator, memScope, mem, new VectorOptions(), len);
     }
 }

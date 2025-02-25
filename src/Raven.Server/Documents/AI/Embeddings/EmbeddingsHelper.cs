@@ -50,19 +50,4 @@ public static class EmbeddingsHelper
     {
         return $"embeddings-cache/{aiConnectionStringIdentifier.Value}/{hash}";
     }
-
-#pragma warning disable SKEXP0001
-    public static VectorValue GenerateAndEnqueueSingleEmbedding(ITextEmbeddingGenerationService service, ByteStringContext allocator, EmbeddingsStorage embeddingsStorage, string textValue, int dimensions, AiConnectionStringIdentifier connectionStringIdentifier)
-#pragma warning restore SKEXP0001
-    {
-        var embedding = service.GenerateEmbeddingAsync(textValue).GetAwaiter().GetResult();
-
-        //aiStorage.EnqueueEmbeddingToCache(connectionStringIdentifier, textValue, embedding);
-
-        var memoryScope = allocator.Allocate(dimensions, out Memory<byte> memory);
-
-        MemoryMarshal.AsBytes(embedding.Span).CopyTo(memory.Span);
-
-        return new VectorValue(memoryScope, memory, VectorEmbeddingType.Single, dimensions);
-    }
 }

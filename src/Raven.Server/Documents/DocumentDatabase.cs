@@ -180,7 +180,8 @@ namespace Raven.Server.Documents
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
-                EmbeddingsStorage = new EmbeddingsStorage(this);
+                AiIntegrations = new AiIntegrationsController(this);
+                
                 IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
@@ -359,7 +360,7 @@ namespace Raven.Server.Documents
 
         public CompareExchangeStorage CompareExchangeStorage { get; private set; }
 
-        public EmbeddingsStorage EmbeddingsStorage { get; private set; }
+        public AiIntegrationsController AiIntegrations { get; private set; }
 
         public OngoingTasks.OngoingTasks OngoingTasks { get; private set; }
 
@@ -1716,7 +1717,7 @@ namespace Raven.Server.Documents
                 EtlLoader?.HandleDatabaseRecordChange(record);
                 SubscriptionStorage?.HandleDatabaseRecordChange();
 
-                EmbeddingsStorage?.HandleDatabaseRecordChange(record);
+                AiIntegrations?.HandleDatabaseRecordChange(record);
             }
             finally
             {

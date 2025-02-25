@@ -658,9 +658,11 @@ public static class CoraxQueryBuilder
 
         VectorValue transformedEmbedding;
         
-        if (builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out var embeddingsGenerationTaskIdentifier))
+        if (builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out var taskIdentifier))
         {
-            var identifier = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
+            var database = builderParameters.Index.DocumentDatabase;
+
+            var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(taskIdentifier);
 
             var valueAsString = valueType switch
             {
@@ -668,20 +670,11 @@ public static class CoraxQueryBuilder
                 _ => throw new NotSupportedException("Vector.Search() on " + valueType)
             };
 
-            var connectionStringIdentifier = EmbeddingsStorage.GetConnectionStringIdentifierByIntegrationIdentifier(identifier); // TODO michal
+            var connectionStringId = database.AiIntegrations.GetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId); // TODO michal
 
-            using (builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                if (TryGetEmbeddingFromCache(context, builderParameters.Allocator, valueAsString, connectionStringIdentifier, out transformedEmbedding) == false)
-                {
-                    if (builderParameters.DocumentsContext.DocumentDatabase.EmbeddingsStorage.TryGetServiceByIntegrationIdentifier(identifier, out var service) == false)
-                        throw new ArgumentException($"Couldn't find {identifier} AI task.");
-
-                    var aiStorage = builderParameters.DocumentsContext.DocumentDatabase.EmbeddingsStorage;
-                    
-                    transformedEmbedding = EmbeddingsHelper.GenerateAndEnqueueSingleEmbedding(service, builderParameters.Allocator, aiStorage, valueAsString, GenerateEmbeddings.F32Size, connectionStringIdentifier);
-                } 
-            }
+            transformedEmbedding = database.AiIntegrations.Embeddings
+                .GetEmbeddingForQueryAsync(builderParameters.DocumentsContext, connectionStringId, valueAsString, GenerateEmbeddings.F32Size)
+                .GetAwaiter().GetResult();
         }
         
         else if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Text)

@@ -119,7 +119,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     {
                         var connectionStringIdentifier = new AiConnectionStringIdentifier(Configuration.Connection.Identifier);
 
-                        if (Database.EmbeddingsStorage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value) == false)
+                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value) == false)
                             _missingEmbeddingsHolder.Add(value.InputValue, value);
                     }
                 }
@@ -335,7 +335,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 var embeddingsDocumentModification = new DynamicJsonValue();
                 
                 // Load the embeddings document (if it exists) to track which attachments need to be removed (on update)
-                using var embeddingsDocument = _database.EmbeddingsStorage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);
+                using var embeddingsDocument = _database.AiIntegrations.Embeddings.Storage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);
                 var currentAttachmentsOfEmbeddingsFromThisTransformer = LoadNamesOfExistingAttachmentsOfThisTransformer(embeddingsDocument);
                 
                 foreach (var embeddingsByPath in document.Values)
@@ -350,7 +350,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     
                     foreach (var embedding in generatedEmbeddings)
                     {
-                        _database.EmbeddingsStorage.AddOrUpdateEmbeddingDocument(context, embedding, operationStartDate);
+                        _database.AiIntegrations.Embeddings.Storage.AddOrUpdateEmbeddingDocument(context, embedding, operationStartDate);
                         embedding.SetPrefixForDestinationAttachmentName(prefix);
                         
                         if (alreadyAddedAttachments.Add(embedding.DestinationAttachmentName) == false)
