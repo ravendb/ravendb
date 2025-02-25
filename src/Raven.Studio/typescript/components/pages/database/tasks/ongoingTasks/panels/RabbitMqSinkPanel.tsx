@@ -18,7 +18,8 @@ import {
     RichPanelInfo,
     RichPanelSelect,
 } from "components/common/RichPanel";
-import { Collapse, Input } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -91,8 +92,10 @@ export function RabbitMqSinkPanel(props: RabbitMqSinkPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse isOpen={detailsVisible}>
-                <Details {...props} canEdit={canEdit} />
+            <Collapse in={detailsVisible}>
+                <div>
+                    <Details {...props} canEdit={canEdit} />
+                </div>
             </Collapse>
         </RichPanel>
     );

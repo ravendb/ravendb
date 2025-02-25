@@ -3,7 +3,8 @@ import { Icon } from "components/common/Icon";
 import { OptionWithIcon, SingleValueWithIcon, SelectOptionWithIcon } from "components/common/select/Select";
 import React, { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Collapse, Row, Col, Label } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Row, Col, Label } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
 import BackupSourceLocal from "./BackupSourceLocal";
 import BackupSourceAmazonS3 from "./BackupSourceAmazonS3";
@@ -44,7 +45,7 @@ export default function CreateDatabaseFromBackupStepSource() {
 
     return (
         <>
-            <Collapse isOpen={sourceType == null}>
+            <Collapse in={sourceType == null}>
                 <div className="d-flex justify-content-center">
                     <img src={backupSourceImg} alt="Backup source" className="step-img" />
                 </div>
@@ -67,30 +68,32 @@ export default function CreateDatabaseFromBackupStepSource() {
                     />
                 </Col>
             </Row>
-            <Collapse isOpen={sourceType != null}>
-                {sourceType === "local" && <BackupSourceLocal />}
-                {sourceType === "ravenCloud" && <BackupSourceRavenCloud />}
-                {sourceType === "amazonS3" && <BackupSourceAmazonS3 />}
-                {sourceType === "azure" && <BackupSourceAzure />}
-                {sourceType === "googleCloud" && <BackupSourceGoogleCloud />}
+            <Collapse in={sourceType != null}>
+                <div>
+                    {sourceType === "local" && <BackupSourceLocal />}
+                    {sourceType === "ravenCloud" && <BackupSourceRavenCloud />}
+                    {sourceType === "amazonS3" && <BackupSourceAmazonS3 />}
+                    {sourceType === "azure" && <BackupSourceAzure />}
+                    {sourceType === "googleCloud" && <BackupSourceGoogleCloud />}
 
-                <FormSwitch
-                    className="mt-4"
-                    control={control}
-                    name="sourceStep.isDisableOngoingTasksAfterRestore"
-                    color="primary"
-                >
-                    <Icon icon="ongoing-tasks" addon="cancel" />
-                    Disable ongoing tasks after restore
-                </FormSwitch>
-                <FormSwitch control={control} name="sourceStep.isSkipIndexes" color="primary">
-                    <Icon icon="index" />
-                    Skip indexes
-                </FormSwitch>
-                <IsEncryptedField
-                    isRestorePointSnapshot={isRestorePointSnapshot}
-                    isRestorePointEncrypted={isRestorePointEncrypted}
-                />
+                    <FormSwitch
+                        className="mt-4"
+                        control={control}
+                        name="sourceStep.isDisableOngoingTasksAfterRestore"
+                        color="primary"
+                    >
+                        <Icon icon="ongoing-tasks" addon="cancel" />
+                        Disable ongoing tasks after restore
+                    </FormSwitch>
+                    <FormSwitch control={control} name="sourceStep.isSkipIndexes" color="primary">
+                        <Icon icon="index" />
+                        Skip indexes
+                    </FormSwitch>
+                    <IsEncryptedField
+                        isRestorePointSnapshot={isRestorePointSnapshot}
+                        isRestorePointEncrypted={isRestorePointEncrypted}
+                    />
+                </div>
             </Collapse>
         </>
     );

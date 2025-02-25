@@ -67,6 +67,26 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
     };
 }
 
+function migrateProp({ attr, newProp, message, context }) {
+    context.report({
+        node: attr,
+        message,
+        fix(fixer) {
+            return fixer.replaceText(attr.name, newProp);
+        },
+    });
+}
+
+function removeProp({ attr, message, context }) {
+    context.report({
+        node: attr,
+        message,
+        fix(fixer) {
+            return fixer.remove(attr);
+        },
+    });
+}
+
 module.exports = {
     "no-reactstrap-alert": {
         create: function (context) {
@@ -184,26 +204,6 @@ module.exports = {
         create(context) {
             const sourceCode = context.getSourceCode();
 
-            function migrateProp(attr, newProp, message) {
-                context.report({
-                    node: attr,
-                    message,
-                    fix(fixer) {
-                        return fixer.replaceText(attr.name, newProp);
-                    },
-                });
-            }
-
-            function removeProp(attr, message) {
-                context.report({
-                    node: attr,
-                    message,
-                    fix(fixer) {
-                        return fixer.remove(attr);
-                    },
-                });
-            }
-
             return {
                 JSXOpeningElement(node) {
                     if (node.name?.name !== "Badge") return;
@@ -212,31 +212,37 @@ module.exports = {
                     node.attributes.forEach(attr => {
                         if (!attr || !attr.name || !attr.name.name) return;
                         const propName = attr.name.name;
+
                         if (propName === "bg" || propName === "color") {
                             hasBg = true;
                         }
 
                         switch (propName) {
                             case "color":
-                                migrateProp(
-                                  attr,
-                                  "bg",
-                                  "'color' prop is deprecated. Use 'bg' prop instead.",
-                                );
+                                migrateProp({
+                                    attr,
+                                    newProp: "bg",
+                                    message: "'color' prop is deprecated. Use 'bg' prop instead.",
+                                    context,
+                                });
                                 break;
-                            case "tag":
-                                migrateProp(
-                                  attr,
-                                  "as",
-                                  "'tag' prop is deprecated. Use 'as' prop instead.",
-                                );
+                            case "type":
+                                migrateProp({
+                                    attr,
+                                    newProp: "as",
+                                    message: "'type' prop is deprecated. Use 'as' prop instead.",
+                                    context,
+                                });
                                 break;
                             case "node":
                             case "cssModule":
                             case "innerRef":
                                 removeProp(
-                                  attr,
-                                  `'${propName}' prop is not supported in react-bootstrap Badge.`,
+                                  {
+                                      context,
+                                      attr,
+                                      message: `'${propName}' prop is not supported in react-bootstrap Badge.`,
+                                  },
                                 );
                                 break;
                             default:
@@ -254,6 +260,39 @@ module.exports = {
                             },
                         });
                     }
+                },
+            };
+        },
+    },
+    "no-reactstrap-Collapse": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "Collapse" }),
+    },
+    "no-reactstrap-Collapse-props": {
+        meta: fixableMeta,
+        create(context) {
+            return {
+                JSXOpeningElement(node) {
+                    if (node.name?.name !== "Collapse") {
+                        return;
+                    }
+
+                    node.attributes.forEach(attr => {
+                        if (!attr || !attr.name || !attr.name.name) {
+                            return;
+                        }
+
+                        const propName = attr.name.name;
+
+                        if (propName === "isOpen") {
+                            migrateProp({
+                                context,
+                                attr,
+                                message: "'isOpen' prop is deprecated. Use 'in' prop instead.",
+                                newProp: "in",
+                            });
+                        }
+                    });
                 },
             };
         },

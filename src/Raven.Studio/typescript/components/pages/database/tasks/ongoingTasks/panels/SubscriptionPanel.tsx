@@ -21,7 +21,8 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Collapse, Input } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Input } from "reactstrap";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
@@ -270,14 +271,16 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse isOpen={detailsVisible}>
-                <Details {...props} />
-                <SubscriptionTaskDistribution task={data} />
-                <ConnectedClients
-                    dropSubscription={dropSubscription}
-                    refreshSubscriptionInfo={refreshSubscriptionInfo}
-                    connections={connections}
-                />
+            <Collapse in={detailsVisible}>
+                <div>
+                    <Details {...props} />
+                    <SubscriptionTaskDistribution task={data} />
+                    <ConnectedClients
+                        dropSubscription={dropSubscription}
+                        refreshSubscriptionInfo={refreshSubscriptionInfo}
+                        connections={connections}
+                    />
+                </div>
             </Collapse>
         </RichPanel>
     );

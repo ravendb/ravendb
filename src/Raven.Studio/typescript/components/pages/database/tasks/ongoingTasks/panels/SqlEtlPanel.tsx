@@ -22,7 +22,8 @@ import {
     RichPanelSelect,
 } from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
-import { Collapse, Input } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -105,9 +106,11 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse isOpen={detailsVisible}>
-                <Details {...props} canEdit={canEdit} />
-                <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+            <Collapse in={detailsVisible}>
+                <div>
+                    <Details {...props} canEdit={canEdit} />
+                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+                </div>
             </Collapse>
         </RichPanel>
     );

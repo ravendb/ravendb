@@ -18,7 +18,8 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
-import { Collapse, Form, InputGroup, Label } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Form, InputGroup, Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -123,37 +124,41 @@ export default function ServerWideCustomAnalyzersListItem(props: ServerWideCusto
                         )}
                     </RichPanelActions>
                 </RichPanelHeader>
-                <Collapse isOpen={isEditMode}>
-                    <RichPanelDetails className="vstack gap-3 p-4">
-                        {isNew && (
-                            <InputGroup className="vstack mb-1">
-                                <Label>Name</Label>
-                                <FormInput
-                                    type="text"
-                                    control={control}
-                                    name="name"
-                                    placeholder="Enter analyzer name"
-                                />
-                            </InputGroup>
-                        )}
-                        <InputGroup className="vstack">
-                            <div className="d-flex justify-content-end">
-                                <Label className="btn btn-link btn-xs text-right">
-                                    <Icon icon="upload" />
-                                    Load from a file
-                                    <input
-                                        type="file"
-                                        className="d-none"
-                                        onChange={(e) =>
-                                            fileImporter.readAsBinaryString(e.currentTarget, (x) => setValue("code", x))
-                                        }
-                                        accept=".cs"
+                <Collapse in={isEditMode}>
+                    <div>
+                        <RichPanelDetails className="vstack gap-3 p-4">
+                            {isNew && (
+                                <InputGroup className="vstack mb-1">
+                                    <Label>Name</Label>
+                                    <FormInput
+                                        type="text"
+                                        control={control}
+                                        name="name"
+                                        placeholder="Enter analyzer name"
                                     />
-                                </Label>
-                            </div>
-                            <FormAceEditor name="code" control={control} mode="csharp" height="400px" />
-                        </InputGroup>
-                    </RichPanelDetails>
+                                </InputGroup>
+                            )}
+                            <InputGroup className="vstack">
+                                <div className="d-flex justify-content-end">
+                                    <Label className="btn btn-link btn-xs text-right">
+                                        <Icon icon="upload" />
+                                        Load from a file
+                                        <input
+                                            type="file"
+                                            className="d-none"
+                                            onChange={(e) =>
+                                                fileImporter.readAsBinaryString(e.currentTarget, (x) =>
+                                                    setValue("code", x)
+                                                )
+                                            }
+                                            accept=".cs"
+                                        />
+                                    </Label>
+                                </div>
+                                <FormAceEditor name="code" control={control} mode="csharp" height="400px" />
+                            </InputGroup>
+                        </RichPanelDetails>
+                    </div>
                 </Collapse>
             </Form>
         </RichPanel>

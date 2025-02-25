@@ -3,15 +3,8 @@ import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databas
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
 import Spinner from "react-bootstrap/Spinner";
-import {
-    ButtonGroup,
-    Collapse,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    Input,
-    UncontrolledDropdown,
-} from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import {
     RichPanel,
@@ -480,15 +473,19 @@ export function DatabasePanel(props: DatabasePanelProps) {
                         togglePanelCollapsed={togglePanelCollapsed}
                     />
                     <div className="px-4 pb-2">
-                        <Collapse isOpen={!panelCollapsed}>
-                            <DatabaseDistribution db={db} />
+                        <Collapse in={!panelCollapsed}>
+                            <div>
+                                <DatabaseDistribution db={db} />
+                            </div>
                         </Collapse>
-                        <Collapse isOpen={panelCollapsed}>
-                            <DatabaseTopology
-                                db={db}
-                                localInfos={dbState}
-                                togglePanelCollapsed={togglePanelCollapsed}
-                            />
+                        <Collapse in={panelCollapsed}>
+                            <div>
+                                <DatabaseTopology
+                                    db={db}
+                                    localInfos={dbState}
+                                    togglePanelCollapsed={togglePanelCollapsed}
+                                />
+                            </div>
                         </Collapse>
                     </div>
                 </div>

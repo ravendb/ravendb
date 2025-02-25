@@ -1,7 +1,8 @@
 ﻿import React from "react";
 import { Icon } from "components/common/Icon";
 import Spinner from "react-bootstrap/Spinner";
-import { Card, CardBody, Collapse } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Card, CardBody } from "reactstrap";
 import "./CreateSampleData.scss";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsync, useAsyncCallback } from "react-async-hook";
@@ -114,42 +115,44 @@ function CreateSampleData() {
                             <Icon icon="hash" /> {isCodeSampleOpen ? "Hide" : "Show"} C# classes
                         </Button>
                     </div>
-                    <Collapse isOpen={isCodeSampleOpen}>
-                        <Card className="sample-code">
-                            <CardBody>
-                                <div className="sample-code-header">
-                                    <h3>Sample data C# code</h3>
-                                    {asyncGetSampleDataClasses.result && (
-                                        <Button
-                                            variant="secondary"
-                                            className="rounded-pill"
-                                            onClick={() =>
-                                                copyToClipboard.copy(
-                                                    asyncGetSampleDataClasses.result,
-                                                    "Copied C# classes to clipboard."
-                                                )
-                                            }
-                                        >
-                                            <Icon icon="copy" /> <span>Copy C# classes</span>
-                                        </Button>
-                                    )}
-                                </div>
-                                {asyncGetSampleDataClasses.loading && (
-                                    <div className="d-flex justify-content-center">
-                                        <Spinner className="spinner-gradient" />
+                    <Collapse in={isCodeSampleOpen}>
+                        <div>
+                            <Card className="sample-code">
+                                <CardBody>
+                                    <div className="sample-code-header">
+                                        <h3>Sample data C# code</h3>
+                                        {asyncGetSampleDataClasses.result && (
+                                            <Button
+                                                variant="secondary"
+                                                className="rounded-pill"
+                                                onClick={() =>
+                                                    copyToClipboard.copy(
+                                                        asyncGetSampleDataClasses.result,
+                                                        "Copied C# classes to clipboard."
+                                                    )
+                                                }
+                                            >
+                                                <Icon icon="copy" /> <span>Copy C# classes</span>
+                                            </Button>
+                                        )}
                                     </div>
-                                )}
-                                {asyncGetSampleDataClasses.error && (
-                                    <LoadError
-                                        error="Unable to load sample data classes"
-                                        refresh={asyncGetSampleDataClasses.execute}
-                                    />
-                                )}
-                                {asyncGetSampleDataClasses.result && (
-                                    <Code code={asyncGetSampleDataClasses.result} language="csharp" />
-                                )}
-                            </CardBody>
-                        </Card>
+                                    {asyncGetSampleDataClasses.loading && (
+                                        <div className="d-flex justify-content-center">
+                                            <Spinner className="spinner-gradient" />
+                                        </div>
+                                    )}
+                                    {asyncGetSampleDataClasses.error && (
+                                        <LoadError
+                                            error="Unable to load sample data classes"
+                                            refresh={asyncGetSampleDataClasses.execute}
+                                        />
+                                    )}
+                                    {asyncGetSampleDataClasses.result && (
+                                        <Code code={asyncGetSampleDataClasses.result} language="csharp" />
+                                    )}
+                                </CardBody>
+                            </Card>
+                        </div>
                     </Collapse>
                 </div>
             </div>

@@ -36,6 +36,8 @@ module.exports = {
     "local-rules/no-reactstrap-Popover": "error",
     "local-rules/no-reactstrap-Badge": "error",
     "local-rules/no-reactstrap-Badge-props": "error",
+    "local-rules/no-reactstrap-Collapse": "error",
+    "local-rules/no-reactstrap-Collapse-props": "error",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

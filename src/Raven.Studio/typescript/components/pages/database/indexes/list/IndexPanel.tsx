@@ -23,15 +23,8 @@ import {
 } from "components/common/RichPanel";
 import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
-import {
-    ButtonGroup,
-    Collapse,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    Input,
-    UncontrolledDropdown,
-} from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import assertUnreachable from "components/utils/assertUnreachable";
 import useUniqueId from "components/hooks/useUniqueId";
@@ -496,13 +489,15 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     )}
                 </RichPanelDetails>
                 <div className="px-3 pb-2">
-                    <Collapse isOpen={!panelCollapsed}>
-                        <IndexDistribution
-                            index={index}
-                            globalIndexingStatus={globalIndexingStatus}
-                            showStaleReason={(location) => showStaleReasons(index, location)}
-                            openFaulty={openFaulty}
-                        />
+                    <Collapse in={!panelCollapsed}>
+                        <div>
+                            <IndexDistribution
+                                index={index}
+                                globalIndexingStatus={globalIndexingStatus}
+                                showStaleReason={(location) => showStaleReasons(index, location)}
+                                openFaulty={openFaulty}
+                            />
+                        </div>
                     </Collapse>
                 </div>
             </RichPanel>

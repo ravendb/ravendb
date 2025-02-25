@@ -27,7 +27,8 @@ import React from "react";
 import { useState } from "react";
 import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 import { useForm, useWatch, SubmitHandler } from "react-hook-form";
-import { Form, Collapse, InputGroup, Label } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Form, InputGroup, Label } from "reactstrap";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -128,51 +129,55 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                     </RichPanelActions>
                 </RichPanelHeader>
 
-                <Collapse isOpen={isTestMode}>
-                    <DatabaseCustomSorterTest name={formValues.name} />
+                <Collapse in={isTestMode}>
+                    <div>
+                        <DatabaseCustomSorterTest name={formValues.name} />
+                    </div>
                 </Collapse>
 
-                <Collapse isOpen={isEditMode}>
-                    <RichPanelDetails className="vstack gap-3 p-4">
-                        {isNew && (
-                            <InputGroup className="vstack mb-1">
-                                <Label>Name</Label>
-                                <FormInput
-                                    type="text"
+                <Collapse in={isEditMode}>
+                    <div>
+                        <RichPanelDetails className="vstack gap-3 p-4">
+                            {isNew && (
+                                <InputGroup className="vstack mb-1">
+                                    <Label>Name</Label>
+                                    <FormInput
+                                        type="text"
+                                        control={control}
+                                        name="name"
+                                        placeholder="Enter a sorter name"
+                                    />
+                                </InputGroup>
+                            )}
+                            <InputGroup className="vstack">
+                                {hasDatabaseAdminAccess && (
+                                    <div className="d-flex justify-content-end">
+                                        <Label className="btn btn-link btn-xs text-right">
+                                            <Icon icon="upload" />
+                                            Load from a file
+                                            <input
+                                                type="file"
+                                                className="d-none"
+                                                onChange={(e) =>
+                                                    fileImporter.readAsBinaryString(e.currentTarget, (x) =>
+                                                        setValue("code", x)
+                                                    )
+                                                }
+                                                accept=".cs"
+                                            />
+                                        </Label>
+                                    </div>
+                                )}
+                                <FormAceEditor
                                     control={control}
-                                    name="name"
-                                    placeholder="Enter a sorter name"
+                                    name="code"
+                                    mode="csharp"
+                                    height="400px"
+                                    readOnly={!hasDatabaseAdminAccess}
                                 />
                             </InputGroup>
-                        )}
-                        <InputGroup className="vstack">
-                            {hasDatabaseAdminAccess && (
-                                <div className="d-flex justify-content-end">
-                                    <Label className="btn btn-link btn-xs text-right">
-                                        <Icon icon="upload" />
-                                        Load from a file
-                                        <input
-                                            type="file"
-                                            className="d-none"
-                                            onChange={(e) =>
-                                                fileImporter.readAsBinaryString(e.currentTarget, (x) =>
-                                                    setValue("code", x)
-                                                )
-                                            }
-                                            accept=".cs"
-                                        />
-                                    </Label>
-                                </div>
-                            )}
-                            <FormAceEditor
-                                control={control}
-                                name="code"
-                                mode="csharp"
-                                height="400px"
-                                readOnly={!hasDatabaseAdminAccess}
-                            />
-                        </InputGroup>
-                    </RichPanelDetails>
+                        </RichPanelDetails>
+                    </div>
                 </Collapse>
             </Form>
         </RichPanel>

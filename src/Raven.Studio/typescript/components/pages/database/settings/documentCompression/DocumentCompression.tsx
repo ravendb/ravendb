@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Col, Row, Card, Collapse, Form } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Col, Row, Card, Form } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
@@ -153,18 +154,20 @@ export default function DocumentCompression() {
                                     customOptions={customCollectionOptions}
                                     isReadOnly={!hasDatabaseAdminAccess}
                                 />
-                                <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
-                                    <RichAlert variant="info" icon="documents-compression" className="mt-4">
-                                        <div>
-                                            Documents that will be compressed:
-                                            <ul className="m-0">
-                                                <li>New documents created in {infoTextSuffix}</li>
-                                                <li>
-                                                    Existing documents that are modified & saved in {infoTextSuffix}
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </RichAlert>
+                                <Collapse in={CompressAllCollections || Collections.length > 0}>
+                                    <div>
+                                        <RichAlert variant="info" icon="documents-compression" className="mt-4">
+                                            <div>
+                                                Documents that will be compressed:
+                                                <ul className="m-0">
+                                                    <li>New documents created in {infoTextSuffix}</li>
+                                                    <li>
+                                                        Existing documents that are modified & saved in {infoTextSuffix}
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </RichAlert>
+                                    </div>
                                 </Collapse>
                             </Card>
                             <Card

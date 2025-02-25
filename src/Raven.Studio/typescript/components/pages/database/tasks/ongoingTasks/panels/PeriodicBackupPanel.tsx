@@ -29,7 +29,8 @@ import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 import Badge from "react-bootstrap/Badge";
-import { Collapse, Input } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Input } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -299,8 +300,10 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse isOpen={detailsVisible}>
-                <Details {...props} />
+            <Collapse in={detailsVisible}>
+                <div>
+                    <Details {...props} />
+                </div>
             </Collapse>
         </RichPanel>
     );

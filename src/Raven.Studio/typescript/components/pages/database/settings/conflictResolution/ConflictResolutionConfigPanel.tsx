@@ -8,7 +8,8 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { Collapse, Form, InputGroup, Label } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Form, InputGroup, Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { EditConflictResolutionSyntaxModal } from "components/pages/database/settings/conflictResolution/EditConflictResolutionSyntaxModal";
@@ -102,63 +103,67 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                         </RichPanelActions>
                     </Form>
                 </RichPanelHeader>
-                <Collapse isOpen={!initialConfig.isInEditMode}>
-                    <RichPanelDetails>
-                        <RichPanelDetailItem
-                            label={
-                                <>
-                                    <Icon icon="clock" />
-                                    Last modified
-                                </>
-                            }
-                        >
-                            {initialConfig.lastModifiedTime
-                                ? genUtils.formatUtcDateAsLocal(initialConfig.lastModifiedTime)
-                                : "(new)"}
-                        </RichPanelDetailItem>
-                    </RichPanelDetails>
+                <Collapse in={!initialConfig.isInEditMode}>
+                    <div>
+                        <RichPanelDetails>
+                            <RichPanelDetailItem
+                                label={
+                                    <>
+                                        <Icon icon="clock" />
+                                        Last modified
+                                    </>
+                                }
+                            >
+                                {initialConfig.lastModifiedTime
+                                    ? genUtils.formatUtcDateAsLocal(initialConfig.lastModifiedTime)
+                                    : "(new)"}
+                            </RichPanelDetailItem>
+                        </RichPanelDetails>
+                    </div>
                 </Collapse>
-                <Collapse isOpen={initialConfig.isInEditMode}>
-                    <RichPanelDetails className="vstack gap-3 p-3">
-                        {!initialConfig.name && (
-                            <InputGroup className="vstack mb-1">
-                                <Label>Collection</Label>
-                                <FormSelectCreatable
+                <Collapse in={initialConfig.isInEditMode}>
+                    <div>
+                        <RichPanelDetails className="vstack gap-3 p-3">
+                            {!initialConfig.name && (
+                                <InputGroup className="vstack mb-1">
+                                    <Label>Collection</Label>
+                                    <FormSelectCreatable
+                                        control={control}
+                                        name="collectionName"
+                                        placeholder="Select collection (or enter a new one)"
+                                        options={collectionOptions}
+                                        isClearable={false}
+                                        maxMenuHeight={300}
+                                        isDisabled={!hasDatabaseAdminAccess}
+                                    />
+                                </InputGroup>
+                            )}
+                            <InputGroup className="vstack">
+                                <Label className="d-flex flex-wrap justify-content-between">
+                                    Script
+                                    <Button
+                                        variant="link"
+                                        size="xs"
+                                        onClick={toggleIsSyntaxModalOpen}
+                                        className="p-0 align-self-end"
+                                    >
+                                        Syntax
+                                        <Icon icon="help" margin="ms-1" />
+                                    </Button>
+                                </Label>
+                                {isSyntaxModalOpen && (
+                                    <EditConflictResolutionSyntaxModal toggle={toggleIsSyntaxModalOpen} />
+                                )}
+                                <FormAceEditor
                                     control={control}
-                                    name="collectionName"
-                                    placeholder="Select collection (or enter a new one)"
-                                    options={collectionOptions}
-                                    isClearable={false}
-                                    maxMenuHeight={300}
-                                    isDisabled={!hasDatabaseAdminAccess}
+                                    name="script"
+                                    mode="javascript"
+                                    height="400px"
+                                    readOnly={!hasDatabaseAdminAccess}
                                 />
                             </InputGroup>
-                        )}
-                        <InputGroup className="vstack">
-                            <Label className="d-flex flex-wrap justify-content-between">
-                                Script
-                                <Button
-                                    variant="link"
-                                    size="xs"
-                                    onClick={toggleIsSyntaxModalOpen}
-                                    className="p-0 align-self-end"
-                                >
-                                    Syntax
-                                    <Icon icon="help" margin="ms-1" />
-                                </Button>
-                            </Label>
-                            {isSyntaxModalOpen && (
-                                <EditConflictResolutionSyntaxModal toggle={toggleIsSyntaxModalOpen} />
-                            )}
-                            <FormAceEditor
-                                control={control}
-                                name="script"
-                                mode="javascript"
-                                height="400px"
-                                readOnly={!hasDatabaseAdminAccess}
-                            />
-                        </InputGroup>
-                    </RichPanelDetails>
+                        </RichPanelDetails>
+                    </div>
                 </Collapse>
             </div>
         </RichPanel>

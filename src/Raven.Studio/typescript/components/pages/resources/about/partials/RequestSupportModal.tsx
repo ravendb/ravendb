@@ -1,17 +1,6 @@
 ﻿import useBoolean from "hooks/useBoolean";
-import {
-    CloseButton,
-    Col,
-    Collapse,
-    Form,
-    FormGroup,
-    Input,
-    Label,
-    Modal,
-    ModalBody,
-    ModalFooter,
-    Row,
-} from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { CloseButton, Col, Form, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, Row } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { Checkbox, Switch } from "components/common/Checkbox";
 import React from "react";
@@ -83,12 +72,12 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
                         <Checkbox size="lg" selected={includeDebugPackage} toggleSelection={toggleIncludeDebugPackage}>
                             Include debug package
                         </Checkbox>
-                        <Collapse isOpen={includeDebugPackage}>
+                        <Collapse in={includeDebugPackage}>
                             <div className="py-2">
                                 <Switch selected={includeAllDatabases} toggleSelection={toggleIncludeAllDatabases}>
                                     Include all databases
                                 </Switch>
-                                <Collapse isOpen={!includeAllDatabases}>
+                                <Collapse in={!includeAllDatabases}>
                                     <div className="vstack">
                                         <Checkbox selected={null} toggleSelection={null}>
                                             Database1

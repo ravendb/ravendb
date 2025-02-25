@@ -4,7 +4,8 @@ import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidatio
 import { useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Col, Collapse, InputGroup, InputGroupText, Row } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import { Col, InputGroup, InputGroupText, Row } from "reactstrap";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
@@ -157,30 +158,32 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     </Row>
                     <Row className="pt-2">
                         <Col sm="6">
-                            <Collapse isOpen={isReplicationFactorVisible}>
-                                <InputGroup>
-                                    <InputGroupText>Replication Factor</InputGroupText>
+                            <Collapse in={isReplicationFactorVisible}>
+                                <div>
+                                    <InputGroup>
+                                        <InputGroupText>Replication Factor</InputGroupText>
+                                        <FormInput
+                                            type="number"
+                                            control={control}
+                                            name="replicationAndShardingStep.replicationFactor"
+                                            className="replication-input"
+                                            min="1"
+                                            max={maxReplicationFactor}
+                                        />
+                                    </InputGroup>
                                     <FormInput
-                                        type="number"
+                                        type="range"
                                         control={control}
                                         name="replicationAndShardingStep.replicationFactor"
-                                        className="replication-input"
                                         min="1"
                                         max={maxReplicationFactor}
+                                        className="mt-3"
                                     />
-                                </InputGroup>
-                                <FormInput
-                                    type="range"
-                                    control={control}
-                                    name="replicationAndShardingStep.replicationFactor"
-                                    min="1"
-                                    max={maxReplicationFactor}
-                                    className="mt-3"
-                                />
+                                </div>
                             </Collapse>
                         </Col>
                         <Col sm="auto">
-                            <Collapse isOpen={isSharded}>
+                            <Collapse in={isSharded}>
                                 <InputGroup>
                                     <InputGroupText>Number of shards</InputGroupText>
                                     <FormInput
@@ -196,15 +199,15 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         </Col>
                     </Row>
                     <RichAlert variant="info" className="mt-4">
-                        <Collapse isOpen={isSharded}>
-                            <>
+                        <Collapse in={isSharded}>
+                            <div>
                                 Data will be divided into{" "}
                                 <strong>
                                     {shardsCount}
                                     <Icon icon="shard" margin="m-0" /> Shards
                                 </strong>
                                 .<br />
-                            </>
+                            </div>
                         </Collapse>
                         {replicationFactor > 1 ? (
                             <>

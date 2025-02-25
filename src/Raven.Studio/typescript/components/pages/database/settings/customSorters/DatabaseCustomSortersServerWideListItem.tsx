@@ -11,7 +11,7 @@ import useBoolean from "components/hooks/useBoolean";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { Collapse } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
 import Button from "react-bootstrap/Button";
 
 interface DatabaseCustomSortersServerWideListItemProps {
@@ -40,8 +40,10 @@ export default function DatabaseCustomSortersServerWideListItem({
                     )}
                 </RichPanelInfo>
             </RichPanelHeader>
-            <Collapse isOpen={isTestMode}>
-                <DatabaseCustomSorterTest name={sorter.Name} />
+            <Collapse in={isTestMode}>
+                <div>
+                    <DatabaseCustomSorterTest name={sorter.Name} />
+                </div>
             </Collapse>
         </RichPanel>
     );
