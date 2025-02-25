@@ -1,5 +1,4 @@
 import { RtlScreen, rtlRender } from "test/rtlTestUtils";
-import { fireEvent } from "@testing-library/react";
 import * as Stories from "./CreateDatabase.stories";
 import { composeStories } from "@storybook/react";
 
@@ -8,27 +7,27 @@ const { DefaultCreateDatabase } = composeStories(Stories);
 describe("CreateDatabase", () => {
     describe("Regular", () => {
         it("can disable encryption when the license does not allow it", async () => {
-            const { screen } = rtlRender(<DefaultCreateDatabase hasEncryption={false} />);
+            const { screen, user } = rtlRender(<DefaultCreateDatabase hasEncryption={false} />);
 
             const encryptionSwitch = screen.getByLabelText(/Encrypt at Rest/);
             expect(encryptionSwitch).toBeDisabled();
 
-            fireEvent.mouseOver(encryptionSwitch);
+            await user.hover(encryptionSwitch);
             expect(await screen.findByText(/Current license doesn't include/i)).toBeInTheDocument();
         });
 
         it("can disable encryption when server is not secure", async () => {
-            const { screen } = rtlRender(<DefaultCreateDatabase isSecureServer={false} />);
+            const { screen, user } = rtlRender(<DefaultCreateDatabase isSecureServer={false} />);
 
             const encryptionSwitch = screen.getByLabelText(/Encrypt at Rest/);
             expect(encryptionSwitch).toBeDisabled();
 
-            fireEvent.mouseOver(encryptionSwitch);
+            await user.hover(encryptionSwitch);
             expect(await screen.findByText(/Authentication is off/i)).toBeInTheDocument();
         });
 
         it("can disable dynamic database distribution when the license does not allow it", async () => {
-            const { screen, fillInput, fireClick } = rtlRender(
+            const { screen, user, fillInput, fireClick } = rtlRender(
                 <DefaultCreateDatabase hasDynamicNodesDistribution={false} />
             );
 
@@ -37,12 +36,12 @@ describe("CreateDatabase", () => {
             const dynamicDatabaseDistributionSwitch = screen.getByLabelText(/Allow dynamic database distribution/);
             expect(dynamicDatabaseDistributionSwitch).toBeDisabled();
 
-            fireEvent.mouseOver(dynamicDatabaseDistributionSwitch);
+            await user.hover(dynamicDatabaseDistributionSwitch);
             expect(await screen.findByText(/Current license doesn't include/i)).toBeInTheDocument();
         });
 
         it("can override max replication factor for sharding when is set in license", async () => {
-            const { screen, fillInput, fireClick } = rtlRender(
+            const { screen, user, fillInput, fireClick } = rtlRender(
                 <DefaultCreateDatabase maxReplicationFactorForSharding={2} />
             );
 
@@ -54,7 +53,7 @@ describe("CreateDatabase", () => {
             expect(replicationFactorInputBeforeShardingEnabled).toHaveValue(3);
 
             const shardingSwitch = screen.getByLabelText(/Enable/);
-            fireEvent.click(shardingSwitch);
+            await user.click(shardingSwitch);
 
             const replicationFactorInputAfterShardingEnabled = screen.getAllByName(
                 "replicationAndShardingStep.replicationFactor"
@@ -65,7 +64,7 @@ describe("CreateDatabase", () => {
 
     describe("From backup", () => {
         it("can disable encryption when the license does not allow it", async () => {
-            const { screen, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase hasEncryption={false} />);
+            const { screen, user, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase hasEncryption={false} />);
 
             await fireClick(screen.getByRole("button", { name: /Restore from backup/ }));
             await goNextFromBasicInfoStep(screen, fillInput, fireClick);
@@ -73,20 +72,19 @@ describe("CreateDatabase", () => {
             const encryptionSwitch = screen.getByLabelText(/Encrypt at Rest/);
             expect(encryptionSwitch).toBeDisabled();
 
-            fireEvent.mouseOver(encryptionSwitch);
+            await user.hover(encryptionSwitch);
             expect(await screen.findByText(/Current license doesn't include/i)).toBeInTheDocument();
         });
 
         it("can disable encryption when server is not secure", async () => {
-            const { screen, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase isSecureServer={false} />);
+            const { screen, user, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase isSecureServer={false} />);
 
             await fireClick(screen.getByRole("button", { name: /Restore from backup/ }));
             await goNextFromBasicInfoStep(screen, fillInput, fireClick);
 
             const encryptionSwitch = screen.getByLabelText(/Encrypt at Rest/);
             expect(encryptionSwitch).toBeDisabled();
-
-            fireEvent.mouseOver(encryptionSwitch);
+            await user.hover(encryptionSwitch);
             expect(await screen.findByText(/Authentication is off/i)).toBeInTheDocument();
         });
     });
