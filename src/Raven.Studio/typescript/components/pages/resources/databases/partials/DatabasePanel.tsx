@@ -4,7 +4,8 @@ import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
 import Spinner from "react-bootstrap/Spinner";
 import Collapse from "react-bootstrap/Collapse";
-import { ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import {
     RichPanel,

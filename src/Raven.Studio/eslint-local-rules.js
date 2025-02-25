@@ -304,4 +304,8 @@ module.exports = {
             };
         },
     },
+    "no-reactstrap-ButtonGroup": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "ButtonGroup" }),
+    },
 };

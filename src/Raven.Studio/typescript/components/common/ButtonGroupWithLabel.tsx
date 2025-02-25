@@ -1,5 +1,5 @@
 import React from "react";
-import { ButtonGroup, ButtonGroupProps } from "reactstrap";
+import ButtonGroup, { ButtonGroupProps } from "react-bootstrap/ButtonGroup";
 import classNames from "classnames";
 
 interface ButtonGroupWithLabelProps extends ButtonGroupProps {

@@ -5,7 +5,8 @@ import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
 import Spinner from "react-bootstrap/Spinner";
-import { ButtonGroup, UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem } from "reactstrap";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem } from "reactstrap";
 import { OngoingTaskOperationConfirmType } from "../shared/OngoingTaskOperationConfirm";
 import Button from "react-bootstrap/Button";
 
