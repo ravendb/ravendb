@@ -55,7 +55,7 @@ public class AiConnectionStringsTests : RavenTestBase
             {
                 Name = "AiIntegrationTaskForTestingPurposes",
                 ConnectionStringName = "ConnectionStringForTestingPurposes",
-                EmbeddingsPaths = ["Lines"],
+                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Lines" }],
                 Collection = "Orders"
             };
 

@@ -25,7 +25,7 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
 
     public string Collection { get; set; }
 
-    public List<string> EmbeddingsPaths { get; set; }
+    public List<EmbeddingPathConfiguration> EmbeddingsPathConfigurations { get; set; }
 
     public EmbeddingsTransformation EmbeddingsTransformation { get; set; }
     
@@ -87,10 +87,10 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         if (string.IsNullOrEmpty(Collection))
             errors.Add($"{nameof(Collection)} must be provided");
 
-        if ((EmbeddingsPaths is null || EmbeddingsPaths.Count == 0) &&
+        if ((EmbeddingsPathConfigurations is null || EmbeddingsPathConfigurations.Count == 0) &&
             (EmbeddingsTransformation is null || string.IsNullOrEmpty(EmbeddingsTransformation.Script)))
         {
-            errors.Add($"Configuration must have either {nameof(EmbeddingsPaths)} or {nameof(EmbeddingsTransformation)} script specified");
+            errors.Add($"Configuration must have either {nameof(EmbeddingsPathConfigurations)} or {nameof(EmbeddingsTransformation)} script specified");
         }
         
         if (TargetQuantizationType == VectorEmbeddingType.Text)
@@ -129,7 +129,7 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
 
         json[nameof(Identifier)] = Identifier;
         json[nameof(Collection)] = Collection;
-        json[nameof(EmbeddingsPaths)] = new DynamicJsonArray(EmbeddingsPaths);
+        json[nameof(EmbeddingsPathConfigurations)] = new DynamicJsonArray(EmbeddingsPathConfigurations);
         json[nameof(EmbeddingsTransformation)] = EmbeddingsTransformation != null ? new DynamicJsonValue
         {
             [nameof(EmbeddingsTransformation.Script)] = EmbeddingsTransformation.Script

@@ -36,7 +36,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         IDocumentStore store,
         string embeddingsGenerationTaskName = DefaultEmbeddingGenerationTaskName,
         string connectionStringName = DefaultConnectionStringName,
-        List<string> embeddingsPaths = null,
+        List<EmbeddingPathConfiguration> embeddingsPaths = null,
         string script = null,
         string collectionName = null,
         VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
@@ -45,7 +45,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         {
             Name = embeddingsGenerationTaskName,
             ConnectionStringName = connectionStringName,
-            EmbeddingsPaths = embeddingsPaths ?? (string.IsNullOrEmpty(script) ? ["Name"] : null),
+            EmbeddingsPathConfigurations = embeddingsPaths ?? (string.IsNullOrEmpty(script) ? [new EmbeddingPathConfiguration() { Path = "Name" }] : null),
             Collection = collectionName ?? "Dtos",
             EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new EmbeddingsTransformation
             {

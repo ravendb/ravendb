@@ -124,7 +124,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
             return;
         }
 
-        if (_configuration.EmbeddingsPaths is { Count: > 0 })
+        if (_configuration.EmbeddingsPathConfigurations is { Count: > 0 })
         {
             var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult
             {
@@ -133,15 +133,64 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
                 Values = new Dictionary<string, List<EmbeddingGenerationItem>>()
             };
 
-            foreach (var path in _configuration.EmbeddingsPaths)
+            foreach (var pathConfiguration in _configuration.EmbeddingsPathConfigurations)
             {
-                if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, path, out var value) == false)
+                if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, pathConfiguration.Path, out var value) == false)
                     continue;
 
-                ref var embeddingValues = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Values, path, out _);
+                ref var embeddingValues = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Values, pathConfiguration.Path, out _);
                 embeddingValues ??= new();
 
-                CollectEmbeddingValues(ref embeddingValues, value);
+                var textualValues = new List<string>();
+                CollectEmbeddingValues(ref textualValues, value);
+                
+#pragma warning disable SKEXP0050
+                var maxTokensPerChunk = pathConfiguration.ChunkingOptions.MaxTokensPerChunk;
+                List<string> chunkedValues;
+                switch (pathConfiguration.ChunkingOptions.ChunkingMethod)
+                {
+                    case ChunkingMethod.PlainTextSplitLines:
+                        foreach (var textualValue in textualValues)
+                        {
+                            chunkedValues = TextChunker.SplitPlainTextLines(textualValue, maxTokensPerChunk);
+                            foreach (var chunkedValue in chunkedValues)
+                                embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = chunkedValue });
+                        }
+                        break;
+                    case ChunkingMethod.PlainTextSplitParagraphs:
+                        chunkedValues = TextChunker.SplitPlainTextParagraphs(textualValues, maxTokensPerChunk);
+                        foreach (var chunkedValue in chunkedValues)
+                            embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = chunkedValue });
+                        break;
+                    case ChunkingMethod.MarkDownSplitLines:
+                        foreach (var textualValue in textualValues)
+                        {
+                            chunkedValues = TextChunker.SplitMarkDownLines(textualValue, maxTokensPerChunk);
+                            foreach (var chunkedValue in chunkedValues)
+                                embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = chunkedValue });
+                        }
+                        break;
+                    case ChunkingMethod.MarkDownSplitParagraphs:
+                        chunkedValues = TextChunker.SplitMarkdownParagraphs(textualValues, maxTokensPerChunk);
+                        foreach (var chunkedValue in chunkedValues)
+                            embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = chunkedValue });
+                        break;
+                    case ChunkingMethod.HtmlStrip:
+                        foreach (var textualValue in textualValues)
+                            embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = StripHtml(textualValue)});
+                        break;
+                    case ChunkingMethod.HtmlSplitLines:
+                        foreach (var textualValue in textualValues)
+                        {
+                            chunkedValues = TextChunker.SplitPlainTextLines(textualValue, maxTokensPerChunk);
+                            foreach (var chunkedValue in chunkedValues)
+                                embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = StripHtml(chunkedValue) });
+                        }
+                        break;
+                    default:
+                        throw new ArgumentException($"Unrecognized chunking method - {pathConfiguration.ChunkingOptions.ChunkingMethod}");
+                }
+#pragma warning restore SKEXP0050
             }
 
             _currentRun.Additions.Add(aiEtlEmbeddingItem);
@@ -150,10 +199,10 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
         }
 
         throw new InvalidOperationException(
-            $"Cannot create embeddings because neither {nameof(_configuration.EmbeddingsTransformation)} nor {nameof(_configuration.EmbeddingsPaths)} were specified in the configuration of AI Integration task");
+            $"Cannot create embeddings because neither {nameof(_configuration.EmbeddingsTransformation)} nor {nameof(_configuration.EmbeddingsPathConfigurations)} were specified in the configuration of AI Integration task");
     }
-
-    private void CollectEmbeddingValues(ref List<EmbeddingGenerationItem> values, object value)
+    
+     private void CollectEmbeddingValues(ref List<string> values, object value)
     {
         var valueType = ConverterBase.GetValueTypeUnlikely(value);
         switch (valueType)
@@ -163,12 +212,12 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
             case ConverterBase.ValueType.Enum:
             case ConverterBase.ValueType.Boolean:
             case ConverterBase.ValueType.String:
-                values.Add(new EmbeddingGenerationItem() { InputValue = value.ToString() });
+                values.Add(value.ToString());
                 break;
 
             case ConverterBase.ValueType.Char:
                 if (value is char c)
-                    values.Add(new EmbeddingGenerationItem() { InputValue = char.ToString(c) });
+                    values.Add( char.ToString(c));
                 break;
 
             case ConverterBase.ValueType.LazyCompressedString:
@@ -177,19 +226,19 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
                     ? ((LazyCompressedStringValue)value).ToLazyStringValue()
                     : (LazyStringValue)value;
 
-                values.Add(new EmbeddingGenerationItem() { InputValue = lazyStringValue });
+                values.Add(lazyStringValue);
                 break;
 
             case ConverterBase.ValueType.DateTime:
                 var dateTime = (DateTime)value;
                 var dateAsBytes = dateTime.GetDefaultRavenFormat();
-                values.Add(new EmbeddingGenerationItem() { InputValue = dateAsBytes });
+                values.Add(dateAsBytes);
                 break;
 
             case ConverterBase.ValueType.DateTimeOffset:
                 var dateTimeOffset = (DateTimeOffset)value;
                 var dateTimeOffsetBytes = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
-                values.Add(new EmbeddingGenerationItem() { InputValue = dateTimeOffsetBytes });
+                values.Add(dateTimeOffsetBytes);
                 break;
 
             case ConverterBase.ValueType.TimeSpan:
@@ -199,24 +248,24 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
                     if (Utf8Formatter.TryFormat(timeSpan, buffer, out var bytesWritten, new('c')) == false)
                         throw new Exception($"Cannot convert {timeSpan} to a string");
 
-                    values.Add(new EmbeddingGenerationItem() { InputValue = Encodings.Utf8.GetString(buffer[..bytesWritten]) });
+                    values.Add(Encodings.Utf8.GetString(buffer[..bytesWritten]));
                     break;
                 }
             case ConverterBase.ValueType.DateOnly:
                 var dateOnly = (DateOnly)value;
                 var dateOnlyTextual = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                values.Add(new EmbeddingGenerationItem() { InputValue = dateOnlyTextual });
+                values.Add(dateOnlyTextual);
                 break;
 
             case ConverterBase.ValueType.TimeOnly:
                 var timeOnly = (TimeOnly)value;
                 var timeOnlyTextual = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                values.Add(new EmbeddingGenerationItem() { InputValue = timeOnlyTextual });
+                values.Add(timeOnlyTextual);
                 break;
 
             case ConverterBase.ValueType.Convertible:
                 var iConvertible = (IConvertible)value;
-                values.Add(new EmbeddingGenerationItem() { InputValue = iConvertible.ToString(CultureInfo.InvariantCulture) });
+                values.Add(iConvertible.ToString(CultureInfo.InvariantCulture));
                 break;
 
             case ConverterBase.ValueType.Enumerable:
@@ -228,7 +277,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
 
             case ConverterBase.ValueType.DynamicJsonObject:
                 var valueAsJson = (DynamicBlittableJson)value;
-                values.Add(new EmbeddingGenerationItem() { InputValue = valueAsJson.ToString() });
+                values.Add(valueAsJson.ToString());
                 break;
 
             case ConverterBase.ValueType.Dictionary:
@@ -248,16 +297,16 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
 
             case ConverterBase.ValueType.BlittableJsonObject:
                 var bjo = (BlittableJsonReaderObject)value;
-                values.Add(new() { InputValue = bjo.ToString() });
+                values.Add(bjo.ToString());
                 break;
 
             case ConverterBase.ValueType.DynamicNull:
             case ConverterBase.ValueType.Null:
-                values.Add(new() { InputValue = $"null" });
+                values.Add("null");
                 break;
 
             case ConverterBase.ValueType.EmptyString:
-                values.Add(new() { InputValue = $"" });
+                values.Add("");
                 break;
 
             default:

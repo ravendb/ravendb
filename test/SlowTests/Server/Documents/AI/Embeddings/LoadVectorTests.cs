@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
@@ -128,7 +129,7 @@ WaitForUserToContinueTheTest(store);
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Names"]);
+        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names" }]);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
@@ -218,7 +219,7 @@ WaitForUserToContinueTheTest(store);
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Name"], embeddingsGenerationTaskName: embeddingEtlName);
+        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name" }], embeddingsGenerationTaskName: embeddingEtlName);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
         AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
 
@@ -243,7 +244,7 @@ WaitForUserToContinueTheTest(store);
         }
 
         etlStatus.Reset();
-        var (config2, connectionString2) = RegisterAiIntegration(store, embeddingsPaths: ["Names"], embeddingsGenerationTaskName: embeddingEtlName2);
+        var (config2, connectionString2) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names" }], embeddingsGenerationTaskName: embeddingEtlName2);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
         Indexes.WaitForIndexing(store);

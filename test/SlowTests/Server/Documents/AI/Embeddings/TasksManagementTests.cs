@@ -23,7 +23,7 @@ public class TasksManagementTests : RavenTestBase
         {
             Name = "ai-task-testing",
             ConnectionStringName = "ai-service-connection",
-            EmbeddingsPaths = ["PostContent", "Comments"],
+            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent" }, new EmbeddingPathConfiguration(){ Path = "Comments" }],
             Collection = "Posts",
         };
 
@@ -52,7 +52,7 @@ public class TasksManagementTests : RavenTestBase
         {
             Name = "ai-task-testing",
             ConnectionStringName = "ai-service-connection",
-            EmbeddingsPaths = ["PostContent", "Comments"],
+            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent" }, new EmbeddingPathConfiguration() { Path = "Comments" }],
             Collection = "Posts",
         };
 

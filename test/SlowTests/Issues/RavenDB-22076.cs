@@ -472,7 +472,7 @@ public class RavenDB_22076 : RavenTestBase
                 Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                EmbeddingsPaths = ["TextualValue"],
+                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "TextualValue" }],
                 Collection = "Dtos",
                 Identifier = "ai-task-identifier"
             };
@@ -533,7 +533,7 @@ public class RavenDB_22076 : RavenTestBase
                 Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                EmbeddingsPaths = ["TextualValue"],
+                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "TextualValue" }],
                 Collection = "Dtos"
             };
 
@@ -581,7 +581,7 @@ public class RavenDB_22076 : RavenTestBase
                 Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                EmbeddingsPaths = ["TextualValue"],
+                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "TextualValue" }],
                 Collection = "Dtos"
             };
 
@@ -628,7 +628,7 @@ public class RavenDB_22076 : RavenTestBase
                 Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
                 ConnectionStringName = connectionStringName,
-                EmbeddingsPaths = ["TextualValue"],
+                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "TextualValue" }],
                 Collection = "Dtos"
             };
             
