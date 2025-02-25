@@ -1,5 +1,5 @@
 import { ReactNode, PropsWithChildren, useState } from "react";
-import { Placement } from "react-bootstrap/esm/types";
+import { Placement } from "react-bootstrap/types";
 import { PopoverWithHover } from "./PopoverWithHover";
 import Popover from "react-bootstrap/Popover";
 

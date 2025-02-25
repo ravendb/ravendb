@@ -13,8 +13,8 @@ import { AccordionItemWrapper } from "./AboutView";
 import RichAlert from "components/common/RichAlert";
 import appUrl from "common/appUrl";
 import { HrHeader } from "components/common/HrHeader";
-import OverlayTrigger from "react-bootstrap/esm/OverlayTrigger";
-import Tooltip from "react-bootstrap/esm/Tooltip";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
 
 export type AvailabilityValue = boolean | number | string;

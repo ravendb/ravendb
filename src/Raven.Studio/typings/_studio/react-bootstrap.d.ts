@@ -1,6 +1,7 @@
 /// <reference types="react-bootstrap" />
 import { BsPrefixRefForwardingComponent } from "react-bootstrap/helpers";
-import { ButtonProps, SpinnerProps as ReactBootstrapSpinnerProps } from "react-bootstrap";
+import { ButtonProps } from "react-bootstrap/Button";
+import { SpinnerProps as ReactBootstrapSpinnerProps } from "react-bootstrap/Spinner";
 import { BadgeProps } from "react-bootstrap/Badge";
 
 type RavenSizes = "xs"

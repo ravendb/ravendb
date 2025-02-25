@@ -9,7 +9,8 @@ import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
 import { uniqueId } from "lodash";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
-import { OverlayTrigger, Popover } from "react-bootstrap";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Popover from "react-bootstrap/Popover";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];

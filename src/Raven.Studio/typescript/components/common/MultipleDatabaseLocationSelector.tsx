@@ -6,8 +6,8 @@ import { Icon } from "./Icon";
 import classNames from "classnames";
 import { produce } from "immer";
 import ActionContextUtils from "components/utils/actionContextUtils";
-import OverlayTrigger from "react-bootstrap/esm/OverlayTrigger";
-import Tooltip from "react-bootstrap/esm/Tooltip";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 export type DatabaseActionContexts =
     | {
