@@ -30,7 +30,7 @@ export default function ServerSettings() {
     }
 
     return (
-        <Row className="content-padding">
+        <Row className="content-padding h-100">
             <Col className="h-100" md={12} lg={7}>
                 <div className="h-100 flex-column d-flex mb-4">
                     <AboutViewHeading title="Server Settings" icon="server-settings" />
