@@ -486,7 +486,7 @@ namespace Voron.Impl.Compaction
                 {
                     long transactionSize = 0L;
 
-                    Table inputTable = innerTxr.OpenTable(schema, treeName);
+                    Table inputTable = innerTxr.OpenTable(schema, treeName, prefetch: true);
                     var outputTable = txw.OpenTable(schema, treeName);
 
                     if (schema.Key == null || schema.Key.IsGlobal) 

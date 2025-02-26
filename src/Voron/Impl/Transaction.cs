@@ -230,15 +230,15 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Table OpenTable(TableSchema schema, string name)
+        public Table OpenTable(TableSchema schema, string name, bool prefetch = false)
         {
             using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
             {
-                return OpenTable(schema, nameSlice);
+                return OpenTable(schema, nameSlice, prefetch);
             }
         }
 
-        public Table OpenTable(TableSchema schema, Slice name)
+        public Table OpenTable(TableSchema schema, Slice name, bool prefetch = false)
         {
             _tables ??= new Dictionary<TableKey, Table>();
 
@@ -269,7 +269,7 @@ namespace Voron.Impl
                 };
             }
 
-            value = new Table(schema, clonedName, this, tableTree, tableStatsRef, schema.TableType);
+            value = new Table(schema, clonedName, this, tableTree, tableStatsRef, schema.TableType, prefetch: prefetch);
             _tables[key] = value;
             return value;
         }
