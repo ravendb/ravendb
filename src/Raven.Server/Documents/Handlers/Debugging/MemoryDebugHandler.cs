@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return djv;
         }
 
-        [RavenAction("/admin/debug/memory/smaps", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/memory/smaps", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = false)]
         public async Task MemorySmaps()
         {
             if (PlatformDetails.RunningOnLinux == false)
