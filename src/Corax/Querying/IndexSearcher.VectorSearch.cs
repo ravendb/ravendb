@@ -10,4 +10,7 @@ public partial class IndexSearcher
     {
         return new VectorSearchMatch(this, metadata, vectorValue, minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch);
     }
+
+    public MultiVectorSearchMatch MultiVectorSearch(in FieldMetadata metadata, in VectorValue[] vectorValues, float minimumMatch, in int numberOfCandidates, bool isExact,
+        bool isSingleVectorSearch) => new MultiVectorSearchMatch(this, metadata, vectorValues, minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch);
 }

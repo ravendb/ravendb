@@ -525,6 +525,13 @@ public static class QueryBuilderHelper
         return GetFieldMetadata(allocator, fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery: isForQuery, isSorting: true);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static FieldMetadata GetFieldMetadata(in CoraxQueryBuilder.Parameters parameters, string fieldName, bool isForQuery = true,
+        bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false)
+    {
+        return GetFieldMetadata(parameters.Allocator, fieldName, parameters.Index, parameters.IndexFieldsMapping, parameters.FieldsToFetch, parameters.HasDynamics, parameters.DynamicFields, isForQuery, exact, isSorting, hasBoost, handleSearch);
+    }
+    
     internal static FieldMetadata GetFieldMetadata(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping,
         FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
         bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false)

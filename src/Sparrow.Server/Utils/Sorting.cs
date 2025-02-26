@@ -7,10 +7,13 @@ namespace Sparrow.Server.Utils
 {
     internal static class Sorting
     {
-        public static int SortAndRemoveDuplicates<T, W>(Span<T> values, Span<W> items)
+        public static int SortAndRemoveDuplicates<T, W>(Span<T> valuesToDeduplicate, Span<W> itemsAssociated)
             where T : unmanaged, IBinaryNumber<T>
         {
-            values.Sort(items);
+            if (valuesToDeduplicate.Length <= 1)
+                return valuesToDeduplicate.Length;
+            
+            valuesToDeduplicate.Sort(itemsAssociated);
 
             // We need to fill in the gaps left by removing deduplication process.
             // If there are no duplicated the writes at the architecture level will execute
@@ -18,21 +21,21 @@ namespace Sparrow.Server.Utils
 
             int nextI = 0;
             int outputIdx = 0;
-            while (nextI < values.Length - 1)
+            while (nextI < valuesToDeduplicate.Length - 1)
             {
                 int i = nextI;
                 nextI++;
 
-                outputIdx += (values[nextI] != values[i]).ToInt32();
-                values[outputIdx] = values[nextI];
-                items[outputIdx] = items[nextI];
+                outputIdx += (valuesToDeduplicate[nextI] != valuesToDeduplicate[i]).ToInt32();
+                valuesToDeduplicate[outputIdx] = valuesToDeduplicate[nextI];
+                itemsAssociated[outputIdx] = itemsAssociated[nextI];
             }
 
             outputIdx++;
-            if (outputIdx != values.Length)
+            if (outputIdx != valuesToDeduplicate.Length)
             {
-                values[outputIdx] = values[^1];
-                items[outputIdx] = items[^1];
+                valuesToDeduplicate[outputIdx] = valuesToDeduplicate[^1];
+                itemsAssociated[outputIdx] = itemsAssociated[^1];
             }
 
             return outputIdx;

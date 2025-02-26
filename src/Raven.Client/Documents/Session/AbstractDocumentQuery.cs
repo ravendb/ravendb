@@ -1525,10 +1525,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var etlConfigName = fieldFactoryAccessor.EtlConfigName;
             
             var text = fieldValueFactoryAccessor.Text;
+            var texts = fieldValueFactoryAccessor.Texts;
             var embedding = fieldValueFactoryAccessor.Embedding;
-            var base64Embedding = fieldValueFactoryAccessor.Base64Embedding;
 
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, embedding, base64Embedding, etlConfigName);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embedding, etlConfigName);
         }
         
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
@@ -1540,20 +1540,23 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var etlConfigName = embeddingFieldFactory.EtlConfigName;
             
             var text = embeddingValueFactory.Text;
+            var texts = embeddingValueFactory.Texts;
             var embedding = embeddingValueFactory.Embedding;
-            var base64Embedding = embeddingValueFactory.Base64Embedding;
             
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, embedding, base64Embedding, etlConfigName);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embedding, etlConfigName);
         }
         
         private void VectorSearch(string fieldName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? minimumSimilarity,
-            int? numberOfCandidates, bool isExact, string text, object embedding, string base64Embedding, string etlConfigName = null)
+            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embedding, string etlConfigName = null)
         {
             string queryParameterName;
             
             if (text != null)
                 queryParameterName = AddQueryParameter(text);
-            
+            else if (texts != null)
+            {
+                queryParameterName = AddQueryParameter(texts);
+            }
             else if (embedding != null)
             {
                 // for well-known types we can convert the array into Base64
@@ -1575,7 +1578,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
             else
             {
-                queryParameterName = AddQueryParameter(base64Embedding);
+                throw new InvalidOperationException("Cannot use VectorSearch without text(s) or embedding(s).");
             }
             
             var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, etlConfigName);
