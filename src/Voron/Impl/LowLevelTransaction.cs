@@ -96,15 +96,18 @@ namespace Voron.Impl
 
         public event Action<LowLevelTransaction> LastChanceToReadFromWriteTransactionBeforeCommit;
 
-        public Size TransactionSize => new Size(NumberOfModifiedPages * Constants.Storage.PageSize, SizeUnit.Bytes) + AdditionalMemoryUsageSize;
+        public Size TransactionSize => new Size(NumberOfModifiedPages * Constants.Storage.PageSize, SizeUnit.Bytes) + new Size(TotalEncryptionBufferInBytes + DecompressedBufferBytes, SizeUnit.Bytes);
 
-        public Size AdditionalMemoryUsageSize
+        public long TotalAllocatedInBytes => _allocator._totalAllocated;
+
+        public long TotalEncryptionBufferInBytes
         {
             get
             {
+
+                var total = 0L;
+
                 var cryptoTransactionStates = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState;
-                
-                var total = DecompressedBufferBytes;
 
                 if (cryptoTransactionStates != null)
                 {
@@ -114,9 +117,18 @@ namespace Voron.Impl
                     }
                 }
 
-                return new Size(total, SizeUnit.Bytes);
+                return total;
             }
         }
+
+        public Size AdditionalMemoryUsageSize
+        {
+            get
+            {
+                return new Size(_allocator._totalAllocated + TotalEncryptionBufferInBytes, SizeUnit.Bytes);
+            }
+        }
+
         public event Action<IPagerLevelTransactionState> OnDispose;
         
         /// <summary>
