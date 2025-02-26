@@ -213,11 +213,11 @@ module.exports = {
 
             return {
                 JSXOpeningElement(node) {
-                    if (node.name?.name !== "Badge") return;
+                    if (node.name?.name !== "Badge") {return;}
 
                     let hasBg = false;
                     node.attributes.forEach(attr => {
-                        if (!attr || !attr.name || !attr.name.name) return;
+                        if (!attr || !attr.name || !attr.name.name) {return;}
                         const propName = attr.name.name;
 
                         if (propName === "bg" || propName === "color") {
@@ -319,5 +319,9 @@ module.exports = {
     "no-reactstrap-ListGroup": {
         meta: fixableMeta,
         create: (context) => createDeprecatedReactstrapImport({ context, name: "ListGroup" }),
+    },
+    "no-reactstrap-Accordion": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "UncontrolledAccordion", reactBootstrapName: "Accordion", canFix: false }),
     },
 };

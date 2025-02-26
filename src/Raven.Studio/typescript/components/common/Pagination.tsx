@@ -1,6 +1,6 @@
 import React from "react";
 import Pagination from "react-bootstrap/Pagination";
-import {  PaginationItem, PaginationLink } from "reactstrap";
+import { PaginationItem, PaginationLink } from "reactstrap";
 import "./Pagination.scss";
 import { Icon } from "components/common/Icon";
 import { withPreventDefault } from "components/utils/common";
