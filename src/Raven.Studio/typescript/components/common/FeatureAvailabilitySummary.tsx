@@ -3,7 +3,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { uniqueId } from "lodash";
 import { ReactNode } from "react";
-import { Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";

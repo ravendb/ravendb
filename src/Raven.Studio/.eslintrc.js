@@ -43,6 +43,7 @@ module.exports = {
     "local-rules/no-reactstrap-Alert": "warn",
     "local-rules/no-reactstrap-ListGroup": "warn",
     "local-rules/no-reactstrap-Accordion": "warn",
+    "local-rules/no-reactstrap-Table": "warn",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

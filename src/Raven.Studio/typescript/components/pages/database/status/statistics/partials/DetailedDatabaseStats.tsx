@@ -1,7 +1,8 @@
 ﻿import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
-import { Card, Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
+import { Card } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";

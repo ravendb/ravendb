@@ -3,7 +3,7 @@ import { virtualTableConstants } from "../utils/virtualTableConstants";
 import VirtualTableHead from "./VirtualTableHead";
 import { VirtualTableState } from "./VirtualTableState";
 import classNames from "classnames";
-import { Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
 import { Table as TanstackTable } from "@tanstack/react-table";
 import { ClassNameProps } from "../../../models/common";
 

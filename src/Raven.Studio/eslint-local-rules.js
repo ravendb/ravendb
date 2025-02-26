@@ -324,4 +324,8 @@ module.exports = {
         meta: fixableMeta,
         create: (context) => createDeprecatedReactstrapImport({ context, name: "UncontrolledAccordion", reactBootstrapName: "Accordion", canFix: false }),
     },
+    "no-reactstrap-Table": {
+        meta: fixableMeta,
+        create: (context) => createDeprecatedReactstrapImport({ context, name: "Table" }),
+    },
 };

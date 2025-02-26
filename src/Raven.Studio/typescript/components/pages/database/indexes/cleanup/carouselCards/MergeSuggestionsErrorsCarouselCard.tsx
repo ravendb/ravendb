@@ -7,7 +7,8 @@ import useBoolean from "components/hooks/useBoolean";
 import { MergeSuggestionsError } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { Card, Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
+import { Card } from "reactstrap";
 import Button from "react-bootstrap/Button";
 
 interface MergeSuggestionsErrorsCarouselCardProps {
