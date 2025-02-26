@@ -11,7 +11,9 @@ using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.VectorSearch;
@@ -61,7 +63,7 @@ public partial class AbstractStaticIndexBase
                 }
             }
 
-            indexField = currentIndexingScope.GetOrCreateVectorField(fieldName, isText);
+            indexField = currentIndexingScope.GetOrCreateVectorField(fieldName, null, isText);
 
             if (indexField.Id == Corax.Constants.IndexWriter.DynamicField)
             {
@@ -548,9 +550,9 @@ public partial class AbstractStaticIndexBase
         return value is null or DynamicNullObject or DynamicJsNull or JsNull;
     }
 
-    public static IndexField RetrieveLoadVectorField(string fieldName)
+    public static IndexField RetrieveLoadVectorField(string fieldName, EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier)
     {
-        var vectorField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
+        var vectorField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName,  embeddingsGenerationTaskIdentifier, false);
         if (vectorField.Id == Corax.Constants.IndexWriter.DynamicField)
         {
             var currentIndexingScope = CurrentIndexingScope.Current;
@@ -562,26 +564,28 @@ public partial class AbstractStaticIndexBase
         return vectorField;
     }
 
-    public object LoadVector(string fieldName, string etlTaskName, string path)
+    public object LoadVector(string fieldName, string embeddingGeneratorTaskName, string path)
     {
-        var vectorField = RetrieveLoadVectorField(fieldName);
-        var vectors =  LoadVector(vectorField, etlTaskName, path);
+        var embeddingsGenerationTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(embeddingGeneratorTaskName);
+        var vectorField = RetrieveLoadVectorField(fieldName, embeddingsGenerationTaskIdentifier);
+        
+        var vectors =  LoadVector(vectorField, embeddingGeneratorTaskName, path);
 
         return (vectorField.Id == Corax.Constants.IndexWriter.DynamicField)
             ? new CoraxDynamicItem() { FieldName = fieldName, Field = vectorField, Value = vectors }
             : vectors;
     }
     
-    public static object LoadVector(IndexField vectorField, string aiTaskName, string path)
+    public static object LoadVector(IndexField vectorField, string embeddingGeneratorTaskName, string path)
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
-        currentIndexingScope.Index.IndexFieldsPersistence.SetEmbeddingsGenerationTaskName(vectorField.Name, aiTaskName);
+        currentIndexingScope.Index.IndexFieldsPersistence.SetEmbeddingsGenerationTaskName(vectorField.Name, embeddingGeneratorTaskName);
         
         var relatedDocument = LoadVectorDocument(out var embeddingDocument) as DynamicBlittableJson;
         if (relatedDocument == null)
             return new object[]{VectorValue.Null};
         
-        if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, relatedDocument.BlittableJson, aiTaskName, out var aiResult))
+        if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, relatedDocument.BlittableJson, embeddingGeneratorTaskName, out var aiResult))
         {
             if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, (BlittableJsonReaderObject)aiResult, path, out var vectorValue))
             {

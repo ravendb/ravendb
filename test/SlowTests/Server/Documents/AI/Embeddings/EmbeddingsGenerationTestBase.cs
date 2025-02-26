@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using FastTests;
@@ -24,7 +25,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
     protected const string DefaultConnectionStringName = "Local AI connection";
     protected const string DefaultEmbeddingGenerationTaskName = "localAiTask";
     protected ByteStringContext _allocator;
-
+    protected readonly TimeSpan DefaultEtlTimeout = TimeSpan.FromSeconds(10);
     protected float[] GenerateEmbeddingForTextViaOnnx(string text)
     {
         _allocator ??= new(SharedMultipleUseFlag.None);

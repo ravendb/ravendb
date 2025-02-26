@@ -146,15 +146,26 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                         case VectorEmbeddingType.Single:
                             foreach (var embeddingItem in embeddingsMap[key])
                             {
+                                Debug.Assert(embeddingItem.OutputValue is ReadOnlyMemory<float>, "embeddingItem.OutputValue is ReadOnlyMemory<float>");
                                 embeddingItem.OutputValue = embedding;
-                                embeddingItem.UsedBytes = embedding.Length;
+                                embeddingItem.UsedBytes = embedding.Length * sizeof(float);
                             }
                             break;
                         case VectorEmbeddingType.Int8:
                             foreach (var embeddingItem in embeddingsMap[key])
                             {
                                 var dest = MemoryMarshal.Cast<float, sbyte>(embedding.Span);
-                                VectorQuantizer.TryToInt8(embedding.Span, dest, out int usedBytes);
+                                if (VectorQuantizer.TryToInt8(embedding.Span, dest, out int usedBytes) == false)
+                                {
+                                    var newMemory = new ReadOnlyMemory<float>(new float[embedding.Length + 1]);
+                                    var span = MemoryMarshal.Cast<float, sbyte>(newMemory.Span);
+                                    var result = VectorQuantizer.TryToInt8(embedding.Span, span, out usedBytes);
+                                    Debug.Assert(result, "TryToInt8 should always return true");
+                                    embeddingItem.OutputValue = newMemory;
+                                    embeddingItem.UsedBytes = usedBytes;
+                                    break;
+                                }
+                                
                                 embeddingItem.OutputValue = embedding;
                                 embeddingItem.UsedBytes = usedBytes;
                             }

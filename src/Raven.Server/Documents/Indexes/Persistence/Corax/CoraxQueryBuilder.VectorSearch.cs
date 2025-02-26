@@ -6,6 +6,7 @@ using Corax.Querying.Matches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -33,64 +34,67 @@ public static partial class CoraxQueryBuilder
             : metadata.GetVectorFieldName(me, builderParameters.QueryParameters);
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters, fieldName, hasBoost: builderParameters.HasBoost);
-        VectorOptions vectorOptions = VectorHelpers.GetOptions(builderParameters, fieldName, out var indexField);
         object transformedEmbeddings = null;
-        bool skipDimensionCheck = false;
+        IndexField indexField = null;
 
+        
         if (builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out var embeddingsGenerationTaskIdentifier))
         {
-            skipDimensionCheck = true;
             VectorHelpers.ReadEmbeddingFromEmbeddingsGenerationTask(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, out transformedEmbeddings);
-        }
-        else if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Text)
-        {
-            transformedEmbeddings = VectorHelpers.GetVectorValueForTextualInput(builderParameters, vectorOptions, valueType, value);
         }
         else
         {
-            switch (value)
+            VectorOptions vectorOptions = VectorHelpers.GetOptions(builderParameters, fieldName, out indexField);
+            if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Text)
             {
-                case string s:
-                    transformedEmbeddings = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, s);
-                    break;
-                case StringSegment stringSegment:
-                    transformedEmbeddings = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, stringSegment.ToString());
-                    break;
-                case BlittableJsonReaderObject bjro:
-                    transformedEmbeddings = VectorHelpers.GetVectorValueFromRavenVector(builderParameters, bjro, vectorOptions);
-                    break;
-                case BlittableJsonReaderArray { Length: > 0 } bjra:
+                transformedEmbeddings = VectorHelpers.GetVectorValueForTextualInput(builderParameters, vectorOptions, valueType, value);
+            }
+            else
+            {
+                switch (value)
                 {
-                    var isRavenVector = bjra[0] is BlittableJsonReaderObject;
-                    var isStringArray = bjra[0] is string or StringSegment or LazyStringValue;
-                    var isArray = bjra[0] is BlittableJsonReaderArray;
+                    case string s:
+                        transformedEmbeddings = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, s);
+                        break;
+                    case StringSegment stringSegment:
+                        transformedEmbeddings = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, stringSegment.ToString());
+                        break;
+                    case BlittableJsonReaderObject bjro:
+                        transformedEmbeddings = VectorHelpers.GetVectorValueFromRavenVector(builderParameters, bjro, vectorOptions);
+                        break;
+                    case BlittableJsonReaderArray { Length: > 0 } bjra:
+                    {
+                        var isRavenVector = bjra[0] is BlittableJsonReaderObject;
+                        var isStringArray = bjra[0] is string or StringSegment or LazyStringValue;
+                        var isArray = bjra[0] is BlittableJsonReaderArray;
 
-                    if (isRavenVector == false && isStringArray == false && isArray == false)
-                    {
-                        transformedEmbeddings = VectorHelpers.GetVectorValueFromNumericalBlittableArray(builderParameters, bjra, vectorOptions);
-                    }
-                    else
-                    {
-                        var embeddings = new VectorValue[bjra.Length];
-                        for (int i = 0; i < bjra.Length; ++i)
+                        if (isRavenVector == false && isStringArray == false && isArray == false)
                         {
-                            if (isRavenVector)
-                                embeddings[i] = VectorHelpers.GetVectorValueFromRavenVector(builderParameters, (BlittableJsonReaderObject)bjra[i], vectorOptions);
-                            else if (isStringArray)
-                                embeddings[i] = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, bjra[i].ToString());
-                            else
-                                embeddings[i] = VectorHelpers.GetVectorValueFromNumericalBlittableArray(builderParameters, (BlittableJsonReaderArray)bjra[i],
-                                    vectorOptions);
+                            transformedEmbeddings = VectorHelpers.GetVectorValueFromNumericalBlittableArray(builderParameters, bjra, vectorOptions);
+                        }
+                        else
+                        {
+                            var embeddings = new VectorValue[bjra.Length];
+                            for (int i = 0; i < bjra.Length; ++i)
+                            {
+                                if (isRavenVector)
+                                    embeddings[i] = VectorHelpers.GetVectorValueFromRavenVector(builderParameters, (BlittableJsonReaderObject)bjra[i], vectorOptions);
+                                else if (isStringArray)
+                                    embeddings[i] = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, bjra[i].ToString());
+                                else
+                                    embeddings[i] = VectorHelpers.GetVectorValueFromNumericalBlittableArray(builderParameters, (BlittableJsonReaderArray)bjra[i],
+                                        vectorOptions);
+                            }
+
+                            transformedEmbeddings = embeddings;
                         }
 
-                        transformedEmbeddings = embeddings;
+                        break;
                     }
-
-                    break;
+                    default:
+                        PortableExceptions.Throw<InvalidDataException>("We expected to get vector(s), however got: " + value.GetType().Name);
+                        break;
                 }
-                default:
-                    PortableExceptions.Throw<InvalidDataException>("We expected to get vector(s), however got: " + value.GetType().Name);
-                    break;
             }
         }
 
@@ -128,12 +132,14 @@ public static partial class CoraxQueryBuilder
         switch (transformedEmbeddings)
         {
             case VectorValue singleVector:
-                AssertDimensions(singleVector, skipDimensionCheck);
+                if (indexField != null)
+                    AssertDimensions(singleVector);
+                
                 return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, singleVector, minimumMatch, numberOfCandidates, exact,
                     builderParameters.IsVectorSingleClause);
             case VectorValue[] multiVector:
             {
-                if (skipDimensionCheck == false)
+                if (indexField != null)
                 {
                     foreach (var vector in multiVector)
                         AssertDimensions(vector);
@@ -146,9 +152,9 @@ public static partial class CoraxQueryBuilder
 
         throw new InvalidDataException("Expected a VectorValue(s), but got: " + transformedEmbeddings.GetType().Name);
 
-        void AssertDimensions(in VectorValue vector, bool skip = false)
+        void AssertDimensions(in VectorValue vector)
         {
-            if (numberOfDimensions != vector.Length && skip == false)
+            if (numberOfDimensions != vector.Length)
             {
                 using (vector)
                     VectorHelpers.ThrowDifferentNumberOfDimensions(indexField, fieldName, vector, numberOfDimensions);
@@ -261,7 +267,6 @@ public static partial class CoraxQueryBuilder
         {
             var database = builderParameters.Index.DocumentDatabase;
 
-            var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
             var valueAsString = valueType switch
             {
@@ -269,16 +274,19 @@ public static partial class CoraxQueryBuilder
                 _ => throw new NotSupportedException("Vector.Search() on " + valueType)
             };
 
+            var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
             var connectionStringId = database.AiIntegrations.GetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId); // TODO michal
-
+            var embeddingsGenerationConfiguration = database.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsTaskId);
+            
+            
             transformedEmbedding = database.AiIntegrations.Embeddings
-                .GetEmbeddingForQueryAsync(builderParameters.DocumentsContext, connectionStringId, valueAsString, GenerateEmbeddings.F32Size)
+                .GetEmbeddingForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsGenerationConfiguration.TargetQuantizationType, valueAsString)
                 .GetAwaiter().GetResult();
         }
 
         private static bool TryGetEmbeddingFromCache(Parameters builderParameters, DocumentsOperationContext documentContext, ByteStringContext embeddingContext,
             string valueAsString,
-            AiConnectionStringIdentifier aiConnectionStringIdentifier, out object transformedEmbedding)
+            AiConnectionStringIdentifier aiConnectionStringIdentifier, EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier, out object transformedEmbedding)
         {
             transformedEmbedding = null;
             var hash = EmbeddingsHelper.CalculateInputValueHash(valueAsString);
@@ -295,10 +303,12 @@ public static partial class CoraxQueryBuilder
                         var attachment = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachment(documentContext, id,
                             attachmentName, AttachmentType.Document, null);
 
-                        var memScope = embeddingContext.Allocate((int)attachment.Size, out Memory<byte> memory);
+                        var configuration = builderParameters.Index.DocumentDatabase.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier);
 
+                        var bytesRequired = (int)attachment.Size;
+                        var memScope = embeddingContext.Allocate(bytesRequired, out Memory<byte> memory);
                         attachment.Stream.ReadExactly(memory.Span);
-                        transformedEmbedding = new VectorValue(memScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Single);
+                        transformedEmbedding = GenerateEmbeddings.Quantize(embeddingContext, configuration.TargetQuantizationType, memScope, memory, bytesRequired);
 
                         return true;
                     }

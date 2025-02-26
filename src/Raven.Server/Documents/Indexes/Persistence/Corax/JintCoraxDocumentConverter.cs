@@ -11,6 +11,7 @@ using Jint.Runtime.Descriptors;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Corax;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -268,7 +269,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     PortableExceptions.ThrowIf<InvalidDataException>(loadVector.IsObject() == false);
                     var obj = loadVector.AsObject();
                     JsValue pathOfEmbeddingJsv = null;
-                    JsValue nameOfEtlJsv = null;
+                    JsValue nameofEmbeddingsGeneratorJsv = null;
                     if (obj.HasOwnProperty(JavaScriptFieldName.ValuePropertyName) == false 
                         || obj.TryGetValue(JavaScriptFieldName.ValuePropertyName, out pathOfEmbeddingJsv) == false)
                     {
@@ -276,19 +277,19 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     }
                     
                     if (obj.HasOwnProperty(JavaScriptFieldName.NamePropertyName) == false 
-                        || obj.TryGetValue(JavaScriptFieldName.NamePropertyName, out nameOfEtlJsv) == false)
+                        || obj.TryGetValue(JavaScriptFieldName.NamePropertyName, out nameofEmbeddingsGeneratorJsv) == false)
                     {
                         PortableExceptions.Throw<InvalidDataException>("Path field doesn't exist but is required.");
                     }
                     
                     PortableExceptions.ThrowIfNot<ArgumentException>(pathOfEmbeddingJsv.IsString(), $"'loadVector' requires a string value of the path to the vector.");
-                    PortableExceptions.ThrowIfNot<ArgumentException>(nameOfEtlJsv.IsString(), $"'loadVector' requires a string AI Task of the vector.");
+                    PortableExceptions.ThrowIfNot<ArgumentException>(nameofEmbeddingsGeneratorJsv.IsString(), $"'loadVector' requires a string AI Task of the vector.");
                     
-                    var etlName = nameOfEtlJsv.AsString();
+                    var embeddingGeneratorName = nameofEmbeddingsGeneratorJsv.AsString();
                     var path = pathOfEmbeddingJsv.AsString();
                     
-                    var indexField = AbstractStaticIndexBase.RetrieveLoadVectorField(field.Name);
-                    object objectForIndexing = AbstractStaticIndexBase.LoadVector(indexField, etlName, path);
+                    var indexField = AbstractStaticIndexBase.RetrieveLoadVectorField(field.Name, new EmbeddingsGenerationTaskIdentifier(embeddingGeneratorName));
+                    object objectForIndexing = AbstractStaticIndexBase.LoadVector(indexField, embeddingGeneratorName, path);
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
                     shouldProcessAsBlittable = false;
                     return;

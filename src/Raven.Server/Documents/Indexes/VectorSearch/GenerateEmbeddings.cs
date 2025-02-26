@@ -88,7 +88,7 @@ public static class GenerateEmbeddings
         return FromArray(allocator, memScope, mem, options, bytesWritten);
     }
 
-    private static VectorValue Quantize(ByteStringContext allocator, in VectorEmbeddingType destinationFormat,
+    internal static VectorValue Quantize(ByteStringContext allocator, in VectorEmbeddingType destinationFormat,
         IDisposable memoryScope,
         Memory<byte> memory, int usedBytes)
     {

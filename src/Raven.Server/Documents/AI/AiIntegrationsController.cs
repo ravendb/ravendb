@@ -5,6 +5,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Extensions;
 #pragma warning disable SKEXP0001
@@ -17,12 +18,12 @@ public class AiIntegrationsController : IDisposable
     private readonly Dictionary<AiConnectionStringIdentifier, ITextEmbeddingGenerationService> _embeddingGeneratorsByConnectionStringIdentifier;
 
     private Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier> _connectionStringsByTasks;
-
+    private Dictionary<EmbeddingsGenerationTaskIdentifier, EmbeddingsGenerationConfiguration> _embeddingGeneratorsConfigurationByTasks;
     public AiIntegrationsController(DocumentDatabase database)
     {
         _embeddingGeneratorsByConnectionStringIdentifier = new();
         _embeddingGeneratorsByTaskIdentifier = new();
-
+        _embeddingGeneratorsConfigurationByTasks = new();
         _connectionStringsByTasks = new Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier>();
 
         var storage = new EmbeddingsStorage(database);
@@ -33,6 +34,11 @@ public class AiIntegrationsController : IDisposable
 
     public EmbeddingsController Embeddings { get; private set; }
 
+    public EmbeddingsGenerationConfiguration GetEmbeddingsGenerationConfiguration(EmbeddingsGenerationTaskIdentifier taskIdentifier)
+    {
+        return _embeddingGeneratorsConfigurationByTasks[taskIdentifier];
+    }
+    
     public AiConnectionStringIdentifier GetConnectionStringByEmbeddingsGenerationTask(EmbeddingsGenerationTaskIdentifier taskIdentifier)
     {
         return _connectionStringsByTasks[taskIdentifier];
@@ -70,6 +76,8 @@ public class AiIntegrationsController : IDisposable
             _embeddingGeneratorsByTaskIdentifier[aiIntegrationIdentifier] = service;
 
             _connectionStringsByTasks[aiIntegrationIdentifier] = connectionStringIdentifier;
+
+            _embeddingGeneratorsConfigurationByTasks[aiIntegrationIdentifier] = aiIntegrationConfiguration;
         }
 
 

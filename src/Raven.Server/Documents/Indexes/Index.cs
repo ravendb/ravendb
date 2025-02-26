@@ -26,6 +26,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -5260,25 +5261,44 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private IndexField GetOrAddVectorField(string name, bool isText)
+        private IndexField GetOrAddVectorField(string name, EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier, bool isText)
         {
             return _vectorFields.GetOrAdd(name, _ =>
             {
                 if (Definition.MapFields.TryGetValue(name, out var field) == false || field is IndexField { Vector: null })
                 {
-                    var isTextual = IsFieldTextualAndPersistConfigurationOnDisk();
+                    var isTextual = embeddingsGenerationTaskIdentifier == null && IsFieldTextualAndPersistConfigurationOnDisk();
                     return IndexField.Create(name, new IndexFieldOptions()
                         {
                             Vector = CreateVectorOptionsBasedOnConfiguration(isTextual)
                         }, null, Corax.Constants.IndexWriter.DynamicField);
                 }
-                
-                return field switch
+
+                switch (field)
                 {
-                    AutoIndexField => throw new InvalidOperationException($"{nameof(AutoIndexField)} should be created via AutoIndex builder. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values."),
-                    IndexField staticField => staticField,
-                    _ => throw new InvalidOperationException($"Unknown configuration error. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values.")
-                };
+                    case AutoIndexField:
+                        throw new InvalidOperationException(
+                            $"{nameof(AutoIndexField)} should be created via AutoIndex builder. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values.");
+                    case IndexField staticField:
+                    {
+                        if (embeddingsGenerationTaskIdentifier != null)
+                        {
+                            var configuration = DocumentDatabase.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier);
+
+                            var formatIsMatching = configuration.TargetQuantizationType == VectorEmbeddingType.Single || 
+                                                   (staticField.Vector.SourceEmbeddingType == configuration.TargetQuantizationType ||
+                                                    staticField.Vector.DestinationEmbeddingType == configuration.TargetQuantizationType);
+
+                            PortableExceptions.ThrowIfNot<InvalidOperationException>(formatIsMatching,
+                                $"Embeddings generator is generating vectors in {configuration.TargetQuantizationType} format, but the field '{name}' is configured to use Source: {staticField.Vector.SourceEmbeddingType} Destination: {staticField.Vector.DestinationEmbeddingType} format.");
+                        }
+
+                        return staticField;
+                    }
+                    default:
+                        throw new InvalidOperationException(
+                            $"Unknown configuration error. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values.");
+                }
             });
 
             bool IsFieldTextualAndPersistConfigurationOnDisk()
@@ -5304,7 +5324,19 @@ namespace Raven.Server.Documents.Indexes
             VectorOptions CreateVectorOptionsBasedOnConfiguration(bool isTextualValue)
             {
                 VectorOptions vectorOptions;
-                if (isTextualValue)
+                if (embeddingsGenerationTaskIdentifier != null)
+                {
+                    var configuration = DocumentDatabase.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier);
+                    vectorOptions = new VectorOptions()
+                    {
+                        SourceEmbeddingType = configuration.TargetQuantizationType,
+                        DestinationEmbeddingType = configuration.TargetQuantizationType,
+                        Dimensions = VectorOptions.Default.Dimensions,                         
+                        NumberOfEdges = Configuration.CoraxVectorDefaultNumberOfEdges,
+                        NumberOfCandidatesForIndexing = Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                    };
+                }
+                else if (isTextualValue)
                 {
                     vectorOptions =  new VectorOptions()
                     {
