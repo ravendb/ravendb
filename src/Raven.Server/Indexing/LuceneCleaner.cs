@@ -70,7 +70,7 @@ public class LuceneCleaner : ILowMemoryHandler
         if (sp != null && sp.ElapsedMilliseconds > 100)
         {
             Logger.Info($"Purged Lucene caches, took: {sp.ElapsedMilliseconds}ms, " +
-                        $"cleaned: {new Size(NativeMemory.TotalLuceneUnmanagedAllocationsForSorting - unmanagedUsedBeforeInBytes, SizeUnit.Bytes)}");
+                        $"cleaned: {new Size(unmanagedUsedBeforeInBytes - NativeMemory.TotalLuceneUnmanagedAllocationsForSorting, SizeUnit.Bytes)}");
         }
     }
 
