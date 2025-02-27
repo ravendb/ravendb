@@ -78,6 +78,37 @@ public static class GenerateEmbeddings
                 return Quantize(allocator, options.DestinationEmbeddingType, memoryScope, memory, usedBytes);
         }
     }
+    
+    public static VectorValue FromArray(ByteStringContext allocator, ReadOnlyMemory<float> readOnlyMemory, in VectorOptions options)
+    {
+        var embeddingSourceType = options.SourceEmbeddingType;
+        var embeddingDestinationType = options.DestinationEmbeddingType;
+        
+        var usedBytes = embeddingDestinationType switch
+        {
+            VectorEmbeddingType.Single => readOnlyMemory.Length * sizeof(float),
+            VectorEmbeddingType.Int8 => readOnlyMemory.Length + sizeof(float),
+            VectorEmbeddingType.Binary => readOnlyMemory.Length,
+            _ => throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}")
+        };
+        
+        var memoryScope = allocator.Allocate(usedBytes, out Memory<byte> memory);
+        MemoryMarshal.AsBytes(readOnlyMemory.Span).CopyTo(memory.Span);
+        
+        switch (embeddingSourceType)
+        {
+            case VectorEmbeddingType.Binary:
+                PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != embeddingSourceType);
+                return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Binary, usedBytes);
+            case VectorEmbeddingType.Int8:
+                PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != embeddingSourceType);
+                return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Int8, usedBytes);
+            case VectorEmbeddingType.Single when embeddingDestinationType is VectorEmbeddingType.Single:
+                return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Single, usedBytes);
+            default:
+                return Quantize(allocator, options.DestinationEmbeddingType, memoryScope, memory, usedBytes);
+        }
+    }
 
     public static VectorValue FromBase64Array(in VectorOptions options, ByteStringContext allocator, string base64, bool isAutoIndex = false)
     {

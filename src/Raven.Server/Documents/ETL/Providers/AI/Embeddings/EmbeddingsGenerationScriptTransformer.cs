@@ -144,53 +144,9 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
                 var textualValues = new List<string>();
                 CollectEmbeddingValues(ref textualValues, value);
                 
-#pragma warning disable SKEXP0050
-                var maxTokensPerChunk = pathConfiguration.ChunkingOptions.MaxTokensPerChunk;
-                List<string> chunkedValues;
-                switch (pathConfiguration.ChunkingOptions.ChunkingMethod)
-                {
-                    case ChunkingMethod.PlainTextSplitLines:
-                        foreach (var textualValue in textualValues)
-                        {
-                            chunkedValues = TextChunker.SplitPlainTextLines(textualValue, maxTokensPerChunk);
-                            foreach (var chunkedValue in chunkedValues)
-                                embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = chunkedValue });
-                        }
-                        break;
-                    case ChunkingMethod.PlainTextSplitParagraphs:
-                        chunkedValues = TextChunker.SplitPlainTextParagraphs(textualValues, maxTokensPerChunk);
-                        foreach (var chunkedValue in chunkedValues)
-                            embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = chunkedValue });
-                        break;
-                    case ChunkingMethod.MarkDownSplitLines:
-                        foreach (var textualValue in textualValues)
-                        {
-                            chunkedValues = TextChunker.SplitMarkDownLines(textualValue, maxTokensPerChunk);
-                            foreach (var chunkedValue in chunkedValues)
-                                embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = chunkedValue });
-                        }
-                        break;
-                    case ChunkingMethod.MarkDownSplitParagraphs:
-                        chunkedValues = TextChunker.SplitMarkdownParagraphs(textualValues, maxTokensPerChunk);
-                        foreach (var chunkedValue in chunkedValues)
-                            embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = chunkedValue });
-                        break;
-                    case ChunkingMethod.HtmlStrip:
-                        foreach (var textualValue in textualValues)
-                            embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = StripHtml(textualValue)});
-                        break;
-                    case ChunkingMethod.HtmlSplitLines:
-                        foreach (var textualValue in textualValues)
-                        {
-                            chunkedValues = TextChunker.SplitPlainTextLines(textualValue, maxTokensPerChunk);
-                            foreach (var chunkedValue in chunkedValues)
-                                embeddingValues.Add(new EmbeddingGenerationItem(){ InputValue = StripHtml(chunkedValue) });
-                        }
-                        break;
-                    default:
-                        throw new ArgumentException($"Unrecognized chunking method - {pathConfiguration.ChunkingOptions.ChunkingMethod}");
-                }
-#pragma warning restore SKEXP0050
+                var x = Documents.AI.TextChunker.ChunkValues(textualValues, pathConfiguration.ChunkingOptions);
+
+                embeddingValues = x.Select(y => new EmbeddingGenerationItem() { InputValue = y }).ToList();
             }
 
             _currentRun.Additions.Add(aiEtlEmbeddingItem);

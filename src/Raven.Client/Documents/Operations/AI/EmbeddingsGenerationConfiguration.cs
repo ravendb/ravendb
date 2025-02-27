@@ -30,6 +30,8 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
     public EmbeddingsTransformation EmbeddingsTransformation { get; set; }
     
     public VectorEmbeddingType TargetQuantizationType { get; set; }
+    
+    public ChunkingOptions ChunkingOptionsForQuerying { get; set; }
 
     private List<Transformation> _transforms;
 
@@ -96,6 +98,9 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         if (TargetQuantizationType == VectorEmbeddingType.Text)
             errors.Add($"{nameof(TargetQuantizationType)} cannot be {nameof(VectorEmbeddingType.Text)}");
 
+        if (ChunkingOptionsForQuerying.MaxTokensPerChunk <= 0)
+            errors.Add($"{nameof(ChunkingOptionsForQuerying.MaxTokensPerChunk)} must be greater than 0");
+
         return errors.Count == 0;
     }
 
@@ -136,6 +141,7 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         } : null;
         json[nameof(AiConnectorType)] = AiConnectorType;
         json[nameof(TargetQuantizationType)] = TargetQuantizationType;
+        json[nameof(ChunkingOptionsForQuerying)] = ChunkingOptionsForQuerying;
 
         return json;
     }

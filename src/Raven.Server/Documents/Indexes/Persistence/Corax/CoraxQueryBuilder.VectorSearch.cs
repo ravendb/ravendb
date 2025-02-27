@@ -37,7 +37,6 @@ public static partial class CoraxQueryBuilder
         object transformedEmbeddings = null;
         IndexField indexField = null;
 
-        
         if (builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out var embeddingsGenerationTaskIdentifier))
         {
             VectorHelpers.ReadEmbeddingFromEmbeddingsGenerationTask(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, out transformedEmbeddings);
@@ -262,12 +261,11 @@ public static partial class CoraxQueryBuilder
         }
 
         internal static void ReadEmbeddingFromEmbeddingsGenerationTask(Parameters builderParameters, ValueTokenType valueType, object value,
-            string embeddingsGenerationTaskIdentifier,
+            string embeddingsGenerationTaskIdentifier, VectorOptions vectorOptions,
             out object transformedEmbedding)
         {
             var database = builderParameters.Index.DocumentDatabase;
-
-
+            
             var valueAsString = valueType switch
             {
                 ValueTokenType.String => value.ToString(),
@@ -280,7 +278,7 @@ public static partial class CoraxQueryBuilder
                 PortableExceptions.Throw<InvalidDataException>($"Cannot find embeddings generation configuration for {embeddingsTaskId.Value}.");            
             
             transformedEmbedding = database.AiIntegrations.Embeddings
-                .GetEmbeddingForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsGenerationConfiguration.TargetQuantizationType, valueAsString)
+                .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsTaskId, valueAsString, vectorOptions)
                 .GetAwaiter().GetResult();
         }
 
@@ -305,7 +303,7 @@ public static partial class CoraxQueryBuilder
                         var attachment = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachment(documentContext, id,
                             attachmentName, AttachmentType.Document, null);
 
-
+                        var configuration = builderParameters.Index.DocumentDatabase.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier);
 
                         var bytesRequired = (int)attachment.Size;
                         var memScope = embeddingContext.Allocate(bytesRequired, out Memory<byte> memory);

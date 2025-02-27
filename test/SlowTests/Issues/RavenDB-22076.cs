@@ -642,7 +642,7 @@ public class RavenDB_22076 : RavenTestBase
 
             etlDone.Wait(TimeSpan.FromSeconds(10));
 
-            var index = new SomeIndex(aiTaskName);
+            var index = new SomeIndex();
             index.Execute(store);
             Indexes.WaitForIndexing(store);
             
@@ -661,6 +661,55 @@ public class RavenDB_22076 : RavenTestBase
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
                 Assert.NotNull(valueEmbeddingsDocument);
+            }
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestChunkingInQuery(Options options)
+    {
+        const string aiTaskName = "AiTaskName";
+        const string connectionStringName = "ConnectionStringName";
+        const string queriedText = "computer machine technology tech";
+        
+        using (var store = GetDocumentStore(options))
+        {
+            var dto1 = new Dto() { TextualValue = "computer" };
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto1);
+                session.SaveChanges();
+            }
+            
+            var configuration = new EmbeddingsGenerationConfiguration()
+            {
+                Name = aiTaskName,
+                AllowEtlOnNonEncryptedChannel = true,
+                ConnectionStringName = connectionStringName,
+                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 }}],
+                Collection = "Dtos",
+                ChunkingOptionsForQuerying = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 }
+            };
+            
+            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            Etl.AddEtl(store, configuration, connectionString);
+
+            etlDone.Wait(TimeSpan.FromSeconds(10));
+
+            var index = new SomeIndex();
+            index.Execute(store);
+            Indexes.WaitForIndexing(store);
+            
+            using (var session = store.OpenSession())
+            {
+                var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText)).ProjectInto<Dto>().ToList();
+
+                Assert.Single(result);
             }
         }
     }
@@ -787,16 +836,11 @@ public class RavenDB_22076 : RavenTestBase
         {
             public object TextualValueVector { get; set; }
         }
-
+        
         public SomeIndex()
         {
-            
-        }
-        
-        public SomeIndex(string aiTaskName)
-        {
             Map = dtos => from dto in dtos
-                select new IndexEntry { TextualValueVector = LoadVector(aiTaskName, "TextualValue") };
+                select new IndexEntry { TextualValueVector = LoadVector("aitaskname", "TextualValue") };
         }
     }
 }
