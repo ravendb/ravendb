@@ -162,8 +162,6 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestEmbeddingGenerationWhenQueryingStaticIndex(Options options)
     {
-        const string aiTaskName = "AiTaskName";
-        const string connectionStringName = "ConnectionStringName";
         const string queriedText = "fruit";
         
         using (var store = GetDocumentStore(options))
@@ -181,7 +179,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             var etlDone = Etl.WaitForEtlToComplete(store);
             
-            var (configuration, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
+            var (_, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
             
             etlDone.Wait(TimeSpan.FromSeconds(10));
             

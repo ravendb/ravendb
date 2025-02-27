@@ -85,7 +85,8 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         AiConnectionStringIdentifier connectionStringIdentifier,
         string path,
         string[] inputValues,
-        string docId)
+        string docId,
+        VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
     {
         using var session = store.OpenSession();
         session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
@@ -98,7 +99,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             //Assert if value is in embedding cache
             var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(inputValue);
             //todo maciej
-            var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, VectorEmbeddingType.Single);
+            var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, targetQuantization);
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
             Assert.NotNull(embeddingCacheDocument);
 

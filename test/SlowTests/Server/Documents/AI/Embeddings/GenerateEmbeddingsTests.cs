@@ -663,6 +663,7 @@ Console.WriteLine(""Hello, World!"");";
     public void TestQuantizationOfEmbeddingsInTask()
     {
         var dto = new Dto { Name = "CoolName" };
+        var targetQuantization = VectorEmbeddingType.Binary;
 
         using (var store = GetDocumentStore())
         {
@@ -674,17 +675,17 @@ Console.WriteLine(""Hello, World!"");";
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
                 var (configuration, connectionString) = RegisterAiIntegration(store,
-                    embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], targetQuantization: VectorEmbeddingType.Binary);
+                    embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], targetQuantization: targetQuantization);
 
                 aiTaskDone.Wait(TimeSpan.FromSeconds(20));
 
                 var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
                 var integrationIdentifier = new EmbeddingsGenerationTaskIdentifier(configuration.Identifier);
 
-                AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, "Name", [dto.Name], dto.Id);
+                AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, "Name", [dto.Name], dto.Id, targetQuantization: targetQuantization);
 
                 var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(dto.Name);
-                var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, VectorEmbeddingType.Binary);
+                var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, targetQuantization);
 
                 var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
                 Assert.NotNull(embeddingCacheDocument);
