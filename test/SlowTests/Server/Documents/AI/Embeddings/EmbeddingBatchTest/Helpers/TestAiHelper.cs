@@ -14,7 +14,6 @@ namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest.Helpers;
 
 public static class TestAiHelper
 {
-    // Создание сервиса-обертки с возможностью выбросить исключение
     public static ITextEmbeddingGenerationService CreateEmbeddingService(
         Exception exceptionToThrow = null)
     {
@@ -25,10 +24,9 @@ public static class TestAiHelper
 
         var realService = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId);
 
-        if (exceptionToThrow != null)
-            return new TestEmbeddingServiceWrapper(realService, exceptionToThrow);
-
-        return realService;
+        return exceptionToThrow != null
+            ? new TestEmbeddingServiceWrapper(realService, exceptionToThrow)
+            : realService;
     }
 
     public static ITextEmbeddingGenerationService CreateMockEmbeddingService(
