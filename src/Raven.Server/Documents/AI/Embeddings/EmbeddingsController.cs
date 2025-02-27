@@ -21,7 +21,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
     public async Task<VectorValue> GetEmbeddingForQueryAsync(DocumentsOperationContext documentsContext, AiConnectionStringIdentifier connectionStringId, Client.Documents.Indexes.Vector.VectorEmbeddingType targetQuantization, string value)
     {
-        if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, out var embeddingCacheDocumentId, out var toDoArek)) 
+        if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, targetQuantization, out var embeddingCacheDocumentId, out var toDoArek)) 
         {
             var valueHash = EmbeddingsHelper.CalculateInputValueHash(value);
 

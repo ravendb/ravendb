@@ -195,7 +195,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             var (config, connectionString) = RegisterAiIntegration(store);
             var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
 
-            var embeddingDocName = EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiConnectionStringIdentifier, EmbeddingsHelper.CalculateInputValueHash("Name1"));
+            var embeddingDocName = EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiConnectionStringIdentifier, EmbeddingsHelper.CalculateInputValueHash("Name1"), VectorEmbeddingType.Single);
 
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
@@ -685,7 +685,7 @@ Console.WriteLine(""Hello, World!"");";
                 AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, "Name", [dto.Name], dto.Id);
 
                 var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(dto.Name);
-                var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput);
+                var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, VectorEmbeddingType.Binary);
 
                 var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
                 Assert.NotNull(embeddingCacheDocument);

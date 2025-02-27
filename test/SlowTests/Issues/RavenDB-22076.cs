@@ -495,7 +495,7 @@ public class RavenDB_22076 : RavenTestBase
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
 
                 var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
-                var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash);
+                var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash, VectorEmbeddingType.Single);
                 
                 WaitForUserToContinueTheTest(store);
                 
@@ -656,7 +656,7 @@ public class RavenDB_22076 : RavenTestBase
                 WaitForUserToContinueTheTest(store);
                 
                 var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
-                var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash);
+                var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash, VectorEmbeddingType.Single);
                 
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 

@@ -276,8 +276,8 @@ public static partial class CoraxQueryBuilder
 
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
             var connectionStringId = database.AiIntegrations.GetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId); // TODO michal
-            var embeddingsGenerationConfiguration = database.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsTaskId);
-            
+            if (builderParameters.Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsTaskId, out var embeddingsGenerationConfiguration) == false)
+                PortableExceptions.Throw<InvalidDataException>($"Cannot find embeddings generation configuration for {embeddingsTaskId.Value}.");            
             
             transformedEmbedding = database.AiIntegrations.Embeddings
                 .GetEmbeddingForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsGenerationConfiguration.TargetQuantizationType, valueAsString)
@@ -289,8 +289,10 @@ public static partial class CoraxQueryBuilder
             AiConnectionStringIdentifier aiConnectionStringIdentifier, EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier, out object transformedEmbedding)
         {
             transformedEmbedding = null;
+            if (builderParameters.Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier, out var configuration) == false)
+                PortableExceptions.Throw<InvalidDataException>($"Cannot find embeddings generation configuration for {embeddingsGenerationTaskIdentifier.Value}.");
             var hash = EmbeddingsHelper.CalculateInputValueHash(valueAsString);
-            var id = EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiConnectionStringIdentifier, hash);
+            var id = EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiConnectionStringIdentifier, hash, configuration.TargetQuantizationType);
 
             using (documentContext.OpenReadTransaction())
             {
@@ -303,7 +305,7 @@ public static partial class CoraxQueryBuilder
                         var attachment = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachment(documentContext, id,
                             attachmentName, AttachmentType.Document, null);
 
-                        var configuration = builderParameters.Index.DocumentDatabase.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier);
+
 
                         var bytesRequired = (int)attachment.Size;
                         var memScope = embeddingContext.Allocate(bytesRequired, out Memory<byte> memory);

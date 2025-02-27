@@ -552,7 +552,7 @@ public partial class AbstractStaticIndexBase
 
     public static IndexField RetrieveLoadVectorField(string fieldName, EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier)
     {
-        var vectorField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName,  embeddingsGenerationTaskIdentifier, false);
+        var vectorField = CurrentIndexingScope.Current.GetLoadVectorField(fieldName,  embeddingsGenerationTaskIdentifier);
         if (vectorField.Id == Corax.Constants.IndexWriter.DynamicField)
         {
             var currentIndexingScope = CurrentIndexingScope.Current;

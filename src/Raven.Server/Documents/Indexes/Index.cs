@@ -5265,39 +5265,24 @@ namespace Raven.Server.Documents.Indexes
         {
             return _vectorFields.GetOrAdd(name, _ =>
             {
-                if (Definition.MapFields.TryGetValue(name, out var field) == false || field is IndexField { Vector: null })
+                
+
                 {
-                    var isTextual = embeddingsGenerationTaskIdentifier == null && IsFieldTextualAndPersistConfigurationOnDisk();
-                    return IndexField.Create(name, new IndexFieldOptions()
+                    if (Definition.MapFields.TryGetValue(name, out var field) == false || field is IndexField { Vector: null })
+                    {
+                        var isTextual = IsFieldTextualAndPersistConfigurationOnDisk();
+                        return IndexField.Create(name, new IndexFieldOptions()
                         {
                             Vector = CreateVectorOptionsBasedOnConfiguration(isTextual)
                         }, null, Corax.Constants.IndexWriter.DynamicField);
-                }
-
-                switch (field)
-                {
-                    case AutoIndexField:
-                        throw new InvalidOperationException(
-                            $"{nameof(AutoIndexField)} should be created via AutoIndex builder. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values.");
-                    case IndexField staticField:
-                    {
-                        if (embeddingsGenerationTaskIdentifier != null)
-                        {
-                            var configuration = DocumentDatabase.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier);
-
-                            var formatIsMatching = configuration.TargetQuantizationType == VectorEmbeddingType.Single || 
-                                                   (staticField.Vector.SourceEmbeddingType == configuration.TargetQuantizationType ||
-                                                    staticField.Vector.DestinationEmbeddingType == configuration.TargetQuantizationType);
-
-                            PortableExceptions.ThrowIfNot<InvalidOperationException>(formatIsMatching,
-                                $"Embeddings generator is generating vectors in {configuration.TargetQuantizationType} format, but the field '{name}' is configured to use Source: {staticField.Vector.SourceEmbeddingType} Destination: {staticField.Vector.DestinationEmbeddingType} format.");
-                        }
-
-                        return staticField;
                     }
-                    default:
-                        throw new InvalidOperationException(
-                            $"Unknown configuration error. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values.");
+                
+                    return field switch
+                    {
+                        AutoIndexField => throw new InvalidOperationException($"{nameof(AutoIndexField)} should be created via AutoIndex builder. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values."),
+                        IndexField staticField => staticField,
+                        _ => throw new InvalidOperationException($"Unknown configuration error. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values.")
+                    };
                 }
             });
 
@@ -5324,19 +5309,7 @@ namespace Raven.Server.Documents.Indexes
             VectorOptions CreateVectorOptionsBasedOnConfiguration(bool isTextualValue)
             {
                 VectorOptions vectorOptions;
-                if (embeddingsGenerationTaskIdentifier != null)
-                {
-                    var configuration = DocumentDatabase.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier);
-                    vectorOptions = new VectorOptions()
-                    {
-                        SourceEmbeddingType = configuration.TargetQuantizationType,
-                        DestinationEmbeddingType = configuration.TargetQuantizationType,
-                        Dimensions = VectorOptions.Default.Dimensions,                         
-                        NumberOfEdges = Configuration.CoraxVectorDefaultNumberOfEdges,
-                        NumberOfCandidatesForIndexing = Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
-                    };
-                }
-                else if (isTextualValue)
+                if (isTextualValue)
                 {
                     vectorOptions =  new VectorOptions()
                     {

@@ -8,8 +8,10 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Voron;
@@ -34,7 +36,89 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly Func<string, SpatialField> _getSpatialField;
         private readonly Func<string, EmbeddingsGenerationTaskIdentifier, bool, IndexField> _getVectorField;
 
+        private Dictionary<string, IndexField> _loadVectorFields;
 
+        public IndexField GetLoadVectorField(string fieldName, EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier)
+        {
+            _loadVectorFields ??= new Dictionary<string, IndexField>(StringComparer.OrdinalIgnoreCase);
+            if (_loadVectorFields.TryGetValue(fieldName, out var field))
+                return field;
+            
+            if (embeddingsGenerationTaskIdentifier != null)
+            {
+                var taskExists = Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier,
+                        out var taskConfiguration);
+                var fieldExists = Index.Definition.MapFields.TryGetValue(fieldName, out var mapField);
+                var fieldHasVector = fieldExists && mapField is IndexField { Vector: not null };
+                switch (TaskExists: taskExists, FieldExists: fieldExists, fieldHasVector: fieldHasVector)
+                {
+                    case (TaskExists: true, FieldExists: true, fieldHasVector: true):
+                    {
+                        field = (IndexField)mapField;
+                        var fieldHasCorrectConfiguration = true;
+                        if (taskConfiguration.TargetQuantizationType is VectorEmbeddingType.Single)
+                            fieldHasCorrectConfiguration &= field!.Vector.SourceEmbeddingType is VectorEmbeddingType.Single;
+                        else
+                            fieldHasCorrectConfiguration &= field!.Vector.SourceEmbeddingType == taskConfiguration.TargetQuantizationType
+                                                            && field.Vector.DestinationEmbeddingType == taskConfiguration.TargetQuantizationType;
+
+                        PortableExceptions.ThrowIfNot<InvalidOperationException>(fieldHasCorrectConfiguration,
+                            $"Not matching types in VectorOptions for field {fieldName}.");
+                        break;
+                    }
+                    case (TaskExists: true, FieldExists: true, fieldHasVector: false):
+                    {
+                        field =  IndexField.Create(fieldName,
+                            new IndexFieldOptions()
+                            {
+                                Vector = new VectorOptions()
+                                {
+                                    SourceEmbeddingType = taskConfiguration.TargetQuantizationType,
+                                    DestinationEmbeddingType = taskConfiguration.TargetQuantizationType,
+                                    Dimensions = VectorOptions.DefaultText.Dimensions,
+                                    NumberOfEdges = Index.Configuration.CoraxVectorDefaultNumberOfEdges,
+                                    NumberOfCandidatesForIndexing = Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                                }
+                            }, null, Corax.Constants.IndexWriter.DynamicField);
+                        break;
+                    }
+                    case (TaskExists: false, FieldExists: false, fieldHasVector: _):
+                    {
+                        // We need to return something. Since the ETL doesn't exist and the field is not defined, we should only index nulls.
+                        // Register blank dynamic field
+                        field = IndexField.Create(fieldName, null, null, Corax.Constants.IndexWriter.DynamicField);
+                        break;
+                    }
+                    case (TaskExists: true, FieldExists: false, fieldHasVector: _):
+                    {
+                        field =  IndexField.Create(fieldName,
+                            new IndexFieldOptions()
+                            {
+                                Vector = new VectorOptions()
+                                {
+                                    SourceEmbeddingType = taskConfiguration.TargetQuantizationType,
+                                    DestinationEmbeddingType = taskConfiguration.TargetQuantizationType,
+                                    Dimensions = VectorOptions.DefaultText.Dimensions,
+                                    NumberOfEdges = Index.Configuration.CoraxVectorDefaultNumberOfEdges,
+                                    NumberOfCandidatesForIndexing = Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                                }
+                            }, null, Corax.Constants.IndexWriter.DynamicField);
+                        
+                        break;
+                    }
+                    case (TaskExists: false, FieldExists: true, _):
+                    {
+                        field = (IndexField)mapField;
+                        break;
+                    }
+                    default: throw new InvalidOperationException();
+                }
+            }
+
+            return field;
+        }
+        
+        
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollection;
 

@@ -93,7 +93,8 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         {
             //Assert if value is in embedding cache
             var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(inputValue);
-            var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput);
+            //todo maciej
+            var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, VectorEmbeddingType.Single);
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
             Assert.NotNull(embeddingCacheDocument);
 

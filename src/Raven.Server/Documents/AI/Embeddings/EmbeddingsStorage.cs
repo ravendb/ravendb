@@ -44,10 +44,10 @@ public class EmbeddingsStorage
         return document;
     }
 
-    public bool TryGetEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, string value,
+    public bool TryGetEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, string value, in VectorEmbeddingType targetQuantization,
         out string embeddingCacheDocumentId, out EmbeddingCacheDocument result)
     {
-        embeddingCacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, "TODO arek");
+        embeddingCacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, "TODO arek", targetQuantization);
         
         return TryGetEmbeddingCacheDocument(context, embeddingCacheDocumentId, out result);
     }
@@ -91,6 +91,7 @@ public class EmbeddingsStorage
         {
             var embeddingSpan = MemoryMarshal.Cast<float, byte>(embeddingValue.Span)[..usedBytes];
             
+            // TODO: Implement a Stream wrapper around ReadOnlyMemory<float> and usedBytes to avoid cloning memory and unnecessary allocations.
             using (var stream = new MemoryStream(embeddingSpan.ToArray()))
             {
                 var hash = AttachmentsStorageHelper.CalculateHash(MemoryMarshal.Cast<float, byte>(embeddingValue.Span));
@@ -113,10 +114,9 @@ public class EmbeddingsStorage
             }
         };
     }
-    public bool ExistsEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, EmbeddingGenerationItem value)
+    public bool ExistsEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, EmbeddingGenerationItem value, in VectorEmbeddingType targetQuantization)
     {
-        value.EmbeddingCacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, value.InputValueHash);
-
+        value.EmbeddingCacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, value.InputValueHash, targetQuantization);
         using var document = _documentsStorage.Get(context, value.EmbeddingCacheDocumentId);
 
         return document != null;

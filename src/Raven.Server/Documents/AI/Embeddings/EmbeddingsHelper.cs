@@ -46,8 +46,16 @@ public static class EmbeddingsHelper
         return $"{embeddingsGenerationTaskIdentifier.Value}_{path}_";
     }
 
-    public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier aiConnectionStringIdentifier, string hash)
+    public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier aiConnectionStringIdentifier, string hash, in Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType targetQuantization)
     {
-        return $"embeddings-cache/{aiConnectionStringIdentifier.Value}/{hash}";
+        var suffix = targetQuantization switch
+        {
+            Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Single => string.Empty,
+            Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Int8 => "/int8",
+            Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Binary => "/binary",
+            _ => throw new ArgumentException($"Unknown quantization type '{targetQuantization}'")
+        };
+        
+        return $"embeddings-cache/{aiConnectionStringIdentifier.Value}/{hash}{suffix}";
     }
 }

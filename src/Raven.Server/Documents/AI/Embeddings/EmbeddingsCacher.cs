@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Background;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -84,7 +85,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
                 {
                     var hash = AttachmentsStorageHelper.CalculateHash(MemoryMarshal.Cast<float, byte>(item.EmbeddingValue.Span));
 
-                    var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(item.ConnectionStringIdentifier, hash);
+                    var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(item.ConnectionStringIdentifier, hash, item.Quantization);
 
                     var valueEmbeddingsDocumentJsonDjv = EmbeddingsStorage.CreateEmbeddingCacheDocument(operationStartDate);
 
@@ -118,5 +119,6 @@ public class EmbeddingsCacher : BackgroundWorkBase
         public string TextualValue;
         // Name of the connection string used for embedding generation 
         public AiConnectionStringIdentifier ConnectionStringIdentifier;
+        public VectorEmbeddingType Quantization;
     }
 }

@@ -76,6 +76,46 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }
     }
     
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying | RavenTestCategory.Vector)]
+    public void QuantizedValuesInCacheAreSeparated()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Dto { Name = "car" });
+            session.SaveChanges();
+        }
+
+        var etl = Etl.WaitForEtlToComplete(store);
+        RegisterAiIntegration(embeddingsGenerationTaskName: "secondEtl", store: store, embeddingsPaths: ["Name"], targetQuantization: VectorEmbeddingType.Single);
+        etl.Wait(DefaultEtlTimeout);
+        
+        etl.Reset();
+        RegisterAiIntegration(store, embeddingsPaths: ["Name"], targetQuantization: VectorEmbeddingType.Int8);
+        etl.Wait(DefaultEtlTimeout);
+        
+        
+        
+        new Index().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            
+            QueryTimings timings = null;
+            var results = session.Query<Dto, Index>()
+                .Customize(x => x.Timings(out timings))
+                .VectorSearch(f => f.WithField(s => s.Name), v => v.ByText("car"))
+                .ToList();
+            Assert.Equal(1, results.Count);
+            Assert.NotNull(timings);
+            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan).Parameters["SimilarityMethod"];
+            Assert.Equal("CosineSimilarityI8", usedSimilarityMethod);
+        }
+        
+        WaitForUserToContinueTheTest(store);
+    }
+    
     private class Index : AbstractIndexCreationTask<Dto>
     {
         public Index()

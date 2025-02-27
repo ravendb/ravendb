@@ -5,9 +5,12 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Extensions;
+
 #pragma warning disable SKEXP0001
 
 namespace Raven.Server.Documents.AI;
@@ -19,6 +22,7 @@ public class AiIntegrationsController : IDisposable
 
     private Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier> _connectionStringsByTasks;
     private Dictionary<EmbeddingsGenerationTaskIdentifier, EmbeddingsGenerationConfiguration> _embeddingGeneratorsConfigurationByTasks;
+
     public AiIntegrationsController(DocumentDatabase database)
     {
         _embeddingGeneratorsByConnectionStringIdentifier = new();
@@ -34,11 +38,11 @@ public class AiIntegrationsController : IDisposable
 
     public EmbeddingsController Embeddings { get; private set; }
 
-    public EmbeddingsGenerationConfiguration GetEmbeddingsGenerationConfiguration(EmbeddingsGenerationTaskIdentifier taskIdentifier)
+    public bool TryGetEmbeddingsGenerationConfiguration(EmbeddingsGenerationTaskIdentifier taskIdentifier, out EmbeddingsGenerationConfiguration configuration)
     {
-        return _embeddingGeneratorsConfigurationByTasks[taskIdentifier];
+        return _embeddingGeneratorsConfigurationByTasks.TryGetValue(taskIdentifier, out configuration);
     }
-    
+
     public AiConnectionStringIdentifier GetConnectionStringByEmbeddingsGenerationTask(EmbeddingsGenerationTaskIdentifier taskIdentifier)
     {
         return _connectionStringsByTasks[taskIdentifier];

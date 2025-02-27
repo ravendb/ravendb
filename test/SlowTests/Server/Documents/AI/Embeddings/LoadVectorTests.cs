@@ -52,7 +52,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
-
+WaitForUserToContinueTheTest(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);

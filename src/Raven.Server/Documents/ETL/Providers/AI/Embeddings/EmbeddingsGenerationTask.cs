@@ -97,7 +97,6 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
     protected override int LoadInternal(IEnumerable<EmbeddingGenerationScriptResult> items, DocumentsOperationContext context, AiIntegrationStatsScope scope)
     {
         _service ??= AiHelper.CreateService(Configuration);
-
         if (items is not EmbeddingsGenerationScriptRun embeddingsScriptRun)
         {
             Debug.Assert(items != null && items!.GetType()!.FullName!.StartsWith("System.Linq.EmptyPartition")
@@ -119,7 +118,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     {
                         var connectionStringIdentifier = new AiConnectionStringIdentifier(Configuration.Connection.Identifier);
 
-                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value) == false)
+                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value, Configuration.TargetQuantizationType) == false)
                             _missingEmbeddingsHolder.Add(value.InputValue, value);
                     }
                 }
