@@ -2,6 +2,7 @@
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
 import ongoingTaskAiTransformationModel = require("models/database/tasks/ongoingTaskAiTransformationModel");
 import TaskUtils = require("components/utils/TaskUtils");
+import TimeInSeconds = require("common/constants/timeInSeconds");
 
 class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
     identifier = ko.observable<string>();
@@ -15,6 +16,33 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
     enterTestModeValidationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
 
+    maxTokensPerChunk = ko.observable<number>();
+    maxTokensPerChunkDefaultValue: KnockoutObservable<number>;
+
+    chunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>("PlainTextSplitLines");
+    chunkingMethodOptions: valueAndLabelItem<Raven.Client.Documents.Operations.AI.ChunkingMethod, string>[] = [
+        { value: "PlainTextSplitLines", label: "Plain Text Split Lines" },
+        { value: "PlainTextSplitParagraphs", label: "Plain Text Split Paragraphs" },
+        { value: "MarkDownSplitLines", label: "Markdown Split Lines" },
+        { value: "MarkDownSplitParagraphs", label: "Markdown Split Paragraphs" },
+        { value: "HtmlSplitLines", label: "HTML Split Lines" },
+        { value: "HtmlStrip", label: "HTML Strip" },
+    ];
+    chunkingMethodLabel: KnockoutComputed<string>;
+
+    quantizationType = ko.observable<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>("Single");
+    quantizationTypeOptions: valueAndLabelItem<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType, string>[] = [
+        { value: "Single", label: "Single (no quantization)" },
+        { value: "Int8", label: "Int8" },
+        { value: "Binary", label: "Binary" }
+    ];
+    quantizationTypeLabel: KnockoutComputed<string>;
+
+    embeddingsCacheExpiration = ko.observable<number>(TimeInSeconds.TimeInSeconds.Day * 14);
+
+    aiConnectionStrings: KnockoutObservableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>;
+
+
     get studioTaskType(): StudioTaskType {
         return "AiIntegration";
     }
@@ -23,8 +51,10 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         return "Index";
     }
     
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration, aiConnectionStrings: KnockoutObservableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>) {
         super();
+
+        this.aiConnectionStrings = aiConnectionStrings;
 
         this.update(dto);
         this.initializeObservables();
@@ -42,8 +72,29 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             this.mentorNode,
             this.pinMentorNode,
             this.manualChooseMentor,
-            this.allowEtlOnNonEncryptedChannel
+            this.allowEtlOnNonEncryptedChannel,
+            this.chunkingMethod,
+            this.maxTokensPerChunk,
+            this.quantizationType,
+            this.embeddingsCacheExpiration,
         ]);
+
+        this.maxTokensPerChunkDefaultValue = ko.pureComputed(() => {
+            const connectionString = this.aiConnectionStrings().find(x => x.Name === this.connectionStringName());
+            
+            if (connectionString?.OnnxSettings) {
+                return 512;
+            }
+            return 2048;
+        });
+
+        this.quantizationTypeLabel = ko.pureComputed(() => {
+            return this.quantizationTypeOptions.find(x => x.value === this.quantizationType())?.label || "Select quantization type";
+        });
+
+        this.chunkingMethodLabel = ko.pureComputed(() => {
+            return this.chunkingMethodOptions.find(x => x.value === this.chunkingMethod())?.label || "Select chunking method";
+        });
     }
     
     initializeValidation() {
@@ -95,14 +146,30 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             this.pinMentorNode(configuration.PinToMentorNode);
             this.mentorNode(configuration.MentorNode);
             this.identifier(configuration.Identifier);
+            if (configuration.ChunkingOptionsForQuerying) {
+                this.chunkingMethod(configuration.ChunkingOptionsForQuerying.ChunkingMethod);
+                this.maxTokensPerChunk(configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk);
+            }
+            if (configuration.TargetQuantizationType) {
+                this.quantizationType(configuration.TargetQuantizationType);
+            }
+
+            // TODO add expiration
 
             if (configuration.Transforms) {
-                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskAiTransformationModel(x, false, true, configuration.EmbeddingsPaths?.length ? "paths" : "script", configuration.EmbeddingsPaths ?? [])));
+                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskAiTransformationModel(
+                    x,
+                    false,
+                    true,
+                    configuration.EmbeddingsPathConfigurations?.length ? "paths" : "script",
+                    configuration.EmbeddingsPathConfigurations ?? [],
+                    this.maxTokensPerChunkDefaultValue
+                )));
             }
         }
     }
     
-    toDto(): AiIntegrationConfiguration {
+    toDto(): Raven.Client.Documents.Operations.AI.EmbeddingsGenerationConfiguration {
         // only one transformation is supported
         const transformation = this.transformationScripts()[0];
 
@@ -110,13 +177,15 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             Script: transformation.script(),
         } : null;
 
-        const EmbeddingsPaths: string[] = transformation.embeddingsSource() === "paths" ? transformation.embeddingsPaths() : [];
+        const EmbeddingsPathConfigurations = transformation.embeddingsSource() === "paths" ? transformation.embeddingPathConfigurations() : [];
+
+        // TODO add expiration
 
         return {
             TaskId: this.taskId,
             Name: this.taskName(),
             Identifier: this.identifier(),
-            EtlType: "Ai",
+            EtlType: "EmbeddingsGeneration",
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
             Disabled: this.taskState() === "Disabled",
@@ -124,12 +193,17 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             PinToMentorNode: this.pinMentorNode(),
             Transforms: [transformation.toDto()],
             Collection: transformation.transformScriptCollections()[0],
-            EmbeddingsPaths,
-            EmbeddingsTransformation
+            ChunkingOptionsForQuerying: {
+                ChunkingMethod: this.chunkingMethod(),
+                MaxTokensPerChunk: this.maxTokensPerChunk(),
+            },
+            TargetQuantizationType: this.quantizationType(),
+            EmbeddingsTransformation,
+            EmbeddingsPathConfigurations
         };
     }
     
-    static empty(): ongoingTaskAiEtlEditModel {
+    static empty(aiConnectionStrings: KnockoutObservableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>): ongoingTaskAiEtlEditModel {
         return new ongoingTaskAiEtlEditModel(
             {
                 TaskName: "",
@@ -140,7 +214,9 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
                     Transforms: [],
                     Identifier: ""
                 }
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration,
+            aiConnectionStrings
+        );
        }
 }
 

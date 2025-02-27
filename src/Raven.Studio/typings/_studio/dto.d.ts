@@ -1073,5 +1073,3 @@ type GetConnectionStringsResult = Omit<Raven.Client.Documents.Operations.Connect
 
 type AzureQueueStorageAuthenticationType = "connectionString" | "entraId" | "passwordless";
 type AmazonSqsAuthenticationType = "basic" | "passwordless";
-
-type AiIntegrationConfiguration = Omit<Raven.Client.Documents.Operations.AI.AiIntegrationConfiguration, "NormalizedConnectionName">;

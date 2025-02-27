@@ -27,144 +27,6 @@ import EditConnectionStrings = require("components/pages/database/settings/conne
 import connectionStringsSlice = require("components/pages/database/settings/connectionStrings/store/connectionStringsSlice");
 import storeCompat = require("components/storeCompat");
 
-class aiTaskTestMode {
-
-    documentId = ko.observable<string>();
-    testDelete = ko.observable<boolean>(false);
-    docsIdsAutocompleteResults = ko.observableArray<string>([]);
-    db: database;
-    configurationProvider: () => AiIntegrationConfiguration;
-
-    validationGroup: KnockoutValidationGroup;
-    validateParent: () => boolean;
-
-    testAlreadyExecuted = ko.observable<boolean>(false);
-
-    spinners = {
-        preview: ko.observable<boolean>(false),
-        test: ko.observable<boolean>(false)
-    };
-
-    loadedDocument = ko.observable<string>();
-    loadedDocumentId = ko.observable<string>();
-
-    debugOutput = ko.observableArray<string>([]);
-    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test.EmbeddingsGenerationTestScriptResult>([]);
-
-    // all kinds of alerts:
-    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
-
-    warningsCount = ko.pureComputed(() => {
-        return this.transformationErrors().length;
-    });
-
-    constructor(db: database,
-                validateParent: () => boolean,
-                configurationProvider: () => AiIntegrationConfiguration) {
-        this.db = db;
-        this.validateParent = validateParent;
-        this.configurationProvider = configurationProvider;
-
-        _.bindAll(this, "onAutocompleteOptionSelected");
-    }
-
-    initObservables() {
-        this.documentId.extend({
-            required: true
-        });
-
-        this.documentId.throttle(250).subscribe(item => {
-            if (!item) {
-                return;
-            }
-
-            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db)
-                .execute()
-                .done(results => {
-                    this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
-                });
-        });
-
-        this.validationGroup = ko.validatedObservable({
-            documentId: this.documentId
-        });
-    }
-
-    onAutocompleteOptionSelected(option: string) {
-        this.documentId(option);
-        this.previewDocument();
-    }
-
-    previewDocument() {
-        const spinner = this.spinners.preview;
-        const documentId: KnockoutObservable<string> = this.documentId;
-
-        spinner(true);
-
-        viewHelpers.asyncValidationCompleted(this.validationGroup)
-            .then(() => {
-                if (viewHelpers.isValid(this.validationGroup)) {
-                    new getDocumentWithMetadataCommand(documentId(), this.db)
-                        .execute()
-                        .done((doc: document) => {
-                            const docDto = doc.toDto(true);
-                            const metaDto = docDto["@metadata"];
-                            documentMetadata.filterMetadata(metaDto);
-                            const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(prismjs.highlight(text, prismjs.languages.javascript, "js"));
-                            this.loadedDocumentId(doc.getId());
-
-                            $('.test-container a[href="#documentPreview"]').tab('show');
-                        }).always(() => spinner(false));
-                } else {
-                    spinner(false);
-                }
-            });
-    }
-
-    runTest() {
-        const testValid = viewHelpers.isValid(this.validationGroup, true);
-        const parentValid = this.validateParent();
-
-        if (testValid && parentValid) {
-            this.spinners.test(true);
-
-            const dto: Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.TestElasticSearchEtlScript = {
-                DocumentId: this.documentId(),
-                IsDelete: this.testDelete(),
-                Configuration: this.configurationProvider()
-            };
-
-            eventsCollector.default.reportEvent("ai-etl", "test-script");
-
-            new testAiCommand(this.db, dto)
-                .execute()
-                .done(simulationResult => {
-                    console.log('kalczur ', simulationResult);
-                    // TODO kalczur
-                    // const summaryFormatted =  simulationResult.Summary.map(x => ({
-                    //     Commands: x.Commands.map((cmd: string) => cmd.replace(/\r\n/g, "\n")),
-                    //     IndexName: x.IndexName
-                    // }));
-                    
-                    // this.testResults(summaryFormatted);
-                    
-                    // this.debugOutput(simulationResult.DebugOutput);
-                    // this.transformationErrors(simulationResult.TransformationErrors);
-
-                    // if (this.warningsCount()) {
-                    //     $('.test-container a[href="#warnings"]').tab('show');
-                    // } else {
-                    //     $('.test-container a[href="#testResults"]').tab('show');
-                    // }
-
-                    this.testAlreadyExecuted(true);
-                })
-                .always(() => this.spinners.test(false));
-        }
-    }
-}
-
 class aiEtlTask extends shardViewModelBase {
     
     view = require("views/database/tasks/editAiEtlTask.html");
@@ -185,6 +47,7 @@ class aiEtlTask extends shardViewModelBase {
 
     possibleMentors = ko.observableArray<string>([]);
     connectionStringsNames = ko.observableArray<string>([]);
+    aiConnectionStrings = ko.observableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>([]);
 
     spinners = {
         test: ko.observable<boolean>(false),
@@ -258,14 +121,16 @@ class aiEtlTask extends shardViewModelBase {
             getOngoingTaskInfoCommand.forAiIntegration(this.db, args.taskId)
                 .execute()
                 .done((result) => {
-                    this.editedAiEtl(new ongoingTaskAiEtlEditModel(result));
+                    this.editedAiEtl(new ongoingTaskAiEtlEditModel(result, this.aiConnectionStrings));
+
                     this.editTransformationScript(new ongoingTaskAiTransformationModel(
                         result.Configuration.Transforms[0],
                         false,
                         true,
-                        result.Configuration.EmbeddingsPaths?.length > 0 ? "paths" : "script",
-                        result.Configuration.EmbeddingsPaths)
-                    );
+                        result.Configuration.EmbeddingsPathConfigurations?.length > 0 ? "paths" : "script",
+                        result.Configuration.EmbeddingsPathConfigurations,
+                        this.editedAiEtl().maxTokensPerChunkDefaultValue
+                    ));
 
                     deferred.resolve();
                 })
@@ -276,9 +141,9 @@ class aiEtlTask extends shardViewModelBase {
         } else {
             // 2. Creating a New task
             this.isAddingNewEtlTask(true);
-            this.editedAiEtl(ongoingTaskAiEtlEditModel.empty());
+            this.editedAiEtl(ongoingTaskAiEtlEditModel.empty(this.aiConnectionStrings));
 
-            this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.findNameForNewTransformation()));
+            this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.editedAiEtl().maxTokensPerChunkDefaultValue, this.findNameForNewTransformation()));
 
             deferred.resolve();
         }
@@ -315,6 +180,8 @@ class aiEtlTask extends shardViewModelBase {
         return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                this.aiConnectionStrings(Object.values(result.AiConnectionStrings));
+
                 const connectionStringsNames = Object.keys(result.AiConnectionStrings);
                 this.connectionStringsNames(typeUtils.sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
@@ -491,7 +358,7 @@ class aiEtlTask extends shardViewModelBase {
 
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
-        this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.findNameForNewTransformation()));
+        this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.editedAiEtl().maxTokensPerChunkDefaultValue, this.findNameForNewTransformation()));
     }
     
     saveEditedTransformation() {
@@ -503,13 +370,13 @@ class aiEtlTask extends shardViewModelBase {
         }
 
         if (transformation.isNew()) {
-            const newTransformationItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, false, transformation.embeddingsSource(), transformation.embeddingsPaths());
+            const newTransformationItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, false, transformation.embeddingsSource(), transformation.embeddingPathConfigurations(), this.editedAiEtl().maxTokensPerChunkDefaultValue);
             newTransformationItem.name(transformation.name());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedAiEtl().transformationScripts.push(newTransformationItem);
         } else {
             const oldItem = this.editedAiEtl().transformationScripts().find(x => x.name() === transformation.name());
-            const newItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, transformation.resetScript(), transformation.embeddingsSource(), transformation.embeddingsPaths());
+            const newItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, transformation.resetScript(), transformation.embeddingsSource(), transformation.embeddingPathConfigurations(), this.editedAiEtl().maxTokensPerChunkDefaultValue);
 
             if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
                 newItem.dirtyFlag().forceDirty();
@@ -536,7 +403,7 @@ class aiEtlTask extends shardViewModelBase {
     editTransformationScript(model: ongoingTaskAiTransformationModel) {
         this.makeSureSandboxIsVisible();
         this.transformationScriptSelectedForEdit(model);
-        this.editedTransformationScriptSandbox(new ongoingTaskAiTransformationModel(model.toDto(), false, model.resetScript(), model.embeddingsSource(), model.embeddingsPaths()));
+        this.editedTransformationScriptSandbox(new ongoingTaskAiTransformationModel(model.toDto(), false, model.resetScript(), model.embeddingsSource(), model.embeddingPathConfigurations(), this.editedAiEtl().maxTokensPerChunkDefaultValue));
 
         $('.edit-ai-task .js-test-area [data-toggle="tooltip"]').tooltip();
     }
@@ -571,3 +438,141 @@ class aiEtlTask extends shardViewModelBase {
 }
 
 export = aiEtlTask;
+
+class aiTaskTestMode {
+
+    documentId = ko.observable<string>();
+    testDelete = ko.observable<boolean>(false);
+    docsIdsAutocompleteResults = ko.observableArray<string>([]);
+    db: database;
+    configurationProvider: () => Raven.Client.Documents.Operations.AI.EmbeddingsGenerationConfiguration;
+
+    validationGroup: KnockoutValidationGroup;
+    validateParent: () => boolean;
+
+    testAlreadyExecuted = ko.observable<boolean>(false);
+
+    spinners = {
+        preview: ko.observable<boolean>(false),
+        test: ko.observable<boolean>(false)
+    };
+
+    loadedDocument = ko.observable<string>();
+    loadedDocumentId = ko.observable<string>();
+
+    debugOutput = ko.observableArray<string>([]);
+    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test.EmbeddingsGenerationTestScriptResult>([]);
+
+    // all kinds of alerts:
+    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
+
+    warningsCount = ko.pureComputed(() => {
+        return this.transformationErrors().length;
+    });
+
+    constructor(db: database,
+                validateParent: () => boolean,
+                configurationProvider: () => Raven.Client.Documents.Operations.AI.EmbeddingsGenerationConfiguration) {
+        this.db = db;
+        this.validateParent = validateParent;
+        this.configurationProvider = configurationProvider;
+
+        _.bindAll(this, "onAutocompleteOptionSelected");
+    }
+
+    initObservables() {
+        this.documentId.extend({
+            required: true
+        });
+
+        this.documentId.throttle(250).subscribe(item => {
+            if (!item) {
+                return;
+            }
+
+            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db)
+                .execute()
+                .done(results => {
+                    this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
+                });
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            documentId: this.documentId
+        });
+    }
+
+    onAutocompleteOptionSelected(option: string) {
+        this.documentId(option);
+        this.previewDocument();
+    }
+
+    previewDocument() {
+        const spinner = this.spinners.preview;
+        const documentId: KnockoutObservable<string> = this.documentId;
+
+        spinner(true);
+
+        viewHelpers.asyncValidationCompleted(this.validationGroup)
+            .then(() => {
+                if (viewHelpers.isValid(this.validationGroup)) {
+                    new getDocumentWithMetadataCommand(documentId(), this.db)
+                        .execute()
+                        .done((doc: document) => {
+                            const docDto = doc.toDto(true);
+                            const metaDto = docDto["@metadata"];
+                            documentMetadata.filterMetadata(metaDto);
+                            const text = JSON.stringify(docDto, null, 4);
+                            this.loadedDocument(prismjs.highlight(text, prismjs.languages.javascript, "js"));
+                            this.loadedDocumentId(doc.getId());
+
+                            $('.test-container a[href="#documentPreview"]').tab('show');
+                        }).always(() => spinner(false));
+                } else {
+                    spinner(false);
+                }
+            });
+    }
+
+    runTest() {
+        const testValid = viewHelpers.isValid(this.validationGroup, true);
+        const parentValid = this.validateParent();
+
+        if (testValid && parentValid) {
+            this.spinners.test(true);
+
+            const dto: Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.TestElasticSearchEtlScript = {
+                DocumentId: this.documentId(),
+                IsDelete: this.testDelete(),
+                Configuration: this.configurationProvider()
+            };
+
+            eventsCollector.default.reportEvent("ai-etl", "test-script");
+
+            new testAiCommand(this.db, dto)
+                .execute()
+                .done(simulationResult => {
+                    console.log('kalczur ', simulationResult);
+                    // TODO kalczur
+                    // const summaryFormatted =  simulationResult.Summary.map(x => ({
+                    //     Commands: x.Commands.map((cmd: string) => cmd.replace(/\r\n/g, "\n")),
+                    //     IndexName: x.IndexName
+                    // }));
+                    
+                    // this.testResults(summaryFormatted);
+                    
+                    // this.debugOutput(simulationResult.DebugOutput);
+                    // this.transformationErrors(simulationResult.TransformationErrors);
+
+                    // if (this.warningsCount()) {
+                    //     $('.test-container a[href="#warnings"]').tab('show');
+                    // } else {
+                    //     $('.test-container a[href="#testResults"]').tab('show');
+                    // }
+
+                    this.testAlreadyExecuted(true);
+                })
+                .always(() => this.spinners.test(false));
+        }
+    }
+}

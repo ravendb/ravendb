@@ -2,7 +2,7 @@
     <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
         <div class="flex-horizontal gap-2">
             <i class="icon-ai-etl"></i>
-            <h2 data-bind="text: $root.isAddingNewEtlTask() ? 'New AI' : 'Edit AI'" class="mb-0"></h2>
+            <h2 data-bind="text: $root.isAddingNewEtlTask() ? 'New Embeddings Generation' : 'Edit Embeddings Generation'" class="mb-0"></h2>
             <span class="badge license-restricted-badge enterprise" data-bind="if: !hasAiIntegration">Enterprise</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
@@ -110,25 +110,63 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="panel margin-top" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
+                    <div data-bind="with: editedAiEtl">
+                        <div class="panel-body">
+                            <h3>Querying</h3>
+
+                            <div class="form-group">
+                                <label class="control-label">Chunking Method</label>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: chunkingMethodLabel">
+                                        <span data-bind="text: chunkingMethodLabel"></span>
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: chunkingMethodOptions">
+                                        <li><a href="#" data-bind="click: _.partial($parent.chunkingMethod, value)"><span data-bind="text: label"></span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: maxTokensPerChunk">
+                                <label class="control-label">Max Tokens Per Chunk</label>
+                                <div class="flex-grow">
+                                    <input type="number" class="form-control" data-bind="value: maxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Quantization Type</label>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: quantizationTypeLabel">
+                                        <span data-bind="text: quantizationTypeLabel"></span>
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: quantizationTypeOptions">
+                                        <li><a href="#" data-bind="click: _.partial($parent.quantizationType, value)"><span data-bind="text: label"></span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">
+                                        Embeddings Cache Expiration
+                                        <i class="icon-info text-info" title="Query parameters containing vector fields will have embeddings generated during query execution."></i>
+                                    </label>
+                                </div>
+                                <div class="flex-grow" data-bind="validationElement: embeddingsCacheExpiration">
+                                    <input type="text" class="form-control" data-bind="durationPicker: embeddingsCacheExpiration, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                                    <div class="help-block" data-bind="validationMessage: embeddingsCacheExpiration"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
             <div class="flex-grow">
                 <div class="panel padding" data-bind="if: $root.showEditTransformationArea()">
-
-                    <div class="form-group">
-                        <label class="control-label">Embeddings Source:</label>
-                        <div class="flex-grow">
-                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: embeddingsSourceLabel">
-                                <span data-bind="text: embeddingsSourceLabel() || 'Select a embeddings source'"></span>
-                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: _.partial(embeddingsSource, 'script')"><span>Script</span></a></li>
-                                <li><a href="#" data-bind="click: _.partial(embeddingsSource, 'paths')"><span>Path</span></a></li>
-                            </ul>
-                        </div>
-                    </div>
 
                     <div class="margin-bottom-sm" data-bind="visible: transformScriptCollections().length === 0">
                         <label><strong>Collection:</strong></label>
@@ -159,30 +197,93 @@
                             </div>
                         </div>
                     </div>
+                    <div class="margin-bottom-sm margin-top-sm">
+                        <div data-bind="visible: transformScriptCollections().length" class="margin-top-sm">
+                            <label><strong>Collection:</strong></label>
+                            <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
+                                <li>
+                                    <div class="name" data-bind="text: $data"></div>
+                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label">Embeddings Source:</label>
+                        <div class="flex-grow">
+                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: embeddingsSourceLabel">
+                                <span data-bind="text: embeddingsSourceLabel() || 'Select a embeddings source'"></span>
+                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: _.partial(embeddingsSource, 'script')"><span>Script</span></a></li>
+                                <li><a href="#" data-bind="click: _.partial(embeddingsSource, 'paths')"><span>Path</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
     
                     <div data-bind="if: embeddingsSource() === 'paths'">
                         <div class="form-group">
-                            <label for="embeddingsPathSelect"><strong>Embeddings Paths:</strong></label>
-                            <div class="flex-horizontal gap-1">
-                                <div class="flex-grow">
-                                    <input type="text" class="form-control" placeholder="Enter Embeddings Path" data-bind="textInput: inputEmbeddingsPath" />
-                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: embeddingsPaths">
-                                        <div class="help-block" data-bind="validationMessage: embeddingsPaths"></div>
+                            <label class="control-label"><strong>Path Configurations:</strong></label>
+                            <div class="padding panel-bg-1">
+                                <div class="flex-horizontal gap-1">
+                                    <div style="width: 33%;">
+                                        <label class="control-label"><strong>Embeddings Path</strong></label>
+                                        <input type="text" class="form-control" placeholder="Enter Embeddings Path" data-bind="textInput: inputEmbeddingsPath" />
+                                    </div>
+                                    <div style="width: 33%;">
+                                        <label class="control-label">Chunking Method</label>
+                                        <div class="flex-grow">
+                                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: chunkingMethodLabel">
+                                                <span data-bind="text: chunkingMethodLabel"></span>
+                                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                            </button>
+                                            <ul class="dropdown-menu" data-bind="foreach: chunkingMethodOptions">
+                                                <li><a href="#" data-bind="click: _.partial($parent.chunkingMethod, value)"><span data-bind="text: label"></span></a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div style="width: 33%;" data-bind="validationElement: maxTokensPerChunk">
+                                        <label class="control-label">Max Tokens Per Chunk</label>
+                                        <div class="flex-grow">
+                                            <input type="number" class="form-control" data-bind="value: maxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }"/>
+                                        </div>
                                     </div>
                                 </div>
-                                <div>
-                                    <button class="btn btn-info" data-bind="click: addEmbeddingsPath, enable: inputEmbeddingsPath()">
-                                        <i class="icon-plus"></i><span>Add path</span>
+                                <div class="d-flex margin-top-xs">
+                                    <div class="flex-grow"></div>
+                                    <button class="btn btn-info" data-bind="click: addEmbeddingsPathConfiguration, enable: inputEmbeddingsPath() && !embeddingPathConfigurations().map(x => x.Path).includes(inputEmbeddingsPath())">
+                                        <i class="icon-plus"></i><span>Add path configuration</span>
                                     </button>
                                 </div>
-                            </div>
-                            <div class="margin-top-sm" data-bind="if: embeddingsPaths().length > 0">
-                                <ul class="well collection-list" data-bind="foreach: embeddingsPaths">
-                                    <li>
-                                        <div class="name" data-bind="text: $data"></div>
-                                        <a title="Remove collection" href="#" data-bind="click: $parent.removeEmbeddingsPath.bind($parent, $data)"><i class="icon-trash"></i></a>
-                                    </li>
-                                </ul>
+
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: embeddingPathConfigurations">
+                                    <div class="help-block" data-bind="validationMessage: embeddingPathConfigurations"></div>
+                                </div>
+                               
+                                <div class="margin-top-sm" data-bind="if: embeddingPathConfigurations().length > 0">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Path</th>
+                                                <th>Chunking Method</th>
+                                                <th>Max Tokens Per Chunk</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody data-bind="foreach: embeddingPathConfigurations">
+                                            <tr>
+                                                <td data-bind="text: Path"></td>
+                                                <td data-bind="text: ChunkingOptions.ChunkingMethod"></td>
+                                                <td data-bind="text: ChunkingOptions.MaxTokensPerChunk"></td>
+                                                <td class="actions">
+                                                    <a title="Remove path" href="#" data-bind="click: $parent.removeEmbeddingsPathConfiguration.bind($parent, Path)"><i class="icon-trash"></i></a>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -198,16 +299,13 @@
                             </div>
                         </div>
                     </div>
-                    <div class="margin-bottom-sm margin-top-sm">
-                        
-                        <div data-bind="visible: transformScriptCollections().length" class="margin-top-sm">
-                            <label><strong>Collection:</strong></label>
-                            <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
-                                <li>
-                                    <div class="name" data-bind="text: $data"></div>
-                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
-                                </li>
-                            </ul>
+                    <div class="margin-top-sm margin-bottom-sm">
+                        <div>
+                            <label class="control-label">Embeddings Cache Expiration:</label>
+                        </div>
+                        <div class="flex-grow" data-bind="validationElement: embeddingsCacheExpiration">
+                            <input type="text" class="form-control" data-bind="durationPicker: embeddingsCacheExpiration, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                            <div class="help-block" data-bind="validationMessage: embeddingsCacheExpiration"></div>
                         </div>
                     </div>
                     <div class="toggle margin-top-sm margin-bottom-sm" data-bind="visible: !isNew() && !$root.enableTestArea()">
