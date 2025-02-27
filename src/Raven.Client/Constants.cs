@@ -297,6 +297,8 @@ namespace Raven.Client
                 public const string HasValue = "HasValue";
 
                 public const string Etag = "@etag";
+                
+                public const string Quantization = "@quantization";
 
                 internal sealed class Sharding
                 {

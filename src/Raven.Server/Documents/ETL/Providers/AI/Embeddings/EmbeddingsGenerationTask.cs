@@ -256,12 +256,15 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         private readonly EmbeddingsGenerationScriptRun _taskResults;
         private readonly EmbeddingsGenerationTaskIdentifier _embeddingsTaskIdentifier;
         private readonly DocumentDatabase _database;
+        private readonly EmbeddingsGenerationConfiguration _configuration; 
         
         public MergedPutEmbeddingsCommand(EmbeddingsGenerationScriptRun taskResults, EmbeddingsGenerationTaskIdentifier embeddingsTaskIdentifier, DocumentDatabase database)
         {
             _taskResults = taskResults;
             _embeddingsTaskIdentifier = embeddingsTaskIdentifier;
             _database = database;
+            database.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsTaskIdentifier, out _configuration);
+            Debug.Assert(_configuration != null, "Configuration should not be null");
         }
 
         //We need to remove all attachments from this ETL task (but not all of them, as they may be loaded from other tasks.)
@@ -343,6 +346,9 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
             {
                 // Modifications of embeddings document
                 var embeddingsDocumentModification = new DynamicJsonValue();
+                if (_configuration.TargetQuantizationType != VectorEmbeddingType.Single)
+                    embeddingsDocumentModification[Constants.Documents.Metadata.Quantization] = _configuration.TargetQuantizationType.ToString();
+                
                 
                 // Load the embeddings document (if it exists) to track which attachments need to be removed (on update)
                 using var embeddingsDocument = _database.AiIntegrations.Embeddings.Storage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);

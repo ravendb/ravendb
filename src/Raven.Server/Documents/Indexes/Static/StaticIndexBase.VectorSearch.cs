@@ -550,73 +550,94 @@ public partial class AbstractStaticIndexBase
         return value is null or DynamicNullObject or DynamicJsNull or JsNull;
     }
 
-    public static IndexField RetrieveLoadVectorField(string fieldName, EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier)
+    public static object LoadVectorJs(string fieldName, string embeddingGeneratorTaskName, string path, out IndexField vectorField)
     {
-        var vectorField = CurrentIndexingScope.Current.GetLoadVectorField(fieldName,  embeddingsGenerationTaskIdentifier);
-        if (vectorField.Id == Corax.Constants.IndexWriter.DynamicField)
+        var vectors =  ProcessLoadVector(fieldName, embeddingGeneratorTaskName, path, out vectorField);
+
+        //for js indexes we've no choice than create dynamic field, in such cases let's assume it is single. 
+        if (vectorField == null)
         {
-            var currentIndexingScope = CurrentIndexingScope.Current;
-            currentIndexingScope.DynamicFields ??= new Dictionary<string, IndexField>();
-            if (currentIndexingScope.DynamicFields.TryAdd(fieldName, vectorField))
-                currentIndexingScope.IncrementDynamicFields();
+            vectorField = RetrieveCreateVectorField(fieldName, null);
+            return new CoraxDynamicItem() { FieldName = fieldName, Field = vectorField, Value = vectors };
         }
-
-        return vectorField;
-    }
-
-    public object LoadVector(string fieldName, string embeddingGeneratorTaskName, string path)
-    {
-        var embeddingsGenerationTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(embeddingGeneratorTaskName);
-        var vectorField = RetrieveLoadVectorField(fieldName, embeddingsGenerationTaskIdentifier);
         
-        var vectors =  LoadVector(vectorField, embeddingGeneratorTaskName, path);
-
         return (vectorField.Id == Corax.Constants.IndexWriter.DynamicField)
             ? new CoraxDynamicItem() { FieldName = fieldName, Field = vectorField, Value = vectors }
             : vectors;
     }
     
-    public static object LoadVector(IndexField vectorField, string embeddingGeneratorTaskName, string path)
+    public object LoadVector(string fieldName, string embeddingGeneratorTaskName, string path)
+    {
+        var vectors =  ProcessLoadVector(fieldName, embeddingGeneratorTaskName, path, out var vectorField);
+
+        if (vectorField == null)
+            return vectors;
+        
+        return (vectorField.Id == Corax.Constants.IndexWriter.DynamicField)
+            ? new CoraxDynamicItem() { FieldName = fieldName, Field = vectorField, Value = vectors }
+            : vectors;
+    }
+
+    private static object ProcessLoadVector(string fieldName, string embeddingGeneratorTaskName, string path, out IndexField indexField)
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
-        currentIndexingScope.Index.IndexFieldsPersistence.SetEmbeddingsGenerationTaskName(vectorField.Name, embeddingGeneratorTaskName);
+        currentIndexingScope.Index.IndexFieldsPersistence.SetEmbeddingsGenerationTaskName(fieldName, embeddingGeneratorTaskName);
+        var embeddingDocument = LoadVectorDocument(out var embeddingDocumentId) as DynamicBlittableJson;
         
-        var relatedDocument = LoadVectorDocument(out var embeddingDocument) as DynamicBlittableJson;
-        if (relatedDocument == null)
-            return new object[]{VectorValue.Null};
         
-        if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, relatedDocument.BlittableJson, embeddingGeneratorTaskName, out var aiResult))
+        //no related document
+        if (embeddingDocument == null
+            // no embedding generator task in thw document
+            || BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingDocument.BlittableJson, embeddingGeneratorTaskName,
+                out var documentEmbeddings) == false
+            // no path in the embedding task dictionary
+            || BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, (BlittableJsonReaderObject)documentEmbeddings, path,
+                out var embeddingContainerObject) == false
+            // stored value has no elements
+            || IsNullValue(embeddingContainerObject))
         {
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, (BlittableJsonReaderObject)aiResult, path, out var vectorValue))
+            indexField = null;
+            return new object[]{VectorValue.Null};
+        }
+
+        if (currentIndexingScope.TryGetLoadVectorField(fieldName, out indexField) == false)
+        {
+            VectorEmbeddingType expectedVectorType = VectorEmbeddingType.Single;
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, (BlittableJsonReaderObject)documentEmbeddings,
+                    Raven.Client.Constants.Documents.Metadata.Quantization, out var quantizationFromDocument))
             {
-                if (IsNullValue(vectorValue))
-                    return new object[]{VectorValue.Null};
-                
-                if (vectorValue is BlittableJsonReaderArray bjra)
-                {
-                    var attachmentNames = new string[bjra.Length];
-                    for (var i = 0; i < bjra.Length; i++)
-                        attachmentNames[i] = GetStringFromObject(bjra[i]);
-
-                    var attachments = currentIndexingScope.LoadAttachments(embeddingDocument, attachmentNames);
-                    if (attachments is null)
-                        return new object[]{VectorValue.Null};
-
-                    return VectorFromEmbedding(vectorField, attachments.Select(x => x.GetContentAsStream()), isAutoIndex: false);
-                }
-
-                if (IsExplicitString(vectorValue))
-                {
-                    var singleAttachmentName = GetStringFromObject(vectorValue);
-                    var attachment = currentIndexingScope.LoadAttachment(embeddingDocument, singleAttachmentName);
-                    return attachment is null 
-                        ? VectorValue.Null 
-                        : VectorFromEmbedding(vectorField, attachment.GetContentAsStream(), isAutoIndex: false);
-                }
+                var enumAsStr = GetStringFromObject(quantizationFromDocument);
+                if (Enum.TryParse(enumAsStr.AsSpan(), out expectedVectorType) == false)
+                    expectedVectorType = VectorEmbeddingType.Single;
             }
+        
+            indexField = currentIndexingScope.GetLoadVectorField(fieldName, new EmbeddingsGenerationTaskIdentifier(embeddingGeneratorTaskName), expectedVectorType);
         }
         
-        return new object[]{VectorValue.Null};
+        
+        if (embeddingContainerObject is BlittableJsonReaderArray bjra)
+        {
+            var attachmentNames = new string[bjra.Length];
+            for (var i = 0; i < bjra.Length; i++)
+                attachmentNames[i] = GetStringFromObject(bjra[i]);
+
+            var attachments = currentIndexingScope.LoadAttachments(embeddingDocumentId, attachmentNames);
+            return attachments is null 
+                ? new object[]{ VectorValue.Null } 
+                : VectorFromEmbedding(indexField, attachments.Select(x => x.GetContentAsStream()), isAutoIndex: false);
+        }
+
+        if (IsExplicitString(embeddingContainerObject))
+        {
+            var singleAttachmentName = GetStringFromObject(embeddingContainerObject);
+            var attachment = currentIndexingScope.LoadAttachment(embeddingDocument, singleAttachmentName);
+            return attachment is null 
+                ? new object[]{ VectorValue.Null }
+                : VectorFromEmbedding(indexField, attachment.GetContentAsStream(), isAutoIndex: false);
+        }
+        
+        
+        return new object[]{ VectorValue.Null };
     }
     
     private static dynamic LoadVectorDocument(out string embeddingDocument)
