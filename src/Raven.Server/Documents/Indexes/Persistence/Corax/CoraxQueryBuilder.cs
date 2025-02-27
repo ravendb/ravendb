@@ -622,7 +622,6 @@ public static partial class CoraxQueryBuilder
                     return HandleSpatial(builderParameters, me, methodType);
                 case MethodType.Vector_Search:
                     return HandleVector(builderParameters, me, exact);
-
                 case MethodType.Regex:
                     return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.MoreLikeThis:

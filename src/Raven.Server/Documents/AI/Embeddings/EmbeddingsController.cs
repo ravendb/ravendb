@@ -1,6 +1,7 @@
 ﻿using Microsoft.SemanticKernel.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes.Vector;
@@ -19,15 +20,6 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
     public async Task<object> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext, AiConnectionStringIdentifier connectionStringId,
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value, VectorEmbeddingType destinationEmbeddingType)
     {
-        // TODO michal - chunking handling
-
-        if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, destinationEmbeddingType, out var embeddingCacheDocumentId, out var toDoArek)) 
-        {
-            var valueHash = EmbeddingsHelper.CalculateInputValueHash(value);
-
-            return Storage.GetCachedEmbeddingValue(documentsContext, embeddingCacheDocumentId, valueHash);
-        }
-        
         if (_aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
             throw new ArgumentException($"Couldn't find Embeddings Generation task for connection string '{connectionStringId.Value}' ");
 
@@ -39,15 +31,30 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         var chunkingOptions = taskConfig.ChunkingOptionsForQuerying;
         
         var chunks = TextChunker.ChunkValue(value, chunkingOptions);
-        
         var vectorValues = new VectorValue[chunks.Count];
+        var chunksForGeneration = new List<string>();
+        int vectorValuesCount = 0;
 
-        for (var i = 0; i < chunks.Count; i++)
+        foreach (var chunk in chunks)
         {
-            var embedding = await service.GenerateEmbeddingAsync(chunks[i]);
+            if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, destinationEmbeddingType, out var embeddingCacheDocumentId, out var toDoArek)) 
+            {
+                var valueHash = EmbeddingsHelper.CalculateInputValueHash(value);
+
+                var cachedVectorValue = Storage.GetCachedEmbeddingValue(documentsContext, embeddingCacheDocumentId, valueHash);
+                
+                vectorValues[vectorValuesCount++] = cachedVectorValue;
+            }
+            else
+                chunksForGeneration.Add(chunk);
+        }
+
+        for (var i = 0; i < chunksForGeneration.Count; i++)
+        {
+            var embedding = await service.GenerateEmbeddingAsync(chunksForGeneration[i]);
             var vectorValue = GenerateEmbeddings.FromArray(allocator, embedding, VectorEmbeddingType.Single, destinationEmbeddingType);
 
-            vectorValues[i] = vectorValue;
+            vectorValues[vectorValuesCount++] = vectorValue;
         }
 
         // TODO arek Cacher.EnqueueEmbeddingToCache(connectionStringId, );

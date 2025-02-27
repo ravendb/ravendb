@@ -81,7 +81,26 @@ public static class GenerateEmbeddings
     
     public static VectorValue FromArray(ByteStringContext allocator, ReadOnlyMemory<float> readOnlyMemory, VectorEmbeddingType sourceEmbeddingType, VectorEmbeddingType embeddingDestinationType)
     {
-        var usedBytes = embeddingDestinationType switch
+        var originalMemory = MemoryMarshal.AsBytes(readOnlyMemory.Span);
+        var coraxType = embeddingDestinationType switch
+        {
+            VectorEmbeddingType.Single => Voron.Data.Graphs.VectorEmbeddingType.Single,
+            VectorEmbeddingType.Int8 => Voron.Data.Graphs.VectorEmbeddingType.Int8,
+            VectorEmbeddingType.Binary => Voron.Data.Graphs.VectorEmbeddingType.Binary,
+            _ => throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}")
+        };
+        
+        if (sourceEmbeddingType == embeddingDestinationType)
+        {
+            var memScope = allocator.Allocate(originalMemory.Length, out Memory<byte> mem);
+            originalMemory.CopyTo(mem.Span);
+
+            return new VectorValue(memScope, mem, coraxType, originalMemory.Length);
+        }
+        
+        //Quantization required
+        //Validation?? todo
+        var requiredBytes = embeddingDestinationType switch
         {
             VectorEmbeddingType.Single => readOnlyMemory.Length * sizeof(float),
             VectorEmbeddingType.Int8 => readOnlyMemory.Length + sizeof(float),
@@ -89,22 +108,22 @@ public static class GenerateEmbeddings
             _ => throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}")
         };
         
-        var memoryScope = allocator.Allocate(usedBytes, out Memory<byte> memory);
-        MemoryMarshal.AsBytes(readOnlyMemory.Span).CopyTo(memory.Span);
-        
-        switch (sourceEmbeddingType)
+        var memoryScope = allocator.Allocate(requiredBytes, out Memory<byte> memory);
+        int bytesUsed;
+        switch (embeddingDestinationType)
         {
-            case VectorEmbeddingType.Binary:
-                PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != sourceEmbeddingType);
-                return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Binary, usedBytes);
             case VectorEmbeddingType.Int8:
-                PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != sourceEmbeddingType);
-                return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Int8, usedBytes);
-            case VectorEmbeddingType.Single when embeddingDestinationType is VectorEmbeddingType.Single:
-                return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Single, usedBytes);
+                var asSbyes = MemoryMarshal.Cast<byte, sbyte>(memory.Span);
+                VectorQuantizer.TryToInt8(readOnlyMemory.Span, asSbyes, out bytesUsed);
+                break;
+            case VectorEmbeddingType.Binary:
+                VectorQuantizer.TryToInt1(readOnlyMemory.Span, memory.Span, out bytesUsed);
+                break;
             default:
-                return Quantize(allocator, embeddingDestinationType, memoryScope, memory, usedBytes);
+                throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}");
         }
+        
+        return new VectorValue(memoryScope, memory, coraxType, bytesUsed);
     }
 
     public static VectorValue FromBase64Array(in VectorOptions options, ByteStringContext allocator, string base64, bool isAutoIndex = false)

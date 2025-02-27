@@ -10,6 +10,8 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class TasksManagementTests : RavenTestBase
 {
+    protected static readonly ChunkingOptions DefaultChunkingOptions = new() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 };
+    
     public TasksManagementTests(ITestOutputHelper output) : base(output)
     {
     }
@@ -23,8 +25,9 @@ public class TasksManagementTests : RavenTestBase
         {
             Name = "ai-task-testing",
             ConnectionStringName = "ai-service-connection",
-            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent" }, new EmbeddingPathConfiguration(){ Path = "Comments" }],
+            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent" }, new EmbeddingPathConfiguration(){ Path = "Comments", ChunkingOptions = DefaultChunkingOptions }],
             Collection = "Posts",
+            ChunkingOptionsForQuerying = DefaultChunkingOptions
         };
 
         var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, OnnxSettings = new OnnxSettings() };
@@ -52,8 +55,9 @@ public class TasksManagementTests : RavenTestBase
         {
             Name = "ai-task-testing",
             ConnectionStringName = "ai-service-connection",
-            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent" }, new EmbeddingPathConfiguration() { Path = "Comments" }],
+            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent" }, new EmbeddingPathConfiguration() { Path = "Comments", ChunkingOptions = DefaultChunkingOptions }],
             Collection = "Posts",
+            ChunkingOptionsForQuerying = DefaultChunkingOptions
         };
 
         var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, OnnxSettings = new OnnxSettings() };
