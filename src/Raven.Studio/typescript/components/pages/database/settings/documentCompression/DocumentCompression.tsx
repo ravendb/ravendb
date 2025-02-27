@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Collapse from "react-bootstrap/Collapse";
-import { Col, Row, Card, Form } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Col, Row, Form } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";

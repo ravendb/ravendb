@@ -2,7 +2,8 @@
 import { Icon } from "components/common/Icon";
 import Spinner from "react-bootstrap/Spinner";
 import Collapse from "react-bootstrap/Collapse";
-import { Card, CardBody } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import {} from "reactstrap";
 import "./CreateSampleData.scss";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsync, useAsyncCallback } from "react-async-hook";
@@ -118,7 +119,7 @@ function CreateSampleData() {
                     <Collapse in={isCodeSampleOpen}>
                         <div>
                             <Card className="sample-code">
-                                <CardBody>
+                                <Card.Body>
                                     <div className="sample-code-header">
                                         <h3>Sample data C# code</h3>
                                         {asyncGetSampleDataClasses.result && (
@@ -150,7 +151,7 @@ function CreateSampleData() {
                                     {asyncGetSampleDataClasses.result && (
                                         <Code code={asyncGetSampleDataClasses.result} language="csharp" />
                                     )}
-                                </CardBody>
+                                </Card.Body>
                             </Card>
                         </div>
                     </Collapse>

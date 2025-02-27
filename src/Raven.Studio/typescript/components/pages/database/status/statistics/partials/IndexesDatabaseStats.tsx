@@ -4,7 +4,7 @@ import genUtils from "common/generalUtils";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";

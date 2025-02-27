@@ -1,7 +1,8 @@
 ﻿import { ChangeEvent } from "react";
 import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
-import { Card, CardBody, InputGroup, InputGroupText, Label } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { InputGroup, InputGroupText, Label } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -49,7 +50,7 @@ export default function Ftp() {
 
     return (
         <Card className="well mb-2">
-            <CardBody>
+            <Card.Body>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     FTP
                 </FormSwitch>
@@ -167,7 +168,7 @@ export default function Ftp() {
                         )}
                     </div>
                 </Collapse>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

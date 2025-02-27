@@ -1,6 +1,6 @@
 ﻿import React, { ReactNode } from "react";
 import classNames from "classnames";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 
 import "./NodeSet.scss";
 import { Icon } from "./Icon";

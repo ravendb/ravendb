@@ -1,6 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
-import { Card, CardBody, Label } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Label } from "reactstrap";
 import { FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -34,7 +35,7 @@ export default function AmazonGlacier() {
 
     return (
         <Card className="well">
-            <CardBody>
+            <Card.Body>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Amazon Glacier
                 </FormSwitch>
@@ -149,7 +150,7 @@ export default function AmazonGlacier() {
                         )}
                     </div>
                 </Collapse>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

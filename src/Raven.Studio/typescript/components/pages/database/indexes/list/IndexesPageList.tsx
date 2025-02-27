@@ -1,7 +1,7 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import IndexUtils from "components/utils/IndexUtils";
 import React from "react";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import { IndexPanel } from "./IndexPanel";
 import { IndexSharedInfo } from "components/models/indexes";
 import { Icon } from "components/common/Icon";

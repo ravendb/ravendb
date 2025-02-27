@@ -1,4 +1,5 @@
-﻿import { Card, CardBody } from "reactstrap";
+﻿import Card from "react-bootstrap/Card";
+import {} from "reactstrap";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import appUrl from "common/appUrl";
@@ -28,7 +29,7 @@ export function PassiveState() {
 
     return (
         <Card color="faded-primary">
-            <CardBody className="text-body">
+            <Card.Body className="text-body">
                 <h3>
                     <Icon icon="info" />
                     The running server is in a <span className="fw-bolder">Passive State</span>, it is not part of a
@@ -59,7 +60,7 @@ export function PassiveState() {
                 {createDatabaseMode && (
                     <CreateDatabase closeModal={() => setCreateDatabaseMode(null)} initialMode={createDatabaseMode} />
                 )}
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

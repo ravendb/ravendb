@@ -1,4 +1,5 @@
-﻿import { Card, CardBody, Col, Row } from "reactstrap";
+﻿import Card from "react-bootstrap/Card";
+import { Col, Row } from "reactstrap";
 import { OverallInfoItem } from "components/pages/resources/about/partials/common";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
@@ -42,7 +43,7 @@ export function VersionsSummary(props: VersionsSummaryProps) {
 
     return (
         <Card>
-            <CardBody>
+            <Card.Body>
                 <h4>Software Version</h4>
                 <Row>
                     <OverallInfoItem icon="server" label="Server version">
@@ -75,7 +76,7 @@ export function VersionsSummary(props: VersionsSummaryProps) {
                         </Col>
                     </Row>
                 )}
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

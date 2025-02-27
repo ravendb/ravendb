@@ -1,4 +1,5 @@
-﻿import { Card, CardBody, Col, Row } from "reactstrap";
+﻿import Card from "react-bootstrap/Card";
+import { Col, Row } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { aboutPageUrls, ConnectivityStatus, OverallInfoItem } from "components/pages/resources/about/partials/common";
 import classNames from "classnames";
@@ -31,7 +32,7 @@ export function SupportSummary(props: SupportSummaryProps) {
 
     return (
         <Card>
-            <CardBody>
+            <Card.Body>
                 <h4>Support</h4>
                 <Row>
                     <OverallInfoItem icon="support" label="Support type">
@@ -75,7 +76,7 @@ export function SupportSummary(props: SupportSummaryProps) {
                         </Button>
                     </Col>
                 </Row>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

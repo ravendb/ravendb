@@ -4,7 +4,8 @@ import { UseIndexCleanupResult } from "components/pages/database/indexes/cleanup
 import { useAppSelector } from "components/store";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
-import { NavItem, Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { NavItem } from "reactstrap";
 
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
 

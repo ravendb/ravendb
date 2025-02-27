@@ -1,4 +1,5 @@
-import { Card, CardBody, Col, Form, Label, Row } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Col, Form, Label, Row } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";
@@ -119,8 +120,8 @@ export default function StudioGlobalConfiguration() {
                             </ButtonWithSpinner>
                         </ConditionalPopover>
                         <div className={hasStudioConfiguration ? null : "item-disabled pe-none"}>
-                            <Card innerRef={popoverContainerRef}>
-                                <CardBody className="vstack gap-3">
+                            <Card ref={popoverContainerRef}>
+                                <Card.Body className="vstack gap-3">
                                     <div className="gap-1">
                                         <Label className="mb-0 md-label">
                                             <PopoverWithHoverWrapper
@@ -181,10 +182,10 @@ export default function StudioGlobalConfiguration() {
                                             placeholder="Cluster size (default)"
                                         ></FormInput>
                                     </div>
-                                </CardBody>
+                                </Card.Body>
                             </Card>
                             <Card className="mt-3">
-                                <CardBody>
+                                <Card.Body>
                                     <div className="d-flex flex-column">
                                         <FormSwitch control={control} name="isCollapseDocsWhenOpening">
                                             Collapse documents when opening
@@ -193,7 +194,7 @@ export default function StudioGlobalConfiguration() {
                                             Help improve the Studio by gathering anonymous usage statistics
                                         </FormSwitch>
                                     </div>
-                                </CardBody>
+                                </Card.Body>
                             </Card>
                         </div>
                     </Form>

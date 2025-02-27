@@ -3,7 +3,8 @@ import { Icon } from "components/common/Icon";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
-import { Card, CardBody, Label } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Label } from "reactstrap";
 import { FormSwitch, FormInput, FormSelectCreatable } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
@@ -34,7 +35,7 @@ export default function AmazonS3() {
 
     return (
         <Card className="well">
-            <CardBody>
+            <Card.Body>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Amazon S3
                 </FormSwitch>
@@ -220,7 +221,7 @@ export default function AmazonS3() {
                         )}
                     </div>
                 </Collapse>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

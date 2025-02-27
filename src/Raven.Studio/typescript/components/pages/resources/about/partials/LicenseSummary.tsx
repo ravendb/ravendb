@@ -1,4 +1,5 @@
-﻿import { Card, CardBody, Col, Row } from "reactstrap";
+﻿import Card from "react-bootstrap/Card";
+import { Col, Row } from "reactstrap";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
@@ -53,7 +54,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
 
     return (
         <Card>
-            <CardBody>
+            <Card.Body>
                 <h4>License</h4>
                 <Row>
                     <OverallInfoItem icon="license" label="License type">
@@ -71,7 +72,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                     </OverallInfoItem>
                     <LicenseActions asyncGetConfigurationSettings={asyncGetConfigurationSettings} />
                 </Row>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { Card, CardBody, Col, Form, Row } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Col, Form, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormInput, FormSwitch } from "components/common/Form";
@@ -142,7 +143,7 @@ export default function DocumentRefresh() {
                             </ButtonWithSpinner>
                             <Col>
                                 <Card>
-                                    <CardBody>
+                                    <Card.Body>
                                         <div className="vstack gap-2">
                                             <FormSwitch
                                                 name="isDocumentRefreshEnabled"
@@ -212,7 +213,7 @@ export default function DocumentRefresh() {
                                                 />
                                             </div>
                                         </div>
-                                    </CardBody>
+                                    </Card.Body>
                                 </Card>
                             </Col>
                         </Form>

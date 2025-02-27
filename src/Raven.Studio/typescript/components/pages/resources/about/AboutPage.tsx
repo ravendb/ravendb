@@ -1,6 +1,7 @@
 ﻿import React, { useState } from "react";
 import Badge from "react-bootstrap/Badge";
-import { Card, Col, Row, TabContent, TabPane } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Col, Row, TabContent, TabPane } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import "./AboutPage.scss";
 

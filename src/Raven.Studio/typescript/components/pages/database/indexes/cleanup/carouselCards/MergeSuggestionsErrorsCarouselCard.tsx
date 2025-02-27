@@ -8,7 +8,7 @@ import { MergeSuggestionsError } from "components/pages/database/indexes/cleanup
 import { useAppSelector } from "components/store";
 import React from "react";
 import Table from "react-bootstrap/Table";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 
 interface MergeSuggestionsErrorsCarouselCardProps {

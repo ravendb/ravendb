@@ -1,5 +1,6 @@
 ﻿import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
-import { Card, Col, Row } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Col, Row } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import {
     refresh,

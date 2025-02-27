@@ -2,7 +2,7 @@
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
 import Table from "react-bootstrap/Table";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";

@@ -1,7 +1,8 @@
 ﻿import React from "react";
 import Spinner from "react-bootstrap/Spinner";
 import Collapse from "react-bootstrap/Collapse";
-import { Card, CardBody, Label } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Label } from "reactstrap";
 import { FormSwitch, FormPathSelector } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -37,7 +38,7 @@ export default function Local() {
 
     return (
         <Card className="well">
-            <CardBody>
+            <Card.Body>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Local
                 </FormSwitch>
@@ -73,7 +74,7 @@ export default function Local() {
                         )}
                     </div>
                 </Collapse>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

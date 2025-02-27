@@ -2,7 +2,7 @@
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "./PropSummary";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import { Icon } from "./Icon";
 
 export default {

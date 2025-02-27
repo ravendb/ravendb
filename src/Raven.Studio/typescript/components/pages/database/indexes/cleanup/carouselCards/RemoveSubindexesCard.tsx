@@ -13,7 +13,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
 import Table from "react-bootstrap/Table";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 
 interface RemoveSubindexesCardProps {
     surpassing: UseIndexCleanupResult["surpassing"];

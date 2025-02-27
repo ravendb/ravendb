@@ -1,6 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
-import { Card, CardBody, Label } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -43,7 +44,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
 
     return (
         <Card className="well">
-            <CardBody>
+            <Card.Body>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Google Cloud
                 </FormSwitch>
@@ -168,7 +169,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                         )}
                     </div>
                 </Collapse>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

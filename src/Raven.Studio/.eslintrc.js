@@ -44,6 +44,10 @@ module.exports = {
     "local-rules/no-reactstrap-ListGroup": "warn",
     "local-rules/no-reactstrap-Accordion": "warn",
     "local-rules/no-reactstrap-Table": "warn",
+    "local-rules/no-reactstrap-Card": "warn",
+    "local-rules/no-reactstrap-CardHeader": "warn",
+    "local-rules/no-reactstrap-CardBody": "warn",
+    "local-rules/reactstrap-Card-children-to-RBootstrap-children": "warn",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

@@ -7,7 +7,7 @@ import { UseIndexCleanupResult } from "components/pages/database/indexes/cleanup
 import { useAppSelector } from "components/store";
 import React from "react";
 import Table from "react-bootstrap/Table";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 
 interface UnmergableIndexesCardProps {
     unmergable: UseIndexCleanupResult["unmergable"];

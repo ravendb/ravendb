@@ -2,7 +2,7 @@
 import Steps from "./Steps";
 import React, { useState } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import { FlexGrow } from "../FlexGrow";
 import { Icon } from "../Icon";
 import Button from "react-bootstrap/Button";

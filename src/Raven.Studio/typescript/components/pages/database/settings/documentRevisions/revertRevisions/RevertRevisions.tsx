@@ -3,7 +3,8 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { RevertRevisionsFormData, revertRevisionsYupResolver } from "./RevertRevisionsValidation";
-import { Row, Col, Form, Card, CardBody, Label, FormGroup, InputGroup } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Row, Col, Form, Label, FormGroup, InputGroup } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -97,7 +98,7 @@ export default function RevertRevisions() {
                         </small>
                     </div>
                     <Card className="mt-3">
-                        <CardBody className="gap-4">
+                        <Card.Body className="gap-4">
                             <FormGroup>
                                 <Label for="pointInTime">Point in Time</Label>
                                 <FormDatePicker
@@ -135,11 +136,11 @@ export default function RevertRevisions() {
                                     />
                                 </InputGroup>
                             </FormGroup>
-                        </CardBody>
+                        </Card.Body>
                     </Card>
                     {hasDatabaseAdminAccess && (
                         <Card className="mt-3">
-                            <CardBody>
+                            <Card.Body>
                                 <FormCollectionsSelect
                                     control={control}
                                     collectionsFormName="collections"
@@ -149,7 +150,7 @@ export default function RevertRevisions() {
                                     allCollectionNames={allCollectionNames}
                                     setValue={setValue}
                                 />
-                            </CardBody>
+                            </Card.Body>
                         </Card>
                     )}
                 </Form>
