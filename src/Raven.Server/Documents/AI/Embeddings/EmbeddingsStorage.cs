@@ -3,22 +3,16 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Corax.Utils;
 using JetBrains.Annotations;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
-using Raven.Client.ServerWide;
-using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
-using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
-using Raven.Server.Documents.ETL.Providers.AI.Extensions;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.AI;
+namespace Raven.Server.Documents.AI.Embeddings;
 
 public class EmbeddingsStorage
 {
@@ -26,13 +20,9 @@ public class EmbeddingsStorage
 
     private readonly DocumentsStorage _documentsStorage;
 
-    
-    private readonly EmbeddingsCacher _embeddingsCacher;
-    
     public EmbeddingsStorage([NotNull] DocumentDatabase database)
     {
         _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(_documentsStorage));
-        _embeddingsCacher = new EmbeddingsCacher(database, database.Loggers.GetLogger<EmbeddingsCacher>(), database.DatabaseShutdown);
     }
 
     public Document GetDocumentEmbeddings(DocumentsOperationContext context, string sourceDocumentId, out string documentEmbeddingsId)
@@ -44,10 +34,10 @@ public class EmbeddingsStorage
         return document;
     }
 
-    public bool TryGetEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, string value, in VectorEmbeddingType targetQuantization,
+    public bool TryGetEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, string valueHash, in VectorEmbeddingType targetQuantization,
         out string embeddingCacheDocumentId, out EmbeddingCacheDocument result)
     {
-        embeddingCacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, "TODO arek", targetQuantization);
+        embeddingCacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, valueHash, targetQuantization);
         
         return TryGetEmbeddingCacheDocument(context, embeddingCacheDocumentId, out result);
     }

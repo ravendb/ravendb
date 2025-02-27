@@ -19,6 +19,8 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
     public async Task<object> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext, AiConnectionStringIdentifier connectionStringId,
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value, VectorEmbeddingType destinationEmbeddingType)
     {
+        // TODO michal - chunking handling
+
         if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, destinationEmbeddingType, out var embeddingCacheDocumentId, out var toDoArek)) 
         {
             var valueHash = EmbeddingsHelper.CalculateInputValueHash(value);

@@ -92,7 +92,7 @@ namespace Raven.Server.Background
             Cts.Dispose();
         }
 
-        
+        public bool IsRunning => _currentTask != null;
 
         protected async Task WaitOrThrowOperationCanceled(TimeSpan time)
         {

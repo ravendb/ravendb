@@ -5,8 +5,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Extensions;
@@ -17,21 +15,19 @@ namespace Raven.Server.Documents.AI;
 
 public class AiIntegrationsController : IDisposable
 {
-    private readonly Dictionary<EmbeddingsGenerationTaskIdentifier, ITextEmbeddingGenerationService> _embeddingGeneratorsByTaskIdentifier;
     private readonly Dictionary<AiConnectionStringIdentifier, ITextEmbeddingGenerationService> _embeddingGeneratorsByConnectionStringIdentifier;
 
-    private Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier> _connectionStringsByTasks;
-    private Dictionary<EmbeddingsGenerationTaskIdentifier, EmbeddingsGenerationConfiguration> _embeddingGeneratorsConfigurationByTasks;
+    private Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier> _connectionStringsByTaskIdentifiers;
+    private Dictionary<EmbeddingsGenerationTaskIdentifier, EmbeddingsGenerationConfiguration> _embeddingGeneratorsConfigurationByTaskIdentifers;
 
     public AiIntegrationsController(DocumentDatabase database)
     {
         _embeddingGeneratorsByConnectionStringIdentifier = new();
-        _embeddingGeneratorsByTaskIdentifier = new();
-        _embeddingGeneratorsConfigurationByTasks = new();
-        _connectionStringsByTasks = new Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier>();
+        _embeddingGeneratorsConfigurationByTaskIdentifers = new();
+        _connectionStringsByTaskIdentifiers = new();
 
         var storage = new EmbeddingsStorage(database);
-        var cacher = new EmbeddingsCacher(database, database.Loggers.GetLogger<EmbeddingsCacher>(), database.DatabaseShutdown);
+        var cacher = new EmbeddingsCacher(database, database.DatabaseShutdown);
 
         Embeddings = new EmbeddingsController(this, storage, cacher);
     }
@@ -40,18 +36,21 @@ public class AiIntegrationsController : IDisposable
 
     public bool TryGetEmbeddingsGenerationConfiguration(EmbeddingsGenerationTaskIdentifier taskIdentifier, out EmbeddingsGenerationConfiguration configuration)
     {
-        return _embeddingGeneratorsConfigurationByTasks.TryGetValue(taskIdentifier, out configuration);
+        return _embeddingGeneratorsConfigurationByTaskIdentifers.TryGetValue(taskIdentifier, out configuration);
     }
 
     public AiConnectionStringIdentifier GetConnectionStringByEmbeddingsGenerationTask(EmbeddingsGenerationTaskIdentifier taskIdentifier)
     {
-        return _connectionStringsByTasks[taskIdentifier];
+        return _connectionStringsByTaskIdentifiers[taskIdentifier];
     }
 
     public void HandleDatabaseRecordChange(DatabaseRecord record)
     {
         if (record == null)
             return;
+
+        var connectionStringsByTasks = new Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier>();
+        var embeddingGeneratorsConfigurationByTasks = new Dictionary<EmbeddingsGenerationTaskIdentifier, EmbeddingsGenerationConfiguration>();
 
         foreach (var connectionStringKvp in record.AiConnectionStrings)
         {
@@ -69,41 +68,38 @@ public class AiIntegrationsController : IDisposable
             _embeddingGeneratorsByConnectionStringIdentifier[connectionStringIdentifier] = service;
         }
 
-        // todo skip disabled tasks?
-        foreach (var aiIntegrationConfiguration in record.EmbeddingsGenerations)
+        var numberOfActiveEmbeddingGenerationTasks = 0;
+
+        foreach (var embeddingGenerationConfiguration in record.EmbeddingsGenerations)
         {
-            var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(aiIntegrationConfiguration.Identifier);
-            var connectionStringIdentifier = new AiConnectionStringIdentifier(record.AiConnectionStrings[aiIntegrationConfiguration.ConnectionStringName].Identifier);
+            if (embeddingGenerationConfiguration.Disabled == false)
+                numberOfActiveEmbeddingGenerationTasks++;
 
-            var service = _embeddingGeneratorsByConnectionStringIdentifier[connectionStringIdentifier];
+            var embeddingsGeneratorIdentifier = new EmbeddingsGenerationTaskIdentifier(embeddingGenerationConfiguration.Identifier);
+            var connectionStringIdentifier = new AiConnectionStringIdentifier(record.AiConnectionStrings[embeddingGenerationConfiguration.ConnectionStringName].Identifier);
 
-            _embeddingGeneratorsByTaskIdentifier[aiIntegrationIdentifier] = service;
+            connectionStringsByTasks[embeddingsGeneratorIdentifier] = connectionStringIdentifier;
 
-            _connectionStringsByTasks[aiIntegrationIdentifier] = connectionStringIdentifier;
-
-            _embeddingGeneratorsConfigurationByTasks[aiIntegrationIdentifier] = aiIntegrationConfiguration;
+            embeddingGeneratorsConfigurationByTasks[embeddingsGeneratorIdentifier] = embeddingGenerationConfiguration;
         }
 
+        _connectionStringsByTaskIdentifiers = connectionStringsByTasks;
+        _embeddingGeneratorsConfigurationByTaskIdentifers = embeddingGeneratorsConfigurationByTasks;
 
-        //if (_embeddingsCacher.IsStarted)
-        //{
-        //    if (record.AiIntegrations.Count == 0)
-        //    {
-        //        _embeddingsCacher.Stop();
-        //        _embeddingsCacher.IsStarted = false;
-        //    }
-
-        //    return;
-        //}
-
-
-        //_embeddingsCacher.Start();
-        //_embeddingsCacher.IsStarted = true;
+        if (Embeddings.Cacher.IsRunning)
+        {
+            if (numberOfActiveEmbeddingGenerationTasks == 0)
+                Embeddings.Cacher.Stop();
+        }
+        else
+        {
+            Embeddings.Cacher.Start();
+        }
     }
 
     public void Dispose()
     {
-        //TODO arek
+        Embeddings.Cacher.Dispose();
     }
 
     public bool TryGetServiceByConnectionString(AiConnectionStringIdentifier connectionStringIdentifier, out ITextEmbeddingGenerationService service)

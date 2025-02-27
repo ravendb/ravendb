@@ -25,7 +25,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
     protected const string DefaultConnectionStringName = "Local AI connection";
     protected const string DefaultEmbeddingGenerationTaskName = "localAiTask";
     protected ByteStringContext _allocator;
-    protected readonly TimeSpan DefaultEtlTimeout = TimeSpan.FromSeconds(10);
+    protected readonly TimeSpan DefaultEtlTimeout = TimeSpan.FromSeconds(30);
     protected static readonly ChunkingOptions DefaultChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 };
     
     protected float[] GenerateEmbeddingForTextViaOnnx(string text)

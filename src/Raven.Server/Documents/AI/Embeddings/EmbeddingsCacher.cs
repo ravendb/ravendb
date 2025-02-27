@@ -10,7 +10,6 @@ using Raven.Server.Background;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -24,9 +23,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
     private readonly ConcurrentQueue<EmbeddingCacheItem> _embeddingsQueue;
     private readonly SemaphoreSlim _semaphore;
 
-    public bool IsStarted { get; set; }
-
-    public EmbeddingsCacher(DocumentDatabase database, RavenLogger logger, CancellationToken shutdown) : base(database.Name, logger, shutdown)
+    public EmbeddingsCacher(DocumentDatabase database, CancellationToken shutdown) : base(database.Name, database.Loggers.GetLogger<EmbeddingsCacher>(), shutdown)
     {
         _database = database;
         _embeddingsQueue = new ConcurrentQueue<EmbeddingCacheItem>();
@@ -42,6 +39,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
 
     public void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embedding)
     {
+        // TODO arek - need to pass quantization
         var newItem = new EmbeddingCacheItem() { EmbeddingValue = embedding, TextualValue = textualValue, ConnectionStringIdentifier = connectionStringIdentifier };
 
         _embeddingsQueue.Enqueue(newItem);

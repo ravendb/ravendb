@@ -1096,6 +1096,13 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed QueueSinkLoader");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing AiIntegrationsController");
+            exceptionAggregator.Execute(() =>
+            {
+                AiIntegrations?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed AiIntegrationsController");
+
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing Operations");
             exceptionAggregator.Execute(() =>
             {
