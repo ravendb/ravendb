@@ -13,14 +13,16 @@ namespace Raven.Server.Documents.AI.Embeddings;
 
 public class EmbeddingsController(AiIntegrationsController aiIntegrations, EmbeddingsStorage storage, EmbeddingsCacher cacher)
 {
-    private readonly AiIntegrationsController _aiIntegrations = aiIntegrations;
     public EmbeddingsStorage Storage { get; private set; } = storage;
     public EmbeddingsCacher Cacher { get; private set; } = cacher;
+#pragma warning disable SKEXP0001
+    private readonly EmbeddingsBatchingService _batchingService = new(aiIntegrations.Database, aiIntegrations);
+#pragma warning restore SKEXP0001
 
     public async Task<object> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext, AiConnectionStringIdentifier connectionStringId,
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value, VectorEmbeddingType destinationEmbeddingType)
     {
-        if (_aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
+        if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
             throw new ArgumentException($"Couldn't find Embeddings Generation task for connection string '{connectionStringId.Value}' ");
 
         var allocator = documentsContext.Transaction.InnerTransaction.Allocator; // TODO arek - use buildparameters.Allocator
@@ -52,6 +54,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         for (var i = 0; i < chunksForGeneration.Count; i++)
         {
             var embedding = await service.GenerateEmbeddingAsync(chunksForGeneration[i]);
+            // var embedding = await _batchingService.GetEmbeddingAsync(connectionStringId, value); // TODO Lev - uncomment when batching is implemented
             var vectorValue = GenerateEmbeddings.FromArray(allocator, embedding, VectorEmbeddingType.Single, destinationEmbeddingType);
 
             vectorValues[vectorValuesCount++] = vectorValue;
@@ -63,5 +66,10 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
             return vectorValues[0];
         
         return vectorValues;
+    }
+
+    public void Dispose()
+    {
+        _batchingService?.Dispose();
     }
 }

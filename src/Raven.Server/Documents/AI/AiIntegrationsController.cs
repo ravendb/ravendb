@@ -20,8 +20,11 @@ public class AiIntegrationsController : IDisposable
     private Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier> _connectionStringsByTaskIdentifiers;
     private Dictionary<EmbeddingsGenerationTaskIdentifier, EmbeddingsGenerationConfiguration> _embeddingGeneratorsConfigurationByTaskIdentifers;
 
+    public DocumentDatabase Database { get; }
+
     public AiIntegrationsController(DocumentDatabase database)
     {
+        Database = database;
         _embeddingGeneratorsByConnectionStringIdentifier = new();
         _embeddingGeneratorsConfigurationByTaskIdentifers = new();
         _connectionStringsByTaskIdentifiers = new();
