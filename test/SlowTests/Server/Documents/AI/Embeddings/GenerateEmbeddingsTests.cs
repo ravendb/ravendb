@@ -34,7 +34,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
 
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
-        var (config, connection) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name" }, new EmbeddingPathConfiguration() { Path = "SubDto.Name" }]);
+        var (config, connection) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }, new EmbeddingPathConfiguration() { Path = "SubDto.Name", ChunkingOptions = DefaultChunkingOptions }]);
         aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
         var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);

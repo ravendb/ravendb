@@ -26,6 +26,8 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
     protected const string DefaultEmbeddingGenerationTaskName = "localAiTask";
     protected ByteStringContext _allocator;
     protected readonly TimeSpan DefaultEtlTimeout = TimeSpan.FromSeconds(10);
+    protected static readonly ChunkingOptions DefaultChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 };
+    
     protected float[] GenerateEmbeddingForTextViaOnnx(string text)
     {
         _allocator ??= new(SharedMultipleUseFlag.None);
@@ -39,7 +41,8 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         List<EmbeddingPathConfiguration> embeddingsPaths = null,
         string script = null,
         string collectionName = null,
-        VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
+        VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single,
+        ChunkingOptions chunkingOptionsForQuerying = null)
     {
         var configuration = new EmbeddingsGenerationConfiguration
         {
@@ -53,6 +56,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             }
             : null,
             TargetQuantizationType = targetQuantization,
+            ChunkingOptionsForQuerying = chunkingOptionsForQuerying ?? DefaultChunkingOptions,
         };
 
         configuration.Identifier = configuration.GenerateIdentifier();

@@ -6,9 +6,6 @@ using Corax.Utils;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.VectorSearch;
-using Raven.Client.Documents.Operations.AI;
-using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
-using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.AI.Embeddings;
@@ -20,9 +17,9 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
     public EmbeddingsCacher Cacher { get; private set; } = cacher;
 
     public async Task<object> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext, AiConnectionStringIdentifier connectionStringId,
-        EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value, VectorOptions vectorOptions)
+        EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value, VectorEmbeddingType destinationEmbeddingType)
     {
-        if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, targetQuantization, out var embeddingCacheDocumentId, out var toDoArek)) 
+        if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, destinationEmbeddingType, out var embeddingCacheDocumentId, out var toDoArek)) 
         {
             var valueHash = EmbeddingsHelper.CalculateInputValueHash(value);
 
@@ -34,7 +31,8 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
         var allocator = documentsContext.Transaction.InnerTransaction.Allocator; // TODO arek - use buildparameters.Allocator
 
-        var taskConfig = documentsContext.DocumentDatabase.AiIntegrations.GetConfigurationByTaskIdentifier(embeddingTaskId);
+        if (documentsContext.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingTaskId, out var taskConfig) == false)
+            throw new Exception($"Could not find embeddings generation configuration for embedding task '{embeddingTaskId.Value}'");
 
         var chunkingOptions = taskConfig.ChunkingOptionsForQuerying;
         
@@ -45,7 +43,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         for (var i = 0; i < chunks.Count; i++)
         {
             var embedding = await service.GenerateEmbeddingAsync(chunks[i]);
-            var vectorValue = GenerateEmbeddings.FromArray(allocator, embedding, vectorOptions);
+            var vectorValue = GenerateEmbeddings.FromArray(allocator, embedding, VectorEmbeddingType.Single, destinationEmbeddingType);
 
             vectorValues[i] = vectorValue;
         }

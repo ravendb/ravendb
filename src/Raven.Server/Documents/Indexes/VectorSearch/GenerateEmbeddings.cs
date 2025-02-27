@@ -79,11 +79,8 @@ public static class GenerateEmbeddings
         }
     }
     
-    public static VectorValue FromArray(ByteStringContext allocator, ReadOnlyMemory<float> readOnlyMemory, in VectorOptions options)
+    public static VectorValue FromArray(ByteStringContext allocator, ReadOnlyMemory<float> readOnlyMemory, VectorEmbeddingType sourceEmbeddingType, VectorEmbeddingType embeddingDestinationType)
     {
-        var embeddingSourceType = options.SourceEmbeddingType;
-        var embeddingDestinationType = options.DestinationEmbeddingType;
-        
         var usedBytes = embeddingDestinationType switch
         {
             VectorEmbeddingType.Single => readOnlyMemory.Length * sizeof(float),
@@ -95,18 +92,18 @@ public static class GenerateEmbeddings
         var memoryScope = allocator.Allocate(usedBytes, out Memory<byte> memory);
         MemoryMarshal.AsBytes(readOnlyMemory.Span).CopyTo(memory.Span);
         
-        switch (embeddingSourceType)
+        switch (sourceEmbeddingType)
         {
             case VectorEmbeddingType.Binary:
-                PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != embeddingSourceType);
+                PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != sourceEmbeddingType);
                 return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Binary, usedBytes);
             case VectorEmbeddingType.Int8:
-                PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != embeddingSourceType);
+                PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != sourceEmbeddingType);
                 return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Int8, usedBytes);
             case VectorEmbeddingType.Single when embeddingDestinationType is VectorEmbeddingType.Single:
                 return new VectorValue(memoryScope, memory, Voron.Data.Graphs.VectorEmbeddingType.Single, usedBytes);
             default:
-                return Quantize(allocator, options.DestinationEmbeddingType, memoryScope, memory, usedBytes);
+                return Quantize(allocator, embeddingDestinationType, memoryScope, memory, usedBytes);
         }
     }
 

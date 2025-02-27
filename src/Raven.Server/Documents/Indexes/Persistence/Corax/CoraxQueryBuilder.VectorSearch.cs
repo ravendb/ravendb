@@ -35,11 +35,12 @@ public static partial class CoraxQueryBuilder
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters, fieldName, hasBoost: builderParameters.HasBoost);
         object transformedEmbeddings = null;
-        IndexField indexField = null;
+        IndexField indexField;
 
         if (builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out var embeddingsGenerationTaskIdentifier))
         {
-            VectorHelpers.ReadEmbeddingFromEmbeddingsGenerationTask(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, out transformedEmbeddings);
+            var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
+            VectorHelpers.ReadEmbeddingFromEmbeddingsGenerationTask(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, out transformedEmbeddings);
         }
         else
         {
@@ -223,6 +224,15 @@ public static partial class CoraxQueryBuilder
             return GenerateEmbeddings.FromArray(parameters.Allocator, memScope, mem, vectorOptions, bytesUsed);
         }
 
+        internal static VectorOptions GetExplicitVectorOptions(Parameters builderParameters, in string fieldName, out IndexField indexField)
+        {
+            if ((builderParameters.FieldsToFetch != null && builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out indexField)) == false
+                && (builderParameters.Index.Definition.IndexFields.TryGetValue(fieldName, out indexField)) == false)
+                PortableExceptions.Throw<InvalidDataException>($"Cannot find `{fieldName}` field in the index.");
+            
+            return indexField.Vector;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static VectorOptions GetOptions(Parameters builderParameters, in string fieldName, out IndexField indexField)
         {
@@ -274,11 +284,17 @@ public static partial class CoraxQueryBuilder
 
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
             var connectionStringId = database.AiIntegrations.GetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId); // TODO michal
-            if (builderParameters.Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsTaskId, out var embeddingsGenerationConfiguration) == false)
-                PortableExceptions.Throw<InvalidDataException>($"Cannot find embeddings generation configuration for {embeddingsTaskId.Value}.");            
+
+            var destinationEmbeddingType = vectorOptions?.DestinationEmbeddingType;
+            
+            if (destinationEmbeddingType is null && builderParameters.Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsTaskId,
+                    out var embeddingsGenerationConfiguration))
+            {
+                destinationEmbeddingType = embeddingsGenerationConfiguration.TargetQuantizationType;
+            }         
             
             transformedEmbedding = database.AiIntegrations.Embeddings
-                .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsTaskId, valueAsString, vectorOptions)
+                .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsTaskId, valueAsString, destinationEmbeddingType!.Value)
                 .GetAwaiter().GetResult();
         }
 
@@ -302,8 +318,6 @@ public static partial class CoraxQueryBuilder
                     {
                         var attachment = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachment(documentContext, id,
                             attachmentName, AttachmentType.Document, null);
-
-                        var configuration = builderParameters.Index.DocumentDatabase.AiIntegrations.GetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier);
 
                         var bytesRequired = (int)attachment.Size;
                         var memScope = embeddingContext.Allocate(bytesRequired, out Memory<byte> memory);

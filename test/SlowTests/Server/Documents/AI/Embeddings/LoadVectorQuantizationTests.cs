@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Queries.Timings;
 using Tests.Infrastructure;
 using Xunit;
@@ -23,7 +25,10 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }
 
         var etl = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(store, embeddingsPaths: ["Name"], targetQuantization: VectorEmbeddingType.Int8);
+        RegisterAiIntegration(store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
+        {
+            new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
+        }, targetQuantization: VectorEmbeddingType.Int8);
         etl.Wait(DefaultEtlTimeout);
         
         new Index().Execute(store);
@@ -55,7 +60,10 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }
 
         var etl = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(store, embeddingsPaths: ["Name"], targetQuantization: VectorEmbeddingType.Binary);
+        RegisterAiIntegration(store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
+        {
+            new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
+        }, targetQuantization: VectorEmbeddingType.Binary);
         etl.Wait(DefaultEtlTimeout);
         
         new Index().Execute(store);
@@ -87,11 +95,17 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }
 
         var etl = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(embeddingsGenerationTaskName: "secondEtl", store: store, embeddingsPaths: ["Name"], targetQuantization: VectorEmbeddingType.Single);
+        RegisterAiIntegration(embeddingsGenerationTaskName: "secondEtl", store: store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
+        {
+            new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
+        }, targetQuantization: VectorEmbeddingType.Single);
         etl.Wait(DefaultEtlTimeout);
         
         etl.Reset();
-        RegisterAiIntegration(store, embeddingsPaths: ["Name"], targetQuantization: VectorEmbeddingType.Int8);
+        RegisterAiIntegration(store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
+        {
+            new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
+        }, targetQuantization: VectorEmbeddingType.Int8);
         etl.Wait(DefaultEtlTimeout);
         
         
