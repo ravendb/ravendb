@@ -17,6 +17,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -544,7 +545,7 @@ select {
                 {
                     Query = query
                 });
-                var revisions = new HashSet<MyRevision>();
+                var revisions = new ConcurrentSet<MyRevision>();
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<MyRevision>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3)
@@ -668,7 +669,7 @@ select {
                 }
 
                 var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = query });
-                var revisions = new HashSet<MyRevision>();
+                var revisions = new ConcurrentSet<MyRevision>();
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<MyRevision>(new SubscriptionWorkerOptions(subscriptionId)
                        {
                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3)
@@ -777,7 +778,7 @@ select {
                 {
                     Query = query
                 });
-                var revisions = new HashSet<MyRevision>();
+                var revisions = new ConcurrentSet<MyRevision>();
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<MyRevision>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3)

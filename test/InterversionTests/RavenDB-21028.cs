@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Indexing.Benchmark.Entities;
 using Raven.Client.Documents.Subscriptions;
+using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -50,7 +51,7 @@ namespace InterversionTests
                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
                        }))
                 {
-                    var items = new HashSet<string>();
+                    var items = new ConcurrentSet<string>();
                     subscription.AfterAcknowledgment += batch =>
                     {
                         foreach (var item in batch.Items)

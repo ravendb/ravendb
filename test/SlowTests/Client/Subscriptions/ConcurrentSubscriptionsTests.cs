@@ -17,6 +17,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -101,7 +102,7 @@ namespace SlowTests.Client.Subscriptions
             {
                 var id = store.Subscriptions.Create<User>();
 
-                var workerToDocsAmount = new Dictionary<SubscriptionWorker<User>, HashSet<string>>();
+                var workerToDocsAmount = new Dictionary<SubscriptionWorker<User>, ConcurrentSet<string>>();
 
                 for (int i = 0; i < workersAmount; i++)
                 {
@@ -110,7 +111,7 @@ namespace SlowTests.Client.Subscriptions
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
                         Strategy = SubscriptionOpeningStrategy.Concurrent,
                         MaxDocsPerBatch = 1
-                    }), new HashSet<string>());
+                    }), new ConcurrentSet<string>());
                 }
 
                 using (var session = store.OpenSession())
@@ -984,7 +985,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = await store.Subscriptions.CreateAsync<User>();
-                var docs = new HashSet<string>();
+                var docs = new ConcurrentSet<string>();
 
                 for (int i = 0; i < 10; i++)
                 {
@@ -1044,7 +1045,7 @@ namespace SlowTests.Client.Subscriptions
                     Filter = user => user.Age == 0
                 });
 
-                var docs = new HashSet<string>();
+                var docs = new ConcurrentSet<string>();
 
                 for (int i = 0; i < 10; i++)
                 {
@@ -1119,7 +1120,7 @@ where predicate.call(doc)"
                     Filter = user => user.Age == 0
                 });
 
-                var docs = new HashSet<string>();
+                var docs = new ConcurrentSet<string>();
                 var workers = new List<SubscriptionWorker<User>>();
                 var subscriptionLog = new List<(string WorkerId, DateTime Date, string Message)>();
                 try
@@ -1298,7 +1299,7 @@ where predicate.call(doc)"
                 var id = await store.Subscriptions.CreateAsync<User>();
 
                 //responsible node processes doc
-                HashSet<string> docs = await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id);
+                ConcurrentSet<string> docs = await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id);
 
                 var node1 = string.Empty;
                 Assert.True(await WaitForValueAsync(async () =>
@@ -1375,9 +1376,9 @@ where predicate.call(doc)"
             }
         }
 
-        private static async Task<HashSet<string>> RunSubscriptionWorkerAndProcessOneDocumentAsync(DocumentStore store, string id)
+        private static async Task<ConcurrentSet<string>> RunSubscriptionWorkerAndProcessOneDocumentAsync(DocumentStore store, string id)
         {
-            var docs = new HashSet<string>();
+            var docs = new ConcurrentSet<string>();
             await using var worker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),

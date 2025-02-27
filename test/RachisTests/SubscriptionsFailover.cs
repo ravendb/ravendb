@@ -24,6 +24,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -797,7 +798,7 @@ namespace RachisTests
                     Assert.NotNull(tag);
 
                     var redirects = new Dictionary<string, string>();
-                    var processedIds = new HashSet<string>();
+                    var processedIds = new ConcurrentSet<string>();
                     var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(name)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16),

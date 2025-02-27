@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -97,6 +98,22 @@ namespace Sparrow.Collections
         public override string ToString()
         {
             return Count.ToString("#,#", CultureInfo.InvariantCulture);
+        }
+
+        public void UnionWith(IEnumerable<T> other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            foreach (T item in other)
+            {
+                if (_inner.TryAdd(item, null))
+                {
+                    Interlocked.Increment(ref _innerCountForEmpty);
+                }
+            }
         }
     }
 }
