@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
@@ -7,7 +6,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -549,8 +547,7 @@ select {
                 {
                     Query = query
                 });
-                var concurrentDictionary = new ConcurrentDictionary<int, MyRevision>();
-                var index = 0;
+                var revisions = new ConcurrentSet<MyRevision>();
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<MyRevision>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3)
@@ -560,15 +557,15 @@ select {
                     {
                         foreach (var item in x.Items)
                         {
-                            concurrentDictionary[Interlocked.Increment(ref index)] = item.Result;
+                            revisions.Add(item.Result);
                         }
                     });
 
                     dynamic resultsObj1 = JsonConvert.DeserializeObject<ExpandoObject>(jsonString);
 
                     List<dynamic> results = resultsObj1.RevisionDocuments;
-                    Assert.Equal(8, await WaitForValueAsync(() => concurrentDictionary.Count, 8));
-                    List<MyRevision> revisions = concurrentDictionary.OrderBy(kvp => kvp.Key).Select(x => x.Value).ToList();
+                    Assert.Equal(8, await WaitForValueAsync(() => revisions.Count, 8));
+
                     var f = revisions.First();
                     IDictionary<string, object> metadata = (IDictionary<string, object>)((IDictionary<string, object>)results[0])["@metadata"];
 
@@ -674,8 +671,7 @@ select {
                 }
 
                 var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = query });
-                var concurrentDictionary = new ConcurrentDictionary<int, MyRevision>();
-                var index = 0;
+                var revisions = new ConcurrentSet<MyRevision>();
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<MyRevision>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3)
@@ -685,15 +681,15 @@ select {
                     {
                         foreach (var item in x.Items)
                         {
-                            concurrentDictionary[Interlocked.Increment(ref index)] = item.Result;
+                            revisions.Add(item.Result);
                         }
                     });
 
                     dynamic resultsObj1 = JsonConvert.DeserializeObject<ExpandoObject>(jsonString);
 
                     List<dynamic> results = resultsObj1.RevisionDocuments;
-                    Assert.Equal(1, await WaitForValueAsync(() => concurrentDictionary.Count, 1));
-                    List<MyRevision> revisions = concurrentDictionary.OrderBy(kvp => kvp.Key).Select(x => x.Value).ToList();
+                    Assert.Equal(1, await WaitForValueAsync(() => revisions.Count, 1));
+
                     var f = revisions.First();
                     IDictionary<string, object> metadata = (IDictionary<string, object>)((IDictionary<string, object>)results[results.Count - 2])["@metadata"];
 
@@ -784,8 +780,7 @@ select {
                 {
                     Query = query
                 });
-                var concurrentDictionary = new ConcurrentDictionary<int,MyRevision>();
-                var index = 0;
+                var revisions = new ConcurrentSet<MyRevision>();
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<MyRevision>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3)
@@ -795,15 +790,15 @@ select {
                     {
                         foreach (var item in x.Items)
                         {
-                            concurrentDictionary[Interlocked.Increment(ref index)] = item.Result;
+                            revisions.Add(item.Result);
                         }
                     });
 
                     dynamic resultsObj1 = JsonConvert.DeserializeObject<ExpandoObject>(jsonString);
 
                     List<dynamic> results = resultsObj1.RevisionDocuments;
-                    Assert.Equal(7, await WaitForValueAsync(() => concurrentDictionary.Count, 7));
-                    List<MyRevision> revisions = concurrentDictionary.OrderBy(kvp => kvp.Key).Select(x => x.Value).ToList();
+                    Assert.Equal(7, await WaitForValueAsync(() => revisions.Count, 7));
+
                     var f = revisions.First();
                     IDictionary<string, object> metadata = (IDictionary<string, object>)((IDictionary<string, object>)results[0])["@metadata"];
 
