@@ -664,7 +664,7 @@ class aiTasksStats extends shardViewModelBase {
         }, 1000, { maxWait: 3000 });
 
         this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.db, this.location, d => {
-            const aiEtlData = d.filter(x => x.EtlType === "Ai")
+            const aiEtlData = d.filter(x => x.EtlType === "EmbeddingsGeneration")
             this.etlData = aiEtlData;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
@@ -1553,7 +1553,7 @@ class aiTasksStats extends shardViewModelBase {
             if (!_.isObject(importedData)) {
                 messagePublisher.reportError("Invalid replication stats file format", undefined, undefined);
             } else {
-                this.etlData = importedData.Etl.filter(x => x.EtlType === "Ai");
+                this.etlData = importedData.Etl.filter(x => x.EtlType === "EmbeddingsGeneration");
 
                 this.fillCache();
                 this.prepareBrush();

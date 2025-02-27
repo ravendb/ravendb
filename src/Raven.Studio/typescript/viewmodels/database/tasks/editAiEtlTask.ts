@@ -49,7 +49,7 @@ class aiTaskTestMode {
     loadedDocumentId = ko.observable<string>();
 
     debugOutput = ko.observableArray<string>([]);
-    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.AI.Test.AiIntegrationTestScriptResult>([]);
+    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test.EmbeddingsGenerationTestScriptResult>([]);
 
     // all kinds of alerts:
     transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);

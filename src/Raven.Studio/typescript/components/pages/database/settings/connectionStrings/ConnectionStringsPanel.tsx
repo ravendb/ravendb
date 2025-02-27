@@ -127,6 +127,8 @@ function getDtoEtlType(type: StudioEtlType): Raven.Client.Documents.Operations.E
         case "AzureQueueStorage":
         case "AmazonSqs":
             return "Queue";
+        case "Ai":
+            return "EmbeddingsGeneration";
         default:
             return type;
     }

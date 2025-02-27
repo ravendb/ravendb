@@ -106,7 +106,7 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         // only one transformation is supported
         const transformation = this.transformationScripts()[0];
 
-        const EmbeddingsTransformation: Raven.Client.Documents.Operations.AI.AiEmbeddingsTransformation = transformation.embeddingsSource() === "script" ? {
+        const EmbeddingsTransformation: Raven.Client.Documents.Operations.AI.EmbeddingsTransformation = transformation.embeddingsSource() === "script" ? {
             Script: transformation.script(),
         } : null;
 

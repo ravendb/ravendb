@@ -49,7 +49,7 @@ class etlScriptDefinitionCache {
                 case "Queue":
                     command = getOngoingTaskInfoCommand.forQueueEtl(databaseName, taskId);
                     break;
-                case "Ai":
+                case "EmbeddingsGeneration":
                     command = getOngoingTaskInfoCommand.forAiIntegration(databaseName, taskId);
                     break;
                 default: 

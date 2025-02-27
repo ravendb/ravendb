@@ -5,15 +5,15 @@ import endpoints = require("endpoints");
 class testAiCommand extends commandBase {
     constructor(
         private db: database | string,
-        private payload: Raven.Server.Documents.ETL.Providers.AI.Test.TestAiIntegrationScript
+        private payload: Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test.TestEmbeddingsGenerationScript
     ) {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.AI.Test.AiIntegrationTestScriptResult> {
-        const url = endpoints.databases.aiIntegration.adminAiTest;
+    execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test.EmbeddingsGenerationTestScriptResult> {
+        const url = endpoints.databases.aiIntegrationConnection.adminAiTestConnection;
 
-        return this.post<Raven.Server.Documents.ETL.Providers.AI.Test.AiIntegrationTestScriptResult>(url, JSON.stringify(this.payload), this.db).fail((response: JQueryXHR) => {
+        return this.post<Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test.EmbeddingsGenerationTestScriptResult>(url, JSON.stringify(this.payload), this.db).fail((response: JQueryXHR) => {
             this.reportError(`Failed to test AI`, response.responseText, response.statusText);
         });
     }
