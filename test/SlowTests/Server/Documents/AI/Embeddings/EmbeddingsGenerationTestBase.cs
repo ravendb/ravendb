@@ -48,7 +48,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         {
             Name = embeddingsGenerationTaskName,
             ConnectionStringName = connectionStringName,
-            EmbeddingsPathConfigurations = embeddingsPaths ?? (string.IsNullOrEmpty(script) ? [new EmbeddingPathConfiguration() { Path = "Name" }] : null),
+            EmbeddingsPathConfigurations = embeddingsPaths ?? (string.IsNullOrEmpty(script) ? [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }] : null),
             Collection = collectionName ?? "Dtos",
             EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new EmbeddingsTransformation
             {

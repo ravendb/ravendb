@@ -129,7 +129,7 @@ WaitForUserToContinueTheTest(store);
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names" }]);
+        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }]);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
@@ -219,7 +219,7 @@ WaitForUserToContinueTheTest(store);
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name" }], embeddingsGenerationTaskName: embeddingEtlName);
+        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: embeddingEtlName);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
         AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
 

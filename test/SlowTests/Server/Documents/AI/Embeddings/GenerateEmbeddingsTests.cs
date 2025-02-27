@@ -93,7 +93,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names" }]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Names", ["Name1", "Name2", "Name3"], dto.Id);
         }
@@ -115,7 +115,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "SubDto.Name" }]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "SubDto.Name" , ChunkingOptions = DefaultChunkingOptions }]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "SubDto.Name", ["Subname1"], dto.Id);
         }
@@ -137,7 +137,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "SubDtos.Name" }]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "SubDtos.Name" , ChunkingOptions = DefaultChunkingOptions}]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "SubDtos.Name", ["Subname1", "Subname2"], dto.Id);
         }
@@ -159,7 +159,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name" }]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
 
             var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);
@@ -279,7 +279,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Age" }]);
+            var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Age", ChunkingOptions = DefaultChunkingOptions }]);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Age", ["21"], dto.Id);
         }
@@ -449,7 +449,6 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
     }
 
-
     [RavenFact(RavenTestCategory.Ai)]
     public void TestDocumentExpiration()
     {
@@ -462,8 +461,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 session.Store(dto);
                 session.SaveChanges();
             }
-
-
+            
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             RegisterAiIntegration(store);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
@@ -676,7 +674,7 @@ Console.WriteLine(""Hello, World!"");";
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
                 var (configuration, connectionString) = RegisterAiIntegration(store,
-                    embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name" }], targetQuantization: VectorEmbeddingType.Binary);
+                    embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], targetQuantization: VectorEmbeddingType.Binary);
 
                 aiTaskDone.Wait(TimeSpan.FromSeconds(20));
 
