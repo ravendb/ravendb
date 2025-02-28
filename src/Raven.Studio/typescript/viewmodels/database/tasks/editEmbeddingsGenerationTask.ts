@@ -37,7 +37,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     static isApplyToAll = ongoingTaskEmbeddingsGenerationTransformationModel.isApplyToAll;
     
     enableTestArea = ko.observable<boolean>(false);
-    test: aiTaskTestMode;    
+    test: embeddingsGenerationTaskTestMode;    
 
     editedEmbeddingsGeneration = ko.observable<ongoingTaskEmbeddingsGenerationEditModel>();
     isAddingNewEtlTask = ko.observable<boolean>(true);
@@ -216,12 +216,12 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             dto.Transforms = [transformationScriptDto];
 
             if (!dto.Name) {
-                dto.Name = "Test AI Task"; // assign fake name
+                dto.Name = "Test Embeddings Generation Task"; // assign fake name
             }
             return dto;
         };
 
-        this.test = new aiTaskTestMode(this.db, () => {
+        this.test = new embeddingsGenerationTaskTestMode(this.db, () => {
             return this.isValid(this.editedTransformationScriptSandbox().validationGroup);
         }, dtoProvider);
                 
@@ -279,7 +279,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         let hasAnyErrors = false;
         this.spinners.save(true);
         
-        // 2. Validate *edited transformation script*
+        // 1. Validate *edited transformation script*
         if (this.showEditTransformationArea()) {
             if (!this.isValid(this.editedTransformationScriptSandbox().validationGroup)) {
                 hasAnyErrors = true;
@@ -288,7 +288,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             }
         }
 
-        // 4. Validate *general form*
+        // 2. Validate *general form*
         if (!this.isValid(this.editedEmbeddingsGeneration().validationGroup)) {
             hasAnyErrors = true;
         }
@@ -297,6 +297,9 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             this.spinners.save(false);
             return false;
         }
+
+        // TODO kalczur - if has no Document Expiration configuration, lets ask if he wants to enable it
+
         
         const scriptsToReset = this.editedEmbeddingsGeneration()
                 .transformationScripts()
@@ -438,7 +441,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
 
 export = editEmbeddingsGenerationTask;
 
-class aiTaskTestMode {
+class embeddingsGenerationTaskTestMode {
 
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
@@ -546,12 +549,12 @@ class aiTaskTestMode {
                 Configuration: this.configurationProvider()
             };
 
-            eventsCollector.default.reportEvent("ai-etl", "test-script");
+            eventsCollector.default.reportEvent("embeddings-generation", "test-script");
 
             new testAiCommand(this.db, dto)
                 .execute()
                 .done(simulationResult => {
-                    console.log('kalczur ', simulationResult);
+                    console.log("simulationResult", simulationResult);
                     // TODO kalczur
                     // const summaryFormatted =  simulationResult.Summary.map(x => ({
                     //     Commands: x.Commands.map((cmd: string) => cmd.replace(/\r\n/g, "\n")),
