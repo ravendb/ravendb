@@ -1,6 +1,6 @@
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { Icon } from "components/common/Icon";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import React from "react";
 
 interface NodeInfoFailureProps {
@@ -17,7 +17,7 @@ export function NodeInfoFailure(props: NodeInfoFailureProps) {
                 <div className="text-danger">
                     <Icon icon="warning" color="danger" /> Unable to load task status
                 </div>
-                <Button color="danger" onClick={openErrorModal} className="rounded-pill">
+                <Button variant="danger" onClick={openErrorModal} className="rounded-pill">
                     Open error in modal <Icon icon="newtab" margin="ms-1" />
                 </Button>
             </div>

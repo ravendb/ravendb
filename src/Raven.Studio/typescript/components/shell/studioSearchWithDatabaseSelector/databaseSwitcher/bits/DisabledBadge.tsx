@@ -1,4 +1,4 @@
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 import React from "react";
 
 export default function DisabledBadge({ isDisabled }: { isDisabled: boolean }) {
@@ -7,7 +7,7 @@ export default function DisabledBadge({ isDisabled }: { isDisabled: boolean }) {
     }
 
     return (
-        <Badge className="ms-2" pill>
+        <Badge className="ms-2" pill bg="secondary">
             Disabled
         </Badge>
     );

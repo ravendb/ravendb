@@ -39,7 +39,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
             <div className="vstack gap-3 py-2">
                 {hasError && (
                     <div className="text-center">
-                        <Button color="danger" key="button" onClick={toggleErrorModal} className="rounded-pill">
+                        <Button variant="danger" key="button" onClick={toggleErrorModal} className="rounded-pill">
                             Open error in modal <Icon icon="newtab" margin="ms-1" />
                         </Button>
                     </div>

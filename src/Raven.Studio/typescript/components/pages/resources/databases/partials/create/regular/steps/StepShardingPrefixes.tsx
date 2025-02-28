@@ -1,10 +1,12 @@
 import React, { useEffect } from "react";
 import { CreateDatabaseRegularFormData as FormData } from "../createDatabaseRegularValidation";
 import { FieldArrayWithId, useFieldArray, useFormContext, useWatch } from "react-hook-form";
-import { Button, Table, UncontrolledTooltip } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { Table } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";
 import { Checkbox } from "components/common/Checkbox";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export default function StepShardingPrefixes() {
     const { control, trigger } = useFormContext<FormData>();
@@ -69,8 +71,7 @@ export default function StepShardingPrefixes() {
 
             <Button
                 type="button"
-                color="shard"
-                outline
+                variant="outline-shard"
                 className="rounded-pill mt-2"
                 onClick={() => append({ prefix: "", shardNumbers: [] })}
             >
@@ -132,19 +133,16 @@ function PrefixRow({ index, field, allShardNumbers, toggleShard, remove }: Prefi
             ))}
             <td className="px-0 align-middle">
                 {index !== 0 && (
-                    <Button type="button" color="danger" outline onClick={() => remove(index)}>
+                    <Button type="button" variant="outline-danger" onClick={() => remove(index)}>
                         <Icon icon="trash" margin="m-0" />
                     </Button>
                 )}
             </td>
-            <td id={"prefixShardsError" + index} className="px-0 align-middle">
+            <td className="px-0 align-middle">
                 {shardsError && (
-                    <>
+                    <PopoverWithHoverWrapper message={shardsError}>
                         <Icon icon="warning" color="danger" margin="m-0" />
-                        <UncontrolledTooltip target={"prefixShardsError" + index} placement="left">
-                            {shardsError}
-                        </UncontrolledTooltip>
-                    </>
+                    </PopoverWithHoverWrapper>
                 )}
             </td>
         </tr>

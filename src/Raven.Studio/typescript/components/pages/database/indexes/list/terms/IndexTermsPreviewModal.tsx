@@ -1,4 +1,5 @@
-import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import Code from "components/common/Code";
@@ -39,7 +40,7 @@ export default function IndexTermsPreviewModal({
         <Modal centered contentClassName="modal-border bulge-primary" isOpen={isOpen} wrapClassName="bs5">
             <ModalBody className="pb-0 vstack gap-3">
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggleModal} />
+                    <CloseButton onClick={toggleModal} />
                 </div>
                 <div className="text-center">
                     <Icon icon="terms" color="primary" margin="me-0" className="fs-1" />
@@ -50,6 +51,7 @@ export default function IndexTermsPreviewModal({
             <ModalFooter className="mt-4 d-flex justify-content-between w-100">
                 <div className="d-flex gap-2">
                     <Button
+                        variant="secondary"
                         onClick={navigateToPreviousTerm}
                         disabled={!canNavigateToPreviousTerm}
                         className="rounded-pill"
@@ -57,12 +59,17 @@ export default function IndexTermsPreviewModal({
                         <Icon icon="arrow-thin-left" />
                         Previous
                     </Button>
-                    <Button onClick={navigateToNextTerm} disabled={!canNavigateToNextTerm} className="rounded-pill">
+                    <Button
+                        variant="secondary"
+                        onClick={navigateToNextTerm}
+                        disabled={!canNavigateToNextTerm}
+                        className="rounded-pill"
+                    >
                         Next
                         <Icon icon="arrow-thin-right" margin="ms-1" />
                     </Button>
                 </div>
-                <Button className="rounded-pill" color="primary" onClick={toggleModal} type="button">
+                <Button className="rounded-pill" variant="primary" onClick={toggleModal} type="button">
                     Close
                 </Button>
             </ModalFooter>

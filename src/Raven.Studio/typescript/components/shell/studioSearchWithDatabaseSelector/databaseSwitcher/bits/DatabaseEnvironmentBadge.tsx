@@ -1,6 +1,6 @@
 import assertUnreachable from "components/utils/assertUnreachable";
 import React from "react";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 
 interface DatabaseEnvironmentBadgeProps {
     environment: Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment;
@@ -38,7 +38,7 @@ export default function DatabaseEnvironmentBadge({ environment }: DatabaseEnviro
     };
 
     return (
-        <Badge className="ms-2 text-uppercase text-black" color={getColor()} pill>
+        <Badge className="ms-2 text-uppercase text-black" bg={getColor()} pill>
             {getText()}
         </Badge>
     );

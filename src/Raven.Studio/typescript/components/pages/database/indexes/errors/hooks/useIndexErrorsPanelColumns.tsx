@@ -6,12 +6,12 @@ import CellDocumentValue from "components/common/virtualTable/cells/CellDocument
 import { useAppUrls } from "hooks/useAppUrls";
 import { CellWithCopy, CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { Button, UncontrolledTooltip } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import IndexErrorsModal from "components/pages/database/indexes/errors/IndexErrorsModal";
 import useBoolean from "hooks/useBoolean";
-import useUniqueId from "hooks/useUniqueId";
 import React from "react";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 const defaultCellSize = 95 / 5;
 
@@ -115,7 +115,7 @@ const CellValueButtonWrapper = (args: CellValueButtonWrapperProps) => {
 
     return (
         <>
-            <Button onClick={toggleIsOpen}>
+            <Button variant="secondary" onClick={toggleIsOpen}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
             <IndexErrorsModal
@@ -132,22 +132,24 @@ const CellValueButtonWrapper = (args: CellValueButtonWrapperProps) => {
 type CellValueRelativeTimeWrapperProps = CellContext<IndexErrorPerDocument, IndexErrorPerDocument["LocalTime"]>;
 
 const CellValueRelativeTimeWrapper = ({ getValue, row }: CellValueRelativeTimeWrapperProps) => {
-    const relativeTimeId = useUniqueId(`relative-time`);
     const rowData = row.original;
 
     return (
-        <>
-            <CellValue id={relativeTimeId} value={getValue()} />
-            <UncontrolledTooltip innerClassName="index-errors-details-tooltip" autohide={false} target={relativeTimeId}>
-                <div className="index-errors-details-tooltip__container">
-                    <b>UTC: </b>
-                    <time>{rowData.Timestamp}</time>
-                </div>
-                <div className="index-errors-details-tooltip__container">
-                    <b>Relative: </b>
-                    <time>{rowData.RelativeTime}</time>
-                </div>
-            </UncontrolledTooltip>
-        </>
+        <PopoverWithHoverWrapper
+            message={
+                <>
+                    <div className="index-errors-details-tooltip__container">
+                        <b>UTC: </b>
+                        <time>{rowData.Timestamp}</time>
+                    </div>
+                    <div className="index-errors-details-tooltip__container">
+                        <b>Relative: </b>
+                        <time>{rowData.RelativeTime}</time>
+                    </div>
+                </>
+            }
+        >
+            <CellValue value={getValue()} />
+        </PopoverWithHoverWrapper>
     );
 };

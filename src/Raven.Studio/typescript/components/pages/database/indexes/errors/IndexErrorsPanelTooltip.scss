@@ -1,8 +1,6 @@
 @use "Content/scss/sizes";
 
 .index-errors-details-tooltip {
-    max-width: 600px;
-
     &__container {
         display: flex;
         gap: sizes.$gutter-md;

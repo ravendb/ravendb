@@ -10,7 +10,8 @@ import {
     RichPanelStatus,
 } from "components/common/RichPanel";
 import { Icon } from "components/common/Icon";
-import { Button, Collapse, UncontrolledTooltip } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import Collapse from "react-bootstrap/Collapse";
 import moment from "moment/moment";
 import genUtils from "common/generalUtils";
 import { useIndexErrorsPanel } from "components/pages/database/indexes/errors/hooks/useIndexErrorsPanel";
@@ -25,6 +26,7 @@ import { LazyLoad } from "components/common/LazyLoad";
 import useBoolean from "hooks/useBoolean";
 import useUniqueId from "hooks/useUniqueId";
 import "./IndexErrorsPanelTooltip.scss";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export interface IndexErrorsPanelProps {
     errorItem: ErrorInfoItem;
@@ -71,6 +73,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                     <RichPanelDetails className="pb-0">
                         <RichPanelDetailItem>
                             <Button
+                                variant="secondary"
                                 onClick={togglePanelCollapsed}
                                 title={panelCollapsed ? "Expand errors details" : "Collapse errors details"}
                                 className="btn-toggle-panel rounded-pill"
@@ -79,7 +82,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                             </Button>
                         </RichPanelDetailItem>
                     </RichPanelDetails>
-                    <Collapse isOpen={!panelCollapsed}>
+                    <Collapse in={!panelCollapsed}>
                         <RichPanelDetails>
                             <div className="w-100">
                                 {(asyncFetchErrorDetails.error as unknown as JQueryXHR).responseJSON.Message}
@@ -116,7 +119,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                         <RichPanelActions>
                             <Button
                                 disabled={isLoading}
-                                color="warning"
+                                variant="warning"
                                 onClick={handleClearErrors}
                                 title="Click to clear errors from the selected indexes"
                             >
@@ -197,6 +200,7 @@ function IndexErrorsPanelDetailsStatus({
                     <LazyLoad active={isLoading} className="d-flex">
                         <RichPanelDetailItem>
                             <Button
+                                variant="secondary"
                                 onClick={togglePanelCollapsed}
                                 title={panelCollapsed ? "Expand errors details" : "Collapse errors details"}
                                 className="btn-toggle-panel rounded-pill"
@@ -211,18 +215,35 @@ function IndexErrorsPanelDetailsStatus({
                             </span>
                             <div className="value">{errorItem.totalErrorCount} errors</div>
                         </RichPanelDetailItem>
-                        <RichPanelDetailItem id={mostRecentDateId}>
-                            <span>
-                                <Icon icon="clock" />
-                                Most recent
-                            </span>
-                            <div className="value">
-                                {newestDate ? moment(newestDate).format(genUtils.dateFormat) : ""}
-                            </div>
-                        </RichPanelDetailItem>
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    <div className="index-errors-details-tooltip__container">
+                                        <b>UTC: </b>
+                                        <time className="index-errors-details-tooltip__date">
+                                            {moment.utc(newestDate).toISOString()}
+                                        </time>
+                                    </div>
+                                    <div className="index-errors-details-tooltip__container">
+                                        <b>Relative: </b>
+                                        <time>{moment(newestDate).fromNow()}</time>
+                                    </div>
+                                </>
+                            }
+                        >
+                            <RichPanelDetailItem id={mostRecentDateId}>
+                                <span>
+                                    <Icon icon="clock" />
+                                    Most recent
+                                </span>
+                                <div className="value">
+                                    {newestDate ? moment(newestDate).format(genUtils.dateFormat) : ""}
+                                </div>
+                            </RichPanelDetailItem>
+                        </PopoverWithHoverWrapper>
                     </LazyLoad>
                 </RichPanelDetails>
-                <Collapse isOpen={!panelCollapsed}>
+                <Collapse in={!panelCollapsed}>
                     <RichPanelDetails>
                         <div ref={ref} className="w-100">
                             <IndexErrorsPanelTable
@@ -236,24 +257,6 @@ function IndexErrorsPanelDetailsStatus({
                         </div>
                     </RichPanelDetails>
                 </Collapse>
-                {!isLoading && (
-                    <UncontrolledTooltip
-                        innerClassName="index-errors-details-tooltip"
-                        autohide={false}
-                        target={mostRecentDateId}
-                    >
-                        <div className="index-errors-details-tooltip__container">
-                            <b>UTC: </b>
-                            <time className="index-errors-details-tooltip__date">
-                                {moment.utc(newestDate).toISOString()}
-                            </time>
-                        </div>
-                        <div className="index-errors-details-tooltip__container">
-                            <b>Relative: </b>
-                            <time>{moment(newestDate).fromNow()}</time>
-                        </div>
-                    </UncontrolledTooltip>
-                )}
             </>
         );
     }
