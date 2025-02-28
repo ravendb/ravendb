@@ -8,6 +8,8 @@ public sealed class AutoVectorOptions : VectorOptions
     /// Data source of embeddings
     /// </summary>
     public string SourceFieldName { get; set; }
+    
+    public string EmbeddingsGenerationTaskIdentifier { get; set; }
 
     public AutoVectorOptions()
     {
@@ -21,6 +23,7 @@ public sealed class AutoVectorOptions : VectorOptions
         SourceFieldName = options.SourceFieldName;
         NumberOfCandidatesForIndexing = options.NumberOfCandidatesForIndexing;
         NumberOfEdges = options.NumberOfEdges;
+        EmbeddingsGenerationTaskIdentifier = options.EmbeddingsGenerationTaskIdentifier;
     }
 
     public override bool Equals(object obj)
@@ -33,11 +36,22 @@ public sealed class AutoVectorOptions : VectorOptions
 
     public bool Equals(AutoVectorOptions other)
     {
-        return base.Equals(other) && SourceFieldName == other.SourceFieldName;
+        return base.Equals(other) 
+               && SourceFieldName == other.SourceFieldName
+               && EmbeddingsGenerationTaskIdentifier == other.EmbeddingsGenerationTaskIdentifier;
     }
+    
+    // todo add validate
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(base.GetHashCode(), SourceFieldName.GetHashCode());
+        unchecked
+        {
+            var hashCode = base.GetHashCode();
+            hashCode = (hashCode * 397) ^ (SourceFieldName != null ? SourceFieldName.GetHashCode() : 0);
+            hashCode = (hashCode * 397) ^ (EmbeddingsGenerationTaskIdentifier != null ? EmbeddingsGenerationTaskIdentifier.GetHashCode() : 0);
+
+            return hashCode;
+        }
     }
 }

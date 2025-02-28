@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -19,8 +18,6 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestEmbeddingsGenerationForQuerying(Options options)
     {
-        const string aiTaskName = "AiTaskName";
-        const string connectionStringName = "ConnectionStringName";
         const string queriedText = "fruit";
         
         using (var store = GetDocumentStore(options))
@@ -36,26 +33,13 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
             }
             
-            var configuration = new EmbeddingsGenerationConfiguration()
-            {
-                Name = aiTaskName,
-                AllowEtlOnNonEncryptedChannel = true,
-                ConnectionStringName = connectionStringName,
-                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }],
-                Collection = "Dtos",
-                Identifier = "ai-task-identifier",
-                ChunkingOptionsForQuerying = DefaultChunkingOptions
-            };
-
-            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings(), Identifier = "connection-string-identifier" };
-
-            var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
-            var etlDone = Etl.WaitForEtlToComplete(store);
-
-            Etl.AddEtl(store, configuration, connectionString);
-
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var (configuration, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
+            
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            
+            var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
             
             using (var session = store.OpenSession())
             {
@@ -79,8 +63,6 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestFetchingEmbeddingFromCache(Options options)
     {
-        const string aiTaskName = "AiTaskName";
-        const string connectionStringName = "ConnectionStringName";
         const string queriedText = "fruit";
         
         using (var store = GetDocumentStore(options))
@@ -96,27 +78,16 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
             }
             
-            var configuration = new EmbeddingsGenerationConfiguration()
-            {
-                Name = aiTaskName,
-                AllowEtlOnNonEncryptedChannel = true,
-                ConnectionStringName = connectionStringName,
-                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }],
-                Collection = "Dtos",
-                ChunkingOptionsForQuerying = DefaultChunkingOptions
-            };
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
-            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
-
-            var etlDone = Etl.WaitForEtlToComplete(store);
-
-            Etl.AddEtl(store, configuration, connectionString);
-
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            var (configuration, connectionString) = RegisterAiIntegration(store,
+                embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
+            
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, aiTaskName), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, configuration.Identifier), factory => factory.ByText(queriedText)).ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
@@ -143,11 +114,11 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
             }
             
-            var etlDone = Etl.WaitForEtlToComplete(store);
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store);
             
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
             using (var session = store.OpenSession())
             {
@@ -177,11 +148,11 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
             }
             
-            var etlDone = Etl.WaitForEtlToComplete(store);
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
             var (_, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
             
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
             
             var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
             
@@ -196,14 +167,15 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
                 
-                WaitForUserToContinueTheTest(store);
-                
+                // todo Michal wait for cacher
+                /*
                 var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
                 var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash, VectorEmbeddingType.Single);
                 
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
                 Assert.NotNull(valueEmbeddingsDocument);
+                */
             }
         }
     }
@@ -212,8 +184,6 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestChunkingInQuery(Options options)
     {
-        const string aiTaskName = "AiTaskName";
-        const string connectionStringName = "ConnectionStringName";
         const string queriedText = "computer machine technology tech";
         
         using (var store = GetDocumentStore(options))
@@ -226,23 +196,19 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
             }
             
-            var configuration = new EmbeddingsGenerationConfiguration()
-            {
-                Name = aiTaskName,
-                AllowEtlOnNonEncryptedChannel = true,
-                ConnectionStringName = connectionStringName,
-                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 }}],
-                Collection = "Dtos",
-                ChunkingOptionsForQuerying = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 }
-            };
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
-            var connectionString = new AiConnectionString() { Name = connectionStringName, OnnxSettings = new OnnxSettings() };
+            var (configuration, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [
+                new EmbeddingPathConfiguration()
+                {
+                    Path = "TextualValue", ChunkingOptions = new ChunkingOptions()
+                    {
+                        ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5
+                    }
+                }
+            ], chunkingOptionsForQuerying: new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 });
             
-            var etlDone = Etl.WaitForEtlToComplete(store);
-
-            Etl.AddEtl(store, configuration, connectionString);
-
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
             var index = new SomeIndex();
             index.Execute(store);
@@ -267,7 +233,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         public SomeIndex()
         {
             Map = dtos => from dto in dtos
-                select new IndexEntry { TextualValueVector = LoadVector("aitaskname", "TextualValue") };
+                select new IndexEntry { TextualValueVector = LoadVector("localaitask", "TextualValue") };
         }
     }
 

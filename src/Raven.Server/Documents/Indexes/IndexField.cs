@@ -339,10 +339,27 @@ namespace Raven.Server.Documents.Indexes
             return $"search({name})";
         }
 
-        public static string GetVectorAutoIndexFieldName(string name, VectorOptions vectorOptions)
+        public static string GetVectorAutoIndexFieldName(string name, AutoVectorOptions autoVectorOptions)
         {
-            var methodName = Constants.VectorSearch.ConfigurationToMethodName(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType);
-            var inner = methodName == string.Empty ? name : $"{methodName}({name})";
+            const string aiTask = "ai.task";
+            
+            var methodName = Constants.VectorSearch.ConfigurationToMethodName(autoVectorOptions.SourceEmbeddingType, autoVectorOptions.DestinationEmbeddingType);
+
+            string inner;
+            
+            if (autoVectorOptions.SourceEmbeddingType == VectorEmbeddingType.Text)
+            {
+                var embeddingsGenerationTaskIdentifier = autoVectorOptions.EmbeddingsGenerationTaskIdentifier;
+                
+                if (embeddingsGenerationTaskIdentifier is null)
+                    // todo
+                    throw new Exception("embeddingsGenerationTaskIdentifier is null");
+                
+                inner = methodName == string.Empty ? name : $"{methodName}({name},{aiTask}('{embeddingsGenerationTaskIdentifier}'))";
+            }
+            else
+                inner = methodName == string.Empty ? name : $"{methodName}({name})";
+        
             return $"vector.search({inner})";
         }
         

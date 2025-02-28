@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes
             return _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out taskName);
         }
 
-        internal void SetEmbeddingsGenerationTaskName(string fieldName, string taskIdentifier)
+        internal void SetEmbeddingsGenerationTaskIdentifier(string fieldName, string taskIdentifier)
         {
             var isStoredOnDisk = _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out var diskStoredSourceEtlTaskName);
 

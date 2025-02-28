@@ -39,6 +39,7 @@ using Acornima;
 using Acornima.Ast;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.Indexes;
+using Enum = System.Enum;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -2501,7 +2502,7 @@ function execute(doc, args){
             private void HandleVector(string methodName, List<QueryExpression> arguments, bool withoutAlias, BlittableJsonReaderObject parameters)
             {
                 QueryFieldName fieldName;
-                string aiIntegrationTaskName = null;
+                string embeddingsGenerationTaskIdentifier = null;
 
                 if (_metadata.IsDynamic == false)
                 {
@@ -2519,7 +2520,7 @@ function execute(doc, args){
                 else
                 {
                     var embedding = (Source: VectorEmbeddingType.Single, Destination: VectorEmbeddingType.Single);
-                    //vector.search(SRC_DST(Field))
+                    //vector.search(SRC_DST(Field, TaskId))
                     if (arguments.Count > 0 && arguments[0] is MethodExpression embeddingMethod)
                     {
                         var materializedMethodName = embeddingMethod.Name.Value;
@@ -2527,14 +2528,16 @@ function execute(doc, args){
                         embedding = MethodTypeToEmbeddingType(embeddingType);
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(embeddingMethod.Arguments, materializedMethodName, parameters);
 
-                        if (embeddingMethod.Arguments.Count == 2 && embeddingMethod.Arguments[1] is ValueExpression valueExpression)
-                            aiIntegrationTaskName = valueExpression.Token.Value;
+                        if (embeddingMethod.Arguments.Count == 2 && embeddingMethod.Arguments[1] is MethodExpression methodExpression)
+                        {
+                            var x = methodExpression.Arguments[0] as ValueExpression;
+                            embeddingsGenerationTaskIdentifier = x.Token.Value;
+                        } 
                     }
                     else
                     {
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
                     }
-                    
                     
                     //HANDLE ALIASED:
                     fieldName = AliasHandling(fieldName);
@@ -2544,6 +2547,7 @@ function execute(doc, args){
                         SourceFieldName = fieldName, 
                         DestinationEmbeddingType = embedding.Destination, 
                         SourceEmbeddingType = embedding.Source,
+                        EmbeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier
                     };
                     
                     _metadata.AddWhereField(new(AutoIndexField.GetVectorAutoIndexFieldName(fieldName, vectorOptions), false), parameters, exact: _insideExact > 0, vector: vectorOptions);
@@ -2817,6 +2821,10 @@ function execute(doc, args){
                 sb.Append(innerExpression.Name.ToString());
                 sb.Append("(");
                 sb.Append(ExtractFieldNameFromArgument(innerExpression.Arguments[0], withoutAlias: true, innerExpression.Name.Value, parameters, QueryText));
+                
+                var x = innerExpression.Arguments[1] as MethodExpression;
+                var y = x.Arguments[0] as ValueExpression; 
+                sb.Append($",{x.Name}('{y.Token.Value}')");
                 sb.Append(")");
             }
             else

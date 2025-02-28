@@ -14,8 +14,11 @@ public sealed class VectorSearchToken : WhereToken
     private readonly VectorEmbeddingType _sourceQuantizationType;
     private readonly VectorEmbeddingType _targetQuantizationType;
     private readonly int? _numberOfCandidatesForQuerying;
-    private readonly string _etlConfigName;
-    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? similarityThreshold, int? numberOfCandidatesForQuerying, bool isExact, string etlConfigName)
+    private readonly string _embeddingsGenerationTaskIdentifier;
+
+    private static string AiTaskMethodName = "ai.task";
+    
+    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? similarityThreshold, int? numberOfCandidatesForQuerying, bool isExact, string embeddingsGenerationTaskIdentifier)
     {
         FieldName = fieldName;
         ParameterName = parameterName;
@@ -28,7 +31,7 @@ public sealed class VectorSearchToken : WhereToken
         _numberOfCandidatesForQuerying = numberOfCandidatesForQuerying;
         Options = new(isExact);
 
-        _etlConfigName = etlConfigName;
+        _embeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
     }
     
     public override void WriteTo(StringBuilder writer)
@@ -47,8 +50,8 @@ public sealed class VectorSearchToken : WhereToken
         {
             var methodName = Constants.VectorSearch.ConfigurationToMethodName(_sourceQuantizationType, _targetQuantizationType);
             
-            if (_sourceQuantizationType is VectorEmbeddingType.Text && _etlConfigName != null)
-                writer.Append($"{methodName}({FieldName}, '{_etlConfigName}')");
+            if (_sourceQuantizationType is VectorEmbeddingType.Text && _embeddingsGenerationTaskIdentifier != null)
+                writer.Append($"{methodName}({FieldName},{AiTaskMethodName}('{_embeddingsGenerationTaskIdentifier}'))");
             else
                 writer.Append($"{methodName}({FieldName})");
         }

@@ -288,6 +288,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     var embeddingGeneratorName = nameofEmbeddingsGeneratorJsv.AsString();
                     var path = pathOfEmbeddingJsv.AsString();
                     
+                    // todo pass id
                     object objectForIndexing = AbstractStaticIndexBase.LoadVectorJs(field.Name, embeddingGeneratorName, path, out var indexField);
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
                     shouldProcessAsBlittable = false;

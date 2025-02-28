@@ -1522,13 +1522,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var fieldName = fieldFactoryAccessor.FieldName;
             var sourceQuantizationType = fieldFactoryAccessor.SourceQuantizationType;
             var targetQuantizationType = fieldFactoryAccessor.DestinationQuantizationType;
-            var etlConfigName = fieldFactoryAccessor.EtlConfigName;
+            var embeddingsGenerationTaskIdentifier = fieldFactoryAccessor.EmbeddingsGenerationTaskIdentifier;
             
             var text = fieldValueFactoryAccessor.Text;
             var texts = fieldValueFactoryAccessor.Texts;
             var embedding = fieldValueFactoryAccessor.Embedding;
 
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embedding, etlConfigName);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embedding, embeddingsGenerationTaskIdentifier);
         }
         
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
@@ -1537,17 +1537,17 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var fieldName = embeddingFieldFactory.FieldName;
             var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
             var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
-            var etlConfigName = embeddingFieldFactory.EtlConfigName;
+            var embeddingsGenerationTaskIdentifier = embeddingFieldFactory.EmbeddingsGenerationTaskIdentifier;
             
             var text = embeddingValueFactory.Text;
             var texts = embeddingValueFactory.Texts;
             var embedding = embeddingValueFactory.Embedding;
             
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embedding, etlConfigName);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embedding, embeddingsGenerationTaskIdentifier);
         }
         
         private void VectorSearch(string fieldName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? minimumSimilarity,
-            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embedding, string etlConfigName = null)
+            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embedding, string embeddingsGenerationTaskIdentifier = null)
         {
             string queryParameterName;
             
@@ -1581,7 +1581,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new InvalidOperationException("Cannot use VectorSearch without text(s) or embedding(s).");
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, etlConfigName);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, embeddingsGenerationTaskIdentifier);
 
             WhereTokens.AddLast(vectorSearchToken);
         }
