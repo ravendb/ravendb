@@ -1,5 +1,6 @@
 ﻿import React from "react";
-import { Carousel, CarouselItem, Nav } from "reactstrap";
+import Nav from "react-bootstrap/Nav";
+import { Carousel, CarouselItem } from "reactstrap";
 import useIndexCleanup from "./useIndexCleanup";
 import { LoadError } from "components/common/LoadError";
 import { AboutViewHeading } from "components/common/AboutView";

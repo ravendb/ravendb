@@ -48,6 +48,7 @@ module.exports = {
     "local-rules/no-reactstrap-CardHeader": "warn",
     "local-rules/no-reactstrap-CardBody": "warn",
     "local-rules/reactstrap-Card-children-to-RBootstrap-children": "warn",
+    "local-rules/no-reactstrap-Nav": "warn",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

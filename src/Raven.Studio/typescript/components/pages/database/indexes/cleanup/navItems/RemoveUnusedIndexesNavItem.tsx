@@ -5,7 +5,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
-import { NavItem } from "reactstrap";
+import Nav from "react-bootstrap/Nav";
 
 const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
 
@@ -18,7 +18,7 @@ export default function RemoveUnusedIndexesNavItem({ carousel, unused }: RemoveU
     const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
 
     return (
-        <NavItem>
+        <Nav.Item>
             <Card
                 className={classNames("p-3", "card-tab", { active: carousel.activeTab === 2 })}
                 onClick={() => carousel.setActiveTab(2)}
@@ -32,6 +32,6 @@ export default function RemoveUnusedIndexesNavItem({ carousel, unused }: RemoveU
                     unused indexes
                 </h4>
             </Card>
-        </NavItem>
+        </Nav.Item>
     );
 }

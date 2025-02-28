@@ -110,6 +110,26 @@ function removeProp({ attr, message, context }) {
   });
 }
 
+function replaceReactstrapToReactBootstrap({ context, componentMap }) {
+  return {
+    JSXIdentifier(node) {
+      if (componentMap[node.name]) {
+        context.report({
+          node,
+          message: `Replace '${node.name}' with '${componentMap[node.name]}'.`,
+          fix: (fixer) => {
+            const replacement = componentMap[node.name];
+
+            if (replacement) {
+              return fixer.replaceText(node, replacement);
+            }
+          },
+        });
+      }
+    },
+  };
+}
+
 module.exports = {
   "no-reactstrap-alert": {
     create: function(context) {
@@ -403,24 +423,21 @@ module.exports = {
         CardFooter: "Card.Footer",
       };
 
-      return {
-        JSXIdentifier(node) {
-          if (cardComponentMap[node.name]) {
-            context.report({
-              node,
-              message: `Replace '${node.name}' with '${cardComponentMap[node.name]}'.`,
-              fix: (fixer) => {
-                const replacement = cardComponentMap[node.name];
-
-                if (replacement) {
-                  return fixer.replaceText(node, replacement);
-                }
-              },
-            });
-          }
-        },
+      return replaceReactstrapToReactBootstrap({ context, componentMap: cardComponentMap });
+    },
+  },
+  "no-reactstrap-Nav": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Nav" }),
+  },
+  "reactstrap-Nav-children-to-RBootstrap-children": {
+    meta: fixableMeta,
+    create(context) {
+      const navComponentMap = {
+        NavItem: "Nav.Item",
       };
 
+      return replaceReactstrapToReactBootstrap({ context, componentMap: navComponentMap });
     },
   },
 };

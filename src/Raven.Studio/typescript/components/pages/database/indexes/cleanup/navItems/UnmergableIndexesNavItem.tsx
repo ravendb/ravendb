@@ -5,7 +5,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
-import { NavItem } from "reactstrap";
+import Nav from "react-bootstrap/Nav";
 
 const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
 
@@ -18,7 +18,7 @@ export default function UnmergableIndexesNavItem({ carousel, unmergable }: Unmer
     const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
 
     return (
-        <NavItem>
+        <Nav.Item>
             <Card
                 className={classNames("p-3", "card-tab", { active: carousel.activeTab === 3 })}
                 onClick={() => carousel.setActiveTab(3)}
@@ -33,6 +33,6 @@ export default function UnmergableIndexesNavItem({ carousel, unmergable }: Unmer
                     indexes
                 </h4>
             </Card>
-        </NavItem>
+        </Nav.Item>
     );
 }
