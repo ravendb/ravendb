@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -79,16 +80,13 @@ public class EmbeddingsStorage
 
         void PutEmbeddingCacheDocument(BlittableJsonReaderObject json, ReadOnlyMemory<float> embeddingValue, int usedBytes)
         {
-            var embeddingSpan = MemoryMarshal.Cast<float, byte>(embeddingValue.Span)[..usedBytes];
-            
-            // TODO: Implement a Stream wrapper around ReadOnlyMemory<float> and usedBytes to avoid cloning memory and unnecessary allocations.
-            using (var stream = new MemoryStream(embeddingSpan.ToArray()))
+            using (var attachmentContentStream = new ReadOnlyMemoryStream<float>(embeddingValue, usedBytes))
             {
-                var hash = AttachmentsStorageHelper.CalculateHash(MemoryMarshal.Cast<float, byte>(embeddingValue.Span));
+                var hash = AttachmentsStorageHelper.CalculateHash(MemoryMarshal.Cast<float, byte>(embeddingValue.Span)[..usedBytes]);
 
                 _documentsStorage.Put(context, item.EmbeddingCacheDocumentId, null, json);
                 _documentsStorage.AttachmentsStorage.PutAttachment(context, item.EmbeddingCacheDocumentId, item.InputValueHash, EmbeddingAttachmentContentType, hash, null,
-                    stream);
+                    attachmentContentStream);
             }
         }
     }
