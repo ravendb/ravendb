@@ -31,7 +31,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
 
-const defaultItemsToProcess = 65536;
+export const defaultItemsToProcess = 65536;
 
 export default function DocumentExpiration() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);

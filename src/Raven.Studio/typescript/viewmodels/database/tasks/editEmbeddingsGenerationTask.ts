@@ -26,6 +26,10 @@ import ongoingTaskEmbeddingsGenerationEditModel = require("models/database/tasks
 import EditConnectionStrings = require("components/pages/database/settings/connectionStrings/EditConnectionStrings");
 import connectionStringsSlice = require("components/pages/database/settings/connectionStrings/store/connectionStringsSlice");
 import storeCompat = require("components/storeCompat");
+import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
+import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
+import DocumentExpiration = require("components/pages/database/settings/documentExpiration/DocumentExpiration");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class editEmbeddingsGenerationTask extends shardViewModelBase {
     
@@ -71,6 +75,8 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
 
     sourceView = ko.observable<EditAiTaskSourceView>();
 
+    isDocumentExpirationEnabled = ko.observable<boolean>(false);
+
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("useConnectionString",
@@ -78,7 +84,9 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             "syntaxHelp",
             "toggleTestArea",
             "toggleIsNewConnectionStringOpen",
-            "setState");
+            "setState",
+            "getIsDocumentExpirationEnabled"
+        );
         
         aceEditorBindingHandler.install();
 
@@ -147,7 +155,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             deferred.resolve();
         }
         
-        return $.when<any>(this.getAllConnectionStrings(), deferred)
+        return $.when<any>(this.getAllConnectionStrings(), this.getIsDocumentExpirationEnabled(), deferred)
             .done(() => {
                 this.initObservables();
             });
@@ -260,6 +268,16 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         this.editedEmbeddingsGeneration().connectionStringName(connectionStringToUse);
     }
 
+    async getIsDocumentExpirationEnabled() {
+        const result = await new getExpirationConfigurationCommand(this.db).execute();
+
+        if (!result) {
+            return this.isDocumentExpirationEnabled(false);
+        }
+
+        return this.isDocumentExpirationEnabled(!result.Disabled);
+    }
+
     // onTestConnectionElasticSearch(urlToTest: discoveryUrl) {
     //     eventsCollector.default.reportEvent("ai-connection-string", "test-connection");
     //     this.spinners.test(true);
@@ -275,7 +293,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     //         });
     // }
 
-    saveEtl() {
+    async saveEtl() {
         let hasAnyErrors = false;
         this.spinners.save(true);
         
@@ -297,23 +315,39 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             this.spinners.save(false);
             return false;
         }
-
-        // TODO kalczur - if has no Document Expiration configuration, lets ask if he wants to enable it
-
         
         const scriptsToReset = this.editedEmbeddingsGeneration()
                 .transformationScripts()
                 .filter(x => x.resetScript())
                 .map(x => x.name());
-            
-        const dto = this.editedEmbeddingsGeneration().toDto();
-        saveEtlTaskCommand.forEmbeddingsGeneration(this.db, dto, scriptsToReset)
-            .execute()
-            .done(() => {
-                this.dirtyFlag().reset();
-                this.goToOngoingTasksView();
-                })
-            .always(() => this.spinners.save(false));
+                
+        try {
+            if (!this.isDocumentExpirationEnabled()) {
+                const confirmationResult = await viewHelpers.confirmationMessage(
+                    "Document Expiration",
+                    "Embeddings created by this task will be cached. To ensure they expire and are deleted after the specified duration, the 'Expiration' feature must be enabled. Would you like to enable the 'Expiration' feature now?",
+                    { forceRejectWithResolve: true }
+                )
+                
+                if (confirmationResult.can) {
+                    await new saveExpirationConfigurationCommand(this.db, {
+                        Disabled: false,
+                        DeleteFrequencyInSec: null,
+                        MaxItemsToProcess: DocumentExpiration.defaultItemsToProcess
+                    }).execute();
+
+                    activeDatabaseTracker.default.database().hasExpirationConfiguration(true);
+                }
+            }
+
+            const dto = this.editedEmbeddingsGeneration().toDto();
+            await saveEtlTaskCommand.forEmbeddingsGeneration(this.db, dto, scriptsToReset).execute();
+
+            this.dirtyFlag().reset();
+            this.goToOngoingTasksView();
+        } finally {
+            this.spinners.save(false)
+        }
     }
 
     cancelOperation() {
