@@ -2,12 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Background;
-using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 
@@ -15,13 +12,12 @@ namespace Raven.Server.Documents.AI.Embeddings;
 
 public class EmbeddingsCacher : BackgroundWorkBase
 {
-    //private TimeSpan _cachingInterval = TimeSpan.FromMinutes(5);
-    private TimeSpan _cachingInterval = TimeSpan.FromSeconds(15);
-
     private DocumentDatabase _database;
 
     private readonly ConcurrentQueue<EmbeddingCacheItem> _embeddingsQueue;
     private readonly SemaphoreSlim _semaphore;
+
+    private int _approxQueueLength;
 
     public EmbeddingsCacher(DocumentDatabase database, CancellationToken shutdown) : base(database.Name, database.Loggers.GetLogger<EmbeddingsCacher>(), shutdown)
     {
@@ -32,41 +28,43 @@ public class EmbeddingsCacher : BackgroundWorkBase
 
     protected override async Task DoWork()
     {
-        await WaitOrThrowOperationCanceled(_cachingInterval);
+        while (true)
+        {
+            await _semaphore.WaitAsync(CancellationToken);
 
-        await CacheEmbeddings();
+            var payload = new List<EmbeddingCacheItem>(_approxQueueLength);
+
+            while (_embeddingsQueue.TryDequeue(out var item))
+            {
+                payload.Add(item);
+                _approxQueueLength--;
+            }
+
+            var putEmbeddingsCommand = new PutEmbeddingsCommand(payload, _database);
+
+            _database.TxMerger.EnqueueSync(putEmbeddingsCommand);
+        }
     }
 
-    public void EnqueueEmbeddingToCache(AiConnectionStringIdentifier connectionStringIdentifier, string textualValue, ReadOnlyMemory<float> embedding)
+    public void EnqueueEmbeddingToCache(List<EmbeddingCacheItem> embeddings)
     {
-        // TODO arek - need to pass quantization
-        var newItem = new EmbeddingCacheItem() { EmbeddingValue = embedding, TextualValue = textualValue, ConnectionStringIdentifier = connectionStringIdentifier };
+        foreach (EmbeddingCacheItem item in embeddings)
+        {
+            _embeddingsQueue.Enqueue(item);
 
-        _embeddingsQueue.Enqueue(newItem);
+            _approxQueueLength++;
+        }
+
         _semaphore.Release();
     }
 
-    private async Task CacheEmbeddings()
+    private sealed class PutEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
     {
-        await _semaphore.WaitAsync(CancellationToken);
-
-        var payload = new List<EmbeddingCacheItem>();
-
-        while (_embeddingsQueue.TryDequeue(out var item))
-            payload.Add(item);
-
-        var putEmbeddingsCommand = new MergedCacheEmbeddingsCommand(payload, _database);
-
-        _database.TxMerger.EnqueueSync(putEmbeddingsCommand);
-    }
-
-    private sealed class MergedCacheEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
-    {
-        private List<EmbeddingCacheItem> _embeddingItems;
+        private readonly List<EmbeddingCacheItem> _embeddingItems;
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
 
-        public MergedCacheEmbeddingsCommand(List<EmbeddingCacheItem> embeddingItems, DocumentDatabase database)
+        public PutEmbeddingsCommand(List<EmbeddingCacheItem> embeddingItems, DocumentDatabase database)
         {
             _embeddingItems = embeddingItems;
             _database = database;
@@ -79,9 +77,9 @@ public class EmbeddingsCacher : BackgroundWorkBase
 
             foreach (var item in _embeddingItems)
             {
-                using (var stream = new MemoryStream(MemoryMarshal.Cast<float, byte>(item.EmbeddingValue.Span).ToArray()))
+                using (var stream = new MemoryStream(item.EmbeddingValue.Span.ToArray()))
                 {
-                    var hash = AttachmentsStorageHelper.CalculateHash(MemoryMarshal.Cast<float, byte>(item.EmbeddingValue.Span));
+                    var hash = AttachmentsStorageHelper.CalculateHash(item.EmbeddingValue.Span);
 
                     var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(item.ConnectionStringIdentifier, hash, item.Quantization);
 
@@ -97,7 +95,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
                 }
             }
 
-            return 1;
+            return _embeddingItems.Count;
         }
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
@@ -109,14 +107,5 @@ public class EmbeddingsCacher : BackgroundWorkBase
         {
             throw new NotImplementedException();
         }
-    }
-
-    public class EmbeddingCacheItem
-    {
-        public ReadOnlyMemory<float> EmbeddingValue;
-        public string TextualValue;
-        // Name of the connection string used for embedding generation 
-        public AiConnectionStringIdentifier ConnectionStringIdentifier;
-        public VectorEmbeddingType Quantization;
     }
 }

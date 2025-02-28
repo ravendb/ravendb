@@ -18,7 +18,7 @@ public class AiIntegrationsController : IDisposable
     private readonly Dictionary<AiConnectionStringIdentifier, ITextEmbeddingGenerationService> _embeddingGeneratorsByConnectionStringIdentifier;
 
     private Dictionary<EmbeddingsGenerationTaskIdentifier, AiConnectionStringIdentifier> _connectionStringsByTaskIdentifiers;
-    private Dictionary<EmbeddingsGenerationTaskIdentifier, EmbeddingsGenerationConfiguration> _embeddingGeneratorsConfigurationByTaskIdentifers;
+    private Dictionary<EmbeddingsGenerationTaskIdentifier, EmbeddingsGenerationConfiguration> _embeddingGeneratorsConfigurationByTaskIdentifiers;
 
     public DocumentDatabase Database { get; }
 
@@ -26,7 +26,7 @@ public class AiIntegrationsController : IDisposable
     {
         Database = database;
         _embeddingGeneratorsByConnectionStringIdentifier = new();
-        _embeddingGeneratorsConfigurationByTaskIdentifers = new();
+        _embeddingGeneratorsConfigurationByTaskIdentifiers = new();
         _connectionStringsByTaskIdentifiers = new();
 
         var storage = new EmbeddingsStorage(database);
@@ -39,7 +39,7 @@ public class AiIntegrationsController : IDisposable
 
     public bool TryGetEmbeddingsGenerationConfiguration(EmbeddingsGenerationTaskIdentifier taskIdentifier, out EmbeddingsGenerationConfiguration configuration)
     {
-        return _embeddingGeneratorsConfigurationByTaskIdentifers.TryGetValue(taskIdentifier, out configuration);
+        return _embeddingGeneratorsConfigurationByTaskIdentifiers.TryGetValue(taskIdentifier, out configuration);
     }
 
     public AiConnectionStringIdentifier GetConnectionStringByEmbeddingsGenerationTask(EmbeddingsGenerationTaskIdentifier taskIdentifier)
@@ -87,7 +87,7 @@ public class AiIntegrationsController : IDisposable
         }
 
         _connectionStringsByTaskIdentifiers = connectionStringsByTasks;
-        _embeddingGeneratorsConfigurationByTaskIdentifers = embeddingGeneratorsConfigurationByTasks;
+        _embeddingGeneratorsConfigurationByTaskIdentifiers = embeddingGeneratorsConfigurationByTasks;
 
         if (Embeddings.Cacher.IsRunning)
         {

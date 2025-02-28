@@ -1,13 +1,16 @@
 ﻿using Microsoft.SemanticKernel.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Corax.Utils;
+using Microsoft.Extensions.AI;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -19,13 +22,14 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
     private readonly EmbeddingsBatchingService _batchingService = new(aiIntegrations.Database, aiIntegrations);
 #pragma warning restore SKEXP0001
 
-    public async Task<object> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext, AiConnectionStringIdentifier connectionStringId,
+    private readonly ArrayPool<byte> _embeddingPool = ArrayPool<byte>.Create();
+
+    public async Task<object> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext, ByteStringContext allocator,
+        AiConnectionStringIdentifier connectionStringId,
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value, VectorEmbeddingType destinationEmbeddingType)
     {
         if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
             throw new ArgumentException($"Couldn't find Embeddings Generation task for connection string '{connectionStringId.Value}' ");
-
-        var allocator = documentsContext.Transaction.InnerTransaction.Allocator; // TODO arek - use buildparameters.Allocator
 
         if (documentsContext.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingTaskId, out var taskConfig) == false)
             throw new Exception($"Could not find embeddings generation configuration for embedding task '{embeddingTaskId.Value}'");
@@ -39,7 +43,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
         foreach (var chunk in chunks)
         {
-            if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, destinationEmbeddingType, out var embeddingCacheDocumentId, out var toDoArek)) 
+            if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, destinationEmbeddingType, out var embeddingCacheDocumentId, out _)) 
             {
                 var valueHash = EmbeddingsHelper.CalculateInputValueHash(value);
 
@@ -51,16 +55,36 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
                 chunksForGeneration.Add(chunk);
         }
 
-        for (var i = 0; i < chunksForGeneration.Count; i++)
+        List<EmbeddingCacheItem> embeddingsToCache = null;
+
+        // var embedding = await _batchingService.GetEmbeddingAsync(connectionStringId, value); // TODO Lev - uncomment when batching is implemented
+        var embeddings = await service.GenerateEmbeddingsAsync(chunksForGeneration, cancellationToken: aiIntegrations.Database.DatabaseShutdown);
+
+        for (int i = 0; i < embeddings.Count; i++)
         {
-            var embedding = await service.GenerateEmbeddingAsync(chunksForGeneration[i]);
-            // var embedding = await _batchingService.GetEmbeddingAsync(connectionStringId, value); // TODO Lev - uncomment when batching is implemented
+            var embedding = embeddings[i];
+
             var vectorValue = GenerateEmbeddings.FromArray(allocator, embedding, VectorEmbeddingType.Single, destinationEmbeddingType);
 
             vectorValues[vectorValuesCount++] = vectorValue;
+
+            embeddingsToCache ??= new (embeddings.Count);
+
+            byte[] bytes = _embeddingPool.Rent(vectorValue.Length);
+
+            vectorValue.GetEmbedding().CopyTo(bytes);
+
+            var embeddingCacheItem = new EmbeddingCacheItem(
+                chunksForGeneration[i], 
+                new ReadOnlyMemory<byte>(bytes, 0, vectorValue.Length), 
+                destinationEmbeddingType,
+                connectionStringId, 
+                new ReturnEmbeddingBuffer(bytes, _embeddingPool));
+
+            embeddingsToCache.Add(embeddingCacheItem);
         }
 
-        // TODO arek Cacher.EnqueueEmbeddingToCache(connectionStringId, );
+        Cacher.EnqueueEmbeddingToCache(embeddingsToCache);
 
         if (vectorValues.Length == 1) 
             return vectorValues[0];
@@ -71,5 +95,13 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
     public void Dispose()
     {
         _batchingService?.Dispose();
+    }
+
+    private readonly struct ReturnEmbeddingBuffer(byte[] embeddingBuffer, ArrayPool<byte> pool) : IDisposable
+    {
+        public void Dispose()
+        {
+            pool.Return(embeddingBuffer);
+        }
     }
 }

@@ -2,14 +2,8 @@
 using System.Collections.Generic;
 using System.Data.HashFunction;
 using System.Data.HashFunction.Blake2;
-using System.Runtime.InteropServices;
-using Corax.Utils;
-using Microsoft.SemanticKernel.Embeddings;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
-using Sparrow.Server;
-using Voron.Data.Graphs;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 

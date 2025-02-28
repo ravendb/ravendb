@@ -294,7 +294,7 @@ public static partial class CoraxQueryBuilder
             }         
             
             transformedEmbedding = database.AiIntegrations.Embeddings
-                .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsTaskId, valueAsString, destinationEmbeddingType!.Value)
+                .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, builderParameters.Allocator, connectionStringId, embeddingsTaskId, valueAsString, destinationEmbeddingType!.Value)
                 .GetAwaiter().GetResult();
         }
 
