@@ -5,10 +5,22 @@ import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenCon
 import AzureQueueStorageConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings;
 import AmazonSqsConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings;
 import AiConnectionSettingsDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
+import { FormDestinations } from "components/common/formDestinations/utils/formDestinationsTypes";
 
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
-import { FormDestinations } from "components/common/formDestinations/utils/formDestinationsTypes";
+
+export type StudioConnectionType =
+    | "Raven"
+    | "Sql"
+    | "Snowflake"
+    | "Olap"
+    | "ElasticSearch"
+    | "Kafka"
+    | "RabbitMQ"
+    | "AzureQueueStorage"
+    | "AmazonSqs"
+    | "Ai";
 
 export interface ConnectionStringUsedTask {
     id: number;
@@ -21,7 +33,7 @@ interface ConnectionBase {
 }
 
 export interface RavenConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "Raven">;
+    type: Extract<StudioConnectionType, "Raven">;
     database?: string;
     topologyDiscoveryUrls?: {
         url: string;
@@ -29,18 +41,18 @@ export interface RavenConnection extends ConnectionBase {
 }
 
 export interface SqlConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "Sql">;
+    type: Extract<StudioConnectionType, "Sql">;
     connectionString?: string;
     factoryName?: SqlConnectionStringFactoryName;
 }
 
 export interface SnowflakeConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "Snowflake">;
+    type: Extract<StudioConnectionType, "Snowflake">;
     connectionString?: string;
 }
 
 export interface OlapConnection extends ConnectionBase, FormDestinations {
-    type: Extract<StudioEtlType, "Olap">;
+    type: Extract<StudioConnectionType, "Olap">;
 }
 
 export type ElasticSearchAuthenticationMethod =
@@ -51,7 +63,7 @@ export type ElasticSearchAuthenticationMethod =
     | "Certificate";
 
 export interface ElasticSearchConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "ElasticSearch">;
+    type: Extract<StudioConnectionType, "ElasticSearch">;
     authMethodUsed?: ElasticSearchAuthenticationMethod;
     apiKey?: string;
     apiKeyId?: string;
@@ -65,19 +77,19 @@ export interface ElasticSearchConnection extends ConnectionBase {
 }
 
 export interface KafkaConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "Kafka">;
+    type: Extract<StudioConnectionType, "Kafka">;
     bootstrapServers?: string;
     connectionOptions?: { key?: string; value?: string }[];
     isUseRavenCertificate?: boolean;
 }
 
 export interface RabbitMqConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "RabbitMQ">;
+    type: Extract<StudioConnectionType, "RabbitMQ">;
     connectionString?: string;
 }
 
 export interface AzureQueueStorageConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "AzureQueueStorage">;
+    type: Extract<StudioConnectionType, "AzureQueueStorage">;
     authType?: AzureQueueStorageAuthenticationType;
     settings?: {
         connectionString?: {
@@ -96,7 +108,7 @@ export interface AzureQueueStorageConnection extends ConnectionBase {
 }
 
 export interface AmazonSqsConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "AmazonSqs">;
+    type: Extract<StudioConnectionType, "AmazonSqs">;
     authType?: AmazonSqsAuthenticationType;
     settings?: {
         basic?: {
@@ -109,7 +121,7 @@ export interface AmazonSqsConnection extends ConnectionBase {
 }
 
 export interface AiConnection extends ConnectionBase {
-    type: Extract<StudioEtlType, "Ai">;
+    type: Extract<StudioConnectionType, "Ai">;
     identifier?: string;
     connectorType?:
         | "azureOpenAiSettings"

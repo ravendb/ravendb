@@ -6,7 +6,7 @@ import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTa
 import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
-import ongoingTaskAiTransformationModel = require("models/database/tasks/ongoingTaskAiTransformationModel");
+import ongoingTaskEmbeddingsGenerationTransformationModel = require("models/database/tasks/ongoingTaskEmbeddingsGenerationTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -22,28 +22,28 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
 import EditAiEtlInfoHub = require("viewmodels/database/tasks/EditAiEtlInfoHub");
 import typeUtils = require("common/typeUtils");
-import ongoingTaskAiEtlEditModel = require("models/database/tasks/ongoingTaskAiEtlEditModel");
+import ongoingTaskEmbeddingsGenerationEditModel = require("models/database/tasks/ongoingTaskEmbeddingsGenerationEditModel");
 import EditConnectionStrings = require("components/pages/database/settings/connectionStrings/EditConnectionStrings");
 import connectionStringsSlice = require("components/pages/database/settings/connectionStrings/store/connectionStringsSlice");
 import storeCompat = require("components/storeCompat");
 
-class aiEtlTask extends shardViewModelBase {
+class editEmbeddingsGenerationTask extends shardViewModelBase {
     
-    view = require("views/database/tasks/editAiEtlTask.html");
+    view = require("views/database/tasks/editEmbeddingsGenerationTask.html");
     taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     static readonly scriptNamePrefix = "Script_";
-    static isApplyToAll = ongoingTaskAiTransformationModel.isApplyToAll;
+    static isApplyToAll = ongoingTaskEmbeddingsGenerationTransformationModel.isApplyToAll;
     
     enableTestArea = ko.observable<boolean>(false);
     test: aiTaskTestMode;    
 
-    editedAiEtl = ko.observable<ongoingTaskAiEtlEditModel>();
+    editedEmbeddingsGeneration = ko.observable<ongoingTaskEmbeddingsGenerationEditModel>();
     isAddingNewEtlTask = ko.observable<boolean>(true);
 
-    transformationScriptSelectedForEdit = ko.observable<ongoingTaskAiTransformationModel>();
-    editedTransformationScriptSandbox = ko.observable<ongoingTaskAiTransformationModel>();
+    transformationScriptSelectedForEdit = ko.observable<ongoingTaskEmbeddingsGenerationTransformationModel>();
+    editedTransformationScriptSandbox = ko.observable<ongoingTaskEmbeddingsGenerationTransformationModel>();
 
     possibleMentors = ko.observableArray<string>([]);
     connectionStringsNames = ko.observableArray<string>([]);
@@ -79,7 +79,6 @@ class aiEtlTask extends shardViewModelBase {
             "toggleTestArea",
             "toggleIsNewConnectionStringOpen",
             "setState");
-
         
         aceEditorBindingHandler.install();
 
@@ -95,7 +94,7 @@ class aiEtlTask extends shardViewModelBase {
                 },
                 afterSave: async (name: string) => {
                     await this.getAllConnectionStrings();
-                    this.editedAiEtl().connectionStringName(name)
+                    this.editedEmbeddingsGeneration().connectionStringName(name)
                     this.toggleIsNewConnectionStringOpen();
                 },
                 afterClose: () => {
@@ -121,15 +120,15 @@ class aiEtlTask extends shardViewModelBase {
             getOngoingTaskInfoCommand.forAiIntegration(this.db, args.taskId)
                 .execute()
                 .done((result) => {
-                    this.editedAiEtl(new ongoingTaskAiEtlEditModel(result, this.aiConnectionStrings));
+                    this.editedEmbeddingsGeneration(new ongoingTaskEmbeddingsGenerationEditModel(result, this.aiConnectionStrings));
 
-                    this.editTransformationScript(new ongoingTaskAiTransformationModel(
+                    this.editTransformationScript(new ongoingTaskEmbeddingsGenerationTransformationModel(
                         result.Configuration.Transforms[0],
                         false,
                         true,
                         result.Configuration.EmbeddingsPathConfigurations?.length > 0 ? "paths" : "script",
                         result.Configuration.EmbeddingsPathConfigurations,
-                        this.editedAiEtl().maxTokensPerChunkDefaultValue
+                        this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue
                     ));
 
                     deferred.resolve();
@@ -141,9 +140,9 @@ class aiEtlTask extends shardViewModelBase {
         } else {
             // 2. Creating a New task
             this.isAddingNewEtlTask(true);
-            this.editedAiEtl(ongoingTaskAiEtlEditModel.empty(this.aiConnectionStrings));
+            this.editedEmbeddingsGeneration(ongoingTaskEmbeddingsGenerationEditModel.empty(this.aiConnectionStrings));
 
-            this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.editedAiEtl().maxTokensPerChunkDefaultValue, this.findNameForNewTransformation()));
+            this.editedTransformationScriptSandbox(ongoingTaskEmbeddingsGenerationTransformationModel.empty(this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue, this.findNameForNewTransformation()));
 
             deferred.resolve();
         }
@@ -195,13 +194,13 @@ class aiEtlTask extends shardViewModelBase {
 
         this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
 
-        const connectionStringName = this.editedAiEtl().connectionStringName();
+        const connectionStringName = this.editedEmbeddingsGeneration().connectionStringName();
         const connectionStringIsMissing = connectionStringName && !this.connectionStringsNames()
             .find(x => x.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
 
         if (connectionStringIsMissing) {
             // looks like user imported data w/o connection strings, prefill form with desired name
-            this.editedAiEtl().connectionStringName(null);
+            this.editedEmbeddingsGeneration().connectionStringName(null);
         }
 
         this.enableTestArea.subscribe(testMode => {
@@ -209,7 +208,7 @@ class aiEtlTask extends shardViewModelBase {
         });
 
         const dtoProvider = () => {
-            const dto = this.editedAiEtl().toDto();
+            const dto = this.editedEmbeddingsGeneration().toDto();
 
             // override transforms - use only current transformation
             const transformationScriptDto = this.editedTransformationScriptSandbox().toDto();
@@ -232,14 +231,14 @@ class aiEtlTask extends shardViewModelBase {
     }
     
     private initDirtyFlag() {
-        const innerDirtyFlag = ko.pureComputed(() => this.editedAiEtl().dirtyFlag().isDirty());
+        const innerDirtyFlag = ko.pureComputed(() => this.editedEmbeddingsGeneration().dirtyFlag().isDirty());
         const editedScriptFlag = ko.pureComputed(() => !!this.editedTransformationScriptSandbox() && this.editedTransformationScriptSandbox().dirtyFlag().isDirty());
 
-        const scriptsCount = ko.pureComputed(() => this.editedAiEtl().transformationScripts().length);
+        const scriptsCount = ko.pureComputed(() => this.editedEmbeddingsGeneration().transformationScripts().length);
         
         const hasAnyDirtyTransformationScript = ko.pureComputed(() => {
             let anyDirty = false;
-            this.editedAiEtl().transformationScripts().forEach(script => {
+            this.editedEmbeddingsGeneration().transformationScripts().forEach(script => {
                 if (script.dirtyFlag().isDirty()) {
                     anyDirty = true;
                     // don't break here - we want to track all dependencies
@@ -258,7 +257,7 @@ class aiEtlTask extends shardViewModelBase {
     }
     
     useConnectionString(connectionStringToUse: string) {
-        this.editedAiEtl().connectionStringName(connectionStringToUse);
+        this.editedEmbeddingsGeneration().connectionStringName(connectionStringToUse);
     }
 
     // onTestConnectionElasticSearch(urlToTest: discoveryUrl) {
@@ -290,7 +289,7 @@ class aiEtlTask extends shardViewModelBase {
         }
 
         // 4. Validate *general form*
-        if (!this.isValid(this.editedAiEtl().validationGroup)) {
+        if (!this.isValid(this.editedEmbeddingsGeneration().validationGroup)) {
             hasAnyErrors = true;
         }
         
@@ -299,13 +298,13 @@ class aiEtlTask extends shardViewModelBase {
             return false;
         }
         
-        const scriptsToReset = this.editedAiEtl()
+        const scriptsToReset = this.editedEmbeddingsGeneration()
                 .transformationScripts()
                 .filter(x => x.resetScript())
                 .map(x => x.name());
             
-        const dto = this.editedAiEtl().toDto();
-        saveEtlTaskCommand.forAiIntegration(this.db, dto, scriptsToReset)
+        const dto = this.editedEmbeddingsGeneration().toDto();
+        saveEtlTaskCommand.forEmbeddingsGeneration(this.db, dto, scriptsToReset)
             .execute()
             .done(() => {
                 this.dirtyFlag().reset();
@@ -327,7 +326,7 @@ class aiEtlTask extends shardViewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax("Ai");
+        const viewmodel = new transformationScriptSyntax("EmbeddingsGeneration");
         app.showBootstrapDialog(viewmodel);
     }
     
@@ -349,7 +348,7 @@ class aiEtlTask extends shardViewModelBase {
     }
 
     setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
-        this.editedAiEtl().taskState(state);
+        this.editedEmbeddingsGeneration().taskState(state);
     }
 
     /********************************************/
@@ -358,7 +357,7 @@ class aiEtlTask extends shardViewModelBase {
 
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
-        this.editedTransformationScriptSandbox(ongoingTaskAiTransformationModel.empty(this.editedAiEtl().maxTokensPerChunkDefaultValue, this.findNameForNewTransformation()));
+        this.editedTransformationScriptSandbox(ongoingTaskEmbeddingsGenerationTransformationModel.empty(this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue, this.findNameForNewTransformation()));
     }
     
     saveEditedTransformation() {
@@ -370,40 +369,40 @@ class aiEtlTask extends shardViewModelBase {
         }
 
         if (transformation.isNew()) {
-            const newTransformationItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, false, transformation.embeddingsSource(), transformation.embeddingPathConfigurations(), this.editedAiEtl().maxTokensPerChunkDefaultValue);
+            const newTransformationItem = new ongoingTaskEmbeddingsGenerationTransformationModel(transformation.toDto(), false, false, transformation.embeddingsSource(), transformation.embeddingPathConfigurations(), this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue);
             newTransformationItem.name(transformation.name());
             newTransformationItem.dirtyFlag().forceDirty();
-            this.editedAiEtl().transformationScripts.push(newTransformationItem);
+            this.editedEmbeddingsGeneration().transformationScripts.push(newTransformationItem);
         } else {
-            const oldItem = this.editedAiEtl().transformationScripts().find(x => x.name() === transformation.name());
-            const newItem = new ongoingTaskAiTransformationModel(transformation.toDto(), false, transformation.resetScript(), transformation.embeddingsSource(), transformation.embeddingPathConfigurations(), this.editedAiEtl().maxTokensPerChunkDefaultValue);
+            const oldItem = this.editedEmbeddingsGeneration().transformationScripts().find(x => x.name() === transformation.name());
+            const newItem = new ongoingTaskEmbeddingsGenerationTransformationModel(transformation.toDto(), false, transformation.resetScript(), transformation.embeddingsSource(), transformation.embeddingPathConfigurations(), this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue);
 
             if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
                 newItem.dirtyFlag().forceDirty();
             }
 
-            this.editedAiEtl().transformationScripts.replace(oldItem, newItem);
+            this.editedEmbeddingsGeneration().transformationScripts.replace(oldItem, newItem);
         }
 
-        this.editedAiEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
+        this.editedEmbeddingsGeneration().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
     }
 
     private findNameForNewTransformation() {
-        const scriptsWithPrefix = this.editedAiEtl().transformationScripts().filter(script => {
-            return script.name().startsWith(aiEtlTask.scriptNamePrefix);
+        const scriptsWithPrefix = this.editedEmbeddingsGeneration().transformationScripts().filter(script => {
+            return script.name().startsWith(editEmbeddingsGenerationTask.scriptNamePrefix);
         });
 
         const maxNumber = _.max(scriptsWithPrefix
-            .map(x => x.name().substr(aiEtlTask.scriptNamePrefix.length))
+            .map(x => x.name().substr(editEmbeddingsGenerationTask.scriptNamePrefix.length))
             .map(x => _.toInteger(x))) || 0;
 
-        return aiEtlTask.scriptNamePrefix + (maxNumber + 1);
+        return editEmbeddingsGenerationTask.scriptNamePrefix + (maxNumber + 1);
     }
 
-    editTransformationScript(model: ongoingTaskAiTransformationModel) {
+    editTransformationScript(model: ongoingTaskEmbeddingsGenerationTransformationModel) {
         this.makeSureSandboxIsVisible();
         this.transformationScriptSelectedForEdit(model);
-        this.editedTransformationScriptSandbox(new ongoingTaskAiTransformationModel(model.toDto(), false, model.resetScript(), model.embeddingsSource(), model.embeddingPathConfigurations(), this.editedAiEtl().maxTokensPerChunkDefaultValue));
+        this.editedTransformationScriptSandbox(new ongoingTaskEmbeddingsGenerationTransformationModel(model.toDto(), false, model.resetScript(), model.embeddingsSource(), model.embeddingPathConfigurations(), this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue));
 
         $('.edit-ai-task .js-test-area [data-toggle="tooltip"]').tooltip();
     }
@@ -437,7 +436,7 @@ class aiEtlTask extends shardViewModelBase {
     }
 }
 
-export = aiEtlTask;
+export = editEmbeddingsGenerationTask;
 
 class aiTaskTestMode {
 

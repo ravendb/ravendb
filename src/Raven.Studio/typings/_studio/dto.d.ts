@@ -882,7 +882,7 @@ type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationA
     "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "AmazonSqsQueueEtl" |
     "KafkaQueueSink" | "RabbitQueueSink" | "AiIntegration";
 
-type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage" | "AmazonSqs" | "Ai";
+type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage" | "AmazonSqs" | "EmbeddingsGeneration";
 
 type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink";
 

@@ -5,7 +5,7 @@ import { useAppSelector } from "components/store";
 import { useDispatch } from "react-redux";
 import Button from "react-bootstrap/Button";
 import ConnectionStringsPanel from "./ConnectionStringsPanel";
-import { Connection } from "./connectionStringsTypes";
+import { Connection, StudioConnectionType } from "./connectionStringsTypes";
 import { connectionStringsActions } from "./store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
@@ -53,7 +53,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType }
     );
 }
 
-function getTypeLabel(type: StudioEtlType): string {
+function getTypeLabel(type: StudioConnectionType): string {
     switch (type) {
         case "Raven":
             return "RavenDB";
@@ -70,7 +70,7 @@ function getTypeLabel(type: StudioEtlType): string {
     }
 }
 
-function getIcon(type: StudioEtlType): IconName {
+function getIcon(type: StudioConnectionType): IconName {
     switch (type) {
         case "Raven":
             return "raven";

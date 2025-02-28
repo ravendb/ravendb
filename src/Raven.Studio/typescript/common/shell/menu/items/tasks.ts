@@ -337,17 +337,17 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             }
         }),
         new leafMenuItem({
-            route: 'databases/tasks/editAiEtlTask',
-            moduleId: require('viewmodels/database/tasks/editAiEtlTask'),
+            route: 'databases/tasks/editEmbeddingsGenerationTask',
+            moduleId: require('viewmodels/database/tasks/editEmbeddingsGenerationTask'),
             shardingMode: "allShards",
-            title: 'AI Task',
+            title: 'Embeddings Generation Task',
             nav: false,
             css: "icon-plus",
-            dynamicHash: appUrls.editAiEtlTaskUrl,
+            dynamicHash: appUrls.editEmbeddingsGenerationTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks',
             search: {
-                overrideTitle: "Add New AI Task",
-                alternativeTitles: ["Create AI Task"],
+                overrideTitle: "Add New Embeddings Generation Task",
+                alternativeTitles: ["Create Embeddings Generation Task"],
             }
         }),
         new leafMenuItem({

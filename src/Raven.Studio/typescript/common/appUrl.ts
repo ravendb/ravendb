@@ -4,6 +4,7 @@ import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import databases = require("components/models/databases");
+import connectionStringsTypes = require("components/pages/database/settings/connectionStrings/connectionStringsTypes");
 
 class appUrl {
 
@@ -51,7 +52,7 @@ class appUrl {
         editSnowflakeEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditSnowflakeEtl(appUrl.currentDatabase(), taskId)),
         editOlapEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditOlapEtl(appUrl.currentDatabase(), taskId)),
         editElasticSearchEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase(), taskId)),
-        editAiEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditAiEtl(appUrl.currentDatabase(), taskId)),
+        editEmbeddingsGeneration: (taskId?: number) => ko.pureComputed(() => appUrl.forEditEmbeddingsGeneration(appUrl.currentDatabase(), taskId)),
         editKafkaEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditKafkaEtl(appUrl.currentDatabase(), taskId)),
         editRabbitMqEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRabbitMqEtl(appUrl.currentDatabase(), taskId)),
         editAzureQueueStorageEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditAzureQueueStorageEtl(appUrl.currentDatabase(), taskId)),
@@ -78,7 +79,7 @@ class appUrl {
         editSnowflakeEtlTaskUrl: ko.pureComputed(() => appUrl.forEditSnowflakeEtl(appUrl.currentDatabase())),
         editOlapEtlTaskUrl: ko.pureComputed(() => appUrl.forEditOlapEtl(appUrl.currentDatabase())),
         editElasticSearchEtlTaskUrl: ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase())),
-        editAiEtlTaskUrl: ko.pureComputed(() => appUrl.forEditAiEtl(appUrl.currentDatabase())),
+        editEmbeddingsGenerationTaskUrl: ko.pureComputed(() => appUrl.forEditEmbeddingsGeneration(appUrl.currentDatabase())),
         editKafkaEtlTaskUrl: ko.pureComputed(() => appUrl.forEditKafkaEtl(appUrl.currentDatabase())),
         editRabbitMqEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRabbitMqEtl(appUrl.currentDatabase())),
         editAzureQueueStorageEtlTaskUrl: ko.pureComputed(() => appUrl.forEditAzureQueueStorageEtl(appUrl.currentDatabase())),
@@ -433,7 +434,7 @@ class appUrl {
         return "#databases/settings/revisionsBinCleaner?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forConnectionStrings(db: database | string, type?: StudioEtlType, name?: string): string {
+    static forConnectionStrings(db: database | string, type?: connectionStringsTypes.StudioConnectionType, name?: string): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const typeUrlPart = type ? "&type=" + encodeURIComponent(type) : "";
         const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
@@ -697,12 +698,12 @@ class appUrl {
         return "#databases/tasks/editRabbitMqSinkTask?" + databasePart + taskPart;
     }
 
-    static forEditAiEtl(db: database | string, taskId?: number): string {
+    static forEditEmbeddingsGeneration(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
 
         const sourceViewPart = "&sourceView=" + appUrl.getAiTaskSourceView();
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editAiEtlTask?" + databasePart + sourceViewPart + taskPart;
+        return "#databases/tasks/editEmbeddingsGenerationTask?" + databasePart + sourceViewPart + taskPart;
     }
 
     static getAiTaskSourceView(): EditAiTaskSourceView {

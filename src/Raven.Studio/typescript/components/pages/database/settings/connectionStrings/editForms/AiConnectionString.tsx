@@ -147,7 +147,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
 
                 <ConnectionStringUsedByTasks
                     tasks={initialConnection.usedByTasks}
-                    urlProvider={forCurrentDatabase.editAiEtl}
+                    urlProvider={forCurrentDatabase.editEmbeddingsGeneration}
                 />
             </Form>
         </FormProvider>

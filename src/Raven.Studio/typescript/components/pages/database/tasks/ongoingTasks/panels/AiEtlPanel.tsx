@@ -73,7 +73,7 @@ export function AiEtlPanel(props: AiEtlPanelProps & ICanShowTransformationScript
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editAiEtl(data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editEmbeddingsGeneration(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 

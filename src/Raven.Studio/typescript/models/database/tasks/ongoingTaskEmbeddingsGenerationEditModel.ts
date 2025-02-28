@@ -1,16 +1,16 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
-import ongoingTaskAiTransformationModel = require("models/database/tasks/ongoingTaskAiTransformationModel");
+import ongoingTaskEmbeddingsGenerationTransformationModel = require("models/database/tasks/ongoingTaskEmbeddingsGenerationTransformationModel");
 import TaskUtils = require("components/utils/TaskUtils");
 import TimeInSeconds = require("common/constants/timeInSeconds");
 
-class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
+class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     identifier = ko.observable<string>();
     connectionStringName = ko.observable<string>();
 
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
     
-    transformationScripts = ko.observableArray<ongoingTaskAiTransformationModel>([]);
+    transformationScripts = ko.observableArray<ongoingTaskEmbeddingsGenerationTransformationModel>([]);
     
     validationGroup: KnockoutValidationGroup;
     enterTestModeValidationGroup: KnockoutValidationGroup;
@@ -157,7 +157,7 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
             // TODO add expiration
 
             if (configuration.Transforms) {
-                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskAiTransformationModel(
+                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskEmbeddingsGenerationTransformationModel(
                     x,
                     false,
                     true,
@@ -203,8 +203,8 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
         };
     }
     
-    static empty(aiConnectionStrings: KnockoutObservableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>): ongoingTaskAiEtlEditModel {
-        return new ongoingTaskAiEtlEditModel(
+    static empty(aiConnectionStrings: KnockoutObservableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>): ongoingTaskEmbeddingsGenerationEditModel {
+        return new ongoingTaskEmbeddingsGenerationEditModel(
             {
                 TaskName: "",
                 TaskType: "AiIntegration",
@@ -220,4 +220,4 @@ class ongoingTaskAiEtlEditModel extends ongoingTaskEditModel {
        }
 }
 
-export = ongoingTaskAiEtlEditModel;
+export = ongoingTaskEmbeddingsGenerationEditModel;

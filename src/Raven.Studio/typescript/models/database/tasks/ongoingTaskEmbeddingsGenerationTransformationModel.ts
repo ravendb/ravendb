@@ -6,7 +6,7 @@ import TimeInSeconds = require("common/constants/timeInSeconds");
 
 type EmbeddingsSource = "script" | "paths";
 
-class ongoingTaskAiTransformationModel {
+class ongoingTaskEmbeddingsGenerationTransformationModel {
     name = ko.observable<string>("not-empty");
     script = ko.observable<string>();
 
@@ -66,7 +66,7 @@ class ongoingTaskAiTransformationModel {
     }
 
     static isApplyToAll(collectionName: string){
-        return collectionName === ongoingTaskAiTransformationModel.applyToAllCollectionsText;
+        return collectionName === ongoingTaskEmbeddingsGenerationTransformationModel.applyToAllCollectionsText;
     }
 
     initObservables(): void {
@@ -103,8 +103,8 @@ class ongoingTaskAiTransformationModel {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    static empty(maxTokensPerChunkDefaultValue: KnockoutObservable<number>, name?: string): ongoingTaskAiTransformationModel {
-        return new ongoingTaskAiTransformationModel(
+    static empty(maxTokensPerChunkDefaultValue: KnockoutObservable<number>, name?: string): ongoingTaskEmbeddingsGenerationTransformationModel {
+        return new ongoingTaskEmbeddingsGenerationTransformationModel(
             {
                 ApplyToAllDocuments: false,
                 Collections: [],
@@ -188,13 +188,13 @@ class ongoingTaskAiTransformationModel {
     }
 
     addWithBlink(collectionName: string): void {
-        if (ongoingTaskAiTransformationModel.isApplyToAll(collectionName)) {
+        if (ongoingTaskEmbeddingsGenerationTransformationModel.isApplyToAll(collectionName)) {
             this.applyScriptForAllCollections(true);
-            this.transformScriptCollections([ongoingTaskAiTransformationModel.applyToAllCollectionsText]);
+            this.transformScriptCollections([ongoingTaskEmbeddingsGenerationTransformationModel.applyToAllCollectionsText]);
         } else {
             this.applyScriptForAllCollections(false);
             this.transformScriptCollections.unshift(collectionName);
-            this.transformScriptCollections.remove(ongoingTaskAiTransformationModel.applyToAllCollectionsText);
+            this.transformScriptCollections.remove(ongoingTaskEmbeddingsGenerationTransformationModel.applyToAllCollectionsText);
         }
 
         this.inputCollection("");
@@ -213,7 +213,7 @@ class ongoingTaskAiTransformationModel {
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
 
         if (this.applyScriptForAllCollections()) {
-            this.transformScriptCollections([ongoingTaskAiTransformationModel.applyToAllCollectionsText]);
+            this.transformScriptCollections([ongoingTaskEmbeddingsGenerationTransformationModel.applyToAllCollectionsText]);
         }
         
         this.isNew(isNew);
@@ -230,4 +230,4 @@ class ongoingTaskAiTransformationModel {
     }
 }
 
-export = ongoingTaskAiTransformationModel;
+export = ongoingTaskEmbeddingsGenerationTransformationModel;

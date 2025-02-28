@@ -33,13 +33,13 @@ interface computedAppUrls {
     editSnowflakeEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editOlapEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editElasticSearchEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
-    editAiEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editKafkaEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRabbitMqEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editAzureQueueStorageEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editAmazonSqsEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editKafkaSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRabbitMqSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editEmbeddingsGeneration: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
     importDatabaseFromFileUrl: KnockoutComputed<string>;
@@ -64,9 +64,9 @@ interface computedAppUrls {
     editRabbitMqEtlTaskUrl: KnockoutComputed<string>;
     editAzureQueueStorageEtlTaskUrl: KnockoutComputed<string>;
     editAmazonSqsEtlTaskUrl: KnockoutComputed<string>;
-    editAiEtlTaskUrl: KnockoutComputed<string>;
     editKafkaSinkTaskUrl: KnockoutComputed<string>;
     editRabbitMqSinkTaskUrl: KnockoutComputed<string>;
+    editEmbeddingsGenerationTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;

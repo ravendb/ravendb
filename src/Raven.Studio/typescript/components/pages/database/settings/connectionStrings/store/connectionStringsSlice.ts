@@ -1,7 +1,7 @@
 import { PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
-import { Connection } from "../connectionStringsTypes";
+import { Connection, StudioConnectionType } from "../connectionStringsTypes";
 import { RootState } from "components/store";
 import { ConnectionStringsUrlParameters } from "../ConnectionStrings";
 import {
@@ -24,7 +24,7 @@ type ConnectionStringsViewContext = "ai" | "connectionString";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
-    connections: { [key in StudioEtlType]: Connection[] };
+    connections: { [key in StudioConnectionType]: Connection[] };
     urlParameters: ConnectionStringsUrlParameters;
     initialEditConnection: Connection;
     viewContext: ConnectionStringsViewContext;
@@ -52,18 +52,6 @@ const initialState: ConnectionStringsState = {
     viewContext: "connectionString",
 };
 
-type StudioEtlType =
-    | "Raven"
-    | "Sql"
-    | "Snowflake"
-    | "Olap"
-    | "ElasticSearch"
-    | "Kafka"
-    | "RabbitMQ"
-    | "AzureQueueStorage"
-    | "AmazonSqs"
-    | "Ai";
-
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
     initialState,
@@ -74,7 +62,7 @@ export const connectionStringsSlice = createSlice({
         newConnectionModalOpened: (state) => {
             state.initialEditConnection = { type: null };
         },
-        newConnectionOfTypeModalOpened: (state, { payload: type }: PayloadAction<StudioEtlType>) => {
+        newConnectionOfTypeModalOpened: (state, { payload: type }: PayloadAction<StudioConnectionType>) => {
             state.initialEditConnection = { type };
         },
         editConnectionModalOpened: (state, { payload: connection }: PayloadAction<Connection>) => {

@@ -145,7 +145,7 @@ export default function AiTasks() {
     };
 
     const goToNewAiTask = (e: React.MouseEvent<HTMLButtonElement>) => {
-        const url = appUrl.forEditAiEtl(db.name);
+        const url = appUrl.forEditEmbeddingsGeneration(db.name);
         if (e.ctrlKey) {
             window.open(url, "_blank");
         } else {

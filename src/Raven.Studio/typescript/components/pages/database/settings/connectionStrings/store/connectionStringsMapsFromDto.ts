@@ -11,6 +11,7 @@ import {
     SnowflakeConnection,
     AmazonSqsConnection,
     AiConnection,
+    StudioConnectionType,
 } from "../connectionStringsTypes";
 
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
@@ -31,7 +32,7 @@ type OngoingTaskForConnection = Raven.Client.Documents.Operations.OngoingTasks.O
 
 function getConnectionStringUsedTasks(
     tasks: OngoingTaskForConnection[],
-    connectionType: StudioEtlType,
+    connectionType: StudioConnectionType,
     connectionName: string
 ): ConnectionStringUsedTask[] {
     let filteredTasks: OngoingTaskForConnection[] = [];

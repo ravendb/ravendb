@@ -108,7 +108,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                 <Row className="gy-sm">
                     <TaskItem
                         title="Create new AI task"
-                        href={appUrl.forEditAiEtl(db.name)}
+                        href={appUrl.forEditEmbeddingsGeneration(db.name)}
                         className="ai-etl"
                         target="AiETL"
                         disabled={isSharded}

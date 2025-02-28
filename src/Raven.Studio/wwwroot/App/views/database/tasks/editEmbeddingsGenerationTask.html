@@ -22,7 +22,7 @@
                     </button>
                 </div>
                 <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
-                    <div data-bind="with: editedAiEtl">
+                    <div data-bind="with: editedEmbeddingsGeneration">
                         <div class="panel-body">
                             <div class="form-group margin-top" data-bind="validationElement: taskName">
                                 <label for="taskName" class="control-label">Task Name</label>
@@ -113,7 +113,7 @@
                 </div>
 
                 <div class="panel margin-top" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
-                    <div data-bind="with: editedAiEtl">
+                    <div data-bind="with: editedEmbeddingsGeneration">
                         <div class="panel-body">
                             <h3>Querying</h3>
 
@@ -229,8 +229,8 @@
                             <div class="padding panel-bg-1">
                                 <div class="flex-horizontal gap-1">
                                     <div style="width: 33%;">
-                                        <label class="control-label"><strong>Embeddings Path</strong></label>
-                                        <input type="text" class="form-control" placeholder="Enter Embeddings Path" data-bind="textInput: inputEmbeddingsPath" />
+                                        <label class="control-label"><strong>Source Text Path</strong></label>
+                                        <input type="text" class="form-control" placeholder="Enter Source Text Path" data-bind="textInput: inputEmbeddingsPath" />
                                     </div>
                                     <div style="width: 33%;">
                                         <label class="control-label">Chunking Method</label>
