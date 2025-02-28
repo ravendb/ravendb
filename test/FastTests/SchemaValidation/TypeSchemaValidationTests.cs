@@ -505,7 +505,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         {
             [SVC.properties] = new DynamicJsonValue
             {
-                ["prop"] = new DynamicJsonValue { [SVC.@type] = type }
+                ["prop"] = new DynamicJsonValue { [SVC.type] = type }
             },
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))

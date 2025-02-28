@@ -6,12 +6,12 @@ namespace Raven.Server.SchemaValidation.Validators.Object;
 [DebuggerDisplay("'{_schemaPath}' property validator")]
 public class PropertySchemaRuleValidator : ElementSchemaRuleValidator<BlittableJsonReaderObject, string>
 {
-    public string Accessor { get; }
+    public string Property { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public PropertySchemaRuleValidator(string accessor, string schemaPath) : base(string.IsNullOrEmpty(schemaPath) ? accessor : $"{schemaPath}.{accessor}")
-    {
-        Accessor = accessor;
+    public PropertySchemaRuleValidator(BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators, string property, string schemaPath) 
+        : base(typesRestriction, ruleValidators, schemaPath){
+        Property = property;
     }
     
     protected override bool TryGetElement(BlittableJsonReaderObject parent, string accessor, out (BlittableJsonToken Type, object Value) element)

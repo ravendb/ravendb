@@ -7,11 +7,8 @@ namespace Raven.Server.SchemaValidation.Validators.Array;
 public class ArrayItemSchemaRuleValidator : ElementSchemaRuleValidator<BlittableJsonReaderArray, int>
 {
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ArrayItemSchemaRuleValidator(int index, string schemaPath) : base($"{schemaPath}[{index}]")
-    {
-    }
-    
-    public ArrayItemSchemaRuleValidator(string schemaPath) : base($"{schemaPath}[*]")
+    public ArrayItemSchemaRuleValidator(BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators, string schemaPath) 
+        : base(typesRestriction, ruleValidators, schemaPath)
     {
     }
     

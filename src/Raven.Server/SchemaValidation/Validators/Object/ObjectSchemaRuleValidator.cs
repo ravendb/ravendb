@@ -83,9 +83,9 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
     {
         //TODO To create an informative error when fails to read
         var named = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.properties, schemaPath)?
-            .ToDictionary(x => x.Accessor);
+            .ToDictionary(x => x.Property);
         var pattern = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.patternProperties, schemaPath)?
-            .Select(x => (new Regex(x.Accessor), x)).ToArray();
+            .Select(x => (new Regex(x.Property), x)).ToArray();
 
         var additional = ReadAdditionalProperties(schemaDefinition, schemaPath);
 
@@ -113,8 +113,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
                 return (isAdditionalPropertiesAllowed, null);
             case BlittableJsonReaderObject additionalPropertiesSchema:
             {
-                var validator = new PropertySchemaRuleValidator(propertySpecifier, schemaPath);
-                validator.Init(additionalPropertiesSchema);
+                var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(additionalPropertiesSchema, schemaPath, propertySpecifier);
                 return (true, validator);
             }
             default:
@@ -136,11 +135,11 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
         List<PropertySchemaRuleValidator> validators = null;
         foreach (var propertySpecifier in propertySpecifiers.GetPropertyNames())
         {
-            SchemaValidationHelper.TryGetObject(propertySpecifiers, propertySpecifier, schemaPath, out var propertySchemaDefinition);
+            var propertySchemaPath = string.IsNullOrEmpty(schemaPath) ? propertySpecifier : $"{schemaPath}.{propertySpecifier}";
+            SchemaValidationHelper.TryGetObject(propertySpecifiers, propertySpecifier, propertySchemaPath, out var propertySchemaDefinition);
 
-            var validator = new PropertySchemaRuleValidator(propertySpecifier, schemaPath);
-            validator.Init(propertySchemaDefinition);
-            (validators ??= new List<PropertySchemaRuleValidator>()).Add(validator);
+            var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(propertySchemaDefinition, propertySchemaPath, propertySpecifier);
+            (validators ??= []).Add(validator);
         }
 
         return validators;

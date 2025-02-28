@@ -61,8 +61,7 @@ public class ContainsRuleValidatorRuleValidatorFactory : SchemaRuleValidatorFact
         if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.maxContains, schemaPath, out var maxContains) == false)
             maxContains = long.MaxValue;
         
-        var containsValidator = new ArrayItemSchemaRuleValidator(schemaPath);
-        containsValidator.Init(containsSchema);
+        var containsValidator = ElementSchemaRuleValidatorFactory.CreateArrayItemSchemaRuleValidator(containsSchema, schemaPath);
         return new ContainsRuleValidator(containsValidator, minContains, maxContains);
     }
 }

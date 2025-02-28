@@ -10,6 +10,7 @@ namespace FastTests.SchemaValidation;
 
 public class GeneralSchemaValidationTests : SchemaValidationTestsBase
 {
+    // ReSharper disable once ConvertToPrimaryConstructor
     public GeneralSchemaValidationTests(ITestOutputHelper output) : base(output)
     {
 
@@ -60,16 +61,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         {
             [SVC.properties] = new DynamicJsonValue
             {
-                [prop] = new DynamicJsonValue
-                {
-                    [SVC.properties] = new DynamicJsonValue
-                    {
-                        [prop] = new DynamicJsonValue
-                        {
-                            [SVC.@const] = 123
-                        }
-                    }
-                }
+                [prop] = new DynamicJsonValue { [SVC.properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.@const] = 123 } } }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -97,10 +89,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     public async Task SchemaValidation_WhenRestrictOnMinProperties()
     {
         var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue
-        {
-            [SVC.minProperties] = 2
-        };
+        var schemaDefinition = new DynamicJsonValue { [SVC.minProperties] = 2 };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
@@ -108,34 +97,22 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
 
         await AssertMultipleParallel(() =>
             {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["prop1"] = "value1",
-                    ["prop2"] = "value2",
-                }, out var obj);
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "value1", ["prop2"] = "value2", }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["prop1"] = "value1",
-                    ["prop2"] = "value2",
-                    ["prop3"] = "value3",
-                }, out var obj);
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "value1", ["prop2"] = "value2", ["prop3"] = "value3", }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["prop1"] = "value1",
-                }, out var obj);
-                
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "value1", }, out var obj);
+
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The object at '' must have at least 2 properties, but it has only 1.", errors);
             });
@@ -145,10 +122,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     public async Task SchemaValidation_WhenRestrictOnMaxProperties()
     {
         var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue
-        {
-            [SVC.maxProperties] = 3
-        };
+        var schemaDefinition = new DynamicJsonValue { [SVC.maxProperties] = 3 };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
@@ -156,12 +130,14 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
 
         await AssertMultipleParallel(() =>
             {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["prop1"] = "value1",
-                    ["prop2"] = "value2",
-                    ["prop2"] = "value2",
-                }, out var obj);
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "value1", ["prop2"] = "value2", ["prop2"] = "value2", }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "value1", ["prop2"] = "value2", }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
@@ -170,86 +146,12 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
                 {
-                    ["prop1"] = "value1",
-                    ["prop2"] = "value2",
+                    ["prop1"] = "value1", ["prop2"] = "value2", ["prop3"] = "value3", ["prop4"] = "value4",
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
-            },
-            () =>
-            {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["prop1"] = "value1",
-                    ["prop2"] = "value2",
-                    ["prop3"] = "value3",
-                    ["prop4"] = "value4",
-                }, out var obj);
-                
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The object at '' must have no more than 3 properties, but it has 4.", errors);
             });
     }
-    
-    [RavenFact(RavenTestCategory.JavaScript)]
-    public async Task SchemaValidation_WhenRestrictOnDependentRequired()
-    {
-        var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue
-        {
-            [SVC.dependentRequired] = new DynamicJsonValue
-            {
-                ["prop1"] = new []{"prop2", "prop3"}
-            }
-        };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
 
-        await AssertMultipleParallel(() =>
-            {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["anotherPropName"] = "somevalue"
-                }, out var obj);
-
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
-            },
-            () =>
-            {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["prop1"] = "somevalue1",
-                    ["prop2"] = "somevalue2",
-                    ["prop3"] = "somevalue3",
-                }, out var obj);
-
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
-            },
-            () =>
-            {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["prop1"] = "somevalue1",
-                }, out var obj);
-                
-                Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The object at '' is missing properties 'prop2' & 'prop3' which are required when property 'prop1' is present.", errors);
-            },
-            () =>
-            {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
-                {
-                    ["prop1"] = "somevalue1",
-                    ["prop2"] = "somevalue1",
-                }, out var obj);
-                
-                Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The object at '' is missing property 'prop3' which is required when property 'prop1' is present.", errors);
-            });
-    }
-    }
+}

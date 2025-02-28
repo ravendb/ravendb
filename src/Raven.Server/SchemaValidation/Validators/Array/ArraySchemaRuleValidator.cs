@@ -83,9 +83,8 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
             if (token != expectedType)
                 SchemaValidationHelper.TrowRuleTypeError($"{SchemaValidatorConstants.prefixItems}", value, expectedType, token, schemaPath);
                     
-            var validator = new ArrayItemSchemaRuleValidator(i, schemaPath);
-            validator.Init((BlittableJsonReaderObject)prefixItemsSchema[i]);
-            (validators ??= new List<ArrayItemSchemaRuleValidator>()).Add(validator);
+            var validator = ElementSchemaRuleValidatorFactory.CreateArrayItemSchemaRuleValidator((BlittableJsonReaderObject)prefixItemsSchema[i], schemaPath, i);
+            (validators ??= []).Add(validator);
         }
         return validators?.ToArray();
     }
@@ -102,8 +101,7 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
             case bool isAdditionalPropertiesAllowed:
                 return (isAdditionalPropertiesAllowed, null);
             case BlittableJsonReaderObject additionalPropertiesSchema:
-                var validator = new ArrayItemSchemaRuleValidator(schemaPath);
-                validator.Init(additionalPropertiesSchema);
+                var validator = ElementSchemaRuleValidatorFactory.CreateArrayItemSchemaRuleValidator(additionalPropertiesSchema, schemaPath);
                 return (true, validator);
             default:
                 SchemaValidationHelper.TrowRuleTypeError(
