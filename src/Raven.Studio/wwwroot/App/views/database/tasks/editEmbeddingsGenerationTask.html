@@ -45,6 +45,18 @@
                                 </div>
                             </div>
                             <div class="form-group">
+                                <label class="control-label">Quantization Type</label>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: quantizationTypeLabel">
+                                        <span data-bind="text: quantizationTypeLabel"></span>
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: quantizationTypeOptions">
+                                        <li><a href="#" data-bind="click: _.partial($parent.quantizationType, value)"><span data-bind="text: label"></span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label class="control-label">Task State</label>
                                 <div class="flex-grow">
                                     <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
@@ -115,7 +127,10 @@
                 <div class="panel margin-top" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegration }">
                     <div data-bind="with: editedEmbeddingsGeneration">
                         <div class="panel-body">
-                            <h3>Querying</h3>
+                            <h3>
+                                Querying
+                                <i class="icon-info text-info" title="Query parameters containing vector fields will have embeddings generated during query execution."></i>
+                            </h3>
 
                             <div class="form-group">
                                 <label class="control-label">Chunking Method</label>
@@ -136,22 +151,9 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="control-label">Quantization Type</label>
-                                <div class="flex-grow">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: quantizationTypeLabel">
-                                        <span data-bind="text: quantizationTypeLabel"></span>
-                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" data-bind="foreach: quantizationTypeOptions">
-                                        <li><a href="#" data-bind="click: _.partial($parent.quantizationType, value)"><span data-bind="text: label"></span></a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="form-group">
                                 <div>
                                     <label class="control-label">
                                         Embeddings Cache Expiration
-                                        <i class="icon-info text-info" title="Query parameters containing vector fields will have embeddings generated during query execution."></i>
                                     </label>
                                 </div>
                                 <div class="flex-grow" data-bind="validationElement: embeddingsCacheExpiration">
@@ -341,7 +343,8 @@
                                     <i class="icon-import"></i> <span>Load document</span>
                                 </button>
                             </div>
-                            <div class="flex-horizontal">
+                            <!-- TODO hidden for now  -->
+                            <!-- <div class="flex-horizontal">
                                 <div class="flex-separator"></div>
                                 <button type="button" class="btn btn-primary margin-right margin-right-sm" data-bind="click: runTest, css: { 'btn-spinner': spinners.test }, disable: spinners.test()">
                                     <i class="icon-rocket"></i>
@@ -350,7 +353,7 @@
                                 <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea">
                                     <i class="icon-cancel"></i> <span>Close Test Area</span>
                                 </button>
-                            </div>
+                            </div> -->
                         </div>
                     </div>
                 </div>
