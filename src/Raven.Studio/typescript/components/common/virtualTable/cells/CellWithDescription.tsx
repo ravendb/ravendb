@@ -28,7 +28,7 @@ export function CellWithDescription<TData, TValue>({
     return (
         <PopoverWithHoverWrapper
             message={
-                <div className="p-1">
+                <>
                     <div>{description}</div>
                     {isActionsMenuVisible && (
                         <>
@@ -40,7 +40,7 @@ export function CellWithDescription<TData, TValue>({
                             </div>
                         </>
                     )}
-                </div>
+                </>
             }
         >
             <CellValueWrapper className={cellClassName} id={`popover-${cell.id}`} getValue={getValue} />
