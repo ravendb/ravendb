@@ -63,7 +63,7 @@ public partial class AbstractStaticIndexBase
                 }
             }
 
-            indexField = currentIndexingScope.GetOrCreateVectorField(fieldName, null, isText);
+            indexField = currentIndexingScope.GetOrCreateVectorField(fieldName, isText);
 
             if (indexField.Id == Corax.Constants.IndexWriter.DynamicField)
             {

@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public Dictionary<string, IndexField> DynamicFields;
 
         private readonly Func<string, SpatialField> _getSpatialField;
-        private readonly Func<string, EmbeddingsGenerationTaskIdentifier, bool, IndexField> _getVectorField;
+        private readonly Func<string, bool, IndexField> _getVectorField;
 
         private Dictionary<string, IndexField> _loadVectorFields;
         
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public LuceneDocumentConverter CreateFieldConverter;
 
-        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, QueryOperationContext queryContext, IndexDefinitionBaseServerSide indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, Func<string, EmbeddingsGenerationTaskIdentifier, bool, IndexField> getVectorField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
+        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, QueryOperationContext queryContext, IndexDefinitionBaseServerSide indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, Func<string, bool, IndexField> getVectorField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
         {
             _documentsStorage = documentsStorage;
             QueryContext = queryContext;
@@ -406,9 +406,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return _getSpatialField(name);
         }
 
-        public IndexField GetOrCreateVectorField(string name, EmbeddingsGenerationTaskIdentifier embeddingGeneratorTaskName, bool isText)
+        public IndexField GetOrCreateVectorField(string name, bool isText)
         {
-            return _getVectorField(name, embeddingGeneratorTaskName, isText);
+            return _getVectorField(name, isText);
         }
 
         public void RegisterJavaScriptUtils(JavaScriptUtils javaScriptUtils)
@@ -482,8 +482,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 case (FieldExists: true, FieldHasVector: true):
                 {
                     field = (IndexField)mapField;
-                    //todo: validation
-
+                    PortableExceptions.ThrowIfNot<InvalidOperationException>(vectorEmbeddingTypeInDocument == field!.Vector.SourceEmbeddingType, $"Document contains vector in format '{vectorEmbeddingTypeInDocument}' but field '{fieldName}' is configured to source: '{field.Vector.SourceEmbeddingType}'");
+                    
                     vectorField =  field;
                     break;
                 }
