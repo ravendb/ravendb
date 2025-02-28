@@ -6,7 +6,9 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
-import { Button, ButtonGroup, Collapse } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import Collapse from "react-bootstrap/Collapse";
+import { ButtonGroup } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { OngoingInternalReplicationNodeInfo } from "components/models/tasks";
 import useBoolean from "hooks/useBoolean";
@@ -36,15 +38,17 @@ export function InternalReplicationPanel(props: InternalReplicationPanelProps) {
                 <RichPanelActions>
                     <div className="actions">
                         <ButtonGroup>
-                            <Button onClick={toggleDetails} title="Click for details">
+                            <Button variant="secondary" onClick={toggleDetails} title="Click for details">
                                 <Icon icon="info" margin="m-0" />
                             </Button>
                         </ButtonGroup>
                     </div>
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse isOpen={detailsVisible}>
-                <InternalReplicationTaskDistribution data={data} />
+            <Collapse in={detailsVisible}>
+                <div>
+                    <InternalReplicationTaskDistribution data={data} />
+                </div>
             </Collapse>
         </RichPanel>
     );

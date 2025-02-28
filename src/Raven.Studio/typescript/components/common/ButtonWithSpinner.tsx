@@ -28,6 +28,7 @@ export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
 
     return (
         <Button
+            variant="secondary"
             className={classNames({ "d-flex": children != null }, "align-items-center", className)}
             size={size}
             {...rest}

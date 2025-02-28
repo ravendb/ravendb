@@ -1,14 +1,7 @@
 import { Icon } from "components/common/Icon";
-import {
-    AccordionBody,
-    AccordionHeader,
-    AccordionItem,
-    Badge,
-    Button,
-    Col,
-    Row,
-    UncontrolledAccordion,
-} from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
+import { AccordionBody, AccordionHeader, AccordionItem, Col, Row, UncontrolledAccordion } from "reactstrap";
 import { UseAsyncReturn } from "react-async-hook";
 import React from "react";
 import "./IndexTerms.scss";
@@ -44,7 +37,7 @@ export default function IndexTerms({ pathParams }: ReactPathParamsProps) {
                         <Icon icon="terms" />
                         Index terms for <a href={editUrl}>{indexName}</a>
                     </h3>
-                    <Badge color="primary" className="rounded-pill">
+                    <Badge bg="primary" className="rounded-pill">
                         {termsLoadedAmount} loaded
                     </Badge>
                 </Col>
@@ -85,11 +78,11 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                         <span className="m-0">{field.name}</span>
                         <HStack className="gap-1">
                             {field.type === "dynamic" && (
-                                <Badge data-testid="term-dynamic-field" color="light" className="rounded-pill">
+                                <Badge data-testid="term-dynamic-field" bg="light" className="rounded-pill">
                                     Dynamic field
                                 </Badge>
                             )}
-                            <Badge pill>
+                            <Badge pill bg="secondary">
                                 {field.terms.length}
                                 {field.hasMoreTerms ? "+" : ""}
                             </Badge>
@@ -114,7 +107,7 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                         <span className="d-flex justify-content-center mt-4 mb-2">
                             <ButtonWithSpinner
                                 data-testid="term-load-more-btn"
-                                color="primary"
+                                variant="primary"
                                 icon="refresh"
                                 isSpinning={loadMore.loading}
                                 disabled={loadMore.loading}
@@ -163,19 +156,19 @@ function IndexTermItem({ index, term, indexName, field, fieldTerms }: IndexTermI
                 <div className="d-flex gap-1 align-items-center">
                     <Button
                         onClick={() => navigateToQuery()}
-                        color="link"
+                        variant="link"
                         size="sm"
                         className="p-0"
                         title="Query index with given term"
                     >
                         <Icon icon="query" margin="m-0" />
                     </Button>
-                    <Button onClick={toggleIsOpen} color="link" size="sm" className="p-0" title="Preview item">
+                    <Button onClick={toggleIsOpen} variant="link" size="sm" className="p-0" title="Preview item">
                         <Icon icon="preview" margin="m-0" />
                     </Button>
                     <Button
                         onClick={() => copyToClipboard.copy(term, "Index term was copied to clipboard")}
-                        color="link"
+                        variant="link"
                         size="sm"
                         className="p-0"
                         title="Copy to clipboard"

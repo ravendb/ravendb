@@ -44,7 +44,7 @@ export default function IndexErrorsActions({
                     dropdownType="Action"
                 />
             </div>
-            <ButtonWithSpinner onClick={refresh} icon="refresh" isSpinning={isLoading} color="primary">
+            <ButtonWithSpinner onClick={refresh} icon="refresh" isSpinning={isLoading} variant="primary">
                 Refresh
             </ButtonWithSpinner>
         </div>

@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { Col, Row, UncontrolledTooltip } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -11,7 +11,7 @@ import EditRevision, {
 } from "components/pages/database/settings/documentRevisions/EditRevision";
 import EnforceConfiguration from "components/pages/database/settings/documentRevisions/EnforceConfiguration";
 import { LoadingView } from "components/common/LoadingView";
-import { DocumentRevisionsConfig, documentRevisionsActions } from "./store/documentRevisionsSlice";
+import { documentRevisionsActions, DocumentRevisionsConfig } from "./store/documentRevisionsSlice";
 import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { LoadError } from "components/common/LoadError";
@@ -37,9 +37,8 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import Button from "react-bootstrap/Button";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -194,39 +193,29 @@ export default function DocumentRevisions() {
                                             Save
                                         </ButtonWithSpinner>
                                         <FlexGrow />
-
-                                        <UncontrolledTooltip target="revertCollections">
-                                            Revert documents to their revisions at a specific point in time
-                                        </UncontrolledTooltip>
-                                        <a
-                                            id="revertCollections"
-                                            className="btn btn-secondary"
-                                            href={urls.revertRevisions()}
-                                        >
-                                            <Icon icon="revert-revisions" />
-                                            Revert revisions
-                                        </a>
-                                        <OverlayTrigger
-                                            overlay={
-                                                <Tooltip id="enforceConfiguration">
-                                                    {isSaveDisabled
-                                                        ? "Enforce the defined revisions configuration on all documents per collection"
-                                                        : "Save current configuration before enforcing"}
-                                                </Tooltip>
+                                        <PopoverWithHoverWrapper message="Revert documents to their revisions at a specific point in time">
+                                            <a className="btn btn-secondary" href={urls.revertRevisions()}>
+                                                <Icon icon="revert-revisions" />
+                                                Revert revisions
+                                            </a>
+                                        </PopoverWithHoverWrapper>
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                isSaveDisabled
+                                                    ? "Enforce the defined revisions configuration on all documents per collection"
+                                                    : "Save current configuration before enforcing"
                                             }
                                         >
-                                            <div>
-                                                <ButtonWithSpinner
-                                                    variant="secondary"
-                                                    onClick={toggleEnforceConfigurationModal}
-                                                    disabled={isAnyModified}
-                                                    isSpinning={asyncEnforceRevisionsConfiguration.status === "loading"}
-                                                >
-                                                    <Icon icon="rocket" />
-                                                    Enforce configuration
-                                                </ButtonWithSpinner>
-                                            </div>
-                                        </OverlayTrigger>
+                                            <ButtonWithSpinner
+                                                variant="secondary"
+                                                onClick={toggleEnforceConfigurationModal}
+                                                disabled={isAnyModified}
+                                                isSpinning={asyncEnforceRevisionsConfiguration.status === "loading"}
+                                            >
+                                                <Icon icon="rocket" />
+                                                Enforce configuration
+                                            </ButtonWithSpinner>
+                                        </PopoverWithHoverWrapper>
                                     </div>
                                     <div className="mt-3">
                                         <DocumentRevisionsSelectActions />

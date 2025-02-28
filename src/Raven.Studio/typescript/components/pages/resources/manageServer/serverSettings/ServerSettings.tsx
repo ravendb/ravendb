@@ -37,6 +37,7 @@ export default function ServerSettings() {
                     {asyncFetchServerSettings.status !== "error" && (
                         <div className="d-flex justify-content-end">
                             <ButtonWithSpinner
+                                variant="secondary"
                                 className="justify-content-end"
                                 onClick={asyncFetchServerSettings.execute}
                                 isSpinning={asyncFetchServerSettings.loading}

@@ -1,7 +1,7 @@
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import DocumentIdentitiesModal from "components/pages/database/documents/identities/DocumentIdentitiesModal";
 import { useAppSelector } from "components/store";
@@ -65,7 +65,12 @@ function CellValueButtonWrapper(args: CellValueButtonWrapperProps) {
 
     return (
         <>
-            <Button onClick={toggleIsOpen} className="d-flex align-items-center h-100" title="Edit identity settings">
+            <Button
+                variant="secondary"
+                onClick={toggleIsOpen}
+                className="d-flex align-items-center h-100"
+                title="Edit identity settings"
+            >
                 <Icon icon="edit" margin="me-0" />
             </Button>
             <DocumentIdentitiesModal

@@ -1,4 +1,4 @@
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
@@ -74,7 +74,7 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                             />
                         )}
                         <div id="NewTaskButton">
-                            <Button onClick={toggleIsNewTaskModalOpen} color="primary" className="rounded-pill">
+                            <Button onClick={toggleIsNewTaskModalOpen} variant="primary" className="rounded-pill">
                                 <Icon icon="ongoing-tasks" addon="plus" />
                                 Add a Database Task
                             </Button>
@@ -86,7 +86,7 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
 
                 {isClusterAdminOrClusterNode && (
                     <Button
-                        color="link"
+                        variant="link"
                         size="sm"
                         target="_blank"
                         href={serverWideTasksUrl}
