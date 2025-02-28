@@ -31,6 +31,7 @@ internal static class SchemaValidatorConstants
     public const string propertyNames = "propertyNames";
     public const string required = "required";
     public const string dependentRequired = "dependentRequired";
+    public const string dependentSchemas = "dependentSchemas";
     public const string @if = "if";
     public const string then = "then";
     public const string @else = "else";

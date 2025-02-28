@@ -12,6 +12,12 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
     {
         _requiredHashSet = required.Select(x => x.ToString()).ToHashSet();
     }
+    
+    public RequiredSchemaRuleValidator(string required)
+    {
+        _requiredHashSet = [required];
+    }
+    
     protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
     {
         var isValid = true;

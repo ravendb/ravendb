@@ -4,6 +4,7 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
 
@@ -24,17 +25,17 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SchemaValidatorConstants.@if] = new DynamicJsonValue
+            [SVC.@if] = new DynamicJsonValue
             {
-                [SchemaValidatorConstants.required] = new []{ifProp}
+                [SVC.required] = new []{ifProp}
             },
-            [SchemaValidatorConstants.then] = new DynamicJsonValue
+            [SVC.then] = new DynamicJsonValue
             {
-                [SchemaValidatorConstants.required] = new []{thenProp}
+                [SVC.required] = new []{thenProp}
             },
-            [SchemaValidatorConstants.@else] = new DynamicJsonValue
+            [SVC.@else] = new DynamicJsonValue
             {
-                [SchemaValidatorConstants.required] = new []{elseProp}
+                [SVC.required] = new []{elseProp}
             }
         };
 
@@ -102,6 +103,95 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The required property 'elseProp' is missing at ''.", errors);
+            });
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnDependentRequired()
+    {
+        var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaDefinition = new DynamicJsonValue { [SVC.dependentRequired] = new DynamicJsonValue { ["prop1"] = new[] { "prop2", "prop3" } } };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["anotherPropName"] = "somevalue" }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "somevalue1", ["prop2"] = "somevalue2", ["prop3"] = "somevalue3", }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "somevalue1", }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The required property 'prop2' is missing at ''", errors);
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "somevalue1", ["prop2"] = "somevalue1", }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The required property 'prop3' is missing at ''", errors);
+            });
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnDependentSchemas()
+    {
+        var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaDefinition = new DynamicJsonValue 
+        { 
+            [SVC.dependentSchemas] = new DynamicJsonValue 
+            { 
+                ["prop1"] = new DynamicJsonValue
+                {
+                    [SVC.properties] = new DynamicJsonValue
+                    {
+                        ["prop2"] = new DynamicJsonValue
+                        {
+                            [SVC.type] = "string"
+                        }
+                    }
+                } 
+            } 
+        };
+        
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["anotherPropName"] = "somevalue", ["prop2"] = 1 }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "somevalue", ["prop2"] = "1" }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "somevalue", ["prop2"] = 1 }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("'prop2' should be of type 'string' but actual type is 'integer'.", errors);
             });
     }
 }

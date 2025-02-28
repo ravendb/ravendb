@@ -1,27 +1,29 @@
-﻿using Sparrow.Json;
+﻿using System.Diagnostics.CodeAnalysis;
+using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
 public class IfThenElseSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     //TODO To change RootSchemaRuleValidator name or implement new class
-    private readonly SelfElementSchemaRuleValidator _ifSchema;
-    private readonly SelfElementSchemaRuleValidator _thenSchema;
-    private readonly SelfElementSchemaRuleValidator _elseSchema;
+    private readonly SelfElementSchemaRuleValidator _ifValidator;
+    private readonly SelfElementSchemaRuleValidator _thenValidator;
+    private readonly SelfElementSchemaRuleValidator _elseValidator;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public IfThenElseSchemaRuleValidator(SelfElementSchemaRuleValidator ifSchema, SelfElementSchemaRuleValidator thenSchema, SelfElementSchemaRuleValidator elseSchema)
+    public IfThenElseSchemaRuleValidator([NotNull] SelfElementSchemaRuleValidator ifValidator, [NotNull] SelfElementSchemaRuleValidator thenValidator, SelfElementSchemaRuleValidator elseValidator = null)
     {
-        _ifSchema = ifSchema;
-        _thenSchema = thenSchema;
-        _elseSchema = elseSchema;
+        _ifValidator = ifValidator;
+        _thenValidator = thenValidator;
+        _elseValidator = elseValidator;
     }
 
     protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
     {
-        return _ifSchema.Validate(value, null, null) 
-            ? _thenSchema.Validate(value, null, errorBuilder) 
-            : _elseSchema.Validate(value, null, errorBuilder);
+        //TODO Maybe to build a dedicated error
+        return _ifValidator.Validate(value, null, null) 
+            ? _thenValidator.Validate(value, null, errorBuilder) 
+            : _elseValidator == null || _elseValidator.Validate(value, null, errorBuilder);
     }
 }
 
@@ -32,24 +34,17 @@ public class IfThenElseSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<I
     {
         if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var ifSchema) == false)
             return null;
+        var ifSchemaValidator = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(ifSchema, schemaPath);
 
-        var ifSchemaValidator = new SelfElementSchemaRuleValidator(schemaPath);
-        ifSchemaValidator.Init(ifSchema);
+        if(SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.then, schemaPath, out var thenSchema) == false)
+            return null;
+        var thenValidator = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(thenSchema, schemaPath);
 
-        SelfElementSchemaRuleValidator thenValidator = null;
-        if (SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.then, schemaPath, out var then))
-        {
-            thenValidator = new SelfElementSchemaRuleValidator(schemaPath);
-            thenValidator.Init(then);
-        }
-
-        SelfElementSchemaRuleValidator elseValidator = null;
-        if (SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.@else, schemaPath, out var @else))
-        {
-            elseValidator = new SelfElementSchemaRuleValidator(schemaPath);
-            elseValidator.Init(@else);
-        }
+        var elseValidator = SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.@else, schemaPath, out var elseSchema)
+            ? ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(elseSchema, schemaPath)
+            : null;
         
-        return new IfThenElseSchemaRuleValidator(ifSchemaValidator, thenValidator, @elseValidator);
+        return new IfThenElseSchemaRuleValidator(ifSchemaValidator, thenValidator, elseValidator);
     }
 }
+

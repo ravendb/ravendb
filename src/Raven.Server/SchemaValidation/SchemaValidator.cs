@@ -1,13 +1,12 @@
 ﻿using System;
 using Raven.Server.SchemaValidation.Validators;
-using Raven.Server.SchemaValidation.Validators.Object;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation;
 
 public class SchemaValidator : IDisposable
 {
-    private RootSchemaRuleValidator _root;
+    private SelfElementSchemaRuleValidator _root;
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
     
     public SchemaValidator(JsonContextPool contextPool)
@@ -18,9 +17,7 @@ public class SchemaValidator : IDisposable
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
         schemaDefinition = schemaDefinition.Clone(_context.Value);
-        var root = new RootSchemaRuleValidator();
-        root.Init(schemaDefinition);
-        _root = root;
+        _root = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(schemaDefinition, string.Empty);
     }
 
     public bool Validate(BlittableJsonReaderObject obj, out string errors)

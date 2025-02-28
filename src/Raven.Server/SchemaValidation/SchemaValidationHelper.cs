@@ -123,35 +123,35 @@ public static class SchemaValidationHelper
         return "aeiouAEIOU".Contains(word[0]) ? "an" : "a";
     }
     
-    public static bool TryGetBoolean(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out bool ret)
+    public static bool TryGetBoolean(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out bool ret)
     {
-        return TryGetProperty(schemaDefinition, rule, BlittableJsonToken.Boolean, schemaPath, out ret);
+        return TryGetProperty(schemaDefinition, key, BlittableJsonToken.Boolean, schemaPath, out ret);
     }
     
     private static readonly BlittableJsonToken[] StringTypes = [BlittableJsonToken.String, BlittableJsonToken.CompressedString];
-    public static bool TryGetString(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out string ret)
+    public static bool TryGetString(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out string ret)
     {
-        return TryGetProperty(schemaDefinition, rule, StringTypes, schemaPath, out ret);
+        return TryGetProperty(schemaDefinition, key, StringTypes, schemaPath, out ret);
     }
-    public static bool TryGetInteger(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out long ret)
+    public static bool TryGetInteger(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out long ret)
     {
-        return TryGetProperty(schemaDefinition, rule, BlittableJsonToken.Integer, schemaPath, out ret);
-    }
-    
-    public static bool TryGetObject(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out BlittableJsonReaderObject ret)
-    {
-        return TryGetProperty(schemaDefinition, rule, BlittableJsonToken.StartObject, schemaPath, out ret);
+        return TryGetProperty(schemaDefinition, key, BlittableJsonToken.Integer, schemaPath, out ret);
     }
     
-    public static bool TryGetArray(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out BlittableJsonReaderArray ret)
+    public static bool TryGetObject(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out BlittableJsonReaderObject ret)
     {
-        return TryGetProperty(schemaDefinition, rule, BlittableJsonToken.StartArray, schemaPath, out ret);
+        return TryGetProperty(schemaDefinition, key, BlittableJsonToken.StartObject, schemaPath, out ret);
+    }
+    
+    public static bool TryGetArray(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out BlittableJsonReaderArray ret)
+    {
+        return TryGetProperty(schemaDefinition, key, BlittableJsonToken.StartArray, schemaPath, out ret);
     }
     
     private static readonly BlittableJsonToken[] NumberTypes = [BlittableJsonToken.LazyNumber, BlittableJsonToken.Integer];
-    public static bool TryGetNumber(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out decimal ret)
+    public static bool TryGetNumber(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out decimal ret)
     {
-        return TryGetProperty(schemaDefinition, rule, NumberTypes, schemaPath, out ret);
+        return TryGetProperty(schemaDefinition, key, NumberTypes, schemaPath, out ret);
     }
     
     public static void TrowRuleTypeError(string rule, object ruleValue, BlittableJsonToken expectedType, BlittableJsonToken actualType, string schemaPath)

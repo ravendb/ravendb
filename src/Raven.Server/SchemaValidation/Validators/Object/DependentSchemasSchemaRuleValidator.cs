@@ -4,9 +4,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule(SchemaValidatorConstants.dependentRequired)]
+[SchemaRule(SchemaValidatorConstants.dependentSchemas)]
 // ReSharper disable once UnusedType.Global
-public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<GroupedIfThenElseSchemaRuleValidator>
+public class DependentSchemasSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<IfThenElseSchemaRuleValidator>
 {
     public override GroupedIfThenElseSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
     {
@@ -20,25 +20,23 @@ public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFa
         List<IfThenElseSchemaRuleValidator> dependentRequires = null;
         foreach (var propertyName in propertyNames)
         {
-            if (SchemaValidationHelper.TryGetArray(dependentRequiredSchema, propertyName, schemaPath, out var requiredSchema) == false)
+            if (SchemaValidationHelper.TryGetObject(dependentRequiredSchema, propertyName, schemaPath, out var dependentSchemas) == false)
                 throw new InvalidOperationException(
                     $"Should not happen. {propertyName} exists and wrong type should throw {nameof(InvalidSchemaValidationDefinitionException)}");
             
-            if(requiredSchema.Length == 0)
+            if(dependentSchemas.GetPropertyNames().Length == 0)
                 continue;
                     
             var ifRequiredValidator = new RequiredSchemaRuleValidator(propertyName);
             var ifValidator = new SelfElementSchemaRuleValidator(null, [ifRequiredValidator], schemaPath);
             
-            var thenRequiredValidator = new RequiredSchemaRuleValidator(requiredSchema);
-            var thenValidator = new SelfElementSchemaRuleValidator(null, [thenRequiredValidator], schemaPath);
+            var thenValidator = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(dependentSchemas, schemaPath);
 
-            (dependentRequires ??= new List<IfThenElseSchemaRuleValidator>()).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
+            (dependentRequires ??= []).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
         }
 
         if (dependentRequires == null)
             return null;
         
         return new GroupedIfThenElseSchemaRuleValidator(dependentRequires.ToArray());
-    }
-}
+    }}

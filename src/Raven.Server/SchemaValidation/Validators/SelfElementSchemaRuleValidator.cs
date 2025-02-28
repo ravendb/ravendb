@@ -5,7 +5,8 @@ namespace Raven.Server.SchemaValidation.Validators;
 public class SelfElementSchemaRuleValidator : ElementSchemaRuleValidator<BlittableJsonReaderObject, object>
 {
     // ReSharper disable once ConvertToPrimaryConstructor
-    public SelfElementSchemaRuleValidator(string schemaPath) : base(schemaPath)
+    public SelfElementSchemaRuleValidator(BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators, string schemaPath) 
+        : base(typesRestriction, ruleValidators, schemaPath)
     {
     }
 
