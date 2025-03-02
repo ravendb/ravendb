@@ -89,10 +89,6 @@ namespace Raven.Server.Utils.Cpu
             // use the last valid CPU usage value.
             if (processorTimeDiff < 0)
             {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info($"processorTimeDiff == {processorTimeDiff}, OS: {RuntimeInformation.OSDescription}");
-                }
                 return LastCpuUsage?.ProcessCpuUsage ?? 0;
             }
 
@@ -113,7 +109,7 @@ namespace Raven.Server.Utils.Cpu
                 // min as sometimes +-1% due to time sampling
                 processCpuUsage = Math.Min(processCpuUsage, machineCpuUsage);
             }
-
+            // shouldn't happen
             if (processCpuUsage < 0 && Logger.IsInfoEnabled)
             {
                 Logger.Info($"processCpuUsage == {processCpuUsage}, OS: {RuntimeInformation.OSDescription}");
