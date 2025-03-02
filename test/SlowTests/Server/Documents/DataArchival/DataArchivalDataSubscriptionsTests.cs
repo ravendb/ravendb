@@ -24,6 +24,7 @@ using Raven.Server.Config;
 using SlowTests.Client.Subscriptions;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -591,7 +592,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
             });
             try
             {
-                var items = new HashSet<string>();
+                var items = new ConcurrentSet<string>();
                 var fetchFromResendListTask = subscription.Run(batch =>
                 {
                     foreach (var item in batch.Items)

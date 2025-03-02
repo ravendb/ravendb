@@ -9,6 +9,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Collections;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -171,7 +172,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                 var mre = new AsyncManualResetEvent();
                 var mre2 = new AsyncManualResetEvent();
-                HashSet<string> results = new HashSet<string>();
+                ConcurrentSet<string> results = new ConcurrentSet<string>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                 {
                     var t = subscription.Run(x =>

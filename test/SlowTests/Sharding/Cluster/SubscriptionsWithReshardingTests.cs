@@ -20,6 +20,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -77,7 +78,7 @@ namespace SlowTests.Sharding.Cluster
             });
 
             var sub = await store.Subscriptions.CreateAsync<User>();
-            var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var users = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
             var usersList = new List<(string, string)>();
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sub)
                          {
@@ -89,7 +90,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     foreach (var item in batch.Items)
                     {
-                        if (users.Add(item.Id) == false)
+                        if (users.TryAdd(item.Id) == false)
                         {
                             twiceIds.Add((item.Id, item.ChangeVector));
                         }
@@ -158,7 +159,7 @@ namespace SlowTests.Sharding.Cluster
                 shardNumber = ShardHelper.GetShardNumberFor(conf, allocator, "users/1-A");
 
 
-            var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var users = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
             var usersList = new List<(string, string)>();
 
             var id = await store.Subscriptions.CreateAsync<User>();
@@ -174,7 +175,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     foreach (var item in batch.Items)
                     {
-                        if (users.Add(item.Id) == false)
+                        if (users.TryAdd(item.Id) == false)
                         {
                             twiceIds.Add((item.Id, item.ChangeVector));
                         }
@@ -261,7 +262,7 @@ namespace SlowTests.Sharding.Cluster
 
             var id = await store.Subscriptions.CreateAsync<User>();
 
-            var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var users = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
             var usersList = new List<(string, string)>();
 
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
@@ -284,7 +285,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     foreach (var item in batch.Items)
                     {
-                        if (users.Add(item.Id) == false)
+                        if (users.TryAdd(item.Id) == false)
                         {
                             twiceIds.Add((item.Id, item.ChangeVector));
                         }
@@ -335,7 +336,7 @@ namespace SlowTests.Sharding.Cluster
 
             var id = await store.Subscriptions.CreateAsync<User>();
 
-            var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var users = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
             var usersList = new List<(string, string)>();
 
             var mre0 = new ManualResetEventSlim(false);
@@ -361,7 +362,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     foreach (var item in batch.Items)
                     {
-                        if (users.Add(item.Id) == false)
+                        if (users.TryAdd(item.Id) == false)
                         {
                             twiceIds.Add((item.Id, item.ChangeVector));
                         }
@@ -516,7 +517,7 @@ namespace SlowTests.Sharding.Cluster
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
 
             var id = await store.Subscriptions.CreateAsync<User>();
-            var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var users = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                          {
                              MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
@@ -526,7 +527,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     foreach (var item in batch.Items)
                     {
-                        if (users.Add(item.Id) == false)
+                        if (users.TryAdd(item.Id) == false)
                         {
                             throw new SubscriberErrorException($"Got exact same {item.Id} twice");
                         }
@@ -573,7 +574,7 @@ namespace SlowTests.Sharding.Cluster
             });
 
             var sub = await store.Subscriptions.CreateAsync<User>();
-            var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var users = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sub)
                          {
                              MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250),
@@ -584,7 +585,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     foreach (var item in batch.Items)
                     {
-                        if (users.Add(item.Id) == false)
+                        if (users.TryAdd(item.Id) == false)
                         {
                             throw new SubscriberErrorException($"Got exact same {item.Id} twice");
                         }
@@ -1121,7 +1122,7 @@ namespace SlowTests.Sharding.Cluster
         private async Task SubscriptionWithResharding(IDocumentStore store)
         {
             var id = await store.Subscriptions.CreateAsync<User>();
-            var users = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var users = new Dictionary<string, ConcurrentSet<string>>(StringComparer.OrdinalIgnoreCase);
             var mre = new ManualResetEvent(false);
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                          {
@@ -1138,10 +1139,10 @@ namespace SlowTests.Sharding.Cluster
                 {
                     foreach (var item in batch.Items)
                     {
-                        users.TryAdd(item.Id, new HashSet<string>(StringComparer.Ordinal));
+                        users.TryAdd(item.Id, new ConcurrentSet<string>(StringComparer.Ordinal));
                         var cv = users[item.Id];
 
-                        if (cv.Add(item.ChangeVector) == false)
+                        if (cv.TryAdd(item.ChangeVector) == false)
                         {
                             throw new SubscriberErrorException($"Got exact same {item.Id} twice");
                         }

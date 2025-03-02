@@ -30,6 +30,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Sharding.Cluster;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -1749,7 +1750,7 @@ namespace SlowTests.Sharding.Subscriptions
                 });
                 try
                 {
-                    var items = new HashSet<string>();
+                    var items = new ConcurrentSet<string>();
                     subscription.AfterAcknowledgment += batch =>
                     {
                         foreach (var item in batch.Items)
@@ -1783,7 +1784,7 @@ namespace SlowTests.Sharding.Subscriptions
             {
                 var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users", Name = "Created" });
 
-                HashSet<string> ids = new HashSet<string>();
+                ConcurrentSet<string> ids = new ConcurrentSet<string>();
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User() { Age = 11 });
