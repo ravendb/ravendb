@@ -312,7 +312,7 @@ namespace Raven.Server.Commercial
 
         public class LicenseVerificationErrorBuilder
         {
-            private readonly RavenConfiguration _configuration;
+            private protected RavenConfiguration Configuration;
             private readonly StorageEnvironment _storageEnvironment;
             private readonly TransactionContextPool _contextPool;
             private readonly StringBuilder _errorBuilder = new();
@@ -321,18 +321,9 @@ namespace Raven.Server.Commercial
 
             public LicenseVerificationErrorBuilder(RavenConfiguration configuration, StorageEnvironment storageEnvironment, TransactionContextPool contextPool)
             {
-                _configuration = configuration;
+                Configuration = configuration;
                 _storageEnvironment = storageEnvironment;
                 _contextPool = contextPool;
-            }
-
-            public LicenseVerificationErrorBuilder(bool isForTestingEmbeddedServer = true)
-            {
-                if (isForTestingEmbeddedServer == false)
-                    return;
-
-                _configuration = RavenConfiguration.Default;
-                _configuration.Embedded.ParentProcessId = 1;
             }
 
             public void AppendInStorageLicenseExpiredMessage(DateTime expirationDate)
@@ -379,7 +370,7 @@ namespace Raven.Server.Commercial
                         _errorBuilder.AppendLine($"- As a temporary measure, consider downgrading to the last working build ({buildInfo.FullVersion}).");
                 }
 
-                AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(_configuration.Licensing.ThrowOnInvalidOrMissingLicense, _isInStorageLicenseExpired);
+                AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(Configuration.Licensing.ThrowOnInvalidOrMissingLicense, _isInStorageLicenseExpired);
             }
 
             public void AppendGeneralSuggestions()
@@ -389,7 +380,7 @@ namespace Raven.Server.Commercial
                 _errorBuilder.AppendLine("- Ensure your license key is correctly embedded in 'settings.json' or set as an environment variable.");
                 _errorBuilder.AppendLine("- Or, check the 'License.Path' in your configuration to ensure it points to a valid 'license.json' file.");
 
-                if (_configuration.Embedded.ParentProcessId.HasValue)
+                if (Configuration.Embedded.ParentProcessId.HasValue)
                 {
                     _errorBuilder.AppendLine("""
                         - Or, since you are using an embedded server (TestDriver or EmbeddedServer), you can provide a valid license using one of these approaches:
@@ -451,7 +442,7 @@ namespace Raven.Server.Commercial
                     return;
 
                 _errorBuilder.AppendLine();
-                if (_configuration.Embedded.ParentProcessId.HasValue)
+                if (Configuration.Embedded.ParentProcessId.HasValue)
                 {
                     _errorBuilder.AppendLine("""
                                              - Alternatively, since you are using an embedded server, you can disable this strict licensing requirement by setting the 'ThrowOnInvalidOrMissingLicense' option to 'false' in your configuration, as demonstrated in the example above:
