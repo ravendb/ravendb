@@ -752,7 +752,7 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
 
-    private class Dto
+    internal class Dto
     {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -762,7 +762,7 @@ Console.WriteLine(""Hello, World!"");";
         public SubDto[] SubDtos { get; set; }
     }
 
-    private class SubDto
+    internal class SubDto
     {
         public string Id { get; set; }
         public string Name { get; set; }

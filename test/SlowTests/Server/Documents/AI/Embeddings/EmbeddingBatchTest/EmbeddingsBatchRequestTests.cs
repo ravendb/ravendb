@@ -10,7 +10,7 @@ public class EmbeddingsBatchRequestTests
     public void Creation_InitializesCorrectly()
     {
         // Arrange
-        var value = "test text";
+        const string value = "test text";
         var callerToken = new CancellationTokenSource();
         var workerToken = new CancellationTokenSource();
 
@@ -35,7 +35,7 @@ public class EmbeddingsBatchRequestTests
         callerToken.Cancel();
 
         // Assert
-        Assert.True(request.TaskCompletionSource.Task.IsCanceled);
+        Assert.True(request.TaskCompletionSource.Task.IsCanceled, $"Expected task to be canceled, but it was '{request.TaskCompletionSource.Task.Status}'");
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public class EmbeddingsBatchRequestTests
         workerToken.Cancel();
 
         // Assert
-        Assert.True(request.TaskCompletionSource.Task.IsCanceled);
+        Assert.True(request.TaskCompletionSource.Task.IsCanceled, $"Expected task to be canceled, but it was '{request.TaskCompletionSource.Task.Status}'");
     }
 
     [Fact]

@@ -37,7 +37,7 @@ public static class TestAiHelper
         return new TestEmbeddingGenerationService
         {
             DimensionSize = dimensionSize,
-            FailureRate = failureRate,
+            FailureRateInPercentage = failureRate,
             ExceptionToThrow = exceptionToThrow
         };
     }
@@ -94,14 +94,16 @@ public class TestEmbeddingGenerationService : ITextEmbeddingGenerationService
 {
     public int DimensionSize { get; set; } = 128;
     public int ProcessingDelayMs { get; set; } = 10;
-    public int FailureRate { get; set; } = 0; // 0-100, percentage of requests that should fail
+    public int FailureRateInPercentage { get; set; } = 0; // 0-100, percentage of requests that should fail
     public int BatchCallCount { get; private set; } = 0;
     public List<string> ProcessedTexts { get; } = [];
     public Exception ExceptionToThrow { get; set; } = null;
 
-    // Added helper variables for retry testing
+    // Add callback for custom behavior
+    public Func<IList<string>, CancellationToken, Task<IList<ReadOnlyMemory<float>>>> CustomBehavior { get; set; }
+
+    // Track call attempts
     public int AttemptCount { get; private set; } = 0;
-    public int FailForFirstNAttempts { get; set; } = 0;
 
     private readonly Dictionary<string, object> _attributes = new()
     {
@@ -112,11 +114,14 @@ public class TestEmbeddingGenerationService : ITextEmbeddingGenerationService
 
     public IReadOnlyDictionary<string, object> Attributes => _attributes;
 
-    public async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(
-        IList<string> texts, CancellationToken cancellationToken = default)
+    public async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(IList<string> texts, CancellationToken cancellationToken = default)
     {
         BatchCallCount++;
-        AttemptCount++; // Count this attempt
+        AttemptCount++;
+
+        // If we have custom behavior defined, use it
+        if (CustomBehavior != null)
+            return await CustomBehavior(texts, cancellationToken);
 
         // Save processed texts
         lock (ProcessedTexts)
@@ -128,20 +133,15 @@ public class TestEmbeddingGenerationService : ITextEmbeddingGenerationService
         if (ProcessingDelayMs > 0)
             await Task.Delay(ProcessingDelayMs, cancellationToken);
 
-        // Fail for specific number of attempts if configured
-        if (AttemptCount <= FailForFirstNAttempts)
-        {
-            throw new InvalidOperationException($"Simulated failure on attempt {AttemptCount}");
-        }
-
-        // Simulate errors based on failure rate
-        if (FailureRate > 0)
+        // Simulate errors if configured
+        if (FailureRateInPercentage > 0)
         {
             var rand = new Random();
-            if (rand.Next(100) < FailureRate)
+            if (rand.Next(100) < FailureRateInPercentage)
             {
                 if (ExceptionToThrow != null)
                     throw ExceptionToThrow;
+
                 throw new InvalidOperationException("Simulated error in embedding generation");
             }
         }
@@ -165,13 +165,9 @@ public class TestEmbeddingGenerationService : ITextEmbeddingGenerationService
         return result;
     }
 
-    public Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(
-        IList<string> data,
-        Kernel kernel = null,
-        CancellationToken cancellationToken = new())
-    => GenerateEmbeddingsAsync(data, cancellationToken);
+    public Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(IList<string> data, Kernel kernel = null, CancellationToken cancellationToken = new()) =>
+        GenerateEmbeddingsAsync(data, cancellationToken);
 
-    // Reset attempt counter for new tests
     public void ResetAttemptCount()
     {
         AttemptCount = 0;

@@ -32,12 +32,13 @@ namespace Raven.Server.Documents.AI.Embeddings
 
         public Task<ReadOnlyMemory<float>> EnqueueRequestAsync(string value, CancellationToken cancellationToken)
         {
-            using var request = new EmbeddingsBatchRequest(value, callerToken: cancellationToken, workerToken: CancellationToken);
+            var request = new EmbeddingsBatchRequest(value, callerToken: cancellationToken, workerToken: CancellationToken);
 
+            bool wasEmpty = _requestQueue.IsEmpty;
             _requestQueue.Enqueue(request);
 
-            // Start the batch timer if it's not already running
-            if (_batchTimer.IsRunning == false)
+            // Start the batch timer if this is the first request
+            if (wasEmpty)
                 _batchTimer.Restart();
 
             return request.TaskCompletionSource.Task;
@@ -55,10 +56,17 @@ namespace Raven.Server.Documents.AI.Embeddings
                     return;
                 }
 
-                // Nagle's algorithm: If we have a full batch, process immediately
-                // Otherwise, wait for a short time in case more requests arrive
-                if (_requestQueue.Count >= configuration.MaxBatchSize ||
-                    (_batchTimer.IsRunning && _batchTimer.ElapsedMilliseconds >= configuration.BatchTimeoutInMs) == false)
+                if (_batchTimer.IsRunning == false)
+                    _batchTimer.Restart();
+
+                // Nagle's algorithm:
+                // 1. If we have a full batch, process immediately
+                // 2. If the timeout has elapsed, process immediately
+                // 3. Otherwise, wait for more requests longer
+                bool shouldProcessNow = _requestQueue.Count >= configuration.MaxBatchSize ||
+                                        _batchTimer.ElapsedMilliseconds >= configuration.BatchTimeoutInMs;
+
+                if (shouldProcessNow == false)
                 {
                     // Wait a bit before checking again
                     await WaitOrThrowOperationCanceled(TimeSpan.FromMilliseconds(Math.Min(10, configuration.BatchTimeoutInMs / 5)));
@@ -138,6 +146,7 @@ namespace Raven.Server.Documents.AI.Embeddings
             finally
             {
                 ArrayPool<EmbeddingsBatchRequest>.Shared.Return(requestsArray);
+                ForTestingPurposes?.AfterBatchProcessed?.Invoke();
             }
         }
 
@@ -232,6 +241,21 @@ namespace Raven.Server.Documents.AI.Embeddings
                 Logger.Info($"Initializing {nameof(EmbeddingsBatchingWorker)} for connection '{connectionStringId.Value}' in database '{_databaseName}'");
 
             _batchTimer.Reset();
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal sealed class TestingStuff
+        {
+            internal Action AfterBatchProcessed;
         }
     }
 }

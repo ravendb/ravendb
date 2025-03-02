@@ -18,9 +18,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 {
     public EmbeddingsStorage Storage { get; private set; } = storage;
     public EmbeddingsCacher Cacher { get; private set; } = cacher;
-#pragma warning disable SKEXP0001
-    private readonly EmbeddingsBatchingService _batchingService = new(aiIntegrations.Database, aiIntegrations);
-#pragma warning restore SKEXP0001
+    private readonly EmbeddingsBatchingService _batchingService = new(aiIntegrations);
 
     private readonly ArrayPool<byte> _embeddingPool = ArrayPool<byte>.Create();
 
