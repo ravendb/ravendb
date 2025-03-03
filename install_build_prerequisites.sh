@@ -28,25 +28,22 @@ if ! echo "16.04 18.04 20.04 22.04 24.04" | grep -q "$UBUNTU_VERSION"; then
     exit 1
 fi
 
-echo "Installing .NET Core SDK 5.0"
-
+# Check and install curl
+echo "Checking for curl..."
+CURL_CMD=$(command -v curl)
 if [ -z "$CURL_CMD" ]; then
-    sudo apt-get install -y curl 
+    echo "curl not found. Installing curl..."
+    apt-get install -y curl
+else
+    echo "curl is already installed."
 fi
 
-curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-
-if [ "$UBUNTU_VERSION" = "16.04" ] ; then
-    sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod xenial main" > /etc/apt/sources.list.d/dotnetdev.list'
-elif [ "$UBUNTU_VERSION" = "14.04" ] ; then
-    sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-trusty-prod trusty main" > /etc/apt/sources.list.d/dotnetdev.list'
-elif [ "$UBUNTU_VERSION" = "18.04" ] ; then
-    sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-bionic-prod bionic main" > /etc/apt/sources.list.d/dotnetdev.list'
-elif [ "$UBUNTU_VERSION" = "20.04" ] ; then
-    sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-focal-prod focal main" > /etc/apt/sources.list.d/dotnetdev.list'          
-fi
-
-sudo apt-get update
+# Set up Microsoft repository
+echo "Setting up Microsoft repository for .NET and PowerShell..."
+curl -sSL https://packages.microsoft.com/config/ubuntu/$UBUNTU_VERSION/packages-microsoft-prod.deb -o packages-microsoft-prod.deb
+dpkg -i packages-microsoft-prod.deb
+rm packages-microsoft-prod.deb
+apt-get update
 sudo apt-get install -y dotnet-sdk-5.0
 
 mkdir ./dotnet_tmp
