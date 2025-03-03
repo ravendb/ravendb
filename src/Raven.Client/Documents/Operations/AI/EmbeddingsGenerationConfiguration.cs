@@ -29,9 +29,13 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
 
     public EmbeddingsTransformation EmbeddingsTransformation { get; set; }
     
-    public VectorEmbeddingType TargetQuantizationType { get; set; }
+    public VectorEmbeddingType Quantization { get; set; }
     
     public ChunkingOptions ChunkingOptionsForQuerying { get; set; }
+
+    public TimeSpan EmbeddingsCacheExpiration { get; set; } = TimeSpan.FromDays(90);
+
+    public TimeSpan EmbeddingsCacheForQueryingExpiration { get; set; } = TimeSpan.FromDays(14);
 
     private List<Transformation> _transforms;
 
@@ -95,8 +99,8 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
             errors.Add($"Configuration must have either {nameof(EmbeddingsPathConfigurations)} or {nameof(EmbeddingsTransformation)} script specified");
         }
         
-        if (TargetQuantizationType == VectorEmbeddingType.Text)
-            errors.Add($"{nameof(TargetQuantizationType)} cannot be {nameof(VectorEmbeddingType.Text)}");
+        if (Quantization == VectorEmbeddingType.Text)
+            errors.Add($"{nameof(Quantization)} cannot be {nameof(VectorEmbeddingType.Text)}");
 
         if (ChunkingOptionsForQuerying.MaxTokensPerChunk <= 0)
             errors.Add($"{nameof(ChunkingOptionsForQuerying.MaxTokensPerChunk)} must be greater than 0");
@@ -140,7 +144,7 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
             [nameof(EmbeddingsTransformation.Script)] = EmbeddingsTransformation.Script
         } : null;
         json[nameof(AiConnectorType)] = AiConnectorType;
-        json[nameof(TargetQuantizationType)] = TargetQuantizationType;
+        json[nameof(Quantization)] = Quantization;
         json[nameof(ChunkingOptionsForQuerying)] = ChunkingOptionsForQuerying;
 
         return json;

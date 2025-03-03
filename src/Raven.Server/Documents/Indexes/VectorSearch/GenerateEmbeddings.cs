@@ -14,6 +14,7 @@ using Microsoft.SemanticKernel.Connectors.Onnx;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Config;
+using Raven.Server.Documents.AI.Embeddings;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -60,6 +61,78 @@ public static class GenerateEmbeddings
             : Quantize(allocator, options.DestinationEmbeddingType, embedding.MemoryScope, embedding.Memory, embedding.UsedBytes);
     }
 
+    public static VectorValue FromArray(ByteStringContext allocator, IEmbeddingValue embedding, in VectorOptions options)
+    {
+        switch (embedding)
+        {
+            case EmbeddingValue ev:
+                return FromArray(allocator, ev.GetEmbedding(), in options);
+            case StreamedEmbeddingValue sev:
+                var memScope = sev.ReadTo(allocator, out var mem, out int usedBytes);
+                return FromArray(allocator, memScope, mem, options, usedBytes);
+
+            default:
+                throw new NotSupportedException($"Unknown embedding value type: {embedding.GetType().FullName}");
+        }
+    }
+
+    public static VectorValue FromArray(ByteStringContext allocator, ReadOnlySpan<byte> embedding, in VectorOptions options)
+    {
+        var embeddingDestinationType = options.DestinationEmbeddingType;
+
+        int requiredBytes;
+
+        if (options.SourceEmbeddingType == embeddingDestinationType)
+        {
+            requiredBytes = embedding.Length;
+        }
+        else
+        {
+            requiredBytes = embeddingDestinationType switch
+            {
+                VectorEmbeddingType.Single => embedding.Length * sizeof(float),
+                VectorEmbeddingType.Int8 => embedding.Length + sizeof(float),
+                VectorEmbeddingType.Binary => embedding.Length,
+                _ => throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}")
+            };
+        }
+
+        var memoryScope = allocator.Allocate(requiredBytes, out Memory<byte> memory);
+        int bytesUsed;
+
+        switch (embeddingDestinationType)
+        {
+            case VectorEmbeddingType.Int8 when options.SourceEmbeddingType is VectorEmbeddingType.Single:
+            {
+                var destination = MemoryMarshal.Cast<byte, sbyte>(memory.Span);
+                var source = MemoryMarshal.Cast<byte, float>(embedding);
+
+                VectorQuantizer.TryToInt8(source, destination, out bytesUsed);
+                break;
+            }
+            case VectorEmbeddingType.Binary when options.SourceEmbeddingType is VectorEmbeddingType.Single:
+            {
+                var source = MemoryMarshal.Cast<byte, float>(embedding);
+
+                VectorQuantizer.TryToInt1(source, memory.Span, out bytesUsed);
+                break;
+            }
+            default:
+                embedding.CopyTo(memory.Span);
+                bytesUsed = requiredBytes;
+                break;
+        }
+
+        var coraxType = embeddingDestinationType switch
+        {
+            VectorEmbeddingType.Single => Voron.Data.Graphs.VectorEmbeddingType.Single,
+            VectorEmbeddingType.Int8 => Voron.Data.Graphs.VectorEmbeddingType.Int8,
+            VectorEmbeddingType.Binary => Voron.Data.Graphs.VectorEmbeddingType.Binary,
+            _ => throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}")
+        };
+
+        return new VectorValue(memoryScope, memory, coraxType, bytesUsed);
+    }
     public static VectorValue FromArray(ByteStringContext allocator, IDisposable memoryScope, Memory<byte> memory, in VectorOptions options, int usedBytes)
     {
         var embeddingSourceType = options.SourceEmbeddingType;

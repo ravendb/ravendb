@@ -1,34 +1,64 @@
 using System;
 using System.Diagnostics;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Server.Documents.ETL.Providers.AI;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
 public class EmbeddingGenerationItem
 {
-    private string _inputValueHash;
-    public string InputValue { get; set; }
+    public IEmbeddingValue EmbeddingValue { get; private set; }
 
-    public string InputValueHash
+    public string TextualValue { get; }
+
+    public AiConnectionStringIdentifier ConnectionStringIdentifier { get; private set; }
+
+    public VectorEmbeddingType Quantization { get; private set; }
+
+    public string CacheDocumentId { get; set; }
+
+    public DateTime? ExpireAt { get; set; }
+
+    private string _inputValueHash;
+
+    public EmbeddingGenerationItem(string textualValue,
+        IEmbeddingValue embeddingValue,
+        VectorEmbeddingType quantization,
+        AiConnectionStringIdentifier connectionStringIdentifier)
+    {
+        EmbeddingValue = embeddingValue;
+        TextualValue = textualValue;
+        ConnectionStringIdentifier = connectionStringIdentifier;
+        Quantization = quantization;
+    }
+
+    public EmbeddingGenerationItem(string textualValue)
+    {
+        TextualValue = textualValue;
+    }
+
+    public void SetEmbedding(IEmbeddingValue embeddingValue,
+        VectorEmbeddingType quantization,
+        AiConnectionStringIdentifier connectionStringIdentifier)
+    {
+        EmbeddingValue = embeddingValue;
+        ConnectionStringIdentifier = connectionStringIdentifier;
+        Quantization = quantization;
+    }
+
+    public string ValueHash
     {
         get
         {
-            return _inputValueHash ??= EmbeddingsHelper.CalculateInputValueHash(InputValue);
+            return _inputValueHash ??= EmbeddingsHelper.CalculateInputValueHash(TextualValue);
         }
     }
 
-    public string EmbeddingCacheDocumentId { get; set; }
-
-    public ReadOnlyMemory<float> OutputValue { get; set; }
-
     public void GenerateDestinationAttachmentName(string prefix, in VectorEmbeddingType quantization)
     {
-        Debug.Assert(InputValue is not null, "ValueEmbeddingsSourceAttachmentName is not null");
-        DestinationAttachmentName = EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, InputValueHash, quantization);
+        Debug.Assert(TextualValue is not null, "ValueEmbeddingsSourceAttachmentName is not null");
+        DestinationAttachmentName = EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, ValueHash, quantization);
     }
 
     public string DestinationAttachmentName { get; private set; }
-
-    public int UsedBytes { get; set; }
-
 }

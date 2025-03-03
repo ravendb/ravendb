@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.Data.HashFunction;
 using System.Data.HashFunction.Blake2;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.AI;
+using System.Runtime.InteropServices;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
@@ -55,7 +59,7 @@ public static class EmbeddingsHelper
         return $"{embeddingsGenerationTaskIdentifier.Value}_{path}_";
     }
 
-    public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier aiConnectionStringIdentifier, string hash, in Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType targetQuantization)
+    public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier aiConnectionStringIdentifier, string valueHash, in VectorEmbeddingType targetQuantization)
     {
         var suffix = targetQuantization switch
         {
@@ -65,6 +69,38 @@ public static class EmbeddingsHelper
             _ => throw new ArgumentException($"Unknown quantization type '{targetQuantization}'")
         };
         
-        return $"embeddings-cache/{aiConnectionStringIdentifier.Value}/{hash}{suffix}";
+        return $"embeddings-cache/{aiConnectionStringIdentifier.Value}/{valueHash}{suffix}";
+    }
+
+    public static EmbeddingValue CreateEmbeddingValue(ReadOnlyMemory<float> embedding, VectorEmbeddingType quantization)
+    {
+        switch (quantization)
+        {
+            case VectorEmbeddingType.Single:
+                return new EmbeddingValue(embedding, embedding.Length * sizeof(float));
+            case VectorEmbeddingType.Int8:
+            {   var dest = MemoryMarshal.Cast<float, sbyte>(embedding.Span);
+                if (VectorQuantizer.TryToInt8(embedding.Span, dest, out int usedBytes) == false)
+                {
+                    var newMemory = new ReadOnlyMemory<float>(new float[embedding.Length + 1]);
+                    var span = MemoryMarshal.Cast<float, sbyte>(newMemory.Span);
+                    var result = VectorQuantizer.TryToInt8(embedding.Span, span, out usedBytes);
+                    Debug.Assert(result, "TryToInt8 should always return true");
+
+                    return new EmbeddingValue(newMemory, usedBytes);
+                }
+
+                return new EmbeddingValue(embedding, usedBytes);
+            }
+            case VectorEmbeddingType.Binary:
+            {
+                var dest = MemoryMarshal.Cast<float, byte>(embedding.Span);
+                VectorQuantizer.TryToInt1(embedding.Span, dest, out int usedBytes);
+
+                return new EmbeddingValue(embedding, usedBytes);
+            }
+            default:
+                throw new ArgumentOutOfRangeException($"Quantization type {quantization} is not supported");
+        }
     }
 }

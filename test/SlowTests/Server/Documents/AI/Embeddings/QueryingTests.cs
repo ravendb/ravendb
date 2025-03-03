@@ -145,7 +145,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             var etlDone = Etl.WaitForEtlToComplete(store);
             
-            var (configuration, connectionString) = RegisterAiIntegration(store);
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store);
             
             etlDone.Wait(TimeSpan.FromSeconds(10));
 
@@ -179,7 +179,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             var etlDone = Etl.WaitForEtlToComplete(store);
             
-            var (_, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
+            var (_, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
             
             etlDone.Wait(TimeSpan.FromSeconds(10));
             

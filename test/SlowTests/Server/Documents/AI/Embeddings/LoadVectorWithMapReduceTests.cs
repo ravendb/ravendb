@@ -26,7 +26,7 @@ public class LoadVectorWithMapReduceTests(ITestOutputHelper output) : Embeddings
         new SimpleMapReduceIndex().Execute(store);
 
         var etlDone = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Description" }]);
+        AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Description" }]);
         etlDone.Wait(TimeSpan.FromSeconds(10));
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())

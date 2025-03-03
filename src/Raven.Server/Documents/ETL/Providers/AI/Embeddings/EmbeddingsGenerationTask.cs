@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
@@ -20,6 +21,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -29,6 +31,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using static Lucene.Net.Index.ByteBlockPool;
 
 #pragma warning disable SKEXP0001
 
@@ -103,7 +106,9 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 , $"items != null && items!.GetType()!.FullName!.StartsWith('System.Linq.EmptyPartition'): {items!.GetType()!.FullName!}");
             return 0;
         }
-        
+
+        var connectionStringIdentifier = new AiConnectionStringIdentifier(Configuration.Connection.Identifier);
+
         int processed = 0;
 
         using (_missingEmbeddingsHolder)
@@ -116,10 +121,9 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     
                     foreach (var value in values)
                     {
-                        var connectionStringIdentifier = new AiConnectionStringIdentifier(Configuration.Connection.Identifier);
 
-                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value, Configuration.TargetQuantizationType) == false)
-                            _missingEmbeddingsHolder.Add(value.InputValue, value);
+                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value, Configuration.Quantization) == false)
+                            _missingEmbeddingsHolder.Add(value.TextualValue, value);
                     }
                 }
 
@@ -138,48 +142,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 for (var i = 0; i < keys.Count; ++i)
                 {
                     var key = keys[i];
-                    var embedding = generatedValues[i];
-                    
-                    switch (Configuration.TargetQuantizationType)
+                    var embedding = EmbeddingsHelper.CreateEmbeddingValue(generatedValues[i], Configuration.Quantization);
+
+                    foreach (var embeddingItem in embeddingsMap[key])
                     {
-                        case VectorEmbeddingType.Single:
-                            foreach (var embeddingItem in embeddingsMap[key])
-                            {
-                                Debug.Assert(embeddingItem.OutputValue is ReadOnlyMemory<float>, "embeddingItem.OutputValue is ReadOnlyMemory<float>");
-                                embeddingItem.OutputValue = embedding;
-                                embeddingItem.UsedBytes = embedding.Length * sizeof(float);
-                            }
-                            break;
-                        case VectorEmbeddingType.Int8:
-                            foreach (var embeddingItem in embeddingsMap[key])
-                            {
-                                var dest = MemoryMarshal.Cast<float, sbyte>(embedding.Span);
-                                if (VectorQuantizer.TryToInt8(embedding.Span, dest, out int usedBytes) == false)
-                                {
-                                    var newMemory = new ReadOnlyMemory<float>(new float[embedding.Length + 1]);
-                                    var span = MemoryMarshal.Cast<float, sbyte>(newMemory.Span);
-                                    var result = VectorQuantizer.TryToInt8(embedding.Span, span, out usedBytes);
-                                    Debug.Assert(result, "TryToInt8 should always return true");
-                                    embeddingItem.OutputValue = newMemory;
-                                    embeddingItem.UsedBytes = usedBytes;
-                                    break;
-                                }
-                                
-                                embeddingItem.OutputValue = embedding;
-                                embeddingItem.UsedBytes = usedBytes;
-                            }
-                            break;
-                        case VectorEmbeddingType.Binary:
-                            foreach (var embeddingItem in embeddingsMap[key])
-                            {
-                                var dest = MemoryMarshal.Cast<float, byte>(embedding.Span);
-                                VectorQuantizer.TryToInt1(embedding.Span, dest, out int usedBytes);
-                                embeddingItem.OutputValue = embedding;
-                                embeddingItem.UsedBytes = usedBytes;
-                            }
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException($"Quantization type {Configuration.TargetQuantizationType} is not supported");
+                        embeddingItem.SetEmbedding(embedding, Configuration.Quantization, connectionStringIdentifier);
                     }
                 }
             }
@@ -238,7 +205,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         {
             foreach (var embeddingItemValue in record.Values.SelectMany(x => x.Value))
             {
-                embeddingItemValue.OutputValue = embeddingService.GenerateEmbeddingsAsync([embeddingItemValue.InputValue]).Result[0];
+                var embedding = embeddingService.GenerateEmbeddingsAsync([embeddingItemValue.TextualValue]).Result[0];
+
+                var embeddingValue = EmbeddingsHelper.CreateEmbeddingValue(embedding, Configuration.Quantization);
+
+                embeddingItemValue.SetEmbedding(embeddingValue, Configuration.Quantization, new AiConnectionStringIdentifier("TODO")); 
 
                 result.EmbeddingItemValues.Add(embeddingItemValue);
             }
@@ -339,8 +310,9 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            var operationStartDate = _database.Time.GetUtcNow();
-            var quantization = _configuration.TargetQuantizationType;
+            var expireAt = _database.Time.GetUtcNow().Add(_configuration.EmbeddingsCacheExpiration);
+
+            var quantization = _configuration.Quantization;
             // For each of processed document
             foreach (var document in _taskResults.Additions)
             {
@@ -366,7 +338,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     
                     foreach (var embedding in generatedEmbeddings)
                     {
-                        _database.AiIntegrations.Embeddings.Storage.AddOrUpdateEmbeddingDocument(context, embedding, operationStartDate);
+                        _database.AiIntegrations.Embeddings.Storage.PutOrUpdateEmbeddingCacheDocument(context, embedding, expireAt, _configuration.EmbeddingsCacheExpiration);
                         embedding.GenerateDestinationAttachmentName(prefix, quantization);
                         
                         if (alreadyAddedAttachments.Add(embedding.DestinationAttachmentName) == false)
@@ -405,7 +377,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                             if (namesOfCurrentAttachments?.Remove(embedding.DestinationAttachmentName) == true)
                                 continue; 
                             
-                            _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, embedding.EmbeddingCacheDocumentId, embedding.InputValueHash
+                            _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, embedding.CacheDocumentId, embedding.ValueHash
                                 , embeddingsDocumentId, embedding.DestinationAttachmentName, null, AttachmentType.Document);
                         }
                     }

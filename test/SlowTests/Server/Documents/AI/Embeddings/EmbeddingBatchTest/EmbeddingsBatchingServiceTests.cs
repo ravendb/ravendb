@@ -25,7 +25,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
     {
         // Create a document store and register AI integration
         using var store = GetDocumentStore();
-        (_, AiConnectionString connection) = RegisterAiIntegration(store);
+        (_, AiConnectionString connection) = AddEmbeddingsGenerationTask(store);
         
         // Get the database instance
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -49,7 +49,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
     {
         // Create a document store and register AI integration
         using var store = GetDocumentStore();
-        (_, AiConnectionString connection) = RegisterAiIntegration(store);
+        (_, AiConnectionString connection) = AddEmbeddingsGenerationTask(store);
         
         // Get the database instance
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -91,7 +91,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
     {
         // Create a document store and register AI integration
         using var store = GetDocumentStore();
-        RegisterAiIntegration(store);
+        AddEmbeddingsGenerationTask(store);
         
         // Get the database instance
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);

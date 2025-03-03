@@ -25,7 +25,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }
 
         var etl = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
+        AddEmbeddingsGenerationTask(store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
         {
             new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
         }, targetQuantization: VectorEmbeddingType.Int8);
@@ -60,7 +60,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }
 
         var etl = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
+        AddEmbeddingsGenerationTask(store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
         {
             new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
         }, targetQuantization: VectorEmbeddingType.Single);
@@ -95,7 +95,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }
 
         var etl = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(store, targetQuantization: VectorEmbeddingType.Binary);
+        AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Binary);
         etl.Wait(DefaultEtlTimeout);
         
         new Index().Execute(store);
@@ -127,12 +127,12 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }
 
         var etl = Etl.WaitForEtlToComplete(store);
-        RegisterAiIntegration(embeddingsGenerationTaskName: "secondEtl", store: store, targetQuantization: VectorEmbeddingType.Single);
+        AddEmbeddingsGenerationTask(embeddingsGenerationTaskName: "secondEtl", store: store, targetQuantization: VectorEmbeddingType.Single);
         etl.Wait(DefaultEtlTimeout);
         
         etl.Reset();
         
-        RegisterAiIntegration(store, targetQuantization: VectorEmbeddingType.Int8);
+        AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Int8);
         etl.Wait(DefaultEtlTimeout);
         
         new Index().Execute(store);

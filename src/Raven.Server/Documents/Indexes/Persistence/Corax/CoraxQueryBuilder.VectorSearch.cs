@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using static Lucene.Net.Index.ByteBlockPool;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -285,51 +286,45 @@ public static partial class CoraxQueryBuilder
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
             var connectionStringId = database.AiIntegrations.GetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId); // TODO michal
 
-            var destinationEmbeddingType = vectorOptions?.DestinationEmbeddingType;
-            
-            if (destinationEmbeddingType is null && builderParameters.Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsTaskId,
+            var sourceEmbeddingType = VectorEmbeddingType.Single;
+
+            if (builderParameters.Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsTaskId,
                     out var embeddingsGenerationConfiguration))
             {
-                destinationEmbeddingType = embeddingsGenerationConfiguration.TargetQuantizationType;
-            }         
-            
-            transformedEmbedding = database.AiIntegrations.Embeddings
-                .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, builderParameters.Allocator, connectionStringId, embeddingsTaskId, valueAsString, destinationEmbeddingType!.Value)
-                .GetAwaiter().GetResult();
-        }
-
-        private static bool TryGetEmbeddingFromCache(Parameters builderParameters, DocumentsOperationContext documentContext, ByteStringContext embeddingContext,
-            string valueAsString,
-            AiConnectionStringIdentifier aiConnectionStringIdentifier, EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier, out object transformedEmbedding)
-        {
-            transformedEmbedding = null;
-            if (builderParameters.Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsGenerationTaskIdentifier, out var configuration) == false)
-                PortableExceptions.Throw<InvalidDataException>($"Cannot find embeddings generation configuration for {embeddingsGenerationTaskIdentifier.Value}.");
-            var hash = EmbeddingsHelper.CalculateInputValueHash(valueAsString);
-            var id = EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiConnectionStringIdentifier, hash, configuration.TargetQuantizationType);
-
-            using (documentContext.OpenReadTransaction())
-            {
-                var valueEmbeddingsDocument = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.Get(documentContext, id);
-
-                if (valueEmbeddingsDocument != null)
-                {
-                    if (valueEmbeddingsDocument.Data.TryGet(valueAsString, out string attachmentName))
-                    {
-                        var attachment = builderParameters.DocumentsContext.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetAttachment(documentContext, id,
-                            attachmentName, AttachmentType.Document, null);
-
-                        var bytesRequired = (int)attachment.Size;
-                        var memScope = embeddingContext.Allocate(bytesRequired, out Memory<byte> memory);
-                        attachment.Stream.ReadExactly(memory.Span);
-                        transformedEmbedding = GenerateEmbeddings.Quantize(embeddingContext, configuration.TargetQuantizationType, memScope, memory, bytesRequired);
-
-                        return true;
-                    }
-                }
+                sourceEmbeddingType = embeddingsGenerationConfiguration.Quantization;
             }
 
-            return false;
+            var destinationEmbeddingType = vectorOptions?.DestinationEmbeddingType ?? sourceEmbeddingType;
+
+            var embeddingValues = database.AiIntegrations.Embeddings
+                .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, builderParameters.Allocator, connectionStringId, embeddingsTaskId, valueAsString)
+                .GetAwaiter().GetResult();
+
+            var queryingVectorOption = new VectorOptions
+            {
+                SourceEmbeddingType = sourceEmbeddingType,
+                DestinationEmbeddingType = destinationEmbeddingType
+            };
+
+            if (embeddingValues.Length == 1)
+            {
+                var embeddingValue = embeddingValues[0];
+
+                transformedEmbedding = GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue, queryingVectorOption);
+            }
+            else
+            {
+                var vectorValues = new VectorValue[embeddingValues.Length];
+
+                for (int i = 0; i < embeddingValues.Length; i++)
+                {
+                    var embeddingValue = embeddingValues[i];
+
+                    vectorValues[i] = GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue, queryingVectorOption);
+                }
+
+                transformedEmbedding = vectorValues;
+            }
         }
     }
 }

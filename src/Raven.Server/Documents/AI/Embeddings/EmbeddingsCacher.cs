@@ -12,9 +12,9 @@ namespace Raven.Server.Documents.AI.Embeddings;
 
 public class EmbeddingsCacher : BackgroundWorkBase
 {
-    private DocumentDatabase _database;
+    private readonly DocumentDatabase _database;
 
-    private readonly ConcurrentQueue<EmbeddingCacheItem> _embeddingsQueue;
+    private readonly ConcurrentQueue<EmbeddingGenerationItem> _embeddingsQueue;
     private readonly SemaphoreSlim _semaphore;
 
     private int _approxQueueLength;
@@ -22,7 +22,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
     public EmbeddingsCacher(DocumentDatabase database, CancellationToken shutdown) : base(database.Name, database.Loggers.GetLogger<EmbeddingsCacher>(), shutdown)
     {
         _database = database;
-        _embeddingsQueue = new ConcurrentQueue<EmbeddingCacheItem>();
+        _embeddingsQueue = new ConcurrentQueue<EmbeddingGenerationItem>();
         _semaphore = new SemaphoreSlim(0, 1);
     }
 
@@ -32,7 +32,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
         {
             await _semaphore.WaitAsync(CancellationToken);
 
-            var payload = new List<EmbeddingCacheItem>(_approxQueueLength);
+            var payload = new List<EmbeddingGenerationItem>(_approxQueueLength);
 
             while (_embeddingsQueue.TryDequeue(out var item))
             {
@@ -46,9 +46,9 @@ public class EmbeddingsCacher : BackgroundWorkBase
         }
     }
 
-    public void EnqueueEmbeddingToCache(List<EmbeddingCacheItem> embeddings)
+    public void EnqueueEmbeddingToCache(List<EmbeddingGenerationItem> embeddings)
     {
-        foreach (EmbeddingCacheItem item in embeddings)
+        foreach (EmbeddingGenerationItem item in embeddings)
         {
             _embeddingsQueue.Enqueue(item);
 
@@ -60,39 +60,20 @@ public class EmbeddingsCacher : BackgroundWorkBase
 
     private sealed class PutEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
     {
-        private readonly List<EmbeddingCacheItem> _embeddingItems;
-        private readonly DocumentDatabase _database;
-        private readonly DocumentsStorage _documentsStorage;
+        private readonly List<EmbeddingGenerationItem> _embeddingItems;
+        private readonly EmbeddingsStorage _embeddingsStorage;
 
-        public PutEmbeddingsCommand(List<EmbeddingCacheItem> embeddingItems, DocumentDatabase database)
+        public PutEmbeddingsCommand(List<EmbeddingGenerationItem> embeddingItems, DocumentDatabase database)
         {
             _embeddingItems = embeddingItems;
-            _database = database;
-            _documentsStorage = database.DocumentsStorage;
+            _embeddingsStorage = database.AiIntegrations.Embeddings.Storage;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            var operationStartDate = _database.Time.GetUtcNow();
-
             foreach (var item in _embeddingItems)
             {
-                using (var stream = new MemoryStream(item.EmbeddingValue.Span.ToArray()))
-                {
-                    var hash = AttachmentsStorageHelper.CalculateHash(item.EmbeddingValue.Span);
-
-                    var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(item.ConnectionStringIdentifier, hash, item.Quantization);
-
-                    var valueEmbeddingsDocumentJsonDjv = EmbeddingsStorage.CreateEmbeddingCacheDocument(operationStartDate);
-
-                    using (var json = context.ReadObject(valueEmbeddingsDocumentJsonDjv, valueEmbeddingsDocumentId))
-                    {
-                        _documentsStorage.Put(context, valueEmbeddingsDocumentId, null, json);
-                    }
-
-                    _documentsStorage.AttachmentsStorage.PutAttachment(context, valueEmbeddingsDocumentId, "TODO arek", "application/octet-stream", hash, null,
-                        stream);
-                }
+                _embeddingsStorage.CacheEmbedding(context, item, item.ExpireAt!.Value);
             }
 
             return _embeddingItems.Count;

@@ -144,9 +144,9 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
                 var textualValues = new List<string>();
                 CollectEmbeddingValues(ref textualValues, value);
                 
-                var x = Documents.AI.TextChunker.ChunkValues(textualValues, pathConfiguration.ChunkingOptions);
+                var chunks = Documents.AI.TextChunker.ChunkValues(textualValues, pathConfiguration.ChunkingOptions);
 
-                embeddingValues = x.Select(y => new EmbeddingGenerationItem() { InputValue = y }).ToList();
+                embeddingValues = chunks.Select(chunk => new EmbeddingGenerationItem(chunk)).ToList();
             }
 
             _currentRun.Additions.Add(aiEtlEmbeddingItem);
@@ -476,7 +476,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
 
             if (value.IsString())
             {
-                values.Add(new EmbeddingGenerationItem() { InputValue = value.AsString() });
+                values.Add(new EmbeddingGenerationItem(value.AsString()));
             }
 
             else if (value.IsArray())
@@ -484,7 +484,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
                 var jsArray = value.AsArray();
 
                 foreach (var jsValue in jsArray)
-                    values.Add(new EmbeddingGenerationItem() { InputValue = jsValue.AsString() });
+                    values.Add(new EmbeddingGenerationItem(jsValue.AsString()));
             }
         }
 

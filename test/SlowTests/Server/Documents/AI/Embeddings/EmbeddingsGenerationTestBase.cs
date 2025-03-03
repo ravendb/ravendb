@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using FastTests;
@@ -25,7 +26,8 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
     protected const string DefaultConnectionStringName = "Local AI connection";
     protected const string DefaultEmbeddingGenerationTaskName = "localAiTask";
     protected ByteStringContext _allocator;
-    protected readonly TimeSpan DefaultEtlTimeout = TimeSpan.FromSeconds(30);
+    protected readonly TimeSpan DefaultEtlTimeout = Debugger.IsAttached == false ? TimeSpan.FromSeconds(30) : TimeSpan.FromMinutes(15);
+
     protected static readonly ChunkingOptions DefaultChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 };
     
     protected float[] GenerateEmbeddingForTextViaOnnx(string text)
@@ -34,7 +36,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         return MemoryMarshal.Cast<byte, float>(GenerateEmbeddings.FromText(_allocator, VectorOptions.DefaultText, text).GetEmbedding()).ToArray();
     }
 
-    protected static (EmbeddingsGenerationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
+    protected static (EmbeddingsGenerationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) AddEmbeddingsGenerationTask(
         IDocumentStore store,
         string embeddingsGenerationTaskName = DefaultEmbeddingGenerationTaskName,
         string connectionStringName = DefaultConnectionStringName,
@@ -55,16 +57,16 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
                 Script = script
             }
             : null,
-            TargetQuantizationType = targetQuantization,
+            Quantization = targetQuantization,
             ChunkingOptionsForQuerying = chunkingOptionsForQuerying ?? DefaultChunkingOptions,
         };
 
         configuration.Identifier = configuration.GenerateIdentifier();
 
-        return RegisterAiIntegration(store, configuration);
+        return AddEmbeddingsGenerationTask(store, configuration);
     }
 
-    protected static (EmbeddingsGenerationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
+    protected static (EmbeddingsGenerationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) AddEmbeddingsGenerationTask(
         IDocumentStore store, EmbeddingsGenerationConfiguration configuration)
     {
         var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, OnnxSettings = new OnnxSettings() };
