@@ -1,13 +1,8 @@
 #!/bin/bash
 
-CURL_CMD=$(command -v curl)
-GIT_CMD=$(command -v git)
-NODE_CMD=$(command -v node)
-POWERSHELL_CMD=$(command -v pwsh)
-MONO_CMD=$(command -v mono)
-DOTNET_VERSION_CMD=`dotnet --version 2> /dev/null`
-UBUNTU_CODENAME=$(lsb_release -c | cut -d ":" -f2 | sed 's/\t//g')
-UBUNTU_VERSION=$(lsb_release -r | cut -d ":" -f2 | sed 's/\t//g')
+# Variable definitions
+UBUNTU_VERSION=$(lsb_release -rs)
+UBUNTU_CODENAME=$(lsb_release -cs)
 
 # Introductory message
 echo "Starting environment setup for RavenDB build on Ubuntu $UBUNTU_VERSION ($UBUNTU_CODENAME)"
@@ -24,7 +19,7 @@ fi
 
 # Check Ubuntu version
 if ! echo "16.04 18.04 20.04 22.04 24.04" | grep -q "$UBUNTU_VERSION"; then
-    echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 16.04, 18.04, 20.04, 22.04, or 24.04."
+    echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 24.04, 22.04, 20.04, 18.04, or 16.04."
     exit 1
 fi
 
@@ -75,6 +70,10 @@ if [ -z "$MAJOR_MINOR_VERSION" ]; then
     exit 1
 fi
 
+# Install .NET SDK
+echo "Installing .NET SDK version $MAJOR_MINOR_VERSION..."
+apt-get install -y dotnet-sdk-$MAJOR_MINOR_VERSION
+
 # Check and install PowerShell
 echo "Checking for PowerShell..."
 POWERSHELL_CMD=$(command -v pwsh)
@@ -113,4 +112,5 @@ else
     echo "git is already installed."
 fi
 
-echo "To build RavenDB run: ./build.sh"
+# Completion message
+echo "Environment setup complete. To build RavenDB run: ./build.sh" this is updated script
