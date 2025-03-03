@@ -1,10 +1,10 @@
 #!/bin/bash
 
-CURL_CMD=$(which curl)
-GIT_CMD=$(which git)
-NODE_CMD=$(which node)
-POWERSHELL_CMD=$(which pwsh)
-MONO_CMD=$(which mono)
+CURL_CMD=$(command -v curl)
+GIT_CMD=$(command -v git)
+NODE_CMD=$(command -v node)
+POWERSHELL_CMD=$(command -v pwsh)
+MONO_CMD=$(command -v mono)
 DOTNET_VERSION_CMD=`dotnet --version 2> /dev/null`
 UBUNTU_CODENAME=$(lsb_release -c | cut -d ":" -f2 | sed 's/\t//g')
 UBUNTU_VERSION=$(lsb_release -r | cut -d ":" -f2 | sed 's/\t//g')
