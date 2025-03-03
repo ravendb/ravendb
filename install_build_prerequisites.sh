@@ -85,50 +85,21 @@ else
     echo "PowerShell is already installed."
 fi
 
-# Install .NET SDK
-echo "Installing .NET SDK version $MAJOR_MINOR_VERSION..."
-apt-get install -y dotnet-sdk-$MAJOR_MINOR_VERSION
-
-if [ -z "$POWERSHELL_CMD" ] ; then
-    echo "Powershell not found. Installing.."
-
-    if [ -z "$CURL_CMD" ]; then
-        sudo apt-get install -y curl 
-    fi
-
-    if [ "$UBUNTU_VERSION" = "16.04" ] ; then
-        curl https://packages.microsoft.com/config/ubuntu/16.04/prod.list | sudo tee /etc/apt/sources.list.d/microsoft.list
-    elif [ "$UBUNTU_VERSION" = "14.04" ] ; then
-        curl https://packages.microsoft.com/config/ubuntu/14.04/prod.list | sudo tee /etc/apt/sources.list.d/microsoft.list
-    elif [ "$UBUNTU_VERSION" = "18.04" ] ; then
-        curl https://packages.microsoft.com/config/ubuntu/18.04/prod.list | sudo tee /etc/apt/sources.list.d/microsoft.list
-    elif [ "$UBUNTU_VERSION" = "20.04" ] ; then
-        curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | sudo tee /etc/apt/sources.list.d/microsoft.list                    
-    fi
-    
-    sudo apt-get update
-    sudo apt-get install -y powershell
-else
-    echo "Powershell is installed."
-fi
-
-if [ -z "$NODE_CMD" ] ; then
-    echo "Node not found. Installing.."
-
-    if [ -z "$CURL_CMD" ]; then
-        sudo apt-get install -y curl 
-    fi
-
-    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
-    sudo apt-get install -y nodejs build-essential
+# Check and install Node.js
+echo "Checking for Node.js..."
+NODE_CMD=$(command -v node)
+if [ -z "$NODE_CMD" ]; then
+    echo "Node.js not found. Installing Node.js..."
+    curl -sL https://deb.nodesource.com/setup_lts.x | bash -
+    apt-get install -y nodejs build-essential
 else
     NODE_VERSION="$($NODE_CMD --version)"
-
-    if [[ ! "$NODE_VERSION" =~ ^v?(8|9|10|11) ]] ; then
-        echo "Incompatible version of NodeJS found: $NODE_VERSION. NodeJS 8.x or later is required."
+    MAJOR_VERSION=$(echo "$NODE_VERSION" | sed 's/^v\?\([0-9]*\)\..*/\1/')
+    if [ "$MAJOR_VERSION" -lt 8 ]; then
+        echo "Incompatible Node.js version found: $NODE_VERSION. Node.js 8.x or later is required."
         exit 1
     else
-        echo "Node $NODE_VERSION is installed."
+        echo "Node.js $NODE_VERSION is installed and compatible."
     fi
 fi
 
