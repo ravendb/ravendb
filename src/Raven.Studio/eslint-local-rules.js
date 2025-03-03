@@ -440,4 +440,16 @@ module.exports = {
       return replaceReactstrapToReactBootstrap({ context, componentMap: navComponentMap });
     },
   },
+  "no-reactstrap-InputGroup": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "InputGroup" }),
+  },
+  "no-reactstrap-InputGroupText": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "InputGroupText", canFix: false }),
+  },
+  "no-reactstrap-Carousel": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Carousel", canFix: false }),
+  },
 };

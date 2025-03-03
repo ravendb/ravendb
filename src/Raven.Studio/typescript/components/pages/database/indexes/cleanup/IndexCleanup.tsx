@@ -1,6 +1,5 @@
 ﻿import React from "react";
 import Nav from "react-bootstrap/Nav";
-import { Carousel, CarouselItem } from "reactstrap";
 import useIndexCleanup from "./useIndexCleanup";
 import { LoadError } from "components/common/LoadError";
 import { AboutViewHeading } from "components/common/AboutView";
@@ -19,6 +18,7 @@ import RemoveUnusedIndexesCard from "components/pages/database/indexes/cleanup/c
 import UnmergableIndexesCard from "components/pages/database/indexes/cleanup/carouselCards/UnmergableIndexesCard";
 import MergeSuggestionsErrorsCarouselCard from "components/pages/database/indexes/cleanup/carouselCards/MergeSuggestionsErrorsCarouselCard";
 import { LazyLoad } from "components/common/LazyLoad";
+import Carousel from "react-bootstrap/Carousel";
 
 export function IndexCleanup() {
     const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable, errors } = useIndexCleanup();
@@ -59,35 +59,36 @@ export function IndexCleanup() {
                         activeIndex={carousel.activeTab}
                         className="carousel-auto-height mt-3 mb-4"
                         style={{ height: carousel.carouselHeight }}
-                        previous={() => null}
-                        next={() => null}
+                        onSelect={(index) => carousel.setHeight(index)}
+                        controls={false}
+                        indicators={false}
                     >
-                        <CarouselItem key="carousel-0" onEntering={() => carousel.setHeight(0)}>
+                        <Carousel.Item key="carousel-0">
                             <div ref={(el) => (carousel.carouselRefs.current[0] = el)}>
                                 <MergeIndexesCard mergable={mergable} />
                             </div>
-                        </CarouselItem>
-                        <CarouselItem key="carousel-1" onEntering={() => carousel.setHeight(1)}>
+                        </Carousel.Item>
+                        <Carousel.Item key="carousel-1">
                             <div ref={(el) => (carousel.carouselRefs.current[1] = el)}>
                                 <RemoveSubindexesCard surpassing={surpassing} />
                             </div>
-                        </CarouselItem>
-                        <CarouselItem key="carousel-2" onEntering={() => carousel.setHeight(2)}>
+                        </Carousel.Item>
+                        <Carousel.Item key="carousel-2">
                             <div ref={(el) => (carousel.carouselRefs.current[2] = el)}>
                                 <RemoveUnusedIndexesCard unused={unused} />
                             </div>
-                        </CarouselItem>
-                        <CarouselItem key="carousel-3" onEntering={() => carousel.setHeight(3)}>
+                        </Carousel.Item>
+                        <Carousel.Item key="carousel-3">
                             <div ref={(el) => (carousel.carouselRefs.current[3] = el)}>
                                 <UnmergableIndexesCard unmergable={unmergable} />
                             </div>
-                        </CarouselItem>
+                        </Carousel.Item>
                         {errors.data.length > 0 && (
-                            <CarouselItem key="carousel-4" onEntering={() => carousel.setHeight(4)}>
+                            <Carousel.Item key="carousel-4">
                                 <div ref={(el) => (carousel.carouselRefs.current[4] = el)}>
                                     <MergeSuggestionsErrorsCarouselCard errors={errors.data} />
                                 </div>
-                            </CarouselItem>
+                            </Carousel.Item>
                         )}
                     </Carousel>
                 </LazyLoad>
