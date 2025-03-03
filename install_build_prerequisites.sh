@@ -75,6 +75,16 @@ if [ -z "$MAJOR_MINOR_VERSION" ]; then
     exit 1
 fi
 
+# Check and install PowerShell
+echo "Checking for PowerShell..."
+POWERSHELL_CMD=$(command -v pwsh)
+if [ -z "$POWERSHELL_CMD" ]; then
+    echo "PowerShell not found. Installing PowerShell..."
+    apt-get install -y powershell
+else
+    echo "PowerShell is already installed."
+fi
+
 # Install .NET SDK
 echo "Installing .NET SDK version $MAJOR_MINOR_VERSION..."
 apt-get install -y dotnet-sdk-$MAJOR_MINOR_VERSION
