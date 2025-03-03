@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Raven.Client.Documents.Indexes.Vector;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -20,10 +21,10 @@ public class EmbeddingGenerationItem
 
     public ReadOnlyMemory<float> OutputValue { get; set; }
 
-    public void SetPrefixForDestinationAttachmentName(string prefix)
+    public void GenerateDestinationAttachmentName(string prefix, in VectorEmbeddingType quantization)
     {
         Debug.Assert(InputValue is not null, "ValueEmbeddingsSourceAttachmentName is not null");
-        DestinationAttachmentName = $"{prefix}{InputValueHash}";
+        DestinationAttachmentName = EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, InputValueHash, quantization);
     }
 
     public string DestinationAttachmentName { get; private set; }

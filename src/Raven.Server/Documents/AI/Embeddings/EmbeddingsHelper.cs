@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Data.HashFunction;
 using System.Data.HashFunction.Blake2;
+using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
@@ -25,6 +27,19 @@ public static class EmbeddingsHelper
         return Hash.ComputeHash(value).AsHexString(uppercase: true);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string GenerateDestinationAttachmentName(in string prefix, in string originalAttachmentName, in VectorEmbeddingType quantization)
+    {
+        var suffix = quantization switch
+        {
+            VectorEmbeddingType.Int8 => "_int8",
+            VectorEmbeddingType.Binary => "_binary",
+            _ => string.Empty
+        };
+        
+        return $"{prefix}{originalAttachmentName}{suffix}";
+    }
+    
     public static string GetEmbeddingDocumentId(string documentId)
     {
         return $"{documentId}/embeddings";

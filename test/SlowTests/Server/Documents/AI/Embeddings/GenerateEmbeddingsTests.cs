@@ -659,6 +659,35 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
 
+    [RavenFact(RavenTestCategory.Ai | RavenTestCategory.Vector | RavenTestCategory.Etl)]
+    public void TestQuantizationOfEmbeddingsInTwoTasks()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        string id;
+        using (var session = store.OpenSession())
+        {
+            var dto = new Dto { Name = "CoolName", Names = ["CoolName"] };
+            session.Store(dto);
+            session.SaveChanges();
+            id = dto.Id;
+        }
+        
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        var (configuration1, connectionString1) = RegisterAiIntegration(store,
+            embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], targetQuantization: VectorEmbeddingType.Int8);
+        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        
+        AssertEmbeddingsForPath(store, configuration1, connectionString1, "Name", ["CoolName"], id, VectorEmbeddingType.Int8);
+        
+        aiTaskDone.Reset();
+        var (configuration2, connectionString2) = RegisterAiIntegration(store, embeddingsGenerationTaskName: "secondtask",
+            embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }], targetQuantization: VectorEmbeddingType.Single);
+        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        
+        AssertEmbeddingsForPath(store, configuration1, connectionString1, "Name", ["CoolName"], id, VectorEmbeddingType.Int8);
+        AssertEmbeddingsForPath(store, configuration2, connectionString2, "Names", ["CoolName"], id);
+    }
+
     [RavenFact(RavenTestCategory.Ai)]
     public void TestQuantizationOfEmbeddingsInTask()
     {
@@ -690,7 +719,9 @@ Console.WriteLine(""Hello, World!"");";
                 var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
                 Assert.NotNull(embeddingCacheDocument);
 
-                var expectedAttachmentNameInEmbeddingsDocument = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, "Name") + hashOfInput;
+                var expectedAttachmentNameInEmbeddingsDocument =
+                    EmbeddingsHelper.GenerateDestinationAttachmentName(EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, "Name"),
+                        hashOfInput, targetQuantization);
 
                 var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);
                 var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;

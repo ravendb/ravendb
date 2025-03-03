@@ -340,14 +340,14 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             var operationStartDate = _database.Time.GetUtcNow();
-
+            var quantization = _configuration.TargetQuantizationType;
             // For each of processed document
             foreach (var document in _taskResults.Additions)
             {
                 // Modifications of embeddings document
                 var embeddingsDocumentModification = new DynamicJsonValue();
-                if (_configuration.TargetQuantizationType != VectorEmbeddingType.Single)
-                    embeddingsDocumentModification[Constants.Documents.Metadata.Quantization] = _configuration.TargetQuantizationType.ToString();
+                if (quantization != VectorEmbeddingType.Single)
+                    embeddingsDocumentModification[Constants.Documents.Metadata.Quantization] = quantization.ToString();
                 
                 
                 // Load the embeddings document (if it exists) to track which attachments need to be removed (on update)
@@ -367,7 +367,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     foreach (var embedding in generatedEmbeddings)
                     {
                         _database.AiIntegrations.Embeddings.Storage.AddOrUpdateEmbeddingDocument(context, embedding, operationStartDate);
-                        embedding.SetPrefixForDestinationAttachmentName(prefix);
+                        embedding.GenerateDestinationAttachmentName(prefix, quantization);
                         
                         if (alreadyAddedAttachments.Add(embedding.DestinationAttachmentName) == false)
                             continue;

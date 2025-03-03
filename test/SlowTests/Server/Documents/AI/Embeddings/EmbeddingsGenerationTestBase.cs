@@ -78,6 +78,14 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
 
         return (configuration, connectionString);
     }
+    
+    protected void AssertEmbeddingsForPath(IDocumentStore store,
+        EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration,
+        AiConnectionString aiConnectionString,
+        string path,
+        string[] inputValues,
+        string docId,
+        VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single) => AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationConfiguration.Identifier), new AiConnectionStringIdentifier(aiConnectionString.Identifier), path, inputValues, docId, targetQuantization);
 
     protected void AssertEmbeddingsForPath(
         IDocumentStore store,
@@ -120,7 +128,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             Assert.NotNull(currentPathObject);
 
             // Assert if current path contain embedding of current input value
-            var expectedAttachmentNameInEmbeddingsDocument = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, path) + hashOfInput;
+            var expectedAttachmentNameInEmbeddingsDocument = EmbeddingsHelper.GenerateDestinationAttachmentName(EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, path),hashOfInput, targetQuantization);
             var attachmentsByEtlPath = currentPathObject.Select(att => att.ToString()).ToList();
             Assert.Equal(inputValues.Length, attachmentsByEtlPath.Count); // <- this checks if we've all embeddings
             Assert.Contains(expectedAttachmentNameInEmbeddingsDocument, attachmentsByEtlPath);
