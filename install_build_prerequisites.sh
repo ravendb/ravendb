@@ -103,8 +103,14 @@ else
     fi
 fi
 
+# Check and install git
+echo "Checking for git..."
+GIT_CMD=$(command -v git)
 if [ -z "$GIT_CMD" ]; then
-    sudo apt-get install -y git
+    echo "git not found. Installing git..."
+    apt-get install -y git
+else
+    echo "git is already installed."
 fi
 
 echo "To build RavenDB run: ./build.sh"
