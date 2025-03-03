@@ -17,10 +17,13 @@ if [[ ! "$UBUNTU_VERSION" =~ ^1[468]\.04$ ]] ; then
     exit -1
 fi
 
+# Get the full path of the script
+SCRIPT_PATH=$(realpath "$0")
 
-if [[ $UID != 0 ]]; then
-    echo "Please run this script with sudo:"
-    echo "sudo $0 $*"
+# Check if the script is running with root privileges
+if [ "$EUID" -ne 0 ]; then
+    echo "This script must be run as root. Please use sudo."
+    echo "sudo $SCRIPT_PATH $*"
     exit 1
 fi
 
