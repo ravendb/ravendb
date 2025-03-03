@@ -37,7 +37,11 @@ namespace SlowTests.Issues
             using (var store = new DocumentStore
             {
                 Database = db,
-                Urls = new[] { leader.WebUrl }
+                Urls = new[] { leader.WebUrl },
+                Conventions =
+                {
+                    DisableTopologyUpdates = true,
+                }
             }.Initialize())
             {
                 using (var session = store.OpenAsyncSession())
@@ -85,11 +89,12 @@ namespace SlowTests.Issues
                 mre2.Set();
 
                 var database = await GetDatabase(remainingNode, store.Database);
-                WaitForValue(() =>
+                res = WaitForValue(() =>
                 {
                     var operation = database.ServerStore.Operations.GetOperation(restoreTask.Id);
                     return operation.IsCompleted();
                 }, true);
+                Assert.True(res);
 
                 var revivedNode = GetNewServer(new ServerCreationOptions
                 {
@@ -102,9 +107,6 @@ namespace SlowTests.Issues
                     }
                 });
 
-                nodes.Add(revivedNode);
-                Servers.Add(revivedNode);
-
                 using (remainingNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -112,7 +114,11 @@ namespace SlowTests.Issues
                     Assert.Equal(2, topology.AllNodes.Count);
                 }
 
-                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true));
+                using (var store2 = new DocumentStore { Database = db, Urls = new[] { remainingNode.WebUrl }, Conventions = { DisableTopologyUpdates = true, } }
+                           .Initialize())
+                {
+                    await store2.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true));
+                }
             }
         }
 
