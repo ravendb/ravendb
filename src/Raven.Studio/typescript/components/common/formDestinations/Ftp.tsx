@@ -2,7 +2,8 @@
 import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import { InputGroup, InputGroupText, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Label } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -133,12 +134,12 @@ export default function Ftp() {
                                             <span className="static-name form-control d-flex align-items-center">
                                                 {formValues.certificateAsBase64 ? "<certificate>" : "Select file..."}
                                             </span>
-                                            <InputGroupText>
+                                            <InputGroup.Text>
                                                 <label htmlFor="filePicker" className="cursor-pointer">
                                                     <Icon icon="document" />
                                                     <span>Browse</span>
                                                 </label>
-                                            </InputGroupText>
+                                            </InputGroup.Text>
                                         </InputGroup>
                                         {formState.errors.destinations?.ftp?.certificateAsBase64 && (
                                             <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">

@@ -1,6 +1,7 @@
 ﻿import { Icon } from "components/common/Icon";
 import React from "react";
-import { Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Form, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {

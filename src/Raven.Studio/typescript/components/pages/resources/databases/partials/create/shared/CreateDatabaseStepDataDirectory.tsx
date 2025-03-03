@@ -1,7 +1,7 @@
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Spinner from "react-bootstrap/Spinner";
-import { InputGroup, InputGroupText } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
 import { FormCheckbox, FormPathSelector } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -49,11 +49,11 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
         <div>
             <h2 className="text-center">Data Directory</h2>
             <InputGroup className="my-4">
-                <InputGroupText className="rounded-1 me-1">
+                <InputGroup.Text className="rounded-1 me-1">
                     <FormCheckbox control={control} name="dataDirectoryStep.isDefault">
                         Use server directory
                     </FormCheckbox>
-                </InputGroupText>
+                </InputGroup.Text>
 
                 <FormPathSelector
                     control={control}

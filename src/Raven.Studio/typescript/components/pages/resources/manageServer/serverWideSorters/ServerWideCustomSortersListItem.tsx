@@ -24,7 +24,8 @@ import React, { useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
-import { Form, InputGroup, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Form, Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 
 interface ServerWideCustomSortersListItemProps {

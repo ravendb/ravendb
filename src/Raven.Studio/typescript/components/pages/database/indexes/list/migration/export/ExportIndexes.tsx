@@ -18,7 +18,8 @@ import IndexUtils from "components/utils/IndexUtils";
 import moment from "moment";
 import React, { useEffect, useMemo, useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { CloseButton, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
@@ -154,9 +155,9 @@ export function ExportIndexes(props: ExportIndexesProps) {
                     </div>
                     {exportMode === "database" && (
                         <InputGroup>
-                            <InputGroupText>
+                            <InputGroup.Text>
                                 <Icon icon="database" margin="m-0" />
-                            </InputGroupText>
+                            </InputGroup.Text>
                             <FormSelect
                                 control={control}
                                 name="databaseName"

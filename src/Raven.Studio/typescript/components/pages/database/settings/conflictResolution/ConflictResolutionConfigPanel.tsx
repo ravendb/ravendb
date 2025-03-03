@@ -9,7 +9,8 @@ import {
     RichPanelDetailItem,
 } from "components/common/RichPanel";
 import Collapse from "react-bootstrap/Collapse";
-import { Form, InputGroup, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Form, Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { EditConflictResolutionSyntaxModal } from "components/pages/database/settings/conflictResolution/EditConflictResolutionSyntaxModal";

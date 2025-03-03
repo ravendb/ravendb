@@ -18,7 +18,8 @@ import IndexUtils from "components/utils/IndexUtils";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { CloseButton, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import RichAlert from "components/common/RichAlert";
@@ -201,9 +202,9 @@ export function ImportIndexes(props: ImportIndexesProps) {
 
                     {importMode === "database" && (
                         <InputGroup>
-                            <InputGroupText>
+                            <InputGroup.Text>
                                 <Icon icon="database" margin="m-0" />
-                            </InputGroupText>
+                            </InputGroup.Text>
                             <FormSelect
                                 control={control}
                                 name="selectedDatabaseName"

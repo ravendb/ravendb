@@ -5,7 +5,8 @@ import { useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
-import { Col, InputGroup, InputGroupText, Row } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Col, Row } from "reactstrap";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
@@ -161,7 +162,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             <Collapse in={isReplicationFactorVisible}>
                                 <div>
                                     <InputGroup>
-                                        <InputGroupText>Replication Factor</InputGroupText>
+                                        <InputGroup.Text>Replication Factor</InputGroup.Text>
                                         <FormInput
                                             type="number"
                                             control={control}
@@ -185,7 +186,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         <Col sm="auto">
                             <Collapse in={isSharded}>
                                 <InputGroup>
-                                    <InputGroupText>Number of shards</InputGroupText>
+                                    <InputGroup.Text>Number of shards</InputGroup.Text>
                                     <FormInput
                                         type="number"
                                         control={control}

@@ -1,5 +1,6 @@
 ﻿import React from "react";
-import { InputGroup, InputGroupText, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import { useFormContext } from "react-hook-form";
 import { BackupConfigurationScript, FormDestinations } from "./utils/formDestinationsTypes";
@@ -45,7 +46,7 @@ const OverrideConfiguration = ({ fieldBase }: OverrideConfigurationProps) => {
                         type="number"
                         autoComplete="off"
                     />
-                    <InputGroupText>ms</InputGroupText>
+                    <InputGroup.Text>ms</InputGroup.Text>
                 </InputGroup>
             </div>
         </div>

@@ -1,24 +1,25 @@
 import { Meta } from "@storybook/react";
 import {
-    FormInput,
+    FormAceEditor,
     FormCheckbox,
     FormCheckboxes,
-    FormRadio,
     FormDatePicker,
     FormDurationPicker,
+    FormInput,
+    FormPathSelector,
+    FormRadio,
     FormRadioToggleWithIcon,
     FormSelect,
     FormSelectCreatable,
     FormSwitch,
-    FormAceEditor,
-    FormPathSelector,
 } from "./Form";
 import { useEffect } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Input, InputGroup, InputGroupText, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Input, Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 
@@ -53,28 +54,28 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
             </div>
             <div>
                 <InputGroup>
-                    <InputGroupText>@</InputGroupText>
+                    <InputGroup.Text>@</InputGroup.Text>
                     <Input placeholder="username" />
                 </InputGroup>
                 <br />
                 <InputGroup>
-                    <InputGroupText>
+                    <InputGroup.Text>
                         <FormCheckbox control={control} name="inputGroupCheckbox" />
-                    </InputGroupText>
+                    </InputGroup.Text>
                     <Input placeholder="Check it out" />
                 </InputGroup>
                 <br />
                 <InputGroup>
                     <Input placeholder="username" />
-                    <InputGroupText>@example.com</InputGroupText>
+                    <InputGroup.Text>@example.com</InputGroup.Text>
                 </InputGroup>
                 <br />
                 <InputGroup>
-                    <InputGroupText>$</InputGroupText>
-                    <InputGroupText>$</InputGroupText>
+                    <InputGroup.Text>$</InputGroup.Text>
+                    <InputGroup.Text>$</InputGroup.Text>
                     <Input placeholder="Dolla dolla billz yo!" />
-                    <InputGroupText>$</InputGroupText>
-                    <InputGroupText>$</InputGroupText>
+                    <InputGroup.Text>$</InputGroup.Text>
+                    <InputGroup.Text>$</InputGroup.Text>
                 </InputGroup>
             </div>
             <div>

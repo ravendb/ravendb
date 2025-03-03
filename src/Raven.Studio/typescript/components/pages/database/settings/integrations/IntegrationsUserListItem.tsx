@@ -8,7 +8,8 @@ import {
     RichPanelDetails,
 } from "components/common/RichPanel";
 import Collapse from "react-bootstrap/Collapse";
-import { Form, InputGroup, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Form, Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";
 import { HStack } from "components/common/HStack";

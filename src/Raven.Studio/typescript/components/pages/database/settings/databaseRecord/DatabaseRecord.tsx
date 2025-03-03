@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
-import { Col, InputGroup, Row } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import useConfirm from "components/common/ConfirmDialog";

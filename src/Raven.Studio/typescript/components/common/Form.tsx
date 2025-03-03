@@ -2,7 +2,8 @@ import React, { ComponentProps, ReactNode, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
-import { Input, InputGroup, InputGroupText, InputProps } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Input, InputProps } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon } from "./toggles/RadioToggle";
@@ -407,7 +408,7 @@ export function FormDatePicker<
                         disabled={formState.isSubmitting}
                         {...rest}
                     />
-                    {addon && <InputGroupText>{addon}</InputGroupText>}
+                    {addon && <InputGroup.Text>{addon}</InputGroup.Text>}
                 </InputGroup>
             </div>
             {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
@@ -468,7 +469,7 @@ function FormInputGeneral<
                         >
                             {children}
                         </Input>
-                        {addon && <InputGroupText>{addon}</InputGroupText>}
+                        {addon && <InputGroup.Text>{addon}</InputGroup.Text>}
                         {passwordPreview && (
                             <Button
                                 variant="link-muted"
