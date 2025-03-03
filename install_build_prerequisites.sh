@@ -44,14 +44,40 @@ curl -sSL https://packages.microsoft.com/config/ubuntu/$UBUNTU_VERSION/packages-
 dpkg -i packages-microsoft-prod.deb
 rm packages-microsoft-prod.deb
 apt-get update
-sudo apt-get install -y dotnet-sdk-5.0
 
-mkdir ./dotnet_tmp
-cd ./dotnet_tmp
-sudo dotnet new console
-sudo dotnet build #dotnet telemetry
-cd ..
-sudo rm -rf ./dotnet_tmp
+# Check and install jq for parsing JSON
+echo "Checking for jq..."
+JQ_CMD=$(command -v jq)
+if [ -z "$JQ_CMD" ]; then
+    echo "jq not found. Installing jq..."
+    apt-get install -y jq
+else
+    echo "jq is already installed."
+fi
+
+# Extract .NET SDK version from global.json
+echo "Extracting .NET SDK version from global.json..."
+if [ ! -f "global.json" ]; then
+    echo "Error: global.json not found. Please run this script from the RavenDB repository root directory."
+    exit 1
+fi
+
+SDK_VERSION=$(jq -r '.sdk.version' global.json)
+if [ -z "$SDK_VERSION" ] || [ "$SDK_VERSION" == "null" ]; then
+    echo "Error: Failed to parse .NET SDK version from global.json."
+    exit 1
+fi
+
+# Derive major.minor version (e.g., 8.0 from 8.0.100)
+MAJOR_MINOR_VERSION=$(echo "$SDK_VERSION" | awk -F. '{print $1"."$2}')
+if [ -z "$MAJOR_MINOR_VERSION" ]; then
+    echo "Error: Unable to determine .NET SDK major.minor version from '$SDK_VERSION'."
+    exit 1
+fi
+
+# Install .NET SDK
+echo "Installing .NET SDK version $MAJOR_MINOR_VERSION..."
+apt-get install -y dotnet-sdk-$MAJOR_MINOR_VERSION
 
 if [ -z "$POWERSHELL_CMD" ] ; then
     echo "Powershell not found. Installing.."
