@@ -4,7 +4,7 @@ import {
     adminLogsActions,
 } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 export default function AdminLogsBufferAlert() {
     const dispatch = useAppDispatch();
@@ -30,7 +30,7 @@ export default function AdminLogsBufferAlert() {
             onCancel={() => dispatch(adminLogsActions.isBufferFullAlertOpenSet(false))}
         >
             Log buffer is full. Either increase buffer size in &apos;Display settings&apos; or{" "}
-            <Button color="link" onClick={() => dispatch(adminLogsActions.logsSet([]))} className="p-0">
+            <Button variant="link" onClick={() => dispatch(adminLogsActions.logsSet([]))} className="p-0">
                 clear all entries
             </Button>
             .

@@ -20,7 +20,8 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { logLevelOptions } from "components/utils/common";
 import { useEffect } from "react";
 import { StylesConfig } from "react-select";
-import { Button, Card, CardBody, CardHeader, Input } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { Card, CardBody, CardHeader, Input } from "reactstrap";
 import { Switch } from "components/common/Checkbox";
 import { FlexGrow } from "components/common/FlexGrow";
 import AdminLogsFilterState from "components/pages/resources/manageServer/adminLogs/bits/AdminLogsFilterState";
@@ -129,7 +130,7 @@ export default function AdminLogs() {
                                 >
                                     <Button
                                         type="button"
-                                        color={isPaused ? "success" : "warning"}
+                                        variant={isPaused ? "success" : "warning"}
                                         title={isPaused ? "Click to resume logging" : "Click to pause logging"}
                                         onClick={() => dispatch(adminLogsActions.isPausedToggled())}
                                         disabled={isBufferFull}
@@ -140,7 +141,7 @@ export default function AdminLogs() {
                                 </ConditionalPopover>
                                 <Button
                                     type="button"
-                                    color="danger"
+                                    variant="danger"
                                     onClick={() => {
                                         eventsCollector.reportEvent("admin-logs", "clear");
                                         dispatch(adminLogsActions.logsSet([]));
@@ -162,7 +163,7 @@ export default function AdminLogs() {
                                     <AdminLogsExportButton />
                                     <ButtonWithSpinner
                                         type="button"
-                                        color="secondary"
+                                        variant="secondary"
                                         onClick={() => dispatch(adminLogsActions.isViewSettingOpenToggled())}
                                         isSpinning={configsLoadStatus === "loading"}
                                         icon="settings"
@@ -205,7 +206,7 @@ export default function AdminLogs() {
                                 <FlexGrow />
                                 <Button
                                     type="button"
-                                    color="secondary"
+                                    variant="secondary"
                                     onClick={() => dispatch(adminLogsActions.isDownloadDiskLogsOpenToggled())}
                                 >
                                     <Icon icon="download" />
@@ -214,7 +215,7 @@ export default function AdminLogs() {
                                 {isDownloadDiskLogsOpen && <AdminLogsDiskDownloadModal />}
                                 <ButtonWithSpinner
                                     type="button"
-                                    color="secondary"
+                                    variant="secondary"
                                     onClick={() => dispatch(adminLogsActions.isDiscSettingOpenToggled())}
                                     icon="settings"
                                     isSpinning={configsLoadStatus === "loading"}
@@ -239,7 +240,7 @@ export default function AdminLogs() {
                     />
                     {filter && (
                         <div className="clear-button">
-                            <Button color="secondary" size="sm" onClick={() => handleFilterChange("")}>
+                            <Button variant="secondary" size="sm" onClick={() => handleFilterChange("")}>
                                 <Icon icon="clear" margin="m-0" />
                             </Button>
                         </div>
@@ -248,8 +249,7 @@ export default function AdminLogs() {
                 <div className="d-flex gap-2">
                     <Button
                         type="button"
-                        color="secondary"
-                        outline
+                        variant="outline-secondary"
                         onClick={() => dispatch(adminLogsActions.isAllExpandedToggled())}
                     >
                         <Icon icon={isAllExpanded ? "collapse-vertical" : "expand-vertical"} />
@@ -257,8 +257,7 @@ export default function AdminLogs() {
                     </Button>
                     <Button
                         type="button"
-                        color="secondary"
-                        outline
+                        variant="outline-secondary"
                         onClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}
                     >
                         <Icon icon="table" />

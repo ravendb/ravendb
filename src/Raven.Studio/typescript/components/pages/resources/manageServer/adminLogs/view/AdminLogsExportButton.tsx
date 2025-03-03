@@ -4,7 +4,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { adminLogsSelectors } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppSelector } from "components/store";
 import moment from "moment";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 export default function AdminLogsExportButton() {
     const eventsCollector = useEventsCollector();
@@ -23,7 +23,7 @@ export default function AdminLogsExportButton() {
     return (
         <Button
             type="button"
-            color="secondary"
+            variant="secondary"
             onClick={() => {
                 eventsCollector.reportEvent("admin-logs", "export");
                 exportToFile();

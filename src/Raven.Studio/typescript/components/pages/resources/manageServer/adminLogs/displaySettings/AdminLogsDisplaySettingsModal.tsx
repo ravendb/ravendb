@@ -8,7 +8,8 @@ import {
 } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppSelector, useAppDispatch } from "components/store";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { Modal, ModalBody, CloseButton, FormGroup, Label, Button, Form } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { Modal, ModalBody, CloseButton, FormGroup, Label, Form } from "reactstrap";
 import * as yup from "yup";
 
 export default function AdminLogsDisplaySettingsModal() {
@@ -57,11 +58,16 @@ export default function AdminLogsDisplaySettingsModal() {
                     </FormGroup>
 
                     <div className="d-flex justify-content-end gap-2">
-                        <Button type="button" onClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}>
+                        <Button
+                            variant="secondary"
+                            type="button"
+                            onClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}
+                        >
                             <Icon icon="cancel" />
                             Close
                         </Button>
-                        <Button type="submit" icon="save" color="success" disabled={!formState.isDirty}>
+                        <Button type="submit" variant="success" disabled={!formState.isDirty}>
+                            <Icon icon="save" />
                             Save
                         </Button>
                     </div>

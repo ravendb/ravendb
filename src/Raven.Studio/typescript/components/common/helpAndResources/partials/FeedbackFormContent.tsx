@@ -1,7 +1,9 @@
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
-import { Button, Collapse, Form, FormGroup } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import Collapse from "react-bootstrap/Collapse";
+import { Form, FormGroup } from "reactstrap";
 import { useRavenLink } from "hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -118,10 +120,10 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                     </FormCheckbox>
                 </FormGroup>
                 <div className="d-flex align-items-center">
-                    <Collapse isOpen={isFeatureSpecific}>
+                    <Collapse in={isFeatureSpecific}>
                         <div className="d-flex gap-1">
                             <Button
-                                color="link"
+                                variant="link"
                                 className={classNames("p-0", {
                                     "text-body": featureImpression === null,
                                     "text-success": featureImpression === "positive",
@@ -132,7 +134,7 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                                 <Icon icon="thumb-up" margin="m-0" title="Positive" />
                             </Button>
                             <Button
-                                color="link"
+                                variant="link"
                                 className={classNames("p-0", {
                                     "text-body": featureImpression === null,
                                     "text-danger": featureImpression === "negative",
@@ -147,7 +149,7 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                     <FlexGrow />
                     <ButtonWithSpinner
                         type="submit"
-                        color="primary"
+                        variant="primary"
                         className="rounded-pill"
                         icon="paperplane"
                         isSpinning={formState.isSubmitting}

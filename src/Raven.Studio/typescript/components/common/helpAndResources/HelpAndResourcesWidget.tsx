@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { Icon } from "components/common/Icon";
 import "./HelpAndResources.scss";
 import { FlexGrow } from "components/common/FlexGrow";
-import { UncontrolledTooltip } from "reactstrap";
 import { AskCommunityContent } from "components/common/helpAndResources/partials/AskCommunityContent";
 import { FeedbackFormContent } from "components/common/helpAndResources/partials/FeedbackFormContent";
 import { ContactSupportContent } from "components/common/helpAndResources/partials/ContactSupportContent";
 import useBoolean from "components/hooks/useBoolean";
 import GithubButtonWithStars from "components/common/helpAndResources/partials/GithubButtonWithStars";
 import SeeDocumentationButton from "components/common/helpAndResources/partials/SeeDocumentationButton";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type Tab = "Help and resources" | "Ask the community" | "Contact support" | "Submit feedback";
 
@@ -26,12 +26,11 @@ export function HelpAndResourcesWidget() {
     return (
         <section className="bottom-right-tools-container">
             {!isMenuOpen && (
-                <>
-                    <span role="button" id="helpWidget" className="btn-help-widget" onClick={toggleIsMenuOpen}>
+                <PopoverWithHoverWrapper message="Help and resources">
+                    <span role="button" className="btn-help-widget" onClick={toggleIsMenuOpen}>
                         <Icon icon="question" margin="m-0" />
                     </span>
-                    <UncontrolledTooltip target="helpWidget">Help and resources</UncontrolledTooltip>
-                </>
+                </PopoverWithHoverWrapper>
             )}
             {isMenuOpen && (
                 <div className="action-menu">

@@ -2,7 +2,8 @@ import { Getter } from "@tanstack/react-table";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
-import { Button, CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import document from "models/database/documents/document";
 
 interface CellJsonPreviewProps {
@@ -16,7 +17,7 @@ export default function CellJsonPreview({ json }: CellJsonPreviewProps) {
 
     return (
         <>
-            <Button type="button" title="Show preview" color="link" onClick={toggleIsOpen}>
+            <Button type="button" title="Show preview" variant="link" onClick={toggleIsOpen}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
             <Modal toggle={toggleIsOpen} isOpen={isOpen} wrapClassName="bs5" size="lg" centered>
@@ -33,7 +34,7 @@ export default function CellJsonPreview({ json }: CellJsonPreviewProps) {
                     </pre>
                 </ModalBody>
                 <ModalFooter>
-                    <Button type="button" onClick={toggleIsOpen}>
+                    <Button variant="secondary" type="button" onClick={toggleIsOpen}>
                         <Icon icon="close" />
                         Close
                     </Button>

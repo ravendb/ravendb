@@ -1,13 +1,13 @@
+import Collapse from "react-bootstrap/Collapse";
+import Button from "react-bootstrap/Button";
 import {
     AccordionItem,
     AccordionHeader,
     AccordionBody,
     Form,
-    Collapse,
     FormGroup,
     Label,
     InputGroup,
-    Button,
     Col,
     Row,
 } from "reactstrap";
@@ -64,75 +64,78 @@ export default function AdminLogsConfigEventListener({ targetId }: { targetId: s
                             Enable
                         </FormSwitch>
                     </FormGroup>
-                    <Collapse isOpen={isEnabled}>
-                        <FormGroup>
-                            <Label>Event Types</Label>
-                            <InputGroup>
-                                <FormSelect
+                    <Collapse in={isEnabled}>
+                        <div>
+                            <FormGroup>
+                                <Label>Event Types</Label>
+                                <InputGroup>
+                                    <FormSelect
+                                        control={control}
+                                        name="eventTypes"
+                                        placeholder="Select event types"
+                                        options={allEventTypeOptions}
+                                        isMulti
+                                    />
+                                    <Button
+                                        variant="secondary"
+                                        type="button"
+                                        onClick={() =>
+                                            setValue(
+                                                "eventTypes",
+                                                allEventTypeOptions.map((x) => x.value)
+                                            )
+                                        }
+                                    >
+                                        Select all
+                                    </Button>
+                                </InputGroup>
+                            </FormGroup>
+                            <FormGroup>
+                                <Label>Minimum Duration</Label>
+                                <FormInput
+                                    type="number"
                                     control={control}
-                                    name="eventTypes"
-                                    placeholder="Select event types"
-                                    options={allEventTypeOptions}
-                                    isMulti
+                                    name="minimumDurationInMs"
+                                    placeholder="Minimum duration in ms"
+                                    addon="ms"
                                 />
-                                <Button
-                                    type="button"
-                                    onClick={() =>
-                                        setValue(
-                                            "eventTypes",
-                                            allEventTypeOptions.map((x) => x.value)
-                                        )
-                                    }
-                                >
-                                    Select all
-                                </Button>
-                            </InputGroup>
-                        </FormGroup>
-                        <FormGroup>
-                            <Label>Minimum Duration</Label>
-                            <FormInput
-                                type="number"
-                                control={control}
-                                name="minimumDurationInMs"
-                                placeholder="Minimum duration in ms"
-                                addon="ms"
-                            />
-                        </FormGroup>
-                        <Row>
-                            <Col>
-                                <FormGroup>
-                                    <Label>Allocations Logging Interval</Label>
-                                    <FormInput
-                                        type="number"
-                                        control={control}
-                                        name="allocationsLoggingIntervalInMs"
-                                        placeholder="Allocations Logging Interval"
-                                        addon="ms"
-                                    />
-                                </FormGroup>
-                            </Col>
-                            <Col>
-                                <FormGroup>
-                                    <Label>Allocations Logging Count</Label>
-                                    <FormInput
-                                        type="number"
-                                        control={control}
-                                        name="allocationsLoggingCount"
-                                        placeholder="Allocations Logging Count"
-                                    />
-                                </FormGroup>
-                            </Col>
-                        </Row>
-                        {!isCloud && (
-                            <FormCheckbox control={control} name="isPersist">
-                                Save this configuration in <code>settings.json</code>
-                                <AdminLogsPersistInfoIcon />
-                            </FormCheckbox>
-                        )}
+                            </FormGroup>
+                            <Row>
+                                <Col>
+                                    <FormGroup>
+                                        <Label>Allocations Logging Interval</Label>
+                                        <FormInput
+                                            type="number"
+                                            control={control}
+                                            name="allocationsLoggingIntervalInMs"
+                                            placeholder="Allocations Logging Interval"
+                                            addon="ms"
+                                        />
+                                    </FormGroup>
+                                </Col>
+                                <Col>
+                                    <FormGroup>
+                                        <Label>Allocations Logging Count</Label>
+                                        <FormInput
+                                            type="number"
+                                            control={control}
+                                            name="allocationsLoggingCount"
+                                            placeholder="Allocations Logging Count"
+                                        />
+                                    </FormGroup>
+                                </Col>
+                            </Row>
+                            {!isCloud && (
+                                <FormCheckbox control={control} name="isPersist">
+                                    Save this configuration in <code>settings.json</code>
+                                    <AdminLogsPersistInfoIcon />
+                                </FormCheckbox>
+                            )}
+                        </div>
                     </Collapse>
                     <ButtonWithSpinner
                         type="submit"
-                        color="success"
+                        variant="success"
                         icon="save"
                         className="ms-auto"
                         isSpinning={formState.isSubmitting}

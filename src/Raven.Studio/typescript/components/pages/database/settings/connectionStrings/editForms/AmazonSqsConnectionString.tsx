@@ -7,7 +7,8 @@ import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { FormInput, FormSelect } from "components/common/Form";
-import { Badge, Form, Label } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { Form, Label } from "reactstrap";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
@@ -89,12 +90,12 @@ export default function AmazonSqsConnectionString({
                 <Label className="d-flex align-items-center gap-1">
                     Authentication{" "}
                     {asyncTest.result?.Success ? (
-                        <Badge color="success" pill>
+                        <Badge bg="success" pill>
                             <Icon icon="check" />
                             Successfully connected
                         </Badge>
                     ) : asyncTest.result?.Error ? (
-                        <Badge color="danger" pill>
+                        <Badge bg="danger" pill>
                             <Icon icon="warning" />
                             Failed connection
                         </Badge>
@@ -112,7 +113,7 @@ export default function AmazonSqsConnectionString({
 
             <div className="mb-2">
                 <ButtonWithSpinner
-                    color="secondary"
+                    variant="secondary"
                     icon="rocket"
                     title="Test connection"
                     className="mb-2"

@@ -5,7 +5,8 @@ import { Icon } from "components/common/Icon";
 import { adminLogsActions } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppDispatch } from "components/store";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Button, CloseButton, Col, Form, FormGroup, Modal, ModalBody, Row } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { CloseButton, Col, Form, FormGroup, Modal, ModalBody, Row } from "reactstrap";
 import * as yup from "yup";
 import endpoints from "endpoints";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -104,13 +105,14 @@ export default function AdminLogsDiskDownloadModal() {
 
                     <div className="d-flex justify-content-end gap-2">
                         <Button
+                            variant="secondary"
                             type="button"
                             onClick={() => dispatch(adminLogsActions.isDownloadDiskLogsOpenToggled())}
                         >
                             <Icon icon="cancel" />
                             Close
                         </Button>
-                        <Button type="submit" color="success">
+                        <Button type="submit" variant="success">
                             <Icon icon="download" />
                             Download
                         </Button>

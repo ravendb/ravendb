@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 import { exhaustiveStringTuple } from "components/utils/common";
 import IconName from "typings/server/icons";
 import copyToClipboard from "common/copyToClipboard";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 export default {
     title: "Bits/Icon",
@@ -19,7 +19,7 @@ export const IconStory: StoryObj = {
                 <div key={name}>
                     <Icon icon={name} />
                     {name}
-                    <Button color="link" onClick={() => copyToClipboard.copy(name, "Copied to clipboard")}>
+                    <Button variant="link" onClick={() => copyToClipboard.copy(name, "Copied to clipboard")}>
                         <Icon icon="copy-to-clipboard" />
                     </Button>
                 </div>

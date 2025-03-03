@@ -156,7 +156,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
         reportEvent("databases", "set-lock-mode", lockMode);
 
         const isConfirmed = await confirm({
-            title: "Do you want to change lock mode?`",
+            title: "Do you want to change lock mode?",
         });
 
         if (isConfirmed) {

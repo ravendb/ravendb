@@ -100,7 +100,7 @@ export default function AllRevisions() {
                 {hasDatabaseAdminAccess && (
                     <HStack className="justify-content-between">
                         <ButtonWithSpinner
-                            color="danger"
+                            variant="danger"
                             onClick={handleRemoveConfirmation}
                             disabled={selectedRows.length === 0}
                             isSpinning={asyncRemoveRevisions.loading}

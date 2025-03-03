@@ -1,16 +1,5 @@
-import {
-    AccordionBody,
-    AccordionHeader,
-    AccordionItem,
-    Button,
-    Col,
-    Form,
-    FormGroup,
-    Label,
-    Row,
-    Table,
-    UncontrolledPopover,
-} from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { AccordionBody, AccordionHeader, AccordionItem, Col, Form, FormGroup, Label, Row, Table } from "reactstrap";
 import * as yup from "yup";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { FormCheckbox, FormSelect } from "components/common/Form";
@@ -30,6 +19,7 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AdminLogsPersistInfoIcon from "components/pages/resources/manageServer/adminLogs/bits/AdminLogsPersistInfoIcon";
 import { adminLogsUtils } from "components/pages/resources/manageServer/adminLogs/common/adminLogsUtils";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) {
     const dispatch = useAppDispatch();
@@ -70,20 +60,12 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                             <FormGroup>
                                 <Label>
                                     Current Minimum Level
-                                    <span id="current-min-level">
-                                        <Icon icon="info" color="info" margin="ms-1" />
-                                    </span>
-                                    <UncontrolledPopover
-                                        target="current-min-level"
-                                        trigger="hover"
-                                        className="bs5"
-                                        placement="top"
+                                    <PopoverWithHoverWrapper
+                                        message="Only log entries at this level or higher will be logged, even if a filter
+                                            matches a lower-level entry."
                                     >
-                                        <div className="p-3">
-                                            Only log entries at this level or higher will be logged, even if a filter
-                                            matches a lower-level entry.
-                                        </div>
-                                    </UncontrolledPopover>
+                                        <Icon icon="info" color="info" margin="ms-1" />
+                                    </PopoverWithHoverWrapper>
                                 </Label>
                                 <FormSelect control={control} name="minLevel" options={logLevelOptions} />
                                 {!isCloud && (
@@ -98,32 +80,29 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                             <FormGroup>
                                 <Label>
                                     Default Filter Action
-                                    <span id="default-filter-action">
-                                        <Icon icon="info" color="info" margin="ms-1" />
-                                    </span>
-                                    <UncontrolledPopover
-                                        target="default-filter-action"
-                                        trigger="hover"
-                                        className="bs5"
-                                        placement="top"
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                <p className="mb-1">
+                                                    This action does <strong>Not apply</strong> when no filters are
+                                                    defined.
+                                                    <br />
+                                                    This action <strong>applies</strong> in the following cases:
+                                                </p>
+                                                <ul className="mb-0">
+                                                    <li className="mb-1">
+                                                        When a log entry does Not match any defined filter.
+                                                    </li>
+                                                    <li>
+                                                        When a log entry matches a filter with a <code>Neutral</code>{" "}
+                                                        action, provided that no subsequent filters apply.
+                                                    </li>
+                                                </ul>
+                                            </>
+                                        }
                                     >
-                                        <div className="p-3">
-                                            <p className="mb-1">
-                                                This action does <strong>Not apply</strong> when no filters are defined.
-                                                <br />
-                                                This action <strong>applies</strong> in the following cases:
-                                            </p>
-                                            <ul className="mb-0">
-                                                <li className="mb-1">
-                                                    When a log entry does Not match any defined filter.
-                                                </li>
-                                                <li>
-                                                    When a log entry matches a filter with a <code>Neutral</code>{" "}
-                                                    action, provided that no subsequent filters apply.
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </UncontrolledPopover>
+                                        <Icon icon="info" color="info" margin="ms-1" />
+                                    </PopoverWithHoverWrapper>
                                 </Label>
                                 <FormSelect
                                     control={control}
@@ -148,7 +127,7 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                         </div>
                         <Button
                             type="button"
-                            color="info"
+                            variant="info"
                             className="w-fit-content"
                             onClick={() => filterFieldArray.append(adminLogsUtils.initialFilter)}
                         >
@@ -157,7 +136,7 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                         </Button>
                     </FormGroup>
                     <ButtonWithSpinner
-                        color="success"
+                        variant="success"
                         type="submit"
                         className="ms-auto"
                         icon="save"
@@ -169,14 +148,9 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                 </Form>
                 <h5 className="text-center text-muted text-uppercase">
                     Read-only
-                    <span id="read-only-tooltip-for-logs">
+                    <PopoverWithHoverWrapper message="These settings are not editable here but can be configured through the server configuration.">
                         <Icon icon="info" color="info" margin="ms-1" />
-                    </span>
-                    <UncontrolledPopover target="read-only-tooltip-for-logs" trigger="hover" className="bs5">
-                        <div className="p-3">
-                            These settings are not editable here but can be configured through the server configuration.
-                        </div>
-                    </UncontrolledPopover>
+                    </PopoverWithHoverWrapper>
                 </h5>
                 <Table className="m-0">
                     <tbody>
