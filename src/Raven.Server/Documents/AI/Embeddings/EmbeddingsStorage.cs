@@ -8,7 +8,9 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Utils;
@@ -61,12 +63,48 @@ public class EmbeddingsStorage
     {
         if (item.OutputValue.IsEmpty)
         {
-            // Cache contains embedding for our input value. Extend the expiration date.
+            using var document = context.DocumentDatabase.DocumentsStorage.Get(context, item.EmbeddingCacheDocumentId);
+            var metadataExists = document.TryGetMetadata(out var metadata);
+            PortableExceptions.ThrowIfNot<InvalidDataException>(metadataExists, $"The embedding cache document exists, but its metadata is missing: {item.EmbeddingCacheDocumentId}");
 
-            // todo logic
-            // rozszerzenie eksipracji
-            // validacja istnienia attachmentu
+            var expiresExistsInMetadata = BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, metadata, Constants.Documents.Metadata.Expires, out var expiresObject);
+            PortableExceptions.ThrowIfNot<InvalidDataException>(expiresExistsInMetadata, $"The embedding cache document exists, has metadata, but its expiration is missing: {item.EmbeddingCacheDocumentId}");
+            
+            var expires = (DateTime)expiresObject;
+            bool shouldUpdateExpiration = expires - currentDate > TimeSpan.FromDays(10); //TODO AREK: this is wrong, however we're still missing this in configuration, so this line always return true for testing purposes.
+            
+            var attachmentsExistsInMetadata = BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, metadata, Constants.Documents.Metadata.Attachments, out var attachmentsArrayObject);            
+            PortableExceptions.ThrowIfNot<InvalidDataException>(attachmentsExistsInMetadata, $"The embedding cache document exists, has metadata and expiration, but attachment field is missing: {item.EmbeddingCacheDocumentId}");
 
+            if (attachmentsArrayObject is BlittableJsonReaderArray attachmentsArray)
+            {
+                PortableExceptions.ThrowIfNot<InvalidDataException>(attachmentsArray.Length == 1, $"The embedding document suppose to have only one attachment, but it has {attachmentsArray.Length}.");
+                
+                var attachment = attachmentsArray[0] as BlittableJsonReaderObject;
+                PortableExceptions.ThrowIfNull(attachment, $"The embedding document has no attachment.");
+                
+                var hasHash = BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, attachment, "Hash", out var hashObject);
+                PortableExceptions.ThrowIfNot<InvalidDataException>(hasHash && hashObject is LazyStringValue, "hasHash && hashObject is LazyStringValue");
+                
+                LazyStringValue hash = (LazyStringValue)(hashObject);
+                var existsInStorage = _documentsStorage.AttachmentsStorage.AttachmentExists(context, hash);
+                PortableExceptions.ThrowIfNot<InvalidDataException>(existsInStorage, $"The embedding document has attachment, but it doesn't exist in storage: {item.EmbeddingCacheDocumentId}");
+            }
+
+
+            if (shouldUpdateExpiration)
+            {
+                // document.Data.Modifications = new DynamicJsonValue()
+                // {
+                //     [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                //     {
+                //         [Constants.Documents.Metadata.Expires] = expires.AddMonths(3) // TODO arek
+                //     }
+                // };
+                //
+                // using (var reader = context.ReadObject(document.Data, item.EmbeddingCacheDocumentId))
+                //     _documentsStorage.Put(context, item.EmbeddingCacheDocumentId, null, reader);
+            }
 
             return;
         }
