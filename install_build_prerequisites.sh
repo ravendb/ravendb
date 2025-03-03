@@ -12,11 +12,6 @@ UBUNTU_VERSION=$(lsb_release -r | cut -d ":" -f2 | sed 's/\t//g')
 # Introductory message
 echo "Starting environment setup for RavenDB build on Ubuntu $UBUNTU_VERSION ($UBUNTU_CODENAME)"
 
-if [[ ! "$UBUNTU_VERSION" =~ ^1[468]\.04$ ]] ; then
-    echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 20.04, 18.04, 16.04 or 14.04."
-    exit -1
-fi
-
 # Get the full path of the script
 SCRIPT_PATH=$(realpath "$0")
 
@@ -27,7 +22,11 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-eval 
+# Check Ubuntu version
+if ! echo "16.04 18.04 20.04 22.04 24.04" | grep -q "$UBUNTU_VERSION"; then
+    echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 16.04, 18.04, 20.04, 22.04, or 24.04."
+    exit 1
+fi
 
 echo "Installing .NET Core SDK 5.0"
 
