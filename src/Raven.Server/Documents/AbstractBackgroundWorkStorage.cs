@@ -90,31 +90,8 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                             if (cancellationToken.IsCancellationRequested)
                                 return toProcess;
 
-                            var clonedId = multiIt.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
-
-                            try
-                            {
-                                var item = GetDocumentAndIdOrCollection(options, clonedId, ticksAsSlice);
-                                if (item.Document == null)
-                                {
-                                    toProcess.Enqueue(item);
-                                    totalCount++;
-                                    continue;
-                                }
-
-                                using (item.GetDocumentDisposable())
-                                {
-                                    if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
-                                        break;
-
-                                    toProcess.Enqueue(item);
-                                    totalCount++;
-                                }
-                            }
-                            catch (DocumentConflictException)
-                            {
-                                HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
-                            }
+                            if (TryEnqueueItemToProcess(options, ref totalCount, multiIt.CurrentKey, ticksAsSlice, toProcess) == false)
+                                break;
 
                         } while (multiIt.MoveNext()
                                  && toProcess.Count < options.AmountToTake
@@ -127,6 +104,38 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
             return toProcess;
         }
+    }
+
+    protected bool TryEnqueueItemToProcess(BackgroundWorkParameters options, ref int totalCount, Slice key, Slice ticksAsSlice, Queue<DocumentExpirationInfo> toProcess)
+    {
+        var clonedId = key.Clone(options.Context.Transaction.InnerTransaction.Allocator);
+
+        try
+        {
+            var item = GetDocumentAndIdOrCollection(options, clonedId, ticksAsSlice);
+            if (item.Document == null)
+            {
+                toProcess.Enqueue(item);
+                totalCount++;
+                return true;
+            }
+
+            using (item.GetDocumentDisposable())
+            {
+                if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
+                    return false;
+
+                toProcess.Enqueue(item);
+                totalCount++;
+            }
+            return true;
+        }
+        catch (DocumentConflictException)
+        {
+            HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
+        }
+
+        return false;
     }
 
     public class DocumentExpirationInfo

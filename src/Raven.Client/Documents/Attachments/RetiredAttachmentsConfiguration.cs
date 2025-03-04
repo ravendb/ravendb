@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
@@ -12,7 +12,20 @@ namespace Raven.Client.Documents.Attachments
         public S3Settings S3Settings { get; set; }
         public AzureSettings AzureSettings { get; set; }
 
-        public Dictionary<string, TimeSpan> RetirePeriods { get; set; }
+        public Dictionary<string, TimeSpan> RetirePeriods
+        {
+            get;
+            set
+            {
+                field = new Dictionary<string, TimeSpan>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var kvp in value)
+                {
+                    field.Add(kvp.Key, kvp.Value);
+                }
+            }
+        }
+
         public long? RetireFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
 
@@ -22,6 +35,12 @@ namespace Raven.Client.Documents.Attachments
         /// Default: false
         /// </summary>
         public bool PurgeOnDelete { get; set; }
+
+        /// <summary>
+        /// Retire existing attachments when the configuration is added.
+        /// Default: false
+        /// </summary>
+        public bool RetireExistingAttachments { get; set; }
 
         public override int GetHashCode()
         {
@@ -40,6 +59,7 @@ namespace Raven.Client.Documents.Attachments
             hashCode.Add(RetireFrequencyInSec);
             hashCode.Add(MaxItemsToProcess);
             hashCode.Add(PurgeOnDelete);
+            hashCode.Add(RetireExistingAttachments);
 
             return hashCode.ToHashCode();
         }
@@ -62,7 +82,9 @@ namespace Raven.Client.Documents.Attachments
                 return false;
             if (PurgeOnDelete != other.PurgeOnDelete)
                 return false;
-
+            if (RetireExistingAttachments != other.RetireExistingAttachments)
+                return false;
+            
             if (S3Settings != null)
             {
                 if (other.S3Settings == null)
@@ -111,7 +133,8 @@ namespace Raven.Client.Documents.Attachments
                 [nameof(RetirePeriods)] = DynamicJsonValue.Convert(RetirePeriods),
                 [nameof(S3Settings)] = S3Settings?.ToJson(),
                 [nameof(AzureSettings)] = AzureSettings?.ToJson(),
-                [nameof(PurgeOnDelete)] = PurgeOnDelete
+                [nameof(PurgeOnDelete)] = PurgeOnDelete,
+                [nameof(RetireExistingAttachments)] = RetireExistingAttachments
             };
         }
 

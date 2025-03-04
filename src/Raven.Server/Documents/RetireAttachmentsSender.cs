@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Voron;
 using Voron.Global;
 using static Raven.Server.Documents.AbstractBackgroundWorkStorage;
@@ -72,7 +73,6 @@ namespace Raven.Server.Documents
         {
             if (Configuration.HasUploader() == false)
             {
-                //Console.WriteLine($"Cannot retire attachments on '{_database.Name}' because no destination is configured.");
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Cannot retire attachments on '{_database.Name}' because no destination is configured.");
                 return 0;
@@ -82,39 +82,65 @@ namespace Raven.Server.Documents
             var totalUploaded = 0L;
 
             var currentTime = _database.Time.GetUtcNow();
-
             try
             {
-                var directUpload = new DirectBackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger,
-                    BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token);
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                var lazyDirectUpload = new Lazy<DirectBackupUploader>(() => new DirectBackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger,
+                    BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token));
+
+                using var _ = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
+                while (totalCount < maxItemsToProcess)
                 {
-                    while (totalCount < maxItemsToProcess)
+                    context.Reset();
+                    context.Renew();
+
+                    Stopwatch duration;
+                    var retired = new Queue<DocumentExpirationInfo>();
+
+                    using (var tx = context.OpenReadTransaction())
+                    using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(context))
                     {
-                        context.Reset();
-                        context.Renew();
-
-                        Stopwatch duration;
-                        var retired = new Queue<DocumentExpirationInfo>();
-                        using (context.OpenReadTransaction())
-                        using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(context))
-                        using (directUpload.Initialize())
+                        DatabaseRecord dbRecord;
+                        using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                        using (serverContext.OpenReadTransaction())
                         {
-                            DatabaseRecord dbRecord;
-                            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                            using (serverContext.OpenReadTransaction())
-                            {
-                                dbRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
-                            }
+                            dbRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
+                        }
 
-                            var options = new BackgroundWorkParameters(context, currentTime, dbRecord, _database.ServerStore.NodeTag, batchSize, maxItemsToProcess);
+                        var options = new BackgroundWorkParameters(context, currentTime, dbRecord, _database.ServerStore.NodeTag, batchSize, maxItemsToProcess);
 
-                            Queue<DocumentExpirationInfo> toRetire = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(options, ref totalCount, out duration, CancellationToken);
-                            if (toRetire == null || toRetire.Count == 0)
+                        Queue<DocumentExpirationInfo> toRetire =
+                            _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(options, ref totalCount, out duration,
+                                CancellationToken);
+
+                        if (toRetire == null || toRetire.Count == 0)
+                        {
+                            if (Configuration.RetireExistingAttachments == false)
                             {
                                 return totalCount;
                             }
 
+                            var existing =
+                                _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetExistingAttachmentsToAddRetireAdd(options, ref totalCount, out duration,
+                                    CancellationToken);
+
+                            if (existing == null || existing.Count == 0)
+                            {
+                                return totalCount;
+                            }
+
+                            tx.Dispose();
+
+                            var cmd = new UpdateExistingAttachmentsCommand(existing, _database);
+                            await _database.TxMerger.Enqueue(cmd);
+
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Successfully added '{nameof(Attachment.RetiredAt)}' value to '{cmd.ProcessedCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
+                            continue;
+                        }
+
+                        var directUpload = lazyDirectUpload.Value;
+                        using (directUpload.Initialize())
+                        {
                             // upload the attachments to cloud and update the document
                             foreach (var doc in toRetire)
                             {
@@ -204,26 +230,24 @@ namespace Raven.Server.Documents
                             {
                                 // we had skipped items
                                 if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Skipping retiring of '{toRetire.Count - retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, " +
-                                                $"read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+                                    Logger.Info($"Skipping retiring of '{toRetire.Count - retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
                             }
 
                             if (retired.Count == 0)
                             {
                                 if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Skipping retiring whole batch of '{retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, " +
-                                                $"read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+                                    Logger.Info($"Skipping retiring whole batch of '{retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
 
                                 continue;
                             }
                         }
-
-                        var command = new UpdateRetiredAttachmentsCommand(retired, _database, currentTime);
-                        await _database.TxMerger.Enqueue(command);
-
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Successfully retired '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
                     }
+
+                    var command = new UpdateRetiredAttachmentsCommand(retired, _database, currentTime);
+                    await _database.TxMerger.Enqueue(command);
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Successfully retired '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
                 }
             }
             catch (OperationCanceledException)
@@ -317,6 +341,35 @@ namespace Raven.Server.Documents
             }
         }
 
+        internal sealed class UpdateExistingAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        {
+            private readonly Queue<DocumentExpirationInfo> _attachments;
+            private readonly DocumentDatabase _database;
+
+            public int ProcessedCount;
+
+            public UpdateExistingAttachmentsCommand(Queue<DocumentExpirationInfo> attachments, DocumentDatabase database)
+            {
+                _attachments = attachments;
+                _database = database;
+            }
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                ProcessedCount = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ProcessAddRetiredAtToExistingAttachments(context, _attachments);
+
+                return ProcessedCount;
+            }
+
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+            {
+                return new UpdateExistingAttachmentsCommandDto
+                {
+                    Attachments = _attachments.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray()
+                };
+            }
+        }
+
         public static RetireAttachmentsSender LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, RetireAttachmentsSender retireAttachmentsSender)
         {
             try
@@ -394,5 +447,21 @@ namespace Raven.Server.Documents
         public (Slice, Slice, string)[] Retired { get; set; }
 
         public DateTime CurrentTime { get; set; }
+    }
+
+    internal sealed class UpdateExistingAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RetireAttachmentsSender.UpdateExistingAttachmentsCommand>
+    {
+        public RetireAttachmentsSender.UpdateExistingAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var retired = new Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>();
+            foreach (var item in Attachments)
+            {
+                retired.Enqueue(new AbstractBackgroundWorkStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3));
+            }
+            var command = new RetireAttachmentsSender.UpdateExistingAttachmentsCommand(retired, database);
+            return command;
+        }
+
+        public (Slice, Slice, string)[] Attachments { get; set; }
     }
 }

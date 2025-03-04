@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -116,7 +117,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
                     }
                 }
-                context.Transaction.ForgetAbout(doc);
             }
         }
     }
@@ -135,33 +135,37 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         {
             case AttachmentRetireType.PutRetire:
                 return DocumentAndIdOrCollectionForPutRetire(options, clonedId, ticksSlice);
-
             case AttachmentRetireType.DeleteRetire:
                 return DocumentAndIdOrCollectionForDeleteRetire(options, clonedId, ticksSlice);
-
+            case AttachmentRetireType.ExistingRetire:
+                return DocumentAndIdOrCollectionForExistingRetire(options, clonedId, ticksSlice);
             default:
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
         }
     }
 
-    private DocumentExpirationInfo DocumentAndIdOrCollectionForPutRetire(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    private DocumentExpirationInfo DocumentAndIdOrCollectionInternal(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice, out Document document, out string id, out string collectionStr)
     {
+        document = null;
+         collectionStr = null;
+        //string id;
         using var scope = CleanRetiredAttachmentsKey(options.Context, clonedId, out var keySlice);
-        using (var id = _documentInfoHelper.GetDocumentId(keySlice))
+        using (var idLsv = _documentInfoHelper.GetDocumentId(keySlice))
         {
+            id = idLsv;
             if (id == null)
             {
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
             // document is disposed in caller method
-            var document = Database.DocumentsStorage.Get(options.Context, id, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
+            document = Database.DocumentsStorage.Get(options.Context, id, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
             // doc was deleted
             if (document == null)
             {
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+                return null;
             }
 
-            if (document.TryGetCollection(out string collectionStr))
+            if (document.TryGetCollection(out collectionStr))
             {
                 if (options.DatabaseRecord.RetiredAttachments == null)
                 {
@@ -175,59 +179,80 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                     return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
                 }
             }
-
-            return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr)
-            {
-                Document = document
-            };
         }
+
+        return null;
+    }
+
+    private DocumentExpirationInfo DocumentAndIdOrCollectionForPutRetire(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    {
+        var info = DocumentAndIdOrCollectionInternal(options, clonedId, ticksSlice, out var document, out var id, out var collectionStr);
+        if (info != null)
+            return info;
+
+        if (document == null)
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+
+        return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr);
+    }
+
+    private DocumentExpirationInfo DocumentAndIdOrCollectionForExistingRetire(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    {
+        var info = DocumentAndIdOrCollectionInternal(options, clonedId, ticksSlice, out var document, out var id, out var collectionStr);
+        if (info != null)
+            return info;
+
+        if (document == null)
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+
+        return new DocumentExpirationInfo(ticksSlice, clonedId, id: id);
     }
 
     private DocumentExpirationInfo DocumentAndIdOrCollectionForDeleteRetire(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
     {
-        using var scope = GetAttachmentsKeyAndCollectionSliceFromRetiredAttachmentsKey(options.Context, clonedId, out var keySlice, out var collectionSlice);
-        using (var id = _documentInfoHelper.GetDocumentId(keySlice))
+        var info = DocumentAndIdOrCollectionInternal(options, clonedId, ticksSlice, out var document, out var id, out var collectionStr);
+        if (info != null)
+            return info;
+
+        if (document == null)
         {
-            if (id == null)
+            collectionStr = GetCollectionStringFromRetiredAttachmentsKey(options.Context, clonedId);
+
+            if (options.DatabaseRecord.RetiredAttachments == null)
             {
+                // no configuration, we don't care about this collection
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
-            // document is disposed in caller method
-            var document = Database.DocumentsStorage.Get(options.Context, id, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
-            // doc was deleted
-            if (document == null)
+            if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
             {
-                // TODO: Do I need to check PurgeOnDelete again? 
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionSlice.ToString());
+                // we don't care about this collection, it was removed from the configuration
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+            }
+            if (options.DatabaseRecord.RetiredAttachments.PurgeOnDelete == false)
+            {
+                // purge on delete is false, we don't care about this collection
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
 
-            if (document.TryGetCollection(out string collectionStr))
-            {
-                if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
-                {
-                    // we don't care about this collection, it was removed from the configuration
-                    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-                }
-            }
-
-            return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr)
-            {
-                Document = document
-            };
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr);
         }
+
+        return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr);
     }
+
     [StorageIndexEntryKeyGenerator]
-    internal static unsafe ByteStringContext.Scope GenerateHashAndFlagForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
+    internal static unsafe ByteStringContext.Scope GenerateFlagAndHashForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
     {
         var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
 
         var flags = *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
         Debug.Assert(size == sizeof(int));
-        var scope = tx.Allocator.Allocate( hashSize + sizeof(int), out var buffer);
+        var scope = tx.Allocator.Allocate(sizeof(int) + 1 + hashSize, out var buffer); // flag + record separator + hash
 
         var span = new Span<byte>(buffer.Ptr, buffer.Length);
-        new ReadOnlySpan<byte>(hashPtr, hashSize).CopyTo(span);
-        MemoryMarshal.AsBytes(new Span<int>(ref flags)).CopyTo(span[hashSize..]);
+        MemoryMarshal.AsBytes(new Span<int>(ref flags)).CopyTo(span);
+        buffer.Ptr[sizeof(int)] = SpecialChars.RecordSeparator;
+        new ReadOnlySpan<byte>(hashPtr, hashSize).CopyTo(span[(sizeof(int) + 1)..]);
 
         slice = new Slice(buffer);
         return scope;
@@ -249,7 +274,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
         Debug.Assert(string.IsNullOrEmpty(collection) == false, "string.IsNullOrEmpty(collection) == false");
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
-        using(CreateRetiredAttachmentsKeyWithTypeAndCollection(context, lowerId,AttachmentRetireType.DeleteRetire, collection, out Slice key))
+        using (CreateRetiredAttachmentsKeyWithTypeAndCollection(context, lowerId, AttachmentRetireType.DeleteRetire, collection, out Slice key))
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
             tree.MultiAdd(ticksSlice, key);
     }
@@ -282,19 +307,18 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             case AttachmentRetireType.DeleteRetire:
                 keyMem.Ptr[pos++] = (byte)'d';
                 keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
-
+                break;
+            case AttachmentRetireType.ExistingRetire:
+                keyMem.Ptr[pos++] = (byte)'e';
+                keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
                 break;
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(retireType), retireType, null);
         }
 
-        var outputBuffer = keyMem.ToSpan();
         fixed (char* pCollection = collection)
         {
-            //var span = new ReadOnlySpan<byte>(pCollection, collection.Length * sizeof(char));
-            //span.CopyTo(outputBuffer.Slice(pos));
-
             var buff = (byte*)(keyMem.Ptr + pos);
 
             var dbLen = Encoding.UTF8.GetBytes(pCollection, collection.Length, buff, size - pos);
@@ -324,7 +348,9 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             case AttachmentRetireType.DeleteRetire:
                 keyMem.Ptr[pos++] = (byte)'d';
                 break;
-
+            case AttachmentRetireType.ExistingRetire:
+                keyMem.Ptr[pos++] = (byte)'e';
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(retireType), retireType, null);
         }
@@ -335,38 +361,26 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         outSlice=new Slice(SliceOptions.Key, keyMem);
         return scope;
     }
-    public unsafe ByteStringContext.InternalScope RemoveTypeAndCollectionFromRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
+
+    public ByteStringContext<ByteStringMemoryCache>.ExternalScope RemoveTypeAndCollectionFromRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
     {
         var pos = 2;
         var keyPos = lowerId.Content.IndexOf(SpecialChars.RecordSeparator, pos) + 1;
         var size = lowerId.Content.Length - keyPos; // retireType - record separator - collection - record separator - lowerId 
-     //   var scope = context.Allocator.Allocate(size, out ByteString keyMem);
 
-       // Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr + keyPos, size);
-
-      //  outSlice = new Slice(SliceOptions.Key, keyMem);
-
-        Slice.External(context.Allocator, lowerId.Content, keyPos, size, out outSlice);
-        return default;
+        return Slice.External(context.Allocator, lowerId.Content, keyPos, size, out outSlice);
     }
 
-    public unsafe ByteStringContext.InternalScope GetAttachmentsKeyAndCollectionSliceFromRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice, out Slice collectionSlice)
+    private string GetCollectionStringFromRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId)
     {
         var colPos = 2;
-
         var sepPos = lowerId.Content.IndexOf(SpecialChars.RecordSeparator, colPos);
-        var keyPos = sepPos + 1;
-        var size = lowerId.Content.Length - keyPos; // retireType - record separator - collection - record separator - lowerId 
-     //   var scope = context.Allocator.Allocate(size, out ByteString keyMem);
 
-     //   Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr + colPos, size);
-
-        Slice.External(context.Allocator, lowerId.Content, colPos, sepPos - colPos, out collectionSlice);
-        Slice.External(context.Allocator, lowerId.Content, keyPos, size, out outSlice);
-        return default;
+        using var dispose1 = Slice.External(context.Allocator, lowerId.Content, colPos, sepPos - colPos, out var collectionSlice);
+        return collectionSlice.ToString();
     }
 
-    public ByteStringContext.InternalScope CleanRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
+    public ByteStringContext<ByteStringMemoryCache>.ExternalScope CleanRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
     {
         var type = GetRetireType(lowerId);
 
@@ -378,27 +392,23 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             case AttachmentRetireType.DeleteRetire:
                 return RemoveTypeAndCollectionFromRetiredAttachmentsKey(context, lowerId, out outSlice);
 
+            case AttachmentRetireType.ExistingRetire:
+                return RemoveTypeFromRetiredAttachmentsKey2(context, lowerId, out outSlice);
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
         }
     }
 
-    public unsafe ByteStringContext.InternalScope RemoveTypeFromRetiredAttachmentsKey2(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
+    public ByteStringContext<ByteStringMemoryCache>.ExternalScope RemoveTypeFromRetiredAttachmentsKey2(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
     {
         var pos = 2;
         var size = lowerId.Content.Length - pos; // retireType - record separator - lowerId 
-      //  var scope = context.Allocator.Allocate(size, out ByteString keyMem);
-
-      //  Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr + pos, size);
-
-        Slice.External(context.Allocator, lowerId.Content, pos, size, out outSlice);
-   //     outSlice = new Slice(SliceOptions.Key, keyMem);
-        return default;
+        return  Slice.External(context.Allocator, lowerId.Content, pos, size, out outSlice);
     }
 
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
     {
-        // TODO: egor We somehow need to make sure we upload the attachment just once? or we dont care?
         if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
             return;
 
@@ -477,10 +487,10 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             {
                 case "p":
                     return AttachmentRetireType.PutRetire;
-
                 case "d":
                     return AttachmentRetireType.DeleteRetire;
-
+                case "e":
+                    return AttachmentRetireType.ExistingRetire;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, $"Got unknown '{nameof(AttachmentRetireType)}' from retired key: '{clonedId}'. Should not happen and likely a bug!");
             }
@@ -523,6 +533,68 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
     public enum AttachmentRetireType : byte
     {
         PutRetire = 1,
-        DeleteRetire = 2
+        DeleteRetire = 2,
+        ExistingRetire = 3
+    }
+
+    public Queue<DocumentExpirationInfo> GetExistingAttachmentsToAddRetireAdd(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+    {
+        duration = Stopwatch.StartNew();
+        var toProcess = new Queue<DocumentExpirationInfo>();
+        var take = Math.Min(options.AmountToTake, options.MaxItemsToProcess);
+
+        var processDateUniversalTime = options.CurrentTime.ToUniversalTime();
+        var ticksBigEndian = Bits.SwapBytes(processDateUniversalTime.Ticks);
+
+        Slice ticksAsSlice = TicksAsSlice(options, ticksBigEndian);
+
+        foreach (var disposableSlice in Database.DocumentsStorage.AttachmentsStorage.GetAttachmentKeysByFlagAndHashIndexPrefix(options.Context, AttachmentFlags.None, take))
+        {
+            using (disposableSlice)
+            {
+                if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
+                    break;
+
+                if (cancellationToken.IsCancellationRequested)
+                    return toProcess;
+                if (toProcess.Count >= options.AmountToTake)
+                    return toProcess;
+                if (totalCount >= options.MaxItemsToProcess)
+                    return toProcess;
+
+                using var attachmentKeyWithTypeDisposable = CreateRetiredAttachmentsKeyWithType(options.Context, disposableSlice.Key, AttachmentRetireType.ExistingRetire, out Slice key);
+                var clonedId = key.Clone(options.Context.Transaction.InnerTransaction.Allocator);
+
+                if (TryEnqueueItemToProcess(options, ref totalCount, clonedId, ticksAsSlice, toProcess) == false)
+                    break;
+            }
+        }
+
+        return toProcess;
+    }
+
+    private static unsafe Slice TicksAsSlice(BackgroundWorkParameters options, long ticksBigEndian)
+    {
+        using var scope = Slice.External(options.Context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice temp);
+        var ticksAsSlice = temp.Clone(options.Context.Transaction.InnerTransaction.Allocator);
+        return ticksAsSlice;
+    }
+
+    public int ProcessAddRetiredAtToExistingAttachments(DocumentsOperationContext context, Queue<DocumentExpirationInfo> attachments)
+    {
+        var retire = DateTime.MinValue.ToUniversalTime();
+        foreach (var info in attachments)
+        {
+            using (CleanRetiredAttachmentsKey(context, info.LowerId, out var keySlice))
+            {
+                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, keySlice);
+
+                //TODO: egor I want to use the ticks I sent to command, and not the ticks from retire dt, need to handle that when I will refactor the AttachmentsStorage.PutAttachment() method 
+                Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, info.Id, attachment.Name, attachment.ContentType, attachment.Base64Hash.ToString(),
+                attachment.Flags, attachment.Size, retireAtDt: retire, forceRetireAt: true);
+            }
+        }
+
+        return attachments.Count;
     }
 }

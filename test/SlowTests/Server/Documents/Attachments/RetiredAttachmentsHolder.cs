@@ -116,8 +116,10 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
     }
 
     // add attachments storage key, RetiredKey, and hash to holder
-    public void GetStorageAttachmentsMetadataFromAllAttachments(DocumentDatabase database)
+    public void GetStorageAttachmentsMetadataFromAllAttachments(DocumentDatabase database, ICloudBackupSettings settings = null)
     {
+        settings ??= Settings;
+
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         using (var _documentInfoHelper = new DocumentInfoHelper(context))
@@ -135,7 +137,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     t.RetireAt = attachment.RetiredAt;
                     //TODO: egor I can use getcollecton method here
                     t.RetiredKey =
-                        $"{Settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
+                        $"{settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
                     //  $"{Settings.RemoteFolderName}/{database.Name}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
                     Attachments.Add(t);
                 }

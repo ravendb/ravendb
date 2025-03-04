@@ -150,8 +150,9 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
-            using var scope = context.Allocator.Allocate(hash.Size + sizeof(int), out ByteString keyMem);
-            Memory.Copy(keyMem.Ptr, hash.Content.Ptr, hash.Size);
+            using var scope = context.Allocator.Allocate(sizeof(int) + 1 + hash.Size, out ByteString keyMem); // key size+separator+hash size
+            keyMem.Ptr[sizeof(int)] = SpecialChars.RecordSeparator;
+            Memory.Copy(keyMem.Ptr + sizeof(int) + 1, hash.Content.Ptr, hash.Size);
 
             Slice slice;
             var retiredHashes = GetHashesCount(AttachmentFlags.Retired);
@@ -166,9 +167,9 @@ namespace Raven.Server.Documents
 
             long GetHashesCount(AttachmentFlags flag)
             {
-                *(int*)(keyMem.Ptr + hash.Size) = Bits.SwapBytes((int)flag);
+                *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)flag);
                 slice = new Slice(SliceOptions.Key, keyMem);
-                return table.GetCountOfMatchesFor(AttachmentsSchema.DynamicKeyIndexes[AttachmentsHashAndFlagSlice], slice);
+                return table.GetCountOfMatchesFor(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], slice);
             }
         }
 
@@ -242,7 +243,7 @@ namespace Raven.Server.Documents
 
         public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
             string hash, AttachmentFlags flags, long size, DateTime? retireAtDt, string expectedChangeVector = null, Stream stream = null, 
-            bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false, CollectionName collection2 = null, bool fromEtl = false)
+            bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false, CollectionName collection2 = null, bool fromEtl = false, bool forceRetireAt = false)
         {
             if (context.Transaction == null)
             {
@@ -314,15 +315,26 @@ namespace Raven.Server.Documents
 
                         size = TableValueToLong((int)AttachmentsTable.Size, ref oldValue);
 
-                        retireAt = TableValueToLong((int)AttachmentsTable.RetireAt, ref oldValue);
-                        var existingFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue);
-                        if (existingFlags.HasFlag(AttachmentFlags.Retired) == false && retireAt == -1L)
+                        if (forceRetireAt == false)
                         {
-                            var dbRecord = _documentDatabase.ReadDatabaseRecord();
+                            retireAt = TableValueToLong((int)AttachmentsTable.RetireAt, ref oldValue);
+                            var existingFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue);
+                            if (existingFlags.HasFlag(AttachmentFlags.Retired) == false && retireAt == -1L)
+                            {
+                                var dbRecord = _documentDatabase.ReadDatabaseRecord();
+                                Debug.Assert(collectionName != null, "collectionName != null");
+                                Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
+
+                                TryPutRetiredAttachment(context, dbRecord, collectionName, keySlice, out retireAt);
+                            }
+                        }
+                        else
+                        {
+                            Debug.Assert(retireAtDt != null, "retireAtDt != null");
                             Debug.Assert(collectionName != null, "collectionName != null");
                             Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
-
-                            TryPutRetiredAttachment(context, dbRecord, collectionName, keySlice, out retireAt);
+                            retireAt = retireAtDt.Value.Ticks;
+                            RetiredAttachmentsStorage.Put(context, keySlice, retireAtDt.Value.GetDefaultRavenFormat());
                         }
 
                         using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
@@ -578,8 +590,7 @@ namespace Raven.Server.Documents
 
             if (isRevision == false)
             {
-                // TODO: egor do I need to check for retired config here ?
-                // TODO: egor  write test that add attachment with retireAt, then send it in external replication to DB that doesn't have config for retire attachments see what happen
+                // this works similar to expiration, we populate the tree even if we don't have a configuration for attachments retirement
                 if (flags.Contain(AttachmentFlags.Retired) == false && retireAt.HasValue)
                     RetiredAttachmentsStorage.Put(context, key, retireAt.Value.GetDefaultRavenFormat());
             }
@@ -1808,13 +1819,60 @@ namespace Raven.Server.Documents
                 DeleteAttachmentStream(context, hash);
         }
 
-        public long GetNumberOfRetiredAttachments(DocumentsOperationContext context)
+        public long GetNumberOfAttachmentsForFlag(DocumentsOperationContext context, AttachmentFlags flag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            using var scope = context.Allocator.Allocate(sizeof(int), out ByteString keyMem);
-            *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)AttachmentFlags.Retired);
-            var slice = new Slice(SliceOptions.Key, keyMem);
-            return table.GetCountOfMatchesForSuffix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsHashAndFlagSlice], slice);
+            using var scope = SliceFromAttachmentFlagAndSeparator(context, flag, out var slice);
+            return table.GetCountOfMatchesForPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], slice);
+        }
+
+        public IEnumerable<ResourceWithDisposable<Slice, IDisposable>> GetAttachmentKeysByFlagAndHashIndexPrefix(DocumentsOperationContext context, AttachmentFlags flag, long take = long.MaxValue)
+        {
+            if (take <= 0)
+                yield break;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using (SliceFromAttachmentFlagAndSeparator(context, flag, out var requiredPrefix))
+            {
+                foreach (var seek in table.SeekByPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], requiredPrefix, Slices.Empty, 0, pullTvr: true))
+                {
+                    // disposed by the caller
+                    var scope = TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref seek.Result.Reader, out var keySlice);
+                    yield return new ResourceWithDisposable<Slice, IDisposable>(scope, keySlice);
+
+                    if (--take <= 0)
+                        break;
+                }
+            }
+        }
+
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope SliceFromAttachmentFlagAndSeparator(DocumentsOperationContext context, AttachmentFlags flag, out Slice slice)
+        {
+            var scope = context.Allocator.Allocate(sizeof(int) + 1, out ByteString keyMem);
+            *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)flag);
+            keyMem.Ptr[sizeof(int)] = SpecialChars.RecordSeparator;
+            slice = new Slice(SliceOptions.Key, keyMem);
+
+            return scope;
         }
     }
+
+    public readonly struct ResourceWithDisposable<T, TDisposable> : IDisposable
+        where TDisposable : IDisposable
+    {
+        public TDisposable Scope { get; }
+        public T Key { get; }
+
+        public ResourceWithDisposable(TDisposable scope, T key)
+        {
+            Scope = scope;
+            Key = key;
+        }
+
+        public void Dispose()
+        {
+            Scope.Dispose();
+        }
+    }
+
 }
