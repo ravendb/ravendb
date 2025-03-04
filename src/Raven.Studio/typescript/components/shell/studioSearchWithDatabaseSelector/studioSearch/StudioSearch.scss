@@ -138,7 +138,7 @@
                 @include make-icon-color(stats, colors.$color-3, colors.$color-3);
 
                 .icon-ai::before {
-                    background: linear-gradient(135.89deg, #2fb4d2, #6972ee);
+                    background: colors.$ai-gradient;
                     background-clip: text;
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;

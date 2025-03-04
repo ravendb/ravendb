@@ -97,7 +97,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         placeholder="Enter identifier for the connection string"
                         disabled={isUsedByAnyTask}
                         addon={
-                            <Button color="link" className="text-reset" onClick={handleGenerateIdentifier}>
+                            <Button color="link" className="text-reset px-0" onClick={handleGenerateIdentifier}>
                                 <Icon icon="refresh" />
                                 Regenerate
                             </Button>

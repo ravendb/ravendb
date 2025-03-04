@@ -530,8 +530,8 @@ $task-colors: (
     "olap-etl": $color-2-1,
     "rabbitmq-etl": $color-2-2,
     "azure-queue-storage-etl": $color-2-3,
+    "ai-etl": #5058ff,
     "amazon-sqs-etl": $color-3,
-    "ai-etl": $color-3-3,
     "kafka-sink": $color-3-1,
     "rabbitmq-sink": $color-3-2,
 ) !default;
@@ -554,3 +554,17 @@ $flags: (
     "archived": $color-1-1,
     "deleted-revision": $color-1,
 ) !default;
+
+$ai-gradient: linear-gradient(120deg, #4ac8f9 0%, #5058ff 50%, #8b42f5 100%);
+
+@keyframes ai-gradient-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}

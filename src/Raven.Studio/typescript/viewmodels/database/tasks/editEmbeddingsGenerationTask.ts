@@ -77,6 +77,8 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
 
     isDocumentExpirationEnabled = ko.observable<boolean>(false);
 
+    isAccordionOpen = ko.observable<boolean>(false);
+
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("useConnectionString",
@@ -85,7 +87,8 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             "toggleTestArea",
             "toggleIsNewConnectionStringOpen",
             "setState",
-            "getIsDocumentExpirationEnabled"
+            "getIsDocumentExpirationEnabled",
+            "toggleAccordion"
         );
         
         aceEditorBindingHandler.install();
@@ -110,6 +113,10 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
                 }
             }
         }))
+    }
+
+    toggleAccordion() {
+        this.isAccordionOpen(!this.isAccordionOpen());
     }
 
     activate(args: { taskId?: number, sourceView: EditAiTaskSourceView }) {
