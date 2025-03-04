@@ -11,6 +11,11 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Embeddings.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int? MaxNumberOfExtractedDocuments { get; set; }
 
+    [Description("Maximum number of embeddings generated from queries to be cached in a single batch")]
+    [DefaultValue(128)]
+    [ConfigurationEntry("Ai.Embeddings.MaxBatchSizeOfQueryGeneratedEmbeddingsToCache", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int MaxBatchSizeOfQueryGeneratedEmbeddingsToCache { get; set; }
+
     [Description("Time in milliseconds to wait for additional requests before processing a batch of embedding requests. Lower values reduce latency but may decrease throughput.")]
     [DefaultValue(200)]
     [ConfigurationEntry("Ai.Embeddings.BatchTimeoutInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]

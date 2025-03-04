@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -15,30 +15,35 @@ public class EmbeddingsCacher : BackgroundWorkBase
     private readonly DocumentDatabase _database;
 
     private readonly ConcurrentQueue<EmbeddingGenerationItem> _embeddingsQueue;
-    private readonly SemaphoreSlim _semaphore;
-
-    private int _approxQueueLength;
+    private readonly AsyncManualResetEvent _mre;
 
     public EmbeddingsCacher(DocumentDatabase database, CancellationToken shutdown) : base(database.Name, database.Loggers.GetLogger<EmbeddingsCacher>(), shutdown)
     {
         _database = database;
         _embeddingsQueue = new ConcurrentQueue<EmbeddingGenerationItem>();
-        _semaphore = new SemaphoreSlim(0, 1);
+        _mre = new AsyncManualResetEvent();
     }
 
     protected override async Task DoWork()
     {
         while (true)
         {
-            await _semaphore.WaitAsync(CancellationToken);
+            await _mre.WaitAsync(CancellationToken);
 
-            var payload = new List<EmbeddingGenerationItem>(_approxQueueLength);
+            List<EmbeddingGenerationItem> payload = null;
 
             while (_embeddingsQueue.TryDequeue(out var item))
             {
+                payload ??= new List<EmbeddingGenerationItem>();
+
                 payload.Add(item);
-                _approxQueueLength--;
+
+                if (payload.Count >= _database.Configuration.Ai.MaxBatchSizeOfQueryGeneratedEmbeddingsToCache)
+                    break;
             }
+
+            if (payload == null || payload.Count == 0)
+                return;
 
             var putEmbeddingsCommand = new PutEmbeddingsCommand(payload, _database);
 
@@ -51,11 +56,9 @@ public class EmbeddingsCacher : BackgroundWorkBase
         foreach (EmbeddingGenerationItem item in embeddings)
         {
             _embeddingsQueue.Enqueue(item);
-
-            _approxQueueLength++;
         }
 
-        _semaphore.Release();
+        _mre.Set();
     }
 
     private sealed class PutEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable

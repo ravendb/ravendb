@@ -50,11 +50,10 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
                 var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
                 var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash, VectorEmbeddingType.Single);
-                
-                // todo wait for cacher
-                //var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
-                //Assert.NotNull(valueEmbeddingsDocument);
+                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
+
+                Assert.NotNull(valueEmbeddingsDocument);
             }
         }
     }
@@ -167,15 +166,12 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
                 
-                // todo Michal wait for cacher
-                /*
                 var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
                 var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash, VectorEmbeddingType.Single);
-                
+
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
                 Assert.NotNull(valueEmbeddingsDocument);
-                */
             }
         }
     }
