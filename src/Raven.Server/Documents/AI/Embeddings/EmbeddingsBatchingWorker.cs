@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.AI.Embeddings
         private readonly ConcurrentQueue<EmbeddingsBatchRequest> _requestQueue = new();
         private readonly Stopwatch _batchTimer = new();
 
-        public Task<IList<ReadOnlyMemory<float>>> EnqueueRequestAsync(IList<string> values, CancellationToken cancellationToken)
+        public Task<ReadOnlyMemory<float>[]> EnqueueRequestAsync(IList<string> values, CancellationToken cancellationToken)
         {
             var request = new EmbeddingsBatchRequest(values, callerToken: cancellationToken, workerToken: CancellationToken);
 
@@ -207,17 +207,23 @@ namespace Raven.Server.Documents.AI.Embeddings
                         for (int i = 0; i < count; i++)
                         {
                             var request = requestsArray[i];
-                            var (startIndex, itemsCount) = valueRanges[i];
+                            (int startIndex, int itemsCount) = valueRanges[i];
 
-                            // Create a list of embeddings for this request
-                            var requestEmbeddings = new List<ReadOnlyMemory<float>>(itemsCount);
-                            for (int j = 0; j < itemsCount; j++)
+                            ReadOnlyMemory<float>[] requestEmbeddings = ArrayPool<ReadOnlyMemory<float>>.Shared.Rent(itemsCount);
+
+                            try
                             {
-                                requestEmbeddings.Add(allEmbeddings[startIndex + j]);
-                            }
+                                // Fill the temp array with embeddings for this request
+                                for (int j = 0; j < itemsCount; j++)
+                                    requestEmbeddings[j] = allEmbeddings[startIndex + j];
 
-                            // Return the list of embeddings to the caller
-                            request.TaskCompletionSource.TrySetResult(requestEmbeddings);
+                                // Return the list of embeddings to the caller
+                                request.TaskCompletionSource.TrySetResult(requestEmbeddings);
+                            }
+                            finally
+                            {
+                                ArrayPool<ReadOnlyMemory<float>>.Shared.Return(requestEmbeddings);
+                            }
                         }
 
                         // Successfully processed batch, exit retry loop

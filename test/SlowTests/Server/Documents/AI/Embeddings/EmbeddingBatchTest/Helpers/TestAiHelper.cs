@@ -2,11 +2,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
-using Raven.Client.Documents.Operations.AI;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
 #pragma warning disable SKEXP0001
 
@@ -14,21 +11,6 @@ namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest.Helpers;
 
 public static class TestAiHelper
 {
-    public static ITextEmbeddingGenerationService CreateEmbeddingService(
-        Exception exceptionToThrow = null)
-    {
-        var services = AiHelper.CreateServicesForTest(
-            new EmbeddingsGenerationConfiguration {
-                Connection = new AiConnectionString { OnnxSettings = new OnnxSettings()}
-            }, out string serviceId);
-
-        var realService = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId);
-
-        return exceptionToThrow != null
-            ? new TestEmbeddingServiceWrapper(realService, exceptionToThrow)
-            : realService;
-    }
-
     public static ITextEmbeddingGenerationService CreateMockEmbeddingService(
         int dimensionSize = 128,
         int failureRate = 0,

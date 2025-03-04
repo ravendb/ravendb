@@ -2,8 +2,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.Embeddings;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI;
@@ -30,7 +28,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
 
     public override async ValueTask ExecuteAsync()
     {
-        IServiceProvider services = null;
+        InMemoryLoggerProvider logger = null;
         try
         {
             using (var streamReader = new StreamReader(HttpContext.Request.Body))
@@ -81,8 +79,8 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
 
             var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
 
-            services = AiHelper.CreateServicesForTest(aiEtlConfiguration, out string serviceId);
-            var embeddings = await services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId).GenerateEmbeddingsAsync(EmbeddingsHelper.TestValuesList);
+            (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(aiEtlConfiguration);
+            var embeddings = await service.GenerateEmbeddingsAsync(EmbeddingsHelper.TestValuesList);
 
             if (embeddings.Count != EmbeddingsHelper.TestValuesList.Count)
                 throw new Exception($"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.TestValuesList.Count}' result, but got '{embeddings.Count}'.");
@@ -103,11 +101,9 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                 [nameof(NodeConnectionTestResult.Error)] = e.ToString()
             };
 
-            if (services != null)
+            if (logger != null)
             {
-                var logger = (InMemoryLoggerProvider)services.GetRequiredService<ILoggerProvider>();
                 var logsArray = new DynamicJsonArray(collection: logger.GetLogs());
-
                 result[nameof(NodeConnectionTestResult.Log)] = logsArray;
             }
 
@@ -119,7 +115,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
         }
         finally
         {
-            (services?.GetRequiredService<ILoggerProvider>() as InMemoryLoggerProvider)?.Dispose();
+            logger?.Dispose();
         }
     }
 }

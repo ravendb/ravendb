@@ -227,9 +227,8 @@ public class AiConnectionStringsTests : RavenTestBase
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.All)]
     public void SemanticKernel_WithValidConfiguration_ShouldWork(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
-        var services = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration, out string serviceId);
-        var embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
-            .GenerateEmbeddingsAsync(_testValuesList).Result;
+        (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
+        var embeddings = service.GenerateEmbeddingsAsync(_testValuesList).Result;
 
         Assert.Equal(_testValuesList.Count, embeddings.Count);
     }
@@ -241,9 +240,8 @@ public class AiConnectionStringsTests : RavenTestBase
     {
         const int dimensions = 5;
 
-        var services = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration, out string serviceId);
-        var embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
-            .GenerateEmbeddingsAsync(_testValuesList).Result;
+        (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
+        var embeddings = service.GenerateEmbeddingsAsync(_testValuesList).Result;
 
         for (var i = 0; i < _testValuesList.Count; i++)
             Assert.False(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality was not configured yet, but embeddings were generated with {embeddings[i].Length} dimensions.");
@@ -267,9 +265,8 @@ public class AiConnectionStringsTests : RavenTestBase
                 break;
         }
 
-        services = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration, out serviceId);
-        embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
-            .GenerateEmbeddingsAsync(_testValuesList).Result;
+        (service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
+        embeddings = service.GenerateEmbeddingsAsync(_testValuesList).Result;
 
         for (var i = 0; i < _testValuesList.Count; i++)
             Assert.True(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality was configured to {dimensions}, but embeddings were generated with {embeddings[i].Length} dimensions.");

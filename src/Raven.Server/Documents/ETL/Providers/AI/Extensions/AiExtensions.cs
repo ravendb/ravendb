@@ -94,215 +94,23 @@ public static class AiExtensions
         return builder;
     }
 
-    public static IKernelBuilder AddTransientCustomBertOnnxTextEmbeddingGeneration(
-        this IKernelBuilder builder,
-        BertOnnxOptions options = null,
-        int? dimensions = null,
-        string serviceId = null)
-    {
-        builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(
-            serviceId,
-            (_, _) => GenerateEmbeddings.CreateTextEmbeddingGenerationService(options, dimensions));
-
-        return builder;
-    }
-
-    public static IKernelBuilder AddTransientOpenAiEmbeddingGeneration(
-        this IKernelBuilder builder,
-        string modelId,
-        OpenAIClient openAIClient,
-        string serviceId = null,
-        int? dimensions = null)
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(openAIClient);
-        ArgumentException.ThrowIfNullOrEmpty(modelId);
-
-        builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(
-            serviceId,
-            (serviceProvider, _) => new OpenAITextEmbeddingGenerationService(
-                modelId,
-                openAIClient,
-                serviceProvider.GetService<ILoggerFactory>(),
-                dimensions));
-
-        return builder;
-    }
-
-    public static IKernelBuilder AddTransientAzureOpenAiEmbeddingGeneration(
-        this IKernelBuilder builder,
-        string deploymentName,
-        string endpoint,
-        string apiKey,
-        string serviceId = null,
-        string modelId = null,
-        HttpClient httpClient = null,
-        int? dimensions = null,
-        string apiVersion = null)
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentException.ThrowIfNullOrEmpty(deploymentName);
-        ArgumentException.ThrowIfNullOrEmpty(endpoint);
-        ArgumentException.ThrowIfNullOrEmpty(apiKey);
-        ArgumentException.ThrowIfNullOrEmpty(modelId);
-
-
-        builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(serviceId, (serviceProvider, _) =>
-            new AzureOpenAITextEmbeddingGenerationService(
-                deploymentName,
-                endpoint,
-                apiKey,
-                modelId,
-                httpClient ?? serviceProvider.GetService<HttpClient>(),
-                serviceProvider.GetService<ILoggerFactory>(),
-                dimensions,
-                apiVersion));
-
-        return builder;
-    }
-
-    public static IKernelBuilder AddTransientOllamaEmbeddingGeneration(
-        this IKernelBuilder builder,
-        OllamaApiClient ollamaClient,
-        string serviceId = null)
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(ollamaClient);
-
-        builder.Services.AddKeyedTransient(serviceId, (serviceProvider, _) =>
-        {
-            var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
-            var embeddingGeneratorBuilder = ((IEmbeddingGenerator<string, Embedding<float>>)ollamaClient).AsBuilder();
-
-            if (loggerFactory is not null)
-                embeddingGeneratorBuilder.UseLogging(loggerFactory);
-
-            return embeddingGeneratorBuilder.Build(serviceProvider).AsTextEmbeddingGenerationService(serviceProvider);
-        });
-
-        return builder;
-    }
-
-    public static IKernelBuilder AddTransientGoogleEmbeddingGeneration(
-        this IKernelBuilder builder,
-        string modelId,
-        string apiKey,
-        GoogleApiVersion apiVersion,
-        string serviceId = null,
-        HttpClient httpClient = null)
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentException.ThrowIfNullOrEmpty(modelId);
-        ArgumentException.ThrowIfNullOrEmpty(apiKey);
-
-        builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(serviceId, (serviceProvider, _) =>
-            new GoogleAITextEmbeddingGenerationService(
-                modelId: modelId,
-                apiKey: apiKey,
-                apiVersion: apiVersion.ToGoogleApiVersion(),
-                httpClient: httpClient ?? serviceProvider.GetService<HttpClient>(),
-                loggerFactory: serviceProvider.GetService<ILoggerFactory>()));
-
-        return builder;
-    }
-
-    public static IKernelBuilder AddTransientGoogleEmbeddingGeneration(
-        this IKernelBuilder builder,
-        string modelId,
-        string apiKey,
-        string serviceId = null,
-        HttpClient httpClient = null)
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentException.ThrowIfNullOrEmpty(modelId);
-        ArgumentException.ThrowIfNullOrEmpty(apiKey);
-
-        builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(serviceId, (serviceProvider, _) =>
-            new GoogleAITextEmbeddingGenerationService(
-                modelId: modelId,
-                apiKey: apiKey,
-                httpClient: httpClient ?? serviceProvider.GetService<HttpClient>(),
-                loggerFactory: serviceProvider.GetService<ILoggerFactory>()));
-
-        return builder;
-    }
-
-    public static IKernelBuilder AddTransientHuggingFaceEmbeddingGeneration(
-        this IKernelBuilder builder,
-        string model,
-        Uri endpoint,
-        string apiKey,
-        string serviceId = null,
-        HttpClient httpClient = null)
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(endpoint);
-        ArgumentException.ThrowIfNullOrEmpty(model);
-        ArgumentException.ThrowIfNullOrEmpty(apiKey);
-
-        builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(serviceId, (serviceProvider, _) =>
-            new HuggingFaceTextEmbeddingGenerationService(
-                model,
-                endpoint,
-                apiKey,
-                httpClient ?? serviceProvider.GetService<HttpClient>(),
-                serviceProvider.GetService<ILoggerFactory>()
-            ));
-
-        return builder;
-    }
-
-    public static IKernelBuilder AddTransientMistralEmbeddingGeneration(
-        this IKernelBuilder builder,
-        string model,
-        string apiKey,
-        Uri endpoint,
-        string serviceId = null,
-        HttpClient httpClient = null)
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(endpoint);
-        ArgumentException.ThrowIfNullOrEmpty(model);
-        ArgumentException.ThrowIfNullOrEmpty(apiKey);
-
-        builder.Services.AddKeyedTransient<ITextEmbeddingGenerationService>(serviceId, (serviceProvider, _) =>
-            new MistralAITextEmbeddingGenerationService(
-                model,
-                apiKey,
-                endpoint,
-                httpClient ?? serviceProvider.GetService<HttpClient>(),
-                serviceProvider.GetService<ILoggerFactory>()
-            ));
-
-        return builder;
-    }
-
-    public static void Configure(this IKernelBuilder kernelBuilder, AiConnectionString connectionString, bool isConnectionTest)
+    public static void Configure(this IKernelBuilder kernelBuilder, AiConnectionString connectionString, bool withLogging)
     {
         var connectorType = connectionString.GetActiveProvider();
-        ConfigureInternal(kernelBuilder, connectorType, connectionString, isConnectionTest, out _);
+        ConfigureInternal(kernelBuilder, connectorType, connectionString, withLogging);
     }
     
-    public static void Configure(
-        this IKernelBuilder kernelBuilder,
-        EmbeddingsGenerationConfiguration configuration,
-        bool isConnectionTest,
-        out string resolvedServiceId)
+    public static void Configure(this IKernelBuilder kernelBuilder, EmbeddingsGenerationConfiguration configuration, bool withLogging)
     {
-        ConfigureInternal(kernelBuilder, configuration.AiConnectorType ,configuration.Connection, isConnectionTest, out resolvedServiceId);
+        ConfigureInternal(kernelBuilder, configuration.AiConnectorType ,configuration.Connection, withLogging);
     }
 
-    private static void ConfigureInternal(this IKernelBuilder kernelBuilder, AiConnectorType connectorType, AiConnectionString connectionString, bool isConnectionTest,
-        out string resolvedServiceId)
+    private static void ConfigureInternal(this IKernelBuilder kernelBuilder, AiConnectorType connectorType, AiConnectionString connectionString, bool withLogging)
     {
         var errors = new List<string>();
         if (connectionString.Validate(ref errors) == false)
             throw new InvalidOperationException($"Connection string is invalid due to the following errors:{Environment.NewLine}" +
                                                 $" - {string.Join($"{Environment.NewLine} - ", errors)}");
-        
-        resolvedServiceId = isConnectionTest
-            ? AiHelper.ServiceIdentifiers.GenerateTestId()
-            : AiHelper.ServiceIdentifiers.Production;
         
         switch (connectorType)
         {
@@ -318,31 +126,18 @@ public static class AiExtensions
                 };
                 var openAIClient = new OpenAIClient(apiKey, openAiOptions);
 
-                if (isConnectionTest)
-                    kernelBuilder.AddTransientOpenAiEmbeddingGeneration(openAiSettings.Model, openAIClient, resolvedServiceId, openAiSettings.Dimensions);
-                else
-                    kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient, resolvedServiceId, openAiSettings.Dimensions);
+                kernelBuilder.AddOpenAITextEmbeddingGeneration(openAiSettings.Model, openAIClient, dimensions: openAiSettings.Dimensions);
                 break;
 
             case AiConnectorType.AzureOpenAi:
                 var azureOpenAiSettings = connectionString.AzureOpenAiSettings;
 
-                if (isConnectionTest)
-                    kernelBuilder.AddTransientAzureOpenAiEmbeddingGeneration(
-                        azureOpenAiSettings.DeploymentName,
-                        azureOpenAiSettings.Endpoint,
-                        azureOpenAiSettings.ApiKey,
-                        resolvedServiceId,
-                        azureOpenAiSettings.Model,
-                        dimensions: azureOpenAiSettings.Dimensions);
-                else
-                    kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
-                        azureOpenAiSettings.DeploymentName,
-                        azureOpenAiSettings.Endpoint,
-                        azureOpenAiSettings.ApiKey,
-                        resolvedServiceId,
-                        azureOpenAiSettings.Model,
-                        dimensions: azureOpenAiSettings.Dimensions);
+                kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
+                    azureOpenAiSettings.DeploymentName,
+                    azureOpenAiSettings.Endpoint,
+                    azureOpenAiSettings.ApiKey,
+                    modelId: azureOpenAiSettings.Model,
+                    dimensions: azureOpenAiSettings.Dimensions);
                 break;
 
             case AiConnectorType.Ollama:
@@ -351,18 +146,12 @@ public static class AiExtensions
 
                 var ollamaApiClient = new OllamaApiClient(ollamaApiConfig);
 
-                if (isConnectionTest)
-                    kernelBuilder.AddTransientOllamaEmbeddingGeneration(ollamaApiClient, resolvedServiceId);
-                else
-                    kernelBuilder.AddOllamaTextEmbeddingGeneration(ollamaApiClient, resolvedServiceId);
+                kernelBuilder.AddOllamaTextEmbeddingGeneration(ollamaApiClient);
                 break;
 
             case AiConnectorType.Onnx:
                 var onnxSettings = connectionString.OnnxSettings;
-                if (isConnectionTest)
-                    kernelBuilder.AddTransientCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), onnxSettings.Dimensions, resolvedServiceId);
-                else
-                    kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), onnxSettings.Dimensions, resolvedServiceId);
+                kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), onnxSettings.Dimensions);
                 break;
 
             case AiConnectorType.Google:
@@ -372,83 +161,44 @@ public static class AiExtensions
                 if (googleSettings.Dimensions.HasValue)
                     httpClient = HttpClientExtensions.CreateWithDimensionality(googleSettings.Dimensions.Value);
 
-                if (isConnectionTest)
-                {
-                    if (googleSettings.AiVersion.HasValue)
-                        kernelBuilder.AddTransientGoogleEmbeddingGeneration(
-                            googleSettings.Model,
-                            googleSettings.ApiKey,
-                            googleSettings.AiVersion.Value,
-                            resolvedServiceId,
-                            httpClient);
-                    else
-                        kernelBuilder.AddTransientGoogleEmbeddingGeneration(
-                            googleSettings.Model,
-                            googleSettings.ApiKey,
-                            resolvedServiceId,
-                            httpClient);
-                }
+                if (googleSettings.AiVersion.HasValue)
+                    kernelBuilder.AddGoogleAIEmbeddingGeneration(
+                        googleSettings.Model,
+                        googleSettings.ApiKey,
+                        googleSettings.AiVersion.Value.ToGoogleApiVersion(),
+                        httpClient: httpClient);
                 else
-                {
-                    if (googleSettings.AiVersion.HasValue)
-                        kernelBuilder.AddGoogleAIEmbeddingGeneration(
-                            googleSettings.Model,
-                            googleSettings.ApiKey,
-                            googleSettings.AiVersion.Value.ToGoogleApiVersion(),
-                            resolvedServiceId,
-                            httpClient);
-                    else
-                        kernelBuilder.AddGoogleAIEmbeddingGeneration(
-                            googleSettings.Model,
-                            googleSettings.ApiKey,
-                            serviceId: resolvedServiceId,
-                            httpClient: httpClient);
-                }
-
+                    kernelBuilder.AddGoogleAIEmbeddingGeneration(
+                        googleSettings.Model,
+                        googleSettings.ApiKey,
+                        httpClient: httpClient);
                 break;
 
             case AiConnectorType.HuggingFace:
                 var huggingFaceSettings = connectionString.HuggingFaceSettings;
                 var huggingFaceUri = string.IsNullOrWhiteSpace(huggingFaceSettings.Endpoint) ? null : new Uri(huggingFaceSettings.Endpoint);
 
-                if (isConnectionTest)
-                    kernelBuilder.AddTransientHuggingFaceEmbeddingGeneration(
-                        huggingFaceSettings.Model,
-                        huggingFaceUri,
-                        huggingFaceSettings.ApiKey,
-                        resolvedServiceId);
-                else
-                    kernelBuilder.AddHuggingFaceTextEmbeddingGeneration(
-                        huggingFaceSettings.Model,
-                        huggingFaceUri,
-                        huggingFaceSettings.ApiKey,
-                        resolvedServiceId);
+                  kernelBuilder.AddHuggingFaceTextEmbeddingGeneration(
+                    huggingFaceSettings.Model,
+                    huggingFaceUri,
+                    huggingFaceSettings.ApiKey);
                 break;
 
             case AiConnectorType.MistralAi:
                 var mistralSettings = connectionString.MistralAiSettings;
                 var mistralUri = new Uri(mistralSettings.Endpoint);
 
-                if (isConnectionTest)
-                    kernelBuilder.AddTransientMistralEmbeddingGeneration(
-                        mistralSettings.Model,
-                        mistralSettings.ApiKey,
-                        mistralUri,
-                        resolvedServiceId);
-                else
-                    kernelBuilder.AddMistralTextEmbeddingGeneration(
-                        mistralSettings.Model,
-                        mistralSettings.ApiKey,
-                        mistralUri,
-                        resolvedServiceId);
+                kernelBuilder.AddMistralTextEmbeddingGeneration(
+                    mistralSettings.Model,
+                    mistralSettings.ApiKey,
+                    mistralUri);
                 break;
-
 
             default:
                 throw new NotSupportedException($"'{connectorType}' provider is not supported");
         }
         
-        if (isConnectionTest)
+        if (withLogging)
             kernelBuilder.Services.AddLogging(configure =>
             {
                 configure.SetMinimumLevel(LogLevel.Trace);

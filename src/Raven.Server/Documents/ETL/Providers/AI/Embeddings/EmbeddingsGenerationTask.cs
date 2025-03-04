@@ -39,8 +39,6 @@ namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
 public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationConfiguration, AiConnectionString, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
-    private ITextEmbeddingGenerationService _service;
-
     private readonly MissingEmbeddingsHolder _missingEmbeddingsHolder = new();
 
     public const string EmbeddingsTaskTag = "AI/Embeddings Generation";
@@ -99,15 +97,16 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
 
     protected override int LoadInternal(IEnumerable<EmbeddingGenerationScriptResult> items, DocumentsOperationContext context, EmbeddingsGenerationStatsScope scope)
     {
-        _service ??= AiHelper.CreateService(Configuration);
         if (items is not EmbeddingsGenerationScriptRun embeddingsScriptRun)
         {
-            Debug.Assert(items != null && items!.GetType()!.FullName!.StartsWith("System.Linq.EmptyPartition")
-                , $"items != null && items!.GetType()!.FullName!.StartsWith('System.Linq.EmptyPartition'): {items!.GetType()!.FullName!}");
+            Debug.Assert(items != null && items!.GetType()!.FullName!.StartsWith("System.Linq.EmptyPartition"),
+                $"items != null && items!.GetType()!.FullName!.StartsWith('System.Linq.EmptyPartition'): {items!.GetType()!.FullName!}");
             return 0;
         }
 
-        var connectionStringIdentifier = new AiConnectionStringIdentifier(Configuration.Connection.Identifier);
+        var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(Configuration.Connection.Identifier);
+        if (Database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringIdentifier) == false)
+            throw new ArgumentException($"Couldn't find {embeddingsTaskId.Value} embeddings generation task.");
 
         int processed = 0;
 
@@ -121,7 +120,6 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     
                     foreach (var value in values)
                     {
-
                         if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value, Configuration.Quantization) == false)
                             _missingEmbeddingsHolder.Add(value.TextualValue, value);
                     }
@@ -134,9 +132,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
             var keys = embeddingsMap.Keys.ToList();
             if (embeddingsMap.Keys.Any())
             {
-                var generatedValues = AsyncHelpers.RunSync(() => _service.GenerateEmbeddingsAsync(keys));
+                var generatedValues =
+                    Database.AiIntegrations.Embeddings.GetEmbeddingsForValues(connectionStringIdentifier, keys)
+                        .GetAwaiter().GetResult();
 
-                if (generatedValues.Count != keys.Count)
+                if (generatedValues.Length != keys.Count)
                     throw new InvalidOperationException("Generated embeddings count does not match missing values count");
                 
                 for (var i = 0; i < keys.Count; ++i)
@@ -192,13 +192,12 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
 
     public EmbeddingsGenerationTestScriptResult RunTest(IEnumerable<EmbeddingGenerationScriptResult> records, DocumentsOperationContext context)
     {
-        var services = AiHelper.CreateServicesForTest(
+        (ITextEmbeddingGenerationService embeddingService, _) = AiHelper.CreateServicesForTest(
             new EmbeddingsGenerationConfiguration
             {
                 Connection = new AiConnectionString { OnnxSettings = new OnnxSettings()}
-            }, out string serviceId);
+            });
 
-        var embeddingService = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId);
         var result = new EmbeddingsGenerationTestScriptResult();
 
         foreach (var record in records)

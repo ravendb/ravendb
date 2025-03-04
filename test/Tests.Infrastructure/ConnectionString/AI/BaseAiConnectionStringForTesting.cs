@@ -1,5 +1,4 @@
 ﻿using System;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
@@ -85,9 +84,8 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
     {
         try
         {
-            var services = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value, out string serviceId);
-            var embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
-                .GenerateEmbeddingsAsync(EmbeddingsHelper.TestValuesList).Result;
+            (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value);
+            var embeddings = service.GenerateEmbeddingsAsync(EmbeddingsHelper.TestValuesList).Result;
 
             return embeddings.Count == EmbeddingsHelper.TestValuesList.Count;
         }

@@ -37,7 +37,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
         var embeddings = await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["Test text for embedding generation"], CancellationToken.None);
         
         // Assert
-        for (var i = 0; i < embeddings.Count; i++)
+        for (var i = 0; i < embeddings.Length; i++)
             Assert.True(embeddings[i].Length == OnnxDefaultEmbeddingSize, $"Embedding should have {OnnxDefaultEmbeddingSize} dimensions, but result #{i} has '{embeddings[i].Length}' dimensions");
     }
     
@@ -78,7 +78,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
         };
 
         // Act - Call the service multiple times in quick succession
-        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
         for (int i = 0; i < totalRequests; i++)
             tasks.Add(batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [$"Test text {i} for embedding generation"], CancellationToken.None).AsTask());
 
@@ -99,7 +99,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
         Assert.True(tasks.All(t => t.IsCompletedSuccessfully));
 
         for (var i = 0; i < tasks.Count; i++)
-            for (var j = 0; j < tasks[i].Result.Count; j++)
+            for (var j = 0; j < tasks[i].Result.Length; j++)
                 Assert.True(tasks[i].Result[j].Length == OnnxDefaultEmbeddingSize, $"Embedding should have {OnnxDefaultEmbeddingSize} dimensions, but result #{i} of task #{j} has '{tasks[i].Result[j].Length}' dimensions");
     }
     

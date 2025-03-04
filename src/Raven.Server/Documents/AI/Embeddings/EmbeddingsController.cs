@@ -8,7 +8,7 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
-public class EmbeddingsController(AiIntegrationsController aiIntegrations, EmbeddingsStorage storage, EmbeddingsCacher cacher)
+public class EmbeddingsController(AiIntegrationsController aiIntegrations, EmbeddingsStorage storage, EmbeddingsCacher cacher) : IDisposable
 {
     public EmbeddingsStorage Storage { get; private set; } = storage;
     public EmbeddingsCacher Cacher { get; private set; } = cacher;
@@ -33,8 +33,8 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         foreach (var chunk in chunks)
         {
             var chunkHash = EmbeddingsHelper.CalculateInputValueHash(chunk);
-            
-            if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, chunkHash, quantization, out var embeddingCacheDocumentId, out _)) 
+
+            if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, chunkHash, quantization, out var embeddingCacheDocumentId, out _))
             {
                 var valueHash = EmbeddingsHelper.CalculateInputValueHash(value);
 
@@ -46,14 +46,14 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
                 chunksForGeneration.Add(chunk);
         }
 
-        if (chunksForGeneration.Count == 0) 
+        if (chunksForGeneration.Count == 0)
             return embeddingValues;
-        
+
         List<EmbeddingGenerationItem> embeddingsToCache = null;
 
         var embeddings = await _batchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration);
 
-        for (int i = 0; i < embeddings.Count; i++)
+        for (int i = 0; i < embeddings.Length; i++)
         {
             var embedding = embeddings[i];
 
@@ -61,7 +61,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
             embeddingValues[vectorValuesCount++] = embeddingValue;
 
-            embeddingsToCache ??= new(embeddings.Count);
+            embeddingsToCache ??= new List<EmbeddingGenerationItem>(embeddings.Length);
 
             string textualValue = chunksForGeneration[i];
 
@@ -77,6 +77,11 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         Cacher.EnqueueEmbeddingsToCache(embeddingsToCache);
 
         return embeddingValues;
+    }
+
+    public async Task<ReadOnlyMemory<float>[]> GetEmbeddingsForValues(AiConnectionStringIdentifier connectionStringId, IList<string> values)
+    {
+        return await _batchingService.GetEmbeddingAsync(connectionStringId, values);
     }
 
     public void Dispose()

@@ -59,7 +59,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         var result = await task;
 
         // Assert
-        for (var i = 0; i < result.Count; i++)
+        for (var i = 0; i < result.Length; i++)
             Assert.True(result[i].Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, but result #{i} has '{result[i].Length}' dimensions");
 
     }
@@ -84,7 +84,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         worker.Start();
 
         // Act
-        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
         for (int i = 0; i < processedTextsCount; i++)
             tasks.Add(worker.EnqueueRequestAsync([$"text {i}"], CancellationToken.None));
 
@@ -99,7 +99,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         foreach (var task in tasks)
         {
             var result = await task;
-            for (var i = 0; i < result.Count; i++)
+            for (var i = 0; i < result.Length; i++)
                 Assert.True(result[i].Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, but result #{i} has '{result[i].Length}' dimensions");
         }
     }
@@ -160,7 +160,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
 
         // Assert
         Assert.True(mockService.AttemptCount == 2, $"Should have attempted twice, but was '{mockService.AttemptCount}'");
-        for (var i = 0; i < result.Count; i++)
+        for (var i = 0; i < result.Length; i++)
             Assert.True(result[i].Length == DimensionSize, $"Should be a valid embedding, but was not. Expected length: '{DimensionSize}', but result #{i} has '{result[i].Length}' dimensions");
     }
 
@@ -219,7 +219,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         worker.Start();
 
         // Queue several requests
-        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
         for (int i = 0; i < 5; i++)
             tasks.Add(worker.EnqueueRequestAsync([$"text {i}"], CancellationToken.None));
 
@@ -262,7 +262,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         worker.Start();
 
         // Act
-        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
         for (int i = 0; i < 12; i++)
             tasks.Add(worker.EnqueueRequestAsync([$"text {i}"], CancellationToken.None));
 
@@ -276,7 +276,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         foreach (var task in tasks)
         {
             var result = await task;
-            for (var i = 0; i < result.Count; i++)
+            for (var i = 0; i < result.Length; i++)
                 Assert.True(result[i].Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, but result #{i} has '{result[i].Length}'dimensions");
         }
     }
@@ -464,9 +464,9 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         serviceField.SetValue(worker, selectiveService);
 
         // Submit a mix of requests that should succeed or fail
-        var successTasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
-        var failureTasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
-        var allTasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        var successTasks = new List<Task<ReadOnlyMemory<float>[]>>();
+        var failureTasks = new List<Task<ReadOnlyMemory<float>[]>>();
+        var allTasks = new List<Task<ReadOnlyMemory<float>[]>>();
 
         // Randomize the order of requests controlling that we have at least one success and one failure
         var random = new Random();
@@ -490,13 +490,13 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         foreach (var task in successTasks)
         {
             Assert.True(task.IsCompletedSuccessfully, $"Tasks containing '{successPrefix}' should complete successfully");
-            for (var i = 0; i < task.Result.Count; i++)
+            for (var i = 0; i < task.Result.Length; i++)
                 Assert.True(task.Result[i].Length == dimensionSize, $"Expected embedding of length '{dimensionSize}', but result #{i} got '{task.Result[i].Length}' dimensions");
         }
 
         // Verify failure tasks - they should either fail or return empty embeddings
         foreach (var task in failureTasks)
-            for (var i = 0; i < task.Result.Count; i++)
+            for (var i = 0; i < task.Result.Length; i++)
                 Assert.True(task.Result[i].Length == 0, $"Expected empty embedding for failure case, but result #{i} got '{task.Result[i].Length}' dimensions");
     }
 }

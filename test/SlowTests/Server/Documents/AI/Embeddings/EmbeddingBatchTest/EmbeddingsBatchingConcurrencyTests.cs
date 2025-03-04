@@ -83,7 +83,7 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
         };
 
         // Act - Submit many requests that will be processed in batches
-        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
         for (int i = 0; i < totalBatches * database.Configuration.Ai.MaxBatchSize; i++)
             tasks.Add(batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [$"Concurrent test text {i}"], CancellationToken.None).AsTask());
 
@@ -113,7 +113,7 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
             "All embedding tasks should complete successfully");
 
         for (var i = 0; i < tasks.Count; i++)
-            for (var j = 0; j < tasks[i].Result.Count; j++)
+            for (var j = 0; j < tasks[i].Result.Length; j++)
                 Assert.True(tasks[i].Result[j].Length > 0, $"All embedding tasks should have positive lengths, but result #{i} of task #{j} has '{tasks[i].Result[j]}' dimensions");
 
         // Clean up

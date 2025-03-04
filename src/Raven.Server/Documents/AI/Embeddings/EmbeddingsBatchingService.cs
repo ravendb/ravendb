@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.AI.Embeddings
 
         private readonly ConcurrentDictionary<AiConnectionStringIdentifier, EmbeddingsBatchingWorker> _batchWorkers = new();
 
-        public ValueTask<IList<ReadOnlyMemory<float>>> GetEmbeddingAsync(AiConnectionStringIdentifier connectionStringId, IList<string> values, CancellationToken cancellationToken = default)
+        public ValueTask<ReadOnlyMemory<float>[]> GetEmbeddingAsync(AiConnectionStringIdentifier connectionStringId, IList<string> values, CancellationToken cancellationToken = default)
         {
             if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
                 throw new ArgumentException($"Couldn't find Embeddings Generation task for connection string '{connectionStringId.Value}'");
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                 return worker;
             });
 
-            return new ValueTask<IList<ReadOnlyMemory<float>>>(batchWorker.EnqueueRequestAsync(values, cancellationToken));
+            return new ValueTask<ReadOnlyMemory<float>[]>(batchWorker.EnqueueRequestAsync(values, cancellationToken));
         }
 
         public void Dispose()

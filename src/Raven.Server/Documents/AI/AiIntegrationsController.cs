@@ -63,12 +63,7 @@ public class AiIntegrationsController : IDisposable
             if (_embeddingGeneratorsByConnectionStringIdentifier.ContainsKey(connectionStringIdentifier))
                 continue;
 
-            var kernelBuilder = Kernel.CreateBuilder();
-            kernelBuilder.Configure(connectionString, isConnectionTest: false);
-            var kernel = kernelBuilder.Build();
-            var service = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
-
-            _embeddingGeneratorsByConnectionStringIdentifier[connectionStringIdentifier] = service;
+            _embeddingGeneratorsByConnectionStringIdentifier[connectionStringIdentifier] = AiHelper.CreateService(connectionString);
         }
 
         var numberOfActiveEmbeddingGenerationTasks = 0;
