@@ -12,6 +12,6 @@ public class TotalNumberOfAiIntegrationTasks : OngoingTasksBase
 
     protected override int GetCount(TransactionOperationContext context, RawDatabaseRecord database)
     {
-        return GetNumberOfAiIntegrations(database);
+        return GetNumberOfEmbeddingsGenerations(database);
     }
 }

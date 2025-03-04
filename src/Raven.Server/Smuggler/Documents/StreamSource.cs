@@ -473,11 +473,11 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.EmbeddingsGenerations), out BlittableJsonReaderArray aiEtls) &&
-                    aiEtls != null)
+                if (reader.TryGet(nameof(databaseRecord.EmbeddingsGenerations), out BlittableJsonReaderArray embeddingsGenerations) &&
+                    embeddingsGenerations != null)
                 {
                     databaseRecord.EmbeddingsGenerations = new List<EmbeddingsGenerationConfiguration>();
-                    foreach (BlittableJsonReaderObject etl in aiEtls)
+                    foreach (BlittableJsonReaderObject etl in embeddingsGenerations)
                     {
                         try
                         {
@@ -486,7 +486,7 @@ namespace Raven.Server.Smuggler.Documents
                         catch (Exception e)
                         {
                             if (_log.IsInfoEnabled)
-                                _log.Info("Wasn't able to import the AI ETLs configuration from smuggler file. Skipping.", e);
+                                _log.Info("Wasn't able to import the embeddings generations configuration from smuggler file. Skipping.", e);
                         }
                     }
                 }

@@ -363,8 +363,8 @@ namespace Raven.Server.Dashboard
             long amazonSqsEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.AmazonSqs);
 
-            var aiEtlCount = database.EtlLoader.EmbeddingsGenerationDestinations.Count;
-            long aiEtlCountOnNode = GetTaskCountOnNode<EmbeddingsGenerationConfiguration>(database, dbRecord, serverStore, database.EtlLoader.EmbeddingsGenerationDestinations,
+            var embeddingsGenerationCount = database.EtlLoader.EmbeddingsGenerationDestinations.Count;
+            long embeddingsGenerationCountOnNode = GetTaskCountOnNode<EmbeddingsGenerationConfiguration>(database, dbRecord, serverStore, database.EtlLoader.EmbeddingsGenerationDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
             
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
@@ -384,7 +384,7 @@ namespace Raven.Server.Dashboard
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
                                 ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount +
                                 rabbitMqEtlCount + azureQueueStorageEtlCount + amazonSqsEtlCount + periodicBackupCount +
-                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + snowflakeEtlCount + aiEtlCount;
+                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + snowflakeEtlCount + embeddingsGenerationCount;
 
             return new DatabaseOngoingTasksInfoItem
             {
@@ -405,7 +405,7 @@ namespace Raven.Server.Dashboard
                 KafkaSinkCount = kafkaSinkCountOnNode,
                 RabbitMqSinkCount = rabbitMqSinkCountOnNode,
                 SnowflakeEtlCount = snowflakeEtlCountOnNode,
-                EmbeddingGenerationCount = aiEtlCountOnNode,
+                EmbeddingGenerationCount = embeddingsGenerationCountOnNode,
             };
         }
 

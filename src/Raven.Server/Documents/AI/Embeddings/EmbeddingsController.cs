@@ -32,7 +32,9 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
         foreach (var chunk in chunks)
         {
-            if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, value, quantization, out var embeddingCacheDocumentId, out _)) 
+            var chunkHash = EmbeddingsHelper.CalculateInputValueHash(chunk);
+            
+            if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, chunkHash, quantization, out var embeddingCacheDocumentId, out _)) 
             {
                 var valueHash = EmbeddingsHelper.CalculateInputValueHash(value);
 
@@ -44,6 +46,9 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
                 chunksForGeneration.Add(chunk);
         }
 
+        if (chunksForGeneration.Count == 0) 
+            return embeddingValues;
+        
         List<EmbeddingGenerationItem> embeddingsToCache = null;
 
         var embeddings = await _batchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration);
@@ -56,7 +61,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
             embeddingValues[vectorValuesCount++] = embeddingValue;
 
-            embeddingsToCache ??= new (embeddings.Count);
+            embeddingsToCache ??= new(embeddings.Count);
 
             string textualValue = chunksForGeneration[i];
 
@@ -64,15 +69,12 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
                 textualValue,
                 embeddingValue,
                 quantization,
-                connectionStringId)
-            {
-                ExpireAt = aiIntegrations.Database.Time.GetUtcNow().Add(taskConfig.EmbeddingsCacheForQueryingExpiration)
-            };
+                connectionStringId) { ExpireAt = aiIntegrations.Database.Time.GetUtcNow().Add(taskConfig.EmbeddingsCacheForQueryingExpiration) };
 
             embeddingsToCache.Add(embeddingCacheItem);
         }
 
-        Cacher.EnqueueEmbeddingToCache(embeddingsToCache);
+        Cacher.EnqueueEmbeddingsToCache(embeddingsToCache);
 
         return embeddingValues;
     }

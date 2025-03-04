@@ -51,7 +51,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
         }
     }
 
-    public void EnqueueEmbeddingToCache(List<EmbeddingGenerationItem> embeddings)
+    public void EnqueueEmbeddingsToCache(List<EmbeddingGenerationItem> embeddings)
     {
         foreach (EmbeddingGenerationItem item in embeddings)
         {
