@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -11,7 +10,6 @@ using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -593,9 +591,9 @@ public partial class AbstractStaticIndexBase
         currentIndexingScope.Index.IndexFieldsPersistence.SetEmbeddingsGenerationTaskIdentifier(fieldName, embeddingGeneratorTaskIdentifier);
         var embeddingDocument = LoadVectorDocument(out var embeddingDocumentId, documentId) as DynamicBlittableJson;
         
-        //no related document
+        // no related document
         if (embeddingDocument == null
-            // no embedding generator task in thw document
+            // no embedding generator task in the document
             || BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingDocument.BlittableJson, embeddingGeneratorTaskIdentifier,
                 out var documentEmbeddings) == false
             // no path in the embedding task dictionary

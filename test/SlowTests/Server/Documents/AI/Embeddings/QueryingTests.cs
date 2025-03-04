@@ -124,7 +124,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             {
                 var ex = Assert.Throws<RavenException>(() => session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, "NotExistingTask"), factory => factory.ByText(queriedText)).ToList());
                 
-                Assert.Contains("Couldn't find NotExistingTask AI task.", ex.Message);
+                Assert.Contains("Couldn't find NotExistingTask embeddings generation task.", ex.Message);
             }
         }
     }

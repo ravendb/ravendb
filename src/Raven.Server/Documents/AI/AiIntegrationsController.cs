@@ -42,9 +42,9 @@ public class AiIntegrationsController : IDisposable
         return _embeddingGeneratorsConfigurationByTaskIdentifiers.TryGetValue(taskIdentifier, out configuration);
     }
 
-    public AiConnectionStringIdentifier GetConnectionStringByEmbeddingsGenerationTask(EmbeddingsGenerationTaskIdentifier taskIdentifier)
+    public bool TryGetConnectionStringByEmbeddingsGenerationTask(EmbeddingsGenerationTaskIdentifier taskIdentifier, out AiConnectionStringIdentifier connectionString)
     {
-        return _connectionStringsByTaskIdentifiers[taskIdentifier];
+        return _connectionStringsByTaskIdentifiers.TryGetValue(taskIdentifier, out connectionString);
     }
 
     public void HandleDatabaseRecordChange(DatabaseRecord record)

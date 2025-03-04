@@ -2814,25 +2814,33 @@ function execute(doc, args){
         {
             var sb = new StringBuilder();
             sb.Append(vectorExpression.Name.ToString());
-            sb.Append("(");
+            sb.Append('(');
 
             if (vectorExpression.Arguments.Count > 0 && vectorExpression.Arguments[0] is MethodExpression innerExpression)
             {
                 sb.Append(innerExpression.Name.ToString());
-                sb.Append("(");
-                sb.Append(ExtractFieldNameFromArgument(innerExpression.Arguments[0], withoutAlias: true, innerExpression.Name.Value, parameters, QueryText));
+                sb.Append('(');
+
+                var fieldName = ExtractFieldNameFromArgument(innerExpression.Arguments[0], withoutAlias: true, innerExpression.Name.Value, parameters, QueryText);
+                sb.Append(fieldName);
+
+                // ai.task('taskIdentifier')
+                if (innerExpression.Arguments.Count == 2 && innerExpression.Arguments[1] is MethodExpression me)
+                {
+                    if (me.Arguments[0] is not ValueExpression taskIdentifier)
+                        throw new ArgumentException("Task identifier has to be string literal.");
+
+                    sb.Append($",{me.Name}('{taskIdentifier.Token.Value}')");
+                }
                 
-                var x = innerExpression.Arguments[1] as MethodExpression;
-                var y = x.Arguments[0] as ValueExpression; 
-                sb.Append($",{x.Name}('{y.Token.Value}')");
-                sb.Append(")");
+                sb.Append(')');
             }
             else
             {
                 sb.Append(ExtractFieldNameFromArgument(vectorExpression.Arguments[0], withoutAlias: true, vectorExpression.Name.Value, parameters, QueryText));
             }
 
-            sb.Append(")");
+            sb.Append(')');
             return sb.ToString();
         }
         

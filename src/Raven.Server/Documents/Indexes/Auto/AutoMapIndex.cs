@@ -2,7 +2,10 @@
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -35,7 +38,32 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new AutoIndexDocsEnumerator(items, stats);
+            return new AutoIndexDocsEnumerator(items, stats, collection);
+        }
+
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
+        {
+            var workers = new List<IIndexingWork>
+            {
+                new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null, Configuration)
+            };
+
+            var usesEmbeddingsGenerationTask = Definition.IndexFields.Values.Any(x => ((AutoVectorOptions)x.Vector).EmbeddingsGenerationTaskIdentifier != null);
+            
+            if (usesEmbeddingsGenerationTask)
+            {
+                // We only have a single collection for auto map index
+                var collection = Collections.First();
+                
+                var referencedCollections = new Dictionary<string, HashSet<CollectionName>>();
+                
+                referencedCollections.Add(collection, new HashSet<CollectionName>() { new CollectionName(collection) });
+                
+                workers.Add(new HandleDocumentReferences(this, referencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+            }
+            
+            return workers.ToArray();
         }
 
         public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)

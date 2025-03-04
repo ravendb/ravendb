@@ -48,6 +48,9 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual bool HasCompareExchange => false;
 
+        // fieldName, string
+        public Dictionary<string, string> VectorFieldToEmbeddingGenerationTask;
+
         public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
         {
             Name = name;

@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Auto
@@ -11,10 +12,12 @@ namespace Raven.Server.Documents.Indexes.Auto
         private readonly IEnumerator<IndexItem> _itemsEnumerator;
         private readonly Document[] _results = new Document[1];
 
-        public AutoIndexDocsEnumerator(IEnumerable<IndexItem> items, IndexingStatsScope stats)
+        public AutoIndexDocsEnumerator(IEnumerable<IndexItem> items, IndexingStatsScope stats, string collection)
         {
             _documentReadStats = stats.For(IndexingOperation.Map.DocumentRead, start: false);
             _itemsEnumerator = items.GetEnumerator();
+            
+            CurrentIndexingScope.Current.SetSourceCollection(collection, null);
         }
 
         public bool MoveNext(DocumentsOperationContext ctx, out IEnumerable resultsOfCurrentDocument, out long? etag)
@@ -29,6 +32,11 @@ namespace Raven.Server.Documents.Indexes.Auto
                 _results[0] = document;
                 etag = document?.Etag;
                 resultsOfCurrentDocument = _results;
+
+                var dynamicItem = new DynamicBlittableJson();
+                dynamicItem.Set(document);
+                
+                CurrentIndexingScope.Current.Source = dynamicItem;
 
                 return moveNext;
             }

@@ -6,8 +6,6 @@ using Corax.Querying.Matches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
-using Raven.Client.Documents.Linq;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
@@ -18,7 +16,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
-using static Lucene.Net.Index.ByteBlockPool;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -38,7 +35,7 @@ public static partial class CoraxQueryBuilder
         object transformedEmbeddings = null;
         IndexField indexField;
 
-        if (builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out var embeddingsGenerationTaskIdentifier))
+        if (VectorHelpers.TryRetrieveEtlTaskName(builderParameters, fieldName, out var embeddingsGenerationTaskIdentifier))
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
             VectorHelpers.ReadEmbeddingFromEmbeddingsGenerationTask(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, out transformedEmbeddings);
@@ -165,6 +162,25 @@ public static partial class CoraxQueryBuilder
 
     private static class VectorHelpers
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryRetrieveEtlTaskName(Parameters builderParameters, in string fieldName, out string embeddingsGenerationTaskIdentifier)
+        {
+            var existsInPersistence =
+                builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out embeddingsGenerationTaskIdentifier);
+
+            if (builderParameters.Metadata.IsDynamic == false)
+                return existsInPersistence;
+
+            if (((builderParameters.FieldsToFetch != null && builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField)) || (builderParameters.Index.Definition.IndexFields.TryGetValue(fieldName, out indexField))) && indexField.Vector is AutoVectorOptions avo)
+            {
+                embeddingsGenerationTaskIdentifier = avo.EmbeddingsGenerationTaskIdentifier;
+                return avo.EmbeddingsGenerationTaskIdentifier != null;            
+            }
+            
+            embeddingsGenerationTaskIdentifier = null;
+            return false;
+        }
+        
         internal static object GetVectorValueForTextualInput(Parameters parameters, VectorOptions vectorOptions, ValueTokenType valueType, object value)
         {
             object result = null;
@@ -284,7 +300,9 @@ public static partial class CoraxQueryBuilder
             };
 
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
-            var connectionStringId = database.AiIntegrations.GetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId); // TODO michal
+
+            if (database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringId) == false)
+                throw new ArgumentException($"Couldn't find {embeddingsTaskId.Value} embeddings generation task.");
 
             var sourceEmbeddingType = VectorEmbeddingType.Single;
 
