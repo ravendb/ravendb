@@ -6,13 +6,13 @@ import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "comp
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditAiEtlInfoHub() {
-    const hasAiIntegration = useAppSelector(licenseSelectors.statusValue("HasAiIntegration"));
+    const hasAiIntegrations = useAppSelector(licenseSelectors.statusValue("HasAiIntegrations"));
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
             {
                 featureName: defaultFeatureAvailability[0].featureName,
-                value: hasAiIntegration,
+                value: hasAiIntegrations,
             },
         ],
     });
@@ -20,7 +20,7 @@ export function EditAiEtlInfoHub() {
     const docsLink = "#"; // TODO
 
     return (
-        <AboutViewFloating defaultOpen={hasAiIntegration ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasAiIntegrations ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -36,7 +36,7 @@ export function EditAiEtlInfoHub() {
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasAiIntegration}
+                isUnlimited={hasAiIntegrations}
                 data={featureAvailability}
             />
         </AboutViewFloating>

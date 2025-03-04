@@ -3,7 +3,7 @@ import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./partials/OngoingTasksReducer";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
-    OngoingTaskAiEtlInfo,
+    OngoingTaskEmbeddingsGenerationInfo,
     OngoingTaskAmazonSqsEtlInfo,
     OngoingTaskAzureQueueStorageEtlInfo,
     OngoingTaskElasticSearchEtlInfo,
@@ -200,7 +200,7 @@ export function OngoingTasksPage() {
         kafkaSinks,
         rabbitMqSinks,
         elasticSearchEtls,
-        aiEtls,
+        embeddingsGenerations,
         backups,
         replicationHubs,
         replicationSinks,
@@ -420,14 +420,14 @@ export function OngoingTasksPage() {
                             />
                         )}
 
-                        {aiEtls.length > 0 && (
+                        {embeddingsGenerations.length > 0 && (
                             <div key="ai-etls">
-                                <HrHeader className="ai-etl" count={aiEtls.length}>
+                                <HrHeader className="ai-etl" count={embeddingsGenerations.length}>
                                     <Icon icon="ai-etl" />
                                     AI
                                 </HrHeader>
 
-                                {aiEtls.map((x) => (
+                                {embeddingsGenerations.map((x) => (
                                     <AiEtlPanel
                                         {...sharedPanelProps}
                                         key={taskKey(x.shared)}
@@ -827,7 +827,9 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         amazonSqsEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "AmazonSqsQueueEtl"
         ) as OngoingTaskAmazonSqsEtlInfo[],
-        aiEtls: filteredTasks.filter((x) => x.shared.taskType === "AiIntegration") as OngoingTaskAiEtlInfo[],
+        embeddingsGenerations: filteredTasks.filter(
+            (x) => x.shared.taskType === "EmbeddingsGeneration"
+        ) as OngoingTaskEmbeddingsGenerationInfo[],
         kafkaSinks: filteredTasks.filter((x) => x.shared.taskType === "KafkaQueueSink") as OngoingTaskKafkaSinkInfo[],
         rabbitMqSinks: filteredTasks.filter(
             (x) => x.shared.taskType === "RabbitQueueSink"

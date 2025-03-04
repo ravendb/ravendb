@@ -51,7 +51,7 @@ export function ConnectionStringsInfoHub() {
             },
             {
                 featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "ai-etl").featureName,
-                value: features.hasAiIntegration,
+                value: features.hasAiIntegrations,
             },
         ],
     });

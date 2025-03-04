@@ -3,6 +3,7 @@ import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditMode
 import ongoingTaskEmbeddingsGenerationTransformationModel = require("models/database/tasks/ongoingTaskEmbeddingsGenerationTransformationModel");
 import TaskUtils = require("components/utils/TaskUtils");
 import TimeInSeconds = require("common/constants/timeInSeconds");
+import genUtils = require("common/generalUtils");
 
 class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     identifier = ko.observable<string>();
@@ -44,14 +45,14 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
 
     get studioTaskType(): StudioTaskType {
-        return "AiIntegration";
+        return "EmbeddingsGeneration";
     }
 
     get destinationType(): TaskDestinationType {
         return "Index";
     }
     
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration, aiConnectionStrings: KnockoutObservableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.EmbeddingsGeneration, aiConnectionStrings: KnockoutObservableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>) {
         super();
 
         this.aiConnectionStrings = aiConnectionStrings;
@@ -135,7 +136,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.identifier(TaskUtils.default.getGeneratedIdentifier(this.taskName()));
     }
 
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.EmbeddingsGeneration) {
         super.update(dto);
         
         const configuration = dto.Configuration;
@@ -150,8 +151,8 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 this.chunkingMethod(configuration.ChunkingOptionsForQuerying.ChunkingMethod);
                 this.maxTokensPerChunk(configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk);
             }
-            if (configuration.TargetQuantizationType) {
-                this.quantizationType(configuration.TargetQuantizationType);
+            if (configuration.Quantization) {
+                this.quantizationType(configuration.Quantization);
             }
 
             // TODO add expiration
@@ -195,11 +196,13 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             Collection: transformation.transformScriptCollections()[0],
             ChunkingOptionsForQuerying: {
                 ChunkingMethod: this.chunkingMethod(),
-                MaxTokensPerChunk: this.maxTokensPerChunk(),
+                MaxTokensPerChunk: this.maxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(),
             },
-            TargetQuantizationType: this.quantizationType(),
+            Quantization: this.quantizationType(),
             EmbeddingsTransformation,
-            EmbeddingsPathConfigurations
+            EmbeddingsPathConfigurations,
+            EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000),
+            EmbeddingsCacheForQueryingExpiration: genUtils.formatAsTimeSpan(transformation.embeddingsCacheExpiration() * 1000)
         };
     }
     
@@ -214,7 +217,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                     Transforms: [],
                     Identifier: ""
                 }
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskAiIntegration,
+            } as TODO,
             aiConnectionStrings
         );
        }

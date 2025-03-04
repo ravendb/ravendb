@@ -144,7 +144,7 @@ export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
     url: string;
 }
 
-export interface OngoingTaskAiEtlSharedInfo extends OngoingTaskSharedInfo {
+export interface OngoingTaskEmbeddingsGenerationSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
     identifier: string;
 }
@@ -318,8 +318,8 @@ export type OngoingTaskAmazonSqsEtlInfo = OngoingTaskInfo<
     OngoingEtlTaskNodeInfo<OngoingTaskAmazonSqsEtlNodeInfoDetails>
 >;
 
-export type OngoingTaskAiEtlInfo = OngoingTaskInfo<
-    OngoingTaskAiEtlSharedInfo,
+export type OngoingTaskEmbeddingsGenerationInfo = OngoingTaskInfo<
+    OngoingTaskEmbeddingsGenerationSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskAiEtlNodeInfoDetails>
 >;
 

@@ -10,7 +10,7 @@ import {
     OngoingTaskStatus,
     useTasksOperations,
 } from "../../shared/shared";
-import { OngoingTaskAiEtlInfo } from "components/models/tasks";
+import { OngoingTaskEmbeddingsGenerationInfo } from "components/models/tasks";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -29,7 +29,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import copyToClipboard from "common/copyToClipboard";
 import { Icon } from "components/common/Icon";
 
-type AiEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskAiEtlInfo>;
+type AiEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskEmbeddingsGenerationInfo>;
 
 function Details(props: AiEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;

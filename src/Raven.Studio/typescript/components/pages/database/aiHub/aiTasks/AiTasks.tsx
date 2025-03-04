@@ -9,7 +9,7 @@ import { StickyHeader } from "components/common/StickyHeader";
 import useBoolean from "components/hooks/useBoolean";
 import useInterval from "components/hooks/useInterval";
 import { useServices } from "components/hooks/useServices";
-import { OngoingTaskInfo, OngoingTaskSharedInfo, OngoingTaskAiEtlInfo } from "components/models/tasks";
+import { OngoingTaskInfo, OngoingTaskSharedInfo, OngoingTaskEmbeddingsGenerationInfo } from "components/models/tasks";
 import { useAppSelector } from "components/store";
 import TaskUtils from "components/utils/TaskUtils";
 import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
@@ -99,12 +99,14 @@ export default function AiTasks() {
         [definitionCache]
     );
 
-    const aiEtls = tasks.tasks.filter((x) => x.shared.taskType === "AiIntegration") as OngoingTaskAiEtlInfo[];
+    const embeddingsGenerations = tasks.tasks.filter(
+        (x) => x.shared.taskType === "EmbeddingsGeneration"
+    ) as OngoingTaskEmbeddingsGenerationInfo[];
 
     const getSelectedTaskShardedInfos = () =>
-        [...aiEtls].filter((x) => selectedTaskIds.includes(x.shared.taskId)).map((x) => x.shared);
+        [...embeddingsGenerations].filter((x) => selectedTaskIds.includes(x.shared.taskId)).map((x) => x.shared);
 
-    const filteredDatabaseTaskIds = Object.values(aiEtls)
+    const filteredDatabaseTaskIds = Object.values(embeddingsGenerations)
         .flat()
         .filter((x) => !x.shared.serverWide)
         .map((x) => x.shared.taskId);
@@ -169,7 +171,7 @@ export default function AiTasks() {
                     <FlexGrow />
                     <AiTasksInfoHub />
                 </div>
-                {aiEtls.length > 0 && hasDatabaseAdminAccess && (
+                {embeddingsGenerations.length > 0 && hasDatabaseAdminAccess && (
                     <OngoingTaskSelectActions
                         allTasks={filteredDatabaseTaskIds}
                         selectedTasks={selectedTaskIds}
@@ -183,17 +185,17 @@ export default function AiTasks() {
             <Row className="gy-sm">
                 <div className="flex-vertical">
                     <div className="scroll flex-grow">
-                        {aiEtls.length === 0 && (
+                        {embeddingsGenerations.length === 0 && (
                             <EmptySet>No tasks have been created for this Database Group.</EmptySet>
                         )}
-                        {aiEtls.length > 0 && (
+                        {embeddingsGenerations.length > 0 && (
                             <div key="ai-etls">
-                                <HrHeader className="ai-etl" count={aiEtls.length}>
+                                <HrHeader className="ai-etl" count={embeddingsGenerations.length}>
                                     <Icon icon="ai-etl" />
                                     AI
                                 </HrHeader>
 
-                                {aiEtls.map((x) => (
+                                {embeddingsGenerations.map((x) => (
                                     <AiEtlPanel
                                         {...sharedPanelProps}
                                         key={taskKey(x.shared)}

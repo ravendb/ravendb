@@ -68,7 +68,7 @@ function getConnectionStringUsedTasks(
             filteredTasks = tasks.filter((task) => task.BrokerType === "AmazonSqs");
             break;
         case "Ai":
-            filteredTasks = tasks.filter((task) => task.TaskType === "AiIntegration");
+            filteredTasks = tasks.filter((task) => task.TaskType === "EmbeddingsGeneration");
             break;
         default:
             assertUnreachable(connectionType);

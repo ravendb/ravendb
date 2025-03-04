@@ -112,7 +112,7 @@ export default class TaskUtils {
             case "Queue":
                 return "QueueEtl";
             case "EmbeddingsGeneration":
-                return "AiIntegration";
+                return "EmbeddingsGeneration";
             default:
                 throw new Error("Unknown etl type mapping: " + etlType);
         }
@@ -132,7 +132,7 @@ export default class TaskUtils {
                 return "Snowflake";
             case "QueueEtl":
                 return "Queue";
-            case "AiIntegration":
+            case "EmbeddingsGeneration":
                 return "EmbeddingsGeneration";
             default:
                 throw new Error("Unsupported task type: " + taskType);

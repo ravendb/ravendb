@@ -55,7 +55,7 @@ describe("ConnectionStrings", () => {
                 hasRavenEtl={false}
                 hasOlapEtl={false}
                 hasQueueEtl={false}
-                hasAiIntegration={false}
+                hasAiIntegrations={false}
             />
         );
 

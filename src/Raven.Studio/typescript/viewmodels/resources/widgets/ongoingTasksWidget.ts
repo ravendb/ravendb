@@ -76,8 +76,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             icon: "icon-amazon-sqs-etl",
             colorClass: "amazon-sqs-etl",
         },
-        "AiIntegration": {
-            nameForUI: "AI",
+        "EmbeddingsGeneration": {
+            nameForUI: "Embeddings Generation",
             icon: "icon-ai-etl",
             colorClass: "ai-etl"
         },
@@ -328,8 +328,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "Subscription";
             case "SnowflakeEtlCount":
                 return "SnowflakeEtl";
-            case "AiIntegrationCount":
-                return "AiIntegration";
+            case "EmbeddingGenerationCount":
+                return "EmbeddingsGeneration";
             default:
                 throw new Error("Unknown task type count received:" + input);
             }

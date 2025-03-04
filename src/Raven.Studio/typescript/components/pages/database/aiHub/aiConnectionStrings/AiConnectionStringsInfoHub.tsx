@@ -7,14 +7,14 @@ import { useAppSelector } from "components/store";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function AiConnectionStringsInfoHub() {
-    const hasAiIntegration = useAppSelector(licenseSelectors.statusValue("HasAiIntegration"));
+    const hasAiIntegrations = useAppSelector(licenseSelectors.statusValue("HasAiIntegrations"));
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
             {
                 featureName: defaultFeatureAvailability[0].featureName,
-                value: hasAiIntegration,
+                value: hasAiIntegrations,
             },
         ],
     });
@@ -22,7 +22,7 @@ export function AiConnectionStringsInfoHub() {
     // TODO adjust to only AI connection strings
 
     return (
-        <AboutViewAnchored defaultOpen={hasAiIntegration ? null : "licensing"}>
+        <AboutViewAnchored defaultOpen={hasAiIntegrations ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -51,7 +51,7 @@ export function AiConnectionStringsInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper isUnlimited={hasAiIntegration} data={featureAvailability} />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasAiIntegrations} data={featureAvailability} />
         </AboutViewAnchored>
     );
 }
