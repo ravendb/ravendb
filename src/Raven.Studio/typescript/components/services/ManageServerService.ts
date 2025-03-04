@@ -13,6 +13,8 @@ import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/
 import saveServerWideCustomAnalyzerCommand from "commands/serverWide/analyzers/saveServerWideCustomAnalyzerCommand";
 import getServerSettingsCommand from "commands/maintenance/getServerSettingsCommand";
 import getClusterLogCommand from "commands/database/cluster/getClusterLogCommand";
+import getClusterLogEntryCommand from "commands/database/cluster/getClusterLogEntryCommand";
+import removeEntryFromLogCommand from "commands/database/cluster/removeEntryFromLogCommand";
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -70,7 +72,15 @@ export default class ManageServerService {
         return new getServerSettingsCommand().execute();
     }
 
-    async getClusterLog(nodeTag: string) {
-        return new getClusterLogCommand(nodeTag, undefined, 1).execute();
+    async getClusterLog(nodeTag: string, from: number, pageSize: number) {
+        return new getClusterLogCommand(nodeTag, from, pageSize).execute();
+    }
+
+    async getClusterLogEntry(nodeTag: string, index: number) {
+        return new getClusterLogEntryCommand(nodeTag, index).execute();
+    }
+
+    async removeClusterEntryLog(nodeTag: string, index: number) {
+        return new removeEntryFromLogCommand(nodeTag, index).execute();
     }
 }

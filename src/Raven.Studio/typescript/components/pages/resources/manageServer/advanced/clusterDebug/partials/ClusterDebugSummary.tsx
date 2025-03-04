@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { Badge, Button, Table, UncontrolledTooltip } from "reactstrap";
+import React from "react";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import ProgressBarWithTrackingPoint from "components/common/ProgressBarWithTrackingPoint";
@@ -16,12 +15,15 @@ import genUtils from "common/generalUtils";
 import moment from "moment";
 import notificationCenter from "common/notifications/notificationCenter";
 import messagePublisher from "common/messagePublisher";
-import { withPreventDefault } from "components/utils/common";
-import useConfirm from "components/common/ConfirmDialog";
 import useDialog from "components/common/Dialog";
 import Code from "components/common/Code";
 import ClusterSnapshotInstallation from "components/pages/resources/manageServer/advanced/clusterDebug/partials/ClusterSnapshotInstallation";
 import SizeGetter from "components/common/SizeGetter";
+import RichAlert from "components/common/RichAlert";
+import Table from "react-bootstrap/Table";
+import Badge from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface ClusterDebugSummaryProps {
     nodes: nodeAwareLoadableData<ClusterDebugNodeInfo>[];
@@ -43,7 +45,6 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
     const openInstallationDetails = async (nodeTag: string) => {
         const nodeData = nodes.find((x) => x.nodeTag === nodeTag);
 
-
         if (nodeData.data.installingSnapshot) {
             await dialog({
                 title: "Cluster Snapshot installation progress for node: " + nodeTag,
@@ -61,6 +62,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
             });
         }
     };
+
     const showConnectionDetails = async (connection: Raven.Server.Rachis.RaftDebugView.PeerConnection) => {
         const jsonString = JSON.stringify(connection, null, 4);
         await dialog({
@@ -89,7 +91,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
 
     return (
         <React.Fragment key="summary">
-            <Table dark bordered responsive className="mb-1 rounded-1 overflow-hidden">
+            <Table variant="dark" bordered responsive className="mb-1 rounded-1 overflow-hidden cluster-debug-summary">
                 <thead>
                     <tr>
                         <th></th>
@@ -107,7 +109,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                             <span className="text-nowrap">{node.nodeTag}</span>
                                         </span>
                                         {localNode?.nodeTag === node.nodeTag && (
-                                            <Badge color="node" pill>
+                                            <Badge bg="node" pill>
                                                 Current
                                             </Badge>
                                         )}
@@ -130,20 +132,23 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     <tr>
                         <th>Progress</th>
                         {nodes.map((node) => {
+                            if (node.status === "failure") {
+                                return (
+                                    <td rowSpan={hasAnyCriticalError ? 9 : 8} className="align-content-center">
+                                        <RichAlert variant="danger" title="Unable to connect" icon="cancel">
+                                            There was connection issue with node: {node.nodeTag}
+                                        </RichAlert>
+                                    </td>
+                                );
+                            }
+
                             return (
                                 <ConditionalRender node={node} key={node.nodeTag}>
-                                    {() => {
-                                        return (
-                                            <>
-                                                <div className="hstack gap-1" id={"progress-" + node.nodeTag}>
-                                                    <span className="text-nowrap">{node.data.progress}%</span>
-                                                    <ProgressBarWithTrackingPoint
-                                                        startingPoint={0}
-                                                        progress={node.data.progress}
-                                                        endingPoint={100}
-                                                    />
-                                                </div>
-                                                <UncontrolledTooltip target={"progress-" + node.nodeTag}>
+                                    {() => (
+                                        <PopoverWithHoverWrapper
+                                            inline={false}
+                                            message={
+                                                <>
                                                     First entry index:{" "}
                                                     <strong>{node.data.firstEntryIndex.toLocaleString()}</strong>
                                                     <br />
@@ -153,20 +158,29 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                     Last log entry index:{" "}
                                                     <strong>{node.data.lastLogEntryIndex.toLocaleString()}</strong>
                                                     <br />
-                                                </UncontrolledTooltip>
-                                            </>
-                                        );
-                                    }}
+                                                </>
+                                            }
+                                        >
+                                            <div className="hstack gap-1">
+                                                <span className="text-nowrap">{node.data.progress}%</span>
+                                                <ProgressBarWithTrackingPoint
+                                                    startingPoint={0}
+                                                    progress={node.data.progress}
+                                                    endingPoint={100}
+                                                />
+                                            </div>
+                                        </PopoverWithHoverWrapper>
+                                    )}
                                 </ConditionalRender>
                             );
                         })}
                     </tr>
                     <tr>
                         <th>
-                            Queue size <Icon icon="info" color="info" margin="ms-1" id="queueSizeTooltip" />
-                            <UncontrolledTooltip target="queueSizeTooltip" placement="right">
-                                This is text for Queue size tooltip
-                            </UncontrolledTooltip>
+                            Queue size
+                            <PopoverWithHoverWrapper message="This is text for Queue size tooltip">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
                         </th>
                         {nodes.map((node) => {
                             return (
@@ -178,10 +192,10 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     </tr>
                     <tr>
                         <th>
-                            Commit index <Icon icon="info" color="info" margin="ms-1" id="commitIndexTooltip" />
-                            <UncontrolledTooltip target="commitIndexTooltip" placement="right">
-                                This is text for Commit index tooltip
-                            </UncontrolledTooltip>
+                            Commit index
+                            <PopoverWithHoverWrapper message="This is text for Commit index tooltip">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
                         </th>
                         {nodes.map((node) => {
                             return (
@@ -194,18 +208,15 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                         <>
                                             {node.data.commitIndex.toLocaleString()}
                                             {node.data.chocked && (
-                                                <>
-                                                    <Icon
-                                                        icon="warning"
-                                                        margin="ms-1"
-                                                        id={"failed-commit-" + node.nodeTag}
-                                                    />
-                                                    <UncontrolledTooltip target={"failed-commit-" + node.nodeTag}>
+                                                <PopoverWithHoverWrapper
+                                                    message={
                                                         <span className="text-warning">
                                                             Warning: No commits for over 2 minutes
                                                         </span>
-                                                    </UncontrolledTooltip>
-                                                </>
+                                                    }
+                                                >
+                                                    <Icon icon="warning" margin="ms-1" />
+                                                </PopoverWithHoverWrapper>
                                             )}
                                         </>
                                     )}
@@ -215,10 +226,10 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     </tr>
                     <tr>
                         <th>
-                            Role / Phase <Icon icon="info" color="info" margin="ms-1" id="phaseTooltip" />
-                            <UncontrolledTooltip target="phaseTooltip" placement="right">
-                                This is text for phase tooltip
-                            </UncontrolledTooltip>
+                            Role / Phase
+                            <PopoverWithHoverWrapper message="This is text for phase tooltip">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
                         </th>
                         {nodes.map((node) => {
                             return (
@@ -233,6 +244,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                     </small>
                                                     <FlexGrow />
                                                     <Button
+                                                        variant="secondary"
                                                         size="sm"
                                                         onClick={() => openInstallationDetails(node.nodeTag)}
                                                     >
@@ -251,10 +263,9 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     <tr>
                         <th>
                             Last committed date{" "}
-                            <Icon icon="info" color="info" margin="ms-1" id="lastCommittedDateTooltip" />
-                            <UncontrolledTooltip target="lastCommittedDateTooltip" placement="right">
-                                This is text for Last committed date tooltip
-                            </UncontrolledTooltip>
+                            <PopoverWithHoverWrapper message=" This is text for Last committed date tooltip">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
                         </th>
                         {nodes.map((node) => {
                             const lastCommitedAsAgo = node.data?.lastCommitedTime
@@ -263,14 +274,11 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                             return (
                                 <ConditionalRender node={node} key={node.nodeTag}>
                                     {() => (
-                                        <>
-                                            <div id={"last-commited-" + node.nodeTag}>{lastCommitedAsAgo ?? "n/a"}</div>
-                                            {lastCommitedAsAgo && (
-                                                <UncontrolledTooltip target={"last-commited-" + node.nodeTag}>
-                                                    {node.data.lastCommitedTime}
-                                                </UncontrolledTooltip>
-                                            )}
-                                        </>
+                                        <PopoverWithHoverWrapper
+                                            message={lastCommitedAsAgo ? <> {node.data.lastCommitedTime}</> : null}
+                                        >
+                                            <div>{lastCommitedAsAgo ?? "n/a"}</div>
+                                        </PopoverWithHoverWrapper>
                                     )}
                                 </ConditionalRender>
                             );
@@ -278,10 +286,10 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     </tr>
                     <tr>
                         <th>
-                            Last append date <Icon icon="info" color="info" margin="ms-1" id="lastAppendDateTooltip" />
-                            <UncontrolledTooltip target="lastAppendDateTooltip" placement="right">
-                                This is text for Last append date tooltip
-                            </UncontrolledTooltip>
+                            Last append date
+                            <PopoverWithHoverWrapper message="This is text for Last append date tooltip">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
                         </th>
                         {nodes.map((node) => {
                             const lastAppendedAsAgo = node.data?.lastAppendedTime
@@ -290,14 +298,11 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                             return (
                                 <ConditionalRender node={node} key={node.nodeTag}>
                                     {() => (
-                                        <>
+                                        <PopoverWithHoverWrapper
+                                            message={lastAppendedAsAgo ? node.data.lastAppendedTime : null}
+                                        >
                                             <div id={"last-appended-" + node.nodeTag}>{lastAppendedAsAgo ?? "n/a"}</div>
-                                            {lastAppendedAsAgo && (
-                                                <UncontrolledTooltip target={"last-appended-" + node.nodeTag}>
-                                                    {node.data.lastAppendedTime}
-                                                </UncontrolledTooltip>
-                                            )}
-                                        </>
+                                        </PopoverWithHoverWrapper>
                                     )}
                                 </ConditionalRender>
                             );
@@ -305,18 +310,16 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     </tr>
                     <tr>
                         <th>
-                            Local version <Icon icon="info" color="info" margin="ms-1" id="localVersionTooltip" />
-                            <UncontrolledTooltip target="localVersionTooltip" placement="right">
-                                This is text for Local version tooltip
-                            </UncontrolledTooltip>
+                            Local version
+                            <PopoverWithHoverWrapper message="This is text for Local version tooltip">
+                                <Icon icon="info" color="info" margin="ms-1" id="localVersionTooltip" />
+                            </PopoverWithHoverWrapper>
                         </th>
-                        {nodes.map((node) => {
-                            return (
-                                <ConditionalRender node={node} key={node.nodeTag}>
-                                    {() => <>{node.data.localVersion}</>}
-                                </ConditionalRender>
-                            );
-                        })}
+                        {nodes.map((node) => (
+                            <ConditionalRender node={node} key={node.nodeTag}>
+                                {() => <>{node.data.localVersion}</>}
+                            </ConditionalRender>
+                        ))}
                     </tr>
                     <tr>
                         <th>Connection</th>
@@ -326,23 +329,17 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                     {() => (
                                         <div>
                                             {node.data.connections.map((connection) => (
-                                                <a
-                                                    href="#"
-                                                    onClick={withPreventDefault(() =>
-                                                        showConnectionDetails(connection)
-                                                    )}
+                                                <Button
+                                                    title="Click to see connection details"
+                                                    size="xs"
+                                                    key={connection.Destination}
+                                                    onClick={() => showConnectionDetails(connection)}
+                                                    variant={connection.Connected ? "success" : "danger"}
+                                                    className="margin-right-sm"
                                                 >
-                                                    <small className="margin-right-sm">
-                                                        <strong>
-                                                            {connection.Destination}
-                                                            {connection.Connected ? (
-                                                                <i className="icon-check text-success"></i>
-                                                            ) : (
-                                                                <i className="icon-danger text-danger"></i>
-                                                            )}
-                                                        </strong>
-                                                    </small>
-                                                </a>
+                                                    <Icon icon={connection.Connected ? "connected" : "disconnected"} />
+                                                    {connection.Destination}
+                                                </Button>
                                             ))}
                                         </div>
                                     )}
@@ -361,7 +358,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                 {node.data.criticalError ? (
                                                     <Button
                                                         size="sm"
-                                                        color="danger"
+                                                        variant="danger"
                                                         onClick={() => openCriticalError(node.nodeTag)}
                                                     >
                                                         view details

@@ -3,16 +3,14 @@ import commandBase = require("commands/commandBase");
 
 class getClusterLogEntryCommand extends commandBase {
     
-    private readonly index: number;
-
-    constructor(index: number) {
+    constructor(private readonly nodeTag: string, private readonly index: number) {
         super();
-        this.index = index;
     }
 
     execute(): JQueryPromise<Raven.Server.Rachis.RachisConsensus.RachisDebugLogEntry> { 
         const url = endpoints.global.rachisAdmin.adminClusterLogEntry + this.urlEncodeArgs({
-            index: this.index
+            index: this.index,
+            nodeTag: this.nodeTag,
         })
 
         return this.query<Raven.Server.Rachis.RachisConsensus.RachisDebugLogEntry>(url, null)

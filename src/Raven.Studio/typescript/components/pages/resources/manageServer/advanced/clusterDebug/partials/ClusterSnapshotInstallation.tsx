@@ -9,6 +9,10 @@ interface ClusterSnapshotInstallationProps {
     messages: Raven.Server.Rachis.RachisDebugMessage[];
     availableWidth: number;
 }
+/* TODO
+- fix size getter issue (get rid of scroll)
+- format At with generalUtils.formatDurationByDate(moment.utc(x.At)) + add column preview
+ */
 
 export default function ClusterSnapshotInstallation(props: ClusterSnapshotInstallationProps) {
     const { messages, availableWidth } = props;

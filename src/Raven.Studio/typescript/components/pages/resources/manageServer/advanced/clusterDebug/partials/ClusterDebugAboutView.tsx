@@ -1,6 +1,7 @@
 import React from "react";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 
+//TODO: add some description
 export default function ClusterDebugAboutView() {
     return (
         <AboutViewFloating>
@@ -9,7 +10,10 @@ export default function ClusterDebugAboutView() {
                 icon="about"
                 color="info"
                 heading="About this view"
-            ></AccordionItemWrapper>
+                description="Get additional info on this feature"
+            >
+                <p>We need some description right here</p>
+            </AccordionItemWrapper>
         </AboutViewFloating>
     );
 }

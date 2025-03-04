@@ -402,7 +402,7 @@ public class PassiveDebugView(RachisConsensus engine) : RaftDebugView(engine)
 
 public class FollowerDebugView(Follower follower) : RaftDebugView(follower.Engine)
 {
-    public PeerConnection ConnectionToLeader = DetailedPeerConnection.FromRemoteConnection(follower.Connection.Dest, "Connected", true, follower.Connection);
+    public PeerConnection ConnectionToLeader = DetailedPeerConnection.FromRemoteConnection(follower.Connection.Source, "Connected", true, follower.Connection);
     public List<RachisDebugMessage> RecentMessages = follower.DebugRecorder.Timings.ToList();
     public FollowerPhase Phase = follower.Phase;
     public enum FollowerPhase

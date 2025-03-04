@@ -3,15 +3,13 @@ import endpoints = require("endpoints");
 
 class removeEntryFromLogCommand extends commandBase {
     
-    private readonly index: number;
-    
-    constructor(index: number) {
+    constructor(private readonly nodeTag: string, private readonly index: number) {
         super();
-        this.index = index;
     }
 
     execute(): JQueryPromise<void> { 
         const url = endpoints.global.rachisAdmin.adminClusterRemoveEntryFromLog + this.urlEncodeArgs({
+            nodeTag: this.nodeTag,
             index: this.index
         });
 

@@ -1,7 +1,7 @@
 @use "Content/scss/sizes";
 @use "Content/scss/colors";
 
-table {
+table.cluster-debug-summary {
     thead {
             th {
                 background-color: colors.$panel-header-bg-var !important;
