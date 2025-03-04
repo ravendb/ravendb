@@ -43,7 +43,7 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
                 object vector;
 
                 if (autoVectorOptions.EmbeddingsGenerationTaskIdentifier != null)
-                    vector = AbstractStaticIndexBase.LoadVector(indexField.Name, autoVectorOptions.EmbeddingsGenerationTaskIdentifier, autoVectorOptions.SourceFieldName, id);
+                    vector = AbstractStaticIndexBase.LoadVectorBase(indexField.Name, autoVectorOptions.EmbeddingsGenerationTaskIdentifier, autoVectorOptions.SourceFieldName);
                 else
                     vector = AbstractStaticIndexBase.CreateVector(indexField, value, isAutoIndex: true);
                 InsertRegularField(indexField, vector, indexContext, builder, sourceDocument, out innerShouldSkip);

@@ -16,7 +16,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 {
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestEmbeddingsGenerationForQuerying(Options options)
+    public void CanGenerateEmbeddingsForQuerying(Options options)
     {
         const string queriedText = "fruit";
         
@@ -35,7 +35,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
-            var (configuration, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
             
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
             
@@ -61,7 +61,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestFetchingEmbeddingFromCache(Options options)
+    public void CanFetchEmbeddingFromCache(Options options)
     {
         const string queriedText = "fruit";
         
@@ -80,7 +80,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
-            var (configuration, connectionString) = RegisterAiIntegration(store,
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
             
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
@@ -97,7 +97,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestIfIncorrectTaskNameInQueryThrows(Options options)
+    public void DoesIncorrectTaskNameInQueryThrow(Options options)
     {
         const string queriedText = "fruit";
 
@@ -131,7 +131,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestEmbeddingGenerationWhenQueryingStaticIndex(Options options)
+    public void CanGenerateEmbeddingsWhenQueryingStaticIndex(Options options)
     {
         const string queriedText = "fruit";
         
@@ -182,7 +182,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestChunkingInQuery(Options options)
+    public void CanChunkValueInQuery(Options options)
     {
         const string queriedText = "computer machine technology tech";
         
@@ -198,7 +198,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
-            var (configuration, connectionString) = RegisterAiIntegration(store, embeddingsPaths: [
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [
                 new EmbeddingPathConfiguration()
                 {
                     Path = "TextualValue", ChunkingOptions = new ChunkingOptions()

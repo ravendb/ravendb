@@ -548,7 +548,7 @@ public partial class AbstractStaticIndexBase
         return value is null or DynamicNullObject or DynamicJsNull or JsNull;
     }
 
-    public static object LoadVectorJs(string fieldName, string embeddingGeneratorTaskName, string path, out IndexField vectorField, string documentId = null)
+    public static object LoadVectorJs(string fieldName, string embeddingGeneratorTaskName, string path, out IndexField vectorField)
     {
         if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current))
         {
@@ -556,7 +556,7 @@ public partial class AbstractStaticIndexBase
             return null;
         }
         
-        var vectors = ProcessLoadVector(fieldName, embeddingGeneratorTaskName, path, out vectorField, documentId);
+        var vectors = ProcessLoadVector(fieldName, embeddingGeneratorTaskName, path, out vectorField);
 
         //for js indexes we've no choice than create dynamic field, in such cases let's assume it is single. 
         if (vectorField == null)
@@ -570,12 +570,17 @@ public partial class AbstractStaticIndexBase
             : vectors;
     }
     
-    public static object LoadVector(string fieldName, string embeddingGeneratorTaskIdentifier, string path, string documentId = null)
+    public object LoadVector(string fieldName, string embeddingGeneratorTaskIdentifier, string path)
+    {
+        return LoadVectorBase(fieldName, embeddingGeneratorTaskIdentifier, path);
+    }
+    
+    public static object LoadVectorBase(string fieldName, string embeddingGeneratorTaskIdentifier, string path)
     {
         if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current))
             return null;
         
-        var vectors = ProcessLoadVector(fieldName, embeddingGeneratorTaskIdentifier, path, out var vectorField, documentId);
+        var vectors = ProcessLoadVector(fieldName, embeddingGeneratorTaskIdentifier, path, out var vectorField);
 
         if (vectorField == null)
             return vectors;
@@ -585,11 +590,11 @@ public partial class AbstractStaticIndexBase
             : vectors;
     }
 
-    private static object ProcessLoadVector(string fieldName, string embeddingGeneratorTaskIdentifier, string path, out IndexField indexField, string documentId = null)
+    private static object ProcessLoadVector(string fieldName, string embeddingGeneratorTaskIdentifier, string path, out IndexField indexField)
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
         currentIndexingScope.Index.IndexFieldsPersistence.SetEmbeddingsGenerationTaskIdentifier(fieldName, embeddingGeneratorTaskIdentifier);
-        var embeddingDocument = LoadVectorDocument(out var embeddingDocumentId, documentId) as DynamicBlittableJson;
+        var embeddingDocument = LoadVectorDocument(out var embeddingDocumentId) as DynamicBlittableJson;
         
         // no related document
         if (embeddingDocument == null
@@ -645,11 +650,11 @@ public partial class AbstractStaticIndexBase
         return new object[]{ VectorValue.Null };
     }
     
-    private static dynamic LoadVectorDocument(out string embeddingDocument, string documentId = null)
+    private static dynamic LoadVectorDocument(out string embeddingDocument)
     {
         var scope = CurrentIndexingScope.Current;
         
-        var id = documentId ?? (string)scope.Source.GetId().ToString();
+        var id = (string)scope.Source.GetId().ToString();
         embeddingDocument = EmbeddingsHelper.GetEmbeddingDocumentId(id);
         var collectionName = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(scope.SourceCollection);
         return scope.LoadDocument(null, embeddingDocument, collectionName.ToLowerInvariant());
