@@ -14,7 +14,6 @@ namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest;
 
 public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
 {
-
     const int OnnxDefaultEmbeddingSize = 384;
     public EmbeddingsBatchingServiceTests(ITestOutputHelper output) : base(output)
     {
@@ -35,13 +34,11 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
         
         // Act
-        var embedding = await batchService.GetEmbeddingAsync(
-            aiConnectionStringIdentifier, 
-            "Test text for embedding generation", 
-            CancellationToken.None);
+        var embeddings = await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["Test text for embedding generation"], CancellationToken.None);
         
         // Assert
-        Assert.True(embedding.Length == OnnxDefaultEmbeddingSize, $"Embedding should have {OnnxDefaultEmbeddingSize} dimensions, but got {embedding.Length}");
+        for (var i = 0; i < embeddings.Count; i++)
+            Assert.True(embeddings[i].Length == OnnxDefaultEmbeddingSize, $"Embedding should have {OnnxDefaultEmbeddingSize} dimensions, but result #{i} has '{embeddings[i].Length}' dimensions");
     }
     
     [RavenFact(RavenTestCategory.Ai)]
@@ -62,28 +59,48 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
 
         // Get the batch worker for testing purposes
-        await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, "For worker initialization", CancellationToken.None);
+        await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["For worker initialization"], CancellationToken.None);
         var worker = batchService.ForTestingPurposesOnly().GetBatchWorker(aiConnectionStringIdentifier);
-        var batchCount = 0;
-        worker.ForTestingPurposesOnly().AfterBatchProcessed += () => batchCount++;
-        
-        // Act - Call the service multiple times in quick succession
-        var tasks = new List<Task<ReadOnlyMemory<float>>>();
-        for (int i = 0; i < 5; i++)
-        {
-            tasks.Add(batchService.GetEmbeddingAsync(
-                aiConnectionStringIdentifier, 
-                $"Test text {i} for embedding generation", 
-                CancellationToken.None).AsTask());
-        }
 
-        // Wait for all embeddings to be generated
-        await Task.WhenAll(tasks);
+        int batchCount = 0;
+        var allRequestsCompleted = new TaskCompletionSource<bool>();
+        int processedRequestCount = 0;
+        const int totalRequests = 5;
+
+        worker.ForTestingPurposesOnly().AfterBatchFlushed += () =>
+        {
+            Interlocked.Increment(ref batchCount);
+
+            // If no more requests in queue AND all our tasks received their results,
+            // we can be confident all batches have been processed
+            if (Interlocked.CompareExchange(ref processedRequestCount, 0, 0) == totalRequests)
+                allRequestsCompleted.TrySetResult(true);
+        };
+
+        // Act - Call the service multiple times in quick succession
+        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        for (int i = 0; i < totalRequests; i++)
+            tasks.Add(batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [$"Test text {i} for embedding generation"], CancellationToken.None).AsTask());
+
+        // Track when all individual requests complete
+        _ = Task.WhenAll(tasks).ContinueWith(_ =>
+            Interlocked.Exchange(ref processedRequestCount, totalRequests));
+
+        // Wait for both:
+        // 1. All individual requests to complete
+        // 2. Processing to finish and signal allRequestsCompleted
+        await Task.WhenAll(
+            Task.WhenAll(tasks),
+            Task.WhenAny(allRequestsCompleted.Task, Task.Delay(TimeSpan.FromSeconds(10)))
+        );
 
         // Assert
-        Assert.True(batchCount == 1, $"All embeddings should be batched into a single request, but got {batchCount} batches");
-        Assert.True(tasks.All(t => t.IsCompletedSuccessfully), "All embedding generation tasks should complete successfully");
-        Assert.True(tasks.All(t => t.Result.Length == OnnxDefaultEmbeddingSize), $"All embeddings should have {OnnxDefaultEmbeddingSize} dimensions");
+        Assert.True(batchCount == 1, $"All requests should have been processed in a single batch, but '{batchCount}' batches were processed");
+        Assert.True(tasks.All(t => t.IsCompletedSuccessfully));
+
+        for (var i = 0; i < tasks.Count; i++)
+            for (var j = 0; j < tasks[i].Result.Count; j++)
+                Assert.True(tasks[i].Result[j].Length == OnnxDefaultEmbeddingSize, $"Embedding should have {OnnxDefaultEmbeddingSize} dimensions, but result #{i} of task #{j} has '{tasks[i].Result[j].Length}' dimensions");
     }
     
     [RavenFact(RavenTestCategory.Ai)]
@@ -105,10 +122,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
         {
-            await batchService.GetEmbeddingAsync(
-                invalidConnectionStringId, 
-                "Test text", 
-                CancellationToken.None);
+            await batchService.GetEmbeddingAsync(invalidConnectionStringId, ["Test text"], CancellationToken.None);
         });
         
         Assert.True(ex.Message.Contains("Couldn't find Embeddings Generation task"), 

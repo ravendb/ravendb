@@ -4,17 +4,20 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Logging;
 using SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest.Helpers;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest;
 
-public class EmbeddingsBatchingWorkerTests : IDisposable
+public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
 {
     private readonly TestDocumentDatabaseStub _db;
     private readonly AiConnectionStringIdentifier _connectionStringId;
@@ -25,7 +28,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
     private const string TestText = "test text";
     private const int DimensionSize = 123;
 
-    public EmbeddingsBatchingWorkerTests()
+    public EmbeddingsBatchingWorkerTests(ITestOutputHelper output) : base(output)
     {
         _db = new TestDocumentDatabaseStub();
         _connectionStringId = new AiConnectionStringIdentifier("test-connection");
@@ -34,7 +37,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         _cts = new CancellationTokenSource();
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task EnqueueRequestAsync_ReturnsValidEmbedding()
     {
         // Arrange
@@ -52,14 +55,16 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         worker.Start();
 
         // Act
-        var task = worker.EnqueueRequestAsync(TestText, CancellationToken.None);
+        var task = worker.EnqueueRequestAsync([TestText], CancellationToken.None);
         var result = await task;
 
         // Assert
-        Assert.True(result.Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, actual '{result.Length}' dimensions");
+        for (var i = 0; i < result.Count; i++)
+            Assert.True(result[i].Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, but result #{i} has '{result[i].Length}' dimensions");
+
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task ProcessBatch_HandlesMultipleRequests()
     {
         // Arrange
@@ -79,9 +84,9 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         worker.Start();
 
         // Act
-        var tasks = new List<Task<ReadOnlyMemory<float>>>();
+        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
         for (int i = 0; i < processedTextsCount; i++)
-            tasks.Add(worker.EnqueueRequestAsync($"text {i}", CancellationToken.None));
+            tasks.Add(worker.EnqueueRequestAsync([$"text {i}"], CancellationToken.None));
 
         await Task.WhenAll(tasks);
 
@@ -92,10 +97,14 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
 
         // Verify all results have the expected dimension
         foreach (var task in tasks)
-            Assert.True((await task).Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, actual '{(await task).Length}' dimensions");
+        {
+            var result = await task;
+            for (var i = 0; i < result.Count; i++)
+                Assert.True(result[i].Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, but result #{i} has '{result[i].Length}' dimensions");
+        }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task ProcessBatch_RetriesOnFailure()
     {
         // Arrange
@@ -146,15 +155,16 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         worker.Start();
 
         // Act
-        var task = worker.EnqueueRequestAsync(TestText, CancellationToken.None);
+        var task = worker.EnqueueRequestAsync([TestText], CancellationToken.None);
         var result = await task;
 
         // Assert
         Assert.True(mockService.AttemptCount == 2, $"Should have attempted twice, but was '{mockService.AttemptCount}'");
-        Assert.True(result.Length == DimensionSize, $"Should be a valid embedding, but was not. Expected length: '{DimensionSize}', actual length: '{result.Length}'");
+        for (var i = 0; i < result.Count; i++)
+            Assert.True(result[i].Length == DimensionSize, $"Should be a valid embedding, but was not. Expected length: '{DimensionSize}', but result #{i} has '{result[i].Length}' dimensions");
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task EnqueueRequestAsync_CancellationWorks()
     {
         // Arrange
@@ -177,7 +187,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         using var requestCts = new CancellationTokenSource();
 
         // Act
-        var task = worker.EnqueueRequestAsync(TestText, requestCts.Token);
+        var task = worker.EnqueueRequestAsync([TestText], requestCts.Token);
         await requestCts.CancelAsync();
 
         // Assert
@@ -186,7 +196,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         Assert.True(exception is OperationCanceledException, $"Expected OperationCanceledException, but got {exception.GetType().Name}");
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task WorkerCancellation_CancelsAllRequests()
     {
         // Arrange
@@ -209,9 +219,9 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         worker.Start();
 
         // Queue several requests
-        var tasks = new List<Task<ReadOnlyMemory<float>>>();
+        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
         for (int i = 0; i < 5; i++)
-            tasks.Add(worker.EnqueueRequestAsync($"text {i}", CancellationToken.None));
+            tasks.Add(worker.EnqueueRequestAsync([$"text {i}"], CancellationToken.None));
 
         // Allow some time for the requests to be enqueued
         await Task.Delay(50, workerCts.Token);
@@ -228,7 +238,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task BatchingLogic_RespectsMaxBatchSize()
     {
         // Arrange
@@ -252,9 +262,9 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         worker.Start();
 
         // Act
-        var tasks = new List<Task<ReadOnlyMemory<float>>>();
+        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
         for (int i = 0; i < 12; i++)
-            tasks.Add(worker.EnqueueRequestAsync($"text {i}", CancellationToken.None));
+            tasks.Add(worker.EnqueueRequestAsync([$"text {i}"], CancellationToken.None));
 
         await Task.WhenAll(tasks);
 
@@ -264,10 +274,14 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
 
         // All results should have correct dimensions
         foreach (var task in tasks)
-            Assert.True((await task).Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, actual '{(await task).Length}' dimensions");
+        {
+            var result = await task;
+            for (var i = 0; i < result.Count; i++)
+                Assert.True(result[i].Length == DimensionSize, $"Should be a valid embedding, but was not. Expected '{DimensionSize}' dimensions, but result #{i} has '{result[i].Length}'dimensions");
+        }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task BatchingLogic_RespectsTimeout()
     {
         // Arrange
@@ -291,18 +305,18 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         var stopwatch = Stopwatch.StartNew();
 
         // Send one request
-        var task1 = worker.EnqueueRequestAsync("text 1", CancellationToken.None);
+        var task1 = worker.EnqueueRequestAsync(["text 1"], CancellationToken.None);
         await task1;
 
         var elapsed1 = stopwatch.ElapsedMilliseconds;
 
         // Reset and test with multiple requests
         stopwatch.Restart();
-        var task2 = worker.EnqueueRequestAsync("text 2", CancellationToken.None);
+        var task2 = worker.EnqueueRequestAsync(["text 2"], CancellationToken.None);
 
         // Wait a bit before sending more
         await Task.Delay(10);
-        var task3 = worker.EnqueueRequestAsync("text 3", CancellationToken.None);
+        var task3 = worker.EnqueueRequestAsync(["text 3"], CancellationToken.None);
 
         await Task.WhenAll(task2, task3);
 
@@ -313,7 +327,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         Assert.True(elapsed2 < 200, $"Second batch should process faster with multiple items (elapsed: {elapsed2}ms)");
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task NonRetriableException_FailsImmediately()
     {
         // Arrange
@@ -338,7 +352,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         worker.Start();
 
         // Act & Assert
-        var task = worker.EnqueueRequestAsync(TestText, CancellationToken.None);
+        var task = worker.EnqueueRequestAsync([TestText], CancellationToken.None);
 
         // Should fail with the ArgumentException we configured
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => task);
@@ -346,7 +360,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         Assert.True(mockService.BatchCallCount == 1, $"Should have called the service once, but was '{mockService.BatchCallCount}'");
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task RetriableException_RetriesUpToMaxRetries()
     {
         // Arrange
@@ -376,7 +390,7 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         worker.Start();
 
         // Act & Assert
-        var task = worker.EnqueueRequestAsync(TestText, CancellationToken.None);
+        var task = worker.EnqueueRequestAsync([TestText], CancellationToken.None);
 
         // Should fail after maxRetries + 1 attempts
         var exception = await Assert.ThrowsAsync<IOException>(() => task);
@@ -384,9 +398,105 @@ public class EmbeddingsBatchingWorkerTests : IDisposable
         Assert.True(mockService.AttemptCount == _db.Configuration.MaxRetries + 1, $"Should have attempted {_db.Configuration.MaxRetries + 1} times, but was '{mockService.AttemptCount}'");
     }
 
-    void IDisposable.Dispose()
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task PartialSuccessInBatch_ShouldHandleMixedResults()
     {
-        _concurrencyLimiter.Dispose();
-        _cts.Dispose();
+        const string successPrefix = "success";
+        const int dimensionSize = 384;
+        // Create a document store and register AI integration
+        using var store = GetDocumentStore();
+        (_, AiConnectionString connection) = AddEmbeddingsGenerationTask(store);
+
+        // Get the database instance
+        var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+        // Configure for test
+        database.Configuration.Ai.MaxRetries = 0; // Disable retries for this test
+        database.Configuration.Ai.BatchTimeoutInMs = 50;
+        database.Configuration.Ai.MaxBatchSize = 10; // Allow all requests in one batch
+
+        // Create the batching service
+        var batchService = new EmbeddingsBatchingService(database.AiIntegrations);
+        var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
+
+        // Submit a first request to ensure worker is created
+        await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["Initial request"], CancellationToken.None);
+
+        // Verify we can get the worker
+        var worker = batchService.ForTestingPurposesOnly().GetBatchWorker(aiConnectionStringIdentifier);
+        Assert.True(worker != null, "Worker wasn't created properly");
+
+        // Create a service that selectively succeeds/fails based on text content
+        var selectiveService = new TestEmbeddingGenerationService
+        {
+            DimensionSize = dimensionSize,
+            CustomBehavior = (texts, _) =>
+            {
+                // Process texts individually
+                var results = new List<ReadOnlyMemory<float>>();
+
+                foreach (var text in texts)
+                {
+                    // Succeed for texts containing 'successPrefix' fail for others
+                    if (text.Contains(successPrefix))
+                    {
+                        var embedding = new float[dimensionSize];
+                        for (int i = 0; i < dimensionSize; i++)
+                            embedding[i] = 0.1f * i;
+
+                        results.Add(embedding);
+                    }
+                    else
+                    {
+                        // Failure case - add null to create "holes" in the results
+                        results.Add(null); // Empty embedding
+                    }
+                }
+
+                // Emulate the expected behavior - return list with same count as input
+                return Task.FromResult<IList<ReadOnlyMemory<float>>>(results);
+            }
+        };
+
+        // Replace the service field directly
+        var serviceField = typeof(EmbeddingsBatchingWorker).GetField("<service>P", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Assert.True(serviceField != null, "We want to replace the service field, but it wasn't found");
+        serviceField.SetValue(worker, selectiveService);
+
+        // Submit a mix of requests that should succeed or fail
+        var successTasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        var failureTasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+        var allTasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
+
+        // Randomize the order of requests controlling that we have at least one success and one failure
+        var random = new Random();
+        while (successTasks.Count < 1 || failureTasks.Count < 1 || allTasks.Count < 10)
+        {
+            var text = random.Next(0, 2) == 0 ? "success" : "failure";
+            var task = batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [text], CancellationToken.None).AsTask();
+
+            if (text == successPrefix)
+                successTasks.Add(task);
+            else
+                failureTasks.Add(task);
+
+            allTasks.Add(task);
+        }
+
+        // Wait for successful tasks
+        await Task.WhenAll(allTasks);
+
+        // Verify successful tasks
+        foreach (var task in successTasks)
+        {
+            Assert.True(task.IsCompletedSuccessfully, $"Tasks containing '{successPrefix}' should complete successfully");
+            for (var i = 0; i < task.Result.Count; i++)
+                Assert.True(task.Result[i].Length == dimensionSize, $"Expected embedding of length '{dimensionSize}', but result #{i} got '{task.Result[i].Length}' dimensions");
+        }
+
+        // Verify failure tasks - they should either fail or return empty embeddings
+        foreach (var task in failureTasks)
+            for (var i = 0; i < task.Result.Count; i++)
+                Assert.True(task.Result[i].Length == 0, $"Expected empty embedding for failure case, but result #{i} got '{task.Result[i].Length}' dimensions");
     }
 }

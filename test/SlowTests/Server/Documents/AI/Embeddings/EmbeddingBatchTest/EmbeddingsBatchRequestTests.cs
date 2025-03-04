@@ -6,19 +6,20 @@ namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest;
 
 public class EmbeddingsBatchRequestTests
 {
+    private const string TestValue = "test text";
+
     [Fact]
     public void Creation_InitializesCorrectly()
     {
         // Arrange
-        const string value = "test text";
         var callerToken = new CancellationTokenSource();
         var workerToken = new CancellationTokenSource();
 
         // Act
-        using var request = new EmbeddingsBatchRequest(value, callerToken.Token, workerToken.Token);
+        using var request = new EmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
 
         // Assert
-        Assert.Equal(value, request.Value);
+        Assert.Equal(TestValue, request.Values[0]);
         Assert.False(request.TaskCompletionSource.Task.IsCompleted);
     }
 
@@ -29,7 +30,7 @@ public class EmbeddingsBatchRequestTests
         var callerToken = new CancellationTokenSource();
         var workerToken = new CancellationTokenSource();
 
-        using var request = new EmbeddingsBatchRequest("test", callerToken.Token, workerToken.Token);
+        using var request = new EmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
 
         // Act
         callerToken.Cancel();
@@ -45,7 +46,7 @@ public class EmbeddingsBatchRequestTests
         var callerToken = new CancellationTokenSource();
         var workerToken = new CancellationTokenSource();
 
-        using var request = new EmbeddingsBatchRequest("test", callerToken.Token, workerToken.Token);
+        using var request = new EmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
 
         // Act
         workerToken.Cancel();
@@ -61,7 +62,7 @@ public class EmbeddingsBatchRequestTests
         var callerToken = new CancellationTokenSource();
         var workerToken = new CancellationTokenSource();
 
-        var request = new EmbeddingsBatchRequest("test", callerToken.Token, workerToken.Token);
+        var request = new EmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
 
         // Act
         request.Dispose();

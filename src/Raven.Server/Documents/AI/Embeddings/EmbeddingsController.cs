@@ -18,9 +18,6 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         AiConnectionStringIdentifier connectionStringId,
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value)
     {
-        if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
-            throw new ArgumentException($"Couldn't find Embeddings Generation task for connection string '{connectionStringId.Value}' ");
-
         if (documentsContext.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingTaskId, out var taskConfig) == false)
             throw new Exception($"Could not find embeddings generation configuration for embedding task '{embeddingTaskId.Value}'");
 
@@ -49,8 +46,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
         List<EmbeddingGenerationItem> embeddingsToCache = null;
 
-        // var embedding = await _batchingService.GetEmbeddingAsync(connectionStringId, value); // TODO Lev - uncomment when batching is implemented
-        var embeddings = await service.GenerateEmbeddingsAsync(chunksForGeneration, cancellationToken: aiIntegrations.Database.DatabaseShutdown);
+        var embeddings = await _batchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration);
 
         for (int i = 0; i < embeddings.Count; i++)
         {

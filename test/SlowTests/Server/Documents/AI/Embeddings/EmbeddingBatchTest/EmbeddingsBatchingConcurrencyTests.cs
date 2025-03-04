@@ -39,7 +39,7 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
         int maxObservedConcurrentBatches = 0;
 
         // Submit a first request to ensure worker is created
-        await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, "Initial request", CancellationToken.None);
+        await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["Initial request"], CancellationToken.None);
 
         // Get the worker and set up testing hooks
         var worker = batchService.ForTestingPurposesOnly().GetBatchWorker(aiConnectionStringIdentifier);
@@ -49,12 +49,10 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
         // We'll create events that we can manually trigger to control when batches complete
         const int totalBatches = 5;
         for (int i = 0; i < totalBatches; i++)
-        {
             batchCompletionEvents.Add(new ManualResetEventSlim(false));
-        }
 
         int batchCounter = 0;
-        workerTestHooks.AfterBatchProcessed = () =>
+        workerTestHooks.AfterBatchFlushed = () =>
         {
             int current = Interlocked.Increment(ref currentlyProcessingBatches);
 
@@ -85,14 +83,9 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
         };
 
         // Act - Submit many requests that will be processed in batches
-        var tasks = new List<Task<ReadOnlyMemory<float>>>();
+        var tasks = new List<Task<IList<ReadOnlyMemory<float>>>>();
         for (int i = 0; i < totalBatches * database.Configuration.Ai.MaxBatchSize; i++)
-        {
-            tasks.Add(batchService.GetEmbeddingAsync(
-                aiConnectionStringIdentifier,
-                $"Concurrent test text {i}",
-                CancellationToken.None).AsTask());
-        }
+            tasks.Add(batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [$"Concurrent test text {i}"], CancellationToken.None).AsTask());
 
         // Allow some time for batches to start processing
         await Task.Delay(500);
@@ -119,8 +112,9 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
         Assert.True(tasks.All(t => t.IsCompletedSuccessfully),
             "All embedding tasks should complete successfully");
 
-        Assert.True(tasks.All(t => t.Result.Length > 0),
-            "All embeddings should have positive lengths");
+        for (var i = 0; i < tasks.Count; i++)
+            for (var j = 0; j < tasks[i].Result.Count; j++)
+                Assert.True(tasks[i].Result[j].Length > 0, $"All embedding tasks should have positive lengths, but result #{i} of task #{j} has '{tasks[i].Result[j]}' dimensions");
 
         // Clean up
         foreach (var evt in batchCompletionEvents)
@@ -148,7 +142,7 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
         using var cts = new CancellationTokenSource();
 
         // Act
-        var task = batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, "Text that should never be processed", cts.Token);
+        var task = batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["Text that should never be processed"], cts.Token);
 
         // Cancel immediately
         await cts.CancelAsync();
