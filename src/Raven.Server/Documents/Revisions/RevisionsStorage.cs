@@ -17,7 +17,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -32,6 +31,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Revisions;
+using static Raven.Server.Documents.Schemas.Tombstones;
 using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
@@ -298,6 +298,25 @@ namespace Raven.Server.Documents.Revisions
             }
 
             return true;
+        }
+
+        public bool CheckTombstoneConflictStatus(DocumentsOperationContext context, string docId, ChangeVector revisionChangeVector)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out var revisionIdSlice))
+            using (CreateRevisionTombstoneKeySlice(context, revisionIdSlice, revisionChangeVector.Version.ToString(), out _, out var tombstoneKeySlice))
+            {
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, RevisionsTombstonesSlice);
+                if (tombstoneTable.ReadByKey(tombstoneKeySlice, out var tvr))
+                {
+                    var tombstoneChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr);
+                    var status = ChangeVectorUtils.GetConflictStatus(revisionChangeVector, tombstoneChangeVector);
+
+                    if (status is ConflictStatus.AlreadyMerged)
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         public unsafe bool Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,

@@ -565,6 +565,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 var nonPersistentFlags = GetNonPersistentDocumentFlags();
                                 if (doc.Flags.Contain(DocumentFlags.Revision))
                                 {
+                                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding) == false && 
+                                        database.DocumentsStorage.RevisionsStorage.CheckTombstoneConflictStatus(context, doc.Id, changeVectorVersion)) 
+                                        continue;
+
                                     database.DocumentsStorage.RevisionsStorage.Put(
                                         context,
                                         doc.Id,
@@ -578,6 +582,10 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
                                 {
+                                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding) == false && 
+                                        database.DocumentsStorage.RevisionsStorage.CheckTombstoneConflictStatus(context, doc.Id, changeVectorVersion))
+                                        continue;
+
                                     database.DocumentsStorage.RevisionsStorage.Delete(
                                         context,
                                         doc.Id,
