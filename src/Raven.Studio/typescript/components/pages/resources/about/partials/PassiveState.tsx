@@ -1,5 +1,4 @@
 ﻿import Card from "react-bootstrap/Card";
-import {} from "reactstrap";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import appUrl from "common/appUrl";

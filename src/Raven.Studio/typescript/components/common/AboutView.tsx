@@ -119,7 +119,8 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
 const AboutViewAnchored = (props: AboutViewProps) => {
     const { children, className } = props;
 
-    // defaultActiveKey in Accordion works incorrectly if we do not provide an array
+    // Ensure defaultActiveKey and activeKey are arrays when using alwaysOpen
+    // Otherwise, Accordion may not function correctly – see: https://github.com/react-bootstrap/react-bootstrap/issues/6757#issuecomment-1925633893
     const defaultOpen = Array.isArray(props.defaultOpen) ? props.defaultOpen : [props.defaultOpen];
 
     return (

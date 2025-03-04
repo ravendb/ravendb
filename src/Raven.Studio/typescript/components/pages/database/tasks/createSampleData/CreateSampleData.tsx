@@ -3,7 +3,6 @@ import { Icon } from "components/common/Icon";
 import Spinner from "react-bootstrap/Spinner";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import {} from "reactstrap";
 import "./CreateSampleData.scss";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsync, useAsyncCallback } from "react-async-hook";
