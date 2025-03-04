@@ -17,11 +17,11 @@ namespace Raven.Server.Documents.AI.Embeddings
 
         public ValueTask<ReadOnlyMemory<float>[]> GetEmbeddingAsync(AiConnectionStringIdentifier connectionStringId, IList<string> values, CancellationToken cancellationToken = default)
         {
-            if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
-                throw new ArgumentException($"Couldn't find Embeddings Generation task for connection string '{connectionStringId.Value}'");
-
             var batchWorker = _batchWorkers.GetOrAdd(connectionStringId, aiConnectionStringIdentifier =>
             {
+                if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
+                    throw new ArgumentException($"Couldn't find Embeddings Generation task for connection string '{connectionStringId.Value}'");
+
                 var worker = new EmbeddingsBatchingWorker(aiIntegrations.Database.Name, aiIntegrations.Database.Configuration.Ai, service, aiConnectionStringIdentifier, _globalConcurrencyLimiter, _logger, aiIntegrations.Database.DatabaseShutdown);
 
                 worker.Start();
