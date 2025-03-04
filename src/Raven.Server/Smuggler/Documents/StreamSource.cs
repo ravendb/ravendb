@@ -481,7 +481,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         try
                         {
-                            databaseRecord.EmbeddingsGenerations.Add(JsonDeserializationCluster.AiIntegrationConfiguration(etl));
+                            databaseRecord.EmbeddingsGenerations.Add(JsonDeserializationCluster.EmbeddingsGenerationConfiguration(etl));
                         }
                         catch (Exception e)
                         {

@@ -675,16 +675,16 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
                 {
                     if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
                     {
-                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.AiIntegration, _name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.EmbeddingsGeneration, _name, RaftIdGenerator.DontCareId)));
                     }
                 });
 
                 etl.TaskId = 0;
                 etl.Disabled = true;
-                tasks.Add(_server.SendToLeaderAsync(new AddAiIntegrationCommand(etl, _name, RaftIdGenerator.DontCareId)));
+                tasks.Add(_server.SendToLeaderAsync(new AddEmbeddingsGenerationCommand(etl, _name, RaftIdGenerator.DontCareId)));
             }
 
-            result.DatabaseRecord.AiIntegrationsUpdated = true;
+            result.DatabaseRecord.EmbeddingsGenerationsUpdated = true;
         }
 
         if (tasks.Count == 0)

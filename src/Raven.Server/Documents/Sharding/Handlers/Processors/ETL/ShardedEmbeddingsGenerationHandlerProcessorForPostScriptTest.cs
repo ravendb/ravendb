@@ -18,5 +18,5 @@ internal sealed class ShardedEmbeddingsGenerationHandlerProcessorForPostScriptTe
 
     protected override TestEmbeddingsGenerationScript GetTestEtlScript(BlittableJsonReaderObject json) => JsonDeserializationServer.TestEmbeddingsGenerationScript(json);
 
-    protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new AiIntegrationTestCommand(RequestHandler.ShardExecutor.Conventions, json);
+    protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new EmbeddingsGenerationTestCommand(RequestHandler.ShardExecutor.Conventions, json);
 }

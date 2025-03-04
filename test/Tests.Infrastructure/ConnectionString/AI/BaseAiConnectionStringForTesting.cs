@@ -25,7 +25,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
     internal static T CreateNewInstance(string prefixName) => new() { NamePrefix = new Lazy<string>(prefixName) };
 
-    private readonly Lazy<EmbeddingsGenerationConfiguration> _aiIntegrationConfiguration;
+    private readonly Lazy<EmbeddingsGenerationConfiguration> _embeddingsGenerationConfiguration;
 
     public Lazy<bool> CanConnect { get; }
 
@@ -35,7 +35,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
     protected BaseAiConnectorForTesting()
     {
-        _aiIntegrationConfiguration = new Lazy<EmbeddingsGenerationConfiguration>(GetEtlConfiguration);
+        _embeddingsGenerationConfiguration = new Lazy<EmbeddingsGenerationConfiguration>(GetEtlConfiguration);
         CanConnect = new Lazy<bool>(CanConnectInternal);
     }
 
@@ -85,7 +85,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
     {
         try
         {
-            var services = AiHelper.CreateServicesForTest(_aiIntegrationConfiguration.Value, out string serviceId);
+            var services = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value, out string serviceId);
             var embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
                 .GenerateEmbeddingsAsync(EmbeddingsHelper.TestValuesList).Result;
 

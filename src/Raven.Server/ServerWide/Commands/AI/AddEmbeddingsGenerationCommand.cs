@@ -7,14 +7,14 @@ using Raven.Server.ServerWide.Commands.ETL;
 
 namespace Raven.Server.ServerWide.Commands.AI;
 
-public sealed class AddAiIntegrationCommand : AddEtlCommand<EmbeddingsGenerationConfiguration, AiConnectionString>
+public sealed class AddEmbeddingsGenerationCommand : AddEtlCommand<EmbeddingsGenerationConfiguration, AiConnectionString>
 {
-    public AddAiIntegrationCommand()
+    public AddEmbeddingsGenerationCommand()
     {
         // for deserialization
     }
 
-    public AddAiIntegrationCommand(EmbeddingsGenerationConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
+    public AddEmbeddingsGenerationCommand(EmbeddingsGenerationConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
     {
 
     }
@@ -28,7 +28,7 @@ public sealed class AddAiIntegrationCommand : AddEtlCommand<EmbeddingsGeneration
         }
         catch (Exception e)
         {
-            throw new RachisApplyException("Failed to generate AI integration task identifier", e);
+            throw new RachisApplyException("Failed to generate Embeddings Generation task identifier", e);
         }
 
         InClusterValidation(record);

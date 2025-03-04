@@ -1437,7 +1437,7 @@ namespace Raven.Server.Documents.ETL
                         aiEtl.EnsureThreadAllocationStats();
 
                         var aiEtlItem = new AiIntegrationItem(document, docCollection);
-                        var results = aiEtl.Transform([aiEtlItem], context, new AiIntegrationStatsScope(new EtlRunStats()), new EtlProcessState());
+                        var results = aiEtl.Transform([aiEtlItem], context, new EmbeddingsGenerationStatsScope(new EtlRunStats()), new EtlProcessState());
 
                         var result  = aiEtl.RunTest(results, context);
                         result.DebugOutput = debugOutput;

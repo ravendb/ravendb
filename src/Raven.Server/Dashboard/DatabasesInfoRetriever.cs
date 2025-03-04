@@ -363,8 +363,8 @@ namespace Raven.Server.Dashboard
             long amazonSqsEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.AmazonSqs);
 
-            var aiEtlCount = database.EtlLoader.AiIntegrationDestinations.Count;
-            long aiEtlCountOnNode = GetTaskCountOnNode<EmbeddingsGenerationConfiguration>(database, dbRecord, serverStore, database.EtlLoader.AiIntegrationDestinations,
+            var aiEtlCount = database.EtlLoader.EmbeddingsGenerationDestinations.Count;
+            long aiEtlCountOnNode = GetTaskCountOnNode<EmbeddingsGenerationConfiguration>(database, dbRecord, serverStore, database.EtlLoader.EmbeddingsGenerationDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
             
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
@@ -405,7 +405,7 @@ namespace Raven.Server.Dashboard
                 KafkaSinkCount = kafkaSinkCountOnNode,
                 RabbitMqSinkCount = rabbitMqSinkCountOnNode,
                 SnowflakeEtlCount = snowflakeEtlCountOnNode,
-                AiIntegrationCount = aiEtlCountOnNode,
+                EmbeddingGenerationCount = aiEtlCountOnNode,
             };
         }
 

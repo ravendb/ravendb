@@ -927,7 +927,7 @@ namespace Raven.Server.ServerWide
                     if (_record.TryGet(nameof(DatabaseRecord.EmbeddingsGenerations), out BlittableJsonReaderArray bjra) && bjra != null)
                     {
                         foreach (BlittableJsonReaderObject element in bjra)
-                            _aiIntegrations.Add(JsonDeserializationCluster.AiIntegrationConfiguration(element));
+                            _aiIntegrations.Add(JsonDeserializationCluster.EmbeddingsGenerationConfiguration(element));
                     }
                 }
 

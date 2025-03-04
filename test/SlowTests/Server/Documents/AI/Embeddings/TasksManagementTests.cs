@@ -35,13 +35,13 @@ public class TasksManagementTests : RavenTestBase
         var putAiConnectionStringResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
         Assert.NotNull(putAiConnectionStringResult.RaftCommandIndex);
 
-        var addAiIntegrationTaskResult = store.Maintenance.Send(new AddAiIntegrationOperation(configuration));
+        var addAiIntegrationTaskResult = store.Maintenance.Send(new AddEmbeddingsGenerationOperation(configuration));
         Assert.NotNull(addAiIntegrationTaskResult.RaftCommandIndex);
         Assert.NotNull(addAiIntegrationTaskResult.TaskId);
 
-        store.Maintenance.Send(new DeleteOngoingTaskOperation(addAiIntegrationTaskResult.TaskId, OngoingTaskType.AiIntegration));
+        store.Maintenance.Send(new DeleteOngoingTaskOperation(addAiIntegrationTaskResult.TaskId, OngoingTaskType.EmbeddingsGeneration));
 
-        var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(addAiIntegrationTaskResult.TaskId, OngoingTaskType.AiIntegration));
+        var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(addAiIntegrationTaskResult.TaskId, OngoingTaskType.EmbeddingsGeneration));
 
         Assert.Null(ongoingTask);
     }
@@ -65,15 +65,15 @@ public class TasksManagementTests : RavenTestBase
         var putAiConnectionStringResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
         Assert.NotNull(putAiConnectionStringResult.RaftCommandIndex);
 
-        var addAiIntegrationTaskResult = store.Maintenance.Send(new AddAiIntegrationOperation(configuration));
+        var addAiIntegrationTaskResult = store.Maintenance.Send(new AddEmbeddingsGenerationOperation(configuration));
         Assert.NotNull(addAiIntegrationTaskResult.RaftCommandIndex);
         Assert.NotNull(addAiIntegrationTaskResult.TaskId);
 
         configuration.Disabled = true;
 
-        var update = store.Maintenance.Send(new UpdateAiIntegrationOperation(addAiIntegrationTaskResult.TaskId, configuration));
+        var update = store.Maintenance.Send(new UpdateEmbeddingsGenerationOperation(addAiIntegrationTaskResult.TaskId, configuration));
 
-        var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.AiIntegration));
+        var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.EmbeddingsGeneration));
 
         Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
     }

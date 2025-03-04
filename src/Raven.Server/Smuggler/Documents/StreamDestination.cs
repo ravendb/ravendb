@@ -506,7 +506,7 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.EmbeddingsGenerations));
-                            WriteAiIntegrations(databaseRecord.EmbeddingsGenerations);
+                            WriteEmbeddingsGenerations(databaseRecord.EmbeddingsGenerations);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiConnectionStrings))
@@ -892,16 +892,16 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteAiIntegrations(List<EmbeddingsGenerationConfiguration> aiIntegrationConfigurations)
+            private void WriteEmbeddingsGenerations(List<EmbeddingsGenerationConfiguration> embeddingsGenerationConfigurations)
             {
-                if (aiIntegrationConfigurations == null)
+                if (embeddingsGenerationConfigurations == null)
                 {
                     _writer.WriteNull();
                     return;
                 }
                 _writer.WriteStartArray();
                 var first = true;
-                foreach (var etl in aiIntegrationConfigurations)
+                foreach (var etl in embeddingsGenerationConfigurations)
                 {
                     if (first == false)
                         _writer.WriteComma();

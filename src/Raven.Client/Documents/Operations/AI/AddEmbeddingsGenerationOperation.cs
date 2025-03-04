@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public class AddAiIntegrationOperation(EmbeddingsGenerationConfiguration configuration) : IMaintenanceOperation<AddEtlOperationResult>
+public class AddEmbeddingsGenerationOperation(EmbeddingsGenerationConfiguration configuration) : IMaintenanceOperation<AddEtlOperationResult>
 {
     public RavenCommand<AddEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {

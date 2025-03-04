@@ -137,13 +137,13 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
     }
 
-    private IEnumerable<OngoingTaskAiIntegration> GetAiIntegrationsTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<EmbeddingsGeneration> GetEmbeddingsGenerationTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.EmbeddingsGenerations == null || databaseRecord.EmbeddingsGenerations.Count == 0)
             yield break;
 
         foreach (var aiIntegration in databaseRecord.EmbeddingsGenerations)
-            yield return CreateAiIntegrationTaskInfo(clusterTopology, databaseRecord, aiIntegration);
+            yield return CreateEmbeddingsGenerationTaskInfo(clusterTopology, databaseRecord, aiIntegration);
     }
 
     public IEnumerable<OngoingTask> GetAllTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
@@ -184,7 +184,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         foreach (var task in GetQueueSinkTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in GetAiIntegrationsTasks(clusterTopology, databaseRecord))
+        foreach (var task in GetEmbeddingsGenerationTasks(clusterTopology, databaseRecord))
             yield return task;
     }
 
@@ -308,16 +308,16 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                     return null;
 
                 return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
-            case OngoingTaskType.AiIntegration:
+            case OngoingTaskType.EmbeddingsGeneration:
 
-                var aiIntegrationTask = taskName != null
+                var embeddingsGeneration = taskName != null
                     ? databaseRecord.EmbeddingsGenerations.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
                     : databaseRecord.EmbeddingsGenerations?.Find(x => x.TaskId == taskId);
 
-                if (aiIntegrationTask == null)
+                if (embeddingsGeneration == null)
                     return null;
 
-                return CreateAiIntegrationTaskInfo(clusterTopology, databaseRecord, aiIntegrationTask);
+                return CreateEmbeddingsGenerationTaskInfo(clusterTopology, databaseRecord, embeddingsGeneration);
             default:
                 return null;
         }
@@ -637,14 +637,14 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         };
     }
 
-    private OngoingTaskAiIntegration CreateAiIntegrationTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
+    private EmbeddingsGeneration CreateEmbeddingsGenerationTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
         EmbeddingsGenerationConfiguration configuration)
     {
         databaseRecord.AiConnectionStrings.TryGetValue(configuration.ConnectionStringName, out var connection);
         var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, configuration, out var tag, out var error);
         var taskState = OngoingTasksHandler.GetEtlTaskState(configuration);
 
-        return new OngoingTaskAiIntegration
+        return new EmbeddingsGeneration
         {
             TaskId = configuration.TaskId,
             TaskName = configuration.Name,

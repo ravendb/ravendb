@@ -67,20 +67,20 @@ namespace Raven.Server.Documents.ETL.Stats
         }
     }
 
-    public sealed class AiIntegrationStatsScope : AbstractEtlStatsScope<AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
+    public sealed class EmbeddingsGenerationStatsScope : AbstractEtlStatsScope<EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
     {
         public TimeSpan GenerateEmbeddings { get; set; }
         
-        public AiIntegrationStatsScope(EtlRunStats stats, bool start = true) : base(stats, start)
+        public EmbeddingsGenerationStatsScope(EtlRunStats stats, bool start = true) : base(stats, start)
         {
         }
 
-        protected override AiIntegrationStatsScope OpenNewScope(EtlRunStats stats, bool start)
+        protected override EmbeddingsGenerationStatsScope OpenNewScope(EtlRunStats stats, bool start)
         {
-            return new AiIntegrationStatsScope(stats, start);
+            return new EmbeddingsGenerationStatsScope(stats, start);
         }
 
-        protected override EmbeddingsGenerationPerformanceOperation ToPerformanceOperation(string name, AiIntegrationStatsScope scope)
+        protected override EmbeddingsGenerationPerformanceOperation ToPerformanceOperation(string name, EmbeddingsGenerationStatsScope scope)
         {
             return scope.ToPerformanceOperation(name);
         }

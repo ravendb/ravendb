@@ -137,7 +137,7 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
 
-                case OngoingTaskType.AiIntegration:
+                case OngoingTaskType.EmbeddingsGeneration:
 
                     var aiEtl = record?.EmbeddingsGenerations?.Find(x => x.TaskId == TaskId);
                     if (aiEtl != null)

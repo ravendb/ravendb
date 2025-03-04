@@ -224,7 +224,7 @@ public sealed class DatabaseRecordBuilder :
         return this;
     }
 
-    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddAiIntegration(EmbeddingsGenerationConfiguration configuration)
+    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddEmbeddingsGeneration(EmbeddingsGenerationConfiguration configuration)
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
@@ -742,5 +742,5 @@ public interface IEtlConfigurationBuilder
     
     IEtlConfigurationBuilder AddSnowflakeEtl(SnowflakeEtlConfiguration configuration);
 
-    IEtlConfigurationBuilder AddAiIntegration(EmbeddingsGenerationConfiguration configuration);
+    IEtlConfigurationBuilder AddEmbeddingsGeneration(EmbeddingsGenerationConfiguration configuration);
 }

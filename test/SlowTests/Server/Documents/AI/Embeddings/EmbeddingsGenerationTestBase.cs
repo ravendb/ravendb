@@ -76,7 +76,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         var putResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
         Assert.NotNull(putResult.RaftCommandIndex);
 
-        store.Maintenance.Send(new AddAiIntegrationOperation(configuration));
+        store.Maintenance.Send(new AddEmbeddingsGenerationOperation(configuration));
 
         return (configuration, connectionString);
     }

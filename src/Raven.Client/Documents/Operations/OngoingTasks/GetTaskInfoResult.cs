@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         PullReplicationAsHub,
         PullReplicationAsSink,
         QueueSink,
-        AiIntegration,
+        EmbeddingsGeneration,
     }
 
     public enum OngoingTaskState
@@ -416,11 +416,11 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public sealed class OngoingTaskAiIntegration : OngoingTask
+    public sealed class EmbeddingsGeneration : OngoingTask
     {
-        public OngoingTaskAiIntegration()
+        public EmbeddingsGeneration()
         {
-            TaskType = OngoingTaskType.AiIntegration;
+            TaskType = OngoingTaskType.EmbeddingsGeneration;
         }
 
         public string ConnectionStringName { get; set; }

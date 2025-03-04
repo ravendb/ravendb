@@ -85,7 +85,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         
         public bool SnowflakeEtlsUpdated { get; set; }
         
-        public bool AiIntegrationsUpdated { get; set; }
+        public bool EmbeddingsGenerationsUpdated { get; set; }
 
         public bool ExternalReplicationsUpdated { get; set; }
 
@@ -189,8 +189,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
             if (SnowflakeEtlsUpdated)
                 json[nameof(SnowflakeEtlsUpdated)] = SnowflakeEtlsUpdated;
 
-            if (AiIntegrationsUpdated)
-                json[nameof(AiIntegrationsUpdated)] = AiIntegrationsUpdated;
+            if (EmbeddingsGenerationsUpdated)
+                json[nameof(EmbeddingsGenerationsUpdated)] = EmbeddingsGenerationsUpdated;
 
             if (RavenEtlsUpdated)
                 json[nameof(RavenEtlsUpdated)] = RavenEtlsUpdated;
@@ -288,7 +288,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
             if (SnowflakeEtlsUpdated)
                 sb.AppendLine("- Snowflake ETLs");
 
-            if (AiIntegrationsUpdated)
+            if (EmbeddingsGenerationsUpdated)
                 sb.AppendLine("- AI Integrations");
 
             if (SortersUpdated)

@@ -582,7 +582,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SnowflakeEtlTable));
 
             // ongoing tasks - AI Integration
-            scripter.AddType(typeof(OngoingTaskAiIntegration));
+            scripter.AddType(typeof(EmbeddingsGeneration));
             scripter.AddType(typeof(EmbeddingsGenerationConfiguration));
             scripter.AddType(typeof(TestEmbeddingsGenerationScript));
             scripter.AddType(typeof(EmbeddingsGenerationTestScriptResult));

@@ -37,7 +37,7 @@ using static Lucene.Net.Index.ByteBlockPool;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationConfiguration, AiConnectionString, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
+public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationConfiguration, AiConnectionString, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
     private ITextEmbeddingGenerationService _service;
 
@@ -51,7 +51,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         Metrics = new EtlMetricsCountersManager();
     }
 
-    private AiIntegrationStatsScope _statsScope;
+    private EmbeddingsGenerationStatsScope _statsScope;
 
     public override EtlType EtlType => EtlType.EmbeddingsGeneration;
     public override bool ShouldTrackCounters() => false;
@@ -92,12 +92,12 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         return false;
     }
 
-    protected override EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
         return new EmbeddingsGenerationScriptTransformer(Database, context, Transformation, null, Configuration);
     }
 
-    protected override int LoadInternal(IEnumerable<EmbeddingGenerationScriptResult> items, DocumentsOperationContext context, AiIntegrationStatsScope scope)
+    protected override int LoadInternal(IEnumerable<EmbeddingGenerationScriptResult> items, DocumentsOperationContext context, EmbeddingsGenerationStatsScope scope)
     {
         _service ??= AiHelper.CreateService(Configuration);
         if (items is not EmbeddingsGenerationScriptRun embeddingsScriptRun)
@@ -159,9 +159,9 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         return processed;
     }
 
-    protected override AiIntegrationStatsScope CreateScope(EtlRunStats stats)
+    protected override EmbeddingsGenerationStatsScope CreateScope(EtlRunStats stats)
     {
-        return new AiIntegrationStatsScope(stats);
+        return new EmbeddingsGenerationStatsScope(stats);
     }
 
     protected override bool ShouldFilterOutHiLoDocument()

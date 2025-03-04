@@ -52,8 +52,8 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Snowflake ETL")]
         SnowflakeEtl,
 
-        [Description("AI Integration")]
-        AiIntegration,
+        [Description("AI Integrations")]
+        AiIntegrations,
 
         [Description("Cores Limit")]
         Cores,

@@ -310,7 +310,7 @@ namespace Raven.Client.Json.Serialization
         
         public static readonly Func<BlittableJsonReaderObject, SnowflakeEtlConfiguration> SnowflakeEtlConfiguration = GenerateJsonDeserializationRoutine<SnowflakeEtlConfiguration>();
         
-        public static readonly Func<BlittableJsonReaderObject, EmbeddingsGenerationConfiguration> AiIntegrationConfiguration = GenerateJsonDeserializationRoutine<EmbeddingsGenerationConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, EmbeddingsGenerationConfiguration> EmbeddingsGenerationConfiguration = GenerateJsonDeserializationRoutine<EmbeddingsGenerationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ElasticSearchConnectionString> ElasticSearchConnectionString = GenerateJsonDeserializationRoutine<ElasticSearchConnectionString>();
 
@@ -330,7 +330,7 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, DeleteRevisionsOperation.Result> DeleteRevisionsResult = GenerateJsonDeserializationRoutine<DeleteRevisionsOperation.Result>();
 
-        public static readonly Func<BlittableJsonReaderObject, OngoingTaskAiIntegration> GetOngoingTaskAiIntegrationResult = GenerateJsonDeserializationRoutine<OngoingTaskAiIntegration>();
+        public static readonly Func<BlittableJsonReaderObject, EmbeddingsGeneration> GetOngoingTaskEmbeddingsGenerationResult = GenerateJsonDeserializationRoutine<EmbeddingsGeneration>();
 
     }
 }

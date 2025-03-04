@@ -457,7 +457,7 @@ namespace Raven.Server.ServerWide
                     case nameof(AddQueueEtlCommand):
                     case nameof(AddQueueSinkCommand):
                     case nameof(AddSnowflakeEtlCommand):
-                    case nameof(AddAiIntegrationCommand):
+                    case nameof(AddEmbeddingsGenerationCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
                     case nameof(UpdateOlapEtlCommand):
@@ -465,7 +465,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateQueueEtlCommand):
                     case nameof(UpdateQueueSinkCommand):
                     case nameof(UpdateSnowflakeEtlCommand):
-                    case nameof(UpdateAiIntegrationCommand):
+                    case nameof(UpdateEmbeddingsGenerationCommand):
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
@@ -2794,7 +2794,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AddQueueEtlCommand):
                 case nameof(AddQueueSinkCommand):
                 case nameof(AddSnowflakeEtlCommand):
-                case nameof(AddAiIntegrationCommand):
+                case nameof(AddEmbeddingsGenerationCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(DeleteIndexCommand):
@@ -2840,7 +2840,7 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateQueueEtlCommand):
                 case nameof(UpdateQueueSinkCommand):
                 case nameof(UpdateSnowflakeEtlCommand):
-                case nameof(UpdateAiIntegrationCommand):
+                case nameof(UpdateEmbeddingsGenerationCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
                 case nameof(StartBucketMigrationCommand):

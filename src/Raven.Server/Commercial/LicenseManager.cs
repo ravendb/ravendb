@@ -1245,10 +1245,10 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
             }
 
-            if (aiEtlCount > 0 && newLicenseStatus.HasAiIntegration == false)
+            if (aiEtlCount > 0 && newLicenseStatus.HasAiIntegrations == false)
             {
-                var message = GenerateDetails(aiEtlCount, "AI Integration");
-                throw GenerateLicenseLimit(LimitType.AiIntegration, message);
+                var message = GenerateDetails(aiEtlCount, "AI Integrations");
+                throw GenerateLicenseLimit(LimitType.AiIntegrations, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)

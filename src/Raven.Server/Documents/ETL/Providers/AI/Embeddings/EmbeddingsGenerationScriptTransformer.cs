@@ -32,17 +32,17 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
+internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
     private readonly EmbeddingsGenerationConfiguration _configuration;
     private EmbeddingsGenerationScriptRun _currentRun;
     private readonly PatchRequest _mainScript;
-    private AiIntegrationStatsScope _stats;
+    private EmbeddingsGenerationStatsScope _stats;
 
     public EmbeddingsGenerationScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, EmbeddingsGenerationConfiguration configuration) : base(database, context, null, behaviorFunctions)
     {
         _configuration = configuration;
-        _mainScript = new PatchRequest(transformation.Script, PatchRequestType.AiIntegration);
+        _mainScript = new PatchRequest(transformation.Script, PatchRequestType.EmbeddingsGeneration);
     }
 
     public override void Initialize(bool debugMode)
@@ -101,7 +101,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
         return _currentRun ?? Enumerable.Empty<EmbeddingGenerationScriptResult>();
     }
 
-    public override void Transform(AiIntegrationItem item, AiIntegrationStatsScope stats, EtlProcessState state)
+    public override void Transform(AiIntegrationItem item, EmbeddingsGenerationStatsScope stats, EtlProcessState state)
     {
         Current = item;
         _currentRun ??= new EmbeddingsGenerationScriptRun();

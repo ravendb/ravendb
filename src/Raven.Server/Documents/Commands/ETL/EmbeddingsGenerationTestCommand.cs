@@ -6,13 +6,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.ETL;
 
-public sealed class AiIntegrationTestCommand : RavenCommand
+public sealed class EmbeddingsGenerationTestCommand : RavenCommand
 {
     private readonly DocumentConventions _conventions;
     private readonly BlittableJsonReaderObject _testScript;
     public override bool IsReadRequest => true;
         
-    public AiIntegrationTestCommand(DocumentConventions conventions, BlittableJsonReaderObject testScript)
+    public EmbeddingsGenerationTestCommand(DocumentConventions conventions, BlittableJsonReaderObject testScript)
     {
         _conventions = conventions;
         _testScript = testScript;

@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.ETL
         
         public List<SnowflakeEtlConfiguration> SnowflakeDestinations;
         
-        public List<EmbeddingsGenerationConfiguration> AiIntegrationDestinations;
+        public List<EmbeddingsGenerationConfiguration> EmbeddingsGenerationDestinations;
 
         public long GetQueueDestinationCountByBroker(QueueBrokerType brokerType)
         {
@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.ETL
                 ElasticSearchDestinations = _databaseRecord.ElasticSearchEtls;
                 QueueDestinations = _databaseRecord.QueueEtls;
                 SnowflakeDestinations = _databaseRecord.SnowflakeEtls;
-                AiIntegrationDestinations = _databaseRecord.EmbeddingsGenerations;
+                EmbeddingsGenerationDestinations = _databaseRecord.EmbeddingsGenerations;
 
                 var processes = new List<EtlProcess>(_processes);
 
@@ -1135,9 +1135,9 @@ namespace Raven.Server.Documents.ETL
                 dict[source] = tombstoneCollections;
             }
             
-            foreach (var config in AiIntegrationDestinations.Where(config => config.Disabled))
+            foreach (var config in EmbeddingsGenerationDestinations.Where(config => config.Disabled))
             {
-                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.AiIntegration, config.Name, config.TaskId);
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.EmbeddingsGeneration, config.Name, config.TaskId);
                 dict[source] = tombstoneCollections;
             }
 
