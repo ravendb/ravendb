@@ -5,6 +5,7 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import { SharedStubs } from "test/stubs/SharedStubs";
+import { mockJQueryError } from "test/mocks/utils";
 
 export default class MockManageServerService extends AutoMockService<ManageServerService> {
     constructor() {
@@ -65,5 +66,24 @@ export default class MockManageServerService extends AutoMockService<ManageServe
 
     withServerSettings(dto?: MockedValue<Raven.Server.Config.SettingsResult>) {
         return this.mockResolvedValue(this.mocks.getServerSettings, dto, ManageServerStubs.serverSettings());
+    }
+
+    withGetClusterLog() {
+        return this.mocks.getClusterLog.mockImplementation(
+            async (nodeTag): Promise<Raven.Server.Rachis.RaftDebugView> => {
+                if (nodeTag === "B") {
+                    return ManageServerStubs.getClusterLogLeader();
+                }
+                if (nodeTag === "C") {
+                    throw mockJQueryError("This is an error message");
+                }
+
+                return ManageServerStubs.getClusterLogFollower();
+            }
+        );
+    }
+
+    withGetClusterLogEntry() {
+        return this.mockResolvedValue(this.mocks.getClusterLogEntry, null, ManageServerStubs.getClusterLogEntry());
     }
 }

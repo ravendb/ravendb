@@ -37,8 +37,10 @@ export default function ClusterDebug() {
     useLayoutEffect(() => {
         // FIXME: hack to allow bs5 and bs3 with child router in durandal
         const bs3Container = document.querySelector(".content-container.bs3");
-        bs3Container.classList.remove("bs3");
-        bs3Container.querySelector(".nav.nav-tabs").parentElement.classList.add("bs3");
+        if (bs3Container) {
+            bs3Container.classList.remove("bs3");
+            bs3Container.querySelector(".nav.nav-tabs")?.parentElement.classList.add("bs3");
+        }
     }, []);
 
     return (

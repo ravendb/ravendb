@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import NavItem from "react-bootstrap/NavItem";
 import NavLink from "react-bootstrap/NavLink";
@@ -72,8 +72,13 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
 
     const { columns } = useClusterDebugColumns(availableWidth, result?.Log.CommitIndex, showInlinePreview, deleteEntry);
 
+    const data = useMemo(() => {
+        return result?.Log.Logs ?? [];
+    }, [result]);
+
+
     const table = useReactTable({
-        data: result?.Log.Logs ?? [],
+        data,
         defaultColumn: {
             enableColumnFilter: false,
             enableSorting: false,

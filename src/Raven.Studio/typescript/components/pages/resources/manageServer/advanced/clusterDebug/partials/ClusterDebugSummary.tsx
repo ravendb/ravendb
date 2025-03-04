@@ -134,7 +134,11 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                         {nodes.map((node) => {
                             if (node.status === "failure") {
                                 return (
-                                    <td rowSpan={hasAnyCriticalError ? 9 : 8} className="align-content-center">
+                                    <td
+                                        rowSpan={hasAnyCriticalError ? 9 : 8}
+                                        className="align-content-center"
+                                        key={node.nodeTag}
+                                    >
                                         <RichAlert variant="danger" title="Unable to connect" icon="cancel">
                                             There was connection issue with node: {node.nodeTag}
                                         </RichAlert>
