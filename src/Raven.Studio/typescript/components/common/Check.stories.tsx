@@ -16,7 +16,6 @@ export default {
 
 interface AllChecksVariantsProps {
     size?: "sm" | "lg";
-    active?: boolean;
     disabled?: boolean;
     reversed?: boolean;
     hasLabel?: boolean;
@@ -124,7 +123,7 @@ export function SwitchVariants({
 }
 
 function AllCheckboxVariants(props: AllChecksVariantsProps) {
-    const { active, disabled, hasLabel, reversed, size } = props;
+    const { disabled, hasLabel, reversed, size } = props;
     const { value: selected, toggle } = useBoolean(false);
 
     return (
@@ -135,7 +134,6 @@ function AllCheckboxVariants(props: AllChecksVariantsProps) {
                     size={size}
                     selected={selected}
                     toggleSelection={toggle}
-                    active={active}
                     disabled={disabled}
                     reverse={reversed}
                 >
@@ -147,7 +145,7 @@ function AllCheckboxVariants(props: AllChecksVariantsProps) {
 }
 
 function AllRadioVariants(props: AllChecksVariantsProps) {
-    const { active, disabled, hasLabel, reversed, size } = props;
+    const { disabled, hasLabel, reversed, size } = props;
     const { value: selected, toggle } = useBoolean(false);
 
     return (
@@ -158,7 +156,6 @@ function AllRadioVariants(props: AllChecksVariantsProps) {
                     size={size}
                     selected={selected}
                     toggleSelection={toggle}
-                    active={active}
                     disabled={disabled}
                     reverse={reversed}
                 >
@@ -170,7 +167,7 @@ function AllRadioVariants(props: AllChecksVariantsProps) {
 }
 
 function ALlSwitchVariants(props: AllChecksVariantsProps) {
-    const { active, disabled, hasLabel, reversed, size } = props;
+    const { disabled, hasLabel, reversed, size } = props;
     const { value: selected, toggle } = useBoolean(false);
 
     return (
@@ -181,7 +178,6 @@ function ALlSwitchVariants(props: AllChecksVariantsProps) {
                     size={size}
                     selected={selected}
                     toggleSelection={toggle}
-                    active={active}
                     disabled={disabled}
                     reverse={reversed}
                 >

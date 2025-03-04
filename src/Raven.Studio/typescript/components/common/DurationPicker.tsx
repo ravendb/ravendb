@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { Input, Label } from "reactstrap";
+import React, { ChangeEvent, useEffect, useState } from "react";
+import Form from "react-bootstrap/Form";
+import { Label } from "reactstrap";
 
 interface Duration {
     days: number;
@@ -45,43 +46,43 @@ export default function DurationPicker(props: DurationPickerProps) {
             {showDays && (
                 <Label>
                     <span className="small-label">Days</span>
-                    <Input
+                    <Form.Control
                         type="number"
                         min={0}
                         value={days}
-                        onChange={(e) => setDays(getInputValue(e))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
                         disabled={disabled}
                     />
                 </Label>
             )}
             <Label>
                 <span className="small-label">Hours</span>
-                <Input
+                <Form.Control
                     type="number"
                     min={0}
                     value={hours}
-                    onChange={(e) => setHours(getInputValue(e))}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                     disabled={disabled}
                 />
             </Label>
             <Label>
                 <span className="small-label">Minutes</span>
-                <Input
+                <Form.Control
                     type="number"
                     min={0}
                     value={minutes}
-                    onChange={(e) => setMinutes(getInputValue(e))}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
                     disabled={disabled}
                 />
             </Label>
             {showSeconds && (
                 <Label>
                     <span className="small-label">Seconds</span>
-                    <Input
+                    <Form.Control
                         type="number"
                         min={0}
                         value={seconds}
-                        onChange={(e) => setSeconds(getInputValue(e))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
                         disabled={disabled}
                     />
                 </Label>

@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Form, Col, Row } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Col, Row } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
@@ -285,7 +286,6 @@ export default function ClientGlobalConfiguration() {
                                                     control={control}
                                                     name="loadBalancerSeedEnabled"
                                                     color="primary"
-                                                    label="Seed"
                                                     className="small"
                                                 />
                                                 <InputGroup>

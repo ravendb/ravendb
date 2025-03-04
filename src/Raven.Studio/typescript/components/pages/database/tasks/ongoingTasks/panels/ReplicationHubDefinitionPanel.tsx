@@ -20,7 +20,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { ReplicationHubConnectedSinkPanel } from "./ReplicationHubConnectedSinkPanel";
 import genUtils from "common/generalUtils";
 import Collapse from "react-bootstrap/Collapse";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { EmptySet } from "components/common/EmptySet";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
@@ -73,7 +73,7 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
                 <RichPanelInfo>
                     {canEdit && (
                         <RichPanelSelect>
-                            <Input
+                            <Form.Check
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
                                 checked={isSelected(data.shared.taskId)}

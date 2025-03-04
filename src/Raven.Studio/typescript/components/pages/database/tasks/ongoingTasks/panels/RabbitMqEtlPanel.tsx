@@ -22,7 +22,7 @@ import {
 } from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import Collapse from "react-bootstrap/Collapse";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -77,7 +77,7 @@ export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransfor
                 <RichPanelInfo>
                     {canEdit && (
                         <RichPanelSelect>
-                            <Input
+                            <Form.Check
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
                                 checked={isSelected(data.shared.taskId)}

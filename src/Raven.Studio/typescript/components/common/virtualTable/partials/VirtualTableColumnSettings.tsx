@@ -3,7 +3,8 @@ import classNames from "classnames";
 import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
 import { useState, useMemo } from "react";
-import { UncontrolledDropdown, DropdownToggle, DropdownMenu, Label, Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { UncontrolledDropdown, DropdownToggle, DropdownMenu, Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 
 export default function VirtualTableColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
@@ -81,7 +82,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                         <div className="px-3 pb-2">
                             <Label className="small-label">Filter column</Label>
                             <div className="clearable-input">
-                                <Input
+                                <Form.Control
                                     type="text"
                                     placeholder="Search..."
                                     value={localFilter}

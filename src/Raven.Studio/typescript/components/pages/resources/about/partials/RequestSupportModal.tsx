@@ -1,6 +1,7 @@
 ﻿import useBoolean from "hooks/useBoolean";
 import Collapse from "react-bootstrap/Collapse";
-import { CloseButton, Col, Form, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, Row } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { CloseButton, Col, Label, Modal, ModalBody, ModalFooter, Row } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { Checkbox, Switch } from "components/common/Checkbox";
 import React from "react";
@@ -39,35 +40,35 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
                 <div className="text-center lead">Request support</div>
 
                 <Form className="vstack gap-2">
-                    <FormGroup>
+                    <Form.Group>
                         <Label for="contactEmail">Contact email</Label>
-                        <Input
+                        <Form.Control
                             type="email"
                             name="contactEmail"
                             value="defaultEmailAssignedToLicense@client.com"
                             placeholder="Email"
                         />
-                    </FormGroup>
+                    </Form.Group>
                     <Row>
                         <Col>
-                            <FormGroup>
+                            <Form.Group>
                                 <Label for="supportId">Support ID</Label>
-                                <Input type="number" name="supportId" value={supportId} disabled />
-                            </FormGroup>
+                                <Form.Control type="number" name="supportId" value={supportId} disabled />
+                            </Form.Group>
                         </Col>
                         <Col>
-                            <FormGroup>
+                            <Form.Group>
                                 <Label for="LicenseId">License ID</Label>
-                                <Input type="text" name="supportId" value={licenseId} disabled />
-                            </FormGroup>
+                                <Form.Control type="text" name="supportId" value={licenseId} disabled />
+                            </Form.Group>
                         </Col>
                     </Row>
-                    <FormGroup>
+                    <Form.Group>
                         <Label for="messageText">
                             Message <span className="text-muted">(optional)</span>
                         </Label>
-                        <Input type="textarea" name="text" id="messageText" rows={10} />
-                    </FormGroup>
+                        <Form.Control as="textarea" name="text" id="messageText" rows={10} />
+                    </Form.Group>
                     <div className="well p-3 rounded-2">
                         <Checkbox size="lg" selected={includeDebugPackage} toggleSelection={toggleIncludeDebugPackage}>
                             Include debug package

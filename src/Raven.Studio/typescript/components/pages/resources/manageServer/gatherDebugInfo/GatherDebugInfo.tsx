@@ -1,6 +1,7 @@
 import React from "react";
 import Card from "react-bootstrap/Card";
-import { Col, Form } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Col } from "reactstrap";
 import "./GatherDebugInfo.scss";
 import { useForm, useWatch } from "react-hook-form";
 import {

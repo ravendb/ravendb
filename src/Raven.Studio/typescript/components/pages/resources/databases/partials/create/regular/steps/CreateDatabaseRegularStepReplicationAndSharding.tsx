@@ -1,4 +1,4 @@
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormRange, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";
@@ -172,8 +172,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                             max={maxReplicationFactor}
                                         />
                                     </InputGroup>
-                                    <FormInput
-                                        type="range"
+                                    <FormRange
                                         control={control}
                                         name="replicationAndShardingStep.replicationFactor"
                                         min="1"

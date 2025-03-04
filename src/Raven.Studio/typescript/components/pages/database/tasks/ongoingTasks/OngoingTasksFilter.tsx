@@ -3,7 +3,7 @@ import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxTogg
 import { InputItem } from "components/models/common";
 import { produce } from "immer";
 import React from "react";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 
 export type OngoingTaskFilterType = "Replication" | "ETL" | "Sink" | "Backup" | "Subscription";
@@ -44,7 +44,7 @@ export default function OngoingTasksFilter(props: OngoingTasksFilterProps) {
             <div className="flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <div className="clearable-input">
-                    <Input
+                    <Form.Control
                         type="text"
                         accessKey="/"
                         placeholder="e.g. MyPeriodicBackupTask"

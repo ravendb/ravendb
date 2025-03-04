@@ -25,7 +25,8 @@ import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import { DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import assertUnreachable from "components/utils/assertUnreachable";
 import useUniqueId from "components/hooks/useUniqueId";
@@ -195,7 +196,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     <RichPanelInfo>
                         <RichPanelSelect>
                             {hasDatabaseWriteAccess && (
-                                <Input type="checkbox" onChange={toggleSelection} checked={selected} />
+                                <Form.Check type="checkbox" onChange={toggleSelection} checked={selected} />
                             )}
                         </RichPanelSelect>
                         <div className="flex-grow">

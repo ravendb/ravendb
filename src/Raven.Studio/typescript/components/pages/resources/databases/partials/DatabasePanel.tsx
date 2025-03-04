@@ -5,7 +5,8 @@ import { useAppUrls } from "hooks/useAppUrls";
 import Spinner from "react-bootstrap/Spinner";
 import Collapse from "react-bootstrap/Collapse";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import { DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import {
     RichPanel,
@@ -28,7 +29,6 @@ import genUtils from "common/generalUtils";
 import databasesManager from "common/shell/databasesManager";
 import { AccessIcon } from "components/pages/resources/databases/partials/AccessIcon";
 import { DatabaseTopology } from "components/pages/resources/databases/partials/DatabaseTopology";
-import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { Icon } from "components/common/Icon";
 import { selectDatabaseState } from "components/pages/resources/databases/store/databasesViewSelectors";
 import {
@@ -45,11 +45,12 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { databaseActions } from "components/common/shell/databaseSliceActions";
 import BulkDatabaseResetConfirm from "./BulkDatabaseResetConfirm";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import changesContext = require("common/changesContext");
 import { useServices } from "components/hooks/useServices";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import useConfirm from "components/common/ConfirmDialog";
+import changesContext = require("common/changesContext");
+import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 
 interface DatabasePanelProps {
     databaseName: string;
@@ -157,7 +158,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
         reportEvent("databases", "set-lock-mode", lockMode);
 
         const isConfirmed = await confirm({
-            title: "Do you want to change lock mode?`",
+            title: "Do you want to change lock mode?",
         });
 
         if (isConfirmed) {
@@ -290,7 +291,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                         <RichPanelInfo>
                             {isOperatorOrAbove && (
                                 <RichPanelSelect>
-                                    <Input type="checkbox" checked={selected} onChange={toggleSelection} />
+                                    <Form.Check type="checkbox" checked={selected} onChange={toggleSelection} />
                                 </RichPanelSelect>
                             )}
 

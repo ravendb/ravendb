@@ -20,7 +20,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared/shared";
 import genUtils from "common/generalUtils";
 import Collapse from "react-bootstrap/Collapse";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -88,7 +88,7 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
                 <RichPanelInfo>
                     {canEdit && (
                         <RichPanelSelect>
-                            <Input
+                            <Form.Check
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
                                 checked={isSelected(data.shared.taskId)}

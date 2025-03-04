@@ -1,5 +1,6 @@
 ﻿import React, { useCallback } from "react";
-import { Input, Label } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Label } from "reactstrap";
 import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownPanel";
 import useUniqueId from "components/hooks/useUniqueId";
 import useBoolean from "hooks/useBoolean";
@@ -79,7 +80,7 @@ export function ManageDatabaseGroupPage() {
                             <>
                                 <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
                                     <div className="d-flex gap-3 form-switch">
-                                        <Input
+                                        <Form.Check
                                             id={settingsUniqueId}
                                             type="switch"
                                             role="switch"

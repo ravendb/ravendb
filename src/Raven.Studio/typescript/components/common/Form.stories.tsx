@@ -19,7 +19,8 @@ import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Input, Label } from "reactstrap";
+import ReactBootstrapForm from "react-bootstrap/Form";
+import { Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 
@@ -55,25 +56,25 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
             <div>
                 <InputGroup>
                     <InputGroup.Text>@</InputGroup.Text>
-                    <Input placeholder="username" />
+                    <ReactBootstrapForm.Control placeholder="username" />
                 </InputGroup>
                 <br />
                 <InputGroup>
                     <InputGroup.Text>
                         <FormCheckbox control={control} name="inputGroupCheckbox" />
                     </InputGroup.Text>
-                    <Input placeholder="Check it out" />
+                    <ReactBootstrapForm.Control placeholder="Check it out" />
                 </InputGroup>
                 <br />
                 <InputGroup>
-                    <Input placeholder="username" />
+                    <ReactBootstrapForm.Control placeholder="username" />
                     <InputGroup.Text>@example.com</InputGroup.Text>
                 </InputGroup>
                 <br />
                 <InputGroup>
                     <InputGroup.Text>$</InputGroup.Text>
                     <InputGroup.Text>$</InputGroup.Text>
-                    <Input placeholder="Dolla dolla billz yo!" />
+                    <ReactBootstrapForm.Control placeholder="Dolla dolla billz yo!" />
                     <InputGroup.Text>$</InputGroup.Text>
                     <InputGroup.Text>$</InputGroup.Text>
                 </InputGroup>

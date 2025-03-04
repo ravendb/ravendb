@@ -5,7 +5,8 @@ import { useForm, useWatch } from "react-hook-form";
 import { RevertRevisionsFormData, revertRevisionsYupResolver } from "./RevertRevisionsValidation";
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Row, Col, Form, Label, FormGroup } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Row, Col, Label } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -100,7 +101,7 @@ export default function RevertRevisions() {
                     </div>
                     <Card className="mt-3">
                         <Card.Body className="gap-4">
-                            <FormGroup>
+                            <Form.Group>
                                 <Label for="pointInTime">Point in Time</Label>
                                 <FormDatePicker
                                     id="pointInTime"
@@ -115,8 +116,8 @@ export default function RevertRevisions() {
                                     placeholderText="Select the point in time"
                                     addon="local"
                                 />
-                            </FormGroup>
-                            <FormGroup>
+                            </Form.Group>
+                            <Form.Group>
                                 <Label for="timeWindow">Time Window</Label>
                                 <InputGroup>
                                     <FormInput
@@ -136,7 +137,7 @@ export default function RevertRevisions() {
                                         }
                                     />
                                 </InputGroup>
-                            </FormGroup>
+                            </Form.Group>
                         </Card.Body>
                     </Card>
                     {hasDatabaseAdminAccess && (

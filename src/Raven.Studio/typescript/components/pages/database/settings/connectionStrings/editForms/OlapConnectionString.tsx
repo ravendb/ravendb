@@ -1,4 +1,5 @@
-﻿import { Form, Label } from "reactstrap";
+﻿import Form from "react-bootstrap/Form";
+import { Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";

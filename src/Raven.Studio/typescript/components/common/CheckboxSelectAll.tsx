@@ -1,14 +1,13 @@
-import { Checkbox } from "components/common/Checkbox";
+import { Checkbox, CheckboxProps } from "components/common/Checkbox";
 import { SelectionState } from "components/models/common";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
 
-interface CheckboxSelectAllProps {
+interface CheckboxSelectAllProps extends Pick<CheckboxProps, "size"> {
     selectionState: SelectionState;
     toggleAll: () => void;
     allItemsCount?: number;
     selectedItemsCount?: number;
-    size?: string;
     color?: string;
     title?: string;
 }

@@ -3,7 +3,7 @@ import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Input, InputProps } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon } from "./toggles/RadioToggle";
@@ -17,6 +17,8 @@ import DatePicker from "./DatePicker";
 import { Icon } from "components/common/Icon";
 import PathSelector, { PathSelectorProps, PathSelectorStateRef } from "components/common/pathSelector/PathSelector";
 import { OmitIndexSignature } from "components/utils/common";
+import { RavenFormControlProps } from "react-bootstrap/FormControl";
+import { FormRangeProps } from "react-bootstrap/FormRange";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -29,7 +31,7 @@ interface AddonProps {
     addon?: ReactNode;
 }
 
-type FormInputProps = Omit<OmitIndexSignature<InputProps>, "addon"> &
+type FormInputProps = Omit<OmitIndexSignature<RavenFormControlProps>, "addon"> &
     AddonProps & {
         type: InputType;
         passwordPreview?: boolean;
@@ -419,7 +421,7 @@ export function FormDatePicker<
 function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->(props: FormElementProps<TFieldValues, TName> & FormInputProps) {
+>(props: FormElementProps<TFieldValues, TName> & Omit<FormInputProps, "size">) {
     const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, passwordPreview, ...rest } =
         props;
 
@@ -452,14 +454,14 @@ function FormInputGeneral<
             <div className="position-relative flex-grow-1">
                 <div className="d-flex flex-grow-1">
                     <InputGroup>
-                        <Input
-                            innerRef={ref}
+                        <Form.Control
+                            ref={ref}
                             name={name}
                             type={actualInputType}
                             onBlur={onBlur}
                             onChange={(x) => handleValueChange(x.currentTarget.value)}
                             value={value == null ? "" : value}
-                            invalid={invalid}
+                            isInvalid={invalid}
                             className={classNames(
                                 "position-relative d-flex flex-grow-1",
                                 passwordPreview ? "preview-password" : null
@@ -468,7 +470,7 @@ function FormInputGeneral<
                             {...rest}
                         >
                             {children}
-                        </Input>
+                        </Form.Control>
                         {addon && <InputGroup.Text>{addon}</InputGroup.Text>}
                         {passwordPreview && (
                             <Button
@@ -529,12 +531,34 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                 <ToggleComponent
                     selected={!!value}
                     toggleSelection={onChange}
-                    invalid={invalid}
+                    isInvalid={invalid}
                     onBlur={onBlur}
                     color="primary"
                     disabled={formState.isSubmitting}
                     {...rest}
                 />
+            </div>
+        </div>
+    );
+}
+
+export function FormRange<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+    props: FormElementProps<TFieldValues, TName> & FormRangeProps
+) {
+    const { name, control, rules, defaultValue, shouldUnregister, ...rest } = props;
+
+    const { field, formState } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return (
+        <div className="position-relative">
+            <div className="d-flex flex-grow-1">
+                <Form.Range disabled={formState.isSubmitting || field.disabled} {...field} {...rest} />
             </div>
         </div>
     );
@@ -582,12 +606,12 @@ export function FormPathSelector<
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
                 <InputGroup>
-                    <Input
+                    <Form.Control
                         name={name}
                         type="text"
                         onChange={(x) => onChange(x.currentTarget.value)}
                         value={formValuePath == null ? "" : formValuePath}
-                        invalid={invalid}
+                        isInvalid={invalid}
                         className="position-relative d-flex flex-grow-1"
                         placeholder={placeholder || "Enter path"}
                         disabled={disabled || formState.isSubmitting}

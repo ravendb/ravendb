@@ -5,7 +5,7 @@ import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import React from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { Form } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import * as yup from "yup";
 import Button from "react-bootstrap/Button";
 

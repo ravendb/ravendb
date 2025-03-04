@@ -20,7 +20,8 @@ import {
 } from "components/common/RichPanel";
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Form, Label } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";

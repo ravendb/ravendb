@@ -19,7 +19,8 @@ import moment from "moment";
 import React, { useEffect, useMemo, useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
-import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
@@ -133,7 +134,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
             contentClassName="modal-border bulge-primary"
             centered
         >
-            <Form control={control} onSubmit={handleSubmit(handleExport)}>
+            <Form onSubmit={handleSubmit(handleExport)}>
                 <ModalBody className="vstack gap-4 position-relative">
                     <div className="position-absolute m-2 end-0 top-0">
                         <CloseButton onClick={toggle} />

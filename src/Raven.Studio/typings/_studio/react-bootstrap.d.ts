@@ -3,6 +3,7 @@ import { BsPrefixRefForwardingComponent } from "react-bootstrap/helpers";
 import { ButtonProps } from "react-bootstrap/Button";
 import { SpinnerProps as ReactBootstrapSpinnerProps } from "react-bootstrap/Spinner";
 import { BadgeProps } from "react-bootstrap/Badge";
+import {FormControlProps} from "react-bootstrap/FormControl"
 
 type RavenSizes = "xs"
 
@@ -70,4 +71,15 @@ declare module "react-bootstrap/Badge" {
     
     declare const Badge: BsPrefixRefForwardingComponent<"span", RavenBadgeProps>;
     export = Badge;
+}
+
+declare module "react-bootstrap/FormControl" {
+    export type RavenFormControlSizes = FormControlProps["size"] | "md" | RavenSizes;
+    
+    export interface RavenFormControlProps extends Omit<FormControlProps, "size"> {
+        size?: RavenFormControlSizes;
+    }
+    
+    declare const FormControl: BsPrefixRefForwardingComponent<"div", RavenFormControlProps>
+    export = FormControl;
 }

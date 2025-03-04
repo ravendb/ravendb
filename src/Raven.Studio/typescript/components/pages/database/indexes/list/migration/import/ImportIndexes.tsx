@@ -19,7 +19,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
-import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import RichAlert from "components/common/RichAlert";
@@ -185,7 +186,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
             contentClassName="modal-border bulge-primary"
             centered
         >
-            <Form control={control} onSubmit={handleSubmit(handleImport)}>
+            <Form onSubmit={handleSubmit(handleImport)}>
                 <ModalBody className="vstack gap-4 position-relative">
                     <Icon icon="index-import" color="primary" className="text-center fs-1" margin="m-0" />
                     <div className="lead text-center">

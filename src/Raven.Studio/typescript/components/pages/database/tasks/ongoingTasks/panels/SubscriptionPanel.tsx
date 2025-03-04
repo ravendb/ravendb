@@ -22,7 +22,7 @@ import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
 import Collapse from "react-bootstrap/Collapse";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
@@ -244,7 +244,7 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                 <RichPanelInfo>
                     {canEdit && (
                         <RichPanelSelect>
-                            <Input
+                            <Form.Check
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
                                 checked={isSelected(data.shared.taskId)}

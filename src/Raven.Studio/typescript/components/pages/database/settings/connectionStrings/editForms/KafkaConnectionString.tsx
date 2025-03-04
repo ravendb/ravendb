@@ -1,5 +1,6 @@
 ﻿import Badge from "react-bootstrap/Badge";
-import { Form, Label } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Label } from "reactstrap";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useEffect } from "react";
 import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";

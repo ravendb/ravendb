@@ -1,5 +1,5 @@
 ﻿import { IndexStatus, IndexFilterCriteria, IndexType, IndexGroupBy, IndexSortBy } from "components/models/indexes";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { produce } from "immer";
 import { Icon } from "components/common/Icon";
 import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
@@ -76,7 +76,7 @@ export default function IndexFilter(props: IndexFilterProps) {
             <div className="flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <div className="clearable-input">
-                    <Input
+                    <Form.Control
                         type="text"
                         accessKey="/"
                         placeholder="e.g. Orders/ByCompany/*"

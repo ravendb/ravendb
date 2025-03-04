@@ -1,6 +1,7 @@
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Col, Form, Label, Row } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Col, Label, Row } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormSelect, FormSwitch } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";

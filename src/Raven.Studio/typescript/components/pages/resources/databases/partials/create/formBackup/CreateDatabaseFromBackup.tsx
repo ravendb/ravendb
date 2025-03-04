@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { CloseButton, Form, ModalBody, ModalFooter } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { CloseButton, ModalBody, ModalFooter } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import Steps from "components/common/steps/Steps";

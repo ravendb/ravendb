@@ -1,5 +1,6 @@
 ﻿import React from "react";
-import { Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import * as yup from "yup";

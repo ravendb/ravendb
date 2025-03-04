@@ -30,7 +30,7 @@ import app from "durandal/app";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -263,7 +263,7 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                 <RichPanelInfo>
                     {allowSelect && canEdit && (
                         <RichPanelSelect>
-                            <Input
+                            <Form.Check
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
                                 checked={isSelected(data.shared.taskId)}

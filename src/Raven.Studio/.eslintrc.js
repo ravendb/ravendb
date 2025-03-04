@@ -52,6 +52,11 @@ module.exports = {
     "local-rules/no-reactstrap-InputGroup": "warn",
     "local-rules/no-reactstrap-InputGroupText": "warn",
     "local-rules/no-reactstrap-Carousel": "warn",
+    "local-rules/no-reactstrap-Form": "warn",
+    "local-rules/no-reactstrap-FormGroup": "warn",
+    "local-rules/no-reactstrap-Input": "warn",
+    "local-rules/reactstrap-Form-to-RBootstrap-children": "warn",
+    "local-rules/react-bootstrap-FormControl-checkbox-to-FormCheck": "warn",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

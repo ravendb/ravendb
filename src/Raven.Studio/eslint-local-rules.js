@@ -51,7 +51,7 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
             fixes.push(
               fixer.replaceText(
                 node,
-                `import ${name} from "react-bootstrap/${reactBootstrapName}";`,
+                `import ${reactBootstrapName} from "react-bootstrap/${reactBootstrapName}";`,
               ),
             );
           } else {
@@ -73,7 +73,7 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
             fixes.push(
               fixer.insertTextBefore(
                 node,
-                `import ${name} from "react-bootstrap/${reactBootstrapName}";\n`,
+                `import ${reactBootstrapName} from "react-bootstrap/${reactBootstrapName}";\n`,
               ),
             );
           }
@@ -126,6 +126,74 @@ function replaceReactstrapToReactBootstrap({ context, componentMap }) {
           },
         });
       }
+    },
+  };
+}
+
+/**
+ * Handles the properties of a JSX component and applies transformations based on the provided configuration.
+ *
+ * @param {Object} config - The configuration object containing properties to remove or migrate.
+ * @param {string[]} [config.toRemove] - Array of property names to be removed from the component.
+ * @param {Array<{key: string, migrateTo: string}>} [config.toMigrate] - Array of property migration objects,
+ *                                                                              each containing the original property name (key)
+ *                                                                              and the new property name (migrateTo).
+ * @param {string} componentName - The name of the component to handle properties for.
+ *                                        Can be a simple component name (e.g., "Button") or a
+ *                                        namespaced component (e.g., "Form.Control").
+ */
+function handleProps({ context, config, componentName }) {
+  return {
+    JSXOpeningElement(node) {
+      if (componentName.includes(".")) {
+        const [parentName, childName] = componentName.split(".");
+        if (
+          !(
+            node.name &&
+            node.name.type === "JSXMemberExpression" &&
+            node.name.object &&
+            node.name.object.name === parentName &&
+            node.name.property &&
+            node.name.property.name === childName
+          )
+        ) {
+          return;
+        }
+      } else {
+        if (!(node.name && node.name.type === "JSXIdentifier" && node.name.name === componentName)) {
+          return;
+        }
+      }
+
+      node.attributes.forEach((attr) => {
+        if (!attr || !attr.name || !attr.name.name) {
+          return;
+        }
+        const propName = attr.name.name;
+
+        if (config.toRemove && config.toRemove.includes(propName)) {
+          context.report({
+            node: attr,
+            message: `'${propName}' prop is not supported and should be removed.`,
+            fix(fixer) {
+              return fixer.remove(attr);
+            },
+          });
+        }
+
+        if (config.toMigrate) {
+          const migration = config.toMigrate.find((m) => m.key === propName);
+          if (migration) {
+            context.report({
+              node: attr,
+              message: `'${propName}' prop is deprecated. Use '${migration.migrateTo}' instead.`,
+              fix(fixer) {
+                return fixer.replaceText(attr.name, migration.migrateTo);
+              },
+            });
+          }
+        }
+      });
     },
   };
 }
@@ -451,5 +519,84 @@ module.exports = {
   "no-reactstrap-Carousel": {
     meta: fixableMeta,
     create: (context) => createDeprecatedReactstrapImport({ context, name: "Carousel", canFix: false }),
+  },
+  "no-reactstrap-Form": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Form" }),
+  },
+  "reactstrap-Form-to-RBootstrap-children": {
+    meta: fixableMeta,
+    create: (context) => {
+      const dropdownComponentMap = {
+        FormGroup: "Form.Group",
+        Input: "Form.Control",
+      };
+
+      return replaceReactstrapToReactBootstrap({ context, componentMap: dropdownComponentMap });
+    },
+  },
+  "no-reactstrap-FormControl-props": {
+    meta: fixableMeta,
+    create: (context) => {
+      const config = {
+        toMigrate: [{
+          key: "invalid", migrateTo: "isInvalid",
+        }, {
+          key: "valid", migrateTo: "isValid",
+        }, {
+          key: "bsSize", migrateTo: "size",
+        }, {
+          key: "innerRef", migrateTo: "ref",
+        }],
+      };
+
+      return handleProps({ context, config, componentName: "Form.Control" });
+    },
+  },
+  "no-reactstrap-FormGroup": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "FormGroup", reactBootstrapName: "Form" }),
+  },
+  "no-reactstrap-Input": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Input", reactBootstrapName: "Form" }),
+  },
+  "react-bootstrap-FormControl-checkbox-to-FormCheck": {
+    meta: fixableMeta,
+    create(context) {
+      return {
+        JSXOpeningElement(node) {
+          if (
+            node.name &&
+            node.name.type === "JSXMemberExpression" &&
+            node.name.object &&
+            node.name.object.name === "Form" &&
+            node.name.property &&
+            node.name.property.name === "Control"
+          ) {
+            const typeAttr = node.attributes.find(
+              attr => attr?.name?.name === "type" &&
+                attr?.value?.type === "Literal" &&
+                ["checkbox", "radio", "switch"].includes(attr.value.value),
+            );
+
+            if (typeAttr) {
+              const inputType = typeAttr.value.value;
+
+              context.report({
+                node: node,
+                message: `Form.Control with type="${inputType}" should be replaced with Form.Check`,
+                fix(fixer) {
+                  return fixer.replaceText(
+                    node.name,
+                    "Form.Check",
+                  );
+                },
+              });
+            }
+          }
+        },
+      };
+    },
   },
 };

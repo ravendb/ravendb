@@ -7,7 +7,8 @@ import useBoolean from "components/hooks/useBoolean";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import React, { useEffect, useImperativeHandle, useState } from "react";
 import { AsyncStateStatus } from "react-async-hook";
-import { Modal, ModalBody, FormGroup, Label, Input, ModalFooter, CloseButton } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { Modal, ModalBody, Label, ModalFooter, CloseButton } from "reactstrap";
 import Button from "react-bootstrap/Button";
 
 export interface PathSelectorStateRef {
@@ -139,15 +140,15 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                             />
                         </div>
 
-                        <FormGroup className="mt-2">
+                        <Form.Group className="mt-2">
                             <Label htmlFor="path-selector-input">Path</Label>
-                            <Input
+                            <Form.Control
                                 id="path-selector-input"
                                 type="text"
                                 value={pathInput}
                                 onChange={(x) => setPathInput(x.currentTarget.value)}
                             />
-                        </FormGroup>
+                        </Form.Group>
                     </ModalBody>
                     <ModalFooter className="hstack gap-2 justify-content-end">
                         <Button variant="secondary" onClick={toggleIsModalOpen}>
