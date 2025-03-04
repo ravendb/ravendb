@@ -113,4 +113,4 @@ else
 fi
 
 # Completion message
-echo "Environment setup complete. To build RavenDB run: ./build.sh" this is updated script
+echo "Environment setup complete. To build RavenDB run: ./build.sh"
