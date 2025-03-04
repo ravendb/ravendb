@@ -47,7 +47,8 @@ namespace Raven.Server.Documents.Replication
                 id,
                 doc,
                 lastModifiedTicks,
-                changeVector))
+                changeVector,
+                flags))
                 return;
 
             var lazyId = documentsContext.GetLazyString(id);
@@ -235,7 +236,8 @@ namespace Raven.Server.Documents.Replication
         public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string id,
             BlittableJsonReaderObject incomingDoc,
             long lastModifiedTicks,
-            string incomingChangeVector)
+            string incomingChangeVector, 
+            DocumentFlags flags)
         {
             var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, id, throwOnConflict: false);
             var existingDoc = existing.Document;
@@ -246,6 +248,18 @@ namespace Raven.Server.Documents.Replication
                 var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, incomingDoc, DocumentCompare.DocumentCompareOptions.MergeMetadata);
                 if (compareResult == DocumentCompareResult.NotEqual)
                     return false;
+
+                if ((_database.ReplicationLoader.ConflictSolverConfig?.ResolveToLatest ?? true) &&
+                    compareResult == DocumentCompareResult.Equal && 
+                    flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved))
+                {
+                    // RavenDB-20322
+                    // the existing document and the incoming document have identical content.
+                    // however, if the document has attachments and is marked as resolved,
+                    // there may still be attachment conflicts that need to be handled separately.
+                    // returning 'false' here ensures that attachment conflicts are processed later.
+                    return false;
+                }
 
                 // no real conflict here, both documents have identical content so we only merge the change vector without increasing the local etag to prevent ping-pong replication
                 var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
