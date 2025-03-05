@@ -8,7 +8,6 @@ namespace Voron.Data
 
         Slice CurrentKey { get; }
         Slice RequiredPrefix { get; }
-        Slice RequiredSuffix { get; }
         Slice MaxKey { get; set; }
 
         bool Seek(Slice key);

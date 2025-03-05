@@ -264,8 +264,6 @@ namespace Voron.Data.BTrees
             _disposed = true;
             if (RequiredPrefix.HasValue)
                 RequiredPrefix.Release(_tx.Allocator);
-            if (RequiredSuffix.HasValue)
-                RequiredSuffix.Release(_tx.Allocator);
             if (MaxKey.HasValue)
                 MaxKey.Release(_tx.Allocator);
             _prevKeyScope.Dispose();
@@ -291,20 +289,7 @@ namespace Voron.Data.BTrees
         public void SetRequiredPrefix(Slice prefix)
         {
             _requiredPrefix = prefix.Clone(_tx.Allocator); // make sure the prefix slice won't become invalid during iterator usage
-            _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue || _requiredSuffix.HasValue;
-        }
-
-        private Slice _requiredSuffix;
-
-        public Slice RequiredSuffix
-        {
-            get { return _requiredSuffix; }
-        }
-
-        public void SetRequiredSuffix(Slice suffix)
-        {
-            _requiredSuffix = suffix.Clone(_tx.Allocator); // make sure the suffix slice won't become invalid during iterator usage
-            _requireValidation = _maxKey.HasValue || _requiredSuffix.HasValue || _requiredPrefix.HasValue;
+            _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
         }
 
         private Slice _maxKey;
@@ -314,7 +299,7 @@ namespace Voron.Data.BTrees
             set
             {
                 _maxKey = value;
-                _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue || _requiredSuffix.HasValue;
+                _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
             }
         }
         
@@ -350,11 +335,6 @@ namespace Voron.Data.BTrees
                 if (self.RequiredPrefix.HasValue)
                 {
                     if (SliceComparer.StartWith(currentKey, self.RequiredPrefix) == false)
-                        return false;
-                }
-                if (self.RequiredSuffix.HasValue)
-                {
-                    if (SliceComparer.EndsWith(currentKey, self.RequiredSuffix) == false)
                         return false;
                 }
                 if (self.MaxKey.HasValue)
