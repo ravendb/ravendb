@@ -1,8 +1,7 @@
-﻿import React, { useCallback } from "react";
+﻿import { useCallback } from "react";
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
-    EmptyScriptsWarning,
     ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
