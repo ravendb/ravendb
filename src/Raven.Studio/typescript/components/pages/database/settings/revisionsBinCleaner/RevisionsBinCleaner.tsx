@@ -3,7 +3,8 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "hooks/useServices";
 import Collapse from "react-bootstrap/Collapse";
-import { Card, CardBody, Col, Form, FormGroup, Row } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Col, Form, FormGroup, Row } from "reactstrap";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import {
     RevisionsBinCleanerFormData,
@@ -96,7 +97,7 @@ export default function RevisionsBinCleaner() {
                             )}
                             <Col>
                                 <Card>
-                                    <CardBody>
+                                    <Card.Body>
                                         <FormGroup>
                                             <FormSwitch
                                                 name="isRevisionsBinCleanerEnabled"
@@ -182,7 +183,7 @@ export default function RevisionsBinCleaner() {
                                                 addon="seconds"
                                             />
                                         </FormGroup>
-                                    </CardBody>
+                                    </Card.Body>
                                 </Card>
                             </Col>
                         </Form>

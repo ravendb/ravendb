@@ -1,5 +1,6 @@
 import Button from "react-bootstrap/Button";
-import { CloseButton, FormGroup, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { CloseButton, FormGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";

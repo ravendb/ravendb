@@ -1,7 +1,7 @@
 import DatabaseSwitcher from "./databaseSwitcher/DatabaseSwitcher";
 import StudioSearch from "./studioSearch/StudioSearch";
 import React from "react";
-import { InputGroup } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
 
 export default function StudioSearchWithDatabaseSwitcher(props: { menuItems: menuItem[] }) {
     return (

@@ -45,6 +45,10 @@
             left: sizes.$gutter-xs;
             pointer-events: none;
         }
+
+        &:after {
+            display: none !important;
+        }
     }
 
     &__dropdown-item {
