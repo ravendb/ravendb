@@ -104,4 +104,9 @@ public class AiIntegrationsController : IDisposable
     {
         return _embeddingGeneratorsByConnectionStringIdentifier.TryGetValue(connectionStringIdentifier, out service);
     }
+
+    public void Initialize(DatabaseRecord record)
+    {
+        HandleDatabaseRecordChange(record);
+    }
 }

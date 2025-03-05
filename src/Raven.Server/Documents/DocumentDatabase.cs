@@ -449,8 +449,14 @@ namespace Raven.Server.Documents
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
                 _addToInitLog(LogLevel.Debug, "Initializing Replication");
                 ReplicationLoader?.Initialize(record, index);
+
+                _addToInitLog(LogLevel.Debug, "Initializing AI Integrations");
+                AiIntegrations.Initialize(record);
+
                 _addToInitLog(LogLevel.Debug, "Initializing ETL");
                 EtlLoader.Initialize(record);
+
+                _addToInitLog(LogLevel.Debug, "Initializing Queue Sinks");
                 QueueSinkLoader.Initialize(record);
 
 
@@ -1721,10 +1727,9 @@ namespace Raven.Server.Documents
             try
             {
                 PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
+                AiIntegrations?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseRecordChange(record);
                 SubscriptionStorage?.HandleDatabaseRecordChange();
-
-                AiIntegrations?.HandleDatabaseRecordChange(record);
             }
             finally
             {
