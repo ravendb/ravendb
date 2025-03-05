@@ -76,7 +76,6 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
         return result?.Log.Logs ?? [];
     }, [result]);
 
-
     const table = useReactTable({
         data,
         defaultColumn: {
@@ -117,18 +116,3 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
 }
 
 export default ClusterDebugEntries;
-
-/*
-TODO
-this.columnPreview.install("virtual-grid", ".js-cluster-log-tooltip",
-    (entry: LogEntry, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
-        if (column.header === "Created") {
-            onValue(moment.utc(entry.CreateAt), entry.CreateAt);
-        } else {
-            if (column instanceof textColumn) {
-                const value = column.getCellValue(entry);
-                onValue(generalUtils.escapeHtml(value), value);
-            }
-        }
-    });
- */

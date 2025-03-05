@@ -1,9 +1,9 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import genUtils from "common/generalUtils";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
+import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
 
 export function useClusterDebugColumns(
     availableWidth: number,
@@ -29,38 +29,38 @@ export function useClusterDebugColumns(
         {
             header: "Index",
             accessorKey: "Index",
-            cell: CellValueWrapper,
+            cell: CellWithCopyWrapper,
             size: 100,
         },
         {
             id: "commandType",
             header: "Command Type",
             accessorKey: "CommandType",
-            cell: CellValueWrapper,
+            cell: CellWithCopyWrapper,
             size: 0, // see code below - we do here flex-grow
         },
         {
             header: "Created",
             accessorKey: "CreateAt",
-            cell: CellValueWrapper,
+            cell: CellWithCopyWrapper,
             size: 250,
         },
         {
             header: "Size",
             accessorFn: (row) => genUtils.formatBytesToSize(row.SizeInBytes),
-            cell: CellValueWrapper,
+            cell: CellWithCopyWrapper,
             size: 100,
         },
         {
             header: "Term",
             accessorKey: "Term",
-            cell: CellValueWrapper,
+            cell: CellWithCopyWrapper,
             size: 70,
         },
         {
             header: "Status",
             accessorFn: (row) => (row.Index <= commitIndex ? "Commited" : "Appended"),
-            cell: CellValueWrapper,
+            cell: CellWithCopyWrapper,
             size: 150,
         },
         {

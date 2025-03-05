@@ -120,7 +120,7 @@ export class ManageServerStubs {
         return {
             ...ManageServerStubs.getClusterLogBase(true),
             Role: "Follower",
-            Phase: "Steady",
+            Phase: "Snapshot",
             ConnectionToLeader: {
                 Status: "Connected",
                 Destination: "A",

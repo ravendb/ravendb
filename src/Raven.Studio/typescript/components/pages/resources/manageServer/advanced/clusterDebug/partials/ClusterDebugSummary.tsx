@@ -365,7 +365,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                         variant="danger"
                                                         onClick={() => openCriticalError(node.nodeTag)}
                                                     >
-                                                        view details
+                                                        view an error
                                                     </Button>
                                                 ) : (
                                                     <>-</>
