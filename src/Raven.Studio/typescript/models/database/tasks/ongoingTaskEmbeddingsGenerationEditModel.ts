@@ -201,8 +201,8 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             Quantization: this.quantizationType(),
             EmbeddingsTransformation,
             EmbeddingsPathConfigurations,
-            EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000),
-            EmbeddingsCacheForQueryingExpiration: genUtils.formatAsTimeSpan(transformation.embeddingsCacheExpiration() * 1000)
+            EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(transformation.embeddingsCacheExpiration() * 1000),
+            EmbeddingsCacheForQueryingExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000)
         };
     }
     
