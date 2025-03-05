@@ -1,7 +1,7 @@
 import { Icon } from "components/common/Icon";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import { AccordionBody, AccordionHeader, AccordionItem, Col, Row, UncontrolledAccordion } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { UseAsyncReturn } from "react-async-hook";
 import React from "react";
 import "./IndexTerms.scss";
@@ -19,6 +19,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { EmptySet } from "components/common/EmptySet";
 import { LoadError } from "components/common/LoadError";
 import { HStack } from "components/common/HStack";
+import Accordion from "react-bootstrap/Accordion";
 
 export default function IndexTerms({ pathParams }: ReactPathParamsProps) {
     const indexName = pathParams[0];
@@ -63,17 +64,16 @@ interface IndexTermsAccordionsProps {
 
 function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordionsProps) {
     return (
-        <UncontrolledAccordion
+        <Accordion
             key={field.name}
             data-testid="term-accordion"
             className="bs5 mt-1 accordion-inside-modal"
-            id={field.name}
-            stayOpen
+            defaultActiveKey={[]}
+            alwaysOpen
             flush
-            toggle={null}
         >
-            <AccordionItem>
-                <AccordionHeader targetId={field.name}>
+            <Accordion.Item eventKey={field.name}>
+                <Accordion.Header>
                     <div className="d-flex align-items-center gap-2">
                         <span className="m-0">{field.name}</span>
                         <HStack className="gap-1">
@@ -82,14 +82,14 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                                     Dynamic field
                                 </Badge>
                             )}
-                            <Badge pill bg="secondary">
+                            <Badge bg="secondary" pill>
                                 {field.terms.length}
                                 {field.hasMoreTerms ? "+" : ""}
                             </Badge>
                         </HStack>
                     </div>
-                </AccordionHeader>
-                <AccordionBody accordionId={field.name}>
+                </Accordion.Header>
+                <Accordion.Body>
                     {field.terms.length === 0 && <EmptySet iconSize="lg">No entries were found.</EmptySet>}
                     <div>
                         {field.terms.map((term, index) => (
@@ -118,9 +118,9 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                             </ButtonWithSpinner>
                         </span>
                     )}
-                </AccordionBody>
-            </AccordionItem>
-        </UncontrolledAccordion>
+                </Accordion.Body>
+            </Accordion.Item>
+        </Accordion>
     );
 }
 

@@ -1,7 +1,8 @@
 import copyToClipboard from "common/copyToClipboard";
 import changeVectorUtils from "common/changeVectorUtils";
 import Button from "react-bootstrap/Button";
-import { Input, InputGroup, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Input, Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import React from "react";
 

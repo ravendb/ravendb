@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { CreateDatabaseRegularFormData as FormData } from "../createDatabaseRegularValidation";
 import { FieldArrayWithId, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import Button from "react-bootstrap/Button";
-import { Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";
 import { Checkbox } from "components/common/Checkbox";

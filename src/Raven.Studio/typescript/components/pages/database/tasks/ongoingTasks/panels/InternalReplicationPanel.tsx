@@ -8,7 +8,7 @@ import {
 } from "components/common/RichPanel";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
-import { ButtonGroup } from "reactstrap";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { Icon } from "components/common/Icon";
 import { OngoingInternalReplicationNodeInfo } from "components/models/tasks";
 import useBoolean from "hooks/useBoolean";
