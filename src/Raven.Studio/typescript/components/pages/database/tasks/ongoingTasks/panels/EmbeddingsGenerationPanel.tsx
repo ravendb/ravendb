@@ -29,9 +29,9 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import copyToClipboard from "common/copyToClipboard";
 import { Icon } from "components/common/Icon";
 
-type AiEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskEmbeddingsGenerationInfo>;
+type EmbeddingsGenerationPanelProps = BaseOngoingTaskPanelProps<OngoingTaskEmbeddingsGenerationInfo>;
 
-function Details(props: AiEtlPanelProps & { canEdit: boolean }) {
+function Details(props: EmbeddingsGenerationPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -66,7 +66,7 @@ function Details(props: AiEtlPanelProps & { canEdit: boolean }) {
     );
 }
 
-export function AiEtlPanel(props: AiEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps & ICanShowTransformationScriptPreview) {
     const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();

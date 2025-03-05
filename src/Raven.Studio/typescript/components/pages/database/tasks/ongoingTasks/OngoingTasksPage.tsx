@@ -70,7 +70,7 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import recentError from "common/notifications/models/recentError";
 import { SnowflakeEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/SnowflakeEtlPanel";
 import { AmazonSqsEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AmazonSqsEtlPanel";
-import { AiEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AiEtlPanel";
+import { EmbeddingsGenerationPanel } from "components/pages/database/tasks/ongoingTasks/panels/EmbeddingsGenerationPanel";
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -428,7 +428,7 @@ export function OngoingTasksPage() {
                                 </HrHeader>
 
                                 {embeddingsGenerations.map((x) => (
-                                    <AiEtlPanel
+                                    <EmbeddingsGenerationPanel
                                         {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}

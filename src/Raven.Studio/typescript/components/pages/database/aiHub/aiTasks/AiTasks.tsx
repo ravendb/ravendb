@@ -18,7 +18,7 @@ import { Button, Row } from "reactstrap";
 import { OngoingTaskProgressProvider } from "../../tasks/ongoingTasks/OngoingTaskProgressProvider";
 import OngoingTaskSelectActions from "../../tasks/ongoingTasks/OngoingTaskSelectActions";
 import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "../../tasks/ongoingTasks/OngoingTasksReducer";
-import { AiEtlPanel } from "../../tasks/ongoingTasks/panels/AiEtlPanel";
+import { EmbeddingsGenerationPanel } from "../../tasks/ongoingTasks/panels/EmbeddingsGenerationPanel";
 import OngoingTaskOperationConfirm from "../../tasks/shared/OngoingTaskOperationConfirm";
 import { useOngoingTasksOperations, BaseOngoingTaskPanelProps, taskKey } from "../../tasks/shared/shared";
 import { Icon } from "components/common/Icon";
@@ -196,7 +196,7 @@ export default function AiTasks() {
                                 </HrHeader>
 
                                 {embeddingsGenerations.map((x) => (
-                                    <AiEtlPanel
+                                    <EmbeddingsGenerationPanel
                                         {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
