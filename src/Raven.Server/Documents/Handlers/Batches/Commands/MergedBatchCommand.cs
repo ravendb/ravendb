@@ -163,7 +163,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                 case CommandType.AttachmentPUT:
                     var docId = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
 
-                    //TODO: egor do here something normal and don't pass so many params and flags 
+                    // TODO: egor AttachmentStorage  do here something normal and don't pass so many params and flags 
 
                     AttachmentDetailsServer attachmentPutResult;
                     if (cmd.FromEtl)

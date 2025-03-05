@@ -456,7 +456,7 @@ namespace Raven.Server.Documents
 
                                 if (retireAtDt != null)
                                 {
-                                    //TODO: egor now this is only done from ETL, but in theory can be done using the client API
+                                    //TODO: egor now this is only done from ETL, but in theory can be done using the client API, this mean the client can add attachment and mark it as retired, do we want that?
                                     retireAt = retireAtDt.Value.Ticks;
                                     RetiredAttachmentsStorage.Put(context, keySlice, retireAtDt.Value.GetDefaultRavenFormat());
                                 }
@@ -1360,8 +1360,7 @@ namespace Raven.Server.Documents
             var attachment = GetAttachment(context, sourceDocumentId, sourceName, AttachmentType.Document, changeVector, hash, contentType, usePartialKey);
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
-            //TODO: egor can I do this for retired?
-            // test: WaitForIndexesAfterSaveChangesSupportsMoveToDifferentCollection
+
             var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Flags,attachment.Size, retireAtDt: null, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
@@ -1686,7 +1685,7 @@ namespace Raven.Server.Documents
                         var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref before.Reader);
                         var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref before.Reader);
 
-                        // TODO: egor organize this (its checked 2nd time inside DeleteInternal)
+                        // TODO: egor AttachmentStorage organize this (its checked 2nd time inside DeleteInternal)
                         if (storageOnly == false)
                         {
                             var dbRecord = _documentDatabase.ReadDatabaseRecord();

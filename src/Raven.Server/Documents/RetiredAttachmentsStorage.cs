@@ -123,8 +123,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     private void ProcessDocumentForDeleteRetire(DocumentsOperationContext context, Slice outSlice, string id, DateTime currentTime)
     {
-        //TODO: egor do we want to do here anything?
-        // here we already deleted the attachment metadata from document, and put a del value to retiretree, now when we are here it means we deleted the attachment from cloud as well.
+        // here we already deleted the attachment metadata from document,and put a DeleteRetire to RetireAttachmentsTree, now when we are here it means we deleted the attachment from cloud as well.
     }
 
     protected override DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
