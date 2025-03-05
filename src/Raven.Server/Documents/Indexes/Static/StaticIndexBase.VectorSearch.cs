@@ -611,6 +611,7 @@ public partial class AbstractStaticIndexBase
             return new object[]{VectorValue.Null};
         }
 
+        var embeddingGenerationTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(embeddingGeneratorTaskIdentifier);
         if (currentIndexingScope.TryGetLoadVectorField(fieldName, out indexField) == false)
         {
             VectorEmbeddingType expectedVectorType = VectorEmbeddingType.Single;
@@ -622,15 +623,15 @@ public partial class AbstractStaticIndexBase
                     expectedVectorType = VectorEmbeddingType.Single;
             }
         
-            indexField = currentIndexingScope.GetLoadVectorField(fieldName, new EmbeddingsGenerationTaskIdentifier(embeddingGeneratorTaskIdentifier), expectedVectorType);
+            indexField = currentIndexingScope.GetLoadVectorField(fieldName, embeddingGenerationTaskIdentifier,  expectedVectorType);
         }
-        
         
         if (embeddingContainerObject is BlittableJsonReaderArray bjra)
         {
+            var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(embeddingGenerationTaskIdentifier, path);
             var attachmentNames = new string[bjra.Length];
             for (var i = 0; i < bjra.Length; i++)
-                attachmentNames[i] = GetStringFromObject(bjra[i]);
+                attachmentNames[i] = EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, GetStringFromObject(bjra[i]), indexField.Vector.SourceEmbeddingType);
 
             var attachments = currentIndexingScope.LoadAttachments(embeddingDocumentId, attachmentNames);
             return attachments is null 

@@ -108,7 +108,6 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         {
             //Assert if value is in embedding cache
             var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(inputValue);
-            //todo maciej
             var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, targetQuantization);
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
             Assert.NotNull(embeddingCacheDocument);
@@ -130,8 +129,9 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             Assert.NotNull(currentPathObject);
 
             // Assert if current path contain embedding of current input value
-            var expectedAttachmentNameInEmbeddingsDocument = EmbeddingsHelper.GenerateDestinationAttachmentName(EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, path),hashOfInput, targetQuantization);
-            var attachmentsByEtlPath = currentPathObject.Select(att => att.ToString()).ToList();
+            var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, path);
+            var expectedAttachmentNameInEmbeddingsDocument = EmbeddingsHelper.GenerateDestinationAttachmentName(prefix,hashOfInput, targetQuantization);
+            var attachmentsByEtlPath = currentPathObject.Select(att => EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, att.ToString(), targetQuantization)).ToList();
             Assert.Equal(inputValues.Length, attachmentsByEtlPath.Count); // <- this checks if we've all embeddings
             Assert.Contains(expectedAttachmentNameInEmbeddingsDocument, attachmentsByEtlPath);
 

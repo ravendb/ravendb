@@ -250,6 +250,8 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 //For each property under ETL name
                 foreach (var path in etlEmbeddingsByPath.GetPropertyNames())
                 {
+                    var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(_embeddingsTaskIdentifier, path);
+                    
                     // We need to read the property at it is, since it may contain dots, etc and BlittableJsonTraverserHelper detects them as nested properties.
                     if (etlEmbeddingsByPath.TryGetMember(path, out var attachmentsArrayObject) == false)
                         continue;
@@ -259,9 +261,9 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                             
                     ref var currentRemoval = ref CollectionsMarshal.GetValueRefOrAddDefault(destination, path, out _);
                     currentRemoval ??= new(array.Length);
-                            
+                    
                     foreach (var item in array.Items)
-                        currentRemoval.Add(item.ToString());
+                        currentRemoval.Add(EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, item.ToString(), _configuration.Quantization));
                 }
             }
             
@@ -304,12 +306,14 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
             isNewDocument = false;
             return context.ReadObject((BlittableJsonReaderObject)document, documentId);
         }
+      
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             var expireAt = _database.Time.GetUtcNow().Add(_configuration.EmbeddingsCacheExpiration);
 
             var quantization = _configuration.Quantization;
+            var alreadyAddedAttachments = new HashSet<string>();
             // For each of processed document
             foreach (var document in _taskResults.Additions)
             {
@@ -329,9 +333,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     var generatedEmbeddings = embeddingsByPath.Value;
                     var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(_embeddingsTaskIdentifier, currentPath);
                     var namesOfNewAttachments = new DynamicJsonArray();
-                    
-                    // todo better handling
-                    var alreadyAddedAttachments = new HashSet<string>();
+                    alreadyAddedAttachments.Clear();
                     
                     foreach (var embedding in generatedEmbeddings)
                     {
@@ -341,7 +343,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                         if (alreadyAddedAttachments.Add(embedding.DestinationAttachmentName) == false)
                             continue;
                         
-                        namesOfNewAttachments.Add(embedding.DestinationAttachmentName);
+                        namesOfNewAttachments.Add(embedding.ValueHash);
                     }
                     
                     embeddingsDocumentModification[currentPath] = namesOfNewAttachments;
@@ -359,8 +361,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     // Insert new embeddings
                     foreach (var embeddingsByPath in document.Values)
                     {
-                        // todo better handling
-                        var alreadyAddedAttachments = new HashSet<string>();
+                        alreadyAddedAttachments.Clear();
                         
                         var namesOfCurrentAttachments = currentAttachmentsOfEmbeddingsFromThisTransformer.GetValueOrDefault(embeddingsByPath.Key);
                         foreach (var embedding in embeddingsByPath.Value)
