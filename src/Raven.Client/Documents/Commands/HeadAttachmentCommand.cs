@@ -10,11 +10,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public sealed class HeadAttachmentCommand : RavenCommand<string>
+    public class HeadAttachmentCommand : RavenCommand<string>
     {
-        private readonly string _documentId;
-        private readonly string _name;
-        private readonly string _changeVector;
+        protected readonly string _documentId;
+        protected readonly string _name;
+        protected readonly string _changeVector;
 
         public HeadAttachmentCommand(string documentId, string name, string changeVector)
         {
@@ -28,9 +28,14 @@ namespace Raven.Client.Documents.Commands
             _changeVector = changeVector;
         }
 
+        protected virtual string GetUrl(ServerNode node)
+        {
+            return $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
+        }
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
+            url = GetUrl(node);
 
             var request = new HttpRequestMessage
             {

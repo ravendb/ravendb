@@ -1,15 +1,9 @@
 using System.IO;
-using Raven.Client.Documents.Operations.Attachments;
 
 namespace Raven.Client.Documents.Session
 {
-    public interface IAttachmentsSessionOperationsBase
+    public interface IAttachmentsSessionOperationsBase : IAttachmentsSessionOperationsBaseOfTheBase
     {
-        /// <summary>
-        /// Returns the attachments info of a document.
-        /// </summary>
-        AttachmentName[] GetNames(object entity);
-
         /// <summary>
         /// Stores attachment to be sent in the session.
         /// </summary>

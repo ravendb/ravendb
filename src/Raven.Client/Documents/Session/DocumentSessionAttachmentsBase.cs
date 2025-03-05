@@ -16,9 +16,9 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Abstract implementation for in memory session operations
     /// </summary>
-    public abstract class DocumentSessionAttachmentsBase : AdvancedSessionExtensionBase
+    public abstract class DocumentSessionAttachmentsBaseOfTheBase : AdvancedSessionExtensionBase
     {
-        protected DocumentSessionAttachmentsBase(InMemoryDocumentSessionOperations session) : base(session)
+        protected DocumentSessionAttachmentsBaseOfTheBase(InMemoryDocumentSessionOperations session) : base(session)
         {
         }
 
@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
 
             if (entity is string)
                 throw new ArgumentException($"{nameof(GetNames)} requires a tracked entity object, other types such as documentId are not valid.", nameof(entity));
-            
+
             if (Session.DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSession(entity);
 
@@ -42,7 +42,20 @@ namespace Raven.Client.Documents.Session
                 var attachment = (BlittableJsonReaderObject)attachments[i];
                 results[i] = JsonDeserializationClient.AttachmentName(attachment);
             }
+
             return results;
+        }
+    }
+
+
+
+    /// <summary>
+        /// Abstract implementation for in memory session operations
+        /// </summary>
+        public abstract class DocumentSessionAttachmentsBase : DocumentSessionAttachmentsBaseOfTheBase
+    {
+        protected DocumentSessionAttachmentsBase(InMemoryDocumentSessionOperations session) : base(session)
+        {
         }
 
         public void Store(string documentId, string name, Stream stream, string contentType = null)
@@ -77,16 +90,6 @@ namespace Raven.Client.Documents.Session
                 ThrowEntityNotInSessionOrMissingId(entity);
 
             Store(document.Id, name, stream, contentType);
-        }
-
-        protected void ThrowEntityNotInSessionOrMissingId(object entity)
-        {
-            throw new ArgumentException($"{entity} is not associated with the session. Use documentId instead or track the entity in the session.", nameof(entity));
-        }
-
-        protected void ThrowEntityNotInSession(object entity)
-        {
-            throw new ArgumentException($"{entity} is not associated with the session. You need to track the entity in the session.", nameof(entity));
         }
 
         public void Delete(object entity, string name)

@@ -8,20 +8,21 @@ namespace Raven.Client.Documents.Attachments
 {
     public sealed class RetiredAttachmentsConfiguration : IDynamicJson
     {
+        private Dictionary<string, TimeSpan> _retirePeriods;
         public bool Disabled { get; set; }
         public S3Settings S3Settings { get; set; }
         public AzureSettings AzureSettings { get; set; }
 
         public Dictionary<string, TimeSpan> RetirePeriods
         {
-            get;
+            get => _retirePeriods;
             set
             {
-                field = new Dictionary<string, TimeSpan>(StringComparer.OrdinalIgnoreCase);
+                _retirePeriods = new Dictionary<string, TimeSpan>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var kvp in value)
                 {
-                    field.Add(kvp.Key, kvp.Value);
+                    _retirePeriods.Add(kvp.Key, kvp.Value);
                 }
             }
         }
@@ -50,7 +51,7 @@ namespace Raven.Client.Documents.Attachments
             hashCode.Add(S3Settings);
             hashCode.Add(AzureSettings);
 
-            foreach (var kvp in RetirePeriods)
+            foreach (var kvp in _retirePeriods)
             {
                 hashCode.Add(kvp.Key, StringComparer.OrdinalIgnoreCase);
                 hashCode.Add(kvp.Value);
@@ -109,8 +110,8 @@ namespace Raven.Client.Documents.Attachments
                 return false;
             }
 
-            var d1 = RetirePeriods;
-            var d2 = other.RetirePeriods;
+            var d1 = _retirePeriods;
+            var d2 = other._retirePeriods;
 
             bool dic = d1.Count == d2.Count && d1.All(
                 (d1Kv) => d2.TryGetValue(d1Kv.Key, out var d2Value) && (
@@ -130,7 +131,7 @@ namespace Raven.Client.Documents.Attachments
                 [nameof(Disabled)] = Disabled,
                 [nameof(RetireFrequencyInSec)] = RetireFrequencyInSec,
                 [nameof(MaxItemsToProcess)] = MaxItemsToProcess,
-                [nameof(RetirePeriods)] = DynamicJsonValue.Convert(RetirePeriods),
+                [nameof(RetirePeriods)] = DynamicJsonValue.Convert(_retirePeriods),
                 [nameof(S3Settings)] = S3Settings?.ToJson(),
                 [nameof(AzureSettings)] = AzureSettings?.ToJson(),
                 [nameof(PurgeOnDelete)] = PurgeOnDelete,
@@ -152,14 +153,14 @@ namespace Raven.Client.Documents.Attachments
                 if(MaxItemsToProcess <= 0)
                     throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
 
-                if (RetirePeriods == null || RetirePeriods.Count == 0)
-                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have a value when {nameof(Disabled)} is false.");
+                if (_retirePeriods == null || _retirePeriods.Count == 0)
+                    throw new InvalidOperationException($"{nameof(_retirePeriods)}{databaseNameStr} must have a value when {nameof(Disabled)} is false.");
 
-                if (RetirePeriods.Keys.Any(string.IsNullOrWhiteSpace))
-                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr}  must have non empty keys.");
+                if (_retirePeriods.Keys.Any(string.IsNullOrWhiteSpace))
+                    throw new InvalidOperationException($"{nameof(_retirePeriods)}{databaseNameStr}  must have non empty keys.");
 
-                if (RetirePeriods.Values.Any(x => x.TotalSeconds <= 0))
-                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have positive TimeSpan values.");
+                if (_retirePeriods.Values.Any(x => x.TotalSeconds <= 0))
+                    throw new InvalidOperationException($"{nameof(_retirePeriods)}{databaseNameStr} must have positive TimeSpan values.");
 
                 if (HasUploader() == false)
                     throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured when {nameof(Disabled)} is false.");

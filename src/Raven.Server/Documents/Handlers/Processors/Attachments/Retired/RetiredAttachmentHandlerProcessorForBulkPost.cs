@@ -1,9 +1,11 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 {
@@ -30,6 +32,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
         public override void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)
         {
             tx.Dispose();
+        }
+
+        protected override void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
+        {
+            writer.WriteStartObject();
+            WriteAttachmentDetailsInternal(writer, attachment, documentId);
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(AttachmentDetails.Flags));
+            writer.WriteInteger((int)attachment.Flags);
+            writer.WriteEndObject();
         }
     }
 }

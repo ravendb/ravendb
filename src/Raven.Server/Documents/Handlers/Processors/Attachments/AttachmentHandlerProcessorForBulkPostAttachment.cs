@@ -120,5 +120,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 }
             }
         }
+
+        protected override void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
+        {
+            writer.WriteStartObject();
+            WriteAttachmentDetailsInternal(writer, attachment, documentId);
+            writer.WriteEndObject();
+        }
     }
 }

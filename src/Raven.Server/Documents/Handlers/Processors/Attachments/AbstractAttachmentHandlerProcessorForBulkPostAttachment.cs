@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         }
 
         protected abstract ValueTask GetAttachmentsAsync(TOperationContext context, BlittableJsonReaderArray attachments, AttachmentType type, OperationCancelToken operationCancelToken);
+        protected abstract void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -37,9 +38,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             }
         }
 
-        protected static void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
+        protected static void WriteAttachmentDetailsInternal(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
         {
-            writer.WriteStartObject();
             writer.WritePropertyName(nameof(AttachmentDetails.Name));
             writer.WriteString(attachment.Name);
             writer.WriteComma();
@@ -57,7 +57,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             writer.WriteComma();
             writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
             writer.WriteString(documentId);
-            writer.WriteEndObject();
         }
     }
 }

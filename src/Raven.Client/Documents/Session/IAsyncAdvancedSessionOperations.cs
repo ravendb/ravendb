@@ -32,6 +32,11 @@ namespace Raven.Client.Documents.Session
         IAttachmentsSessionOperationsAsync Attachments { get; }
 
         /// <summary>
+        ///     Access the attachments operations
+        /// </summary>
+        IRetiredAttachmentsSessionOperationsAsync RetiredAttachments { get; }
+
+        /// <summary>
         ///     Access the revisions operations
         /// </summary>
         IRevisionsSessionOperationsAsync Revisions { get; }

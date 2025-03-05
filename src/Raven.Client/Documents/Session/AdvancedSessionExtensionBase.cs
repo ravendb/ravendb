@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Commands.Batches;
@@ -32,5 +33,16 @@ namespace Raven.Client.Documents.Session
         {
             Session.Defer(command, commands);
         }
+
+        protected void ThrowEntityNotInSessionOrMissingId(object entity)
+        {
+            throw new ArgumentException($"{entity} is not associated with the session. Use documentId instead or track the entity in the session.", nameof(entity));
+        }
+
+        protected void ThrowEntityNotInSession(object entity)
+        {
+            throw new ArgumentException($"{entity} is not associated with the session. You need to track the entity in the session.", nameof(entity));
+        }
+
     }
 }
