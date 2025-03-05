@@ -125,7 +125,10 @@ namespace FastTests.Sparrow
                 context.Allocate(2 * ByteStringContext.MinBlockSizeInBytes - sizeof(ByteStringStorage), out var byteStringInFirst);
 
                 long ptrLocation = (long)byteStringInFirst._pointer;
-                long nextPtrLocation = ptrLocation + byteStringInFirst._pointer->Size;
+
+                // we need to allocate this since we want the first block to be released as a new segment
+                context.Allocate(1, out var byteStringInSecond);
+                long nextPtrLocation = (long)byteStringInSecond._pointer + byteStringInSecond._pointer->Size;
 
                 context.Release(ref byteStringInFirst); // After the release the block should be reserved as a new segment. 
 
@@ -135,9 +138,9 @@ namespace FastTests.Sparrow
                 Assert.InRange((long)byteStringReused._pointer, ptrLocation, ptrLocation + allocationBlockSize);
                 Assert.Equal(ptrLocation, (long)byteStringReused._pointer); // We are the first in the segment.
 
-                // This allocation will have an allocation unit size of 128 and fit into the rest of the initial segment, which should be 
+                // This allocation will have an allocation unit size of 64 and fit into the rest of the initial segment, which should be 
                 // available for an exact reuse bucket allocation. 
-                context.Allocate(64, out var byteStringReusedFromBucket);
+                context.Allocate(32, out var byteStringReusedFromBucket);
 
                 Assert.Equal((long)byteStringReusedFromBucket._pointer, nextPtrLocation);
             }
