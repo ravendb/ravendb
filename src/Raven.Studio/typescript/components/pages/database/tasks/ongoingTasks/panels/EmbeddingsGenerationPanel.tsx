@@ -61,7 +61,6 @@ function Details(props: EmbeddingsGenerationPanelProps & { canEdit: boolean }) {
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
-            <EmptyScriptsWarning task={data} />
         </RichPanelDetails>
     );
 }

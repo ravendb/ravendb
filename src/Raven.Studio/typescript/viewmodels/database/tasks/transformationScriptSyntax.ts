@@ -268,7 +268,12 @@ loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
 
 embeddingsGenerationSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleText);
 
-static readonly embeddingsGenerationSampleText =`generateEmbeddings({ Bar: 'ConstValue'});`;
+static readonly embeddingsGenerationSampleText =`embeddings.generate({ 
+    Name: text.splitLines(this.Name, 512),
+    Description: markdown.splitParagraphs(this.Description, 1024),
+    Tags: html.stripHtml(this.HtmlBodyTags) 
+});
+`;
     
     
     

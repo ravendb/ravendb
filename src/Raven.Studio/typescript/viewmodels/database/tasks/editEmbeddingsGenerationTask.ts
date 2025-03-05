@@ -3,21 +3,12 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import database = require("models/resources/database");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
-import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
-import ongoingTaskEmbeddingsGenerationTransformationModel = require("models/database/tasks/ongoingTaskEmbeddingsGenerationTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
-import document = require("models/database/documents/document");
-import viewHelpers = require("common/helpers/view/viewHelpers");
-import documentMetadata = require("models/database/documents/documentMetadata");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import testAiCommand = require("commands/database/tasks/testAiCommand");
-import prismjs = require("prismjs");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
 import EditAiEtlInfoHub = require("viewmodels/database/tasks/EditAiEtlInfoHub");
@@ -37,24 +28,14 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
-    static readonly scriptNamePrefix = "Script_";
-    static isApplyToAll = ongoingTaskEmbeddingsGenerationTransformationModel.isApplyToAll;
-    
-    enableTestArea = ko.observable<boolean>(false);
-    test: embeddingsGenerationTaskTestMode;    
-
     editedEmbeddingsGeneration = ko.observable<ongoingTaskEmbeddingsGenerationEditModel>();
     isAddingNewEtlTask = ko.observable<boolean>(true);
-
-    transformationScriptSelectedForEdit = ko.observable<ongoingTaskEmbeddingsGenerationTransformationModel>();
-    editedTransformationScriptSandbox = ko.observable<ongoingTaskEmbeddingsGenerationTransformationModel>();
 
     possibleMentors = ko.observableArray<string>([]);
     connectionStringsNames = ko.observableArray<string>([]);
     aiConnectionStrings = ko.observableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>([]);
 
     spinners = {
-        test: ko.observable<boolean>(false),
         save: ko.observable<boolean>(false)
     };
 
@@ -76,15 +57,15 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     sourceView = ko.observable<EditAiTaskSourceView>();
 
     isDocumentExpirationEnabled = ko.observable<boolean>(false);
+    enableDocumentExpiration = ko.observable<boolean>(false);
 
     isAccordionOpen = ko.observable<boolean>(false);
 
     constructor(db: database) {
         super(db);
-        this.bindToCurrentInstance("useConnectionString",
-            "saveEditedTransformation",
+        this.bindToCurrentInstance(
+            "useConnectionString",
             "syntaxHelp",
-            "toggleTestArea",
             "toggleIsNewConnectionStringOpen",
             "setState",
             "getIsDocumentExpirationEnabled",
@@ -137,14 +118,11 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
                 .done((result) => {
                     this.editedEmbeddingsGeneration(new ongoingTaskEmbeddingsGenerationEditModel(result, this.aiConnectionStrings));
 
-                    this.editTransformationScript(new ongoingTaskEmbeddingsGenerationTransformationModel(
-                        result.Configuration.Transforms[0],
-                        false,
-                        true,
-                        result.Configuration.EmbeddingsPathConfigurations?.length > 0 ? "paths" : "script",
-                        result.Configuration.EmbeddingsPathConfigurations,
-                        this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue
-                    ));
+                    this.editedEmbeddingsGeneration().collectionInput.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
+                    this.editedEmbeddingsGeneration().embeddingsSource.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
+                    this.editedEmbeddingsGeneration().script.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
+                    this.editedEmbeddingsGeneration().embeddingPathConfigurations.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
+                    this.editedEmbeddingsGeneration().quantizationType.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
 
                     deferred.resolve();
                 })
@@ -156,8 +134,6 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             // 2. Creating a New task
             this.isAddingNewEtlTask(true);
             this.editedEmbeddingsGeneration(ongoingTaskEmbeddingsGenerationEditModel.empty(this.aiConnectionStrings));
-
-            this.editedTransformationScriptSandbox(ongoingTaskEmbeddingsGenerationTransformationModel.empty(this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue, this.findNameForNewTransformation()));
 
             deferred.resolve();
         }
@@ -186,10 +162,6 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         this.isNewConnectionStringOpen(!this.isNewConnectionStringOpen())
     }
 
-    /**************************************************************/
-    /*** General AI Model / Page Actions Region ***/
-    /**************************************************************/
-
     private getAllConnectionStrings() {
         return new getConnectionStringsCommand(this.db)
             .execute()
@@ -207,8 +179,6 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             return collectionsTracker.default.getCollectionNames();
         });
 
-        this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
-
         const connectionStringName = this.editedEmbeddingsGeneration().connectionStringName();
         const connectionStringIsMissing = connectionStringName && !this.connectionStringsNames()
             .find(x => x.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
@@ -218,56 +188,14 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             this.editedEmbeddingsGeneration().connectionStringName(null);
         }
 
-        this.enableTestArea.subscribe(testMode => {
-            $("body").toggleClass('show-test', testMode);
-        });
-
-        const dtoProvider = () => {
-            const dto = this.editedEmbeddingsGeneration().toDto();
-
-            // override transforms - use only current transformation
-            const transformationScriptDto = this.editedTransformationScriptSandbox().toDto();
-            transformationScriptDto.Name = "Configuration"; // assign fake name
-            dto.Transforms = [transformationScriptDto];
-
-            if (!dto.Name) {
-                dto.Name = "Test Embeddings Generation Task"; // assign fake name
-            }
-            return dto;
-        };
-
-        this.test = new embeddingsGenerationTaskTestMode(this.db, () => {
-            return this.isValid(this.editedTransformationScriptSandbox().validationGroup);
-        }, dtoProvider);
-                
-        this.test.initObservables();
-
         this.initDirtyFlag();
     }
     
     private initDirtyFlag() {
         const innerDirtyFlag = ko.pureComputed(() => this.editedEmbeddingsGeneration().dirtyFlag().isDirty());
-        const editedScriptFlag = ko.pureComputed(() => !!this.editedTransformationScriptSandbox() && this.editedTransformationScriptSandbox().dirtyFlag().isDirty());
-
-        const scriptsCount = ko.pureComputed(() => this.editedEmbeddingsGeneration().transformationScripts().length);
-        
-        const hasAnyDirtyTransformationScript = ko.pureComputed(() => {
-            let anyDirty = false;
-            this.editedEmbeddingsGeneration().transformationScripts().forEach(script => {
-                if (script.dirtyFlag().isDirty()) {
-                    anyDirty = true;
-                    // don't break here - we want to track all dependencies
-                }
-            });
-            return anyDirty;
-        });
-        
 
         this.dirtyFlag = new ko.DirtyFlag([
             innerDirtyFlag,
-            editedScriptFlag,
-            scriptsCount,
-            hasAnyDirtyTransformationScript
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
@@ -282,38 +210,15 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             return this.isDocumentExpirationEnabled(false);
         }
 
+        this.enableDocumentExpiration(result.Disabled);
+
         return this.isDocumentExpirationEnabled(!result.Disabled);
     }
-
-    // onTestConnectionElasticSearch(urlToTest: discoveryUrl) {
-    //     eventsCollector.default.reportEvent("ai-connection-string", "test-connection");
-    //     this.spinners.test(true);
-    //     this.testConnectionResult(null);
-    //     this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
-
-    //     this.newConnectionString()
-    //         .testConnection(this.activeDatabase(), urlToTest)
-    //         .done(result => this.testConnectionResult(result))
-    //         .always(() => {
-    //             this.spinners.test(false);
-    //             this.fullErrorDetailsVisible(false);
-    //         });
-    // }
 
     async saveEtl() {
         let hasAnyErrors = false;
         this.spinners.save(true);
-        
-        // 1. Validate *edited transformation script*
-        if (this.showEditTransformationArea()) {
-            if (!this.isValid(this.editedTransformationScriptSandbox().validationGroup)) {
-                hasAnyErrors = true;
-            } else {
-                this.saveEditedTransformation();
-            }
-        }
 
-        // 2. Validate *general form*
         if (!this.isValid(this.editedEmbeddingsGeneration().validationGroup)) {
             hasAnyErrors = true;
         }
@@ -323,28 +228,17 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             return false;
         }
         
-        const scriptsToReset = this.editedEmbeddingsGeneration()
-                .transformationScripts()
-                .filter(x => x.resetScript())
-                .map(x => x.name());
+        const scriptsToReset = this.editedEmbeddingsGeneration().resetScript() ? this.editedEmbeddingsGeneration().transforms().map(x => x.Name) : [];
                 
         try {
-            if (!this.isDocumentExpirationEnabled()) {
-                const confirmationResult = await viewHelpers.confirmationMessage(
-                    "Document Expiration",
-                    "Embeddings created by this task will be cached. To ensure they expire and are deleted after the specified duration, the 'Expiration' feature must be enabled. Would you like to enable the 'Expiration' feature now?",
-                    { forceRejectWithResolve: true }
-                )
-                
-                if (confirmationResult.can) {
-                    await new saveExpirationConfigurationCommand(this.db, {
-                        Disabled: false,
-                        DeleteFrequencyInSec: null,
-                        MaxItemsToProcess: DocumentExpiration.defaultItemsToProcess
-                    }).execute();
+            if (this.enableDocumentExpiration()) {
+                await new saveExpirationConfigurationCommand(this.db, {
+                    Disabled: false,
+                    DeleteFrequencyInSec: null,
+                    MaxItemsToProcess: DocumentExpiration.defaultItemsToProcess
+                }).execute();
 
-                    activeDatabaseTracker.default.database().hasExpirationConfiguration(true);
-                }
+                activeDatabaseTracker.default.database().hasExpirationConfiguration(true);
             }
 
             const dto = this.editedEmbeddingsGeneration().toDto();
@@ -373,249 +267,16 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         const viewmodel = new transformationScriptSyntax("EmbeddingsGeneration");
         app.showBootstrapDialog(viewmodel);
     }
-    
-    toggleTestArea() {
-        if (!this.enableTestArea()) {
-            // let hasErrors = false;
-
-            // validate global form - but only 'enterTestModeValidationGroup'
-            // if (!this.isValid(this.editedAiEtl().enterTestModeValidationGroup)) {
-            //     hasErrors = true;
-            // }
-            
-            // if (!hasErrors) {
-                this.enableTestArea(true);
-            // }
-        } else {
-            this.enableTestArea(false);
-        }
-    }
 
     setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
         this.editedEmbeddingsGeneration().taskState(state);
     }
 
-    /********************************************/
-    /*** Transformation Script Actions Region ***/
-    /********************************************/
-
-    addNewTransformation() {
-        this.transformationScriptSelectedForEdit(null);
-        this.editedTransformationScriptSandbox(ongoingTaskEmbeddingsGenerationTransformationModel.empty(this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue, this.findNameForNewTransformation()));
-    }
-    
-    saveEditedTransformation() {
-        this.enableTestArea(false);
-        const transformation = this.editedTransformationScriptSandbox();
-
-        if (!this.isValid(transformation.validationGroup)) {
-            return;
-        }
-
-        if (transformation.isNew()) {
-            const newTransformationItem = new ongoingTaskEmbeddingsGenerationTransformationModel(transformation.toDto(), false, false, transformation.embeddingsSource(), transformation.embeddingPathConfigurations(), this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue);
-            newTransformationItem.name(transformation.name());
-            newTransformationItem.dirtyFlag().forceDirty();
-            this.editedEmbeddingsGeneration().transformationScripts.push(newTransformationItem);
-        } else {
-            const oldItem = this.editedEmbeddingsGeneration().transformationScripts().find(x => x.name() === transformation.name());
-            const newItem = new ongoingTaskEmbeddingsGenerationTransformationModel(transformation.toDto(), false, transformation.resetScript(), transformation.embeddingsSource(), transformation.embeddingPathConfigurations(), this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue);
-
-            if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
-                newItem.dirtyFlag().forceDirty();
-            }
-
-            this.editedEmbeddingsGeneration().transformationScripts.replace(oldItem, newItem);
-        }
-
-        this.editedEmbeddingsGeneration().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
-    }
-
-    private findNameForNewTransformation() {
-        const scriptsWithPrefix = this.editedEmbeddingsGeneration().transformationScripts().filter(script => {
-            return script.name().startsWith(editEmbeddingsGenerationTask.scriptNamePrefix);
-        });
-
-        const maxNumber = _.max(scriptsWithPrefix
-            .map(x => x.name().substr(editEmbeddingsGenerationTask.scriptNamePrefix.length))
-            .map(x => _.toInteger(x))) || 0;
-
-        return editEmbeddingsGenerationTask.scriptNamePrefix + (maxNumber + 1);
-    }
-
-    editTransformationScript(model: ongoingTaskEmbeddingsGenerationTransformationModel) {
-        this.makeSureSandboxIsVisible();
-        this.transformationScriptSelectedForEdit(model);
-        this.editedTransformationScriptSandbox(new ongoingTaskEmbeddingsGenerationTransformationModel(model.toDto(), false, model.resetScript(), model.embeddingsSource(), model.embeddingPathConfigurations(), this.editedEmbeddingsGeneration().maxTokensPerChunkDefaultValue));
-
-        $('.edit-ai-task .js-test-area [data-toggle="tooltip"]').tooltip();
-    }
-    
-    private makeSureSandboxIsVisible() {
-        const $editArea = $(".edit-ai-task");
-        if ($editArea.scrollTop() > 300) {
-            $editArea.scrollTop(0);
-        }
-    }
-
-    createCollectionNameAutoCompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
+    createCollectionNameAutoCompleter() {
         return ko.pureComputed(() => {
-            let result;
-            const key = collectionText();
-
-            const options = this.collections().filter(x => !x.isAllDocuments).map(x => x.name);
-
-            const usedOptions = usedCollections().filter(k => k !== key);
-
-            const filteredOptions = options.filter(x => !usedOptions.includes(x));
-
-            if (key) {
-                result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
-            } else {
-                result = filteredOptions;
-            }
-
-            return result;
+            return this.collections().filter(x => !x.isAllDocuments).map(x => x.name);
         });
     }
 }
 
 export = editEmbeddingsGenerationTask;
-
-class embeddingsGenerationTaskTestMode {
-
-    documentId = ko.observable<string>();
-    testDelete = ko.observable<boolean>(false);
-    docsIdsAutocompleteResults = ko.observableArray<string>([]);
-    db: database;
-    configurationProvider: () => Raven.Client.Documents.Operations.AI.EmbeddingsGenerationConfiguration;
-
-    validationGroup: KnockoutValidationGroup;
-    validateParent: () => boolean;
-
-    testAlreadyExecuted = ko.observable<boolean>(false);
-
-    spinners = {
-        preview: ko.observable<boolean>(false),
-        test: ko.observable<boolean>(false)
-    };
-
-    loadedDocument = ko.observable<string>();
-    loadedDocumentId = ko.observable<string>();
-
-    debugOutput = ko.observableArray<string>([]);
-    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test.EmbeddingsGenerationTestScriptResult>([]);
-
-    // all kinds of alerts:
-    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
-
-    warningsCount = ko.pureComputed(() => {
-        return this.transformationErrors().length;
-    });
-
-    constructor(db: database,
-                validateParent: () => boolean,
-                configurationProvider: () => Raven.Client.Documents.Operations.AI.EmbeddingsGenerationConfiguration) {
-        this.db = db;
-        this.validateParent = validateParent;
-        this.configurationProvider = configurationProvider;
-
-        _.bindAll(this, "onAutocompleteOptionSelected");
-    }
-
-    initObservables() {
-        this.documentId.extend({
-            required: true
-        });
-
-        this.documentId.throttle(250).subscribe(item => {
-            if (!item) {
-                return;
-            }
-
-            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db)
-                .execute()
-                .done(results => {
-                    this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
-                });
-        });
-
-        this.validationGroup = ko.validatedObservable({
-            documentId: this.documentId
-        });
-    }
-
-    onAutocompleteOptionSelected(option: string) {
-        this.documentId(option);
-        this.previewDocument();
-    }
-
-    previewDocument() {
-        const spinner = this.spinners.preview;
-        const documentId: KnockoutObservable<string> = this.documentId;
-
-        spinner(true);
-
-        viewHelpers.asyncValidationCompleted(this.validationGroup)
-            .then(() => {
-                if (viewHelpers.isValid(this.validationGroup)) {
-                    new getDocumentWithMetadataCommand(documentId(), this.db)
-                        .execute()
-                        .done((doc: document) => {
-                            const docDto = doc.toDto(true);
-                            const metaDto = docDto["@metadata"];
-                            documentMetadata.filterMetadata(metaDto);
-                            const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(prismjs.highlight(text, prismjs.languages.javascript, "js"));
-                            this.loadedDocumentId(doc.getId());
-
-                            $('.test-container a[href="#documentPreview"]').tab('show');
-                        }).always(() => spinner(false));
-                } else {
-                    spinner(false);
-                }
-            });
-    }
-
-    runTest() {
-        const testValid = viewHelpers.isValid(this.validationGroup, true);
-        const parentValid = this.validateParent();
-
-        if (testValid && parentValid) {
-            this.spinners.test(true);
-
-            const dto: Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.TestElasticSearchEtlScript = {
-                DocumentId: this.documentId(),
-                IsDelete: this.testDelete(),
-                Configuration: this.configurationProvider()
-            };
-
-            eventsCollector.default.reportEvent("embeddings-generation", "test-script");
-
-            new testAiCommand(this.db, dto)
-                .execute()
-                .done(simulationResult => {
-                    console.log("simulationResult", simulationResult);
-                    // TODO kalczur
-                    // const summaryFormatted =  simulationResult.Summary.map(x => ({
-                    //     Commands: x.Commands.map((cmd: string) => cmd.replace(/\r\n/g, "\n")),
-                    //     IndexName: x.IndexName
-                    // }));
-                    
-                    // this.testResults(summaryFormatted);
-                    
-                    // this.debugOutput(simulationResult.DebugOutput);
-                    // this.transformationErrors(simulationResult.TransformationErrors);
-
-                    // if (this.warningsCount()) {
-                    //     $('.test-container a[href="#warnings"]').tab('show');
-                    // } else {
-                    //     $('.test-container a[href="#testResults"]').tab('show');
-                    // }
-
-                    this.testAlreadyExecuted(true);
-                })
-                .always(() => this.spinners.test(false));
-        }
-    }
-}
