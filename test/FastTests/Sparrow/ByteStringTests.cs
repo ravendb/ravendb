@@ -1,4 +1,4 @@
-﻿using System;
+﻿using Sparrow.Global;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -192,6 +192,38 @@ namespace FastTests.Sparrow
                 context.Reset();
 
                 Assert.Equal(blockSizeInBytes, context.AllocationBlockSize);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Memory)]
+        public void CanReuseMemory()
+        {
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None))
+            {
+                while (context.AllocationBlockSize != 2 * Constants.Size.Megabyte)
+                {
+                    context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2, out _);
+                }
+
+                Assert.Equal(2 * Constants.Size.Megabyte, context.AllocationBlockSize);
+
+                const int toAllocate = ByteStringContext.MinBlockSizeInBytes * 5;
+                context.Allocate(toAllocate, out var first);
+                var ptrLocation = (long)first._pointer;
+                var allocatedBefore = context._totalAllocated;
+                context.Release(ref first);
+
+                for (var i = 0; i < 512; i++)
+                {
+                    var allocation = i % 2 == 0 ? toAllocate / 2 : toAllocate;
+                    context.Allocate(allocation, out var byteString);
+
+                    Assert.Equal(ptrLocation, (long)byteString._pointer);
+
+                    context.Release(ref byteString);
+                }
+
+                Assert.Equal(allocatedBefore, context._totalAllocated);
             }
         }
 

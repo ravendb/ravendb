@@ -1336,7 +1336,11 @@ namespace Sparrow.Server
 
             int reusablePoolIndex = GetPoolIndexForReuse(value._pointer->Size);
 
-            if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
+            if (value._pointer == _internalCurrent.Current - value._pointer->Size)
+            {
+                _internalCurrent.Current -= value._pointer->Size;
+            }
+            else if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
             {
                 FastStack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
                 if (pool == null)
