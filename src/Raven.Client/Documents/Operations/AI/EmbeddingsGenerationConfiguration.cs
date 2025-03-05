@@ -145,7 +145,9 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         } : null;
         json[nameof(AiConnectorType)] = AiConnectorType;
         json[nameof(Quantization)] = Quantization;
+        json[nameof(EmbeddingsCacheExpiration)] = EmbeddingsCacheExpiration;
         json[nameof(ChunkingOptionsForQuerying)] = ChunkingOptionsForQuerying;
+        json[nameof(EmbeddingsCacheForQueryingExpiration)] = EmbeddingsCacheForQueryingExpiration;
 
         return json;
     }
