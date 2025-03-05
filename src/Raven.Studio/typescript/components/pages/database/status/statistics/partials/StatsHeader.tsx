@@ -1,4 +1,5 @@
-﻿import { Col, Row } from "reactstrap";
+﻿import Row from "react-bootstrap/Row";
+import { Col } from "reactstrap";
 import {
     refresh,
     statisticsViewSelectors,

@@ -1,7 +1,8 @@
 ﻿import useBoolean from "hooks/useBoolean";
 import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
-import { CloseButton, Col, Label, Modal, ModalBody, ModalFooter, Row } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import { CloseButton, Col, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { Checkbox, Switch } from "components/common/Checkbox";
 import React from "react";

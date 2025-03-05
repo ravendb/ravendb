@@ -6,7 +6,8 @@ import { CreateDatabaseRegularFormData as FormData } from "../createDatabaseRegu
 import { useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Col, Row } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import { Col } from "reactstrap";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
 import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";

@@ -1,7 +1,8 @@
 import { CounterBadge } from "components/common/CounterBadge";
 import { HrHeader } from "components/common/HrHeader";
 import { ReactNode } from "react";
-import { Modal, ModalBody, Row, Col, CloseButton } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import { Modal, ModalBody, Col, CloseButton } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import { useAppUrls } from "components/hooks/useAppUrls";

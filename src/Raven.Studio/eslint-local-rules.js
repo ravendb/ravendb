@@ -599,4 +599,8 @@ module.exports = {
       };
     },
   },
+  "no-reactstrap-Row": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Row" }),
+  }
 };

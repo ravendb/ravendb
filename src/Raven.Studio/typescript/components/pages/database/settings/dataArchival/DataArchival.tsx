@@ -1,7 +1,8 @@
 ﻿import { useEffect } from "react";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import { Col, Row } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import { Col } from "reactstrap";
 import { useServices } from "hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import {

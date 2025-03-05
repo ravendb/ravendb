@@ -1,6 +1,7 @@
 import React from "react";
 import Card from "react-bootstrap/Card";
-import { Col, Row } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import { Col } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";

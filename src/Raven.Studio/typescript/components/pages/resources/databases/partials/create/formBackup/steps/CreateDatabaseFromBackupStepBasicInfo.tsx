@@ -1,6 +1,7 @@
 import { Icon } from "components/common/Icon";
 import React, { useEffect } from "react";
-import { Row, Col } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import { Col } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { CreateDatabaseFromBackupFormData } from "../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";

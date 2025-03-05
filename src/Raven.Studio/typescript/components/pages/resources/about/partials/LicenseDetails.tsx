@@ -1,6 +1,7 @@
 ﻿import Table from "react-bootstrap/Table";
 import Form from "react-bootstrap/Form";
-import { Col, Row } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import { Col } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/toggles/RadioToggle";

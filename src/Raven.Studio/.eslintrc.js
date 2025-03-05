@@ -57,6 +57,7 @@ module.exports = {
     "local-rules/no-reactstrap-Input": "warn",
     "local-rules/reactstrap-Form-to-RBootstrap-children": "warn",
     "local-rules/react-bootstrap-FormControl-checkbox-to-FormCheck": "warn",
+    "local-rules/no-reactstrap-Row": "warn",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

@@ -6,7 +6,8 @@ import { RevertRevisionsFormData, revertRevisionsYupResolver } from "./RevertRev
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { Row, Col, Label } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import { Col, Label } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
