@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardBody } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { VStack, VStackProps } from "components/common/utilities/VStack";
 
@@ -30,19 +30,19 @@ export default {
 const Template = (args: VStackProps) => (
     <VStack {...args}>
         <Card>
-            <CardBody>
+            <Card.Body>
                 <p>Card 1 content</p>
-            </CardBody>
+            </Card.Body>
         </Card>
         <Card>
-            <CardBody>
+            <Card.Body>
                 <p>Card 2 content</p>
-            </CardBody>
+            </Card.Body>
         </Card>
         <Card>
-            <CardBody>
+            <Card.Body>
                 <p>Card 3 content</p>
-            </CardBody>
+            </Card.Body>
         </Card>
     </VStack>
 );

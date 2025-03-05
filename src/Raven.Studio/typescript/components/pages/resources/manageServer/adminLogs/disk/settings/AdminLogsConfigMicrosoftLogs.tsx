@@ -13,7 +13,8 @@ import {
 import { useAppDispatch, useAppSelector } from "components/store";
 import { logLevelOptions, tryHandleSubmit } from "components/utils/common";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { AccordionBody, AccordionHeader, AccordionItem, Form, FormGroup, Label, Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
+import { AccordionBody, AccordionHeader, AccordionItem, Form, FormGroup, Label } from "reactstrap";
 import * as yup from "yup";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";

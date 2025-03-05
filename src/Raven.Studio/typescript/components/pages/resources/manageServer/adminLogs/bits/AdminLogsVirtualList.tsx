@@ -10,7 +10,7 @@ import {
 import { useAppDispatch, useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { useRef, useLayoutEffect } from "react";
-import { Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
 
 export default function AdminLogsVirtualList(props: { availableHeightInPx: number }) {
     const dispatch = useAppDispatch();

@@ -8,7 +8,9 @@ import { logLevelOptions, logFilterActionOptions, logLevelRelevances } from "com
 import { Control, useWatch } from "react-hook-form";
 import { components, OptionProps } from "react-select";
 import Button from "react-bootstrap/Button";
-import { Row, Col, FormGroup, Label, Card, InputGroup } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Row, Col, FormGroup, Label } from "reactstrap";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type FormData = AdminLogsViewSettingsFormData | AdminLogsConfigLogsFormData;

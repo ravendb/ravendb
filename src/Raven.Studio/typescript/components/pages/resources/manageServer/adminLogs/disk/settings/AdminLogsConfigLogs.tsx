@@ -1,5 +1,6 @@
 import Button from "react-bootstrap/Button";
-import { AccordionBody, AccordionHeader, AccordionItem, Col, Form, FormGroup, Label, Row, Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
+import { AccordionBody, AccordionHeader, AccordionItem, Col, Form, FormGroup, Label, Row } from "reactstrap";
 import * as yup from "yup";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { FormCheckbox, FormSelect } from "components/common/Form";

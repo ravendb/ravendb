@@ -1,16 +1,7 @@
 import Collapse from "react-bootstrap/Collapse";
 import Button from "react-bootstrap/Button";
-import {
-    AccordionItem,
-    AccordionHeader,
-    AccordionBody,
-    Form,
-    FormGroup,
-    Label,
-    InputGroup,
-    Col,
-    Row,
-} from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { AccordionItem, AccordionHeader, AccordionBody, Form, FormGroup, Label, Col, Row } from "reactstrap";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { exhaustiveStringTuple, tryHandleSubmit } from "components/utils/common";

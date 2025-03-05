@@ -18,7 +18,8 @@ import { exhaustiveStringTuple, tryHandleSubmit } from "components/utils/common"
 import { useForm, useWatch, SubmitHandler, useFieldArray } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import Button from "react-bootstrap/Button";
-import { AccordionItem, AccordionHeader, AccordionBody, Form, FormGroup, InputGroup, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import { AccordionItem, AccordionHeader, AccordionBody, Form, FormGroup, Label } from "reactstrap";
 import * as yup from "yup";
 
 type TrafficWatchChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType;

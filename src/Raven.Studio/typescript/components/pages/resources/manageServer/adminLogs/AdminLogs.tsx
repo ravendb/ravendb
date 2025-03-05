@@ -21,7 +21,8 @@ import { logLevelOptions } from "components/utils/common";
 import { useEffect } from "react";
 import { StylesConfig } from "react-select";
 import Button from "react-bootstrap/Button";
-import { Card, CardBody, CardHeader, Input } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import { Input } from "reactstrap";
 import { Switch } from "components/common/Checkbox";
 import { FlexGrow } from "components/common/FlexGrow";
 import AdminLogsFilterState from "components/pages/resources/manageServer/adminLogs/bits/AdminLogsFilterState";
@@ -86,7 +87,7 @@ export default function AdminLogs() {
             <div className="d-flex gap-3 flex-lg-row flex-column">
                 <div className="flex-grow-1" style={{ flexBasis: "40%" }}>
                     <Card>
-                        <CardHeader className="d-flex justify-content-between flex-wrap gap-2 p-2">
+                        <Card.Header className="d-flex justify-content-between flex-wrap gap-2 p-2">
                             <h4 className="mb-0 lh-base d-flex align-items-center">
                                 <Icon icon="client" />
                                 Logs on this view
@@ -117,8 +118,8 @@ export default function AdminLogs() {
                                     styles={levelSelectStyles}
                                 />
                             </div>
-                        </CardHeader>
-                        <CardBody className="p-2">
+                        </Card.Header>
+                        <Card.Body className="p-2">
                             <div className="d-flex gap-2 flex-wrap">
                                 <ConditionalPopover
                                     popoverPlacement="top"
@@ -174,12 +175,12 @@ export default function AdminLogs() {
                                 </div>
                                 {isViewSettingOpen && <AdminLogsViewSettingsModal />}
                             </div>
-                        </CardBody>
+                        </Card.Body>
                     </Card>
                 </div>
                 <div className="flex-grow-1" style={{ flexBasis: "40%" }}>
                     <Card>
-                        <CardHeader className="d-flex justify-content-between flex-wrap gap-2 p-2">
+                        <Card.Header className="d-flex justify-content-between flex-wrap gap-2 p-2">
                             <h4 className="mb-0 lh-base d-flex align-items-center">
                                 <Icon icon="drive" />
                                 Logs on disk
@@ -200,8 +201,8 @@ export default function AdminLogs() {
                                     <span className="lh-1">{configs?.adminLogsConfig?.Logs?.CurrentMinLevel}</span>
                                 )}
                             </div>
-                        </CardHeader>
-                        <CardBody className="p-2">
+                        </Card.Header>
+                        <Card.Body className="p-2">
                             <div className="d-flex gap-2 flex-wrap align-items-center">
                                 <FlexGrow />
                                 <Button
@@ -225,7 +226,7 @@ export default function AdminLogs() {
                                 </ButtonWithSpinner>
                                 {isDiscSettingOpen && <AdminLogsDiskSettingsModal />}
                             </div>
-                        </CardBody>
+                        </Card.Body>
                     </Card>
                 </div>
             </div>

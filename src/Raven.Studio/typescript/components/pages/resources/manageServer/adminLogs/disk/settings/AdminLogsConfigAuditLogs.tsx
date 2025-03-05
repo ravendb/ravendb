@@ -1,7 +1,8 @@
 import AdminLogsConfigTableValue from "components/pages/resources/manageServer/adminLogs/bits/AdminLogsConfigTableValue";
 import { adminLogsSelectors } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppSelector } from "components/store";
-import { AccordionItem, AccordionBody, AccordionHeader, Table } from "reactstrap";
+import Table from "react-bootstrap/Table";
+import { AccordionItem, AccordionBody, AccordionHeader } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
