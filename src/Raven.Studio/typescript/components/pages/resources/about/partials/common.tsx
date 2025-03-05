@@ -1,4 +1,4 @@
-﻿import { Col } from "reactstrap";
+﻿import Col from "react-bootstrap/Col";
 import { Icon } from "components/common/Icon";
 import React, { ReactNode } from "react";
 import IconName from "../../../../../../typings/server/icons";

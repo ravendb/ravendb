@@ -1,6 +1,6 @@
 ﻿import Card from "react-bootstrap/Card";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import { OverallInfoItem } from "components/pages/resources/about/partials/common";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";

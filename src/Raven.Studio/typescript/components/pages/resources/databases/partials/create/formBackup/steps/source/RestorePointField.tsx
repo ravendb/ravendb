@@ -10,7 +10,7 @@ import { components } from "react-select";
 import { Icon } from "components/common/Icon";
 import { GroupHeadingProps, OptionProps } from "react-select";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { CreateDatabaseFromBackupFormData as FormData, RestorePoint } from "../../createDatabaseFromBackupValidation";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";

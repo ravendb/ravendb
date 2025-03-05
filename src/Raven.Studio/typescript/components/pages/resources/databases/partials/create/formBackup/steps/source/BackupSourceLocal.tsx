@@ -3,7 +3,7 @@ import { useServices } from "components/hooks/useServices";
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { useRestorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/useRestorePointUtils";

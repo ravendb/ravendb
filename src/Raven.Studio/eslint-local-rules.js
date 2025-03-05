@@ -602,5 +602,9 @@ module.exports = {
   "no-reactstrap-Row": {
     meta: fixableMeta,
     create: (context) => createDeprecatedReactstrapImport({ context, name: "Row" }),
+  },
+  "no-reactstrap-Col": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Col" }),
   }
 };

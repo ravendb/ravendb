@@ -7,7 +7,7 @@ import { useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
 import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
@@ -47,7 +47,7 @@ export default function CreateDatabaseRegularStepBasicInfo() {
             </div>
             <h2 className="text-center mb-4">Create new database</h2>
             <Row>
-                <Col lg={{ offset: 2, size: 8 }} className="text-center">
+                <Col lg={{ offset: 2, span: 8 }} className="text-center">
                     <FormInput
                         type="text"
                         control={control}

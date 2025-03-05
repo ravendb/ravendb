@@ -1,7 +1,8 @@
 import { Icon } from "components/common/Icon";
 import Collapse from "react-bootstrap/Collapse";
 import Row from "react-bootstrap/Row";
-import { Col, Label } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import {  Label } from "reactstrap";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { FormInput, FormSelectAutocomplete, FormSwitch } from "components/common/Form";

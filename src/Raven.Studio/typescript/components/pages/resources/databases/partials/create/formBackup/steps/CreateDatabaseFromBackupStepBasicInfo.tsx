@@ -1,7 +1,7 @@
 import { Icon } from "components/common/Icon";
 import React, { useEffect } from "react";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { CreateDatabaseFromBackupFormData } from "../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -29,7 +29,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
             <h2 className="text-center mb-4">Restore from backup</h2>
 
             <Row>
-                <Col lg={{ offset: 2, size: 8 }}>
+                <Col lg={{ offset: 2, span: 8 }}>
                     <FormInput
                         type="text"
                         control={control}
@@ -42,7 +42,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
             </Row>
 
             <Row className="mt-2 gy-xs">
-                <Col sm="6" lg={{ offset: 2, size: 4 }}>
+                <Col sm="6" lg={{ offset: 2, span: 4 }}>
                     <Button
                         active={!isSharded}
                         onClick={() => setValue("basicInfoStep.isSharded", false)}

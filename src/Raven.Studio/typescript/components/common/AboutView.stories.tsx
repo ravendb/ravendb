@@ -3,7 +3,7 @@ import { Meta } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5, licenseArgType } from "test/storybookTestUtils";
 import { AboutViewFloating, AboutViewAnchored, AccordionItemWrapper, AboutViewHeading } from "./AboutView";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import { Icon } from "./Icon";
 import Code from "./Code";
 import { boundCopy } from "components/utils/common";

@@ -2,7 +2,7 @@
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import { useServices } from "hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import {

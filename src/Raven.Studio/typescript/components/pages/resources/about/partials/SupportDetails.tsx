@@ -1,7 +1,7 @@
 ﻿import React, { ReactNode } from "react";
 import { RichPanelHeader } from "components/common/RichPanel";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import IconName from "../../../../../../typings/server/icons";

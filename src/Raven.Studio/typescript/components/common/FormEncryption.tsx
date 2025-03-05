@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, ElementRef, PropsWithChildren } from "reac
 import { FieldPath, FieldValues, Control } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";

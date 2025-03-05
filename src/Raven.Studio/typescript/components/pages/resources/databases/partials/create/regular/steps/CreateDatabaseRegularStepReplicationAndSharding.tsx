@@ -7,7 +7,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
-import { Col } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
@@ -68,7 +68,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
             <h2 className="text-center">Replication & Sharding</h2>
 
             <Row>
-                <Col lg={{ size: 8, offset: 2 }} className="text-center">
+                <Col lg={{ span: 8, offset: 2 }} className="text-center">
                     <p>
                         Database replication provides benefits such as improved data availability, increased
                         scalability, and enhanced disaster recovery capabilities.
@@ -111,7 +111,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
             </Row>
 
             <Row>
-                <Col lg={{ offset: 2, size: 8 }}>
+                <Col lg={{ offset: 2, span: 8 }}>
                     <Row className="pt-2">
                         <Col sm="6" className="d-flex gap-1 align-items-center">
                             <PopoverWithHoverWrapper

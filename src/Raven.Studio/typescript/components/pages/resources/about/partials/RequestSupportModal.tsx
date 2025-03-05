@@ -2,7 +2,8 @@
 import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
-import { CloseButton, Col, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import { CloseButton, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { Checkbox, Switch } from "components/common/Checkbox";
 import React from "react";
