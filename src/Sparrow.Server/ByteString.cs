@@ -750,7 +750,7 @@ namespace Sparrow.Server
         /// </summary>
         private readonly List<SegmentInformation> _wholeSegments;
         private readonly int _initialAllocationBlockSize;
-        public int AllocationBlockSize { get; private set; }
+        internal int AllocationBlockSize { get; private set; }
 
         internal long _totalAllocated, _currentlyAllocated;
 
