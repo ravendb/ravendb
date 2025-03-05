@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -85,7 +87,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl();
                     break;
                 case EtlType.EmbeddingsGeneration:
-                    RequestHandler.ServerStore.LicenseManager.AssertCanAddAiIntegration();
+                    var aiConnectionString = Client.Json.Serialization.JsonDeserializationClient.AiConnectionString(etlConfiguration);
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddAiIntegration(aiConnectionString);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");

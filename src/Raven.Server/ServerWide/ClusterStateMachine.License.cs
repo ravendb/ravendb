@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Commercial;
@@ -12,6 +13,7 @@ using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
+using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -171,6 +173,9 @@ public sealed partial class ClusterStateMachine
             case nameof(EditDocumentsCompressionCommand):
                 AssertDocumentsCompressionLicenseLimits(serverStore, databaseRecord, context);
                 break;
+            case nameof(PutAiConnectionStringCommand):
+                AssertAiIntegrationEtl(databaseRecord, serverStore.LicenseManager.LicenseStatus);
+                break;
         }
     }
 
@@ -209,7 +214,8 @@ public sealed partial class ClusterStateMachine
             AssertSorters(databaseRecord, newLicenseLimits, context, items, type);
             AssertAnalyzers(databaseRecord, newLicenseLimits, context, items, type);
             AssertSnowflakeEtl(databaseRecord, newLicenseLimits);
-
+            AssertAiIntegrationEtl(databaseRecord, newLicenseLimits);
+            
             if (AssertPeriodicBackup(newLicenseLimits, context) == false && databaseRecord.PeriodicBackups.Count > 0)
                 throw new LicenseLimitException(LimitType.PeriodicBackup, $"Your license doesn't support periodic backup.");
             AssertDatabaseClientConfiguration(databaseRecord, newLicenseLimits, context);
@@ -920,6 +926,23 @@ public sealed partial class ClusterStateMachine
             return;
 
         throw new LicenseLimitException(LimitType.SnowflakeEtl, "Your license doesn't support using the Snowflake ETL feature.");
+    }
+
+    private static void AssertAiIntegrationEtl(DatabaseRecord databaseRecord, LicenseStatus licenseStatus)
+    {
+        if (licenseStatus.HasAiIntegrations)
+            return;
+        
+        if (databaseRecord.AiConnectionStrings.Count == 0)
+            return;
+
+        var countOfExternalConnectors = databaseRecord.AiConnectionStrings
+            .Count(item => item.Value.GetActiveProvider() != AiConnectorType.Onnx);
+        
+        if (countOfExternalConnectors == 0)
+            return;
+        
+        throw new LicenseLimitException(LimitType.AiIntegrations, "Your license doesn't support using the AI Integrations feature.");
     }
 
     private void AssertTimeSeriesConfigurationLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)

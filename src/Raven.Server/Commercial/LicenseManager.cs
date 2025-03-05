@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -1616,16 +1617,22 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
         }
 
-        public void AssertCanAddAiIntegration()
+        public void AssertCanAddAiIntegration(AiConnectionString aiConnectionString)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            // todo: uncomment the code below after license work 
-            //if (LicenseStatus.HasAiEtl)
-            //    return;
-            //const string message = "Your current license doesn't include the AI Integration feature";
-            //throw GenerateLicenseLimit(LimitType.AiEtl, message);
+            if (LicenseStatus.HasAiIntegrations)
+                return;
+            
+            if (aiConnectionString.GetActiveProvider() == AiConnectorType.Onnx)
+                return;
+            
+            //todo: uncomment the code below after license work 
+            // if (LicenseStatus.HasAiIntegrations)
+            //     return;
+            // const string message = "Your current license doesn't include the AI Integration feature";
+            // throw GenerateLicenseLimit(LimitType.AiIntegrations, message);
         }
 
         public void AssertCanAddConcurrentDataSubscriptions()
