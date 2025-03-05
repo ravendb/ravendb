@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -12,8 +10,6 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Queries.Vector;
-using Raven.Client.Util;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Metrics;
@@ -21,7 +17,6 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -31,7 +26,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using static Lucene.Net.Index.ByteBlockPool;
 
 #pragma warning disable SKEXP0001
 
@@ -135,7 +129,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                         .GetAwaiter().GetResult();
 
                 if (generatedValues.Length != keys.Count)
-                    throw new InvalidOperationException("Generated embeddings count does not match missing values count");
+                    throw new InvalidOperationException($"Generated embeddings count ({generatedValues.Length}) does not match missing values count ({keys.Count})");
                 
                 for (var i = 0; i < keys.Count; ++i)
                 {

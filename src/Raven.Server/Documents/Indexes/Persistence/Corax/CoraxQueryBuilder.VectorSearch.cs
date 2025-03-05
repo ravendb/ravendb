@@ -4,18 +4,13 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
-using Raven.Server.Documents.AI.Embeddings;
-using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -32,13 +27,13 @@ public static partial class CoraxQueryBuilder
             : metadata.GetVectorFieldName(me, builderParameters.QueryParameters);
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters, fieldName, hasBoost: builderParameters.HasBoost);
-        object transformedEmbeddings = null;
+        (VectorValue? SingleVector, VectorValue[] MultiVector) transformedEmbeddings = (null, null);
         IndexField indexField;
 
         if (VectorHelpers.TryRetrieveEtlTaskName(builderParameters, fieldName, out var embeddingsGenerationTaskIdentifier))
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
-            VectorHelpers.ReadEmbeddingFromEmbeddingsGenerationTask(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, out transformedEmbeddings);
+            transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
         }
         else
         {
@@ -52,13 +47,13 @@ public static partial class CoraxQueryBuilder
                 switch (value)
                 {
                     case string s:
-                        transformedEmbeddings = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, s);
+                        transformedEmbeddings.SingleVector = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, s);
                         break;
                     case StringSegment stringSegment:
-                        transformedEmbeddings = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, stringSegment.ToString());
+                        transformedEmbeddings.SingleVector = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, stringSegment.ToString());
                         break;
                     case BlittableJsonReaderObject bjro:
-                        transformedEmbeddings = VectorHelpers.GetVectorValueFromRavenVector(builderParameters, bjro, vectorOptions);
+                        transformedEmbeddings.SingleVector = VectorHelpers.GetVectorValueFromRavenVector(builderParameters, bjro, vectorOptions);
                         break;
                     case BlittableJsonReaderArray { Length: > 0 } bjra:
                     {
@@ -68,7 +63,7 @@ public static partial class CoraxQueryBuilder
 
                         if (isRavenVector == false && isStringArray == false && isArray == false)
                         {
-                            transformedEmbeddings = VectorHelpers.GetVectorValueFromNumericalBlittableArray(builderParameters, bjra, vectorOptions);
+                            transformedEmbeddings.SingleVector = VectorHelpers.GetVectorValueFromNumericalBlittableArray(builderParameters, bjra, vectorOptions);
                         }
                         else
                         {
@@ -84,7 +79,7 @@ public static partial class CoraxQueryBuilder
                                         vectorOptions);
                             }
 
-                            transformedEmbeddings = embeddings;
+                            transformedEmbeddings.MultiVector = embeddings;
                         }
 
                         break;
@@ -127,28 +122,32 @@ public static partial class CoraxQueryBuilder
         if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out var numberOfDimensions) == false)
             return builderParameters.IndexSearcher.EmptyMatch(); // no vector indexed
 
-        switch (transformedEmbeddings)
+        if (transformedEmbeddings.SingleVector != null)
         {
-            case VectorValue singleVector:
-                if (indexField != null)
-                    AssertDimensions(singleVector);
-                
-                return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, singleVector, minimumMatch, numberOfCandidates, exact,
-                    builderParameters.IsVectorSingleClause);
-            case VectorValue[] multiVector:
-            {
-                if (indexField != null)
-                {
-                    foreach (var vector in multiVector)
-                        AssertDimensions(vector);
-                }
+            var singleVector = transformedEmbeddings.SingleVector.Value;
 
-                return builderParameters.IndexSearcher.MultiVectorSearch(fieldMetadata, multiVector, minimumMatch, numberOfCandidates, exact,
-                    builderParameters.IsVectorSingleClause);
-            }
+            if (indexField != null)
+                AssertDimensions(singleVector);
+
+            return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, singleVector, minimumMatch, numberOfCandidates, exact,
+                builderParameters.IsVectorSingleClause);
         }
 
-        throw new InvalidDataException("Expected a VectorValue(s), but got: " + transformedEmbeddings.GetType().Name);
+        if (transformedEmbeddings.MultiVector != null)
+        {
+            var multiVector = transformedEmbeddings.MultiVector;
+
+            if (indexField != null)
+            {
+                foreach (var vector in multiVector)
+                    AssertDimensions(vector);
+            }
+
+            return builderParameters.IndexSearcher.MultiVectorSearch(fieldMetadata, multiVector, minimumMatch, numberOfCandidates, exact,
+                builderParameters.IsVectorSingleClause);
+        }
+
+        throw new InvalidDataException("Expected to get single or multiple embeddings of VectorValue type but none was provided");
 
         void AssertDimensions(in VectorValue vector)
         {
@@ -181,28 +180,25 @@ public static partial class CoraxQueryBuilder
             return false;
         }
         
-        internal static object GetVectorValueForTextualInput(Parameters parameters, VectorOptions vectorOptions, ValueTokenType valueType, object value)
+        internal static (VectorValue? SingleVector, VectorValue[] MultiVector) GetVectorValueForTextualInput(Parameters parameters, VectorOptions vectorOptions, ValueTokenType valueType, object value)
         {
-            object result = null;
             if (valueType is ValueTokenType.String)
-                result = GenerateEmbeddings.FromText(parameters.Allocator, vectorOptions, value.ToString());
-            else
-            {
-                if (valueType is not ValueTokenType.Parameter)
-                    PortableExceptions.Throw<InvalidDataException>($"Cannot use vector.search() on a text field with a non-string value. Got {valueType}");
+                return (GenerateEmbeddings.FromText(parameters.Allocator, vectorOptions, value.ToString()), null);
+            
+            if (valueType is not ValueTokenType.Parameter)
+                PortableExceptions.Throw<InvalidDataException>($"Cannot use vector.search() on a text field with a non-string value. Got {valueType}");
 
-                if (value is BlittableJsonReaderArray valueAsList)
-                {
-                    var embeddings = new VectorValue[valueAsList.Length];
-                    for (var i = 0; i < valueAsList.Length; ++i)
-                        embeddings[i] = GenerateEmbeddings.FromText(parameters.Allocator, vectorOptions, valueAsList[i].ToString());
-                    result = embeddings;
-                }
-                else
-                    PortableExceptions.Throw<InvalidDataException>($"Cannot use vector.search() on a text field with a non-string value(s). Got {valueType}");
+            if (value is BlittableJsonReaderArray valueAsList)
+            {
+                var embeddings = new VectorValue[valueAsList.Length];
+                for (var i = 0; i < valueAsList.Length; ++i)
+                    embeddings[i] = GenerateEmbeddings.FromText(parameters.Allocator, vectorOptions, valueAsList[i].ToString());
+
+                return (null, embeddings);
             }
 
-            return result;
+            PortableExceptions.Throw<InvalidDataException>($"Cannot use vector.search() on a text field with a non-string value(s). Got {valueType}");
+            return (null, null);
         }
 
         internal static VectorValue GetVectorValueFromRavenVector(Parameters parameters, BlittableJsonReaderObject json, VectorOptions vectorOptions)
@@ -287,22 +283,21 @@ public static partial class CoraxQueryBuilder
                 $"Vector field `{fieldName}` has {storedDimensions} dimensions, but the vector passed to vector.search() has {inputDimensions} dimensions.");
         }
 
-        internal static void ReadEmbeddingFromEmbeddingsGenerationTask(Parameters builderParameters, ValueTokenType valueType, object value,
-            string embeddingsGenerationTaskIdentifier, VectorOptions vectorOptions,
-            out object transformedEmbedding)
+        internal static (VectorValue? SingleVector, VectorValue[] MultiVector) GetEmbeddingsForQueryParameter(Parameters builderParameters, ValueTokenType valueType, object value,
+            string embeddingsGenerationTaskIdentifier, VectorOptions vectorOptions, string fieldName)
         {
             var database = builderParameters.Index.DocumentDatabase;
             
             var valueAsString = valueType switch
             {
                 ValueTokenType.String => value.ToString(),
-                _ => throw new NotSupportedException("Vector.Search() on " + valueType)
+                _ => throw new NotSupportedException($"Provided parameter to vector.search() method for '{fieldName}' must be of string type, while {valueType} was provided")
             };
 
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
             if (database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringId) == false)
-                throw new ArgumentException($"Couldn't find {embeddingsTaskId.Value} embeddings generation task.");
+                throw new ArgumentException($"Couldn't find Embeddings Generation task with '{embeddingsGenerationTaskIdentifier}' identifier");
 
             var sourceEmbeddingType = VectorEmbeddingType.Single;
 
@@ -328,7 +323,7 @@ public static partial class CoraxQueryBuilder
             {
                 var embeddingValue = embeddingValues[0];
 
-                transformedEmbedding = GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue, queryingVectorOption);
+                return (GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue, queryingVectorOption), null);
             }
             else
             {
@@ -341,7 +336,7 @@ public static partial class CoraxQueryBuilder
                     vectorValues[i] = GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue, queryingVectorOption);
                 }
 
-                transformedEmbedding = vectorValues;
+                return (null, vectorValues);
             }
         }
     }
