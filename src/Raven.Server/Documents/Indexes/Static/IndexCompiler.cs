@@ -872,13 +872,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
 
                 results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
-
-                if (mapRewriter.HasVectorField)
-                {
-                    //todo: maciej
-                   // Debug.Assert(mapRewriter.ReferencedCollections != null);
-                   // mapRewriter.ReferencedCollections.Add(AiHelper.GetDocumentEmbeddingsCollectionName(collectionName));
-                }
                 
                 if (mapRewriter.ReferencedCollections != null)
                 {

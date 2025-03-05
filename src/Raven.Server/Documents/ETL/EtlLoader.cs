@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.ETL
             List<ElasticSearchEtlConfiguration> newElasticSearchDestinations,
             List<QueueEtlConfiguration> newQueueDestinations,
             List<SnowflakeEtlConfiguration> newSnowflakeDestinations,
-            List<EmbeddingsGenerationConfiguration> newAiDestinations,
+            List<EmbeddingsGenerationConfiguration> newEmbeddingsGenerationDestinations,
             List<EtlProcess> toRemove, Dictionary<string, string> responsibleNodes,
             List<string> explanations)
         {
@@ -172,8 +172,8 @@ namespace Raven.Server.Documents.ETL
                 if (newSnowflakeDestinations != null && newSnowflakeDestinations.Count > 0)
                     newProcesses.AddRange(GetRelevantProcesses<SnowflakeEtlConfiguration, SnowflakeConnectionString>(newSnowflakeDestinations, ensureUniqueConfigurationNames));
                 
-                if (newAiDestinations != null && newAiDestinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<EmbeddingsGenerationConfiguration, AiConnectionString>(newAiDestinations, ensureUniqueConfigurationNames));
+                if (newEmbeddingsGenerationDestinations != null && newEmbeddingsGenerationDestinations.Count > 0)
+                    newProcesses.AddRange(GetRelevantProcesses<EmbeddingsGenerationConfiguration, AiConnectionString>(newEmbeddingsGenerationDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -533,7 +533,7 @@ namespace Raven.Server.Documents.ETL
             var myElasticSearchEtl = new List<ElasticSearchEtlConfiguration>();
             var myQueueEtl = new List<QueueEtlConfiguration>();
             var mySnowflakeEtl = new List<SnowflakeEtlConfiguration>();
-            var myAiEtl = new List<EmbeddingsGenerationConfiguration>();
+            var myEmbeddingsGenerationEtl = new List<EmbeddingsGenerationConfiguration>();
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.ETL
             {
                 if (IsMyEtlTask<EmbeddingsGenerationConfiguration, AiConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
-                    myAiEtl.Add(config);
+                    myEmbeddingsGenerationEtl.Add(config);
                 }
             }
 
@@ -807,13 +807,13 @@ namespace Raven.Server.Documents.ETL
                         
                         break;
                     }
-                    case EmbeddingsGenerationTask aiEtl:
+                    case EmbeddingsGenerationTask embeddingsGenerationEtl:
                     {
                         EmbeddingsGenerationConfiguration existing = null;
 
-                        foreach (var config in myAiEtl)
+                        foreach (var config in myEmbeddingsGenerationEtl)
                         {
-                            var diff = aiEtl.Configuration.Compare(config);
+                            var diff = embeddingsGenerationEtl.Configuration.Compare(config);
 
                             if (diff == EtlConfigurationCompareDifferences.None)
                             {
@@ -825,7 +825,7 @@ namespace Raven.Server.Documents.ETL
                         if (existing != null)
                         {
                             toRemove.Remove(processesPerConfig.Key);
-                            myAiEtl.Remove(existing);
+                            myEmbeddingsGenerationEtl.Remove(existing);
                         }
 
                         break;
@@ -835,7 +835,7 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, mySnowflakeEtl, myAiEtl, toRemove.SelectMany(x => x.Value).ToList(), responsibleNodes, explanations);
+            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, mySnowflakeEtl, myEmbeddingsGenerationEtl, toRemove.SelectMany(x => x.Value).ToList(), responsibleNodes, explanations);
 
             if (toRemove.Count == 0)
                 return;

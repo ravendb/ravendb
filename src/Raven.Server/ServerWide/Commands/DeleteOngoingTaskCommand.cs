@@ -165,10 +165,10 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
                 case OngoingTaskType.EmbeddingsGeneration:
-                    var aiEtl = record.EmbeddingsGenerations?.Find(x => x.TaskId == TaskId);
-                    if (aiEtl != null)
+                    var embeddingsGenerationTask = record.EmbeddingsGenerations?.Find(x => x.TaskId == TaskId);
+                    if (embeddingsGenerationTask != null)
                     {
-                        record.EmbeddingsGenerations.Remove(aiEtl);
+                        record.EmbeddingsGenerations.Remove(embeddingsGenerationTask);
                     }
                     break;
             }

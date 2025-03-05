@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public const string NoTracking = "noTracking";
 
         public const string Load = "load";
-        public const string LoadVector = "loadVector";
+        public const string LoadVectorMethodName = "loadVector";
 
         public const string CmpXchg = "cmpxchg";
 

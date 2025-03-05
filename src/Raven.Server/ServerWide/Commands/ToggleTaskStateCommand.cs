@@ -139,10 +139,10 @@ namespace Raven.Server.ServerWide.Commands
 
                 case OngoingTaskType.EmbeddingsGeneration:
 
-                    var aiEtl = record?.EmbeddingsGenerations?.Find(x => x.TaskId == TaskId);
-                    if (aiEtl != null)
+                    var embeddingGenerationTask = record?.EmbeddingsGenerations?.Find(x => x.TaskId == TaskId);
+                    if (embeddingGenerationTask != null)
                     {
-                        aiEtl.Disabled = Disable;
+                        embeddingGenerationTask.Disabled = Disable;
                     }
                     break;
             }

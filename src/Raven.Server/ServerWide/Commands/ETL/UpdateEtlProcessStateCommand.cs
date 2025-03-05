@@ -82,8 +82,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             if (TryGetMatchingConfiguration(record.SnowflakeEtls, out var snowflakeEtlConfiguration))
                 return snowflakeEtlConfiguration;
 
-            if (TryGetMatchingConfiguration(record.EmbeddingsGenerations, out var aiEtlConfiguration))
-                return aiEtlConfiguration;
+            if (TryGetMatchingConfiguration(record.EmbeddingsGenerations, out var embeddingGenerationsConfiguration))
+                return embeddingGenerationsConfiguration;
 
             return null;
 
