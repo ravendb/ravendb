@@ -452,7 +452,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     ConflictStatus.Update => attachmentTombstone.ChangeVector,
                                     _ => throw new ArgumentOutOfRangeException()
                                 };
-                                /// TODO: egor AttachmentStorage  pass the flag inside the method
+
                                 if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,

@@ -301,6 +301,7 @@ namespace Raven.Server.Documents
 
                     }
 
+                    var retiredAttachmentsConfiguration = new Lazy<RetiredAttachmentsConfiguration>(() => _documentDatabase.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(_documentDatabase.Name));
                     if (table.ReadByKey(keySlice, out TableValueReader oldValue))
                     {
                         // This is an update to the attachment with the same stream and content type
@@ -321,11 +322,10 @@ namespace Raven.Server.Documents
                             var existingFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue);
                             if (existingFlags.HasFlag(AttachmentFlags.Retired) == false && retireAt == -1L)
                             {
-                                var dbRecord = _documentDatabase.ReadDatabaseRecord();
                                 Debug.Assert(collectionName != null, "collectionName != null");
                                 Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
 
-                                TryPutRetiredAttachment(context, dbRecord, collectionName, keySlice, out retireAt);
+                                TryPutRetiredAttachment(context, retiredAttachmentsConfiguration.Value, collectionName, keySlice, out retireAt);
                             }
                         }
                         else
@@ -396,10 +396,9 @@ namespace Raven.Server.Documents
                                             {
                                                 //we update retired attachment need to check if it is retired && if it has PurgeOnDelete
 
-                                                var dbRecord2 = _documentDatabase.ReadDatabaseRecord();
-                                                if (dbRecord2.RetiredAttachments is { Disabled: false })
+                                                if (retiredAttachmentsConfiguration.Value is { Disabled: false })
                                                 {
-                                                    if (dbRecord2.RetiredAttachments.PurgeOnDelete == false)
+                                                    if (retiredAttachmentsConfiguration.Value.PurgeOnDelete == false)
                                                     {
                                                         // we cannot delete from cloud since PurgeOnDelete is false
                                                         DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name, storageOnly: true);
@@ -441,8 +440,6 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        var dbRecord = _documentDatabase.ReadDatabaseRecord();
-
                         if (fromSmuggler == false)
                         {
                             if (fromEtl && flags.Contain(AttachmentFlags.Retired))
@@ -462,7 +459,7 @@ namespace Raven.Server.Documents
                                 }
                                 else
                                 {
-                                    TryPutRetiredAttachment(context, dbRecord, collectionName, keySlice, out retireAt);
+                                    TryPutRetiredAttachment(context, retiredAttachmentsConfiguration.Value, collectionName, keySlice, out retireAt);
                                 }
                             }
                         }
@@ -507,11 +504,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void TryPutRetiredAttachment(DocumentsOperationContext context, DatabaseRecord dbRecord, CollectionName collectionName, Slice keySlice, out long retireAt)
+        private void TryPutRetiredAttachment(DocumentsOperationContext context, RetiredAttachmentsConfiguration config, CollectionName collectionName, Slice keySlice, out long retireAt)
         {
-            if (dbRecord.RetiredAttachments is { Disabled: false })
+            if (config is { Disabled: false })
             {
-                if (dbRecord.RetiredAttachments.RetirePeriods.TryGetValue(collectionName.Name, out var timeSpan))
+                if (config.RetirePeriods.TryGetValue(collectionName.Name, out var timeSpan))
                 {
                     var retire = DateTime.UtcNow + timeSpan;
                     retireAt = retire.Ticks;
@@ -530,10 +527,10 @@ namespace Raven.Server.Documents
 
         private void TryDeleteRetiredAttachment(DocumentsOperationContext context, Slice keySlice, string collection)
         {
-            var dbRecord = _documentDatabase.ReadDatabaseRecord();
-            if (dbRecord.RetiredAttachments is { Disabled: false })
+            var retiredAttachments = _documentDatabase.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(_documentDatabase.Name);
+            if (retiredAttachments is { Disabled: false })
             {
-                if (dbRecord.RetiredAttachments.HasUploader() == false)
+                if (retiredAttachments.HasUploader() == false)
                 {
                     var msg = $"Cannot delete attachment '{keySlice}' because {nameof(RetiredAttachmentsConfiguration)} does not have any uploader configured.";
                     if (_logger.IsOperationsEnabled)
@@ -1448,7 +1445,6 @@ namespace Raven.Server.Documents
                     using (scope)
                     {
                         var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                        var collection = GetDocumentCollectionName(context, docTvr);
                         DeleteAttachmentDirect(context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks, storageOnly);
                     }
                 }
@@ -1472,12 +1468,14 @@ namespace Raven.Server.Documents
             {
                 attachments = null;
             }
-            var collection = _documentsStorage.ExtractCollectionName(context, document);
+
             foreach (BlittableJsonReaderObject conflictAttachment in conflictAttachments)
             {
                 if (conflictAttachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue conflictName) == false ||
                     conflictAttachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue conflictContentType) == false ||
-                    conflictAttachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue conflictHash) == false)
+                    conflictAttachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue conflictHash) == false ||
+                    conflictAttachment.TryGet(nameof(AttachmentName.Flags), out LazyStringValue conflictFlags) == false ||
+                    conflictAttachment.TryGet(nameof(AttachmentName.Size), out LazyStringValue conflictSize) == false)
                 {
                     Debug.Assert(false, "Should never happen.");
                     continue;
@@ -1490,7 +1488,9 @@ namespace Raven.Server.Documents
                     {
                         if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                             attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
-                            attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                            attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                            attachment.TryGet(nameof(AttachmentName.Flags), out LazyStringValue flags) == false ||
+                            attachment.TryGet(nameof(AttachmentName.Size), out LazyStringValue size) == false)
                         {
                             Debug.Assert(false, "Should never happen.");
                             continue;
@@ -1498,7 +1498,9 @@ namespace Raven.Server.Documents
 
                         if (conflictName.Equals(name) &&
                             conflictContentType.Equals(contentType) &&
-                            conflictHash.Equals(hash))
+                            conflictHash.Equals(hash) &&
+                            conflictFlags.Equals(flags) &&
+                            conflictSize.Equals(size))
                         {
                             attachmentFoundInResolveDocument = true;
                             break;
@@ -1507,11 +1509,11 @@ namespace Raven.Server.Documents
                 }
 
                 if (attachmentFoundInResolveDocument == false)
-                    DeleteAttachmentDirect(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector);
+                    DeleteAttachmentFromConflict(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector);
             }
         }
 
-        private void DeleteAttachmentDirect(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
+        private void DeleteAttachmentFromConflict(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
             LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, conflictName, out Slice lowerName))
@@ -1618,6 +1620,7 @@ namespace Raven.Server.Documents
                 else
                 {
                    RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
+                   // TODO: egor write test that backup storageOnly=true attachment, it seems like its have to be retired first
 
                     // we create attachment tombstone with special flag to mark that we don't want to delete the attachment from cloud
                     CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, (int)AttachmentTombstoneFlags.FromStorageOnly);
@@ -1685,13 +1688,12 @@ namespace Raven.Server.Documents
                         var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref before.Reader);
                         var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref before.Reader);
 
-                        // TODO: egor AttachmentStorage organize this (its checked 2nd time inside DeleteInternal)
                         if (storageOnly == false)
                         {
-                            var dbRecord = _documentDatabase.ReadDatabaseRecord();
-                            if (dbRecord.RetiredAttachments is { Disabled: false })
+                            var retiredAttachments = _documentDatabase.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(_documentDatabase.Name);
+                            if (retiredAttachments is { Disabled: false } )
                             {
-                                if (dbRecord.RetiredAttachments.PurgeOnDelete == false)
+                                if (retiredAttachments.PurgeOnDelete == false)
                                 {
                                     // we cannot delete from cloud since PurgeOnDelete is false
                                     storageOnly = true;
@@ -1708,7 +1710,6 @@ namespace Raven.Server.Documents
                             // this is revision
                         }
 
-                        //storageOnly = false;
                         var collection = TableValueToId(context, (int)AttachmentsTable.Collection, ref before.Reader);
                         DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, attachmentFlags, retireAtTicks, collection, storageOnly);
                     }

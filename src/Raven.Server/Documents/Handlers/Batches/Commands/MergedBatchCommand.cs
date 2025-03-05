@@ -72,6 +72,8 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
         {
             var cmd = ParsedCommands.Array[i];
 
+            var storageOnly = new Lazy<bool>(() => Database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(Database.Name) is not { Disabled: false, PurgeOnDelete: true });
+
             switch (cmd.Type)
             {
                 case CommandType.PUT:
@@ -219,8 +221,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                 case CommandType.AttachmentDELETE:
 
-                    bool storageOnly = Database.ReadDatabaseRecord().RetiredAttachments is not { Disabled: false, PurgeOnDelete: true };
-                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null, storageOnly: storageOnly);
+                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null, storageOnly: storageOnly.Value);
 
                     if (collectionName != null)
                         ModifiedCollections?.Add(collectionName.Name);
