@@ -1,7 +1,5 @@
 import React from "react";
 import "./ProgressBarWithTrackingPoint.scss";
-import { UncontrolledTooltip } from "reactstrap";
-import useUniqueId from "hooks/useUniqueId";
 
 interface ProgressBarWithTrackingPointProps {
     startingPoint: number;

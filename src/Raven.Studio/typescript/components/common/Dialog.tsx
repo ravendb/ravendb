@@ -1,8 +1,9 @@
 import { TextColor } from "components/models/common";
 import React, { ReactNode, createContext, useContext, useState, PropsWithChildren, useRef } from "react";
-import { Modal, ModalBody, Button, ModalFooter } from "reactstrap";
+import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
+import Button from "react-bootstrap/Button";
 
 interface DialogOptions {
     title: ReactNode;
@@ -59,13 +60,13 @@ export function DialogProvider({ children }: PropsWithChildren) {
                             </div>
                         )}
                         <div className="position-absolute m-2 end-0 top-0">
-                            <Button close onClick={onClose} />
+                            <CloseButton onClick={onClose} />
                         </div>
                         <div className="text-center lead">{title}</div>
                         {message}
                     </ModalBody>
                     <ModalFooter>
-                        <Button color={actionColor} onClick={onClose} className="rounded-pill">
+                        <Button variant={actionColor} onClick={onClose} className="rounded-pill">
                             {closeIcon && <Icon icon={closeIcon} />}
                             {closeText}
                         </Button>
