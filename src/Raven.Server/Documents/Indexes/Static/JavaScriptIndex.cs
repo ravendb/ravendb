@@ -34,6 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public const string Load = "load";
         public const string LoadVectorMethodName = "loadVector";
+        public const string CreateVectorMethodName = "createVector";
 
         public const string CmpXchg = "cmpxchg";
 
@@ -249,7 +250,9 @@ function map(name, lambda) {
                 var definitions = GetDefinitions();
 
                 ProcessMaps(definitions, resolver, maps, mapReferencedCollections, out var collectionFunctions);
+                AssertVectorFieldForMapReduceIndexes(mapReferencedCollections);
 
+                
                 ProcessReduce(definition, definitions, resolver, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
@@ -258,6 +261,15 @@ function map(name, lambda) {
             _javaScriptUtils = new JavaScriptUtils(null, _engine);
         }
 
+        private void AssertVectorFieldForMapReduceIndexes(List<MapMetadata> mapReferencedCollections)
+        {
+            if (Definition.Type.IsMapReduce() == false 
+                || mapReferencedCollections.Any(x => x.HasLoadVector || x.HasCreateVector) == false)
+                return;
+            
+            ThrowIndexCreationException($"Vector fields are not supported for map-reduces indexes.");
+        }
+        
         private List<string> GetMappingFunctions(Action<List<string>> modifyMappingFunctions)
         {
             if (Definition.Maps == null || Definition.Maps.Count == 0)
@@ -377,7 +389,8 @@ function map(name, lambda) {
             {
                 ReferencedCollections = loadVisitor.ReferencedCollection,
                 HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences,
-                HasLoadVector = loadVisitor.HasLoadVector
+                HasLoadVector = loadVisitor.HasLoadVector,
+                HasCreateVector = loadVisitor.HasCreateVector,
             };
         }
 
@@ -629,6 +642,8 @@ function loadVector(aiTaskIdentifier, pathToEmbedding) {
             public bool HasCompareExchangeReferences;
 
             public bool HasLoadVector;
+            
+            public bool HasCreateVector;
         }
     }
 }

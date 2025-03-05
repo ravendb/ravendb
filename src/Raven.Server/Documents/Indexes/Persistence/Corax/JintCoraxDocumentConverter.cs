@@ -245,6 +245,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 if (objectValue.HasOwnProperty(JavaScriptFieldName.VectorPropertyName) &&
                     objectValue.TryGetValue(JavaScriptFieldName.VectorPropertyName, out var vector))
                 {
+                    PortableExceptions.ThrowIf<NotSupportedException>(_index.Type.IsMapReduce(), $"'createVector' is not supported in  MapReduce indexes.");
+                    
                     PortableExceptions.ThrowIf<InvalidDataException>(vector.IsObject() == false);
                     var obj = vector.AsObject();
                     JsValue valueJsv = null;
@@ -266,6 +268,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 if (objectValue.HasOwnProperty(JavaScriptFieldName.LoadVectorPropertyName) &&
                     objectValue.TryGetValue(JavaScriptFieldName.LoadVectorPropertyName, out var loadVector))
                 {
+                    PortableExceptions.ThrowIf<NotSupportedException>(_index.Type.IsMapReduce(), $"'loadVector' is not supported in MapReduce indexes.");
+                    
                     PortableExceptions.ThrowIf<InvalidDataException>(loadVector.IsObject() == false);
                     var obj = loadVector.AsObject();
                     JsValue pathOfEmbeddingJsv = null;

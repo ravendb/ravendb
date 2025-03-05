@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NuGet.Packaging;
 using Raven.Server.Documents.AI.Embeddings;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
@@ -18,9 +19,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 /// </summary>
 internal sealed class VectorFieldRewriter(ReferencedCollectionsRetriever referencedCollectionsRetriever, CSharpSyntaxRewriter collectionNameRetriever, bool isMapReduce = false) : CSharpSyntaxRewriter(true)
 {
-    private readonly ReferencedCollectionsRetriever _referencedCollectionsRetriever = referencedCollectionsRetriever;
-    private readonly CSharpSyntaxRewriter _collectionNameRetriever = collectionNameRetriever;
-
     public bool HasVectorField { get; private set; }
     
     public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -30,22 +28,23 @@ internal sealed class VectorFieldRewriter(ReferencedCollectionsRetriever referen
         {
             case $"this.{nameof(StaticIndexBase.CreateVector)}":
             case $"{nameof(StaticIndexBase.CreateVector)}":
+                PortableExceptions.ThrowIf<NotSupportedException>(isMapReduce, $"The '{nameof(StaticIndexBase.CreateVector)}' method is not supported in map-reduce indexes.");
+                
                 return Rewrite();
             
             case $"this.{nameof(StaticIndexBase.LoadVector)}":
             case $"{nameof(StaticIndexBase.LoadVector)}":
-                if (isMapReduce)
-                    throw new NotSupportedException($"Method {nameof(StaticIndexBase.LoadVector)} is not supported for map reduce indexes.");
+                PortableExceptions.ThrowIf<NotSupportedException>(isMapReduce, $"The '{nameof(StaticIndexBase.LoadVector)}' method is not supported in map-reduce indexes.");
                 
-                IEnumerable<string> names = _collectionNameRetriever switch
+                IEnumerable<string> names = collectionNameRetriever switch
                 {
                     CollectionNameRetriever cnr => cnr!.CollectionNames!.Select(EmbeddingsHelper.GetEmbeddingDocumentCollectionName),
                     CollectionNameRetrieverBase cnrb => cnrb.Collections.Select(n => EmbeddingsHelper.GetEmbeddingDocumentCollectionName(n.CollectionName)),
-                    _ => throw new InvalidOperationException($"Unknown collection name retriever. Got: {_collectionNameRetriever.GetType().FullName}.")
+                    _ => throw new InvalidOperationException($"Unknown collection name retriever. Got: {collectionNameRetriever.GetType().FullName}.")
                 };
 
-                _referencedCollectionsRetriever.CreateReferencedCollections();
-                _referencedCollectionsRetriever.ReferencedCollections.AddRange(names.Distinct());
+                referencedCollectionsRetriever.CreateReferencedCollections();
+                referencedCollectionsRetriever.ReferencedCollections.AddRange(names.Distinct());
                 return Rewrite();
         }
 

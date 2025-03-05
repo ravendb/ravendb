@@ -29,6 +29,7 @@ using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.Counters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries;
 using Raven.Server.Logging;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 
@@ -564,6 +565,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
                 
                 maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
+                if (methodDetector.Methods.HasCreateVector)
+                    throw new IndexCompilationException("'CreateMethod' and 'LoadVector' are not supported in the map of a map-reduce index.");
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);

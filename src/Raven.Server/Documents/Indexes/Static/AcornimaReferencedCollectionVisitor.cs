@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         public readonly HashSet<CollectionName> ReferencedCollection = new HashSet<CollectionName>();
         public bool HasLoadVector { get; private set; }
+        public bool HasCreateVector { get; private set; }
         public bool HasCompareExchangeReferences { get; private set; }
 
         public override void VisitCallExpression(CallExpression callExpression)
@@ -41,6 +42,9 @@ namespace Raven.Server.Documents.Indexes.Static
                         
                         break;
                         
+                    case JavaScriptIndex.CreateVectorMethodName:
+                        HasCreateVector = true;
+                        break;
                     case JavaScriptIndex.CmpXchg:
                         HasCompareExchangeReferences = true;
                         break;

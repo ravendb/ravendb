@@ -4,6 +4,8 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,53 +19,90 @@ public class RavenDB_23509 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void CanCreateVectorFieldFromTextInMapReducePart() => CanCreateVectorFieldFromTextInMapReducePartBase<MapReduceTextual>();
-
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void CanCreateVectorFieldFromTextInMapReducePartJs() => CanCreateVectorFieldFromTextInMapReducePartBase<MapReduceTextualJs>();
-    
-    private void CanCreateVectorFieldFromTextInMapReducePartBase<TIndex>() 
-        where TIndex : AbstractIndexCreationTask, new()
+    public void MapReduceIndexTextualCreateVectorInReduceShouldThrow()
     {
-        using var store = GetDocumentStoreWithDocuments(out var ids);
-        new TIndex().Execute(store);
-        Indexes.WaitForIndexing(store);
-        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
-        Assert.Null(errors);
-        
-        using var session = store.OpenSession();
-        var results = session.Query<Result, TIndex>()
-            .VectorSearch(f => f.WithField(s => s.Vector),
-                v => v.ByText("dog"))
-            .ToList();
-        
-        Assert.Equal(1, results.Count);
-        Assert.Equal(ids["dog"], results[0].Id);
+        using var store = GetDocumentStoreWithDocuments(out _);
+        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceTextualCreateVectorInReduce().Execute(store));
+        Assert.Contains("The 'CreateVector' method is not supported in map-reduce indexes.", exception.Message);
     }
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void CanCreateVectorFieldFromNumericalInMapReducePart() => CanCreateVectorFieldFromNumericalInMapReducePartBase<MapReduceNumerical>();
+    public void MapReduceIndexLoadVectorInReduceShouldThrow()
+    {
+        using var store = GetDocumentStoreWithDocuments(out _);
+        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceLoadVectorInReduce().Execute(store));
+        Assert.Contains("The 'LoadVector' method is not supported in map-reduce indexes.", exception.Message);
+    }
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void MapReduceIndexTextualCreateVectorInMapShouldThrow()
+    {
+        using var store = GetDocumentStoreWithDocuments(out _);
+        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceIndexWithCreateVectorInMap().Execute(store));
+        Assert.Contains("'CreateMethod' and 'LoadVector' are not supported in the map of a map-reduce index.", exception.Message);
+    }
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void MapReduceIndexLoadVectorInMapShouldThrow()
+    {
+        using var store = GetDocumentStoreWithDocuments(out _);
+        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceLoadVectorInMap().Execute(store));
+        Assert.Contains("'CreateMethod' and 'LoadVector' are not supported in the map of a map-reduce index.", exception.Message);
+    }
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void MapReduceIndexJsLoadVectorInMapShouldThrow()
+    {
+        using var store = GetDocumentStoreWithDocuments(out _);
+        var exception = Assert.Throws<IndexCreationException>(() => new MapReduceLoadVectorInMapJs().Execute(store));
+        Assert.Contains("Vector fields are not supported for map-reduces indexes.", exception.Message);
+    }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void CanCreateVectorFieldFromNumericalInMapReducePartJs() => CanCreateVectorFieldFromNumericalInMapReducePartBase<MapReduceNumericalJs>();
-    
-    private void CanCreateVectorFieldFromNumericalInMapReducePartBase<TIndex>()
-        where TIndex : AbstractIndexCreationTask, new()
+    public void MapReduceIndexJsTextualCreateVectorInReduceShouldThrow()
     {
-        using var store = GetDocumentStoreWithDocuments(out var ids);
-        new TIndex().Execute(store);
-        Indexes.WaitForIndexing(store);
-        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
-        Assert.Null(errors);
+        using var store = GetDocumentStoreWithDocuments(out _);
+        new MapReduceTextualCreateVectorInReduceJs().Execute(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
+        Assert.NotNull(errors);
+        Assert.Contains("'createVector' is not supported in  MapReduce indexes.", errors[0].Errors[0].Error);
+    }
+
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void MapReduceIndexJsLoadVectorInReduceShouldThrow()
+    {
+        using var store = GetDocumentStoreWithDocuments(out _);
+        new MapReduceLoadVectorInReduceJs().Execute(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
+        Assert.NotNull(errors);
+        Assert.Contains("'loadVector' is not supported in MapReduce indexes.", errors[0].Errors[0].Error);
+    }
+
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void MapReduceIndexJsNumericalCreateVectorInReduceShouldThrow()
+    {
+        using var store = GetDocumentStoreWithDocuments(out _);
+        new MapReduceNumericalCreateVectorInReduceJs().Execute(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
+        Assert.NotNull(errors);
+        Assert.Contains("'createVector' is not supported in  MapReduce indexes.", errors[0].Errors[0].Error);
+    }
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void MapReduceIndexJsNumericalCreateVectorInMapShouldThrow()
+    {
+        using var store = GetDocumentStoreWithDocuments(out _);
         
-        using var session = store.OpenSession();
-        var results = session.Query<Result, TIndex>()
-            .VectorSearch(f => f.WithField(s => s.Vector),
-                v => v.ByEmbedding([-0.1f, -0.2f]))
-            .ToList();
-        
-        Assert.Equal(1, results.Count);
-        Assert.Equal(ids["car"], results[0].Id);
+        var exception = Assert.Throws<IndexCreationException>(() => new MapReduceNumericalCreateVectorInMapJs().Execute(store));
+        Assert.Contains("Vector fields are not supported for map-reduces indexes.", exception.Message);
+    }
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    private void MapReduceIndexNumericalCreateVectorInReduceShouldThrow()
+    {
+        using var store = GetDocumentStoreWithDocuments(out _);
+        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceNumericalCreateVectorInReduce().Execute(store));
+        Assert.Contains("The 'CreateVector' method is not supported in map-reduce indexes.", exception.Message);
     }
 
     private IDocumentStore GetDocumentStoreWithDocuments(out Dictionary<string, string> identifies)
@@ -96,9 +135,9 @@ public class RavenDB_23509 : RavenTestBase
         public object Vector { get; set; }
     }
 
-    private class MapReduceTextualJs : AbstractJavaScriptIndexCreationTask
+    private class MapReduceTextualCreateVectorInReduceJs : AbstractJavaScriptIndexCreationTask
     {
-        public MapReduceTextualJs()
+        public MapReduceTextualCreateVectorInReduceJs()
         {
             Maps = [$@"map('Dtos', function (dto) {{
                 return {{
@@ -117,9 +156,9 @@ public class RavenDB_23509 : RavenTestBase
         }
     }
     
-    private class MapReduceTextual : AbstractIndexCreationTask<Dto, Result>
+    private class MapReduceTextualCreateVectorInReduce : AbstractIndexCreationTask<Dto, Result>
     {
-        public MapReduceTextual()
+        public MapReduceTextualCreateVectorInReduce()
         {
             Map = dtos => from doc in dtos
                 select new Result() { Id = doc.Id, Vector = doc.Text };
@@ -133,9 +172,9 @@ public class RavenDB_23509 : RavenTestBase
         }
     }
     
-    private class MapReduceNumerical : AbstractIndexCreationTask<Dto, Result>
+    private class MapReduceNumericalCreateVectorInReduce : AbstractIndexCreationTask<Dto, Result>
     {
-        public MapReduceNumerical()
+        public MapReduceNumericalCreateVectorInReduce()
         {
             Map = dtos => from doc in dtos
                 select new Result() { Id = doc.Id, Vector = doc.VectorSingles };
@@ -150,9 +189,37 @@ public class RavenDB_23509 : RavenTestBase
         }
     }
     
-    private class MapReduceNumericalJs : AbstractJavaScriptIndexCreationTask
+    private class MapReduceNumericalCreateVectorInMapJs : AbstractJavaScriptIndexCreationTask
     {
-        public MapReduceNumericalJs()
+        public MapReduceNumericalCreateVectorInMapJs()
+        {
+            Maps = [$@"map('Dtos', function (dto) {{
+                return {{
+                    Id: id(dto),
+                    Vector: createVector(dto.VectorSingles)
+                }};
+            }})"];
+            
+            Reduce = @"groupBy(x => ({ Id: x.Id }))
+.aggregate(g => { 
+    return {
+        Id: g.key.Id,
+        Vector: g.values.map(x => x.Vector)
+    };
+})";
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions(){Vector = new()
+            {
+                SourceEmbeddingType = VectorEmbeddingType.Single,
+                DestinationEmbeddingType = VectorEmbeddingType.Int8
+            }});
+        }
+    }
+    
+    private class MapReduceNumericalCreateVectorInReduceJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MapReduceNumericalCreateVectorInReduceJs()
         {
             Maps = [$@"map('Dtos', function (dto) {{
                 return {{
@@ -166,6 +233,104 @@ public class RavenDB_23509 : RavenTestBase
     return {
         Id: g.key.Id,
         Vector: createVector(g.values.map(x => x.Vector))
+    };
+})";
+
+            Fields = new();
+            Fields.Add("Vector", new IndexFieldOptions(){Vector = new()
+            {
+                SourceEmbeddingType = VectorEmbeddingType.Single,
+                DestinationEmbeddingType = VectorEmbeddingType.Int8
+            }});
+        }
+    }
+
+    private class MapReduceIndexWithCreateVectorInMap : AbstractIndexCreationTask<Dto, Result>
+    {
+        public MapReduceIndexWithCreateVectorInMap()
+        {
+            Map = dtos => from doc in dtos
+                select new Result() { Id = doc.Id, Vector = CreateVector(doc.Text) };
+            
+            Reduce = results => from result in results
+                group result by result.Id into g
+                select new Result()
+                {
+                    Id = g.Key, Vector = g.Select(x => (string)x.Vector).ToArray()
+                };
+        }
+    }
+    
+    // HERE START 
+        private class MapReduceLoadVectorInReduceJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MapReduceLoadVectorInReduceJs()
+        {
+            Maps = [$@"map('Dtos', function (dto) {{
+                return {{
+                    Id: id(dto),
+                    Vector: dto.Text
+                }};
+            }})"];
+            
+            Reduce = @"groupBy(x => ({ Id: x.Id }))
+.aggregate(g => { 
+    return {
+        Id: g.key.Id,
+        Vector: loadVector('test', 'abc')
+    };
+})";
+        }
+    }
+    
+    private class MapReduceLoadVectorInReduce : AbstractIndexCreationTask<Dto, Result>
+    {
+        public MapReduceLoadVectorInReduce()
+        {
+            Map = dtos => from doc in dtos
+                select new Result() { Id = doc.Id, Vector = doc.Text };
+            
+            Reduce = results => from result in results
+                group result by result.Id into g
+                select new Result()
+                {
+                    Id = g.Key, Vector = LoadVector("test", "abc") 
+                };
+        }
+    }
+    
+    private class MapReduceLoadVectorInMap : AbstractIndexCreationTask<Dto, Result>
+    {
+        public MapReduceLoadVectorInMap()
+        {
+            Map = dtos => from doc in dtos
+                select new Result() { Id = doc.Id, Vector = LoadVector("test", "abc") };
+            
+            Reduce = results => from result in results
+                group result by result.Id into g
+                select new Result()
+                {
+                    Id = g.Key, Vector = g.Select(x => x.Vector).ToArray()
+                };
+        }
+    }
+    
+    private class MapReduceLoadVectorInMapJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MapReduceLoadVectorInMapJs()
+        {
+            Maps = [$@"map('Dtos', function (dto) {{
+                return {{
+                    Id: id(dto),
+                    Vector: loadVector('test', 'abc')
+                }};
+            }})"];
+            
+            Reduce = @"groupBy(x => ({ Id: x.Id }))
+.aggregate(g => { 
+    return {
+        Id: g.key.Id,
+        Vector: g.values.map(x => x.Vector)
     };
 })";
 

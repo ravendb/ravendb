@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
@@ -13,38 +14,15 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 public class LoadVectorWithMapReduceTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void CanMapReduceExistingVectors()
+    public void CreateVectorInMapReduceWillThrow()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
 
-        using (var session = store.OpenSession())
-        {
-            session.Store(new Dto() { Name = "John", Description = "car" });
-            session.Store(new Dto() { Name = "John", Description = "lake" });
-            session.SaveChanges();
-        }
-        new SimpleMapReduceIndex().Execute(store);
-
-        var etlDone = Etl.WaitForEtlToComplete(store);
-        AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Description" }]);
-        etlDone.Wait(TimeSpan.FromSeconds(10));
-        Indexes.WaitForIndexing(store);
-        using (var session = store.OpenSession())
-        {
-            var result = session.Query<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>().VectorSearch(f => f.WithField(s => s.Vector),
-                v => v.ByText("car")).ToList();
-            Assert.Equal(1, result.Count);
-        }
+        var ex = Assert.Throws<IndexCompilationException>(() => new SimpleMapReduceIndex().Execute(store));
+        Assert.Contains("The 'CreateVector' method is not supported in map-reduce indexes.", ex.Message);
     }
-
-    private class Dto
-    {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public object Vector { get; set; }
-    }
-
-    private class SimpleMapReduceIndex : AbstractIndexCreationTask<Dto, SimpleMapReduceIndex.Result>
+    
+    private class SimpleMapReduceIndex : AbstractIndexCreationTask<GenerateEmbeddingsTests.Dto, SimpleMapReduceIndex.Result>
     {
         public SimpleMapReduceIndex()
         {

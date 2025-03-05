@@ -26,8 +26,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
         public bool HasLoadCompareExchangeValue => _compareExchangeReferenceDetector.HasLoadCompareExchangeValue;
         
-        public bool HasVectorField => _vectorFieldRewriter.HasVectorField;
-
         public override SyntaxNode Visit(SyntaxNode node)
         {
             foreach (var rewriter in new CSharpSyntaxRewriter[]
