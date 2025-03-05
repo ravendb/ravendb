@@ -1,5 +1,4 @@
-﻿using Sparrow.Global;
-using Sparrow.Server;
+﻿using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
@@ -200,12 +199,12 @@ namespace FastTests.Sparrow
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None))
             {
-                while (context.AllocationBlockSize != 2 * Constants.Size.Megabyte)
+                while (context.AllocationBlockSize != ByteStringContext.MaxAllocatedBlockSize)
                 {
                     context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2, out _);
                 }
 
-                Assert.Equal(2 * Constants.Size.Megabyte, context.AllocationBlockSize);
+                Assert.Equal(ByteStringContext.MaxAllocatedBlockSize, context.AllocationBlockSize);
 
                 const int toAllocate = ByteStringContext.MinBlockSizeInBytes * 5;
                 context.Allocate(toAllocate, out var first);

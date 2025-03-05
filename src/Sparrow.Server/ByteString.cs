@@ -671,6 +671,7 @@ namespace Sparrow.Server
         public const int MaxAllocationBlockSizeInBytes = 256 * MinBlockSizeInBytes;
         public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
         public const int MinReusableBlockSizeInBytes = 8;
+        public const int MaxAllocatedBlockSize = 2 * Sparrow.Global.Constants.Size.Megabyte;
 
         static unsafe ByteStringContext()
         {
@@ -1040,7 +1041,7 @@ namespace Sparrow.Server
             {
                 if (_externalCurrentLeft == 0)
                 {
-                    var tmp = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, AllocationBlockSize * 2);
+                    var tmp = Math.Min(ByteStringContext.MaxAllocatedBlockSize, AllocationBlockSize * 2);
                     AllocateExternalSegment(tmp);
                     AllocationBlockSize = tmp;
                 }
@@ -1184,7 +1185,7 @@ namespace Sparrow.Server
             }
             else
             {
-                AllocationBlockSize = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, AllocationBlockSize * 2);
+                AllocationBlockSize = Math.Min(ByteStringContext.MaxAllocatedBlockSize, AllocationBlockSize * 2);
                 var toAllocate = Math.Max(AllocationBlockSize, allocationUnit);
                 _internalCurrent = AllocateSegment(toAllocate);
                 Debug.Assert(_internalCurrent.SizeLeft >= allocationUnit, $"{_internalCurrent.SizeLeft} >= {allocationUnit}");
