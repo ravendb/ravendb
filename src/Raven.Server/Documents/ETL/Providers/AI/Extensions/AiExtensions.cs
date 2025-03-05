@@ -122,7 +122,7 @@ public static class AiExtensions
                 {
                     Endpoint = new Uri(openAiSettings.Endpoint),
                     ProjectId = openAiSettings.ProjectId,
-                    UserAgentApplicationId = $"RavenDB/{ServerVersion.Version}/{nameof(EmbeddingsGenerationTask)}"
+                    UserAgentApplicationId = $"RavenDB-{ServerVersion.Version}"
                 };
                 var openAIClient = new OpenAIClient(apiKey, openAiOptions);
 

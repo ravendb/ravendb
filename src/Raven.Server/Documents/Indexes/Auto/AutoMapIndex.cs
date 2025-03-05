@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null, Configuration)
             };
 
-            var usesEmbeddingsGenerationTask = Definition.IndexFields.Values.Any(x => ((AutoVectorOptions)x.Vector).EmbeddingsGenerationTaskIdentifier != null);
+            var usesEmbeddingsGenerationTask = Definition.IndexFields.Values.Any(x => ((AutoVectorOptions)x.Vector)?.EmbeddingsGenerationTaskIdentifier != null);
             
             if (usesEmbeddingsGenerationTask)
             {

@@ -347,13 +347,10 @@ namespace Raven.Server.Documents.Indexes
 
             string inner;
             
-            if (autoVectorOptions.SourceEmbeddingType == VectorEmbeddingType.Text)
+            var embeddingsGenerationTaskIdentifier = autoVectorOptions.EmbeddingsGenerationTaskIdentifier;
+            
+            if (autoVectorOptions.SourceEmbeddingType == VectorEmbeddingType.Text && embeddingsGenerationTaskIdentifier != null)
             {
-                var embeddingsGenerationTaskIdentifier = autoVectorOptions.EmbeddingsGenerationTaskIdentifier;
-                
-                if (embeddingsGenerationTaskIdentifier is null)
-                    throw new Exception("EmbeddingsGenerationTaskIdentifier cannot be null");
-                
                 inner = methodName == string.Empty ? name : $"{methodName}({name},{aiTask}('{embeddingsGenerationTaskIdentifier}'))";
             }
             else

@@ -33,10 +33,13 @@ namespace Raven.Server.Documents.Indexes.Auto
                 etag = document?.Etag;
                 resultsOfCurrentDocument = _results;
 
-                var dynamicItem = new DynamicBlittableJson();
-                dynamicItem.Set(document);
+                if (moveNext)
+                {
+                    var dynamicItem = new DynamicBlittableJson();
+                    dynamicItem.Set(document);
                 
-                CurrentIndexingScope.Current.Source = dynamicItem;
+                    CurrentIndexingScope.Current.Source = dynamicItem;
+                }
 
                 return moveNext;
             }

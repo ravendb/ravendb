@@ -21,6 +21,8 @@ namespace SlowTests.Server.Documents.AI;
 
 public class AiConnectionStringsTests : RavenTestBase
 {
+    private static readonly ChunkingOptions DefaultChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 };
+
     public AiConnectionStringsTests(ITestOutputHelper output) : base(output)
     {
     }
@@ -49,14 +51,14 @@ public class AiConnectionStringsTests : RavenTestBase
             var operation = new PutConnectionStringOperation<AiConnectionString>(connectionString);
             var putConnectionStringResult = store.Maintenance.Send(operation);
             Assert.NotNull(putConnectionStringResult.RaftCommandIndex);
-
-
+            
             var configuration = new EmbeddingsGenerationConfiguration
             {
                 Name = "AiIntegrationTaskForTestingPurposes",
                 ConnectionStringName = "ConnectionStringForTestingPurposes",
-                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Lines" }],
-                Collection = "Orders"
+                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Lines", ChunkingOptions = DefaultChunkingOptions }],
+                Collection = "Orders",
+                ChunkingOptionsForQuerying = DefaultChunkingOptions
             };
 
             var database = await GetDatabase(store.Database);
