@@ -112,12 +112,8 @@ export default class TasksService {
         return new saveConnectionStringCommand(databaseName, connectionString).execute();
     }
 
-    async deleteConnectionString(
-        databaseName: string,
-        type: Raven.Client.Documents.Operations.ETL.EtlType,
-        connectionStringName: string
-    ) {
-        return new deleteConnectionStringCommand(databaseName, type, connectionStringName).execute();
+    async deleteConnectionString(...args: ConstructorParameters<typeof deleteConnectionStringCommand>) {
+        return new deleteConnectionStringCommand(...args).execute();
     }
 
     async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {

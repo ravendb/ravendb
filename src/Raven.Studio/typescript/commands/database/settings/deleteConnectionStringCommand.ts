@@ -4,10 +4,10 @@ import endpoints = require("endpoints");
 
 class deleteConnectionStringCommand extends commandBase {
     private readonly db: database | string;
-    private readonly type: Raven.Client.Documents.Operations.ETL.EtlType;
+    private readonly type: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType;
     private readonly connectionStringName: string;
 
-    constructor(db: database | string, type: Raven.Client.Documents.Operations.ETL.EtlType, connectionStringName: string) {
+    constructor(db: database | string, type: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType, connectionStringName: string) {
         super();
         this.db = db;
         this.type = type;

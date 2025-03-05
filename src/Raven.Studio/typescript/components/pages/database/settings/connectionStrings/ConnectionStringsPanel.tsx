@@ -120,15 +120,15 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     );
 }
 
-function getDtoEtlType(type: StudioConnectionType): Raven.Client.Documents.Operations.ETL.EtlType {
+function getDtoEtlType(
+    type: StudioConnectionType
+): Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType {
     switch (type) {
         case "Kafka":
         case "RabbitMQ":
         case "AzureQueueStorage":
         case "AmazonSqs":
             return "Queue";
-        case "Ai":
-            return "EmbeddingsGeneration";
         default:
             return type;
     }
