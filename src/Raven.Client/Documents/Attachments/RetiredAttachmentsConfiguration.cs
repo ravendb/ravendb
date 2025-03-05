@@ -154,13 +154,13 @@ namespace Raven.Client.Documents.Attachments
                     throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
 
                 if (_retirePeriods == null || _retirePeriods.Count == 0)
-                    throw new InvalidOperationException($"{nameof(_retirePeriods)}{databaseNameStr} must have a value when {nameof(Disabled)} is false.");
+                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have a value when {nameof(Disabled)} is false.");
 
                 if (_retirePeriods.Keys.Any(string.IsNullOrWhiteSpace))
-                    throw new InvalidOperationException($"{nameof(_retirePeriods)}{databaseNameStr}  must have non empty keys.");
+                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr}  must have non empty keys.");
 
                 if (_retirePeriods.Values.Any(x => x.TotalSeconds <= 0))
-                    throw new InvalidOperationException($"{nameof(_retirePeriods)}{databaseNameStr} must have positive TimeSpan values.");
+                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have positive TimeSpan values.");
 
                 if (HasUploader() == false)
                     throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured when {nameof(Disabled)} is false.");
