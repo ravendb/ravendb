@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -109,42 +108,33 @@ namespace Raven.Server.Documents.AI.Embeddings
         private async Task ProcessBatchAsync()
         {
             // Collect requests for this batch (up to MaxBatchSize)
-            EmbeddingsBatchRequest[] requestsArray = ArrayPool<EmbeddingsBatchRequest>.Shared.Rent(configuration.MaxBatchSize);
+            EmbeddingsBatchRequest[] requestsArray = new EmbeddingsBatchRequest[configuration.MaxBatchSize];
+            int count = 0;
+
+            while (count < configuration.MaxBatchSize &&
+                   _requestQueue.TryDequeue(out var request))
+            {
+                if (request.TaskCompletionSource.Task.IsCanceled)
+                    continue;
+
+                requestsArray[count++] = request;
+            }
+
+            if (count == 0)
+                return;
+
+            var stopwatch = Stopwatch.StartNew();
 
             try
             {
-                int count = 0;
-
-                while (count < configuration.MaxBatchSize &&
-                       _requestQueue.TryDequeue(out var request))
-                {
-                    if (request.TaskCompletionSource.Task.IsCanceled)
-                        continue;
-
-                    requestsArray[count++] = request;
-                }
-
-                if (count == 0)
-                    return;
-
-                var stopwatch = Stopwatch.StartNew();
-
-                try
-                {
-                    // Execute batch with retry logic
-                    await FlushBatchAsync(requestsArray, count);
-                }
-                finally
-                {
-                    stopwatch.Stop();
-
-                    if (Logger.IsDebugEnabled)
-                        Logger.Debug($"Batch processing completed for connection '{connectionStringId.Value}' in {stopwatch.ElapsedMilliseconds}ms, processed {count} requests");
-                }
+                await FlushBatchAsync(requestsArray, count);
             }
             finally
             {
-                ArrayPool<EmbeddingsBatchRequest>.Shared.Return(requestsArray);
+                stopwatch.Stop();
+
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Batch processing completed for connection '{connectionStringId.Value}' in {stopwatch.ElapsedMilliseconds}ms, processed {count} requests");
             }
         }
 
@@ -156,100 +146,83 @@ namespace Raven.Server.Documents.AI.Embeddings
             {
                 totalValueCount += requestsArray[i].Values.Count;
             }
+            
+            var allTextValues = new string[totalValueCount];
+            
+            // Create tracking structure for the range of values for each request
+            var valueRanges = new (int StartIndex, int Count)[count];
 
-            var allTextValues = ArrayPool<string>.Shared.Rent(totalValueCount);
-
-            try
+            // Fill the array with all values and remember the ranges
+            int currentIndex = 0;
+            for (int i = 0; i < count; i++)
             {
-                // Create tracking structure for the range of values for each request
-                var valueRanges = new (int StartIndex, int Count)[count];
+                var values = requestsArray[i].Values;
+                valueRanges[i] = (currentIndex, values.Count);
 
-                // Fill the array with all values and remember the ranges
-                int currentIndex = 0;
-                for (int i = 0; i < count; i++)
+                foreach (var value in values)
+                    allTextValues[currentIndex++] = value;
+            }
+                
+            // Execute with retry logic
+            for (int attempt = 0; attempt <= configuration.MaxRetries; attempt++)
+            {
+                try
                 {
-                    var values = requestsArray[i].Values;
-                    valueRanges[i] = (currentIndex, values.Count);
-
-                    foreach (var value in values)
-                        allTextValues[currentIndex++] = value;
-                }
-
-                var valuesSegment = new ArraySegment<string>(allTextValues, offset: 0, totalValueCount);
-
-                // Execute with retry logic
-                for (int attempt = 0; attempt <= configuration.MaxRetries; attempt++)
-                {
-                    try
-                    {
-                        if (attempt > 0)
-                        {
-                            if (Logger.IsWarnEnabled)
-                                Logger.Warn($"Retrying batch for connection '{connectionStringId.Value}', attempt {attempt}/{configuration.MaxRetries}");
-
-                            // Exponential backoff
-                            var delay = configuration.RetryDelayMs * Math.Pow(2, attempt - 1);
-                            await WaitOrThrowOperationCanceled(TimeSpan.FromMilliseconds((int)delay));
-                        }
-
-                        if (Logger.IsDebugEnabled)
-                            Logger.Debug($"Processing batch of {totalValueCount} values from {count} requests for connection '{connectionStringId.Value}'");
-
-                        var allEmbeddings = await service.GenerateEmbeddingsAsync(valuesSegment);
-
-                        // Verify we got the expected number of embeddings
-                        if (allEmbeddings.Count != totalValueCount)
-                        {
-                            throw new InvalidOperationException($"Failed to generate embeddings: expected {totalValueCount} embeddings, but got {allEmbeddings.Count}");
-                        }
-
-                        // Distribute results back to the requests
-                        for (int i = 0; i < count; i++)
-                        {
-                            var request = requestsArray[i];
-                            (int startIndex, int itemsCount) = valueRanges[i];
-
-                            ReadOnlyMemory<float>[] requestEmbeddings = ArrayPool<ReadOnlyMemory<float>>.Shared.Rent(itemsCount);
-
-                            try
-                            {
-                                // Fill the temp array with embeddings for this request
-                                for (int j = 0; j < itemsCount; j++)
-                                    requestEmbeddings[j] = allEmbeddings[startIndex + j];
-
-                                // Return the list of embeddings to the caller
-                                request.TaskCompletionSource.TrySetResult(requestEmbeddings);
-                            }
-                            finally
-                            {
-                                ArrayPool<ReadOnlyMemory<float>>.Shared.Return(requestEmbeddings);
-                            }
-                        }
-
-                        // Successfully processed batch, exit retry loop
-                        break;
-                    }
-                    catch (Exception ex) when (attempt < configuration.MaxRetries && IsNonRetriableException(ex) == false)
+                    if (attempt > 0)
                     {
                         if (Logger.IsWarnEnabled)
-                            Logger.Warn($"Error processing batch for connection '{connectionStringId.Value}', retrying {attempt + 1}/{configuration.MaxRetries}", ex);
+                            Logger.Warn($"Retrying batch for connection '{connectionStringId.Value}', attempt {attempt}/{configuration.MaxRetries}");
 
-                        // Continue to next retry iteration
+                        // Exponential backoff
+                        var delay = configuration.RetryDelayMs * Math.Pow(2, attempt - 1);
+                        await WaitOrThrowOperationCanceled(TimeSpan.FromMilliseconds((int)delay));
                     }
-                    catch (Exception ex)
+
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Processing batch of {totalValueCount} values from {count} requests for connection '{connectionStringId.Value}'");
+
+                    var allEmbeddings = await service.GenerateEmbeddingsAsync(allTextValues);
+
+                    // Verify we got the expected number of embeddings
+                    if (allEmbeddings.Count != totalValueCount)
                     {
-                        if (Logger.IsErrorEnabled)
-                            Logger.Error($"Final error processing batch for connection '{connectionStringId.Value}' after {attempt} retries", ex);
-
-                        for (int i = 0; i < count; i++)
-                            requestsArray[i].TaskCompletionSource.TrySetException(ex);
+                        throw new InvalidOperationException($"Failed to generate embeddings: expected {totalValueCount} embeddings, but got {allEmbeddings.Count}");
                     }
+
+                    // Distribute results back to the requests
+                    for (int i = 0; i < count; i++)
+                    {
+                        var request = requestsArray[i];
+                        (int startIndex, int itemsCount) = valueRanges[i];
+
+                        ReadOnlyMemory<float>[] requestEmbeddings = new ReadOnlyMemory<float>[itemsCount];
+                            
+                        // Fill the temp array with embeddings for this request
+                        for (int j = 0; j < itemsCount; j++)
+                            requestEmbeddings[j] = allEmbeddings[startIndex + j];
+
+                        // Return the list of embeddings to the caller
+                        request.TaskCompletionSource.TrySetResult(requestEmbeddings);
+                    }
+
+                    // Successfully processed batch, exit retry loop
+                    break;
                 }
-            }
-            finally
-            {
-                ArrayPool<string>.Shared.Return(allTextValues);
-                ForTestingPurposes?.AfterBatchFlushed?.Invoke();
+                catch (Exception ex) when (attempt < configuration.MaxRetries && IsNonRetriableException(ex) == false)
+                {
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"Error processing batch for connection '{connectionStringId.Value}', retrying {attempt + 1}/{configuration.MaxRetries}", ex);
+
+                    // Continue to next retry iteration
+                }
+                catch (Exception ex)
+                {
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error($"Final error processing batch for connection '{connectionStringId.Value}' after {attempt} retries", ex);
+
+                    for (int i = 0; i < count; i++)
+                        requestsArray[i].TaskCompletionSource.TrySetException(ex);
+                }
             }
         }
 

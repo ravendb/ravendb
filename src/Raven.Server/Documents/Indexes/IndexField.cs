@@ -352,8 +352,7 @@ namespace Raven.Server.Documents.Indexes
                 var embeddingsGenerationTaskIdentifier = autoVectorOptions.EmbeddingsGenerationTaskIdentifier;
                 
                 if (embeddingsGenerationTaskIdentifier is null)
-                    // todo
-                    throw new Exception("embeddingsGenerationTaskIdentifier is null");
+                    throw new Exception("EmbeddingsGenerationTaskIdentifier cannot be null");
                 
                 inner = methodName == string.Empty ? name : $"{methodName}({name},{aiTask}('{embeddingsGenerationTaskIdentifier}'))";
             }

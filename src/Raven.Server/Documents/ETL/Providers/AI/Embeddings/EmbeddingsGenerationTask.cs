@@ -104,9 +104,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
             return 0;
         }
 
-        var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(Configuration.Connection.Identifier);
-        if (Database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringIdentifier) == false)
-            throw new ArgumentException($"Couldn't find {embeddingsTaskId.Value} embeddings generation task.");
+        var connectionStringId = new AiConnectionStringIdentifier(Configuration.Connection.Identifier);
 
         int processed = 0;
 
@@ -120,7 +118,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     
                     foreach (var value in values)
                     {
-                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringIdentifier, value, Configuration.Quantization) == false)
+                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringId, value, Configuration.Quantization) == false)
                             _missingEmbeddingsHolder.Add(value.TextualValue, value);
                     }
                 }
@@ -133,7 +131,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
             if (embeddingsMap.Keys.Any())
             {
                 var generatedValues =
-                    Database.AiIntegrations.Embeddings.GetEmbeddingsForValues(connectionStringIdentifier, keys)
+                    Database.AiIntegrations.Embeddings.GetEmbeddingsForValues(connectionStringId, keys)
                         .GetAwaiter().GetResult();
 
                 if (generatedValues.Length != keys.Count)
@@ -146,7 +144,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
 
                     foreach (var embeddingItem in embeddingsMap[key])
                     {
-                        embeddingItem.SetEmbedding(embedding, Configuration.Quantization, connectionStringIdentifier);
+                        embeddingItem.SetEmbedding(embedding, Configuration.Quantization, connectionStringId);
                     }
                 }
             }

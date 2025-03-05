@@ -64,7 +64,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         {
             new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
         }, targetQuantization: VectorEmbeddingType.Single);
-        etl.Wait(DefaultEtlTimeout);
+        Assert.True(etl.Wait(DefaultEtlTimeout));
         
         new QuantizationInIndex().Execute(store);
         Indexes.WaitForIndexing(store);
