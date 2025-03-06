@@ -2,7 +2,7 @@ import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import {  Label } from "reactstrap";
+import { Label } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";

@@ -2,10 +2,12 @@ import { Column, SortDirection } from "@tanstack/react-table";
 import classNames from "classnames";
 import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import Form from "react-bootstrap/Form";
-import { UncontrolledDropdown, DropdownToggle, DropdownMenu, Label } from "reactstrap";
+import { Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
+import Dropdown from "react-bootstrap/Dropdown";
+import { CustomDropdownToggle } from "components/common/Dropdown";
 
 export default function VirtualTableColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
     const [localFilter, setLocalFilter] = useState("");
@@ -66,10 +68,12 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                 </div>
             )}
             {column.getCanFilter() && (
-                <UncontrolledDropdown>
-                    <DropdownToggle
+                <Dropdown>
+                    <Dropdown.Toggle
                         title="Column settings"
-                        color="link"
+                        as={CustomDropdownToggle}
+                        isCaretHidden
+                        variant="link"
                         className={classNames(
                             column.getFilterValue() ? "active-filtering" : "link-muted",
                             "filtering-controls"
@@ -77,8 +81,8 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                         size="sm"
                     >
                         <Icon icon="filter" margin="m-0" />
-                    </DropdownToggle>
-                    <DropdownMenu container="page-host">
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
                         <div className="px-3 pb-2">
                             <Label className="small-label">Filter column</Label>
                             <div className="clearable-input">
@@ -98,8 +102,8 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                                 )}
                             </div>
                         </div>
-                    </DropdownMenu>
-                </UncontrolledDropdown>
+                    </Dropdown.Menu>
+                </Dropdown>
             )}
         </HStack>
     );

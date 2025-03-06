@@ -6,7 +6,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import {  Label } from "reactstrap";
+import { Label } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
 import BackupSourceLocal from "./BackupSourceLocal";
 import BackupSourceAmazonS3 from "./BackupSourceAmazonS3";

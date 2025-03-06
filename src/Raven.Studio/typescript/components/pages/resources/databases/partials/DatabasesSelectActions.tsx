@@ -1,11 +1,9 @@
 ﻿import React, { useCallback, useState } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { DatabaseSharedInfo } from "components/models/databases";
-import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
@@ -16,10 +14,12 @@ import {
     toggleDatabases,
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
-import genUtils = require("common/generalUtils");
 import useConfirm from "components/common/ConfirmDialog";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import Dropdown from "react-bootstrap/Dropdown";
+import genUtils = require("common/generalUtils");
+import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 
 interface DatabasesSelectActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -131,62 +131,62 @@ export function DatabasesSelectActions({
                     </div>
                     <ButtonGroup className="gap-2 flex-wrap justify-content-center">
                         {isOperatorOrAbove && (
-                            <UncontrolledDropdown>
-                                <DropdownToggle
-                                    caret
+                            <Dropdown>
+                                <Dropdown.Toggle
+                                    variant="secondary"
                                     disabled={!anythingSelected || toggleChanges}
                                     title="Set the status (enabled/disabled) of selected databases"
                                     className="rounded-pill"
                                 >
                                     {toggleChanges ? <Spinner size="sm" /> : <Icon icon="play" />} Set state
-                                </DropdownToggle>
-                                <DropdownMenu>
-                                    <DropdownItem title="Enable" onClick={() => onToggleDatabases(true)}>
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu>
+                                    <Dropdown.Item title="Enable" onClick={() => onToggleDatabases(true)}>
                                         <Icon icon="unlock" />
                                         <span>Enable</span>
-                                    </DropdownItem>
-                                    <DropdownItem title="Disable" onClick={() => onToggleDatabases(false)}>
+                                    </Dropdown.Item>
+                                    <Dropdown.Item title="Disable" onClick={() => onToggleDatabases(false)}>
                                         <Icon icon="lock" />
                                         <span>Disable</span>
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
+                                    </Dropdown.Item>
+                                </Dropdown.Menu>
+                            </Dropdown>
                         )}
 
                         {isOperatorOrAbove && (
-                            <UncontrolledDropdown>
-                                <DropdownToggle
+                            <Dropdown>
+                                <Dropdown.Toggle
+                                    variant="secondary"
                                     title="Set the delete lock mode for the selected databases"
-                                    caret
                                     disabled={!anythingSelected || lockChanges}
                                     className="rounded-pill"
                                 >
                                     {lockChanges ? <Spinner size="sm" /> : <Icon icon="lock" />} Set delete lock mode
-                                </DropdownToggle>
-                                <DropdownMenu>
-                                    <DropdownItem
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu>
+                                    <Dropdown.Item
                                         onClick={() => onChangeLockMode("Unlock")}
                                         title="Allow to delete selected databases"
                                     >
                                         <Icon icon="trash" addon="check" />
                                         <span>Allow databases delete</span>
-                                    </DropdownItem>
-                                    <DropdownItem
+                                    </Dropdown.Item>
+                                    <Dropdown.Item
                                         onClick={() => onChangeLockMode("PreventDeletesIgnore")}
                                         title="Prevent deletion of selected databases. An error will not be thrown if an app attempts to delete."
                                     >
                                         <Icon icon="trash" addon="cancel" />
                                         <span>Prevent databases delete</span>
-                                    </DropdownItem>
-                                    <DropdownItem
+                                    </Dropdown.Item>
+                                    <Dropdown.Item
                                         onClick={() => onChangeLockMode("PreventDeletesError")}
                                         title="Prevent deletion of selected databases. An error will be thrown if an app attempts to delete."
                                     >
                                         <Icon icon="trash" addon="exclamation" />
                                         <span>Prevent databases delete (Error)</span>
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
+                                    </Dropdown.Item>
+                                </Dropdown.Menu>
+                            </Dropdown>
                         )}
                         {isOperatorOrAbove && (
                             <ButtonWithSpinner

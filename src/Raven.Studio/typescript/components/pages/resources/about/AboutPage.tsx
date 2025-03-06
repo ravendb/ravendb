@@ -3,7 +3,7 @@ import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import {  TabContent, TabPane } from "reactstrap";
+import { TabContent, TabPane } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import "./AboutPage.scss";
 

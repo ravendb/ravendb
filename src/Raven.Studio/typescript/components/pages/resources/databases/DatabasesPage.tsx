@@ -152,7 +152,6 @@ export function DatabasesPage(props: DatabasesPageProps) {
                     setSelectedDatabaseNames={setSelectedDatabaseNames}
                 />
             </StickyHeader>
-            <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
             <div className="mt-3">
                 {filteredDatabaseNames.map((dbName) => (
                     <DatabasePanel

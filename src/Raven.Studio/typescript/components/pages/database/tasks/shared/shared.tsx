@@ -3,24 +3,24 @@
     OngoingEtlTaskNodeInfo,
     OngoingTaskInfo,
     OngoingTaskSharedInfo,
-} from "../../../../models/tasks";
+} from "components/models/tasks";
 import useBoolean from "hooks/useBoolean";
 import React, { useCallback, useState } from "react";
 import router from "plugins/router";
-import { RichPanelDetailItem, RichPanelName } from "../../../../common/RichPanel";
+import { RichPanelDetailItem, RichPanelName } from "components/common/RichPanel";
 import Spinner from "react-bootstrap/Spinner";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { OngoingTaskOperationConfirmType } from "./OngoingTaskOperationConfirm";
 import assertUnreachable from "components/utils/assertUnreachable";
 import messagePublisher from "common/messagePublisher";
-import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
+import Dropdown from "react-bootstrap/Dropdown";
+import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -127,24 +127,23 @@ interface OngoingTaskStatusProps {
 export function OngoingTaskStatus(props: OngoingTaskStatusProps) {
     const { task, canEdit, onTaskOperation, isTogglingState, id } = props;
     return (
-        <UncontrolledDropdown id={id}>
-            <DropdownToggle
-                caret
+        <Dropdown id={id}>
+            <Dropdown.Toggle
                 disabled={!canEdit || isTogglingState}
-                color={task.shared.taskState === "Disabled" ? "warning" : "secondary"}
+                variant={task.shared.taskState === "Disabled" ? "warning" : "secondary"}
             >
                 {isTogglingState && <Spinner size="sm" />} {task.shared.taskState}
-            </DropdownToggle>
-            <DropdownMenu>
-                <DropdownItem onClick={() => onTaskOperation("enable", [task.shared])}>
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+                <Dropdown.Item onClick={() => onTaskOperation("enable", [task.shared])}>
                     <Icon icon="play" color="success" /> Enable
-                </DropdownItem>
-                <DropdownItem onClick={() => onTaskOperation("disable", [task.shared])}>
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => onTaskOperation("disable", [task.shared])}>
                     <Icon icon="stop" color="danger" />
                     Disable
-                </DropdownItem>
-            </DropdownMenu>
-        </UncontrolledDropdown>
+                </Dropdown.Item>
+            </Dropdown.Menu>
+        </Dropdown>
     );
 }
 

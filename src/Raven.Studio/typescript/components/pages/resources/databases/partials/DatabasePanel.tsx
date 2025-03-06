@@ -6,7 +6,6 @@ import Spinner from "react-bootstrap/Spinner";
 import Collapse from "react-bootstrap/Collapse";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
-import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import {
     RichPanel,
@@ -49,6 +48,7 @@ import { useServices } from "components/hooks/useServices";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import useConfirm from "components/common/ConfirmDialog";
+import Dropdown from "react-bootstrap/Dropdown";
 import changesContext = require("common/changesContext");
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 
@@ -345,7 +345,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             )}
 
                             {hasDatabaseAdminAccess && (
-                                <UncontrolledDropdown>
+                                <Dropdown>
                                     <ButtonGroup>
                                         {isOperatorOrAbove && (
                                             <Button variant="secondary" onClick={onToggleDatabase}>
@@ -360,33 +360,33 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                 )}
                                             </Button>
                                         )}
-                                        <DropdownToggle caret></DropdownToggle>
+                                        <Dropdown.Toggle variant="secondary" />
                                     </ButtonGroup>
 
-                                    <DropdownMenu end container="dropdownContainer">
+                                    <Dropdown.Menu>
                                         {canPauseAnyIndexing && (
-                                            <DropdownItem onClick={() => onTogglePauseIndexing(true)}>
+                                            <Dropdown.Item onClick={() => onTogglePauseIndexing(true)}>
                                                 <Icon icon="pause" /> Pause indexing until restart
-                                            </DropdownItem>
+                                            </Dropdown.Item>
                                         )}
                                         {canResumeAnyPausedIndexing && (
-                                            <DropdownItem onClick={() => onTogglePauseIndexing(false)}>
+                                            <Dropdown.Item onClick={() => onTogglePauseIndexing(false)}>
                                                 <Icon icon="play" /> Resume indexing
-                                            </DropdownItem>
+                                            </Dropdown.Item>
                                         )}
                                         {canDisableIndexing && (
-                                            <DropdownItem onClick={() => onToggleDisableIndexing(true)}>
+                                            <Dropdown.Item onClick={() => onToggleDisableIndexing(true)}>
                                                 <Icon icon="stop" /> Disable indexing
-                                            </DropdownItem>
+                                            </Dropdown.Item>
                                         )}
                                         {canEnableIndexing && (
-                                            <DropdownItem onClick={() => onToggleDisableIndexing(false)}>
+                                            <Dropdown.Item onClick={() => onToggleDisableIndexing(false)}>
                                                 <Icon icon="play" /> Enable indexing
-                                            </DropdownItem>
+                                            </Dropdown.Item>
                                         )}
                                         {isOperatorOrAbove && (
                                             <>
-                                                <DropdownItem divider />
+                                                <Dropdown.Divider />
                                                 {hasDatabaseAdminAccess && (
                                                     <>
                                                         {isOpenDatabaseRestartConfirm && (
@@ -398,25 +398,25 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                                 onConfirm={onRestartDatabase}
                                                             />
                                                         )}
-                                                        <DropdownItem
+                                                        <Dropdown.Item
                                                             onClick={showResetDatabaseConfirmation}
                                                             disabled={!canRestartDatabase}
                                                         >
                                                             <Icon icon="reset" /> Restart database
-                                                        </DropdownItem>
+                                                        </Dropdown.Item>
                                                     </>
                                                 )}
-                                                <DropdownItem onClick={onCompactDatabase}>
+                                                <Dropdown.Item onClick={onCompactDatabase}>
                                                     <Icon icon="compact" /> Compact database
-                                                </DropdownItem>
+                                                </Dropdown.Item>
                                             </>
                                         )}
-                                    </DropdownMenu>
-                                </UncontrolledDropdown>
+                                    </Dropdown.Menu>
+                                </Dropdown>
                             )}
 
                             {isOperatorOrAbove && (
-                                <UncontrolledDropdown>
+                                <Dropdown>
                                     <ButtonGroup>
                                         <Button
                                             onClick={() => onDelete()}
@@ -439,33 +439,30 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                 <Icon icon="trash" addon="exclamation" margin="m-0" />
                                             )}
                                         </Button>
-                                        <DropdownToggle
-                                            caret
-                                            color={db.lockMode === "Unlock" ? "danger" : "secondary"}
-                                        ></DropdownToggle>
+                                        <Dropdown.Toggle variant={db.lockMode === "Unlock" ? "danger" : "secondary"} />
                                     </ButtonGroup>
 
-                                    <DropdownMenu container="dropdownContainer">
-                                        <DropdownItem
+                                    <Dropdown.Menu>
+                                        <Dropdown.Item
                                             onClick={() => onChangeLockMode("Unlock")}
                                             title="Allow to delete database"
                                         >
                                             <Icon icon="trash" addon="check" /> Allow database delete
-                                        </DropdownItem>
-                                        <DropdownItem
+                                        </Dropdown.Item>
+                                        <Dropdown.Item
                                             onClick={() => onChangeLockMode("PreventDeletesIgnore")}
                                             title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database."
                                         >
                                             <Icon icon="trash" addon="cancel" /> Prevent database delete
-                                        </DropdownItem>
-                                        <DropdownItem
+                                        </Dropdown.Item>
+                                        <Dropdown.Item
                                             onClick={() => onChangeLockMode("PreventDeletesError")}
                                             title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database."
                                         >
                                             <Icon icon="trash" addon="exclamation" /> Prevent database delete (Error)
-                                        </DropdownItem>
-                                    </DropdownMenu>
-                                </UncontrolledDropdown>
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown>
                             )}
                         </RichPanelActions>
                     </RichPanelHeader>

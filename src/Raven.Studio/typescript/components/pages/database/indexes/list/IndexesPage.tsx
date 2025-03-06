@@ -5,7 +5,6 @@ import IndexUtils from "../../../../utils/IndexUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import {  DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
@@ -29,6 +28,9 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { ImportIndexes } from "components/pages/database/indexes/list/migration/import/ImportIndexes";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import Dropdown from "react-bootstrap/Dropdown";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { CustomDropdownToggle } from "components/common/Dropdown";
 
 interface IndexesPageProps {
     stale?: boolean;
@@ -201,7 +203,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                         ),
                                     }}
                                 >
-                                    <UncontrolledDropdown group className="button-dropdown-pill">
+                                    <Dropdown className="button-dropdown-pill" as={ButtonGroup}>
                                         <Button
                                             variant="primary"
                                             href={newIndexUrl}
@@ -211,20 +213,21 @@ export function IndexesPage(props: IndexesPageProps) {
                                             <Icon icon="index" addon="plus" />
                                             <span>New index</span>
                                         </Button>
-                                        <DropdownToggle
+                                        <Dropdown.Toggle
+                                            variant="primary"
                                             className="dropdown-toggle button-dropdown-toggle"
-                                            color="primary"
+                                            as={CustomDropdownToggle}
                                         />
-                                        <DropdownMenu>
-                                            <DropdownItem
+                                        <Dropdown.Menu>
+                                            <Dropdown.Item
                                                 onClick={toggleIsImportIndexModalOpen}
                                                 title="Import indexes from a file"
                                             >
                                                 <Icon icon="index-import" />
                                                 <span>Import indexes</span>
-                                            </DropdownItem>
-                                        </DropdownMenu>
-                                    </UncontrolledDropdown>
+                                            </Dropdown.Item>
+                                        </Dropdown.Menu>
+                                    </Dropdown>
                                 </ConditionalPopover>
                             )}
                         </Col>

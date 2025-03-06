@@ -87,6 +87,16 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
         fix: canFix ? fix : undefined,
       });
     },
+
+    JSXIdentifier(node) {
+      if (name !== reactBootstrapName && node.name === name) {
+        context.report({
+          node: node,
+          message: `Replace '${name}' with '${reactBootstrapName}'.`,
+          fix: canFix ? (fixer) => fixer.replaceText(node, reactBootstrapName) : undefined,
+        });
+      }
+    }
   };
 }
 
@@ -606,5 +616,146 @@ module.exports = {
   "no-reactstrap-Col": {
     meta: fixableMeta,
     create: (context) => createDeprecatedReactstrapImport({ context, name: "Col" }),
-  }
+  },
+  "no-reactstrap-Dropdown": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Dropdown" }),
+  },
+  "no-reactstrap-UncontrolledDropdown": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({
+      context,
+      name: "UncontrolledDropdown",
+      reactBootstrapName: "Dropdown",
+      canFix: false,
+    }),
+  },
+  "no-reactstrap-DropdownToggle": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({
+      context,
+      name: "DropdownToggle",
+      reactBootstrapName: "Dropdown",
+      canFix: false,
+    }),
+  },
+  "no-reactstrap-DropdownMenu": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({
+      context,
+      name: "DropdownMenu",
+      reactBootstrapName: "Dropdown",
+      canFix: false,
+    }),
+  },
+  "no-reactstrap-DropdownItem": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({
+      context,
+      name: "DropdownItem",
+      reactBootstrapName: "Dropdown",
+      canFix: false,
+    }),
+  },
+  "no-reactstrap-Dropdown-childrens": {
+    meta: fixableMeta,
+    create: (context) => {
+      const dropdownComponentMap = {
+        DropdownItem: "Dropdown.Item",
+        DropdownToggle: "Dropdown.Toggle",
+        DropdownMenu: "Dropdown.Menu",
+        UncontrolledDropdown: "Dropdown",
+      };
+
+      return replaceReactstrapToReactBootstrap({ context, componentMap: dropdownComponentMap });
+    },
+  },
+  "no-reactstrap-DropdownToggle-color-prop": {
+    meta: fixableMeta,
+    create(context) {
+      return {
+        JSXOpeningElement(node) {
+          // Check for Dropdown.Toggle component
+          const isDropdownToggle = node.name?.type === "JSXMemberExpression" &&
+            node.name.object?.name === "Dropdown" &&
+            node.name.property?.name === "Toggle";
+
+          if (isDropdownToggle) {
+            const hasVariantProp = node.attributes.some(attr => attr?.name?.name === "variant");
+            const colorProp = node.attributes.find(attr => attr?.name?.name === "color");
+
+            if (!hasVariantProp && !colorProp) {
+              context.report({
+                node,
+                message: "Component is missing 'variant' prop. Defaulting to 'variant=\"secondary\"'.",
+                fix(fixer) {
+                  return fixer.insertTextAfter(
+                    node.name,
+                    ` variant="secondary"`,
+                  );
+                },
+              });
+            } else if (colorProp?.value?.type === "Literal") {
+              const colorValue = colorProp.value.value;
+              context.report({
+                node: colorProp,
+                message: `'color' is deprecated. Replace with 'variant="${colorValue}"'.`,
+                fix(fixer) {
+                  return fixer.replaceText(
+                    colorProp,
+                    `variant="${colorValue}"`,
+                  );
+                },
+              });
+            } else if (colorProp) {
+              context.report({
+                node: colorProp,
+                message: `'color' is deprecated, but automatic fix is not possible as value is not Literal.`,
+              });
+            }
+          }
+        },
+      };
+    },
+  },
+  "no-reactstrap-DropdownToggle-caret-prop": {
+    meta: fixableMeta,
+    create(context) {
+      return {
+        JSXOpeningElement(node) {
+          const isDropdownToggle = node.name?.type === "JSXMemberExpression" &&
+            node.name.object?.name === "Dropdown" &&
+            node.name.property?.name === "Toggle";
+
+          if (isDropdownToggle) {
+            const caretProp = node.attributes.find(attr => attr?.name?.name === "caret");
+
+            if (caretProp) {
+              if (caretProp?.value?.type === "JSXExpressionContainer" &&
+                caretProp.value.expression?.value === false) {
+                context.report({
+                  node: caretProp,
+                  message: "'caret' prop is not supported in react-bootstrap. Use 'as' prop instead with a custom component.",
+                  fix(fixer) {
+                    return fixer.replaceText(
+                      caretProp,
+                      `as={CustomToggleComponent}`,
+                    );
+                  },
+                });
+              } else {
+                context.report({
+                  node: caretProp,
+                  message: "'caret' prop is not needed in react-bootstrap as it shows caret by default.",
+                  fix(fixer) {
+                    return fixer.replaceText(caretProp, "isCaretHidden");
+                  },
+                });
+              }
+            }
+          }
+        },
+      };
+    },
+  },
 };
