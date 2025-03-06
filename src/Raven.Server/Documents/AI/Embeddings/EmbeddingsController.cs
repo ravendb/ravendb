@@ -8,10 +8,10 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
-public class EmbeddingsController(AiIntegrationsController aiIntegrations, EmbeddingsStorage storage, EmbeddingsCacher cacher) : IDisposable
+public class EmbeddingsController(AiIntegrationsController aiIntegrations, EmbeddingsStorage storage, QueryEmbeddingsCacher queryEmbeddingsCacher) : IDisposable
 {
     public EmbeddingsStorage Storage { get; private set; } = storage;
-    public EmbeddingsCacher Cacher { get; private set; } = cacher;
+    public QueryEmbeddingsCacher QueryEmbeddingsCacher { get; private set; } = queryEmbeddingsCacher;
     private readonly EmbeddingsBatchingService _batchingService = new(aiIntegrations);
 
     public async Task<IEmbeddingValue[]> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext, ByteStringContext allocator,
@@ -74,14 +74,9 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
             embeddingsToCache.Add(embeddingCacheItem);
         }
 
-        Cacher.EnqueueEmbeddingsToCache(embeddingsToCache);
+        QueryEmbeddingsCacher.EnqueueEmbeddingsToCache(embeddingsToCache);
 
         return embeddingValues;
-    }
-
-    public async Task<ReadOnlyMemory<float>[]> GetEmbeddingsForValues(AiConnectionStringIdentifier connectionStringId, IList<string> values)
-    {
-        return await _batchingService.GetEmbeddingAsync(connectionStringId, values);
     }
 
     public void Dispose()

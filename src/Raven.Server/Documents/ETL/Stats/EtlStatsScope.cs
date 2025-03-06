@@ -69,11 +69,13 @@ namespace Raven.Server.Documents.ETL.Stats
 
     public sealed class EmbeddingsGenerationStatsScope : AbstractEtlStatsScope<EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
     {
-        public TimeSpan GenerateEmbeddings { get; set; }
-        
         public EmbeddingsGenerationStatsScope(EtlRunStats stats, bool start = true) : base(stats, start)
         {
         }
+
+        public int NumberOfGeneratedEmbeddings { get; set; }
+        public int NumberOfPutEmbeddingDocuments { get; set; }
+        public int NumberOfDeletedEmbeddingDocuments { get; set; }
 
         protected override EmbeddingsGenerationStatsScope OpenNewScope(EtlRunStats stats, bool start)
         {
@@ -90,7 +92,9 @@ namespace Raven.Server.Documents.ETL.Stats
             var operation = new EmbeddingsGenerationPerformanceOperation(Duration)
             {
                 Name = name,
-                GenerateEmbeddings = GenerateEmbeddings
+                NumberOfGeneratedEmbeddings = NumberOfGeneratedEmbeddings,
+                NumberOfPutEmbeddingDocuments = NumberOfPutEmbeddingDocuments,
+                NumberOfDeletedEmbeddingDocuments = NumberOfDeletedEmbeddingDocuments,
             };
 
             if (Scopes != null)

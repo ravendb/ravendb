@@ -10,5 +10,7 @@ public sealed class EmbeddingsGenerationPerformanceOperation : EtlPerformanceOpe
     {
     }
 
-    public TimeSpan GenerateEmbeddings { get; set; }
+    public int NumberOfGeneratedEmbeddings { get; set; }
+    public int NumberOfPutEmbeddingDocuments { get; set; }
+    public int NumberOfDeletedEmbeddingDocuments { get; set; }
 }

@@ -10,14 +10,14 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
-public class EmbeddingsCacher : BackgroundWorkBase
+public class QueryEmbeddingsCacher : BackgroundWorkBase
 {
     private readonly DocumentDatabase _database;
 
     private readonly ConcurrentQueue<EmbeddingGenerationItem> _embeddingsQueue;
     private readonly AsyncManualResetEvent _mre;
 
-    public EmbeddingsCacher(DocumentDatabase database, CancellationToken shutdown) : base(database.Name, database.Loggers.GetLogger<EmbeddingsCacher>(), shutdown)
+    public QueryEmbeddingsCacher(DocumentDatabase database, CancellationToken shutdown) : base(database.Name, database.Loggers.GetLogger<QueryEmbeddingsCacher>(), shutdown)
     {
         _database = database;
         _embeddingsQueue = new ConcurrentQueue<EmbeddingGenerationItem>();
@@ -45,7 +45,7 @@ public class EmbeddingsCacher : BackgroundWorkBase
             if (payload == null || payload.Count == 0)
                 return;
 
-            var putEmbeddingsCommand = new PutEmbeddingsCommand(payload, _database);
+            var putEmbeddingsCommand = new PutQueryEmbeddingsCommand(payload, _database);
 
             _database.TxMerger.EnqueueSync(putEmbeddingsCommand);
         }
@@ -61,12 +61,12 @@ public class EmbeddingsCacher : BackgroundWorkBase
         _mre.Set();
     }
 
-    private sealed class PutEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+    private sealed class PutQueryEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
     {
         private readonly List<EmbeddingGenerationItem> _embeddingItems;
         private readonly EmbeddingsStorage _embeddingsStorage;
 
-        public PutEmbeddingsCommand(List<EmbeddingGenerationItem> embeddingItems, DocumentDatabase database)
+        public PutQueryEmbeddingsCommand(List<EmbeddingGenerationItem> embeddingItems, DocumentDatabase database)
         {
             _embeddingItems = embeddingItems;
             _embeddingsStorage = database.AiIntegrations.Embeddings.Storage;

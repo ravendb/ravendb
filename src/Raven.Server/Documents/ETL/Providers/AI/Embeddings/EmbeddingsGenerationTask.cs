@@ -43,8 +43,6 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         Metrics = new EtlMetricsCountersManager();
     }
 
-    private EmbeddingsGenerationStatsScope _statsScope;
-
     public override EtlType EtlType => EtlType.EmbeddingsGeneration;
     public override bool ShouldTrackCounters() => false;
     public override bool ShouldTrackTimeSeries() => false;
@@ -108,12 +106,12 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
             {
                 foreach (var kvp in embeddingItem.Values)
                 {
-                    var values = kvp.Value;
+                    var embeddingsGenerationItems = kvp.Value;
                     
-                    foreach (var value in values)
+                    foreach (var embeddingToGenerate in embeddingsGenerationItems)
                     {
-                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringId, value, Configuration.Quantization) == false)
-                            _missingEmbeddingsHolder.Add(value.TextualValue, value);
+                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringId, embeddingToGenerate, Configuration.Quantization) == false)
+                            _missingEmbeddingsHolder.Add(embeddingToGenerate.TextualValue, embeddingToGenerate);
                     }
                 }
 
@@ -126,9 +124,16 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 var keys = embeddingsMap.Keys.ToList();
 
                 if (Database.AiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
-                    throw new ArgumentException($"Couldn't find Embeddings Generation task for connection string '{connectionStringId.Value}'");
+                    throw new ArgumentException($"Couldn't find embedding generation service for connection string '{connectionStringId.Value}'");
 
-                var generatedValues = service.GenerateEmbeddingsAsync(keys).GetAwaiter().GetResult();
+                IList<ReadOnlyMemory<float>> generatedValues;
+
+                using (var embeddingsGenerationScope = scope.For("Embeddings/GenerationByAIService"))
+                {
+                    generatedValues = service.GenerateEmbeddingsAsync(keys).GetAwaiter().GetResult();
+
+                    embeddingsGenerationScope.NumberOfGeneratedEmbeddings += generatedValues.Count;
+                }
 
                 if (generatedValues.Count != keys.Count)
                     throw new InvalidOperationException($"Generated embeddings count ({generatedValues.Count}) does not match missing values count ({keys.Count})");
@@ -144,10 +149,16 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     }
                 }
             }
-            
-            var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(embeddingsScriptRun, new EmbeddingsGenerationTaskIdentifier(Configuration.Identifier), Database);
 
-            Database.TxMerger.EnqueueSync(putEmbeddingsCommand);
+            using (var storageScope = scope.For("Embeddings/Storage"))
+            {
+                var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(embeddingsScriptRun, new EmbeddingsGenerationTaskIdentifier(Configuration.Identifier), Database);
+
+                Database.TxMerger.EnqueueSync(putEmbeddingsCommand);
+
+                storageScope.NumberOfPutEmbeddingDocuments = embeddingsScriptRun.Additions.Count;
+                storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
+            }
         }
         
         return processed;
@@ -239,7 +250,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         
             if (embeddingsDocument == null)
                 return destination;
-            
+
             if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingsDocument, _embeddingsTaskIdentifier.Value, out var etlEmbeddingsByPathObject)
                 && etlEmbeddingsByPathObject is BlittableJsonReaderObject etlEmbeddingsByPath)
             {

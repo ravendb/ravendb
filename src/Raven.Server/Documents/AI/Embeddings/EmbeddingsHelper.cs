@@ -4,7 +4,6 @@ using System.Data.HashFunction;
 using System.Data.HashFunction.Blake2;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Microsoft.Extensions.AI;
 using System.Runtime.InteropServices;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries.Vector;

@@ -1,13 +1,11 @@
 ﻿using System;
 using Microsoft.SemanticKernel.Embeddings;
-using Microsoft.SemanticKernel;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI.Embeddings;
-using Raven.Server.Documents.ETL.Providers.AI.Extensions;
 
 #pragma warning disable SKEXP0001
 
@@ -30,7 +28,7 @@ public class AiIntegrationsController : IDisposable
         _connectionStringsByTaskIdentifiers = new();
 
         var storage = new EmbeddingsStorage(database);
-        var cacher = new EmbeddingsCacher(database, database.DatabaseShutdown);
+        var cacher = new QueryEmbeddingsCacher(database, database.DatabaseShutdown);
 
         Embeddings = new EmbeddingsController(this, storage, cacher);
     }
@@ -84,20 +82,20 @@ public class AiIntegrationsController : IDisposable
         _connectionStringsByTaskIdentifiers = connectionStringsByTasks;
         _embeddingGeneratorsConfigurationByTaskIdentifiers = embeddingGeneratorsConfigurationByTasks;
 
-        if (Embeddings.Cacher.IsRunning)
+        if (Embeddings.QueryEmbeddingsCacher.IsRunning)
         {
             if (numberOfActiveEmbeddingGenerationTasks == 0)
-                Embeddings.Cacher.Stop();
+                Embeddings.QueryEmbeddingsCacher.Stop();
         }
         else
         {
-            Embeddings.Cacher.Start();
+            Embeddings.QueryEmbeddingsCacher.Start();
         }
     }
 
     public void Dispose()
     {
-        Embeddings.Cacher.Dispose();
+        Embeddings.QueryEmbeddingsCacher.Dispose();
     }
 
     public bool TryGetServiceByConnectionString(AiConnectionStringIdentifier connectionStringIdentifier, out ITextEmbeddingGenerationService service)
