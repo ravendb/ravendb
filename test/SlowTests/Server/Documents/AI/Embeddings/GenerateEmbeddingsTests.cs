@@ -5,11 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.SemanticKernel.Text;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
@@ -839,8 +839,11 @@ Console.WriteLine(""Hello, World!"");";
                     ]);
                 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                
-                WaitForUserToContinueTheTest(store);
+
+                var result = session.Query<Dto>().VectorSearch(x =>
+                    x.WithText("SubDto.Name", configuration.Identifier), factory => factory.ByText("text")).ToList();
+
+                Assert.Single(result);
             }
         }
     }

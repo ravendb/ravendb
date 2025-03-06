@@ -599,11 +599,9 @@ public partial class AbstractStaticIndexBase
         // no related document
         if (embeddingDocument == null
             // no embedding generator task in the document
-            || BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, embeddingDocument.BlittableJson, embeddingGeneratorTaskIdentifier,
-                out var documentEmbeddings) == false
+            || embeddingDocument.BlittableJson.TryGetMember(embeddingGeneratorTaskIdentifier, out var documentEmbeddings) == false
             // no path in the embedding task dictionary
-            || BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, (BlittableJsonReaderObject)documentEmbeddings, path,
-                out var embeddingContainerObject) == false
+            || ((BlittableJsonReaderObject)documentEmbeddings).TryGetMember(path, out var embeddingContainerObject) == false
             // stored value has no elements
             || IsNullValue(embeddingContainerObject))
         {
