@@ -8,7 +8,6 @@ import {
     RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
-    RichPanelName,
     RichPanelNameMultiLine,
     RichPanelStatus,
 } from "components/common/RichPanel";
@@ -24,7 +23,8 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
 import moment from "moment";
 import { useAsyncCallback } from "react-async-hook";
-import { Badge, Button } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
 import IconName from "typings/server/icons";
 
 interface CertificatesListItemProps {
@@ -115,19 +115,9 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                     <div>
                         <RichPanelNameMultiLine className="d-flex align-items-center">
                             {certificate.Name ?? "<empty name>"}
-                            {isServerCert && (
-                                <Badge
-                                    color="info"
-                                    className="ms-1 fs-6"
-                                    pill
-                                    title="This certificate is currently used by the server for incoming HTTPS connections"
-                                >
-                                    Server
-                                </Badge>
-                            )}
                             {isCurrentBrowserCert && (
                                 <Badge
-                                    color="success"
+                                    bg="success"
                                     className="ms-1 fs-6"
                                     pill
                                     title="This is the client certificate currently used by the browser"
@@ -137,7 +127,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             )}
                             {has2fa && (
                                 <Badge
-                                    color="2fa"
+                                    bg="2fa"
                                     className="ms-1 fs-6"
                                     pill
                                     title="This is the certificate which requires two-factor authentication"
@@ -152,7 +142,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         {canRegenerate && (
                             <Button
                                 title="Regenerate certificate"
-                                color="warning"
+                                variant="warning"
                                 onClick={() => dispatch(certificatesActions.regenerateModalOpen(certificate))}
                             >
                                 <Icon icon="refresh" />
@@ -163,6 +153,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             <Button
                                 title="Clone certificate"
                                 onClick={() => dispatch(certificatesActions.cloneModalOpen(certificate))}
+                                variant="secondary"
                             >
                                 <Icon icon="copy" margin="m-0" />
                             </Button>
@@ -171,6 +162,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             <Button
                                 title="Edit certificate"
                                 onClick={() => dispatch(certificatesActions.editModalOpen(certificate))}
+                                variant="secondary"
                             >
                                 <Icon icon="edit" margin="m-0" />
                             </Button>
@@ -178,7 +170,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         {canDelete && (
                             <ButtonWithSpinner
                                 title="Delete certificate"
-                                color="danger"
+                                variant="danger"
                                 onClick={handleDeleteCertificate}
                                 icon="trash"
                                 isSpinning={asyncDeleteCertificate.loading}
@@ -242,7 +234,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         >
                             {moment.utc(serverCertificateRenewalDate).format("YYYY-MM-DD")}
                             <ButtonWithSpinner
-                                color="link"
+                                variant="link"
                                 size="xs"
                                 title="Renew this server certificate"
                                 onClick={handleRenewServerCertificate}
@@ -278,7 +270,7 @@ function PermissionsBadge({ certificate }: { certificate: CertificateItem }) {
         SecurityClearance === "Operator"
     ) {
         return (
-            <Badge color="faded-success" pill>
+            <Badge bg="faded-success" pill>
                 <Icon icon="user" />
                 All
             </Badge>
@@ -300,7 +292,7 @@ function PermissionsBadge({ certificate }: { certificate: CertificateItem }) {
     return (
         <div className="hstack gap-1">
             {dbAccessArray.map(({ databaseName, accessLevel }) => (
-                <Badge key={databaseName} color={getAccessColor(accessLevel)} pill>
+                <Badge key={databaseName} bg={getAccessColor(accessLevel)} pill>
                     <Icon icon={getAccessIcon(accessLevel)} />
                     {databaseName}
                 </Badge>
