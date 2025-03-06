@@ -80,7 +80,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
             var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
 
             (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(aiEtlConfiguration);
-            var embeddings = await service.GenerateEmbeddingsAsync(EmbeddingsHelper.TestValuesList);
+            var embeddings = await AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.TestValuesList);
 
             if (embeddings.Count != EmbeddingsHelper.TestValuesList.Count)
                 throw new Exception($"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.TestValuesList.Count}' result, but got '{embeddings.Count}'.");

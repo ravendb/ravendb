@@ -6,7 +6,7 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 public class HuggingFaceConnectorForTesting : BaseAiConnectorForTesting<HuggingFaceConnectorForTesting>
 {
     private const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_HUGGINGFACE_API_KEY";
-    private const string Model = "someModel"; // TODO: Add the correct model
+    private const string Model = "sentence-transformers/all-MiniLM-L6-v2";
 
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.HuggingFace);
 

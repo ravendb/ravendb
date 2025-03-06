@@ -1,29 +1,17 @@
 ﻿using System;
 using System.ClientModel;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using Microsoft.SemanticKernel.Connectors.Google;
-using Microsoft.SemanticKernel.Connectors.HuggingFace;
-using Microsoft.SemanticKernel.Connectors.MistralAI;
-using Microsoft.SemanticKernel.Connectors.Onnx;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Embeddings;
 using OllamaSharp;
 using OpenAI;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide;
 using GoogleApiVersion = Raven.Client.Documents.Operations.AI.GoogleAIVersion;
-using Raven.Server.Documents.AI.Embeddings;
-using Raven.Server.Documents.AI;
-using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0010
@@ -33,40 +21,6 @@ namespace Raven.Server.Documents.ETL.Providers.AI.Extensions;
 
 public static class AiExtensions
 {
-    private static readonly BertOnnxOptions BertOnnxDefaults = new();
-
-    public static BertOnnxOptions ToBertOnnxOptions(this OnnxSettings settings)
-    {
-
-        return new BertOnnxOptions
-        {
-            CaseSensitive = settings.CaseSensitive ?? BertOnnxDefaults.CaseSensitive,
-            MaximumTokens = settings.MaximumTokens ?? BertOnnxDefaults.MaximumTokens,
-            ClsToken = settings.ClsToken ?? BertOnnxDefaults.ClsToken,
-            UnknownToken = settings.UnknownToken ?? BertOnnxDefaults.UnknownToken,
-            SepToken = settings.SepToken ?? BertOnnxDefaults.SepToken,
-            PadToken = settings.PadToken ?? BertOnnxDefaults.PadToken,
-            UnicodeNormalization = settings.UnicodeNormalization ?? BertOnnxDefaults.UnicodeNormalization,
-            PoolingMode = settings.PoolingMode?.ToEmbeddingPoolingMode() ?? BertOnnxDefaults.PoolingMode,
-            NormalizeEmbeddings = settings.NormalizeEmbeddings ?? BertOnnxDefaults.NormalizeEmbeddings
-        };
-    }
-
-    public static EmbeddingPoolingMode ToEmbeddingPoolingMode(this OnnxEmbeddingPoolingMode poolingMode)
-    {
-        switch (poolingMode)
-        {
-            case OnnxEmbeddingPoolingMode.Max:
-                return EmbeddingPoolingMode.Max;
-            case OnnxEmbeddingPoolingMode.Mean:
-                return EmbeddingPoolingMode.Mean;
-            case OnnxEmbeddingPoolingMode.MeanSquareRootTokensLength:
-                return EmbeddingPoolingMode.MeanSquareRootTokensLength;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(poolingMode), poolingMode, null);
-        }
-    }
-
     public static Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion ToGoogleApiVersion(this GoogleApiVersion googleApiVersion)
     {
         switch (googleApiVersion)
@@ -80,17 +34,9 @@ public static class AiExtensions
         }
     }
 
-    [Experimental("SKEXP0070")]
-    public static IKernelBuilder AddCustomBertOnnxTextEmbeddingGeneration(
-        this IKernelBuilder builder,
-        BertOnnxOptions options = null,
-        int? dimensions = null,
-        string serviceId = null)
+    public static IKernelBuilder AddCustomBertOnnxTextEmbeddingGeneration(this IKernelBuilder builder, string serviceId = null)
     {
-        builder.Services.AddKeyedSingleton<ITextEmbeddingGenerationService>(
-            serviceId,
-            GenerateEmbeddings.CreateTextEmbeddingGenerationService(options, dimensions));
-
+        builder.Services.AddKeyedSingleton<ITextEmbeddingGenerationService>(serviceId, GenerateEmbeddings.Embedder.Value);
         return builder;
     }
 
@@ -150,8 +96,7 @@ public static class AiExtensions
                 break;
 
             case AiConnectorType.Onnx:
-                var onnxSettings = connectionString.OnnxSettings;
-                kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration(onnxSettings.ToBertOnnxOptions(), onnxSettings.Dimensions);
+                kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration();
                 break;
 
             case AiConnectorType.Google:
@@ -201,7 +146,7 @@ public static class AiExtensions
         if (withLogging)
             kernelBuilder.Services.AddLogging(configure =>
             {
-                configure.SetMinimumLevel(LogLevel.Trace);
+                configure.SetMinimumLevel(LogLevel.Debug);
                 configure.AddProvider(new InMemoryLoggerProvider());
             });
     }

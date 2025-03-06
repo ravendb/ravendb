@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
 
@@ -29,7 +27,7 @@ public sealed class AiConnectionString : ConnectionString
 
     protected override void ValidateImpl(ref List<string> errors)
     {
-        var settings = new AbstractAiSettings[]
+        var allSettings = new AbstractAiSettings[]
         {
             OpenAiSettings,
             AzureOpenAiSettings,
@@ -38,19 +36,22 @@ public sealed class AiConnectionString : ConnectionString
             GoogleSettings,
             HuggingFaceSettings,
             MistralAiSettings
-        }.Where(s => s != null).ToList();
+        };
 
-        foreach (var setting in settings)
+        var configuredSettings = allSettings.Where(s => s != null).ToArray();
+
+        foreach (var setting in configuredSettings)
             setting.ValidateMandatoryFields(ref errors);
 
-        switch (settings.Count)
+        switch (configuredSettings.Length)
         {
             case 0:
-                errors.Add($"At least one of the following settings must be set: {string.Join(", ", nameof(OllamaSettings), nameof(OpenAiSettings), nameof(OnnxSettings))}");
+                var allSettingsNames = allSettings.Select(s => s.GetType().Name);
+                errors.Add($"At least one of the following settings must be set: {string.Join(", ", allSettingsNames)}");
                 break;
             case > 1:
-                var configuredNames = settings.Select(s => s.GetType().Name);
-                errors.Add($"Only one of the following settings can be set: {string.Join(", ", configuredNames)}");
+                var configuredSettingsNames = configuredSettings.Select(s => s.GetType().Name);
+                errors.Add($"Only one of the following settings can be set: {string.Join(", ", configuredSettingsNames)}");
                 break;
         }
     }

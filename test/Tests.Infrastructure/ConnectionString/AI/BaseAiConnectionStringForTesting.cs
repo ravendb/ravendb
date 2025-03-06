@@ -3,6 +3,10 @@ using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
+using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Web.System;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 #pragma warning disable SKEXP0001
 
@@ -82,16 +86,45 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
     private bool CanConnectInternal()
     {
+        InMemoryLoggerProvider logger = null;
+
         try
         {
-            (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value);
-            var embeddings = service.GenerateEmbeddingsAsync(EmbeddingsHelper.TestValuesList).Result;
+            (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value);
+            var embeddings = AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.TestValuesList).GetAwaiter().GetResult();
 
-            return embeddings.Count == EmbeddingsHelper.TestValuesList.Count;
+            var isExpectedResponse = embeddings.Count == EmbeddingsHelper.TestValuesList.Count;
+            if (isExpectedResponse == false)
+                Console.WriteLine($"ERROR: Unexpected response from {AiConnectorType.Value}: '{embeddings.Count}' embeddings were generated for '{EmbeddingsHelper.TestValuesList.Count}' input values.");
+
+            return isExpectedResponse;
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            var errorDetailsJson = new DynamicJsonValue
+            {
+                [nameof(NodeConnectionTestResult.Error)] = e.Message,
+                [nameof(e.StackTrace)] = e.StackTrace
+            };
+
+            if (logger != null)
+            {
+                var logsArray = new DynamicJsonArray(collection: logger.GetLogs());
+                errorDetailsJson[nameof(NodeConnectionTestResult.Log)] = logsArray;
+            }
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var errorDetails = context.ReadObject(errorDetailsJson, "error").ToString();
+                Console.WriteLine($"ERROR: Unable to connect to {AiConnectorType.Value} due to the following error:{Environment.NewLine}{errorDetails}");
+            }
+
             return false;
+
+        }
+        finally
+        {
+            logger?.Dispose();
         }
     }
 }

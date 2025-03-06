@@ -181,7 +181,9 @@ namespace Raven.Server.Documents.AI.Embeddings
                     if (Logger.IsDebugEnabled)
                         Logger.Debug($"Processing batch of {totalValueCount} values from {count} requests for connection '{connectionStringId.Value}'");
 
-                    var allEmbeddings = await service.GenerateEmbeddingsAsync(allTextValues);
+#pragma warning disable SKEXP0001
+                    var allEmbeddings = await AiHelper.GenerateEmbeddingsAsync(service, allTextValues);
+#pragma warning restore SKEXP0001
 
                     // Verify we got the expected number of embeddings
                     if (allEmbeddings.Count != totalValueCount)

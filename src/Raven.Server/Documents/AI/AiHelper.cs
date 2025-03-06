@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel.Connectors.HuggingFace;
+using NuGet.Packaging;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Extensions;
@@ -31,4 +35,38 @@ public static class AiHelper
         var logger = (InMemoryLoggerProvider)kernel.GetRequiredService<ILoggerProvider>();
         return (embeddingService, logger);
     }
+
+    /// <summary>
+    /// HuggingFaceTextEmbeddingGenerationService has a distinctive feature in its implementation of the ITextEmbeddingGenerationService interface,
+    /// which requires processing each element of the array separately instead of batch processing. As a workaround, we created this wrapper method for
+    /// the GenerateEmbeddingsAsync() method of the ITextEmbeddingGenerationService interface.
+    /// </summary>
+    // TODO: Once batch processing is implemented on the SemanticKernel side, or we implement the proper implementation ourselves, we will remove this code.
+    [Experimental("SKEXP0001")]
+    public static async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(ITextEmbeddingGenerationService embeddingGenerationService, IList<string> values)
+    {
+        IList<ReadOnlyMemory<float>> embeddings;
+
+        if (embeddingGenerationService is HuggingFaceTextEmbeddingGenerationService)
+        {
+            embeddings = new List<ReadOnlyMemory<float>>();
+            string[] singleItemArray = new string[1];
+
+            foreach (string value in values)
+            {
+                singleItemArray[0] = value;
+                embeddings.AddRange(await embeddingGenerationService.GenerateEmbeddingsAsync(singleItemArray));
+            }
+        }
+        else
+        {
+            embeddings = await embeddingGenerationService.GenerateEmbeddingsAsync(values);
+        }
+
+        return embeddings;
+    }
+
+    [Experimental("SKEXP0001")]
+    public static ReadOnlyMemory<float> GenerateEmbeddingAsync(ITextEmbeddingGenerationService embeddingGenerationService, string value) =>
+        embeddingGenerationService.GenerateEmbeddingsAsync([value]).GetAwaiter().GetResult()[0];
 }

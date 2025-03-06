@@ -130,7 +130,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
 
                 using (var embeddingsGenerationScope = scope.For("Embeddings/GenerationByAIService"))
                 {
-                    generatedValues = service.GenerateEmbeddingsAsync(keys).GetAwaiter().GetResult();
+                    generatedValues = AiHelper.GenerateEmbeddingsAsync(service, keys).GetAwaiter().GetResult();
 
                     embeddingsGenerationScope.NumberOfGeneratedEmbeddings += generatedValues.Count;
                 }
@@ -209,11 +209,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         {
             foreach (var embeddingItemValue in record.Values.SelectMany(x => x.Value))
             {
-                var embedding = embeddingService.GenerateEmbeddingsAsync([embeddingItemValue.TextualValue]).Result[0];
+                var embedding = AiHelper.GenerateEmbeddingAsync(embeddingService, embeddingItemValue.TextualValue);
 
                 var embeddingValue = EmbeddingsHelper.CreateEmbeddingValue(embedding, Configuration.Quantization);
 
-                embeddingItemValue.SetEmbedding(embeddingValue, Configuration.Quantization, new AiConnectionStringIdentifier("TODO")); 
+                embeddingItemValue.SetEmbedding(embeddingValue, Configuration.Quantization, new AiConnectionStringIdentifier("TODO")); //TODO
 
                 result.EmbeddingItemValues.Add(embeddingItemValue);
             }

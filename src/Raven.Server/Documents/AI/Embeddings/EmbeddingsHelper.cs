@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.AI.Embeddings;
 
 public static class EmbeddingsHelper
 {
-    internal static readonly List<string> TestValuesList = ["TestValue"];
+    internal static readonly List<string> TestValuesList = ["TestValue", "TestValue2"];
     private static readonly IBlake2B Hash;
 
     static EmbeddingsHelper()

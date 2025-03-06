@@ -37,41 +37,6 @@ public static class TestAiHelper
     }
 }
 
-public class TestEmbeddingServiceWrapper : ITextEmbeddingGenerationService
-{
-    private readonly ITextEmbeddingGenerationService _innerService;
-    public Exception ExceptionToThrow { get; set; }
-    public int CallCount { get; private set; } = 0;
-
-    public IReadOnlyDictionary<string, object> Attributes => _innerService.Attributes;
-
-    public TestEmbeddingServiceWrapper(ITextEmbeddingGenerationService innerService, Exception exceptionToThrow = null)
-    {
-        _innerService = innerService;
-        ExceptionToThrow = exceptionToThrow;
-    }
-
-    public async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(IList<string> texts, CancellationToken cancellationToken = default)
-    {
-        CallCount++;
-
-        if (ExceptionToThrow != null)
-            throw ExceptionToThrow;
-
-        return await _innerService.GenerateEmbeddingsAsync(texts, cancellationToken: cancellationToken);
-    }
-
-    public Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(IList<string> data, Kernel kernel = null, CancellationToken cancellationToken = new())
-    {
-        CallCount++;
-
-        if (ExceptionToThrow != null)
-            throw ExceptionToThrow;
-
-        return _innerService.GenerateEmbeddingsAsync(data, kernel, cancellationToken);
-    }
-}
-
 public class TestEmbeddingGenerationService : ITextEmbeddingGenerationService
 {
     public int DimensionSize { get; set; } = 128;
