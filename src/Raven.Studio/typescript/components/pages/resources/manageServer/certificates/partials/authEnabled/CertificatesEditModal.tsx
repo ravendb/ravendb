@@ -113,10 +113,13 @@ const schema = yup.object({
     databasePermissions: certificatesUtils.databasePermissionsSchema,
     twoFactorAction: certificatesUtils.twoFactorActionSchema,
     isRequire2FA: yup.boolean(),
-    authenticationKey: yup.string().when("isRequire2FA", {
-        is: true,
-        then: (schema) => schema.required(),
-    }),
+    authenticationKey: yup
+        .string()
+        .nullable()
+        .when("isRequire2FA", {
+            is: true,
+            then: (schema) => schema.required(),
+        }),
 });
 
 type FormData = yup.InferType<typeof schema>;
