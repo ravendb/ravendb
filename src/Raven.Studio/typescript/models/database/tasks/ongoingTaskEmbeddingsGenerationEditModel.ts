@@ -60,6 +60,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
     isNew = ko.observable<boolean>(true);
     resetScript = ko.observable<boolean>(false);
+    isResetAlreadySet = ko.observable<boolean>(false);
 
     transforms = ko.observableArray<Raven.Client.Documents.Operations.ETL.Transformation>([]);
 
@@ -186,8 +187,9 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     }
 
     setResetScriptIfEdit() {
-        if (!this.isNew()) {
+        if (!this.isNew() && !this.isResetAlreadySet()) {
             this.resetScript(true);
+            this.isResetAlreadySet(true);
         }
     }
 
