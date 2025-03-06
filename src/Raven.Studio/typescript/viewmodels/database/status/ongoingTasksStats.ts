@@ -2369,8 +2369,9 @@ class ongoingTasksStats extends shardViewModelBase {
                             }
                             break;
                         case "Embeddings/Storage": {
+                            console.log('kalczur context',context );
                             const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.EmbeddingsGenerationPerformanceOperation;
-                            tooltipHtml += `<div class="tooltip-li">Put embeddings documents: <div class="value">${elementWithData.NumberOfDeletedEmbeddingDocuments}</div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Put embeddings documents: <div class="value">${elementWithData.NumberOfPutEmbeddingDocuments}</div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Deleted embeddings documents: <div class="value">${elementWithData.NumberOfDeletedEmbeddingDocuments}</div></div>`;
                             break;
                         }
