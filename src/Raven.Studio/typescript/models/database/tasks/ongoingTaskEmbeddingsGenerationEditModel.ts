@@ -256,8 +256,12 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             if (configuration.EmbeddingsPathConfigurations) {
                 this.embeddingPathConfigurations(configuration.EmbeddingsPathConfigurations);
             }
-
-            this.embeddingsSource(configuration.EmbeddingsTransformation?.Script ? "script" : "paths");
+            if (configuration.EmbeddingsTransformation?.Script) {
+                this.script(configuration.EmbeddingsTransformation.Script);
+                this.embeddingsSource("script");
+            } else {
+                this.embeddingsSource("paths");
+            }
         }
     }
     
