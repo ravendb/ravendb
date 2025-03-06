@@ -42,7 +42,8 @@ type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOp
                      Raven.Server.Documents.ETL.Stats.EtlPerformanceOperation |
                      Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceOperation |
-                     Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation;
+                     Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation &
+                     Raven.Server.Documents.ETL.Providers.AI.Embeddings.EmbeddingsGenerationPerformanceOperation;
 
 type performanceBaseWithCache = ReplicationPerformanceWithCache |
                                 EtlPerformanceBaseWithCache |
@@ -486,6 +487,8 @@ class ongoingTasksStats extends shardViewModelBase {
             "Storage/AttachmentRead": undefined as string,
             "Storage/CounterRead": undefined as string,
             "Storage/TimeSeriesRead": undefined as string,
+            "Embeddings/GenerationByAIService": undefined as string,
+            "Embeddings/Storage": undefined as string,
             "ETL": undefined as string,
             "Extract": undefined as string,
             "Transform": undefined as string,
@@ -1701,6 +1704,10 @@ class ongoingTasksStats extends shardViewModelBase {
     }
     
     private drawEtlScriptName(context: CanvasRenderingContext2D, yStart: number, taskInfo: previewEtlScriptItemContext) {
+        if (taskInfo.etlType === "EmbeddingsGeneration") {
+            return;
+        }
+
         const areaWidth = this.drawText(context, yStart, taskInfo.transformationName);
         this.hitTest.registerPreviewEtlScript(2, yStart, areaWidth, ongoingTasksStats.trackHeight, taskInfo);
     }
@@ -2113,7 +2120,8 @@ class ongoingTasksStats extends shardViewModelBase {
                 type === "Kafka" || 
                 type === "AzureQueueStorage" ||
                 type === "AmazonSqs" ||
-                type === "RabbitMQ";
+                type === "RabbitMQ" ||
+                type === "EmbeddingsGeneration";
             
             const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
             const isRootItem = context.rootStats.Details === context.item;
@@ -2360,6 +2368,17 @@ class ongoingTasksStats extends shardViewModelBase {
                                 tooltipHtml += `<div class="tooltip-li">Last loaded Etag: <div class="value">${baseElement.LastLoadedEtag} </div></div>`;
                             }
                             break;
+                        case "Embeddings/Storage": {
+                            const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.EmbeddingsGenerationPerformanceOperation;
+                            tooltipHtml += `<div class="tooltip-li">Put embeddings documents: <div class="value">${elementWithData.NumberOfDeletedEmbeddingDocuments}</div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Deleted embeddings documents: <div class="value">${elementWithData.NumberOfDeletedEmbeddingDocuments}</div></div>`;
+                            break;
+                        }
+                        case "Embeddings/GenerationByAIService": {
+                            const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.EmbeddingsGenerationPerformanceOperation;
+                            tooltipHtml += `<div class="tooltip-li">Generated embeddings: <div class="value">${elementWithData.NumberOfGeneratedEmbeddings}</div></div>`;
+                            break;
+                        }
                     }
                     
                     if (type === "Olap") {
