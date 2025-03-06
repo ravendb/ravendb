@@ -509,9 +509,13 @@ class ongoingTasksStats extends shardViewModelBase {
             "UnknownOperation": undefined as string,
         }
     };
+
+    private filteredTaskTypes: FilterOngoingTaskType[] = [];
     
-    constructor(db: database, location: databaseLocationSpecifier) {
+    constructor(db: database, location: databaseLocationSpecifier, filteredTaskTypes: FilterOngoingTaskType[] = []) {
         super(db, location);
+
+        this.filteredTaskTypes = filteredTaskTypes;
 
         this.bindToCurrentInstance("clearGraphWithConfirm");
         
@@ -782,19 +786,31 @@ class ongoingTasksStats extends shardViewModelBase {
         }, 1000, { maxWait: 3000 });
 
         this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.db, this.location, d => {
-            this.replicationData = d;
+            if (!this.filteredTaskTypes.length || this.filteredTaskTypes.includes("Replication")) {
+                this.replicationData = d;
+            }
             onDataUpdatedThrottle();
         }, this.dateCutoff));
         this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.db, this.location, d => {
-            this.etlData = d;
+            if (this.filteredTaskTypes.length) {
+                this.etlData = d.filter(x => this.filteredTaskTypes.includes(x.EtlType));
+            } else {
+                this.etlData = d;
+            }
             onDataUpdatedThrottle();
         }, this.dateCutoff));
         this.liveViewQueueSinkClient(new liveQueueSinkStatsWebSocketClient(this.db, this.location, d => {
-            this.queueSinkData = d;
+            if (this.filteredTaskTypes.length) {
+                this.queueSinkData = d.filter(x => this.filteredTaskTypes.includes(x.BrokerType));
+            } else {
+                this.queueSinkData = d;
+            }
             onDataUpdatedThrottle();
         }, this.dateCutoff));
         this.liveViewSubscriptionClient(new liveSubscriptionStatsWebSocketClient(this.db, this.location, d => {
-            this.subscriptionData = d;
+            if (!this.filteredTaskTypes.length || this.filteredTaskTypes.includes("Subscription")) {
+                this.subscriptionData = d;
+            }
             onDataUpdatedThrottle();
         }, this.dateCutoff));
     }
