@@ -1272,8 +1272,8 @@ class aiTasksStats extends shardViewModelBase {
 
     private getTaskTypeDescription(type: ongoingTaskStatType): string {
         switch (type) {
-            case "Ai":
-                return "AI"
+            case "EmbeddingsGeneration":
+                return "Embeddings Generation"
             default:
                 throw new Error("Unknown stats type: " + type);
         }
