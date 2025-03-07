@@ -472,7 +472,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
                 }
-
+                
                 if (reader.TryGet(nameof(databaseRecord.EmbeddingsGenerations), out BlittableJsonReaderArray embeddingsGenerations) &&
                     embeddingsGenerations != null)
                 {
@@ -508,6 +508,32 @@ namespace Raven.Server.Smuggler.Documents
 
                             var connectionString = JsonDeserializationCluster.RavenConnectionString(connection);
                             databaseRecord.RavenConnectionStrings[connectionName] = connectionString;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.RavenConnectionStrings.Clear();
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the RavenDB connection strings from smuggler file. Skipping.", e);
+                    }
+                }
+                
+                if (reader.TryGet(nameof(databaseRecord.AiConnectionStrings), out BlittableJsonReaderObject aiConnectionStrings) && aiConnectionStrings != null)
+                {
+                    try
+                    {
+                        foreach (var connectionName in aiConnectionStrings.GetPropertyNames())
+                        {
+                            if (aiConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the RavenDB connection string {connectionName} from smuggler file. Skipping.");
+
+                                continue;
+                            }
+
+                            var connectionString = JsonDeserializationCluster.AiConnectionString(connection);
+                            databaseRecord.AiConnectionStrings[connectionName] = connectionString;
                         }
                     }
                     catch (Exception e)

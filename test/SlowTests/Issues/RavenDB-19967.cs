@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -17,6 +19,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
+using SlowTests.Server.Documents.AI;
 using SlowTests.Server.Replication;
 using Xunit;
 using Xunit.Abstractions;
@@ -38,7 +41,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
         public async Task DismissTombstoneNotification()
         {
             using (var store = GetDocumentStore())
@@ -72,7 +75,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
         public async Task TombstoneCleaningAfterIndexDisabled()
         {
             using (var store = GetDocumentStore())
@@ -120,7 +123,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task TombstoneCleaningAfterReplicationLoaderDisabled()
         {
             using (var store1 = GetDocumentStore())
@@ -182,7 +185,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task TombstoneCleaningAfterPullExternalReplicationDisabled()
         {
             const int sinkTombstonesCount = 7;
@@ -275,7 +278,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void CheckForNewEtlTypes()
         {
             var knownEtlTypes = new[]
@@ -295,13 +298,15 @@ namespace SlowTests.Issues
             if (newEtlTypes.Any())
                 throw new Exception($"New EtlType values detected: {string.Join(", ", newEtlTypes)}. Update {nameof(TombstoneCleaningAfterEtlLoaderDisabled)} test to cover it.");
         }
-        [Theory]
+        
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Replication)]
         [InlineData(EtlType.Raven)]
         [InlineData(EtlType.Sql)]
         [InlineData(EtlType.Olap)]
         [InlineData(EtlType.ElasticSearch)]
         [InlineData(EtlType.Queue)]
         [InlineData(EtlType.Snowflake)]
+        [InlineData(EtlType.EmbeddingsGeneration)]
         public async Task TombstoneCleaningAfterEtlLoaderDisabled(EtlType etlType)
         {
             using (var store = GetDocumentStore())
@@ -364,6 +369,25 @@ namespace SlowTests.Issues
                         taskId = await AddEtlAndDisableIt(store, snowflakeConnectionString, snowflakeConfiguration, OngoingTaskType.SnowflakeEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.SnowflakeEtl;
                         break;
+                    case EtlType.EmbeddingsGeneration:
+                        var aiConnectionString = new AiConnectionString { Name = "aiconnection", OnnxSettings = new OnnxSettings() };
+                        aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
+                        var embeddingsGenerationConfiguration = new EmbeddingsGenerationConfiguration
+                        {
+                            Name = _customTaskName,
+                            ConnectionStringName = aiConnectionString.Identifier,
+                            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Id", ChunkingOptions = new ChunkingOptions(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048} }],
+                            Collection = "Orders",
+                            EmbeddingsTransformation = null,
+                            Quantization = VectorEmbeddingType.Single,
+                            ChunkingOptionsForQuerying = new(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048},
+                        };
+
+                        embeddingsGenerationConfiguration.Identifier = embeddingsGenerationConfiguration.GenerateIdentifier();
+                        
+                        taskId = await AddEtlAndDisableIt(store, aiConnectionString, embeddingsGenerationConfiguration, OngoingTaskType.EmbeddingsGeneration);
+                        blockerType = ITombstoneAware.TombstoneDeletionBlockerType.EmbeddingsGeneration;
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(etlType), etlType, "New EtlType values detected");
                 }
@@ -413,7 +437,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.BackupExportImport)]
         public async Task TombstoneCleaningAfterPeriodicBackupDisabled()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -471,7 +495,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
         public async Task TombstoneCleaningAfterErroredIndex()
         {
             using (var store = GetDocumentStore())
@@ -514,7 +538,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task TombstoneCleaningAfterPausedIndex()
         {
             using (var store = GetDocumentStore())

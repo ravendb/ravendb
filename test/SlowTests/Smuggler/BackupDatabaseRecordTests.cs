@@ -10,7 +10,9 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -64,7 +66,7 @@ namespace SlowTests.Smuggler
                 .Select(field => field.Name)
                 .ToList();
 
-            Assert.Equal(48, fieldNames.Count);
+            Assert.Equal(50, fieldNames.Count);
         }
 
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
@@ -222,8 +224,27 @@ namespace SlowTests.Smuggler
                         MentorNode = "A",
                         Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     }));
-                    await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                    
+                    //put embedding generation store 1
+                    var aiConnectionString = new AiConnectionString { Name = "aiconnection", OnnxSettings = new OnnxSettings() };
+                    aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
+                    var embeddingsGenerationConfiguration = new EmbeddingsGenerationConfiguration
+                    {
+                        Name = "generate-embeddings",
+                        ConnectionStringName = aiConnectionString.Identifier,
+                        EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Id", ChunkingOptions = new ChunkingOptions(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048} }],
+                        Collection = "Orders",
+                        EmbeddingsTransformation = null,
+                        Quantization = VectorEmbeddingType.Single,
+                        ChunkingOptionsForQuerying = new(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048},
+                    };
 
+                    embeddingsGenerationConfiguration.Identifier = embeddingsGenerationConfiguration.GenerateIdentifier();
+                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiConnectionString));
+                    await store1.Maintenance.SendAsync(new AddEmbeddingsGenerationOperation(embeddingsGenerationConfiguration));
+                    
+                    await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                    
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -294,6 +315,15 @@ namespace SlowTests.Smuggler
                     Assert.Equal("connection", record.SnowflakeEtls.First().ConnectionStringName);
                     Assert.Equal(true, record.SnowflakeEtls.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(true, record.SnowflakeEtls.First().Disabled);
+                    
+                    Assert.Equal(1, record.AiConnectionStrings.Count);
+                    Assert.Equal("aiconnection", record.AiConnectionStrings.First().Value.Name);
+                    
+                    Assert.Equal(1, record.EmbeddingsGenerations.Count);
+                    Assert.Equal("generate-embeddings", record.EmbeddingsGenerations.First().Name);
+                    Assert.Equal("aiconnection", record.EmbeddingsGenerations.First().ConnectionStringName);
+                    Assert.Equal(true, record.EmbeddingsGenerations.First().AllowEtlOnNonEncryptedChannel);
+                    Assert.Equal(true, record.EmbeddingsGenerations.First().Disabled);
                 }
             }
             finally
@@ -1207,8 +1237,26 @@ namespace SlowTests.Smuggler
                             },
                     Name = "snowflake",
                     MentorNode = "A",
-                    Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
-                }));
+                    Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }}));
+                
+                // add generate embedding configuration-
+                var aiConnectionString = new AiConnectionString { Name = "aiconnection", OnnxSettings = new OnnxSettings() };
+                aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
+                var embeddingsGenerationConfiguration = new EmbeddingsGenerationConfiguration
+                {
+                    Name = "generate-embeddings",
+                    ConnectionStringName = aiConnectionString.Identifier,
+                    EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Id", ChunkingOptions = new ChunkingOptions(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048} }],
+                    Collection = "Orders",
+                    EmbeddingsTransformation = null,
+                    Quantization = VectorEmbeddingType.Single,
+                    ChunkingOptionsForQuerying = new(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048},
+                };
+
+                embeddingsGenerationConfiguration.Identifier = embeddingsGenerationConfiguration.GenerateIdentifier();
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiConnectionString));
+                await store.Maintenance.SendAsync(new AddEmbeddingsGenerationOperation(embeddingsGenerationConfiguration));
+                
 
                 await RefreshHelper.SetupExpiration(store, Server.ServerStore,
                     new RefreshConfiguration() { Disabled = false, MaxItemsToProcess = 100, RefreshFrequencyInSec = 100 });
@@ -1260,7 +1308,7 @@ namespace SlowTests.Smuggler
                     ConnectionStringName = "test",
                     Scripts = new List<QueueSinkScript>(){ new QueueSinkScript(){Script = "from Users", Disabled = false, Name = "QueueSinkScript"}}
                 }));
-
+                
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -1370,6 +1418,18 @@ namespace SlowTests.Smuggler
                     Assert.False(record.QueueSinks.First().Disabled);
                     Assert.Equal("QueueSink", record.QueueSinks.First().Name);
                     Assert.Equal(1, record.QueueSinks.First().Scripts.Count);
+
+                    Assert.NotNull(record.AiConnectionStrings);
+                    Assert.Equal(1, record.AiConnectionStrings.Count);
+                    Assert.Equal(ConnectionStringType.Ai, record.AiConnectionStrings.First().Value.Type);
+                    Assert.NotNull(record.AiConnectionStrings.First().Value.OnnxSettings);
+                    Assert.Equal(AiSettingsCompareDifferences.None, record.AiConnectionStrings.First().Value.OnnxSettings.Compare(new OnnxSettings()));
+                    
+                    Assert.NotNull(record.EmbeddingsGenerations);
+                    Assert.Equal(1, record.EmbeddingsGenerations.Count);
+                    Assert.False(record.EmbeddingsGenerations.First().Disabled);
+                    Assert.Equal("generate-embeddings", record.EmbeddingsGenerations.First().Name);
+                    Assert.Equal("aiconnection", record.EmbeddingsGenerations.First().ConnectionStringName);;
                 }
             }
         }
@@ -1555,6 +1615,23 @@ namespace SlowTests.Smuggler
 
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(store.Database, store.Database)));
+                
+                var aiConnectionString = new AiConnectionString { Name = "aiconnection", OnnxSettings = new OnnxSettings() };
+                aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
+                var embeddingsGenerationConfiguration = new EmbeddingsGenerationConfiguration
+                {
+                    Name = "generate-embeddings",
+                    ConnectionStringName = aiConnectionString.Identifier,
+                    EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Id", ChunkingOptions = new ChunkingOptions(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048} }],
+                    Collection = "Orders",
+                    EmbeddingsTransformation = null,
+                    Quantization = VectorEmbeddingType.Single,
+                    ChunkingOptionsForQuerying = new(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048},
+                };
+
+                embeddingsGenerationConfiguration.Identifier = embeddingsGenerationConfiguration.GenerateIdentifier();
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiConnectionString));
+                await store.Maintenance.SendAsync(new AddEmbeddingsGenerationOperation(embeddingsGenerationConfiguration));
 
                 // pull replication sink
                 var sink = new PullReplicationAsSink { HubName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name };
@@ -1618,6 +1695,12 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
+                        foreach (var task in databaseRecord.EmbeddingsGenerations)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
                         foreach (var task in databaseRecord.PeriodicBackups)
                         {
                             Assert.Equal(disableOngoingTasks, task.Disabled);
@@ -1642,7 +1725,7 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
-                        Assert.Equal(9, tasksCount);
+                        Assert.Equal(10, tasksCount);
                     }
                 }
             }

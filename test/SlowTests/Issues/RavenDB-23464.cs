@@ -21,7 +21,8 @@ public class RavenDB_23464(ITestOutputHelper output) : RavenTestBase(output)
     {
         options ??= Options.ForSearchEngine(RavenSearchEngineMode.Lucene);
         using var store = GetDocumentStore(options);
-        new MapReduceIndexCorax().Execute(store);
+        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceIndexCorax().Execute(store));
+        Assert.Contains("The 'CreateVector' method is not supported in map-reduce indexes.", exception.Message);
     }
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
@@ -135,13 +136,21 @@ public class RavenDB_23464(ITestOutputHelper output) : RavenTestBase(output)
         ThrowOnIndexCreationWithVectorFieldWhenSearchEngineIsNotCoraxBase<LoadVectorJsIndexLucene>(options);
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void ThrowOnIndexCreationWithVectorFieldWhenSearchEngineIsNotCoraxMapReduceBase() =>
-        ThrowOnIndexCreationWithVectorFieldWhenSearchEngineIsNotCoraxBase<MapReduceIndexBase>();
+    public void ThrowOnIndexCreationWithVectorFieldWhenSearchEngineIsNotCoraxMapReduceBase()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Lucene));
+        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceIndexBase().Execute(store));
+        Assert.Contains("The 'CreateVector' method is not supported in map-reduce indexes.", exception.Message);
+    }
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void ThrowOnIndexCreationWithVectorFieldWhenSearchEngineIsNotCoraxMapReduceLucene(Options options) =>
-        ThrowOnIndexCreationWithVectorFieldWhenSearchEngineIsNotCoraxBase<MapReduceIndexLucene>(options);
+    public void ThrowOnIndexCreationWithVectorFieldWhenSearchEngineIsNotCoraxMapReduceLucene(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceIndexLucene().Execute(store));
+        Assert.Contains("The 'CreateVector' method is not supported in map-reduce indexes.", exception.Message);
+    }
 
     private void ThrowOnIndexCreationWithVectorFieldWhenSearchEngineIsNotCoraxBase<TIndex>(Options options = null) where TIndex : AbstractIndexCreationTask, new()
     {
@@ -375,7 +384,7 @@ public class RavenDB_23464(ITestOutputHelper output) : RavenTestBase(output)
                 @$"map('Dtos', function (e) {{
     return {{ 
         Name: e.Name,
-        Vector: loadVector('eText')
+        Vector: loadVector('etlId', 'eText')
     }};
 }})"
             ];
