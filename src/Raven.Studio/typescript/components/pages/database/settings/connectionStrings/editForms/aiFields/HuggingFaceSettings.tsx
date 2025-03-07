@@ -15,6 +15,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAsyncCallback } from "react-async-hook";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import RichAlert from "components/common/RichAlert";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -40,6 +41,10 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
 
     return (
         <>
+            <RichAlert variant="warning">
+                Semantic Kernel&apos;s Hugging Face connector does not support batching as of now. Each request to a
+                Hugging Face model endpoint will be processed individually.
+            </RichAlert>
             <div className="mb-2">
                 <Label>
                     API Key <OptionalLabel />
