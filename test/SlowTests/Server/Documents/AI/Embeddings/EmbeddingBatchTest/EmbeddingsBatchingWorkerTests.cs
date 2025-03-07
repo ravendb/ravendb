@@ -110,7 +110,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         // Arrange
         _db.Configuration.MaxRetries = 2;
-        _db.Configuration.RetryDelayMs = new TimeSetting(50, TimeUnit.Milliseconds);
+        _db.Configuration.RetryDelay = new TimeSetting(50, TimeUnit.Milliseconds);
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;
@@ -367,7 +367,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         // Arrange
         const string exceptionMessagePrefix = "Temporary network error on attempt";
         _db.Configuration.MaxRetries = 2;
-        _db.Configuration.RetryDelayMs = new(50, TimeUnit.Milliseconds);
+        _db.Configuration.RetryDelay = new(50, TimeUnit.Milliseconds);
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;

@@ -22,7 +22,7 @@ public class TestDocumentDatabaseStub
             BatchTimeoutInMs = 200,
             MaxBatchSize = 100,
             MaxRetries = 3,
-            RetryDelayMs = new TimeSetting(200, TimeUnit.Milliseconds),
+            RetryDelay = new TimeSetting(200, TimeUnit.Milliseconds),
             MaxConcurrentBatches = 4
         };
 

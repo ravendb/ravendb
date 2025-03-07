@@ -36,14 +36,14 @@ public sealed class AiConfiguration : ConfigurationCategory
     [Description("Base delay in milliseconds between retry attempts for failed embedding requests. Actual delay increases exponentially with each retry attempt. For example, with a base delay of 200ms, retries would wait 200ms, 400ms, 800ms, etc.")]
     [DefaultValue(200)]
     [TimeUnit(TimeUnit.Milliseconds)]
-    [ConfigurationEntry("Ai.Embeddings.RetryDelayMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public TimeSetting RetryDelayMs { get; set; }
+    [ConfigurationEntry("Ai.Embeddings.RetryDelayInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting RetryDelay { get; set; }
     
     [Description("Base delay for embedding generation. The delay increases exponentially with each retry attempt. E.g. 5s, 25s, 125s, etc.")]
     [DefaultValue(15)]
     [TimeUnit(TimeUnit.Seconds)]
-    [ConfigurationEntry("Ai.Embeddings.TaskRetryDelayInSeconds", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public TimeSetting TaskRetryDelayInSeconds { get; set; }
+    [ConfigurationEntry("Ai.Embeddings.TaskRetryDelayInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting TaskRetryDelay { get; set; }
 
     [Description("Maximum number of seconds ETL process will be in a fallback mode after a load connection failure to a destination. The fallback mode means suspending the process.")]
     [DefaultValue(60 * 15)]

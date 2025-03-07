@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                             Logger.Warn($"Retrying batch for connection '{connectionStringId.Value}', attempt {attempt}/{configuration.MaxRetries}");
 
                         // Exponential backoff
-                        var delay = configuration.RetryDelayMs.AsTimeSpan * Math.Pow(2, attempt - 1);
+                        var delay = configuration.RetryDelay.AsTimeSpan * Math.Pow(2, attempt - 1);
                         await WaitOrThrowOperationCanceled(delay);
                     }
 

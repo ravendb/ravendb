@@ -111,7 +111,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
         _fallbackCounter++;
-        var taskRetryDelay = Database.Configuration.Ai.TaskRetryDelayInSeconds.AsTimeSpan;
+        var taskRetryDelay = Database.Configuration.Ai.TaskRetryDelay.AsTimeSpan;
         if (lastErrorTime == null)
         {
             FallbackTime = taskRetryDelay;
