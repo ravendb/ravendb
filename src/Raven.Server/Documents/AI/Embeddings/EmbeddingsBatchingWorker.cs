@@ -4,10 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Server.Background;
+using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.AI.Embeddings
@@ -174,16 +177,30 @@ namespace Raven.Server.Documents.AI.Embeddings
                             Logger.Warn($"Retrying batch for connection '{connectionStringId.Value}', attempt {attempt}/{configuration.MaxRetries}");
 
                         // Exponential backoff
-                        var delay = configuration.RetryDelayMs * Math.Pow(2, attempt - 1);
-                        await WaitOrThrowOperationCanceled(TimeSpan.FromMilliseconds((int)delay));
+                        var delay = configuration.RetryDelayMs.AsTimeSpan * Math.Pow(2, attempt - 1);
+                        await WaitOrThrowOperationCanceled(delay);
                     }
 
                     if (Logger.IsDebugEnabled)
                         Logger.Debug($"Processing batch of {totalValueCount} values from {count} requests for connection '{connectionStringId.Value}'");
 
+                    IList<ReadOnlyMemory<float>> allEmbeddings;
+
+                    try
+                    {
 #pragma warning disable SKEXP0001
-                    var allEmbeddings = await AiHelper.GenerateEmbeddingsAsync(service, allTextValues);
+                        allEmbeddings = await AiHelper.GenerateEmbeddingsAsync(service, allTextValues);
 #pragma warning restore SKEXP0001
+                    }
+                    catch (Exception e)
+                    {
+                        if (e is HttpOperationException { StatusCode: System.Net.HttpStatusCode.TooManyRequests })
+                        {
+                            throw new EmbeddingGenerationException($"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. However, decreasing the number of elements processed in a single batch ('{RavenConfiguration.GetKey(x => x.Ai.MaxBatchSize)}') may help, or you can increase the limits on your model deployment.", e);
+                        }
+                        
+                        throw;
+                    }
 
                     // Verify we got the expected number of embeddings
                     if (allEmbeddings.Count != totalValueCount)

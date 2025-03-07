@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
 namespace Raven.Server.Config.Categories;
 
@@ -22,7 +24,7 @@ public sealed class AiConfiguration : ConfigurationCategory
     public int BatchTimeoutInMs { get; set; }
 
     [Description("Maximum number of embedding requests to include in a single batch sent to the AI provider. Optimal values depend on the provider's rate limits and pricing model.")]
-    [DefaultValue(100)]
+    [DefaultValue(128)]
     [ConfigurationEntry("Ai.Embeddings.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int MaxBatchSize { get; set; }
 
@@ -33,9 +35,27 @@ public sealed class AiConfiguration : ConfigurationCategory
 
     [Description("Base delay in milliseconds between retry attempts for failed embedding requests. Actual delay increases exponentially with each retry attempt. For example, with a base delay of 200ms, retries would wait 200ms, 400ms, 800ms, etc.")]
     [DefaultValue(200)]
+    [TimeUnit(TimeUnit.Milliseconds)]
     [ConfigurationEntry("Ai.Embeddings.RetryDelayMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int RetryDelayMs { get; set; }
+    public TimeSetting RetryDelayMs { get; set; }
+    
+    [Description("Base delay for embedding generation. The delay increases exponentially with each retry attempt. E.g. 5s, 25s, 125s, etc.")]
+    [DefaultValue(15)]
+    [TimeUnit(TimeUnit.Seconds)]
+    [ConfigurationEntry("Ai.Embeddings.TaskRetryDelayInSeconds", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting TaskRetryDelayInSeconds { get; set; }
 
+    [Description("Maximum number of seconds ETL process will be in a fallback mode after a load connection failure to a destination. The fallback mode means suspending the process.")]
+    [DefaultValue(60 * 15)]
+    [TimeUnit(TimeUnit.Seconds)]
+    [ConfigurationEntry("Ai.Embeddings.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting MaxFallbackTime { get; set; }
+    
+    [Description("Maximum number of seconds ETL process will be in a fallback mode after a load connection failure to a destination. The fallback mode means suspending the process.")]
+    [DefaultValue(EmbeddingsGenerationFallbackModeStrategy.Exponential)]
+    [ConfigurationEntry("Ai.Embeddings.EmbeddingGenerationFallbackModeStrategy", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public EmbeddingsGenerationFallbackModeStrategy EmbeddingsGenerationFallbackModeStrategy { get; set; }
+    
     [Description("Maximum number of embedding batches that can be processed concurrently. Controls the level of parallelism when sending requests to AI providers. Higher values improve throughput but increase resource usage and may trigger rate limits.")]
     [DefaultValue(4)]
     [ConfigurationEntry("Ai.Embeddings.MaxConcurrentBatches", ConfigurationEntryScope.ServerWideOrPerDatabase)]

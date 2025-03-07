@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Logging;
@@ -109,7 +110,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         // Arrange
         _db.Configuration.MaxRetries = 2;
-        _db.Configuration.RetryDelayMs = 50;
+        _db.Configuration.RetryDelayMs = new TimeSetting(50, TimeUnit.Milliseconds);
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;
@@ -366,7 +367,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         // Arrange
         const string exceptionMessagePrefix = "Temporary network error on attempt";
         _db.Configuration.MaxRetries = 2;
-        _db.Configuration.RetryDelayMs = 50;
+        _db.Configuration.RetryDelayMs = new(50, TimeUnit.Milliseconds);
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;

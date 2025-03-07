@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Runtime.InteropServices;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -10,6 +12,7 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Server.Config;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Metrics;
@@ -31,11 +34,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationConfiguration, AiConnectionString, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
+public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationConfiguration, AiConnectionString,
+    EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
-    private readonly MissingEmbeddingsHolder _missingEmbeddingsHolder = new();
+    private const string EmbeddingsTaskTag = "AI/Embeddings Generation";
 
-    public const string EmbeddingsTaskTag = "AI/Embeddings Generation";
+    private readonly MissingEmbeddingsHolder _missingEmbeddingsHolder = new();
+    private int _fallbackCounter = 0;
+
 
     public EmbeddingsGenerationTask(Transformation transformation, EmbeddingsGenerationConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, EmbeddingsTaskTag)
@@ -46,45 +52,81 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
     public override EtlType EtlType => EtlType.EmbeddingsGeneration;
     public override bool ShouldTrackCounters() => false;
     public override bool ShouldTrackTimeSeries() => false;
+    
+    protected override bool ShouldTrackAttachmentTombstones() => false;
 
     protected override IEnumerator<AiIntegrationItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
     {
         return new DocumentsToAiItems(docs, collection);
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+    protected override IEnumerator<AiIntegrationItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
+        bool trackAttachments)
     {
         return new TombstonesToAiItems(context, tombstones, collection, trackAttachments);
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+    protected override IEnumerator<AiIntegrationItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
+        List<string> collections)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException($"{nameof(ConvertAttachmentTombstonesEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
+    protected override IEnumerator<AiIntegrationItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
+        string collection)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException($"{nameof(ConvertCountersEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+    protected override IEnumerator<AiIntegrationItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
+        string collection)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException($"{nameof(ConvertTimeSeriesEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+    protected override IEnumerator<AiIntegrationItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
+        IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException($"{nameof(ConvertTimeSeriesDeletedRangeEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");
     }
 
-    protected override bool ShouldTrackAttachmentTombstones()
-    {
-        return false;
-    }
-
-    protected override EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
+        GetTransformer(DocumentsOperationContext context)
     {
         return new EmbeddingsGenerationScriptTransformer(Database, context, Transformation, null, Configuration);
+    }
+
+    /*
+     *             if (lastErrorTime == null)
+                FallbackTime = TimeSpan.FromSeconds(5);
+            else
+            {
+                // double the fallback time (but don't cross Etl.MaxFallbackTime)
+                var secondsSinceLastError = (Database.Time.GetUtcNow() - lastErrorTime.Value).TotalSeconds;
+
+                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
+            }
+     */
+    
+    protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
+    {
+        _fallbackCounter++;
+        var taskRetryDelay = Database.Configuration.Ai.TaskRetryDelayInSeconds.AsTimeSpan;
+        if (lastErrorTime == null)
+        {
+            FallbackTime = taskRetryDelay;
+        }
+        else
+        {
+            var secondsToWait = (Database.Configuration.Ai.EmbeddingsGenerationFallbackModeStrategy) switch
+            {
+                EmbeddingsGenerationFallbackModeStrategy.Linear => _fallbackCounter * taskRetryDelay.TotalSeconds,
+                EmbeddingsGenerationFallbackModeStrategy.Exponential => Math.Pow(taskRetryDelay.TotalSeconds, _fallbackCounter),
+                _ => throw new NotImplementedException($"Strategy: '{Database.Configuration.Ai.EmbeddingsGenerationFallbackModeStrategy}' is not implemented.")
+                
+            };
+            FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Ai.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(taskRetryDelay.Seconds, secondsToWait)));
+        }
     }
 
     protected override int LoadInternal(IEnumerable<EmbeddingGenerationScriptResult> items, DocumentsOperationContext context, EmbeddingsGenerationStatsScope scope)
@@ -127,17 +169,27 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     throw new ArgumentException($"Couldn't find embedding generation service for connection string '{connectionStringId.Value}'");
 
                 IList<ReadOnlyMemory<float>> generatedValues;
-
-                using (var embeddingsGenerationScope = scope.For("Embeddings/GenerationByAIService"))
+                try
                 {
+                    using var embeddingsGenerationScope = scope.For("Embeddings/GenerationByAIService");
                     generatedValues = AiHelper.GenerateEmbeddingsAsync(service, keys).GetAwaiter().GetResult();
-
                     embeddingsGenerationScope.NumberOfGeneratedEmbeddings += generatedValues.Count;
+                }
+                catch (Exception ex)
+                {
+                    if (ex is HttpOperationException { StatusCode: HttpStatusCode.TooManyRequests })
+                    {
+                        throw new EmbeddingGenerationException(
+                            $"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. However, decreasing the number of elements processed in a single batch ('{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationMaxBatchSize)}') may help, or you can increase the limits on your model deployment.",
+                            ex);
+                    }
+
+                    throw;
                 }
 
                 if (generatedValues.Count != keys.Count)
                     throw new InvalidOperationException($"Generated embeddings count ({generatedValues.Count}) does not match missing values count ({keys.Count})");
-                
+
                 for (var i = 0; i < keys.Count; ++i)
                 {
                     var key = keys[i];
@@ -160,7 +212,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
             }
         }
-        
+
         return processed;
     }
 
@@ -178,12 +230,12 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
     {
         // missing value -> embeddings
         private readonly Dictionary<string, List<EmbeddingGenerationItem>> _embeddingsMap = new();
-        
+
         public void Add(string value, EmbeddingGenerationItem item)
         {
             if (_embeddingsMap.ContainsKey(value) == false)
                 _embeddingsMap.Add(value, new List<EmbeddingGenerationItem>());
-                
+
             _embeddingsMap[value].Add(item);
         }
 
@@ -198,10 +250,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
     public EmbeddingsGenerationTestScriptResult RunTest(IEnumerable<EmbeddingGenerationScriptResult> records, DocumentsOperationContext context)
     {
         (ITextEmbeddingGenerationService embeddingService, _) = AiHelper.CreateServicesForTest(
-            new EmbeddingsGenerationConfiguration
-            {
-                Connection = new AiConnectionString { OnnxSettings = new OnnxSettings()}
-            });
+            new EmbeddingsGenerationConfiguration { Connection = new AiConnectionString { OnnxSettings = new OnnxSettings() } });
 
         var result = new EmbeddingsGenerationTestScriptResult();
 
@@ -229,11 +278,13 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         /// Contains ETL result
         /// </summary>
         private readonly EmbeddingsGenerationScriptRun _taskResults;
+
         private readonly EmbeddingsGenerationTaskIdentifier _embeddingsTaskIdentifier;
         private readonly DocumentDatabase _database;
-        private readonly EmbeddingsGenerationConfiguration _configuration; 
-        
-        public MergedPutEmbeddingsCommand(EmbeddingsGenerationScriptRun taskResults, EmbeddingsGenerationTaskIdentifier embeddingsTaskIdentifier, DocumentDatabase database)
+        private readonly EmbeddingsGenerationConfiguration _configuration;
+
+        public MergedPutEmbeddingsCommand(EmbeddingsGenerationScriptRun taskResults, EmbeddingsGenerationTaskIdentifier embeddingsTaskIdentifier,
+            DocumentDatabase database)
         {
             _taskResults = taskResults;
             _embeddingsTaskIdentifier = embeddingsTaskIdentifier;
@@ -247,7 +298,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         private Dictionary<string, List<string>> LoadNamesOfExistingAttachmentsOfThisTransformer(Document embeddingsDocument)
         {
             var destination = new Dictionary<string, List<string>>();
-        
+
             if (embeddingsDocument == null)
                 return destination;
 
@@ -258,22 +309,22 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 foreach (var path in etlEmbeddingsByPath.GetPropertyNames())
                 {
                     var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(_embeddingsTaskIdentifier, path);
-                    
+
                     // We need to read the property at it is, since it may contain dots, etc and BlittableJsonTraverserHelper detects them as nested properties.
                     if (etlEmbeddingsByPath.TryGetMember(path, out var attachmentsArrayObject) == false)
                         continue;
-        
-                    if (attachmentsArrayObject is not BlittableJsonReaderArray array) 
+
+                    if (attachmentsArrayObject is not BlittableJsonReaderArray array)
                         continue; // this should never happen unless user manually modifies the embeddings document
-                            
+
                     ref var currentRemoval = ref CollectionsMarshal.GetValueRefOrAddDefault(destination, path, out _);
                     currentRemoval ??= new(array.Length);
-                            
+
                     foreach (var item in array.Items)
                         currentRemoval.Add(EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, item.ToString(), _configuration.Quantization));
                 }
             }
-            
+
             return destination;
         }
 
@@ -292,10 +343,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
 
         private BlittableJsonReaderObject GetModifiedCurrentDocument(Document embeddingsDocument, DynamicJsonValue embeddingsDocumentModification)
         {
-            embeddingsDocument.Data.Modifications = new DynamicJsonValue
-            {
-                [_embeddingsTaskIdentifier.Value] = embeddingsDocumentModification
-            };
+            embeddingsDocument.Data.Modifications = new DynamicJsonValue { [_embeddingsTaskIdentifier.Value] = embeddingsDocumentModification };
 
             return embeddingsDocument.Data;
         }
@@ -307,7 +355,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 isNewDocument = true;
                 return context.ReadObject(newDocument, documentId);
             }
-            
+
             PortableExceptions.ThrowIfNot<InvalidCastException>(document is BlittableJsonReaderObject, $"Unexpected document type: {document.GetType().FullName}");
 
             isNewDocument = false;
@@ -328,12 +376,13 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 var embeddingsDocumentModification = new DynamicJsonValue();
                 if (quantization != VectorEmbeddingType.Single)
                     embeddingsDocumentModification[Constants.Documents.Metadata.Quantization] = quantization.ToString();
-                
-                
+
+
                 // Load the embeddings document (if it exists) to track which attachments need to be removed (on update)
-                using var embeddingsDocument = _database.AiIntegrations.Embeddings.Storage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);
+                using var embeddingsDocument =
+                    _database.AiIntegrations.Embeddings.Storage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);
                 var currentAttachmentsOfEmbeddingsFromThisTransformer = LoadNamesOfExistingAttachmentsOfThisTransformer(embeddingsDocument);
-                
+
                 foreach (var embeddingsByPath in document.Values)
                 {
                     var currentPath = embeddingsByPath.Key;
@@ -341,79 +390,81 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(_embeddingsTaskIdentifier, currentPath);
                     var namesOfNewAttachments = new DynamicJsonArray();
                     alreadyAddedAttachments.Clear();
-                    
+
                     foreach (var embedding in generatedEmbeddings)
                     {
-                        _database.AiIntegrations.Embeddings.Storage.PutOrUpdateEmbeddingCacheDocument(context, embedding, expireAt, _configuration.EmbeddingsCacheExpiration);
+                        _database.AiIntegrations.Embeddings.Storage.PutOrUpdateEmbeddingCacheDocument(context, embedding, expireAt,
+                            _configuration.EmbeddingsCacheExpiration);
                         embedding.GenerateDestinationAttachmentName(prefix, quantization);
-                        
+
                         if (alreadyAddedAttachments.Add(embedding.DestinationAttachmentName) == false)
                             continue;
-                        
+
                         namesOfNewAttachments.Add(embedding.ValueHash);
                     }
-                    
+
                     embeddingsDocumentModification[currentPath] = namesOfNewAttachments;
                 }
 
-                object documentToProcess = embeddingsDocument is null 
-                    ? CreateNewDocument(document.DocumentCollectionName, embeddingsDocumentModification) 
+                object documentToProcess = embeddingsDocument is null
+                    ? CreateNewDocument(document.DocumentCollectionName, embeddingsDocumentModification)
                     : GetModifiedCurrentDocument(embeddingsDocument, embeddingsDocumentModification);
-                
+
                 using (var reader = GetReader(context, documentToProcess, embeddingsDocumentId, out var isNewDocument))
                 {
                     // Update the document
                     _database.DocumentsStorage.Put(context, embeddingsDocumentId, null, reader);
-                    
+
                     // Insert new embeddings
                     foreach (var embeddingsByPath in document.Values)
                     {
                         alreadyAddedAttachments.Clear();
-                        
+
                         var namesOfCurrentAttachments = currentAttachmentsOfEmbeddingsFromThisTransformer.GetValueOrDefault(embeddingsByPath.Key);
                         foreach (var embedding in embeddingsByPath.Value)
                         {
                             if (alreadyAddedAttachments.Add(embedding.DestinationAttachmentName) == false)
                                 continue;
-                            
+
                             // When true:
                             //  This embedding is already in the embeddings document. Therefore, we do not have to insert it again.
                             //  At the same time, we are removing it from the list of attachments to remove (essentially a no-op on attachment storage in case of an update).
                             if (namesOfCurrentAttachments?.Remove(embedding.DestinationAttachmentName) == true)
-                                continue; 
-                            
+                                continue;
+
                             _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, embedding.CacheDocumentId, embedding.ValueHash
                                 , embeddingsDocumentId, embedding.DestinationAttachmentName, null, AttachmentType.Document);
                         }
                     }
-                    
+
                     // Remove old embeddings
                     foreach (var embeddingsByPath in currentAttachmentsOfEmbeddingsFromThisTransformer)
                     {
                         foreach (var attachmentToRemove in embeddingsByPath.Value)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, embeddingsDocumentId, attachmentToRemove, null, out _, extractCollectionName: false);
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, embeddingsDocumentId, attachmentToRemove, null, out _,
+                                extractCollectionName: false);
                         }
                     }
                 }
             }
-            
+
             foreach (var item in _taskResults.Removals)
             {
                 var documentEmbeddingsToDeleteId = EmbeddingsHelper.GetEmbeddingDocumentId(item.DocumentId);
                 _database.DocumentsStorage.Delete(context, documentEmbeddingsToDeleteId, DocumentFlags.None);
             }
-            
+
             return _taskResults.Additions.Count + _taskResults.Removals.Count;
         }
-        
+
         public void Dispose()
         {
-            
         }
 
         // todo
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
+            ToDto(DocumentsOperationContext context)
         {
             throw new NotImplementedException();
         }

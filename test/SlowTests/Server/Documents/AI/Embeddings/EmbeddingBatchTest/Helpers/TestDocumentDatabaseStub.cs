@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 using Raven.Server.Logging;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
@@ -21,7 +22,7 @@ public class TestDocumentDatabaseStub
             BatchTimeoutInMs = 200,
             MaxBatchSize = 100,
             MaxRetries = 3,
-            RetryDelayMs = 200,
+            RetryDelayMs = new TimeSetting(200, TimeUnit.Milliseconds),
             MaxConcurrentBatches = 4
         };
 
