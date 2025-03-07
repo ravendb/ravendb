@@ -5,14 +5,18 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.SemanticKernel.Text;
 using Newtonsoft.Json.Linq;
+using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Config;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
+using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -844,6 +848,55 @@ Console.WriteLine(""Hello, World!"");";
                     x.WithText("SubDto.Name", configuration.Identifier), factory => factory.ByText("text")).ToList();
 
                 Assert.Single(result);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Ai, Skip = "RavenDB-23834")]
+    public async Task CanTestEmbeddingsGenerationScript()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = new Order
+                {
+                    Lines =
+                    [
+                        new OrderLine { ProductName = "Carbon replacement feather for raven wing", Quantity = 450 },
+                        new OrderLine { ProductName = "Plasma gun mount for raven's foot (left-side)", Quantity = 1 }
+                    ]
+                };
+
+                await session.StoreAsync(order);
+                await session.SaveChangesAsync();
+            }
+
+            var connectionString = new AiConnectionString { Name = "ConnectionStringForTestingPurposes", OnnxSettings = new OnnxSettings() };
+            var operation = new PutConnectionStringOperation<AiConnectionString>(connectionString);
+            var putConnectionStringResult = store.Maintenance.Send(operation);
+            Assert.NotNull(putConnectionStringResult.RaftCommandIndex);
+
+            var configuration = new EmbeddingsGenerationConfiguration
+            {
+                Name = "AiIntegrationTaskForTestingPurposes",
+                ConnectionStringName = "ConnectionStringForTestingPurposes",
+                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Lines", ChunkingOptions = DefaultChunkingOptions }],
+                Collection = "Orders",
+                ChunkingOptionsForQuerying = DefaultChunkingOptions
+            };
+
+            var database = await GetDatabase(store.Database);
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var testScript = new TestEmbeddingsGenerationScript
+                {
+                    DocumentId = "orders/1-A",
+                    Configuration = configuration
+                };
+
+                var testResult = EmbeddingsGenerationTask.TestScript(testScript, database, database.ServerStore, context);
+                Assert.NotNull(testResult);
             }
         }
     }

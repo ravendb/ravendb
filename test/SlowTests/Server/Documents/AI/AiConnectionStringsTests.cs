@@ -1,18 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using FastTests;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
-using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
-using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 #pragma warning disable SKEXP0001
@@ -25,55 +19,6 @@ public class AiConnectionStringsTests : RavenTestBase
 
     public AiConnectionStringsTests(ITestOutputHelper output) : base(output)
     {
-    }
-
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    public async Task CanTestAiIntegrationScript()
-    {
-        using (var store = GetDocumentStore())
-        {
-            using (var session = store.OpenAsyncSession())
-            {
-                var order = new Order
-                {
-                    Lines =
-                    [
-                        new OrderLine { ProductName = "Carbon replacement feather for raven wing", Quantity = 450 },
-                        new OrderLine { ProductName = "Plasma gun mount for raven's foot (left-side)", Quantity = 1 }
-                    ]
-                };
-
-                await session.StoreAsync(order);
-                await session.SaveChangesAsync();
-            }
-
-            var connectionString = new AiConnectionString { Name = "ConnectionStringForTestingPurposes", OnnxSettings = new OnnxSettings() };
-            var operation = new PutConnectionStringOperation<AiConnectionString>(connectionString);
-            var putConnectionStringResult = store.Maintenance.Send(operation);
-            Assert.NotNull(putConnectionStringResult.RaftCommandIndex);
-            
-            var configuration = new EmbeddingsGenerationConfiguration
-            {
-                Name = "AiIntegrationTaskForTestingPurposes",
-                ConnectionStringName = "ConnectionStringForTestingPurposes",
-                EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Lines", ChunkingOptions = DefaultChunkingOptions }],
-                Collection = "Orders",
-                ChunkingOptionsForQuerying = DefaultChunkingOptions
-            };
-
-            var database = await GetDatabase(store.Database);
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var testScript = new TestEmbeddingsGenerationScript
-                {
-                    DocumentId = "orders/1-A",
-                    Configuration = configuration
-                };
-
-                var testResult = EmbeddingsGenerationTask.TestScript(testScript, database, database.ServerStore, context);
-                Assert.NotNull(testResult);
-            }
-        }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
