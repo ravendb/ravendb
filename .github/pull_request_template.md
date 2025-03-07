@@ -42,6 +42,7 @@ https://issues.hibernatingrhinos.com/issue/RavenDB-...
 - [ ] Tests have been added that prove the fix is effective or that the feature works
 - [ ] Internal classes added to the test class (e.g. entity or index definition classes) have the lowest possible access modifier (preferable `private`) 
 - [ ] It has been verified by manual testing
+- [ ] Existing tests verify the correct behavior
 
 ### Testing by RavenDB QA team
 
