@@ -104,7 +104,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                         <RichPanelDetailItem label="Identifier">
                             {connection.identifier}
                             <Button
-                                color="link"
+                                variant="link"
                                 onClick={() =>
                                     copyToClipboard.copy(connection.identifier, "Identifier copied to clipboard")
                                 }

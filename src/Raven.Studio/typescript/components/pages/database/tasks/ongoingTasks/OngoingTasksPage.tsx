@@ -432,7 +432,7 @@ export function OngoingTasksPage() {
                                         {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
-                                        onToggleDetails={startTrackingProgress}
+                                        onToggleDetails={startTrackingEtlProgress}
                                         showItemPreview={showItemPreview}
                                     />
                                 ))}

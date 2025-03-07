@@ -1,4 +1,5 @@
-﻿import { Button, Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+﻿import { Form, Label } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { FormInput, FormSelect } from "components/common/Form";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
@@ -18,6 +19,7 @@ import OpenAiSettings from "components/pages/database/settings/connectionStrings
 import MistralaiAiSettings from "./aiFields/MistralaiAiSettings";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import TaskUtils from "components/utils/TaskUtils";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -81,13 +83,12 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 <div className="mb-2">
                     <Label>
                         Identifier <OptionalLabel />
-                        <Icon icon="info" color="info" margin="ms-1" id="identifier" />
-                        <UncontrolledPopover target="identifier" trigger="hover" className="bs5">
-                            <PopoverBody>
-                                A unique identifier used in document paths. If not specified, will be auto-generated
-                                from the connection name.
-                            </PopoverBody>
-                        </UncontrolledPopover>
+                        <PopoverWithHoverWrapper
+                            message="A unique identifier used in document paths. If not specified, will be auto-generated
+                                from the connection name."
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" id="identifier" />
+                        </PopoverWithHoverWrapper>
                     </Label>
                     <FormInput
                         control={control}
@@ -96,7 +97,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         placeholder="Enter identifier for the connection string"
                         disabled={isUsedByAnyTask}
                         addon={
-                            <Button color="link" className="text-reset px-0" onClick={handleGenerateIdentifier}>
+                            <Button variant="link" className="text-reset px-0" onClick={handleGenerateIdentifier}>
                                 <Icon icon="refresh" />
                                 Regenerate
                             </Button>

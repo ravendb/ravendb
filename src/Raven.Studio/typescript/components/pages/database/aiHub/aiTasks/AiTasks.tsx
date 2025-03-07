@@ -14,16 +14,20 @@ import { useAppSelector } from "components/store";
 import TaskUtils from "components/utils/TaskUtils";
 import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
 import { useReducer, useState, useCallback, useEffect } from "react";
-import { Button, Row } from "reactstrap";
-import { OngoingTaskProgressProvider } from "../../tasks/ongoingTasks/OngoingTaskProgressProvider";
-import OngoingTaskSelectActions from "../../tasks/ongoingTasks/OngoingTaskSelectActions";
-import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "../../tasks/ongoingTasks/OngoingTasksReducer";
+import { Row } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { EmbeddingsGenerationPanel } from "../../tasks/ongoingTasks/panels/EmbeddingsGenerationPanel";
 import OngoingTaskOperationConfirm from "../../tasks/shared/OngoingTaskOperationConfirm";
 import { useOngoingTasksOperations, BaseOngoingTaskPanelProps, taskKey } from "../../tasks/shared/shared";
 import { Icon } from "components/common/Icon";
 import AiTasksInfoHub from "./AiTasksInfoHub";
-import OngoingTaskAddModal from "../../tasks/ongoingTasks/OngoingTaskAddModal";
+import OngoingTaskAddModal from "../../tasks/ongoingTasks/partials/OngoingTaskAddModal";
+import OngoingTaskSelectActions from "../../tasks/ongoingTasks/partials/OngoingTaskSelectActions";
+import {
+    ongoingTasksReducer,
+    ongoingTasksReducerInitializer,
+} from "../../tasks/ongoingTasks/partials/OngoingTasksReducer";
+import { EtlProgressProvider } from "../../tasks/ongoingTasks/partials/OngoingTaskProgressProviders";
 
 type EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 
@@ -82,7 +86,7 @@ export default function AiTasks() {
     const onEtlProgress = useCallback(
         (progress: EtlTaskProgress[], location: databaseLocationSpecifier) => {
             dispatch({
-                type: "ProgressLoaded",
+                type: "EtlProgressLoaded",
                 progress,
                 location,
             });
@@ -147,7 +151,7 @@ export default function AiTasks() {
 
     return (
         <div className="content-padding ongoing-tasks-page">
-            {progressEnabled && <OngoingTaskProgressProvider onEtlProgress={onEtlProgress} />}
+            {progressEnabled && <EtlProgressProvider onProgress={onEtlProgress} />}
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>
                 <div className="hstack gap-3 flex-wrap">
@@ -161,7 +165,7 @@ export default function AiTasks() {
                                 />
                             )}
                             <div id="NewTaskButton">
-                                <Button onClick={toggleIsNewTaskModalOpen} color="primary" className="rounded-pill">
+                                <Button onClick={toggleIsNewTaskModalOpen} variant="primary" className="rounded-pill">
                                     <Icon icon="ongoing-tasks" addon="plus" />
                                     Add AI Task
                                 </Button>

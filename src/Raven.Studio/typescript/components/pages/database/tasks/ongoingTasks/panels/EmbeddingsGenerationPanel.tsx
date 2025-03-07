@@ -20,13 +20,15 @@ import {
     RichPanelInfo,
     RichPanelSelect,
 } from "components/common/RichPanel";
-import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
-import { Button, Collapse, Input } from "reactstrap";
+import { Input } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import Button from "react-bootstrap/Button";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import copyToClipboard from "common/copyToClipboard";
 import { Icon } from "components/common/Icon";
+import { OngoingEtlTaskDistribution } from "../partials/OngoingEtlTaskDistribution";
 
 type EmbeddingsGenerationPanelProps = BaseOngoingTaskPanelProps<OngoingTaskEmbeddingsGenerationInfo>;
 
@@ -45,7 +47,7 @@ function Details(props: EmbeddingsGenerationPanelProps & { canEdit: boolean }) {
                     <RichPanelDetailItem label="Identifier">
                         {identifier}
                         <Button
-                            color="link"
+                            variant="link"
                             onClick={() => copyToClipboard.copy(identifier, "Identifier copied to clipboard")}
                             size="xs"
                         >
@@ -115,9 +117,11 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps 
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse isOpen={detailsVisible}>
-                <Details {...props} canEdit={canEdit} />
-                <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+            <Collapse in={detailsVisible}>
+                <div>
+                    <Details {...props} canEdit={canEdit} />
+                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+                </div>
             </Collapse>
         </RichPanel>
     );

@@ -6,7 +6,8 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector, useAppDispatch } from "components/store";
 import { useEffect } from "react";
-import { Row, Col, Button } from "reactstrap";
+import { Row, Col } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import ConnectionStringsPanels from "../../settings/connectionStrings/ConnectionStringsPanels";
 import EditConnectionStrings from "../../settings/connectionStrings/EditConnectionStrings";
 import {
@@ -64,7 +65,7 @@ export default function AiConnectionStrings() {
                             }}
                         >
                             <Button
-                                color="primary"
+                                variant="primary"
                                 onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened("Ai"))}
                                 title="Add new connection string"
                                 disabled={!hasAiIntegrations}

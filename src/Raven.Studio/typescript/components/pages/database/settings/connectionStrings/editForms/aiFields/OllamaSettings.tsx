@@ -6,13 +6,14 @@ import {
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Label, UncontrolledPopover, PopoverBody } from "reactstrap";
+import { Label } from "reactstrap";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -40,27 +41,25 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     Model
-                    <Icon icon="info" color="info" id="model" margin="ms-1" />
-                    <UncontrolledPopover target="model" trigger="hover" className="bs5">
-                        <PopoverBody>The model that should be used.</PopoverBody>
-                    </UncontrolledPopover>
+                    <PopoverWithHoverWrapper message="The model that should be used.">
+                        <Icon icon="info" color="info" id="model" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </Label>
                 <FormInput control={control} name="ollamaSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
                 <Label>
                     URI
-                    <Icon icon="info" color="info" id="uri" margin="ms-1" />
-                    <UncontrolledPopover target="uri" trigger="hover" className="bs5">
-                        <PopoverBody>The URI of the Ollama API.</PopoverBody>
-                    </UncontrolledPopover>
+                    <PopoverWithHoverWrapper message="The URI of the Ollama API.">
+                        <Icon icon="info" color="info" id="uri" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </Label>
                 <FormInput control={control} name="ollamaSettings.uri" type="text" />
             </div>
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner
-                    color="secondary"
+                    variant="secondary"
                     icon="rocket"
                     onClick={asyncTest.execute}
                     isSpinning={asyncTest.loading}

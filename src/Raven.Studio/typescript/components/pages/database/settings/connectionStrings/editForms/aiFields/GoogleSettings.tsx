@@ -14,7 +14,8 @@ import {
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Label, UncontrolledPopover, PopoverBody } from "reactstrap";
+import { Label } from "reactstrap";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -43,10 +44,9 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label className="col-form-label">
                     AI Version <OptionalLabel />
-                    <Icon icon="info" color="info" id="aiVersion" margin="ms-1" />
-                    <UncontrolledPopover target="aiVersion" trigger="hover" className="bs5">
-                        <PopoverBody>The version of the Google AI.</PopoverBody>
-                    </UncontrolledPopover>
+                    <PopoverWithHoverWrapper message="The version of the Google AI.">
+                        <Icon icon="info" color="info" id="aiVersion" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </Label>
                 <FormSelect
                     control={control}
@@ -64,10 +64,9 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     API Key
-                    <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
-                    <UncontrolledPopover target="apiKey" trigger="hover" className="bs5">
-                        <PopoverBody>The API key to used to authenticate with the service.</PopoverBody>
-                    </UncontrolledPopover>
+                    <PopoverWithHoverWrapper message="The API key to used to authenticate with the service.">
+                        <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </Label>
 
                 <FormInput control={control} name="googleSettings.apiKey" type="password" passwordPreview />
@@ -75,17 +74,16 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     Model
-                    <Icon icon="info" color="info" id="model" margin="ms-1" />
-                    <UncontrolledPopover target="model" trigger="hover" className="bs5">
-                        <PopoverBody>The model that should be used.</PopoverBody>
-                    </UncontrolledPopover>
+                    <PopoverWithHoverWrapper message="The model that should be used.">
+                        <Icon icon="info" color="info" id="model" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </Label>
                 <FormInput control={control} name="googleSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner
-                    color="secondary"
+                    variant="secondary"
                     icon="rocket"
                     onClick={asyncTest.execute}
                     isSpinning={asyncTest.loading}
