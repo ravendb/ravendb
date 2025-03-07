@@ -37,7 +37,6 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
     private readonly EmbeddingsGenerationConfiguration _configuration;
     private EmbeddingsGenerationScriptRun _currentRun;
     private readonly PatchRequest _mainScript;
-    private EmbeddingsGenerationStatsScope _stats;
 
     public EmbeddingsGenerationScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, EmbeddingsGenerationConfiguration configuration) : base(database, context, null, behaviorFunctions)
     {

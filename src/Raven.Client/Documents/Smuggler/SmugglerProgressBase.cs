@@ -289,7 +289,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
                 sb.AppendLine("- Snowflake ETLs");
 
             if (EmbeddingsGenerationsUpdated)
-                sb.AppendLine("- AI Integrations");
+                sb.AppendLine("- Embeddings Generation tasks");
 
             if (SortersUpdated)
                 sb.AppendLine("- Sorters");

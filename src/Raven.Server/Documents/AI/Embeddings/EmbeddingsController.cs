@@ -53,6 +53,8 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
         var embeddings = await _batchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration);
 
+        var expireAt = aiIntegrations.Database.Time.GetUtcNow().Add(taskConfig.EmbeddingsCacheForQueryingExpiration);
+
         for (int i = 0; i < embeddings.Length; i++)
         {
             var embedding = embeddings[i];
@@ -69,7 +71,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
                 textualValue,
                 embeddingValue,
                 quantization,
-                connectionStringId) { ExpireAt = aiIntegrations.Database.Time.GetUtcNow().Add(taskConfig.EmbeddingsCacheForQueryingExpiration) };
+                connectionStringId) { ExpireAt = expireAt };
 
             embeddingsToCache.Add(embeddingCacheItem);
         }

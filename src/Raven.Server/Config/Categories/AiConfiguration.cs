@@ -15,7 +15,7 @@ public sealed class AiConfiguration : ConfigurationCategory
 
     [Description("Maximum number of embeddings generated for queries to be cached in a single batch")]
     [DefaultValue(128)]
-    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.MaxCatchBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.MaxCacheBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int QueryEmbeddingsGenerationMaxCacheBatchSize { get; set; }
 
     [Description("Time in milliseconds to wait for additional requests before processing a batch of embedding requests. Lower values reduce latency but may decrease throughput.")]
