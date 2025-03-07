@@ -69,8 +69,18 @@ class transformationScriptSyntax extends dialogViewModelBase {
                 sampleText = transformationScriptSyntax.amazonSqsEtlSampleText;
                 break;
             case "EmbeddingsGeneration":
-                sampleText = transformationScriptSyntax.embeddingsGenerationSampleText;
-                break;
+                switch (sampleTitle) {
+                    case "embeddingsGenerationSampleText":
+                        sampleText = transformationScriptSyntax.embeddingsGenerationSampleText;
+                        break;
+                    case "embeddingsGenerationSampleMarkdown":
+                        sampleText = transformationScriptSyntax.embeddingsGenerationSampleMarkdown;
+                        break;
+                    case "embeddingsGenerationSampleHtml":
+                        sampleText = transformationScriptSyntax.embeddingsGenerationSampleHtml;
+                        break;
+                }
+            break;
             default:
                 genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
         }
@@ -266,15 +276,30 @@ loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
 //});
 `;
 
-embeddingsGenerationSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleText);
+embeddingsGenerationSampleTextHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleText);
 
-static readonly embeddingsGenerationSampleText =`embeddings.generate({ 
-    Name: text.splitLines(this.Name, 512),
-    Description: markdown.splitParagraphs(this.Description, 1024),
-    Tags: html.stripHtml(this.HtmlBodyTags) 
-});
-`;
-    
+static readonly embeddingsGenerationSampleText =
+`embeddings.generate({ 
+    Name: this.Name, 
+    Description: text.splitLines(this.Description, 2048),
+    Paragraphs: text.splitParagraphs(this.Paragraphs, 2048)
+});`;
+
+embeddingsGenerationSampleMarkdownHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleMarkdown);
+
+static readonly embeddingsGenerationSampleMarkdown =
+`embeddings.generate({ 
+    MarkdownDescription: markdown.splitLines(this.MarkdownDescription, 2048),
+    MarkdownSections: markdown.splitParagraphs(this.MarkdownSections, 1024)
+});`
+
+embeddingsGenerationSampleHtmlHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleHtml);
+
+static readonly embeddingsGenerationSampleHtml =
+`embeddings.generate({ 
+    HtmlContent: html.strip(this.HtmlContent),
+    HtmlDivs: html.splitLines(this.HtmlDivs, 2048)
+});`
     
     
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);

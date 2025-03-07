@@ -117,10 +117,19 @@
                    <pre class="copy-area"><a href="#" class="copy-button-hidden margin-right-xs" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: amazonSqsEtlSampleHtml"></span></pre>
                </div>
            </div>
-           <div data-bind="if: etlType() === 'EmbeddingsGeneration'" class="copy-area">
+           <div data-bind="if: etlType() === 'EmbeddingsGeneration'">
                <h3 class="margin-bottom margin-top">Sample Embeddings Generation Script</h3>
-               <div class="margin-bottom">
-                   <pre class="copy-area"><a href="#" class="copy-button-hidden margin-right-xs" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: embeddingsGenerationSampleHtml"></span></pre>
+               <div>Text</div>
+               <div class="margin-bottom copy-area">
+                   <pre class="copy-area"><a href="#" class="copy-button-hidden margin-right-xs" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'embeddingsGenerationSampleText')"><i class="icon-copy"></i></a><span data-bind="html: embeddingsGenerationSampleTextHighlighted"></span></pre>
+               </div>
+               <div>Markdown</div>
+               <div class="margin-bottom copy-area">
+                   <pre class="copy-area"><a href="#" class="copy-button-hidden margin-right-xs" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'embeddingsGenerationSampleMarkdown')"><i class="icon-copy"></i></a><span data-bind="html: embeddingsGenerationSampleMarkdownHighlighted"></span></pre>
+               </div>
+               <div>HTML</div>
+               <div class="margin-bottom copy-area">
+                   <pre class="copy-area"><a href="#" class="copy-button-hidden margin-right-xs" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'embeddingsGenerationSampleHtml')"><i class="icon-copy"></i></a><span data-bind="html: embeddingsGenerationSampleHtmlHighlighted"></span></pre>
                </div>
            </div>
        </div>
