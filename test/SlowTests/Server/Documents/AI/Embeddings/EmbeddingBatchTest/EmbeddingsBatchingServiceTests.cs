@@ -63,7 +63,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
             await batchService.GetEmbeddingAsync(invalidConnectionStringId, ["Test text"], CancellationToken.None);
         });
         
-        Assert.True(ex.Message.Contains("Couldn't find Embeddings Generation task"), 
+        Assert.True(ex.Message.Contains("Couldn't find embedding generation service for connection string 'non-existent-connection'"), 
             $"Exception message should indicate the connection string wasn't found, but got: {ex.Message}");
     }
 }

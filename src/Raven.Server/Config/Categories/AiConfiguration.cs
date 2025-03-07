@@ -6,15 +6,15 @@ namespace Raven.Server.Config.Categories;
 [ConfigurationCategory(ConfigurationCategoryType.Ai)]
 public sealed class AiConfiguration : ConfigurationCategory
 {
-    [Description("Maximum number of documents processed in a single batch during AI embeddings generation. Higher values may improve throughput but require more memory.")]
+    [Description("Maximum number of documents processed in a single batch by Embeddings Generation task. Higher values may improve throughput but require more resources and higher limits in AI service.")]
     [DefaultValue(128)]
-    [ConfigurationEntry("Ai.Embeddings.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int? MaxNumberOfExtractedDocuments { get; set; }
+    [ConfigurationEntry("Ai.Embeddings.Generation.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int? EmbeddingsGenerationMaxBatchSize { get; set; }
 
-    [Description("Maximum number of embeddings generated from queries to be cached in a single batch")]
+    [Description("Maximum number of embeddings generated for queries to be cached in a single batch")]
     [DefaultValue(128)]
-    [ConfigurationEntry("Ai.Embeddings.MaxBatchSizeOfQueryGeneratedEmbeddingsToCache", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int MaxBatchSizeOfQueryGeneratedEmbeddingsToCache { get; set; }
+    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.MaxCatchBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int QueryEmbeddingsGenerationMaxCacheBatchSize { get; set; }
 
     [Description("Time in milliseconds to wait for additional requests before processing a batch of embedding requests. Lower values reduce latency but may decrease throughput.")]
     [DefaultValue(200)]

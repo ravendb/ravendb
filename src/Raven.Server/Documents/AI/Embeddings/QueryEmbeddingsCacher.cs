@@ -16,7 +16,7 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
 
     private readonly ConcurrentQueue<EmbeddingGenerationItem> _embeddingsQueue;
     private readonly AsyncManualResetEvent _mre;
-
+    private int _approximateCount;
     public QueryEmbeddingsCacher(DocumentDatabase database, CancellationToken shutdown) : base(database.Name, database.Loggers.GetLogger<QueryEmbeddingsCacher>(), shutdown)
     {
         _database = database;
@@ -30,20 +30,27 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
         {
             await _mre.WaitAsync(CancellationToken);
 
-            List<EmbeddingGenerationItem> payload = null;
+            _mre.Reset();
+
+            var maxBatchSize = _database.Configuration.Ai.QueryEmbeddingsGenerationMaxCacheBatchSize;
+
+            var payload = new List<EmbeddingGenerationItem>(Math.Min(_approximateCount, maxBatchSize));
 
             while (_embeddingsQueue.TryDequeue(out var item))
             {
-                payload ??= new List<EmbeddingGenerationItem>();
+                Interlocked.Decrement(ref _approximateCount);
 
                 payload.Add(item);
 
-                if (payload.Count >= _database.Configuration.Ai.MaxBatchSizeOfQueryGeneratedEmbeddingsToCache)
+                if (payload.Count >= maxBatchSize)
+                {
+                    _mre.Set(); // might be more
                     break;
+                }
             }
 
-            if (payload == null || payload.Count == 0)
-                return;
+            if (payload.Count == 0)
+                continue;
 
             var putEmbeddingsCommand = new PutQueryEmbeddingsCommand(payload, _database);
 
@@ -56,6 +63,8 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
         foreach (EmbeddingGenerationItem item in embeddings)
         {
             _embeddingsQueue.Enqueue(item);
+
+            Interlocked.Increment(ref _approximateCount);
         }
 
         _mre.Set();

@@ -17,7 +17,7 @@ public class TestDocumentDatabaseStub
     {
         Configuration = aiConfig ?? new AiConfiguration
         {
-            MaxNumberOfExtractedDocuments = 128,
+            EmbeddingsGenerationMaxBatchSize = 128,
             BatchTimeoutInMs = 200,
             MaxBatchSize = 100,
             MaxRetries = 3,
