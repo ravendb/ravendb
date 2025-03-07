@@ -133,7 +133,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 {connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "huggingFaceSettings" && <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {connectorType === "onnxSettings" && <OnnxSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "onnxSettings" && <OnnxSettings />}
                 {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "mistralaiAiSettings" && <MistralaiAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
 
@@ -248,17 +248,7 @@ const schema = yupObjectSchema<FormData>({
                 then: (schema) => schema.trim().required(),
             }),
     }),
-    onnxSettings: yup.object({
-        caseSensitive: yup.boolean().nullable(),
-        clsToken: yup.string().nullable(),
-        maximumTokens: yup.number().nullable(),
-        normalizeEmbeddings: yup.boolean().nullable(),
-        padToken: yup.string().nullable(),
-        poolingMode: yup.string<Raven.Client.Documents.Operations.AI.OnnxEmbeddingPoolingMode>().nullable(),
-        sepToken: yup.string().nullable(),
-        unicodeNormalization: yup.string<System.Text.NormalizationForm>().nullable(),
-        unknownToken: yup.string().nullable(),
-    }),
+    onnxSettings: yup.object({}),
     openAiSettings: yup.object({
         apiKey: yup
             .string()
@@ -336,17 +326,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 model: null,
                 uri: null,
             },
-            onnxSettings: {
-                caseSensitive: null,
-                clsToken: null,
-                maximumTokens: null,
-                normalizeEmbeddings: null,
-                padToken: null,
-                poolingMode: null,
-                sepToken: null,
-                unicodeNormalization: null,
-                unknownToken: null,
-            },
+            onnxSettings: {},
             openAiSettings: {
                 apiKey: null,
                 endpoint: null,

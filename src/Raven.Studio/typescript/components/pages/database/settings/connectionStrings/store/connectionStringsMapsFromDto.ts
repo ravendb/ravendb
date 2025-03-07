@@ -391,17 +391,7 @@ export function mapAiConnectionsFromDto(
                     model: connection.OllamaSettings?.Model,
                     uri: connection.OllamaSettings?.Uri,
                 },
-                onnxSettings: {
-                    caseSensitive: connection.OnnxSettings?.CaseSensitive,
-                    clsToken: connection.OnnxSettings?.ClsToken,
-                    maximumTokens: connection.OnnxSettings?.MaximumTokens,
-                    normalizeEmbeddings: connection.OnnxSettings?.NormalizeEmbeddings,
-                    padToken: connection.OnnxSettings?.PadToken,
-                    poolingMode: connection.OnnxSettings?.PoolingMode,
-                    sepToken: connection.OnnxSettings?.SepToken,
-                    unicodeNormalization: connection.OnnxSettings?.UnicodeNormalization,
-                    unknownToken: connection.OnnxSettings?.UnknownToken,
-                },
+                onnxSettings: {},
                 openAiSettings: {
                     apiKey: connection.OpenAiSettings?.ApiKey,
                     endpoint: connection.OpenAiSettings?.Endpoint,

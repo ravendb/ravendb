@@ -152,17 +152,7 @@ export interface AiConnection extends ConnectionBase {
         model?: string;
         uri?: string;
     };
-    onnxSettings?: {
-        caseSensitive?: boolean;
-        clsToken?: string;
-        maximumTokens?: number;
-        normalizeEmbeddings?: boolean;
-        padToken?: string;
-        poolingMode?: Raven.Client.Documents.Operations.AI.OnnxEmbeddingPoolingMode;
-        sepToken?: string;
-        unicodeNormalization?: System.Text.NormalizationForm;
-        unknownToken?: string;
-    };
+    onnxSettings?: Record<string, never>;
     openAiSettings?: {
         apiKey?: string;
         endpoint?: string;

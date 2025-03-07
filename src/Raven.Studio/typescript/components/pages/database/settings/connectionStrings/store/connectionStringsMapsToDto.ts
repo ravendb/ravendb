@@ -241,20 +241,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Uri: connection.ollamaSettings.uri,
                   }
                 : null,
-        OnnxSettings:
-            connection.connectorType === "onnxSettings"
-                ? {
-                      CaseSensitive: connection.onnxSettings.caseSensitive,
-                      ClsToken: connection.onnxSettings.clsToken,
-                      MaximumTokens: connection.onnxSettings.maximumTokens,
-                      NormalizeEmbeddings: connection.onnxSettings.normalizeEmbeddings,
-                      PadToken: connection.onnxSettings.padToken,
-                      PoolingMode: connection.onnxSettings.poolingMode,
-                      SepToken: connection.onnxSettings.sepToken,
-                      UnicodeNormalization: connection.onnxSettings.unicodeNormalization,
-                      UnknownToken: connection.onnxSettings.unknownToken,
-                  }
-                : null,
+        OnnxSettings: connection.connectorType === "onnxSettings" ? {} : null,
         OpenAiSettings:
             connection.connectorType === "openAiSettings"
                 ? {
