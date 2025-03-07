@@ -14,7 +14,6 @@ import AzureOpenAiSettings from "components/pages/database/settings/connectionSt
 import GoogleSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/GoogleSettings";
 import HuggingFaceSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/HuggingFaceSettings";
 import OllamaSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OllamaSettings";
-import OnnxSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OnnxSettings";
 import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
 import MistralaiAiSettings from "./aiFields/MistralaiAiSettings";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -133,7 +132,6 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 {connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "huggingFaceSettings" && <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {connectorType === "onnxSettings" && <OnnxSettings />}
                 {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "mistralaiAiSettings" && <MistralaiAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
 
