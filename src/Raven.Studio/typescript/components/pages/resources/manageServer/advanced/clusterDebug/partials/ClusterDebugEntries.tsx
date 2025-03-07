@@ -54,7 +54,8 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
     const deleteEntry = useCallback(
         async (logIndex: number) => {
             const isConfirmed = await confirm({
-                title: "Are you sure?",
+                title: "You're about to delete log item",
+                icon: "trash",
                 confirmText: "I understand the risk, delete",
                 message: (
                     <div>

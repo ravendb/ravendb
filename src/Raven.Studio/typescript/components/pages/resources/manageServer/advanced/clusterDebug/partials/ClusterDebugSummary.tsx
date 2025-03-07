@@ -1,7 +1,6 @@
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
-import ProgressBarWithTrackingPoint from "components/common/ProgressBarWithTrackingPoint";
 import "./ClusterDebugSummary.scss";
 import classNames from "classnames";
 import { nodeAwareLoadableData } from "hooks/useClusterWideAsync";
@@ -19,11 +18,12 @@ import useDialog from "components/common/Dialog";
 import Code from "components/common/Code";
 import ClusterSnapshotInstallation from "components/pages/resources/manageServer/advanced/clusterDebug/partials/ClusterSnapshotInstallation";
 import SizeGetter from "components/common/SizeGetter";
-import RichAlert from "components/common/RichAlert";
 import Table from "react-bootstrap/Table";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { Progress } from "reactstrap";
+import { EmptySet } from "components/common/EmptySet";
 
 interface ClusterDebugSummaryProps {
     nodes: nodeAwareLoadableData<ClusterDebugNodeInfo>[];
@@ -101,12 +101,11 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                 <th key={node.nodeTag}>
                                     <div className="d-flex gap-1 align-items-center">
                                         <span>
-                                            {node.data?.role === "Leader" ? (
-                                                <Icon icon="node-leader" color="node" />
-                                            ) : (
-                                                <Icon icon="cluster-member" />
-                                            )}
-                                            <span className="text-nowrap">{node.nodeTag}</span>
+                                            <Icon
+                                                icon={node.data?.role === "Leader" ? "node-leader" : "cluster-member"}
+                                                color="node"
+                                            />
+                                            <span className="text-nowrap">Node {node.nodeTag}</span>
                                         </span>
                                         {localNode?.nodeTag === node.nodeTag && (
                                             <Badge bg="node" pill>
@@ -139,9 +138,14 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                         className="align-content-center"
                                         key={node.nodeTag}
                                     >
-                                        <RichAlert variant="danger" title="Unable to connect" icon="cancel">
-                                            There was connection issue with node: {node.nodeTag}
-                                        </RichAlert>
+                                        <EmptySet color="danger" icon="warning">
+                                            <span>Unable to connect</span>
+                                            <br />
+                                            <small className="text-muted">
+                                                There was connection issue with{" "}
+                                                <Icon icon="node" addon="warning" margin="ms-1 me-1" /> {node.nodeTag}
+                                            </small>
+                                        </EmptySet>
                                     </td>
                                 );
                             }
@@ -165,14 +169,9 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                 </>
                                             }
                                         >
-                                            <div className="hstack gap-1">
-                                                <span className="text-nowrap">{node.data.progress}%</span>
-                                                <ProgressBarWithTrackingPoint
-                                                    startingPoint={0}
-                                                    progress={node.data.progress}
-                                                    endingPoint={100}
-                                                />
-                                            </div>
+                                            <Progress color="progress" value={node.data.progress} animated>
+                                                {node.data.progress}%
+                                            </Progress>
                                         </PopoverWithHoverWrapper>
                                     )}
                                 </ConditionalRender>
@@ -214,9 +213,13 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                             {node.data.chocked && (
                                                 <PopoverWithHoverWrapper
                                                     message={
-                                                        <span className="text-warning">
-                                                            Warning: No commits for over 2 minutes
-                                                        </span>
+                                                        <>
+                                                            <span className="text-warning">
+                                                                <Icon icon="warning" />
+                                                                Warning:
+                                                            </span>
+                                                            <span> No commits for over 2 minutes</span>
+                                                        </>
                                                     }
                                                 >
                                                     <Icon icon="warning" margin="ms-1" />
@@ -249,10 +252,11 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                     <FlexGrow />
                                                     <Button
                                                         variant="secondary"
-                                                        size="sm"
+                                                        size="xs"
                                                         onClick={() => openInstallationDetails(node.nodeTag)}
                                                     >
-                                                        view details
+                                                        <Icon icon="preview" />
+                                                        View details
                                                     </Button>
                                                 </div>
                                             );
@@ -339,7 +343,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                     key={connection.Destination}
                                                     onClick={() => showConnectionDetails(connection)}
                                                     variant={connection.Connected ? "success" : "danger"}
-                                                    className="margin-right-sm"
+                                                    className="me-1 rounded-pill"
                                                 >
                                                     <Icon icon={connection.Connected ? "connected" : "disconnected"} />
                                                     {connection.Destination}
@@ -361,11 +365,12 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                             <div>
                                                 {node.data.criticalError ? (
                                                     <Button
-                                                        size="sm"
+                                                        size="xs"
                                                         variant="danger"
                                                         onClick={() => openCriticalError(node.nodeTag)}
                                                     >
-                                                        view an error
+                                                        <Icon icon="preview" />
+                                                        View error
                                                     </Button>
                                                 ) : (
                                                     <>-</>
@@ -405,7 +410,7 @@ function ConditionalRender(props: ConditionalRenderProps) {
         case "failure":
             return null;
         case "success":
-            return <td className={tdClassName}>{children()}</td>;
+            return <td className={classNames("align-content-center", tdClassName)}>{children()}</td>;
         default:
             assertUnreachable(status);
     }
