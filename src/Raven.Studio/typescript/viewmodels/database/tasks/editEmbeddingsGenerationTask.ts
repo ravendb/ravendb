@@ -11,7 +11,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import jsonUtil = require("common/jsonUtil");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
-import EditAiEtlInfoHub = require("viewmodels/database/tasks/EditAiEtlInfoHub");
+import EditEmbeddingsGenerationInfoHub = require("viewmodels/database/tasks/EditEmbeddingsGenerationInfoHub");
 import typeUtils = require("common/typeUtils");
 import ongoingTaskEmbeddingsGenerationEditModel = require("models/database/tasks/ongoingTaskEmbeddingsGenerationEditModel");
 import EditConnectionStrings = require("components/pages/database/settings/connectionStrings/EditConnectionStrings");
@@ -49,7 +49,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     showEditTransformationArea: KnockoutComputed<boolean>;
    
     hasAiIntegrations = licenseModel.getStatusValue("HasAiIntegrations");
-    infoHubView: ReactInKnockout<typeof EditAiEtlInfoHub.EditAiEtlInfoHub>;
+    infoHubView: ReactInKnockout<typeof EditEmbeddingsGenerationInfoHub.EditEmbeddingsGenerationInfoHub>;
 
     isNewConnectionStringOpen = ko.observable<boolean>(false);
     newConnectionStringView: ReactInKnockout<typeof EditConnectionStrings.default>;
@@ -75,7 +75,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         aceEditorBindingHandler.install();
 
         this.infoHubView = ko.pureComputed(() => ({
-            component: EditAiEtlInfoHub.EditAiEtlInfoHub
+            component: EditEmbeddingsGenerationInfoHub.EditEmbeddingsGenerationInfoHub
         }));
 
         this.newConnectionStringView = ko.pureComputed(() => ({

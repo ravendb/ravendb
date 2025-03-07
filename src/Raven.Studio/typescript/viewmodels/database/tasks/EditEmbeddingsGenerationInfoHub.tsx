@@ -5,7 +5,7 @@ import { Icon } from "components/common/Icon";
 import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
-export function EditAiEtlInfoHub() {
+export function EditEmbeddingsGenerationInfoHub() {
     const hasAiIntegrations = useAppSelector(licenseSelectors.statusValue("HasAiIntegrations"));
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
