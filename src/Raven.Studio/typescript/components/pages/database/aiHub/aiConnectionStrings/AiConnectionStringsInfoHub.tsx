@@ -5,9 +5,14 @@ import FeatureAvailabilitySummaryWrapper, {
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppUrls } from "hooks/useAppUrls";
 
 export function AiConnectionStringsInfoHub() {
     const hasAiIntegrations = useAppSelector(licenseSelectors.statusValue("HasAiIntegrations"));
+
+    const { appUrl } = useAppUrls();
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -18,8 +23,6 @@ export function AiConnectionStringsInfoHub() {
             },
         ],
     });
-
-    // TODO adjust to only AI connection strings
 
     return (
         <AboutViewAnchored defaultOpen={hasAiIntegrations ? null : "licensing"}>
@@ -33,20 +36,28 @@ export function AiConnectionStringsInfoHub() {
                 <div>
                     <ul>
                         <li>
-                            RavenDB is designed to interact with diverse data storage solutions via replication, ETL, or
-                            incoming data processing.
+                            This view allows you to define and manage connection strings for AI model services that{" "}
+                            <strong>generate embeddings from text</strong>.
                         </li>
-                        <li className="margin-top-xxs">
-                            From this view, you can manage all the AI connection strings that may be used when defining
-                            an ongoing-task per data storage.
+                        <li className="mt-1">
+                            Each connection string specifies the details required to connect to a particular provider
+                            and can be reused across multiple{" "}
+                            <a href={appUrl.forAiTasks(activeDatabaseName)} target="_blank">
+                                embedding generation tasks
+                            </a>{" "}
+                            in the database.
                         </li>
-                        <li className="margin-top-xxs">
-                            New connection strings that have been created within an ongoing-task view will also be
-                            listed here.
-                        </li>
-                        <li className="margin-top-xxs">
-                            Connection strings that are in use by ongoing-tasks cannot be deleted, as they are essential
-                            for task functionality and data access.
+                        <li className="mt-1">
+                            Supported providers include:
+                            <ul>
+                                <li>Azure OpenAI</li>
+                                <li>Google AI</li>
+                                <li>Hugging Face</li>
+                                <li>Ollama</li>
+                                <li>OpenAI</li>
+                                <li>Mistral AI</li>
+                                <li>The built-in local model (bge-micro-v2)</li>
+                            </ul>
                         </li>
                     </ul>
                 </div>
