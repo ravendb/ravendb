@@ -205,7 +205,7 @@ public interface IVectorEmbeddingTextFieldValueFactory
     /// Defines queried texts.
     /// </summary>
     /// <param name="texts">Queried texts.</param>
-    public void ByText(IEnumerable<string> texts);
+    public void ByTexts(IEnumerable<string> texts);
 }
 
 public interface IVectorEmbeddingFieldValueFactory
@@ -240,7 +240,7 @@ public interface IVectorEmbeddingFieldValueFactory
     
     /// <inheritdoc cref="ByEmbedding{T}(System.Collections.Generic.IEnumerable{T})"/>
     /// <param name="embeddings">Array containing embeddings values.</param>
-    public void ByEmbedding<T>(T[][] embeddings) where T : unmanaged
+    public void ByEmbeddings<T>(T[][] embeddings) where T : unmanaged
 #if NET7_0_OR_GREATER
         , INumber<T>
 #endif
@@ -276,39 +276,39 @@ public interface IVectorFieldValueFactory : IVectorEmbeddingTextFieldValueFactor
 
 public interface IVectorFieldValueFactoryAccessor
 {
-    internal object Embedding { get; set; }
+    internal object Embeddings { get; set; }
     internal string Text { get; set; }
     internal IEnumerable<string> Texts { get; set; }
 }
 
 internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldValueFactoryAccessor
 {
-    public object Embedding { get; set; }
+    public object Embeddings { get; set; }
     public string Text { get; set; }
     public IEnumerable<string> Texts { get; set; }
     
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(IEnumerable<T> embedding)
     {
         AssertEmbeddingType<T>();
-        Embedding = embedding;
+        Embeddings = embedding;
     }
 
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(T[] embedding)
     {
         AssertEmbeddingType<T>();
-        Embedding = embedding;
+        Embeddings = embedding;
     }
     
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(IEnumerable<IEnumerable<T>> embeddings)
     {
         AssertEmbeddingType<T>();
-        Embedding = embeddings;
+        Embeddings = embeddings;
     }
     
-    void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(T[][] embeddings)
+    void IVectorEmbeddingFieldValueFactory.ByEmbeddings<T>(T[][] embeddings)
     {
         AssertEmbeddingType<T>();
-        Embedding = embeddings;
+        Embeddings = embeddings;
     }
 
     private static void AssertEmbeddingType<T>()
@@ -337,14 +337,14 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldV
         Text = text;
     }
     
-    void IVectorEmbeddingTextFieldValueFactory.ByText(IEnumerable<string> texts)
+    void IVectorEmbeddingTextFieldValueFactory.ByTexts(IEnumerable<string> texts)
     {
         Texts = texts;
     }
     
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(RavenVector<T> embedding)
     {
-        Embedding = embedding;
+        Embeddings = embedding;
     }
 
 }

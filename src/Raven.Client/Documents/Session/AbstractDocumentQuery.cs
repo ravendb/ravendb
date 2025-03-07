@@ -1526,9 +1526,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             
             var text = fieldValueFactoryAccessor.Text;
             var texts = fieldValueFactoryAccessor.Texts;
-            var embedding = fieldValueFactoryAccessor.Embedding;
+            var embeddings = fieldValueFactoryAccessor.Embeddings;
 
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embedding, embeddingsGenerationTaskIdentifier);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embeddings, embeddingsGenerationTaskIdentifier);
         }
         
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
@@ -1541,13 +1541,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             
             var text = embeddingValueFactory.Text;
             var texts = embeddingValueFactory.Texts;
-            var embedding = embeddingValueFactory.Embedding;
+            var embeddings = embeddingValueFactory.Embeddings;
             
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embedding, embeddingsGenerationTaskIdentifier);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embeddings, embeddingsGenerationTaskIdentifier);
         }
         
         private void VectorSearch(string fieldName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? minimumSimilarity,
-            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embedding, string embeddingsGenerationTaskIdentifier = null)
+            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embeddings, string embeddingsGenerationTaskIdentifier = null)
         {
             string queryParameterName;
             
@@ -1557,10 +1557,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             {
                 queryParameterName = AddQueryParameter(texts);
             }
-            else if (embedding != null)
+            else if (embeddings != null)
             {
                 // for well-known types we can convert the array into Base64
-                queryParameterName = AddQueryParameter(embedding switch
+                queryParameterName = AddQueryParameter(embeddings switch
                 {
                     float[] fa => Convert.ToBase64String(MemoryMarshal.Cast<float, byte>(fa)
 #if !NETCOREAPP3_1_OR_GREATER
@@ -1573,7 +1573,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                         .ToArray()
 #endif
                     ),
-                    _  => embedding
+                    _  => embeddings
                 });
             }
             else
