@@ -42,13 +42,13 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
     return (
         <>
             <RichAlert variant="warning">
-                Semantic Kernel&apos;s Hugging Face connector does not support batching as of now. Each request to a
-                Hugging Face model endpoint will be processed individually.
+                Semantic Kernel&apos;s Hugging Face connector does not support batching as of now. <br />
+                Each request to a Hugging Face model endpoint will be processed individually.
             </RichAlert>
             <div className="mb-2">
                 <Label>
                     API Key <OptionalLabel />
-                    <PopoverWithHoverWrapper message="The API key required for accessing the Hugging Face service.">
+                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the Hugging Face service.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -57,7 +57,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     Endpoint
-                    <PopoverWithHoverWrapper message="The endpoint for the text embedding generation service. If not specified, the default endpoint will be used.">
+                    <PopoverWithHoverWrapper message="The Hugging Face endpoint for generating embeddings from text. If not specified, the default endpoint is used.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -66,7 +66,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The name of the Hugging Face model.">
+                    <PopoverWithHoverWrapper message="The Hugging Face model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

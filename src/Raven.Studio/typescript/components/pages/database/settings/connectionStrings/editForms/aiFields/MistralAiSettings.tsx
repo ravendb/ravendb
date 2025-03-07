@@ -42,7 +42,7 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
             <div className="mb-2">
                 <Label>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key required for accessing the Mistral AI service.">
+                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the Mistral AI service.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -51,7 +51,7 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
             <div className="mb-2">
                 <Label>
                     Endpoint
-                    <PopoverWithHoverWrapper message="The endpoint for the Mistral AI service.">
+                    <PopoverWithHoverWrapper message="The Mistral AI endpoint for generating embeddings from text.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -60,7 +60,7 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The model ID for the Mistral AI service.">
+                    <PopoverWithHoverWrapper message="The Mistral AI model ID to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

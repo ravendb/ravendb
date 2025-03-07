@@ -43,7 +43,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key to used to authenticate with the service.">
+                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the Azure OpenAI service.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -53,7 +53,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     Endpoint
-                    <PopoverWithHoverWrapper message="The service endpoint that the client will send requests to.">
+                    <PopoverWithHoverWrapper message="The Azure OpenAI endpoint for generating embeddings from text.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -63,7 +63,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The model that should be used.">
+                    <PopoverWithHoverWrapper message="The Azure OpenAI model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -76,7 +76,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     <PopoverWithHoverWrapper
                         message={
                             <>
-                                AzureOpenAI deployment name.
+                                The name of the deployed Azure OpenAI model to use.
                                 <br />
                                 <a href="https://learn.microsoft.com/azure/cognitive-services/openai/how-to/create-resource">
                                     Learn more
@@ -95,10 +95,9 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     <PopoverWithHoverWrapper
                         message={
                             <>
-                                The number of dimensions the resulting output embeddings should have.
+                                The number of dimensions for the output embeddings.
                                 <br />
-                                <br />
-                                Only supported in &quot;text-embedding-3&quot; and later models.
+                                Supported only in &quot;text-embedding-3&quot; and later models.
                             </>
                         }
                     >

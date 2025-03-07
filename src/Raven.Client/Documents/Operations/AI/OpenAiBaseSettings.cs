@@ -18,7 +18,7 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
     }
 
     /// <summary>
-    /// The API key to used to authenticate with the service.
+    /// The API key to use to authenticate with the service.
     /// </summary>
     public string ApiKey { get; set; }
 

@@ -21,10 +21,10 @@ public sealed class GoogleSettings : AbstractAiSettings
     /// <summary>The model that should be used.</summary>
     public string Model { get; set; }
 
-    /// <summary>The API key to used to authenticate with the service.</summary>
+    /// <summary>The API key to use to authenticate with the service.</summary>
     public string ApiKey { get; set; }
 
-    /// <summary>The version of the Google AI.</summary>
+    /// <summary>The version of Google AI to use.</summary>
     public GoogleAIVersion? AiVersion { get; set; }
 
     /// <summary>

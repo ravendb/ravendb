@@ -84,8 +84,8 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     <Label>
                         Identifier <OptionalLabel />
                         <PopoverWithHoverWrapper
-                            message="A unique identifier used in document paths. If not specified, will be auto-generated
-                                from the connection name."
+                            message="A unique identifier used in document paths. If not specified, it will be auto-generated
+                                from the connection string name."
                         >
                             <Icon icon="info" color="info" margin="ms-1" id="identifier" />
                         </PopoverWithHoverWrapper>
@@ -94,10 +94,15 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         control={control}
                         name="identifier"
                         type="text"
-                        placeholder="Enter identifier for the connection string"
+                        placeholder="Enter an identifier for the connection string"
                         disabled={isUsedByAnyTask}
                         addon={
-                            <Button variant="link" className="text-reset px-0" onClick={handleGenerateIdentifier}>
+                            <Button
+                                color="link"
+                                className="text-reset px-0"
+                                onClick={handleGenerateIdentifier}
+                                title="Click to generate the identifier from the connection string name"
+                            >
                                 <Icon icon="refresh" />
                                 Regenerate
                             </Button>

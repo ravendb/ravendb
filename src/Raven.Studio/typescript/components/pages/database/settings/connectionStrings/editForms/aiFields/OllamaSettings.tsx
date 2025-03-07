@@ -41,7 +41,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The model that should be used.">
+                    <PopoverWithHoverWrapper message="The Ollama model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -50,7 +50,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     URI
-                    <PopoverWithHoverWrapper message="The URI of the Ollama API.">
+                    <PopoverWithHoverWrapper message="The Ollama API URI to use.">
                         <Icon icon="info" color="info" id="uri" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

@@ -44,7 +44,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label className="col-form-label">
                     AI Version <OptionalLabel />
-                    <PopoverWithHoverWrapper message="The version of the Google AI.">
+                    <PopoverWithHoverWrapper message="The Google AI version to use.">
                         <Icon icon="info" color="info" id="aiVersion" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -64,7 +64,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key to used to authenticate with the service.">
+                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the Google AI service.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
@@ -74,7 +74,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The model that should be used.">
+                    <PopoverWithHoverWrapper message="The Google AI model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

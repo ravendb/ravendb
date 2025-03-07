@@ -33,13 +33,13 @@
                             </div>
                             <div class="form-group" data-bind="validationElement: identifier">
                                 <label for="identifier" class="control-label">
-                                    Identifier <i class="icon-info text-info" title="A unique identifier used in document paths. If not specified, will be auto-generated from the task name."></i>
+                                    Identifier <i class="icon-info text-info" title="A unique identifier used in document paths. If not specified, it will be auto-generated from the task name."></i>
                                 </label>
                                 <div class="flex-horizontal w-100">
                                     <div class="flex-grow">
-                                        <input type="text" class="form-control" id="identifier" placeholder="Enter identifier (optional)" data-bind="textInput: identifier">
+                                        <input type="text" class="form-control" id="identifier" placeholder="Enter an identifier (optional)" data-bind="textInput: identifier">
                                     </div>
-                                    <button class="btn btn-default" data-bind="click: generateIdentifier">
+                                    <button class="btn btn-default" data-bind="click: generateIdentifier" title="Click to generate the identifier from the task name">
                                         <i class="icon-refresh"></i>
                                         <span>Regenerate</span>
                                     </button>
@@ -123,7 +123,8 @@
                         <div class="text-info bg-info flex-horizontal padding padding-sm">
                             <span class="flex-start"><i class="icon-info"></i></span>
                             <div class="margin-left margin-left-sm">
-                                Embeddings created by this task will be cached. To ensure they expire and are deleted after the specified duration, the 'Expiration' feature must be enabled.
+                                Embeddings created by this task will be cached.<br/>
+                                To ensure they expire and are deleted after the specified duration, enable 'document expiration'.
                             </div>
                         </div>
                     </div>
@@ -269,7 +270,7 @@
                     <div class="panel-heading padding" data-bind="click: $root.toggleAccordion" style="cursor: pointer;">
                         <h3 class="panel-title">
                             Querying
-                            <i class="icon-info text-info" title="Query parameters containing vector fields will have embeddings generated during query execution."></i>
+                            <i class="icon-info text-info" title="When making a vector search query, embeddings are also generated from the provided search term for comparison with the stored vectors."></i>
                             <span class="pull-right toggle-icon" data-bind="css: { 'icon-chevron-down': !$root.isAccordionOpen(), 'icon-chevron-up': $root.isAccordionOpen() }"></span>
                         </h3>
                     </div>

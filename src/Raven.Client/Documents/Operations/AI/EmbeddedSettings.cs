@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// </summary>
 public sealed class EmbeddedSettings : AbstractAiSettings
 {
-    // We're using a server-wide, singletone ONNX service, and it can't be configured intentionally.
+    // We're using a server-wide, singleton ONNX service, and it can't be configured intentionally.
     public override void ValidateMandatoryFields(ref List<string> errors)
     {
         // nothing to validate
