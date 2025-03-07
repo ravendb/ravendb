@@ -48,7 +48,7 @@ public static class AiExtensions
     
     public static void Configure(this IKernelBuilder kernelBuilder, EmbeddingsGenerationConfiguration configuration, bool withLogging)
     {
-        ConfigureInternal(kernelBuilder, configuration.AiConnectorType ,configuration.Connection, withLogging);
+        ConfigureInternal(kernelBuilder, configuration.AiConnectorType, configuration.Connection, withLogging);
     }
 
     private static void ConfigureInternal(this IKernelBuilder kernelBuilder, AiConnectorType connectorType, AiConnectionString connectionString, bool withLogging)

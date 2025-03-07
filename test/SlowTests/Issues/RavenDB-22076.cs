@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
@@ -8,18 +7,9 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
-using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Vector;
-using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Config;
-using Raven.Server.Documents.AI.Embeddings;
-using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -71,11 +61,6 @@ public class RavenDB_22076 : RavenTestBase
                     factory => factory.ByText("aaaa")).ToString();
                 
                 Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField), $p0)", q7);
-
-                var q8 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName").TargetQuantization(VectorEmbeddingType.Int8),
-                    factory => factory.ByText("aaaa")).ToString();
-                
-                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField, 'EtlConfigName'), $p0)", q8);
             }
         }
     }
@@ -171,10 +156,6 @@ public class RavenDB_22076 : RavenTestBase
                 var q6 = session.Query<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByBase64("aaaa==")).ToString();
                 
                 Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0)", q6);
-                
-                var q7 = session.Query<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName"), factory => factory.ByText("SomeText")).ToString();
-                
-                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField, 'EtlConfigName'), $p0)", q7);
             }
         }
     }

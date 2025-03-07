@@ -285,8 +285,9 @@ namespace SlowTests.Issues
                 EtlType.Olap,
                 EtlType.ElasticSearch,
                 EtlType.Queue,
-                EtlType.Snowflake
-                };
+                EtlType.Snowflake,
+                EtlType.EmbeddingsGeneration
+            };
 
             var currentEtlTypes = Enum.GetValues(typeof(EtlType)).Cast<EtlType>();
             var newEtlTypes = currentEtlTypes.Except(knownEtlTypes).ToArray();

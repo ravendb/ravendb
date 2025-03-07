@@ -16,6 +16,26 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 {
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanGenerateRqlFromLinq(Options options)
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var q1 = session.Query<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName"), factory => factory.ByText("SomeText")).ToString();
+                
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField,ai.task('EtlConfigName')), $p0)", q1);
+                
+                var q2 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName").TargetQuantization(VectorEmbeddingType.Int8),
+                    factory => factory.ByText("aaaa")).ToString();
+                
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField,ai.task('EtlConfigName')), $p0)", q2);
+            }
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanGenerateEmbeddingsForQuerying(Options options)
     {
         const string queriedText = "fruit";
