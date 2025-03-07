@@ -1097,6 +1097,7 @@ namespace Raven.Server.Web.Authentication
                                 // Exporting with the private key, but without the password
                                 certBytes = cert.Export(X509ContentType.Pkcs12);
                                 certificate.Certificate = Convert.ToBase64String(certBytes);
+                                certificate.Password = null;
                             }
                             catch (Exception e)
                             {
