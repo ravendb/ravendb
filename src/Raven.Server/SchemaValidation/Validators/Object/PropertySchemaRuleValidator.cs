@@ -3,15 +3,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[DebuggerDisplay("'{_schemaPath}' property validator")]
+[DebuggerDisplay("'{SchemaPath}' property validator")]
 public class PropertySchemaRuleValidator : ElementSchemaRuleValidator<BlittableJsonReaderObject, string>
 {
-    public string Property { get; }
+    public string Property => SchemaPath.Property;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public PropertySchemaRuleValidator(BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators, string property, string schemaPath) 
+    public PropertySchemaRuleValidator(BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators, SchemaPath schemaPath) 
         : base(typesRestriction, ruleValidators, schemaPath){
-        Property = property;
     }
     
     protected override bool TryGetElement(BlittableJsonReaderObject parent, string accessor, out (BlittableJsonToken Type, object Value) element)

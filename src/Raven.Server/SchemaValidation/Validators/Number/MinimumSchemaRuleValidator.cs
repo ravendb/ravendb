@@ -40,12 +40,12 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 [SchemaRule(SchemaValidatorConstants.minimum)]
 public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumSchemaRuleValidator>
 {
-    public override MinimumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var minimum) == false)
+        if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath.FullPath, out var minimum) == false)
             return null;
         
-        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.exclusiveMinimum, schemaPath, out bool exclusiveMinimum);
+        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.exclusiveMinimum, schemaPath.FullPath, out bool exclusiveMinimum);
 
         return new MinimumSchemaRuleValidator(minimum, exclusiveMinimum);
     }

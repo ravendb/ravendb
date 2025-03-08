@@ -26,9 +26,9 @@ public class PatternSchemaRuleValidator : StringSchemaRuleValidator
 [SchemaRule(SchemaValidatorConstants.pattern)]
 public class PatternSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PatternSchemaRuleValidator>
 {
-    public override PatternSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath, out var pattern) 
+        return SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath.FullPath, out var pattern) 
             ? new PatternSchemaRuleValidator(pattern)
             : null;
     }

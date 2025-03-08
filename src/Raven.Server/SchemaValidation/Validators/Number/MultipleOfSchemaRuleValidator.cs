@@ -27,9 +27,9 @@ public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
 [SchemaRule(SchemaValidatorConstants.multipleOf)]
 public class MultipleOfSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MultipleOfSchemaRuleValidator>
 {
-    public override MultipleOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var multipleOf)
+        return SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath.FullPath, out var multipleOf)
             ? new MultipleOfSchemaRuleValidator(multipleOf) 
             : null;
     }

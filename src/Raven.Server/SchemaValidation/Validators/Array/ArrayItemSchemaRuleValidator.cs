@@ -3,11 +3,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Array;
 
-[DebuggerDisplay("'{_schemaPath}' array item validator")]
+[DebuggerDisplay("'{SchemaPath}' array item validator")]
 public class ArrayItemSchemaRuleValidator : ElementSchemaRuleValidator<BlittableJsonReaderArray, int>
 {
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ArrayItemSchemaRuleValidator(BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators, string schemaPath) 
+    public ArrayItemSchemaRuleValidator(BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators, SchemaPath schemaPath) 
         : base(typesRestriction, ruleValidators, schemaPath)
     {
     }

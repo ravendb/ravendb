@@ -24,9 +24,9 @@ public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
 [SchemaRule(SchemaValidatorConstants.maxProperties)]
 public class MaxPropertiesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaxPropertiesSchemaRuleValidator>
 {
-    public override MaxPropertiesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath, out var maxProperties) 
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath.FullPath, out var maxProperties) 
             ? new MaxPropertiesSchemaRuleValidator(maxProperties)
             : null;
     }

@@ -23,9 +23,9 @@ public class MinPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
 [SchemaRule(SchemaValidatorConstants.minProperties)]
 public class MinPropertiesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinPropertiesSchemaRuleValidator>
 {
-    public override MinPropertiesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath, out var minProperties) 
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath.FullPath, out var minProperties) 
             ? new MinPropertiesSchemaRuleValidator(minProperties)
             : null;
     }

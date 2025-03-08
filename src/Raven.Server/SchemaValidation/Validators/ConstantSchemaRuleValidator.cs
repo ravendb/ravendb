@@ -32,7 +32,7 @@ public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
 [SchemaRule(SchemaValidatorConstants.@const)]
 public class ConstantSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ConstantSchemaRuleValidator>
 {
-    public override ConstantSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return schemaDefinition.TryGet(Rule, out object multipleOf)
             ? new ConstantSchemaRuleValidator(multipleOf) 

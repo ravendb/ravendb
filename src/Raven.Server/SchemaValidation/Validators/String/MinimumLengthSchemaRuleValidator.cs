@@ -26,9 +26,9 @@ public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
 [SchemaRule(SchemaValidatorConstants.minLength)]
 public class MinimumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumLengthSchemaRuleValidator>
 {
-    public override MinimumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath, out var minimumLength) 
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath.FullPath, out var minimumLength) 
             ? new MinimumLengthSchemaRuleValidator(minimumLength)
             : null;
     }
