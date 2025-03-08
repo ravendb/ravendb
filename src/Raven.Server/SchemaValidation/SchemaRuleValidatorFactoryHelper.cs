@@ -11,7 +11,7 @@ namespace Raven.Server.SchemaValidation;
 //TODO Find better name
 public abstract class SchemaRuleValidatorFactoryHelper
 {
-    private static  Dictionary<string, ISchemaRuleValidatorFactory> SchemaRuleValidatorFactories;
+    private static readonly Dictionary<string, ISchemaRuleValidatorFactory> SchemaRuleValidatorFactories;
     private static readonly ObjectSchemaRuleValidatorFactory ObjectSchemaRuleValidatorFactory = new ObjectSchemaRuleValidatorFactory();
     private static readonly ArraySchemaRuleValidatorFactory ArraySchemaRuleValidatorFactory = new ArraySchemaRuleValidatorFactory();
 
@@ -39,7 +39,7 @@ public abstract class SchemaRuleValidatorFactoryHelper
             .ToDictionary(x => x.Rule, x => x!.FactoryInstance);
     }
 
-    public static bool TryCreateValidator(string rule, BlittableJsonReaderObject schemaDefinition, string schemaPath, out ISchemaRuleValidator validator)
+    public static bool TryCreateValidator(string rule, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, out ISchemaRuleValidator validator)
     {
         if (SchemaRuleValidatorFactories.TryGetValue(rule, out ISchemaRuleValidatorFactory factory))
         {
@@ -50,11 +50,11 @@ public abstract class SchemaRuleValidatorFactoryHelper
         return false;
     }
 
-    public static ObjectSchemaRuleValidator CreateObjectValidator(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public static ObjectSchemaRuleValidator CreateObjectValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return ObjectSchemaRuleValidatorFactory.Create(schemaDefinition, schemaPath);
     }
-    public static ArraySchemaRuleValidator CreateArrayValidator(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public static ArraySchemaRuleValidator CreateArrayValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return ArraySchemaRuleValidatorFactory.Create(schemaDefinition, schemaPath);
     }

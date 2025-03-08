@@ -30,19 +30,23 @@ public class IfThenElseSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRe
 [SchemaRule(SchemaValidatorConstants.@if)]
 public class IfThenElseSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<IfThenElseSchemaRuleValidator>
 {
-    public override IfThenElseSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var ifSchema) == false)
+        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var ifSchema) == false)
             return null;
-        var ifSchemaValidator = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(ifSchema, schemaPath);
+        
+        var ifSchemaValidator = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(ifSchema, schemaPath + Rule);
 
-        if(SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.then, schemaPath, out var thenSchema) == false)
-            return null;
-        var thenValidator = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(thenSchema, schemaPath);
-
-        var elseValidator = SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.@else, schemaPath, out var elseSchema)
-            ? ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(elseSchema, schemaPath)
+        var thenValidator = SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.then, schemaPath.FullPath, out var thenSchema) == false
+            ? ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(thenSchema, schemaPath + SchemaValidatorConstants.then)
             : null;
+
+        var elseValidator = SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.@else, schemaPath.FullPath, out var elseSchema)
+            ? ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(elseSchema, schemaPath + SchemaValidatorConstants.@else)
+            : null;
+
+        if (thenValidator == null && elseValidator == null)
+            return null;
         
         return new IfThenElseSchemaRuleValidator(ifSchemaValidator, thenValidator, elseValidator);
     }

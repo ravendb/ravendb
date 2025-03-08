@@ -9,13 +9,13 @@ namespace Raven.Server.SchemaValidation.Validators.Object;
 [DebuggerDisplay("'{_schemaPath}' object validator")]
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    private readonly string _schemaPath;
+    private readonly SchemaPath _schemaPath;
     private readonly Dictionary<string, PropertySchemaRuleValidator> _namedPropertyValidators;
     private readonly (Regex Regex, PropertySchemaRuleValidator Validator)[] _patternPropertiesValidators;
     private readonly (bool Allowed, PropertySchemaRuleValidator Validator) _additionalPropertiesValidator;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ObjectSchemaRuleValidator(Dictionary<string, PropertySchemaRuleValidator> named, (Regex, PropertySchemaRuleValidator x)[] pattern, (bool IsAllowed, PropertySchemaRuleValidator Validator) additional, string schemaPath)
+    public ObjectSchemaRuleValidator(Dictionary<string, PropertySchemaRuleValidator> named, (Regex, PropertySchemaRuleValidator x)[] pattern, (bool IsAllowed, PropertySchemaRuleValidator Validator) additional, SchemaPath schemaPath)
     {
         _namedPropertyValidators = named;
         _patternPropertiesValidators = pattern;
@@ -79,12 +79,12 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
 
 public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ObjectSchemaRuleValidator>
 {
-    public override ObjectSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ObjectSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         //TODO To create an informative error when fails to read
-        var named = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.properties, schemaPath)?
+        var named = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.properties)?
             .ToDictionary(x => x.Property);
-        var pattern = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.patternProperties, schemaPath)?
+        var pattern = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.patternProperties)?
             .Select(x => (new Regex(x.Property), x)).ToArray();
 
         var additional = ReadAdditionalProperties(schemaDefinition, schemaPath);
@@ -96,49 +96,47 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
         return validator;
     }
     
-    private static (bool IsAllowed, PropertySchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    private static (bool IsAllowed, PropertySchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        //TODO Maybe change the schema path to full path
-        const string propertySpecifier = "#/additionalProperties"; //Used for error messages
-
-        if (schemaDefinition.TryGet(SchemaValidatorConstants.additionalProperties, out object additionalProperties) == false)
+        const string rule = SchemaValidatorConstants.additionalProperties;
+        if (schemaDefinition.TryGet(rule, out object additionalProperties) == false)
         {
             return (true, null);
         }
-
-        (bool, PropertySchemaRuleValidator validator) additionalPropertiesSchemaRuleValidator;
+        schemaPath += rule;
+        
         switch (additionalProperties)
         {
             case bool isAdditionalPropertiesAllowed:
                 return (isAdditionalPropertiesAllowed, null);
             case BlittableJsonReaderObject additionalPropertiesSchema:
             {
-                var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(additionalPropertiesSchema, schemaPath, propertySpecifier);
+                var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(additionalPropertiesSchema, schemaPath);
                 return (true, validator);
             }
             default:
                 //TODO To improve error message
                 throw new InvalidSchemaValidationDefinitionException(
-                    $"The value of 'additionalProperties' at '{schemaPath}' must be a boolean or an object, but received a value of type '{SchemaValidationHelper.GetPublicTypeOfObj(additionalProperties)}'."
+                    $"The value of '{rule}' must be a 'boolean' or an 'object', but received a value of type '{SchemaValidationHelper.GetPublicTypeOfObj(additionalProperties)}'. Schema path '{schemaPath}'."
                 );
         }
     }
 
-    private static List<PropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, string name, string schemaPath)
+    private static List<PropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        if (schemaDefinition.TryGet(name, out object readPropertySpecifiers) == false) 
+        if (schemaDefinition.TryGet(schemaPath.Property, out object readPropertySpecifiers) == false) 
             return null;
 
         if (readPropertySpecifiers is BlittableJsonReaderObject propertySpecifiers == false)
-            throw new InvalidSchemaValidationDefinitionException($"The value of '{name}' at '{schemaPath}' must be an object, but received a value of type '{SchemaValidationHelper.GetPublicTypeOfObj(readPropertySpecifiers)}'.");
+            throw new InvalidSchemaValidationDefinitionException($"The value of '{schemaPath.Property}' must be an 'object', but received a value of type '{SchemaValidationHelper.GetPublicTypeOfObj(readPropertySpecifiers)}'. Schema path '{schemaPath}'.");
             
         List<PropertySchemaRuleValidator> validators = null;
         foreach (var propertySpecifier in propertySpecifiers.GetPropertyNames())
         {
-            var propertySchemaPath = string.IsNullOrEmpty(schemaPath) ? propertySpecifier : $"{schemaPath}.{propertySpecifier}";
-            SchemaValidationHelper.TryGetObject(propertySpecifiers, propertySpecifier, propertySchemaPath, out var propertySchemaDefinition);
+            var propertySchemaPath = schemaPath + propertySpecifier;
+            SchemaValidationHelper.TryGetObject(propertySpecifiers, propertySpecifier, propertySchemaPath.FullPath, out var propertySchemaDefinition);
 
-            var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(propertySchemaDefinition, propertySchemaPath, propertySpecifier);
+            var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(propertySchemaDefinition, propertySchemaPath);
             (validators ??= []).Add(validator);
         }
 

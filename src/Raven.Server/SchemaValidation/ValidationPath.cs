@@ -5,7 +5,7 @@ using System.Text;
 namespace Raven.Server.SchemaValidation;
 
 //TODO To optimize
-public class SchemaValidatorPath
+public class ValidationPath
 {
     private readonly Stack<int> _sizes = new Stack<int>();
     private readonly StringBuilder _path = new StringBuilder();

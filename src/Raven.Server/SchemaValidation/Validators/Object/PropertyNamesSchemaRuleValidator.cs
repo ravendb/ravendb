@@ -6,35 +6,14 @@ namespace Raven.Server.SchemaValidation.Validators.Object;
 
 public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    SchemaRuleValidator<string>[] _propertyNameValidators;
-    private readonly string _schemaPath;
+    private readonly SchemaRuleValidator<string>[] _propertyNameValidators;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public PropertyNamesSchemaRuleValidator(string schemaPath)
+    public PropertyNamesSchemaRuleValidator(SchemaRuleValidator<string>[] propertyNameValidators)
     {
-        _schemaPath = schemaPath;
+        _propertyNameValidators = propertyNameValidators;
     }
 
-    public void Init(BlittableJsonReaderObject propertyNamesSchemaDefinition)
-    {
-        List<SchemaRuleValidator<string>> propertyNameValidators = null;
-        foreach (var rule in propertyNamesSchemaDefinition.GetPropertyNames())
-        {
-            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertyNamesSchemaDefinition, _schemaPath, out var validator) == false)
-                continue;
-
-            if (validator is not StringSchemaRuleValidator stringValidator)
-                throw new InvalidSchemaValidationDefinitionException(
-                    $"The rule '{rule}' defined in 'propertyNames' at '{_schemaPath}' is invalid because it includes constraints that are not applicable to strings.");
-
-            //TODO Maybe find more elegant way
-            stringValidator.FocusOnPropertyName();
-            (propertyNameValidators ??= new List<SchemaRuleValidator<string>>()).Add(stringValidator);
-        }
-
-        if (propertyNameValidators != null)
-            _propertyNameValidators = propertyNameValidators.ToArray();
-    }
     // ReSharper disable once ConvertToPrimaryConstructor
     protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
     {
@@ -57,13 +36,29 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
 [SchemaRule(SchemaValidatorConstants.propertyNames)]
 public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PropertyNamesSchemaRuleValidator>
 {
-    public override PropertyNamesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var propertyNames) == false)
+        if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var propertyNames) == false)
+            return null;
+        schemaPath += Rule;
+        List<SchemaRuleValidator<string>> propertyNameValidators = null;
+        foreach (var rule in propertyNames.GetPropertyNames())
+        {
+            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertyNames, schemaPath, out var ruleValidator) == false)
+                continue;
+            var ruleSchemaPath = schemaPath + rule;
+            if (ruleValidator is not StringSchemaRuleValidator stringValidator)
+                throw new InvalidSchemaValidationDefinitionException(
+                    $"The rule '{rule}' defined in 'propertyNames' at '{ruleSchemaPath}' is invalid because it includes constraints that are not applicable to strings.");
+
+            //TODO Maybe find more elegant way
+            stringValidator.FocusOnPropertyName();
+            (propertyNameValidators ??= []).Add(stringValidator);
+        }
+
+        if (propertyNameValidators == null)
             return null;
         
-        var validator = new PropertyNamesSchemaRuleValidator(schemaPath);
-        validator.Init(propertyNames);
-        return validator;
+        return new PropertyNamesSchemaRuleValidator(propertyNameValidators.ToArray());
     }
 }

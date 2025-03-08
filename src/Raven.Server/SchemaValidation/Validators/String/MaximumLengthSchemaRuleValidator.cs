@@ -26,9 +26,9 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
 [SchemaRule(SchemaValidatorConstants.maxLength)]
 public class MaximumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaximumLengthSchemaRuleValidator>
 {
-    public override MaximumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath, out var maximumLength) 
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath.FullPath, out var maximumLength) 
             ? new MaximumLengthSchemaRuleValidator(maximumLength)
             : null;
     }

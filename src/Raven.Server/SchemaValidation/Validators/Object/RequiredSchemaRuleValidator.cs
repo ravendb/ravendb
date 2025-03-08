@@ -35,9 +35,9 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
 [SchemaRule(SchemaValidatorConstants.required)]
 public class RequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<RequiredSchemaRuleValidator>
 {
-    public override RequiredSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath, out var required)
+        return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath.FullPath, out var required)
             ? new RequiredSchemaRuleValidator(required)
             : null;
     }

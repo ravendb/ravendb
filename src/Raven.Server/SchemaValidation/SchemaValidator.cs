@@ -17,7 +17,7 @@ public class SchemaValidator : IDisposable
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
         schemaDefinition = schemaDefinition.Clone(_context.Value);
-        _root = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(schemaDefinition, string.Empty);
+        _root = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(schemaDefinition, new SchemaPath());
     }
 
     public bool Validate(BlittableJsonReaderObject obj, out string errors)

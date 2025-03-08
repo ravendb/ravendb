@@ -494,10 +494,10 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenTheory(RavenTestCategory.JavaScript)]
-    [InlineData("invalidType", "The 'type' restriction must be one of the allowed types (null, integer, number, string, boolean, object, array), but found 'invalidType'. Path: 'prop'.")]
-    [InlineData(89, "Expected a value of type 'string' for 'type', but received 'integer' of type '89' at path 'prop'.")]
-    [InlineData(45.5, "Expected a value of type 'string' for 'type', but received 'number' of type '45.5' at path 'prop'.")]
-    [InlineData(true, "Expected a value of type 'string' for 'type', but received 'boolean' of type 'True' at path 'prop'.")]
+    [InlineData("invalidType", "The 'type' restriction must be one of the allowed types ('null', 'integer', 'number', 'string', 'boolean', 'object', 'array'), but found 'invalidType'. Schema path: 'properties.prop.type'.")]
+    [InlineData(89, "Expected a value of type 'string' for 'type', but received 'integer' of type '89' at path 'properties.prop.type'.")]
+    [InlineData(45.5, "Expected a value of type 'string' for 'type', but received 'number' of type '45.5' at path 'properties.prop.type'.")]
+    [InlineData(true, "Expected a value of type 'string' for 'type', but received 'boolean' of type 'True' at path 'properties.prop.type'.")]
     public void InvalidSchema_WhenTypeIsNotValid_ShouldThrow(object type, string error)
     {
         var schemaValidator = new SchemaValidator(ContextPool);
@@ -519,19 +519,19 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void InvalidSchema_WhenTypeIsObject_ShouldThrow()
     {
         var type = new DynamicJsonValue();
-        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'object' of type '{}' at path 'prop'.");
+        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'object' of type '{}' at path 'properties.prop.type'.");
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
     public void InvalidSchema_WhenTypeIsNull_ShouldThrow()
     {
-        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(null, "Expected a value of type 'string' for 'type', but received 'null' of type '' at path 'prop'.");
+        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(null, "Expected a value of type 'string' for 'type', but received 'null' of type '' at path 'properties.prop.type'.");
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
     public void InvalidSchema_WhenTypeRuleIsArrayOfInt_ShouldThrow()
     {
         var type = new DynamicJsonArray { 54 };
-        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'integer' of type '54' at path 'prop'.");
+        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'integer' of type '54' at path 'properties.prop.type'.");
     }
 }

@@ -7,7 +7,7 @@ namespace Raven.Server.SchemaValidation;
 
 public interface ISchemaRuleValidatorFactory
 {
-    ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath);
+    ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath);
 }
 
 public abstract class SchemaRuleValidatorFactory<T> : ISchemaRuleValidatorFactory where T : ISchemaRuleValidator
@@ -19,5 +19,5 @@ public abstract class SchemaRuleValidatorFactory<T> : ISchemaRuleValidatorFactor
         Rule = GetType().GetCustomAttribute<SchemaRuleAttribute>()?.Rule;
     }    
     
-    public abstract ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath);
+    public abstract ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath);
 }
