@@ -126,12 +126,9 @@ namespace SlowTests.Sharding.Backup
                     await session.SaveChangesAsync();
                 }
 
-                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
-
-                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
-                long taskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
-
-                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: BackupTestBase.GetCronForFarFuture());
+                var (taskId, runBackupOperation) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
+                await runBackupOperation.WaitForCompletionAsync();
 
                 // import
                 var dirs = Directory.GetDirectories(backupPath);
@@ -163,11 +160,8 @@ namespace SlowTests.Sharding.Backup
                     await session.SaveChangesAsync();
                 }
 
-                waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
-                
-                await Sharding.Backup.RunBackupAsync(store1, taskId, isFullBackup: false);
-
-                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                runBackupOperation = await Sharding.Backup.RunBackupAsync(store1, taskId, isFullBackup: false);
+                await runBackupOperation.WaitForCompletionAsync();
 
                 // import
 
@@ -547,8 +541,8 @@ namespace SlowTests.Sharding.Backup
 
                 var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
 
-                var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency:BackupTestBase.GetCronForFarFuture());
+                var (backupTaskId, op) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(backupTaskId + 3, TimeSpan.FromSeconds(10));
@@ -587,17 +581,17 @@ namespace SlowTests.Sharding.Backup
 
                 var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
 
-                var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency:BackupTestBase.GetCronForFarFuture());
+                var (backupTaskId, op) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                 var dirs = Directory.GetDirectories(backupPath).ToList();
                 Assert.Equal(cluster.Nodes.Count, dirs.Count);
 
-                var op = store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId));
+                var opResult = store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId));
 
-                var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await op);
+                var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await opResult);
 
                 Assert.Contains($"Database is sharded, can't use {nameof(GetPeriodicBackupStatusOperation)}, " +
                                 $"use {nameof(GetShardedPeriodicBackupStatusOperation)} instead", ex.Message);

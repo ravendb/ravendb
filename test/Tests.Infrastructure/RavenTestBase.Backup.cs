@@ -199,7 +199,8 @@ namespace FastTests
                     TryGetBackupStatusFromPeriodicBackupAndPrint(OperationStatus.Completed, OperationStatus.Completed, opId, periodicBackupRunner, status, backupResult);
                 }
             }
-
+            public static string GetCronForFarFuture() => $"* {DateTime.Now.AddHours(12).Hour} * * *"; 
+            
             public PeriodicBackupConfiguration CreateBackupConfiguration(string backupPath = null, BackupType backupType = BackupType.Backup, bool disabled = false, string fullBackupFrequency = "0 0 1 1 *",
                 string incrementalBackupFrequency = null, long? taskId = null, string mentorNode = null, BackupEncryptionSettings backupEncryptionSettings = null, AzureSettings azureSettings = null,
                 GoogleCloudSettings googleCloudSettings = null, S3Settings s3Settings = null, FtpSettings ftpSettings = null, RetentionPolicy retentionPolicy = null, string name = null, BackupUploadMode backupUploadMode = BackupUploadMode.Default, bool pinToMentorNode = false)
@@ -358,9 +359,8 @@ namespace FastTests
                 if (mode == RavenDatabaseMode.Single)
                     return await UpdateConfigAndRunBackupAsync(_parent.Server, config, store);
 
-                var backupCompleted = await _parent.Sharding.Backup.WaitForBackupToComplete(store);
-                var backupTaskId = await _parent.Sharding.Backup.UpdateConfigurationAndRunBackupAsync(_parent.Server, store, config);
-                Assert.True(WaitHandle.WaitAll(backupCompleted, TimeSpan.FromSeconds(10)));
+                var (backupTaskId, runBackupOperation) = await _parent.Sharding.Backup.UpdateConfigurationAndRunBackupAsync(_parent.Server, store, config);
+                await runBackupOperation.WaitForCompletionAsync();
 
                 return backupTaskId;
             }

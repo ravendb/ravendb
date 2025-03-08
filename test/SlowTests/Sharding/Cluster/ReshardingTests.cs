@@ -996,12 +996,9 @@ namespace SlowTests.Sharding.Cluster
                     session.SaveChanges();
                 }
 
-                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
-
-                var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config, isFullBackup: false);
-
-                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency:BackupTestBase.GetCronForFarFuture());
+                var (backupTaskId, runBackupOperation) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config, isFullBackup: false);
+                await runBackupOperation.WaitForCompletionAsync();
 
                 // migrate bucket
                 const string id = $"users/1${suffix}";
@@ -1035,10 +1032,8 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 // run backup again
-                waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
-
-                await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
-                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                runBackupOperation = await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
+                await runBackupOperation.WaitForCompletionAsync();
 
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(cluster.Nodes.Count, dirs.Length);

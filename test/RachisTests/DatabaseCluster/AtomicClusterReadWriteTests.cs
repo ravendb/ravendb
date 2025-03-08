@@ -344,7 +344,7 @@ namespace RachisTests.DatabaseCluster
                 // start backup
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
-                long taskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config, isFullBackup: true);
+                var (taskId, _) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config, isFullBackup: true);
 
                 var backupShard0 = database.PeriodicBackupRunner.PeriodicBackups.Single(x => x.Configuration.TaskId == taskId);
                 

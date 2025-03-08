@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
@@ -351,20 +352,19 @@ public partial class RavenTestBase
             return waitHandles.ToArray();
         }
 
-        public Task<long> UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+        public Task<(long TaskId, Operation runBackupOperation)> UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
         {
             return UpdateConfigurationAndRunBackupAsync(new List<RavenServer> { server }, store, config, isFullBackup);
         }
 
-        public async Task<long> UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+        public async Task<(long TaskId, Operation runBackupOperation)> UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
         {
             var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
             WaitForResponsibleNodeUpdateInCluster(store, servers, result.TaskId);
 
-            await RunBackupAsync(store, result.TaskId, isFullBackup);
-
-            return result.TaskId;
+            var runBackupOperation = await RunBackupAsync(store, result.TaskId, isFullBackup);
+            return (result.TaskId, runBackupOperation);
         }
 
         public async Task<long> UpdateConfigAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store)
@@ -405,17 +405,9 @@ public partial class RavenTestBase
             }
         }
 
-        public async Task RunBackupAsync(IDocumentStore store, long taskId, bool isFullBackup)
+        public async Task<Operation> RunBackupAsync(IDocumentStore store, long taskId, bool isFullBackup)
         {
-            try
-            {
-                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, taskId));
-                
-            }
-            catch (BackupAlreadyRunningException)
-            {
-                // backup may have started independently due to timer
-            }
+            return await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, taskId));
         }
 
         public IDisposable ReadOnly(string path)

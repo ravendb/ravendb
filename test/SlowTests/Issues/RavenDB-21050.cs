@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -78,17 +77,8 @@ public class RavenDB_21050 : RavenTestBase
     private async Task<long> WaitAndAssertForBackup(DocumentStore source, RavenDatabaseMode databaseMode, long backupTaskId, TimeSpan? timeout = null)
     {
         timeout ??= TimeSpan.FromMinutes(5);
-
-        WaitHandle[] backupsDone = null;
-        if (databaseMode == RavenDatabaseMode.Sharded)
-            backupsDone = await Sharding.Backup.WaitForBackupToComplete(source);
-        else
-            backupsDone = await Backup.WaitForBackupToComplete(source);
-
         var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-
-        Assert.True(WaitHandle.WaitAll(backupsDone, timeout.Value));
-
+        await backupStatus.WaitForCompletionAsync(timeout);
         return backupStatus.Id;
     }
 

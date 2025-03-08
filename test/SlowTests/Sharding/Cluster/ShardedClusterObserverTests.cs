@@ -727,8 +727,8 @@ namespace SlowTests.Sharding.Cluster
                 await TriggerAClusterTransactionToForceCheckTombstonesAsync(store);
                 
                 //run periodic backup on all shards
-                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
-                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(leader, store, config, isFullBackup: false);
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency:BackupTestBase.GetCronForFarFuture());
+                var (backupTaskId, _) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(leader, store, config, isFullBackup: false);
                 
                 //wait till all shards finish backing up the 2 tombstones
                 foreach (var node in nodes)
