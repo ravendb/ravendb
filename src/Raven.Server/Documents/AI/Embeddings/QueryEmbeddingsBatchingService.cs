@@ -8,12 +8,12 @@ using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.AI.Embeddings
 {
-    public sealed class EmbeddingsBatchingService(AiIntegrationsController aiIntegrations) : IDisposable
+    public sealed class QueryEmbeddingsBatchingService(AiIntegrationsController aiIntegrations) : IDisposable
     {
-        private readonly SemaphoreSlim _globalConcurrencyLimiter = new(aiIntegrations.Database.Configuration.Ai.MaxConcurrentBatches);
-        private readonly RavenLogger _logger = aiIntegrations.Database.Loggers.GetLogger<EmbeddingsBatchingService>();
+        private readonly SemaphoreSlim _globalConcurrencyLimiter = new(aiIntegrations.Database.Configuration.Ai.QueryEmbeddingsMaxConcurrentBatches);
+        private readonly RavenLogger _logger = aiIntegrations.Database.Loggers.GetLogger<QueryEmbeddingsBatchingService>();
 
-        private readonly ConcurrentDictionary<AiConnectionStringIdentifier, EmbeddingsBatchingWorker> _batchWorkers = new();
+        private readonly ConcurrentDictionary<AiConnectionStringIdentifier, QueryEmbeddingsBatchingWorker> _batchWorkers = new();
 
         public ValueTask<ReadOnlyMemory<float>[]> GetEmbeddingAsync(AiConnectionStringIdentifier connectionStringId, IList<string> values, CancellationToken cancellationToken = default)
         {
@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                 if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
                     throw new ArgumentException($"Couldn't find embedding generation service for connection string '{connectionStringId.Value}'");
 
-                var worker = new EmbeddingsBatchingWorker(aiIntegrations.Database.Name, aiIntegrations.Database.Configuration.Ai, service, aiConnectionStringIdentifier, _globalConcurrencyLimiter, _logger, aiIntegrations.Database.DatabaseShutdown);
+                var worker = new QueryEmbeddingsBatchingWorker(aiIntegrations.Database.Name, aiIntegrations.Database.Configuration.Ai, service, aiConnectionStringIdentifier, _globalConcurrencyLimiter, _logger, aiIntegrations.Database.DatabaseShutdown);
 
                 worker.Start();
                 return worker;
@@ -51,14 +51,14 @@ namespace Raven.Server.Documents.AI.Embeddings
 
         internal sealed class TestingStuff
         {
-            private readonly ConcurrentDictionary<AiConnectionStringIdentifier, EmbeddingsBatchingWorker> _batchWorkers;
+            private readonly ConcurrentDictionary<AiConnectionStringIdentifier, QueryEmbeddingsBatchingWorker> _batchWorkers;
 
-            public TestingStuff(ConcurrentDictionary<AiConnectionStringIdentifier, EmbeddingsBatchingWorker> batchWorkers)
+            public TestingStuff(ConcurrentDictionary<AiConnectionStringIdentifier, QueryEmbeddingsBatchingWorker> batchWorkers)
             {
                 _batchWorkers = batchWorkers;
             }
 
-            public EmbeddingsBatchingWorker GetBatchWorker(AiConnectionStringIdentifier connectionStringId)
+            public QueryEmbeddingsBatchingWorker GetBatchWorker(AiConnectionStringIdentifier connectionStringId)
             {
                 return _batchWorkers[connectionStringId];
             }

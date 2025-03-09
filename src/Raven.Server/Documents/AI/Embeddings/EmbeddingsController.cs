@@ -12,7 +12,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 {
     public EmbeddingsStorage Storage { get; private set; } = storage;
     public QueryEmbeddingsCacher QueryEmbeddingsCacher { get; private set; } = queryEmbeddingsCacher;
-    private readonly EmbeddingsBatchingService _batchingService = new(aiIntegrations);
+    private readonly QueryEmbeddingsBatchingService _queryBatchingService = new(aiIntegrations);
 
     public async Task<IEmbeddingValue[]> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext, ByteStringContext allocator,
         AiConnectionStringIdentifier connectionStringId,
@@ -51,7 +51,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
         List<EmbeddingGenerationItem> embeddingsToCache = null;
 
-        var embeddings = await _batchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration);
+        var embeddings = await _queryBatchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration);
 
         var expireAt = aiIntegrations.Database.Time.GetUtcNow().Add(taskConfig.EmbeddingsCacheForQueryingExpiration);
 
@@ -83,6 +83,6 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
     public void Dispose()
     {
-        _batchingService?.Dispose();
+        _queryBatchingService?.Dispose();
     }
 }

@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
+
 #pragma warning disable SKEXP0001
 
-namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest.Helpers;
+namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest.Helpers;
 
 public static class TestAiHelper
 {
@@ -22,18 +23,6 @@ public static class TestAiHelper
             FailureRateInPercentage = failureRate,
             ExceptionToThrow = exceptionToThrow
         };
-    }
-
-    public static TestAiIntegrationsController CreateAiIntegrationsController(
-        TestDocumentDatabaseStub db,
-        params (string connectionStringId, ITextEmbeddingGenerationService service)[] services)
-    {
-        var controller = new TestAiIntegrationsController(db);
-
-        foreach ((string id, ITextEmbeddingGenerationService service) in services)
-            controller.RegisterService(new AiConnectionStringIdentifier(id), service);
-
-        return controller;
     }
 }
 

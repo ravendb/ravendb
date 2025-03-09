@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
@@ -10,14 +8,11 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest;
+namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest;
 
-public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
+public class QueryEmbeddingsBatchingServiceTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     const int OnnxDefaultEmbeddingSize = 384;
-    public EmbeddingsBatchingServiceTests(ITestOutputHelper output) : base(output)
-    {
-    }
 
     [RavenFact(RavenTestCategory.Ai)]
     public async Task GetEmbeddingAsync_ReturnsValidEmbedding()
@@ -30,7 +25,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         
         // Create the batching service
-        var batchService = new EmbeddingsBatchingService(database.AiIntegrations);
+        var batchService = new QueryEmbeddingsBatchingService(database.AiIntegrations);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
         
         // Act
@@ -52,7 +47,7 @@ public class EmbeddingsBatchingServiceTests : EmbeddingsGenerationTestBase
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         
         // Create the batching service
-        var batchService = new EmbeddingsBatchingService(database.AiIntegrations);
+        var batchService = new QueryEmbeddingsBatchingService(database.AiIntegrations);
         
         // Use an invalid connection string identifier
         var invalidConnectionStringId = new AiConnectionStringIdentifier("non-existent-connection");

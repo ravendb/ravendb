@@ -8,56 +8,72 @@ namespace Raven.Server.Config.Categories;
 [ConfigurationCategory(ConfigurationCategoryType.Ai)]
 public sealed class AiConfiguration : ConfigurationCategory
 {
+    #region Embeddings Generation Task
+
     [Description("Maximum number of documents processed in a single batch by Embeddings Generation task. Higher values may improve throughput but require more resources and higher limits in AI service.")]
     [DefaultValue(128)]
-    [ConfigurationEntry("Ai.Embeddings.Generation.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int? EmbeddingsGenerationMaxBatchSize { get; set; }
+    [ConfigurationEntry("Ai.Embeddings.Generation.Task.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int? EmbeddingsGenerationTaskMaxBatchSize { get; set; }
 
-    [Description("Maximum number of embeddings generated for queries to be cached in a single batch")]
-    [DefaultValue(128)]
-    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.MaxCacheBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int QueryEmbeddingsGenerationMaxCacheBatchSize { get; set; }
-
-    [Description("Time in milliseconds to wait for additional requests before processing a batch of embedding requests. Lower values reduce latency but may decrease throughput.")]
-    [DefaultValue(200)]
-    [ConfigurationEntry("Ai.Embeddings.BatchTimeoutInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int BatchTimeoutInMs { get; set; }
-
-    [Description("Maximum number of embedding requests to include in a single batch sent to the AI provider. Optimal values depend on the provider's rate limits and pricing model.")]
-    [DefaultValue(128)]
-    [ConfigurationEntry("Ai.Embeddings.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int MaxBatchSize { get; set; }
-
-    [Description("Maximum number of retry attempts for failed embedding generation requests before giving up. Retries use exponential backoff.")]
-    [DefaultValue(3)]
-    [ConfigurationEntry("Ai.Embeddings.MaxRetries", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int MaxRetries { get; set; }
-
-    [Description("Base delay in milliseconds between retry attempts for failed embedding requests. Actual delay increases exponentially with each retry attempt. For example, with a base delay of 200ms, retries would wait 200ms, 400ms, 800ms, etc.")]
-    [DefaultValue(200)]
-    [TimeUnit(TimeUnit.Milliseconds)]
-    [ConfigurationEntry("Ai.Embeddings.RetryDelayInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public TimeSetting RetryDelay { get; set; }
-    
-    [Description("Base delay for embedding generation. The delay increases exponentially with each retry attempt. E.g. 5s, 25s, 125s, etc.")]
+    [Description("Base delay for Embedding Generation task retries. The delay increases exponentially with each retry attempt. E.g. 5s, 25s, 125s, etc.")]
     [DefaultValue(15)]
     [TimeUnit(TimeUnit.Seconds)]
-    [ConfigurationEntry("Ai.Embeddings.TaskRetryDelayInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public TimeSetting TaskRetryDelay { get; set; }
+    [ConfigurationEntry("Ai.Embeddings.Generation.Task.RetryDelayInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting EmbeddingsGenerationTaskRetryDelay { get; set; }
 
-    [Description("Maximum number of seconds ETL process will be in a fallback mode after a load connection failure to a destination. The fallback mode means suspending the process.")]
+    [Description("Maximum number of seconds Embedding Generation process will be in a fallback mode after a connection failure to the AI provider. The fallback mode means suspending the process.")]
     [DefaultValue(60 * 15)]
     [TimeUnit(TimeUnit.Seconds)]
-    [ConfigurationEntry("Ai.Embeddings.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public TimeSetting MaxFallbackTime { get; set; }
-    
-    [Description("Maximum number of seconds ETL process will be in a fallback mode after a load connection failure to a destination. The fallback mode means suspending the process.")]
+    [ConfigurationEntry("Ai.Embeddings.Generation.Task.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting EmbeddingsGenerationTaskMaxFallbackTime { get; set; }
+
+    [Description("Strategy to use for retry intervals when embedding generation fails. 'Linear' uses fixed intervals between retries, while 'Exponential' increases the wait time exponentially after each failure (e.g., 15s, 30s, 60s for Linear; or 15s, 225s, 3375s for Exponential with base 15s).")]
     [DefaultValue(EmbeddingsGenerationFallbackModeStrategy.Exponential)]
-    [ConfigurationEntry("Ai.Embeddings.EmbeddingGenerationFallbackModeStrategy", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public EmbeddingsGenerationFallbackModeStrategy EmbeddingsGenerationFallbackModeStrategy { get; set; }
+    [ConfigurationEntry("Ai.Embeddings.Generation.Task.FallbackModeStrategy", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public EmbeddingsGenerationFallbackModeStrategy EmbeddingsGenerationTaskFallbackModeStrategy { get; set; }
+
+    #endregion
+
+    #region Querying
+
+    #region Caching
+
+    [Description("Maximum number of embeddings generated for queries to be cached in a single batch. Lower values reduce latency for query embedding generation but may decrease throughput.")]
+    [DefaultValue(128)]
+    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Caching.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int QueryEmbeddingsGenerationMaxCacheBatchSize { get; set; }
     
-    [Description("Maximum number of embedding batches that can be processed concurrently. Controls the level of parallelism when sending requests to AI providers. Higher values improve throughput but increase resource usage and may trigger rate limits.")]
+    #endregion
+
+    #region Batching
+
+    [Description("Time in milliseconds to wait for additional query embedding requests before processing a batch. Lower values reduce latency for query embedding generation but may decrease throughput.")]
+    [DefaultValue(200)]
+    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.TimeoutInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int QueryEmbeddingsBatchTimeout { get; set; }
+
+    [Description("Maximum number of query embedding requests to include in a single batch sent to the AI provider. Optimal values depend on the provider's rate limits and pricing model.")]
+    [DefaultValue(128)]
+    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int QueryEmbeddingsMaxBatchSize { get; set; }
+
+    [Description("Maximum number of retry attempts for failed query embedding generation requests before giving up. Retries use exponential backoff.")]
+    [DefaultValue(3)]
+    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.MaxRetries", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int QueryEmbeddingsBatchMaxRetries { get; set; }
+
+    [Description("Base delay in milliseconds between retry attempts for failed query embedding requests. Actual delay increases exponentially with each retry attempt. For example, with a base delay of 200ms, retries would wait 200ms, 400ms, 800ms, etc.")]
+    [DefaultValue(200)]
+    [TimeUnit(TimeUnit.Milliseconds)]
+    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.RetryDelayInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting QueryEmbeddingsBatchRetryDelay { get; set; }
+
+    [Description("Maximum number of query embedding batches that can be processed concurrently. Controls the level of parallelism when sending query embedding requests to AI providers. Higher values improve throughput but increase resource usage and may trigger rate limits.")]
     [DefaultValue(4)]
-    [ConfigurationEntry("Ai.Embeddings.MaxConcurrentBatches", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int MaxConcurrentBatches { get; set; }
+    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.MaxConcurrentBatches", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int QueryEmbeddingsMaxConcurrentBatches { get; set; }
+    
+    #endregion
+    
+    #endregion
 }

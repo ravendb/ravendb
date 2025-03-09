@@ -2,26 +2,31 @@
 using System.Collections.Generic;
 using Sparrow.Logging;
 
-namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest.Helpers;
+namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest.Helpers;
 
-public class TestRavenLogger<T> : IRavenLogger
+public class TestRavenLogger(List<string> logEntries) : IRavenLogger
 {
-    public List<string> LogEntries { get; }
-
-    public TestRavenLogger(List<string> logEntries)
-    {
-        LogEntries = logEntries;
-    }
+    public List<string> LogEntries { get; } = logEntries;
 
     public IRavenLogger WithProperty(string propertyKey, object propertyValue) => this;
-    public bool IsDebugEnabled => true;
-    public bool IsFatalEnabled { get; }
-    public bool IsTraceEnabled { get; }
-    public bool IsInfoEnabled => true;
-    public bool IsWarnEnabled => true;
-    public bool IsErrorEnabled => true;
-    public bool IsEnabled(LogLevel logLevel) => true;
+    public bool IsTraceEnabled { get; set; } = true;
+    public bool IsDebugEnabled { get; set; } = true;
+    public bool IsInfoEnabled { get; set; } = true;
+    public bool IsWarnEnabled { get; set; } = true;
+    public bool IsErrorEnabled { get; set; } = true;
+    public bool IsFatalEnabled { get; set; } = true;
 
+    public bool IsEnabled(LogLevel logLevel) => logLevel switch
+    {
+        LogLevel.Trace => IsTraceEnabled,
+        LogLevel.Debug => IsDebugEnabled,
+        LogLevel.Info => IsInfoEnabled,
+        LogLevel.Warn => IsWarnEnabled,
+        LogLevel.Error => IsErrorEnabled,
+        LogLevel.Fatal => IsFatalEnabled,
+        LogLevel.Off => (IsTraceEnabled || IsDebugEnabled || IsInfoEnabled|| IsWarnEnabled || IsErrorEnabled || IsFatalEnabled) == false,
+        _ => throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null)
+    };
 
     public void Debug(string message) => LogEntries.Add($"DEBUG: {message}");
     public void Debug(string message, Exception exception) => LogEntries.Add($"DEBUG: {message} - {exception.Message}");

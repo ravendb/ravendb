@@ -2,9 +2,9 @@
 using Raven.Server.Documents.AI.Embeddings;
 using Xunit;
 
-namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest;
+namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest;
 
-public class EmbeddingsBatchRequestTests
+public class QueryEmbeddingsBatchRequestTests
 {
     private const string TestValue = "test text";
 
@@ -16,7 +16,7 @@ public class EmbeddingsBatchRequestTests
         var workerToken = new CancellationTokenSource();
 
         // Act
-        using var request = new EmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
+        using var request = new QueryEmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
 
         // Assert
         Assert.Equal(TestValue, request.Values[0]);
@@ -30,7 +30,7 @@ public class EmbeddingsBatchRequestTests
         var callerToken = new CancellationTokenSource();
         var workerToken = new CancellationTokenSource();
 
-        using var request = new EmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
+        using var request = new QueryEmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
 
         // Act
         callerToken.Cancel();
@@ -46,7 +46,7 @@ public class EmbeddingsBatchRequestTests
         var callerToken = new CancellationTokenSource();
         var workerToken = new CancellationTokenSource();
 
-        using var request = new EmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
+        using var request = new QueryEmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
 
         // Act
         workerToken.Cancel();
@@ -62,7 +62,7 @@ public class EmbeddingsBatchRequestTests
         var callerToken = new CancellationTokenSource();
         var workerToken = new CancellationTokenSource();
 
-        var request = new EmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
+        var request = new QueryEmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
 
         // Act
         request.Dispose();

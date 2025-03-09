@@ -101,31 +101,31 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 FallbackTime = TimeSpan.FromSeconds(5);
             else
             {
-                // double the fallback time (but don't cross Etl.MaxFallbackTime)
+                // double the fallback time (but don't cross Etl.EmbeddingsGenerationTaskMaxFallbackTime)
                 var secondsSinceLastError = (Database.Time.GetUtcNow() - lastErrorTime.Value).TotalSeconds;
 
-                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
+                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.EmbeddingsGenerationTaskMaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
             }
      */
     
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
         _fallbackCounter++;
-        var taskRetryDelay = Database.Configuration.Ai.TaskRetryDelay.AsTimeSpan;
+        var taskRetryDelay = Database.Configuration.Ai.EmbeddingsGenerationTaskRetryDelay.AsTimeSpan;
         if (lastErrorTime == null)
         {
             FallbackTime = taskRetryDelay;
         }
         else
         {
-            var secondsToWait = (Database.Configuration.Ai.EmbeddingsGenerationFallbackModeStrategy) switch
+            var secondsToWait = (Database.Configuration.Ai.EmbeddingsGenerationTaskFallbackModeStrategy) switch
             {
                 EmbeddingsGenerationFallbackModeStrategy.Linear => _fallbackCounter * taskRetryDelay.TotalSeconds,
                 EmbeddingsGenerationFallbackModeStrategy.Exponential => Math.Pow(taskRetryDelay.TotalSeconds, _fallbackCounter),
-                _ => throw new NotImplementedException($"Strategy: '{Database.Configuration.Ai.EmbeddingsGenerationFallbackModeStrategy}' is not implemented.")
+                _ => throw new NotImplementedException($"Strategy: '{Database.Configuration.Ai.EmbeddingsGenerationTaskFallbackModeStrategy}' is not implemented.")
                 
             };
-            FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Ai.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(taskRetryDelay.Seconds, secondsToWait)));
+            FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Ai.EmbeddingsGenerationTaskMaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(taskRetryDelay.Seconds, secondsToWait)));
         }
     }
 
@@ -180,7 +180,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                     if (ex is HttpOperationException { StatusCode: HttpStatusCode.TooManyRequests })
                     {
                         throw new EmbeddingGenerationException(
-                            $"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. However, decreasing the number of elements processed in a single batch ('{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationMaxBatchSize)}') may help, or you can increase the limits on your model deployment.",
+                            $"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. However, decreasing the number of elements processed in a single batch ('{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationTaskMaxBatchSize)}') may help, or you can increase the limits on your model deployment.",
                             ex);
                     }
 

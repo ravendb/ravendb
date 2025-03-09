@@ -5,14 +5,14 @@ using System.Threading.Tasks;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
-public sealed class EmbeddingsBatchRequest : IDisposable
+public sealed class QueryEmbeddingsBatchRequest : IDisposable
 {
     public IList<string> Values { get; }
     public TaskCompletionSource<ReadOnlyMemory<float>[]> TaskCompletionSource { get; }
     private readonly CancellationTokenSource _linkedTokenSource;
     private readonly CancellationTokenRegistration _tokenRegistration;
 
-    public EmbeddingsBatchRequest(IList<string> values, CancellationToken callerToken, CancellationToken workerToken)
+    public QueryEmbeddingsBatchRequest(IList<string> values, CancellationToken callerToken, CancellationToken workerToken)
     {
         Values = values;
         TaskCompletionSource = new TaskCompletionSource<ReadOnlyMemory<float>[]>(TaskCreationOptions.RunContinuationsAsynchronously);

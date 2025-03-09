@@ -15,7 +15,7 @@ using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.AI.Embeddings
 {
-    public class EmbeddingsBatchingWorker(string databaseName,
+    public class QueryEmbeddingsBatchingWorker(string databaseName,
         AiConfiguration configuration,
 #pragma warning disable SKEXP0001
         ITextEmbeddingGenerationService service,
@@ -28,12 +28,12 @@ namespace Raven.Server.Documents.AI.Embeddings
     {
         private readonly string _databaseName = databaseName;
 
-        private readonly ConcurrentQueue<EmbeddingsBatchRequest> _requestQueue = new();
+        private readonly ConcurrentQueue<QueryEmbeddingsBatchRequest> _requestQueue = new();
         private readonly Stopwatch _batchTimer = new();
 
         public Task<ReadOnlyMemory<float>[]> EnqueueRequestAsync(IList<string> values, CancellationToken cancellationToken)
         {
-            var request = new EmbeddingsBatchRequest(values, callerToken: cancellationToken, workerToken: CancellationToken);
+            var request = new QueryEmbeddingsBatchRequest(values, callerToken: cancellationToken, workerToken: CancellationToken);
 
             bool wasEmpty = _requestQueue.IsEmpty;
             _requestQueue.Enqueue(request);
@@ -64,13 +64,13 @@ namespace Raven.Server.Documents.AI.Embeddings
                 // 1. If we have a full batch, process immediately
                 // 2. If the timeout has elapsed, process immediately
                 // 3. Otherwise, wait for more requests longer
-                bool shouldProcessNow = _requestQueue.Count >= configuration.MaxBatchSize ||
-                                        _batchTimer.ElapsedMilliseconds >= configuration.BatchTimeoutInMs;
+                bool shouldProcessNow = _requestQueue.Count >= configuration.QueryEmbeddingsMaxBatchSize ||
+                                        _batchTimer.ElapsedMilliseconds >= configuration.QueryEmbeddingsBatchTimeout;
 
                 if (shouldProcessNow == false)
                 {
                     // Wait a bit before checking again
-                    await WaitOrThrowOperationCanceled(TimeSpan.FromMilliseconds(Math.Min(10, configuration.BatchTimeoutInMs / 5)));
+                    await WaitOrThrowOperationCanceled(TimeSpan.FromMilliseconds(Math.Min(10, configuration.QueryEmbeddingsBatchTimeout / 5)));
                     return;
                 }
 
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.AI.Embeddings
             catch (Exception ex)
             {
                 if (Logger.IsErrorEnabled)
-                    Logger.Error($"Error in EmbeddingsBatchingWorker for connection '{connectionStringId.Value}' in database '{_databaseName}'", ex);
+                    Logger.Error($"Error in QueryEmbeddingsBatchingWorker for connection '{connectionStringId.Value}' in database '{_databaseName}'", ex);
 
                 // Wait a bit before retrying
                 await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(1));
@@ -110,11 +110,11 @@ namespace Raven.Server.Documents.AI.Embeddings
 
         private async Task ProcessBatchAsync()
         {
-            // Collect requests for this batch (up to MaxBatchSize)
-            EmbeddingsBatchRequest[] requestsArray = new EmbeddingsBatchRequest[configuration.MaxBatchSize];
+            // Collect requests for this batch (up to QueryEmbeddingsMaxBatchSize)
+            QueryEmbeddingsBatchRequest[] requestsArray = new QueryEmbeddingsBatchRequest[configuration.QueryEmbeddingsMaxBatchSize];
             int count = 0;
 
-            while (count < configuration.MaxBatchSize &&
+            while (count < configuration.QueryEmbeddingsMaxBatchSize &&
                    _requestQueue.TryDequeue(out var request))
             {
                 if (request.TaskCompletionSource.Task.IsCanceled)
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.AI.Embeddings
             }
         }
 
-        private async Task FlushBatchAsync(EmbeddingsBatchRequest[] requestsArray, int count)
+        private async Task FlushBatchAsync(QueryEmbeddingsBatchRequest[] requestsArray, int count)
         {
             // First calculate total number of values across all requests
             int totalValueCount = 0;
@@ -167,17 +167,17 @@ namespace Raven.Server.Documents.AI.Embeddings
             }
                 
             // Execute with retry logic
-            for (int attempt = 0; attempt <= configuration.MaxRetries; attempt++)
+            for (int attempt = 0; attempt <= configuration.QueryEmbeddingsBatchMaxRetries; attempt++)
             {
                 try
                 {
                     if (attempt > 0)
                     {
                         if (Logger.IsWarnEnabled)
-                            Logger.Warn($"Retrying batch for connection '{connectionStringId.Value}', attempt {attempt}/{configuration.MaxRetries}");
+                            Logger.Warn($"Retrying batch for connection '{connectionStringId.Value}', attempt {attempt}/{configuration.QueryEmbeddingsBatchMaxRetries}");
 
                         // Exponential backoff
-                        var delay = configuration.RetryDelay.AsTimeSpan * Math.Pow(2, attempt - 1);
+                        var delay = configuration.QueryEmbeddingsBatchRetryDelay.AsTimeSpan * Math.Pow(2, attempt - 1);
                         await WaitOrThrowOperationCanceled(delay);
                     }
 
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                     {
                         if (e is HttpOperationException { StatusCode: System.Net.HttpStatusCode.TooManyRequests })
                         {
-                            throw new EmbeddingGenerationException($"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. However, decreasing the number of elements processed in a single batch ('{RavenConfiguration.GetKey(x => x.Ai.MaxBatchSize)}') may help, or you can increase the limits on your model deployment.", e);
+                            throw new EmbeddingGenerationException($"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. However, decreasing the number of elements processed in a single batch ('{RavenConfiguration.GetKey(x => x.Ai.QueryEmbeddingsMaxBatchSize)}') may help, or you can increase the limits on your model deployment.", e);
                         }
                         
                         throw;
@@ -227,10 +227,10 @@ namespace Raven.Server.Documents.AI.Embeddings
                     // Successfully processed batch, exit retry loop
                     break;
                 }
-                catch (Exception ex) when (attempt < configuration.MaxRetries && IsNonRetriableException(ex) == false)
+                catch (Exception ex) when (attempt < configuration.QueryEmbeddingsBatchMaxRetries && IsNonRetriableException(ex) == false)
                 {
                     if (Logger.IsWarnEnabled)
-                        Logger.Warn($"Error processing batch for connection '{connectionStringId.Value}', retrying {attempt + 1}/{configuration.MaxRetries}", ex);
+                        Logger.Warn($"Error processing batch for connection '{connectionStringId.Value}', retrying {attempt + 1}/{configuration.QueryEmbeddingsBatchMaxRetries}", ex);
 
                     // Continue to next retry iteration
                 }
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.AI.Embeddings
         protected override void InitializeWork()
         {
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Initializing {nameof(EmbeddingsBatchingWorker)} for connection '{connectionStringId.Value}' in database '{_databaseName}'");
+                Logger.Info($"Initializing {nameof(QueryEmbeddingsBatchingWorker)} for connection '{connectionStringId.Value}' in database '{_databaseName}'");
 
             _batchTimer.Reset();
         }

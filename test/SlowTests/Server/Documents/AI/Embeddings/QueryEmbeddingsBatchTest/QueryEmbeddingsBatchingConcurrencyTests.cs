@@ -10,9 +10,9 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest;
+namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest;
 
-public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
+public class QueryEmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Ai)]
     public async Task ConcurrentRequests_ShouldRespectMaxConcurrentBatches()
@@ -26,11 +26,11 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
 
         // Configure limited concurrency for test
         int maxConcurrentBatches = 2;
-        database.Configuration.Ai.MaxConcurrentBatches = maxConcurrentBatches;
-        database.Configuration.Ai.MaxBatchSize = 3; // Small batch size to create multiple batches
+        database.Configuration.Ai.QueryEmbeddingsMaxConcurrentBatches = maxConcurrentBatches;
+        database.Configuration.Ai.QueryEmbeddingsMaxBatchSize = 3; // Small batch size to create multiple batches
 
         // Create the batching service
-        var batchService = new EmbeddingsBatchingService(database.AiIntegrations);
+        var batchService = new QueryEmbeddingsBatchingService(database.AiIntegrations);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
 
         // Setup manual control for batch processing
@@ -84,7 +84,7 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
 
         // Act - Submit many requests that will be processed in batches
         var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
-        for (int i = 0; i < totalBatches * database.Configuration.Ai.MaxBatchSize; i++)
+        for (int i = 0; i < totalBatches * database.Configuration.Ai.QueryEmbeddingsMaxBatchSize; i++)
             tasks.Add(batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [$"Concurrent test text {i}"], CancellationToken.None).AsTask());
 
         // Allow some time for batches to start processing
@@ -132,10 +132,10 @@ public class EmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) : Embe
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
         // Configure longer batch timeout to ensure our cancellation happens during batch formation
-        database.Configuration.Ai.BatchTimeoutInMs = (int)TimeSpan.FromSeconds(10).TotalMilliseconds;
+        database.Configuration.Ai.QueryEmbeddingsBatchTimeout = (int)TimeSpan.FromSeconds(10).TotalMilliseconds;
 
         // Create the batching service
-        var batchService = new EmbeddingsBatchingService(database.AiIntegrations);
+        var batchService = new QueryEmbeddingsBatchingService(database.AiIntegrations);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
 
         // Create cancellation token source that we'll cancel immediately

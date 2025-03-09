@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.ETL
                 FallbackTime = TimeSpan.FromSeconds(5);
             else
             {
-                // double the fallback time (but don't cross Etl.MaxFallbackTime)
+                // double the fallback time (but don't cross Etl.EmbeddingsGenerationTaskMaxFallbackTime)
                 var secondsSinceLastError = (Database.Time.GetUtcNow() - lastErrorTime.Value).TotalSeconds;
 
                 FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
@@ -558,7 +558,7 @@ namespace Raven.Server.Documents.ETL
             
             else if (currentItem is AiIntegrationItem)
             {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.EmbeddingsGenerationMaxBatchSize)
+                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.EmbeddingsGenerationTaskMaxBatchSize)
                 {
                     var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
 

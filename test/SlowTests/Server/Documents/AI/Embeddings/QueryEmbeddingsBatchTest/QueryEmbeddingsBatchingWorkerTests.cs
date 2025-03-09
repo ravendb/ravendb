@@ -9,16 +9,16 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Logging;
-using SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest.Helpers;
+using SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest.Helpers;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI.Embeddings.EmbeddingBatchTest;
+namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest;
 
-public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
+public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
 {
     private readonly TestDocumentDatabaseStub _db;
     private readonly AiConnectionStringIdentifier _connectionStringId;
@@ -29,11 +29,11 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     private const string TestText = "test text";
     private const int DimensionSize = 123;
 
-    public EmbeddingsBatchingWorkerTests(ITestOutputHelper output) : base(output)
+    public QueryEmbeddingsBatchingWorkerTests(ITestOutputHelper output) : base(output)
     {
         _db = new TestDocumentDatabaseStub();
         _connectionStringId = new AiConnectionStringIdentifier("test-connection");
-        _concurrencyLimiter = new SemaphoreSlim(_db.Configuration.MaxConcurrentBatches);
+        _concurrencyLimiter = new SemaphoreSlim(_db.Configuration.QueryEmbeddingsMaxConcurrentBatches);
         _logger = RavenLogManager.Instance.CreateNullLogger();
         _cts = new CancellationTokenSource();
     }
@@ -44,7 +44,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         // Arrange
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -73,7 +73,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -109,8 +109,8 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     public async Task ProcessBatch_RetriesOnFailure()
     {
         // Arrange
-        _db.Configuration.MaxRetries = 2;
-        _db.Configuration.RetryDelay = new TimeSetting(50, TimeUnit.Milliseconds);
+        _db.Configuration.QueryEmbeddingsBatchMaxRetries = 2;
+        _db.Configuration.QueryEmbeddingsBatchRetryDelay = new TimeSetting(50, TimeUnit.Milliseconds);
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;
@@ -144,7 +144,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             return result;
         };
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -174,7 +174,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         Assert.NotNull(mockService);
         mockService.ProcessingDelayMs = (int)TimeSpan.FromSeconds(5).TotalMilliseconds; // Ensure processing takes time
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -208,7 +208,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
 
         using var workerCts = new CancellationTokenSource();
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -243,15 +243,15 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     public async Task BatchingLogic_RespectsMaxBatchSize()
     {
         // Arrange
-        _db.Configuration.MaxBatchSize = 5; // Small batch size
-        _db.Configuration.BatchTimeoutInMs = (int)TimeSpan.FromSeconds(10).TotalMilliseconds; // We don't want timeout to interfere
+        _db.Configuration.QueryEmbeddingsMaxBatchSize = 5; // Small batch size
+        _db.Configuration.QueryEmbeddingsBatchTimeout = (int)TimeSpan.FromSeconds(10).TotalMilliseconds; // We don't want timeout to interfere
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;
         Assert.NotNull(mockService);
         mockService.ProcessingDelayMs = 50; // Add some delay
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -286,12 +286,12 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     public async Task BatchingLogic_RespectsTimeout()
     {
         // Arrange
-        _db.Configuration.BatchTimeoutInMs = 100;
-        _db.Configuration.MaxBatchSize = 100;
+        _db.Configuration.QueryEmbeddingsBatchTimeout = 100;
+        _db.Configuration.QueryEmbeddingsMaxBatchSize = 100;
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -341,7 +341,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         mockService.ExceptionToThrow = new ArgumentException(exceptionMessage);
         mockService.FailureRateInPercentage = 100; // Always fail
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -366,8 +366,8 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         // Arrange
         const string exceptionMessagePrefix = "Temporary network error on attempt";
-        _db.Configuration.MaxRetries = 2;
-        _db.Configuration.RetryDelay = new(50, TimeUnit.Milliseconds);
+        _db.Configuration.QueryEmbeddingsBatchMaxRetries = 2;
+        _db.Configuration.QueryEmbeddingsBatchRetryDelay = new(50, TimeUnit.Milliseconds);
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;
@@ -379,7 +379,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         // Setup custom behavior that will always fail with a retriable exception
         mockService.CustomBehavior = (_, _) => throw new IOException($"{exceptionMessagePrefix} '{mockService.AttemptCount}'");
 
-        using var worker = new EmbeddingsBatchingWorker(
+        using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
@@ -396,7 +396,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         // Should fail after maxRetries + 1 attempts
         var exception = await Assert.ThrowsAsync<IOException>(() => task);
         Assert.True(exception.Message.Contains(exceptionMessagePrefix), $"Expected exception message to contain '{exceptionMessagePrefix}', but got '{exception.Message}'");
-        Assert.True(mockService.AttemptCount == _db.Configuration.MaxRetries + 1, $"Should have attempted {_db.Configuration.MaxRetries + 1} times, but was '{mockService.AttemptCount}'");
+        Assert.True(mockService.AttemptCount == _db.Configuration.QueryEmbeddingsBatchMaxRetries + 1, $"Should have attempted {_db.Configuration.QueryEmbeddingsBatchMaxRetries + 1} times, but was '{mockService.AttemptCount}'");
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -412,12 +412,12 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
         // Configure for test
-        database.Configuration.Ai.MaxRetries = 0; // Disable retries for this test
-        database.Configuration.Ai.BatchTimeoutInMs = 50;
-        database.Configuration.Ai.MaxBatchSize = 10; // Allow all requests in one batch
+        database.Configuration.Ai.QueryEmbeddingsBatchMaxRetries = 0; // Disable retries for this test
+        database.Configuration.Ai.QueryEmbeddingsBatchTimeout = 50;
+        database.Configuration.Ai.QueryEmbeddingsMaxBatchSize = 10; // Allow all requests in one batch
 
         // Create the batching service
-        var batchService = new EmbeddingsBatchingService(database.AiIntegrations);
+        var batchService = new QueryEmbeddingsBatchingService(database.AiIntegrations);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
 
         // Submit a first request to ensure worker is created
@@ -460,7 +460,7 @@ public class EmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         };
 
         // Replace the service field directly
-        var serviceField = typeof(EmbeddingsBatchingWorker).GetField("<service>P", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var serviceField = typeof(QueryEmbeddingsBatchingWorker).GetField("<service>P", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.True(serviceField != null, "We want to replace the service field, but it wasn't found");
         serviceField.SetValue(worker, selectiveService);
 
