@@ -241,7 +241,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Uri: connection.ollamaSettings.uri,
                   }
                 : null,
-        OnnxSettings: connection.connectorType === "onnxSettings" ? {} : null,
+        EmbeddedSettings: connection.connectorType === "embeddedSettings" ? {} : null,
         OpenAiSettings:
             connection.connectorType === "openAiSettings"
                 ? {
@@ -253,11 +253,11 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                   }
                 : null,
         MistralAiSettings:
-            connection.connectorType === "mistralaiAiSettings"
+            connection.connectorType === "mistralAiSettings"
                 ? {
-                      ApiKey: connection.mistralaiAiSettings.apiKey,
-                      Endpoint: connection.mistralaiAiSettings.endpoint,
-                      Model: connection.mistralaiAiSettings.model,
+                      ApiKey: connection.mistralAiSettings.apiKey,
+                      Endpoint: connection.mistralAiSettings.endpoint,
+                      Model: connection.mistralAiSettings.model,
                   }
                 : null,
     };

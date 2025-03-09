@@ -128,9 +128,9 @@ export interface AiConnection extends ConnectionBase {
         | "googleSettings"
         | "huggingFaceSettings"
         | "ollamaSettings"
-        | "onnxSettings"
+        | "embeddedSettings"
         | "openAiSettings"
-        | "mistralaiAiSettings";
+        | "mistralAiSettings";
     azureOpenAiSettings?: {
         apiKey?: string;
         endpoint?: string;
@@ -160,7 +160,7 @@ export interface AiConnection extends ConnectionBase {
         organizationId?: string;
         projectId?: string;
     };
-    mistralaiAiSettings?: {
+    mistralAiSettings?: {
         apiKey?: string;
         endpoint?: string;
         model?: string;

@@ -17,7 +17,7 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function MistralaiAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -25,15 +25,15 @@ export default function MistralaiAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
     const formValues = useWatch({ control });
 
     const asyncTest = useAsyncCallback(async () => {
-        const isValid = await trigger("mistralaiAiSettings");
+        const isValid = await trigger("mistralAiSettings");
         if (!isValid) {
             return;
         }
 
         return tasksService.testAiConnectionString(databaseName, "MistralAi", {
-            ApiKey: formValues.mistralaiAiSettings.apiKey,
-            Endpoint: formValues.mistralaiAiSettings.endpoint,
-            Model: formValues.mistralaiAiSettings.model,
+            ApiKey: formValues.mistralAiSettings.apiKey,
+            Endpoint: formValues.mistralAiSettings.endpoint,
+            Model: formValues.mistralAiSettings.model,
         });
     });
 
@@ -46,7 +46,7 @@ export default function MistralaiAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="mistralaiAiSettings.apiKey" type="password" passwordPreview />
+                <FormInput control={control} name="mistralAiSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
                 <Label>
@@ -55,7 +55,7 @@ export default function MistralaiAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="mistralaiAiSettings.endpoint" type="text" />
+                <FormInput control={control} name="mistralAiSettings.endpoint" type="text" />
             </div>
             <div className="mb-2">
                 <Label>
@@ -64,7 +64,7 @@ export default function MistralaiAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="mistralaiAiSettings.model" type="text" disabled={isUsedByAnyTask} />
+                <FormInput control={control} name="mistralAiSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="d-flex mb-2">
                 <FlexGrow />

@@ -350,14 +350,14 @@ export function mapAiConnectionsFromDto(
         if (connection.OllamaSettings) {
             return "ollamaSettings";
         }
-        if (connection.OnnxSettings) {
-            return "onnxSettings";
+        if (connection.EmbeddedSettings) {
+            return "embeddedSettings";
         }
         if (connection.OpenAiSettings) {
             return "openAiSettings";
         }
         if (connection.MistralAiSettings) {
-            return "mistralaiAiSettings";
+            return "mistralAiSettings";
         }
         return null;
     };
@@ -399,7 +399,7 @@ export function mapAiConnectionsFromDto(
                     organizationId: connection.OpenAiSettings?.OrganizationId,
                     projectId: connection.OpenAiSettings?.ProjectId,
                 },
-                mistralaiAiSettings: {
+                mistralAiSettings: {
                     apiKey: connection.MistralAiSettings?.ApiKey,
                     endpoint: connection.MistralAiSettings?.Endpoint,
                     model: connection.MistralAiSettings?.Model,

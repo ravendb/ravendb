@@ -88,7 +88,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.maxTokensPerChunkDefaultValue = ko.pureComputed(() => {
             const connectionString = this.aiConnectionStrings().find(x => x.Name === this.connectionStringName());
             
-            if (connectionString?.OnnxSettings) {
+            if (connectionString?.EmbeddedSettings) {
                 return 512;
             }
             return 2048;

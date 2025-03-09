@@ -6,7 +6,7 @@ type Settings =
     | Raven.Client.Documents.Operations.AI.OpenAiSettings
     | Raven.Client.Documents.Operations.AI.AzureOpenAiSettings
     | Raven.Client.Documents.Operations.AI.OllamaSettings
-    | Raven.Client.Documents.Operations.AI.OnnxSettings
+    | Raven.Client.Documents.Operations.AI.EmbeddedSettings
     | Raven.Client.Documents.Operations.AI.GoogleSettings
     | Raven.Client.Documents.Operations.AI.HuggingFaceSettings
     | Raven.Client.Documents.Operations.AI.MistralAiSettings;

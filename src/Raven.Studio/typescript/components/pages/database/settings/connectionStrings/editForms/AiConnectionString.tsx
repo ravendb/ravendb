@@ -16,7 +16,7 @@ import GoogleSettings from "components/pages/database/settings/connectionStrings
 import HuggingFaceSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/HuggingFaceSettings";
 import OllamaSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OllamaSettings";
 import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
-import MistralaiAiSettings from "./aiFields/MistralaiAiSettings";
+import MistralAiSettings from "./aiFields/MistralAiSettings";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
@@ -116,9 +116,9 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                                 { label: "Google AI", value: "googleSettings", icon: "google-gemini" },
                                 { label: "Hugging Face", value: "huggingFaceSettings", icon: "huggingface" },
                                 { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
-                                { label: "Embedded (bge-micro-v2)", value: "onnxSettings", icon: "onnx" },
+                                { label: "Embedded (bge-micro-v2)", value: "embeddedSettings", icon: "onnx" },
                                 { label: "OpenAI", value: "openAiSettings", icon: "openai" },
-                                { label: "Mistral AI", value: "mistralaiAiSettings", icon: "mistralai" },
+                                { label: "Mistral AI", value: "mistralAiSettings", icon: "mistralai" },
                             ] satisfies SelectOptionWithIcon<FormData["connectorType"]>[]
                         }
                         isDisabled={isUsedByAnyTask}
@@ -134,7 +134,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 {connectorType === "huggingFaceSettings" && <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {connectorType === "mistralaiAiSettings" && <MistralaiAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "mistralAiSettings" && <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
 
                 {isUsedByAnyTask && (
                     <RichAlert variant="info">
@@ -273,7 +273,7 @@ const schema = yupObjectSchema<FormData>({
         organizationId: yup.string().nullable(),
         projectId: yup.string().nullable(),
     }),
-    mistralaiAiSettings: yup.object({
+    mistralAiSettings: yup.object({
         apiKey: yup
             .string()
             .nullable()
