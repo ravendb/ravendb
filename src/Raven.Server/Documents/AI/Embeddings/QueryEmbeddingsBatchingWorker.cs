@@ -192,14 +192,14 @@ namespace Raven.Server.Documents.AI.Embeddings
                         allEmbeddings = await AiHelper.GenerateEmbeddingsAsync(service, allTextValues);
 #pragma warning restore SKEXP0001
                     }
-                    catch (Exception e)
+                    catch (HttpOperationException httpOperationException) when (httpOperationException.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
                     {
-                        if (e is HttpOperationException { StatusCode: System.Net.HttpStatusCode.TooManyRequests })
-                        {
-                            throw new EmbeddingGenerationException($"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. However, decreasing the number of elements processed in a single batch ('{RavenConfiguration.GetKey(x => x.Ai.QueryEmbeddingsMaxBatchSize)}') may help, or you can increase the limits on your model deployment.", e);
-                        }
-                        
-                        throw;
+                        // Handle rate limit errors
+                        throw new EmbeddingGenerationException(
+                            $"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. " +
+                            $"However, decreasing the number of elements processed in a single batch " +
+                            $"('{RavenConfiguration.GetKey(x => x.Ai.QueryEmbeddingsMaxBatchSize)}') may help, or you can increase the " +
+                            $"limits on your model deployment.", httpOperationException);
                     }
 
                     // Verify we got the expected number of embeddings
@@ -245,13 +245,31 @@ namespace Raven.Server.Documents.AI.Embeddings
             }
         }
 
-        private static bool IsNonRetriableException(Exception ex)
-        {
-            return ex
-                is ArgumentException
-                or InvalidOperationException
-                or UnauthorizedAccessException;
-        }
+        private static bool IsNonRetriableException(Exception ex) =>
+            ex switch
+            {
+                // Check for specific exceptions that are not retriable
+                ArgumentException or InvalidOperationException or UnauthorizedAccessException => true,
+
+                // Client errors (4xx) are generally not worth retrying, except for a few specific codes
+                HttpOperationException { StatusCode: not null } httpEx when (int)httpEx.StatusCode >= 400 && (int)httpEx.StatusCode < 500 =>
+                    httpEx.StatusCode switch
+                    {
+                        System.Net.HttpStatusCode.RequestTimeout => false, // 408
+                        System.Net.HttpStatusCode.TooManyRequests => false, // 429
+                        System.Net.HttpStatusCode.GatewayTimeout => false, // 504
+                        _ => true // Other 4xx errors are non-retriable
+                    },
+
+                // Server errors (5xx) are generally worth retrying
+                HttpOperationException { StatusCode: not null } httpEx when (int)httpEx.StatusCode >= 500 && (int)httpEx.StatusCode < 600 => false,
+
+                // For EmbeddingGenerationException, check the inner exception
+                EmbeddingGenerationException { InnerException: not null } embEx => IsNonRetriableException(embEx.InnerException),
+
+                // For all other exceptions, assume they are retriable
+                _ => false
+            };
 
         protected override void InitializeWork()
         {
