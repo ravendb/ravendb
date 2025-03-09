@@ -11,10 +11,7 @@ public sealed class AiIntegrationConnectionHandler : DatabaseRequestHandler
     [RavenAction("/databases/*/admin/ai/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
     public async Task TestAiConnection()
     {
-        var aiConnectorType = GetEnumQueryString<AiConnectorType>("type");
-
-        using (var processor = new AiIntegrationHandlerProcessorForTestAiConnection<DatabaseRequestHandler, DocumentsOperationContext>(this)
-               { AiConnectorType = aiConnectorType })
+        using (var processor = new AiIntegrationHandlerProcessorForTestAiConnection<DatabaseRequestHandler, DocumentsOperationContext>(this))
             await processor.ExecuteAsync();
     }
 }

@@ -19,60 +19,59 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    private protected string JsonConfigString;
-    public AiConnectorType AiConnectorType { get; init; }
-
     public AiIntegrationHandlerProcessorForTestAiConnection([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
     public override async ValueTask ExecuteAsync()
     {
-        if (AiConnectorType == AiConnectorType.None)
+        var aiConnectorType = RequestHandler.GetEnumQueryString<AiConnectorType>("type");
+        if (aiConnectorType == AiConnectorType.None)
             throw new ArgumentException($"AI connector type cannot be '{AiConnectorType.None}'");
 
         InMemoryLoggerProvider logger = null;
         try
         {
+            string jsonConfigString;
             using (var streamReader = new StreamReader(HttpContext.Request.Body))
-                JsonConfigString = await streamReader.ReadToEndAsync();
+                jsonConfigString = await streamReader.ReadToEndAsync();
 
             var aiConnectionString = new AiConnectionString();
 
-            switch (AiConnectorType)
+            switch (aiConnectorType)
             {
                 case AiConnectorType.OpenAi:
-                    var openAiSettings = JsonConvert.DeserializeObject<OpenAiSettings>(JsonConfigString);
+                    var openAiSettings = JsonConvert.DeserializeObject<OpenAiSettings>(jsonConfigString);
                     aiConnectionString.OpenAiSettings = openAiSettings;
                     break;
 
                 case AiConnectorType.AzureOpenAi:
-                    var azureOpenAiSettings = JsonConvert.DeserializeObject<AzureOpenAiSettings>(JsonConfigString);
+                    var azureOpenAiSettings = JsonConvert.DeserializeObject<AzureOpenAiSettings>(jsonConfigString);
                     aiConnectionString.AzureOpenAiSettings = azureOpenAiSettings;
                     break;
 
                 case AiConnectorType.Ollama:
-                    var ollamaSettings = JsonConvert.DeserializeObject<OllamaSettings>(JsonConfigString);
+                    var ollamaSettings = JsonConvert.DeserializeObject<OllamaSettings>(jsonConfigString);
                     aiConnectionString.OllamaSettings = ollamaSettings;
                     break;
 
                 case AiConnectorType.Embedded:
-                    var embeddedSettings = JsonConvert.DeserializeObject<EmbeddedSettings>(JsonConfigString);
+                    var embeddedSettings = JsonConvert.DeserializeObject<EmbeddedSettings>(jsonConfigString);
                     aiConnectionString.EmbeddedSettings = embeddedSettings;
                     break;
 
                 case AiConnectorType.Google:
-                    var googleSettings = JsonConvert.DeserializeObject<GoogleSettings>(JsonConfigString);
+                    var googleSettings = JsonConvert.DeserializeObject<GoogleSettings>(jsonConfigString);
                     aiConnectionString.GoogleSettings = googleSettings;
                     break;
 
                 case AiConnectorType.HuggingFace:
-                    var huggingFace = JsonConvert.DeserializeObject<HuggingFaceSettings>(JsonConfigString);
+                    var huggingFace = JsonConvert.DeserializeObject<HuggingFaceSettings>(jsonConfigString);
                     aiConnectionString.HuggingFaceSettings = huggingFace;
                     break;
 
                 case AiConnectorType.MistralAi:
-                    var mistralAiSettings = JsonConvert.DeserializeObject<MistralAiSettings>(JsonConfigString);
+                    var mistralAiSettings = JsonConvert.DeserializeObject<MistralAiSettings>(jsonConfigString);
                     aiConnectionString.MistralAiSettings = mistralAiSettings;
                     break;
 

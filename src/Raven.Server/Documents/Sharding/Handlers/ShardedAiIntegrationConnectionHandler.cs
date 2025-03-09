@@ -11,10 +11,7 @@ public sealed class ShardedAiIntegrationConnectionHandler : ShardedDatabaseReque
     [RavenShardedAction("/databases/*/admin/ai/test-connection", "POST")]
     public async Task TestAiConnection()
     {
-        var aiConnectorType = GetEnumQueryString<AiConnectorType>("type");
-
-        using (var processor = new AiIntegrationHandlerProcessorForTestAiConnection<ShardedDatabaseRequestHandler, TransactionOperationContext>(this)
-               { AiConnectorType = aiConnectorType })
+        using (var processor = new AiIntegrationHandlerProcessorForTestAiConnection<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
             await processor.ExecuteAsync();
     }
 }
