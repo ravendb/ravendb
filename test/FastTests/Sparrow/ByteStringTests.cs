@@ -202,12 +202,12 @@ namespace FastTests.Sparrow
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None))
             {
-                while (context.AllocationBlockSize != ByteStringContext.MaxAllocatedBlockSize)
+                while (context.AllocationBlockSize != ByteStringContext.MaxSegmentSizeInBytes)
                 {
                     context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2, out _);
                 }
 
-                Assert.Equal(ByteStringContext.MaxAllocatedBlockSize, context.AllocationBlockSize);
+                Assert.Equal(ByteStringContext.MaxSegmentSizeInBytes, context.AllocationBlockSize);
 
                 const int toAllocate = ByteStringContext.MinBlockSizeInBytes * 5;
                 context.Allocate(toAllocate, out var first);
