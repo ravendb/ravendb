@@ -28,6 +28,9 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
 
     public override async ValueTask ExecuteAsync()
     {
+        if (AiConnectorType == AiConnectorType.None)
+            throw new ArgumentException($"AI connector type cannot be '{AiConnectorType.None}'");
+
         InMemoryLoggerProvider logger = null;
         try
         {

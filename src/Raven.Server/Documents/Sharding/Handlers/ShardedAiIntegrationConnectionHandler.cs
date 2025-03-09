@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Handlers.Processors;
 using Raven.Server.Routing;
@@ -12,13 +11,7 @@ public sealed class ShardedAiIntegrationConnectionHandler : ShardedDatabaseReque
     [RavenShardedAction("/databases/*/admin/ai/test-connection", "POST")]
     public async Task TestAiConnection()
     {
-        var aiConnectorTypeString = GetStringQueryString("type");
-
-        if (Enum.TryParse(aiConnectorTypeString, out AiConnectorType aiConnectorType) == false)
-            throw new ArgumentException($"Invalid AI connector type: '{aiConnectorTypeString}'");
-
-        if (aiConnectorType == AiConnectorType.None)
-            throw new ArgumentException("AI connector type cannot be 'None'");
+        var aiConnectorType = GetEnumQueryString<AiConnectorType>("type");
 
         using (var processor = new AiIntegrationHandlerProcessorForTestAiConnection<ShardedDatabaseRequestHandler, TransactionOperationContext>(this)
                { AiConnectorType = aiConnectorType })

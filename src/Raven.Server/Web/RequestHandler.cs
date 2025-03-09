@@ -387,6 +387,19 @@ namespace Raven.Server.Web
             return value[0];
         }
 
+        internal T GetEnumQueryString<T>(string name) where T : struct
+        {
+            var val = HttpContext.Request.Query[name];
+            if (val.Count == 0 || string.IsNullOrWhiteSpace(val[0]))
+                ThrowRequiredMember(name);
+
+            var value = val[0];
+            if (Enum.TryParse(typeof(T), value, true, out var result) == false)
+                ThrowInvalidEnum(typeof(T), name, value);
+
+            return (T)result;
+        }
+
         [DoesNotReturn]
         private static void ThrowSingleCharacterRequired(string name, string value)
         {
@@ -403,6 +416,12 @@ namespace Raven.Server.Web
         public static void ThrowRequiredPropertyNameInRequest(string name)
         {
             throw new ArgumentException($"Request should have a property name '{name}' which is mandatory.");
+        }
+
+        [DoesNotReturn]
+        private static void ThrowInvalidEnum(Type type, string name, string value)
+        {
+            throw new ArgumentException($"Could not parse query string '{name}' as {type.Name}, value was: {value}");
         }
 
         internal Microsoft.Extensions.Primitives.StringValues GetStringValuesQueryString(string name, bool required = true)
