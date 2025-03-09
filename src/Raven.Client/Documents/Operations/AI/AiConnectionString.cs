@@ -15,7 +15,7 @@ public sealed class AiConnectionString : ConnectionString
 
     public OllamaSettings OllamaSettings { get; set; }
 
-    public OnnxSettings OnnxSettings { get; set; }
+    public EmbeddedSettings EmbeddedSettings { get; set; }
 
     public GoogleSettings GoogleSettings { get; set; }
 
@@ -32,7 +32,7 @@ public sealed class AiConnectionString : ConnectionString
             OpenAiSettings,
             AzureOpenAiSettings,
             OllamaSettings,
-            OnnxSettings,
+            EmbeddedSettings,
             GoogleSettings,
             HuggingFaceSettings,
             MistralAiSettings
@@ -84,7 +84,7 @@ public sealed class AiConnectionString : ConnectionString
             AiConnectorType.OpenAi => OpenAiSettings.Compare(newConnectionString.OpenAiSettings),
             AiConnectorType.AzureOpenAi => AzureOpenAiSettings.Compare(newConnectionString.AzureOpenAiSettings),
             AiConnectorType.Ollama => OllamaSettings.Compare(newConnectionString.OllamaSettings),
-            AiConnectorType.Onnx => OnnxSettings.Compare(newConnectionString.OnnxSettings),
+            AiConnectorType.Embedded => EmbeddedSettings.Compare(newConnectionString.EmbeddedSettings),
             AiConnectorType.Google => GoogleSettings.Compare(newConnectionString.GoogleSettings),
             AiConnectorType.HuggingFace => HuggingFaceSettings.Compare(newConnectionString.HuggingFaceSettings),
             AiConnectorType.MistralAi => MistralAiSettings.Compare(newConnectionString.MistralAiSettings),
@@ -102,8 +102,8 @@ public sealed class AiConnectionString : ConnectionString
             return AiConnectorType.AzureOpenAi;
         if (OllamaSettings != null)
             return AiConnectorType.Ollama;
-        if (OnnxSettings != null)
-            return AiConnectorType.Onnx;
+        if (EmbeddedSettings != null)
+            return AiConnectorType.Embedded;
         if (GoogleSettings != null)
             return AiConnectorType.Google;
         if (HuggingFaceSettings != null)
@@ -122,7 +122,7 @@ public sealed class AiConnectionString : ConnectionString
         json[nameof(OpenAiSettings)] = OpenAiSettings?.ToJson();
         json[nameof(AzureOpenAiSettings)] = AzureOpenAiSettings?.ToJson();
         json[nameof(OllamaSettings)] = OllamaSettings?.ToJson();
-        json[nameof(OnnxSettings)] = OnnxSettings?.ToJson();
+        json[nameof(EmbeddedSettings)] = EmbeddedSettings?.ToJson();
         json[nameof(GoogleSettings)] = GoogleSettings?.ToJson();
         json[nameof(HuggingFaceSettings)] = HuggingFaceSettings?.ToJson();
         json[nameof(MistralAiSettings)] = MistralAiSettings?.ToJson();

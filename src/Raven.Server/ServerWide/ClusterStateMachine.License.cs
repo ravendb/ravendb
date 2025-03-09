@@ -937,7 +937,7 @@ public sealed partial class ClusterStateMachine
             return;
 
         var countOfExternalConnectors = databaseRecord.AiConnectionStrings
-            .Count(item => item.Value.GetActiveProvider() != AiConnectorType.Onnx);
+            .Count(item => item.Value.GetActiveProvider() != AiConnectorType.Embedded);
         
         if (countOfExternalConnectors == 0)
             return;

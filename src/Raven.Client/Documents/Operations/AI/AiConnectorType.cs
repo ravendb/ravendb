@@ -6,7 +6,7 @@ public enum AiConnectorType
     OpenAi,
     AzureOpenAi,
     Ollama,
-    Onnx,
+    Embedded,
     Google,
     HuggingFace,
     MistralAi

@@ -95,7 +95,7 @@ public static class AiExtensions
                 kernelBuilder.AddOllamaTextEmbeddingGeneration(ollamaApiClient);
                 break;
 
-            case AiConnectorType.Onnx:
+            case AiConnectorType.Embedded:
                 kernelBuilder.AddCustomBertOnnxTextEmbeddingGeneration();
                 break;
 

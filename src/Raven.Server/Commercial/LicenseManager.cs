@@ -1625,7 +1625,7 @@ namespace Raven.Server.Commercial
             if (LicenseStatus.HasAiIntegrations)
                 return;
             
-            if (aiConnectionString.GetActiveProvider() == AiConnectorType.Onnx)
+            if (aiConnectionString.GetActiveProvider() == AiConnectorType.Embedded)
                 return;
             
             //todo: uncomment the code below after license work 

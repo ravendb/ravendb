@@ -53,9 +53,9 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                     aiConnectionString.OllamaSettings = ollamaSettings;
                     break;
 
-                case AiConnectorType.Onnx:
-                    var onnxSettings = JsonConvert.DeserializeObject<OnnxSettings>(JsonConfigString);
-                    aiConnectionString.OnnxSettings = onnxSettings;
+                case AiConnectorType.Embedded:
+                    var embeddedSettings = JsonConvert.DeserializeObject<EmbeddedSettings>(JsonConfigString);
+                    aiConnectionString.EmbeddedSettings = embeddedSettings;
                     break;
 
                 case AiConnectorType.Google:

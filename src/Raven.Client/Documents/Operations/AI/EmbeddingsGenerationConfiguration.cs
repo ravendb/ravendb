@@ -123,7 +123,7 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
             case AiConnectorType.HuggingFace:
                 // Endpoint is optional for HuggingFace, it will use the default endpoint if not provided, which is HTTPS
                 return string.IsNullOrWhiteSpace(Connection.HuggingFaceSettings.Endpoint) || Connection.HuggingFaceSettings.Endpoint.StartsWith("https");
-            case AiConnectorType.Onnx:
+            case AiConnectorType.Embedded:
             case AiConnectorType.Google:
                 return true;
 

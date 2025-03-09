@@ -30,7 +30,7 @@ public class TasksManagementTests : RavenTestBase
             ChunkingOptionsForQuerying = DefaultChunkingOptions
         };
 
-        var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, OnnxSettings = new OnnxSettings() };
+        var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, EmbeddedSettings = new EmbeddedSettings() };
 
         var putAiConnectionStringResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
         Assert.NotNull(putAiConnectionStringResult.RaftCommandIndex);
@@ -60,7 +60,7 @@ public class TasksManagementTests : RavenTestBase
             ChunkingOptionsForQuerying = DefaultChunkingOptions
         };
 
-        var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, OnnxSettings = new OnnxSettings() };
+        var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, EmbeddedSettings = new EmbeddedSettings() };
 
         var putAiConnectionStringResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
         Assert.NotNull(putAiConnectionStringResult.RaftCommandIndex);

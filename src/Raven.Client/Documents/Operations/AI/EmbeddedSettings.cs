@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// <summary>
 /// The configuration for the ONNX model.
 /// </summary>
-public sealed class OnnxSettings : AbstractAiSettings
+public sealed class EmbeddedSettings : AbstractAiSettings
 {
     // We're using a server-wide, singletone ONNX service, and it can't be configured intentionally.
     public override void ValidateMandatoryFields(ref List<string> errors)
@@ -15,7 +15,7 @@ public sealed class OnnxSettings : AbstractAiSettings
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other) =>
-        other is OnnxSettings
+        other is EmbeddedSettings
             ? AiSettingsCompareDifferences.None
             : AiSettingsCompareDifferences.All;
 

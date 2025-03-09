@@ -370,7 +370,7 @@ namespace SlowTests.Issues
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.SnowflakeEtl;
                         break;
                     case EtlType.EmbeddingsGeneration:
-                        var aiConnectionString = new AiConnectionString { Name = "aiconnection", OnnxSettings = new OnnxSettings() };
+                        var aiConnectionString = new AiConnectionString { Name = "aiconnection", EmbeddedSettings = new EmbeddedSettings() };
                         aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
                         var embeddingsGenerationConfiguration = new EmbeddingsGenerationConfiguration
                         {

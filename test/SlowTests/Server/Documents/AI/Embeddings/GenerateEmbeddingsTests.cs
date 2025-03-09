@@ -872,7 +872,7 @@ Console.WriteLine(""Hello, World!"");";
                 await session.SaveChangesAsync();
             }
 
-            var connectionString = new AiConnectionString { Name = "ConnectionStringForTestingPurposes", OnnxSettings = new OnnxSettings() };
+            var connectionString = new AiConnectionString { Name = "ConnectionStringForTestingPurposes", EmbeddedSettings = new EmbeddedSettings() };
             var operation = new PutConnectionStringOperation<AiConnectionString>(connectionString);
             var putConnectionStringResult = store.Maintenance.Send(operation);
             Assert.NotNull(putConnectionStringResult.RaftCommandIndex);

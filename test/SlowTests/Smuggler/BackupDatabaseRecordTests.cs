@@ -226,7 +226,7 @@ namespace SlowTests.Smuggler
                     }));
                     
                     //put embedding generation store 1
-                    var aiConnectionString = new AiConnectionString { Name = "aiconnection", OnnxSettings = new OnnxSettings() };
+                    var aiConnectionString = new AiConnectionString { Name = "aiconnection", EmbeddedSettings = new EmbeddedSettings() };
                     aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
                     var embeddingsGenerationConfiguration = new EmbeddingsGenerationConfiguration
                     {
@@ -1240,7 +1240,7 @@ namespace SlowTests.Smuggler
                     Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }}));
                 
                 // add generate embedding configuration-
-                var aiConnectionString = new AiConnectionString { Name = "aiconnection", OnnxSettings = new OnnxSettings() };
+                var aiConnectionString = new AiConnectionString { Name = "aiconnection", EmbeddedSettings = new EmbeddedSettings() };
                 aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
                 var embeddingsGenerationConfiguration = new EmbeddingsGenerationConfiguration
                 {
@@ -1422,8 +1422,8 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(record.AiConnectionStrings);
                     Assert.Equal(1, record.AiConnectionStrings.Count);
                     Assert.Equal(ConnectionStringType.Ai, record.AiConnectionStrings.First().Value.Type);
-                    Assert.NotNull(record.AiConnectionStrings.First().Value.OnnxSettings);
-                    Assert.Equal(AiSettingsCompareDifferences.None, record.AiConnectionStrings.First().Value.OnnxSettings.Compare(new OnnxSettings()));
+                    Assert.NotNull(record.AiConnectionStrings.First().Value.EmbeddedSettings);
+                    Assert.Equal(AiSettingsCompareDifferences.None, record.AiConnectionStrings.First().Value.EmbeddedSettings.Compare(new EmbeddedSettings()));
                     
                     Assert.NotNull(record.EmbeddingsGenerations);
                     Assert.Equal(1, record.EmbeddingsGenerations.Count);
@@ -1616,7 +1616,7 @@ namespace SlowTests.Smuggler
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(store.Database, store.Database)));
                 
-                var aiConnectionString = new AiConnectionString { Name = "aiconnection", OnnxSettings = new OnnxSettings() };
+                var aiConnectionString = new AiConnectionString { Name = "aiconnection", EmbeddedSettings = new EmbeddedSettings() };
                 aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
                 var embeddingsGenerationConfiguration = new EmbeddingsGenerationConfiguration
                 {

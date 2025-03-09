@@ -146,7 +146,7 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
             yield return OllamaConnectorForTesting.CreateNewInstance(testMethodName);
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Onnx))
-            yield return OnnxConnectorForTesting.CreateNewInstance(testMethodName);
+            yield return EmbeddedConnectorForTesting.CreateNewInstance(testMethodName);
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Google))
             yield return GoogleConnectorForTesting.CreateNewInstance(testMethodName);
@@ -170,7 +170,7 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
             yield return OllamaConnectorForTesting.Instance;
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Onnx))
-            yield return OnnxConnectorForTesting.Instance;
+            yield return EmbeddedConnectorForTesting.Instance;
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Google))
             yield return GoogleConnectorForTesting.Instance;
