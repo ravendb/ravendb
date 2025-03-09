@@ -15,7 +15,9 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Embeddings.Generation.Task.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int? EmbeddingsGenerationTaskMaxBatchSize { get; set; }
 
-    [Description("Base delay for Embedding Generation task retries. The delay increases exponentially with each retry attempt. E.g. 5s, 25s, 125s, etc.")]
+    [Description("Base delay for Embedding Generation task retries. The actual progression depends on the selected FallbackModeStrategy. " +
+                 $"When using '{nameof(EmbeddingsGenerationFallbackModeStrategy.Linear)}' strategy, the delay increases linearly (e.g., 15s, 30s, 45s). " +
+                 $"When using '{nameof(EmbeddingsGenerationFallbackModeStrategy.Exponential)}' strategy, the delay increases exponentially with each retry attempt (e.g., 15s, 225s, 3375s).")]
     [DefaultValue(15)]
     [TimeUnit(TimeUnit.Seconds)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Task.RetryDelayInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -27,7 +29,10 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Embeddings.Generation.Task.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public TimeSetting EmbeddingsGenerationTaskMaxFallbackTime { get; set; }
 
-    [Description("Strategy to use for retry intervals when embedding generation fails. 'Linear' uses fixed intervals between retries, while 'Exponential' increases the wait time exponentially after each failure (e.g., 15s, 30s, 60s for Linear; or 15s, 225s, 3375s for Exponential with base 15s).")]
+    [Description($"Strategy to use for retry intervals when embedding generation fails. " +
+                 $"'{nameof(EmbeddingsGenerationFallbackModeStrategy.Linear)}' uses fixed intervals between retries, while " +
+                 $"'{nameof(EmbeddingsGenerationFallbackModeStrategy.Exponential)}' increases the wait time exponentially after each failure " +
+                 $"(e.g., 15s, 30s, 60s for {nameof(EmbeddingsGenerationFallbackModeStrategy.Linear)}; or 15s, 225s, 3375s for {nameof(EmbeddingsGenerationFallbackModeStrategy.Exponential)} with base 15s).")]
     [DefaultValue(EmbeddingsGenerationFallbackModeStrategy.Exponential)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Task.FallbackModeStrategy", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public EmbeddingsGenerationFallbackModeStrategy EmbeddingsGenerationTaskFallbackModeStrategy { get; set; }
@@ -38,7 +43,9 @@ public sealed class AiConfiguration : ConfigurationCategory
 
     #region Caching
 
-    [Description("Maximum number of embeddings generated for queries to be cached in a single batch. Lower values reduce latency for query embedding generation but may decrease throughput.")]
+    [Description("Maximum number of embeddings generated for queries to be stored in the embeddings cache in a single batch operation. " +
+                 "When users perform vector searches, their text queries are converted into vector embeddings. " +
+                 "This setting controls how many such query embeddings can be cached together in one operation to reduce repeated calls to AI providers for the same queries.")]
     [DefaultValue(128)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Caching.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int QueryEmbeddingsGenerationMaxCacheBatchSize { get; set; }
@@ -47,7 +54,7 @@ public sealed class AiConfiguration : ConfigurationCategory
 
     #region Batching
 
-    [Description("Time in milliseconds to wait for additional query embedding requests before processing a batch. Lower values reduce latency for query embedding generation but may decrease throughput.")]
+    [Description("Time in milliseconds to wait for additional query embedding requests before the batch is sent to the AI provider. Lower values reduce latency for query embedding generation but may decrease throughput.")]
     [DefaultValue(200)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.TimeoutInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int QueryEmbeddingsBatchTimeout { get; set; }
