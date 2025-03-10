@@ -239,6 +239,68 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
     
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanSearchByMultipleVectorsByTexts(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration(){ ChunkingOptions = DefaultChunkingOptions, Path = "TextualValue" }]);
+        
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Dto() { TextualValue = "pizza" });
+            session.Store(new Dto() { TextualValue = "car" });
+            session.Store(new Dto() { TextualValue = "beach" });
+            session.SaveChanges();
+
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            
+            var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["italian food", "vehicle"])).ToList();
+            Assert.Equal(2, multiVectorTextualQuery.Count);
+
+            multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["italian food", "dog"])).ToList();
+            Assert.Equal(1, multiVectorTextualQuery.Count);
+
+            multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["cat", "dog"])).ToList();
+            Assert.Equal(0, multiVectorTextualQuery.Count);
+        }
+
+        new VectorStaticIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            var multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
+                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["italian food", "vehicle"])).ToList();
+            Assert.Equal(2, multiVectorTextualQuery.Count);
+
+            multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
+                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["italian food", "dog"])).ToList();
+            Assert.Equal(1, multiVectorTextualQuery.Count);
+
+            multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
+                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["cat", "dog"])).ToList();
+            Assert.Equal(0, multiVectorTextualQuery.Count);
+        }
+    }
+    
+    private class VectorStaticIndex : AbstractIndexCreationTask<Dto>
+    {
+        public VectorStaticIndex()
+        {
+            Map = dtos => dtos.Select(x => new
+            {
+                TextualValue = CreateVector(x.TextualValue),
+                Vector = LoadVector("localaitask", "TextualValue")
+            });
+        }
+    }
+    
     private class SomeIndex : AbstractIndexCreationTask<Dto>
     {
         public class IndexEntry

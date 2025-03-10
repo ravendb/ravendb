@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Queries;
@@ -288,12 +289,6 @@ public static partial class CoraxQueryBuilder
         {
             var database = builderParameters.Index.DocumentDatabase;
             
-            var valueAsString = valueType switch
-            {
-                ValueTokenType.String => value.ToString(),
-                _ => throw new NotSupportedException($"Provided parameter to vector.search() method for '{fieldName}' must be of string type, while {valueType} was provided")
-            };
-
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
             if (database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringId) == false)
@@ -308,11 +303,35 @@ public static partial class CoraxQueryBuilder
             }
 
             var destinationEmbeddingType = vectorOptions?.DestinationEmbeddingType ?? sourceEmbeddingType;
+            
+            IEmbeddingValue[] embeddingValues;
 
-            var embeddingValues = database.AiIntegrations.Embeddings
-                .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, builderParameters.Allocator, connectionStringId, embeddingsTaskId, valueAsString)
-                .GetAwaiter().GetResult();
+            switch (valueType)
+            {
+                case ValueTokenType.String:
+                    embeddingValues = database.AiIntegrations.Embeddings
+                        .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsTaskId, value.ToString())
+                        .GetAwaiter().GetResult();
+                    break;
+                case ValueTokenType.Parameter:
+                {
+                    if (value is not BlittableJsonReaderArray bjra)
+                        throw new Exception($"Expected array as parameter, got {value.GetType().FullName} instead.");
+                
+                    var values = new string[bjra.Length];
 
+                    for (var i = 0; i < values.Length; i++)
+                        values[i] = bjra[i].ToString();
+                
+                    embeddingValues = database.AiIntegrations.Embeddings
+                        .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsTaskId, values)
+                        .GetAwaiter().GetResult();
+                    break;
+                }
+                default:
+                    throw new Exception("Unexpected value type.");
+            }
+            
             var queryingVectorOption = new VectorOptions
             {
                 SourceEmbeddingType = sourceEmbeddingType,
