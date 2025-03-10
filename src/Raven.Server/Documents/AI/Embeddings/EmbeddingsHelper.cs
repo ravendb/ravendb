@@ -14,7 +14,16 @@ namespace Raven.Server.Documents.AI.Embeddings;
 
 public static class EmbeddingsHelper
 {
-    internal static readonly List<string> TestValuesList = ["TestValue", "TestValue2"];
+    /// <summary>
+    /// Contains predefined test values used to verify connection with Language Models.
+    /// </summary>
+    /// <remarks>
+    /// These values are sent to the language model when testing the connection
+    /// through either the "Test Connection" button in the UI or the corresponding API endpoint.
+    /// The system uses these values to generate test embeddings and validate that the
+    /// language model properly responds to embedding generation requests.
+    /// </remarks>
+    internal static readonly List<string> ValuesListToVerifyConnection = ["TestValue", "TestValue2"];
     private static readonly IBlake2B Hash;
 
     static EmbeddingsHelper()
