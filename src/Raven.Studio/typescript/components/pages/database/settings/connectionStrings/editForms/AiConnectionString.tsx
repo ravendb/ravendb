@@ -98,7 +98,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         disabled={isUsedByAnyTask}
                         addon={
                             <Button
-                                color="link"
+                                variant="link"
                                 className="text-reset px-0"
                                 onClick={handleGenerateIdentifier}
                                 title="Click to generate the identifier from the connection string name"
