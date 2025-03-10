@@ -58,7 +58,7 @@ public class VectorOptions
     [Conditional("DEBUG")]
     internal void ValidateDebug() => Validate();
     
-    internal void Validate()
+    internal virtual void Validate()
     {
         PortableExceptions.ThrowIf<InvalidOperationException>(DestinationEmbeddingType is VectorEmbeddingType.Text, "Destination embedding type cannot be Text.");
         PortableExceptions.ThrowIf<InvalidOperationException>(Dimensions is <= 0, "Number of vector dimensions has to be positive.");

@@ -1,4 +1,5 @@
 ﻿using System;
+using Sparrow;
 
 namespace Raven.Client.Documents.Indexes.Vector;
 
@@ -40,8 +41,14 @@ public sealed class AutoVectorOptions : VectorOptions
                && SourceFieldName == other.SourceFieldName
                && EmbeddingsGenerationTaskIdentifier == other.EmbeddingsGenerationTaskIdentifier;
     }
-    
-    // todo add validate
+
+    internal override void Validate()
+    {
+        base.Validate();
+        
+        PortableExceptions.ThrowIf<InvalidOperationException>(SourceFieldName is null, "Source field name cannot be null.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(EmbeddingsGenerationTaskIdentifier is null, "EmbeddingsGenerationTaskIdentifier cannot be null.");
+    }
 
     public override int GetHashCode()
     {

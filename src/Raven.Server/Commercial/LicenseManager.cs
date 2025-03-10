@@ -1078,7 +1078,7 @@ namespace Raven.Server.Commercial
             var elasticSearchEtlCount = 0;
             var queueEtlCount = 0;
             var snowflakeEtlCount = 0;
-            var aiEtlCount = 0;
+            var embeddingsGenerationsCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
@@ -1154,7 +1154,7 @@ namespace Raven.Server.Commercial
 
                     if (databaseRecord.EmbeddingsGenerations != null &&
                         databaseRecord.EmbeddingsGenerations.Count > 0)
-                        aiEtlCount++;
+                        embeddingsGenerationsCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1246,9 +1246,9 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
             }
 
-            if (aiEtlCount > 0 && newLicenseStatus.HasAiIntegrations == false)
+            if (embeddingsGenerationsCount > 0 && newLicenseStatus.HasAiIntegrations == false)
             {
-                var message = GenerateDetails(aiEtlCount, "AI Integrations");
+                var message = GenerateDetails(embeddingsGenerationsCount, "AI Integrations");
                 throw GenerateLicenseLimit(LimitType.AiIntegrations, message);
             }
 

@@ -105,14 +105,14 @@ namespace Raven.Server.Documents.Indexes
         {
             var isStoredOnDisk = _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out var diskStoredSourceEtlTaskName);
 
-            PortableExceptions.ThrowIf<InvalidOperationException>(isStoredOnDisk && diskStoredSourceEtlTaskName != taskIdentifier, $"We are expecting that field {fieldName} has the same ETL task as it was before. However, stored ETL task was {diskStoredSourceEtlTaskName} and current one is {taskIdentifier}.");
+            PortableExceptions.ThrowIf<InvalidOperationException>(isStoredOnDisk && diskStoredSourceEtlTaskName != taskIdentifier, $"We are expecting that field {fieldName} has the same Embeddings Generation task as it was before. However, stored task was {diskStoredSourceEtlTaskName} and current one is {taskIdentifier}.");
 
             var isStoredInRuntime = false;
             if (_embeddingsGenerationTaskIdentifiersToWrite != null)
             {
                 isStoredInRuntime = _embeddingsGenerationTaskIdentifiersToWrite.TryGetValue(fieldName, out var runtimeStoredSourceEtlTaskName);
                 PortableExceptions.ThrowIf<InvalidOperationException>(isStoredInRuntime && runtimeStoredSourceEtlTaskName != taskIdentifier,
-                    $"We are expecting that field {fieldName} has the same ETL task as it was before. However, previously ETL task was {runtimeStoredSourceEtlTaskName} and current one is {taskIdentifier}.");
+                    $"We are expecting that field {fieldName} has the same Embeddings Generation task as it was before. However, previous task was {runtimeStoredSourceEtlTaskName} and current one is {taskIdentifier}.");
             }
             
             if (isStoredOnDisk || isStoredInRuntime)
@@ -127,8 +127,7 @@ namespace Raven.Server.Documents.Indexes
             var isStoredOnDisk = _vectorSourceEmbeddingType.TryGetValue(fieldName, out var diskStoredEmbeddingType);
             
             PortableExceptions.ThrowIf<InvalidOperationException>(isStoredOnDisk && embeddingType != diskStoredEmbeddingType, $"We are expecting that field {fieldName} has the same embedding type as it was before. However, stored embedding type was {diskStoredEmbeddingType} and current one is {embeddingType}.");
-
-
+            
             var isStoredInRuntime = false;
             if (_vectorSourceEmbeddingTypeToWrite != null)
             {
