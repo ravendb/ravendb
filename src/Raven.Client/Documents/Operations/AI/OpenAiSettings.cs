@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// </summary>
 public sealed class OpenAiSettings : OpenAiBaseSettings
 {
-    public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, string projectId = null) : base(apiKey, endpoint, model)
+    public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, string projectId = null, int? dimensions = null) : base(apiKey, endpoint, model, dimensions)
     {
         OrganizationId = organizationId;
         ProjectId = projectId;
@@ -54,10 +54,10 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         var json = base.ToJson();
 
         if (string.IsNullOrWhiteSpace(OrganizationId) == false)
-            json[OrganizationId] = OrganizationId;
+            json[nameof(OrganizationId)] = OrganizationId;
 
         if (string.IsNullOrWhiteSpace(ProjectId) == false)
-            json[ProjectId] = ProjectId;
+            json[nameof(ProjectId)] = ProjectId;
 
         return json;
     }

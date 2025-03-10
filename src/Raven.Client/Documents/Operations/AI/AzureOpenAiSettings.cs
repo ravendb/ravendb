@@ -5,10 +5,9 @@ namespace Raven.Client.Documents.Operations.AI;
 
 public sealed class AzureOpenAiSettings : OpenAiBaseSettings
 {
-    public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, int? dimensions = null) : base(apiKey, endpoint, model)
+    public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, int? dimensions = null) : base(apiKey, endpoint, model, dimensions)
     {
         DeploymentName = deploymentName;
-        Dimensions = dimensions;
     }
 
     public AzureOpenAiSettings()
@@ -39,9 +38,6 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
         if (DeploymentName != azureSettings.DeploymentName)
             differences |= AiSettingsCompareDifferences.DeploymentConfiguration;
 
-        if (Dimensions != azureSettings.Dimensions)
-            differences |= AiSettingsCompareDifferences.EmbeddingDimensions;
-
         return differences;
     }
 
@@ -49,9 +45,6 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
     {
         var json = base.ToJson();
         json[nameof(DeploymentName)] = DeploymentName;
-
-        if (Dimensions.HasValue)
-            json[nameof(Dimensions)] = Dimensions;
 
         return json;
     }

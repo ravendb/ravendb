@@ -5,11 +5,13 @@ namespace Raven.Client.Documents.Operations.AI;
 
 public abstract class OpenAiBaseSettings : AbstractAiSettings
 {
-    protected OpenAiBaseSettings(string apiKey, string endpoint, string model)
+    protected OpenAiBaseSettings(string apiKey, string endpoint, string model, int? dimensions = null)
+
     {
         ApiKey = apiKey;
         Endpoint = endpoint;
         Model = model;
+        Dimensions = dimensions;
     }
 
     protected OpenAiBaseSettings()
@@ -47,6 +49,9 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
 
         if (string.IsNullOrWhiteSpace(Model))
             errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
+
+        if (Dimensions is <= 0)
+            errors.Add($"Value of `{nameof(Dimensions)}` field must be positive.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
@@ -81,6 +86,9 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
 
         if (string.IsNullOrWhiteSpace(Endpoint) == false)
             json[nameof(Endpoint)] = Endpoint;
+
+        if (Dimensions.HasValue)
+            json[nameof(Dimensions)] = Dimensions.Value;
 
         return json;
     }

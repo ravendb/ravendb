@@ -39,6 +39,9 @@ public sealed class GoogleSettings : AbstractAiSettings
 
         if (string.IsNullOrWhiteSpace(ApiKey))
             errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
+
+        if (Dimensions is <= 0)
+            errors.Add($"Value of `{nameof(Dimensions)}` field must be positive.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
@@ -70,7 +73,10 @@ public sealed class GoogleSettings : AbstractAiSettings
         };
 
         if (AiVersion != null)
-            json[nameof(AiVersion)] = AiVersion.ToString();
+            json[nameof(AiVersion)] = AiVersion.Value.ToString("G"); // Explicitly convert to string to avoid enum serialization
+
+        if (Dimensions.HasValue)
+            json[nameof(Dimensions)] = Dimensions.Value;
 
         return json;
     }
