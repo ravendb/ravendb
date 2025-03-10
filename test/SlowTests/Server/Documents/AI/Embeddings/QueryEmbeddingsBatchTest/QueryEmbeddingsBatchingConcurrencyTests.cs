@@ -25,7 +25,7 @@ public class QueryEmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) :
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
         // Configure limited concurrency for test
-        int maxConcurrentBatches = 2;
+        const int maxConcurrentBatches = 2;
         database.Configuration.Ai.QueryEmbeddingsMaxConcurrentBatches = maxConcurrentBatches;
         database.Configuration.Ai.QueryEmbeddingsMaxBatchSize = 3; // Small batch size to create multiple batches
 
@@ -38,87 +38,99 @@ public class QueryEmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) :
         int currentlyProcessingBatches = 0;
         int maxObservedConcurrentBatches = 0;
 
+        // Add a hook invocation counter to verify the hook is being called
+        int hookInvocationCount = 0;
+
+        // Add an event to signal when the first batch starts processing
+        var firstBatchProcessingStarted = new ManualResetEventSlim(initialState: false);
+
         // Submit a first request to ensure worker is created
         await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["Initial request"], CancellationToken.None);
 
         // Get the worker and set up testing hooks
         var worker = batchService.ForTestingPurposesOnly().GetBatchWorker(aiConnectionStringIdentifier);
-        var workerTestHooks = worker.ForTestingPurposesOnly();
 
-        // Set up the callback to monitor concurrent batch processing
-        // We'll create events that we can manually trigger to control when batches complete
-        const int totalBatches = 5;
-        for (int i = 0; i < totalBatches; i++)
-            batchCompletionEvents.Add(new ManualResetEventSlim(false));
-
-        int batchCounter = 0;
-        workerTestHooks.AfterBatchFlushed = () =>
+        try
         {
-            int current = Interlocked.Increment(ref currentlyProcessingBatches);
+            // Set up the callback to monitor concurrent batch processing
+            // We'll create events that we can manually trigger to control when batches complete
+            const int totalBatches = 5;
+            for (int i = 0; i < totalBatches; i++)
+                batchCompletionEvents.Add(new ManualResetEventSlim(false));
 
-            // Track the maximum number of concurrent batches we've observed
-            int prevMax;
-            do
+            int batchCounter = 0;
+            worker.ForTestingPurposesOnly().AfterBatchFlushed = () =>
             {
-                prevMax = maxObservedConcurrentBatches;
-                if (current <= prevMax)
-                    break;
-            } while (Interlocked.CompareExchange(ref maxObservedConcurrentBatches, current, prevMax) != prevMax);
+                // Increment the hook invocation counter to verify the hook is being called
+                Interlocked.Increment(ref hookInvocationCount);
 
-            try
-            {
-                // Signal that a batch has started and is in progress
-                int currentBatch = Interlocked.Increment(ref batchCounter) - 1;
-                if (currentBatch < totalBatches)
+                // Signal that at least one batch has started processing
+                // ReSharper disable once AccessToDisposedClosure
+                firstBatchProcessingStarted.Set();
+
+                int current = Interlocked.Increment(ref currentlyProcessingBatches);
+
+                // Track the maximum number of concurrent batches we've observed
+                int prevMax;
+                do
                 {
-                    // Wait until test code allows this batch to complete
-                    batchCompletionEvents[currentBatch].Wait();
+                    prevMax = maxObservedConcurrentBatches;
+                    if (current <= prevMax)
+                        break;
+                } while (Interlocked.CompareExchange(ref maxObservedConcurrentBatches, current, prevMax) != prevMax);
+
+                try
+                {
+                    // Signal that a batch has started and is in progress
+                    int currentBatch = Interlocked.Increment(ref batchCounter) - 1;
+                    if (currentBatch < totalBatches)
+                    {
+                        // Wait until test code allows this batch to complete
+                        batchCompletionEvents[currentBatch].Wait();
+                    }
                 }
-            }
-            finally
-            {
-                // Decrement the counter when batch completes
-                Interlocked.Decrement(ref currentlyProcessingBatches);
-            }
-        };
+                finally
+                {
+                    // Decrement the counter when batch completes
+                    Interlocked.Decrement(ref currentlyProcessingBatches);
+                }
+            };
 
-        // Act - Submit many requests that will be processed in batches
-        var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
-        for (int i = 0; i < totalBatches * database.Configuration.Ai.QueryEmbeddingsMaxBatchSize; i++)
-            tasks.Add(batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [$"Concurrent test text {i}"], CancellationToken.None).AsTask());
+            // Act - Submit many requests that will be processed in batches
+            var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
+            for (int i = 0; i < totalBatches * database.Configuration.Ai.QueryEmbeddingsMaxBatchSize; i++)
+                tasks.Add(batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [$"Concurrent test text {i}"], CancellationToken.None).AsTask());
 
-        // Allow some time for batches to start processing
-        await Task.Delay(500);
+            // Wait for the first batch to start processing
+            var  isBatchStarted = firstBatchProcessingStarted.Wait(TimeSpan.FromSeconds(30));
 
-        // First verification - we should observe no more than maxConcurrentBatches at once
-        Assert.True(maxObservedConcurrentBatches <= maxConcurrentBatches,
-            $"Should not exceed {maxConcurrentBatches} concurrent batches, but observed {maxObservedConcurrentBatches}");
+            Assert.True(isBatchStarted, "No batches started processing within the timeout period");
+            Assert.True(hookInvocationCount > 0, "The AfterBatchFlushed hook should have been invoked, but wasn't. This suggests the hook implementation is missing or broken.");
+            Assert.True(maxObservedConcurrentBatches <= maxConcurrentBatches, $"Should not exceed {maxConcurrentBatches} concurrent batches, but observed {maxObservedConcurrentBatches}");
+            Assert.True(currentlyProcessingBatches > 0, $"Should have batches currently processing, but found {currentlyProcessingBatches}. This suggests the hook implementation isn't properly tracking concurrent batches.");
 
-        // Now verify we actually have batches blocked and waiting
-        Assert.True(currentlyProcessingBatches > 0,
-            $"Should have batches currently processing, but found {currentlyProcessingBatches}");
+            // Release all waiting batches
+            foreach (var evt in batchCompletionEvents)
+                evt.Set();
 
-        // Release all waiting batches
-        foreach (var evt in batchCompletionEvents)
-            evt.Set();
+            // Wait for all requests to complete
+            await Task.WhenAll(tasks);
 
-        // Wait for all requests to complete
-        await Task.WhenAll(tasks);
+            Assert.True(maxObservedConcurrentBatches <= maxConcurrentBatches, $"At no point should we have exceeded {maxConcurrentBatches} concurrent batches, but observed {maxObservedConcurrentBatches}");
+            Assert.True(tasks.All(t => t.IsCompletedSuccessfully),
+                "All embedding tasks should complete successfully");
 
-        // Final assertions
-        Assert.True(maxObservedConcurrentBatches <= maxConcurrentBatches,
-            $"At no point should we have exceeded {maxConcurrentBatches} concurrent batches, but observed {maxObservedConcurrentBatches}");
+            for (var i = 0; i < tasks.Count; i++)
+                for (var j = 0; j < tasks[i].Result.Length; j++)
+                    Assert.True(tasks[i].Result[j].Length > 0, $"All embedding tasks should have positive lengths, but result #{i} of task #{j} has '{tasks[i].Result[j]}' dimensions");
+        }
+        finally // Clean up
+        {
+            foreach (var evt in batchCompletionEvents)
+                evt.Dispose();
 
-        Assert.True(tasks.All(t => t.IsCompletedSuccessfully),
-            "All embedding tasks should complete successfully");
-
-        for (var i = 0; i < tasks.Count; i++)
-            for (var j = 0; j < tasks[i].Result.Length; j++)
-                Assert.True(tasks[i].Result[j].Length > 0, $"All embedding tasks should have positive lengths, but result #{i} of task #{j} has '{tasks[i].Result[j]}' dimensions");
-
-        // Clean up
-        foreach (var evt in batchCompletionEvents)
-            evt.Dispose();
+            firstBatchProcessingStarted.Dispose();
+        }
     }
 
     [RavenFact(RavenTestCategory.Ai)]

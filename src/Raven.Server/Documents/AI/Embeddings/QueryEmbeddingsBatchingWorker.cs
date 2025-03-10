@@ -131,6 +131,7 @@ namespace Raven.Server.Documents.AI.Embeddings
             try
             {
                 await FlushBatchAsync(requestsArray, count);
+                ForTestingPurposes?.AfterBatchFlushed?.Invoke();
             }
             finally
             {
