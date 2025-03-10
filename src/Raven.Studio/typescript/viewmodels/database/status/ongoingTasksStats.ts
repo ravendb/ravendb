@@ -43,7 +43,7 @@ type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOp
                      Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation &
-                     Raven.Server.Documents.ETL.Providers.AI.Embeddings.EmbeddingsGenerationPerformanceOperation;
+                     Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats.EmbeddingsGenerationPerformanceOperation;
 
 type performanceBaseWithCache = ReplicationPerformanceWithCache |
                                 EtlPerformanceBaseWithCache |
@@ -2369,13 +2369,13 @@ class ongoingTasksStats extends shardViewModelBase {
                             }
                             break;
                         case "Embeddings/Storage": {
-                            const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.EmbeddingsGenerationPerformanceOperation;
+                            const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats.EmbeddingsGenerationPerformanceOperation;
                             tooltipHtml += `<div class="tooltip-li">Put embeddings documents: <div class="value">${elementWithData.NumberOfPutEmbeddingDocuments}</div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Deleted embeddings documents: <div class="value">${elementWithData.NumberOfDeletedEmbeddingDocuments}</div></div>`;
                             break;
                         }
                         case "Embeddings/GenerationByAIService": {
-                            const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.EmbeddingsGenerationPerformanceOperation;
+                            const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats.EmbeddingsGenerationPerformanceOperation;
                             tooltipHtml += `<div class="tooltip-li">Generated embeddings: <div class="value">${elementWithData.NumberOfGeneratedEmbeddings}</div></div>`;
                             break;
                         }
