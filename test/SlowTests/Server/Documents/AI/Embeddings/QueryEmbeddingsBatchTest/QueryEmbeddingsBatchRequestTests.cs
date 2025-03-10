@@ -1,14 +1,17 @@
 ﻿using System.Threading;
+using FastTests;
 using Raven.Server.Documents.AI.Embeddings;
+using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest;
 
-public class QueryEmbeddingsBatchRequestTests
+public class QueryEmbeddingsBatchRequestTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     private const string TestValue = "test text";
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public void Creation_InitializesCorrectly()
     {
         // Arrange
@@ -23,7 +26,7 @@ public class QueryEmbeddingsBatchRequestTests
         Assert.False(request.TaskCompletionSource.Task.IsCompleted);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public void CallerCancellation_CancelsTask()
     {
         // Arrange
@@ -39,7 +42,7 @@ public class QueryEmbeddingsBatchRequestTests
         Assert.True(request.TaskCompletionSource.Task.IsCanceled, $"Expected task to be canceled, but it was '{request.TaskCompletionSource.Task.Status}'");
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public void WorkerCancellation_CancelsTask()
     {
         // Arrange
@@ -55,7 +58,7 @@ public class QueryEmbeddingsBatchRequestTests
         Assert.True(request.TaskCompletionSource.Task.IsCanceled, $"Expected task to be canceled, but it was '{request.TaskCompletionSource.Task.Status}'");
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Ai)]
     public void Dispose_ReleasesResources()
     {
         // Arrange

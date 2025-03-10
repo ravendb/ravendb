@@ -41,7 +41,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
+        [Fact]
         public async Task DismissTombstoneNotification()
         {
             using (var store = GetDocumentStore())
@@ -75,7 +75,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
+        [Fact]
         public async Task TombstoneCleaningAfterIndexDisabled()
         {
             using (var store = GetDocumentStore())
@@ -123,7 +123,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
+        [Fact]
         public async Task TombstoneCleaningAfterReplicationLoaderDisabled()
         {
             using (var store1 = GetDocumentStore())
@@ -185,7 +185,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
+        [Fact]
         public async Task TombstoneCleaningAfterPullExternalReplicationDisabled()
         {
             const int sinkTombstonesCount = 7;
@@ -278,7 +278,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Etl)]
+        [Fact]
         public void CheckForNewEtlTypes()
         {
             var knownEtlTypes = new[]
@@ -299,7 +299,7 @@ namespace SlowTests.Issues
                 throw new Exception($"New EtlType values detected: {string.Join(", ", newEtlTypes)}. Update {nameof(TombstoneCleaningAfterEtlLoaderDisabled)} test to cover it.");
         }
         
-        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Replication)]
+        [Theory]
         [InlineData(EtlType.Raven)]
         [InlineData(EtlType.Sql)]
         [InlineData(EtlType.Olap)]
@@ -437,7 +437,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.BackupExportImport)]
+        [Fact]
         public async Task TombstoneCleaningAfterPeriodicBackupDisabled()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -495,7 +495,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Indexes)]
+        [Fact]
         public async Task TombstoneCleaningAfterErroredIndex()
         {
             using (var store = GetDocumentStore())
@@ -538,7 +538,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
+        [Fact]
         public async Task TombstoneCleaningAfterPausedIndex()
         {
             using (var store = GetDocumentStore())
