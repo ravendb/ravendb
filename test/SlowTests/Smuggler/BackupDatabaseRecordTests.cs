@@ -232,11 +232,24 @@ namespace SlowTests.Smuggler
                     {
                         Name = "generate-embeddings",
                         ConnectionStringName = aiConnectionString.Identifier,
-                        EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Id", ChunkingOptions = new ChunkingOptions(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048} }],
+                        EmbeddingsPathConfigurations = [
+                            new EmbeddingPathConfiguration()
+                            {
+                                Path = "Id", ChunkingOptions = new ChunkingOptions()
+                                {
+                                    ChunkingMethod = ChunkingMethod.PlainTextSplitLines,
+                                    MaxTokensPerChunk = 2048
+                                }
+                            }],
                         Collection = "Orders",
                         EmbeddingsTransformation = null,
                         Quantization = VectorEmbeddingType.Single,
-                        ChunkingOptionsForQuerying = new(){ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048},
+                        ChunkingOptionsForQuerying = new()
+                        {
+                            ChunkingMethod = ChunkingMethod.PlainTextSplitLines,
+                            MaxTokensPerChunk = 2048
+                        },
+                        AllowEtlOnNonEncryptedChannel = true
                     };
 
                     embeddingsGenerationConfiguration.Identifier = embeddingsGenerationConfiguration.GenerateIdentifier();
