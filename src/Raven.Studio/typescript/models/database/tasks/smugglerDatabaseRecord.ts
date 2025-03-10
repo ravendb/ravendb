@@ -41,6 +41,8 @@ class smugglerDatabaseRecord {
     includeSinkReplications = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includePostgreSqlIntegration = ko.observable<boolean>(true);
     includeIndexHistory = ko.observable<boolean>(false);
+    includeAiConnectionStrings = ko.observable<boolean>(this.isAdminAccessOrAbove());
+    includeEmbeddingsGeneration = ko.observable<boolean>(this.isAdminAccessOrAbove());
 
     hasIncludes: KnockoutComputed<boolean>;
 
@@ -93,6 +95,12 @@ class smugglerDatabaseRecord {
         popoverUtils.longWithHover($(".js-warning-queue-etl"),
             {
                 content: `Queue Connection strings were not selected.`,
+                placement: 'right'
+            });
+        
+        popoverUtils.longWithHover($(".js-warning-ai-connection-strings"),
+            {
+                content: `AI Connection strings were not selected.`,
                 placement: 'right'
             });
     }
@@ -187,6 +195,12 @@ class smugglerDatabaseRecord {
         }
         if (this.includeIndexHistory()) {
             result.push("IndexesHistory")
+        }
+        if (this.includeAiConnectionStrings()) {
+            result.push("AiConnectionStrings")
+        }
+        if (this.includeEmbeddingsGeneration()) {
+            result.push("EmbeddingsGenerations")
         }
         
         return result;
