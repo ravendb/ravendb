@@ -160,11 +160,11 @@ namespace SlowTests.Issues
                     Name = "HtmlIndex",
                     Maps =
                     {
-                        "from c in docs.Companies select new { Name = typeof(HtmlAgilityPack.HtmlNode).Assembly.FullName }"
+                        "from c in docs.Companies select new { Name = typeof(AngleSharp.Configuration).Assembly.FullName }"
                     },
                     AdditionalAssemblies =
                     {
-                        AdditionalAssembly.FromNuGet("HtmlAgilityPack", "1.11.28")
+                        AdditionalAssembly.FromNuGet("AngleSharp", "1.2.0")
                     }
                 }));
 
@@ -183,18 +183,18 @@ namespace SlowTests.Issues
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex", "Name", null));
                 Assert.Equal(1, terms.Length);
-                Assert.Contains("1.11.28.0", terms[0]);
+                Assert.Contains("1.2.0", terms[0]);
 
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "HtmlIndex",
                     Maps =
                     {
-                        "from c in docs.Companies select new { Name = typeof(HtmlAgilityPack.HtmlNode).Assembly.FullName }"
+                        "from c in docs.Companies select new { Name = typeof(AngleSharp.Configuration).Assembly.FullName }"
                     },
                     AdditionalAssemblies =
                     {
-                        AdditionalAssembly.FromNuGet("HtmlAgilityPack", "1.11.32")
+                        AdditionalAssembly.FromNuGet("AngleSharp", "1.2.0")
                     }
                 }));
 
@@ -203,18 +203,18 @@ namespace SlowTests.Issues
 
                 terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex", "Name", null));
                 Assert.Equal(1, terms.Length);
-                Assert.Contains("1.11.32.0", terms[0]);
+                Assert.Contains("1.2.0", terms[0]);
 
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "HtmlIndex_2",
                     Maps =
                     {
-                        "from c in docs.Companies select new { Name = typeof(HtmlAgilityPack.HtmlNode).Assembly.FullName }"
+                        "from c in docs.Companies select new { Name = typeof(AngleSharp.Configuration).Assembly.FullName }"
                     },
                     AdditionalAssemblies =
                     {
-                        AdditionalAssembly.FromNuGet("HtmlAgilityPack", "1.11.28")
+                        AdditionalAssembly.FromNuGet("AngleSharp", "1.2.0")
                     }
                 }));
 
@@ -223,7 +223,7 @@ namespace SlowTests.Issues
 
                 terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex_2", "Name", null));
                 Assert.Equal(1, terms.Length);
-                Assert.Contains("1.11.28.0", terms[0]);
+                Assert.Contains("1.2.0", terms[0]);
             }
         }
 

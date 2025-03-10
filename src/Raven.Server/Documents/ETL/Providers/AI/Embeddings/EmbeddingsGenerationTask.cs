@@ -16,6 +16,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Stats;
@@ -171,7 +172,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 IList<ReadOnlyMemory<float>> generatedValues;
                 try
                 {
-                    using var embeddingsGenerationScope = scope.For("Embeddings/GenerationByAIService");
+                    using var embeddingsGenerationScope = scope.For(EmbeddingsGenerationOperations.GenerationByAiService);
                     generatedValues = AiHelper.GenerateEmbeddingsAsync(service, keys).GetAwaiter().GetResult();
                     embeddingsGenerationScope.NumberOfGeneratedEmbeddings += generatedValues.Count;
                 }
@@ -202,7 +203,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
                 }
             }
 
-            using (var storageScope = scope.For("Embeddings/Storage"))
+            using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
             {
                 var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(embeddingsScriptRun, new EmbeddingsGenerationTaskIdentifier(Configuration.Identifier), Database);
 

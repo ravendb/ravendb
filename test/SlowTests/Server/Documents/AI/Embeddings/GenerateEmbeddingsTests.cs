@@ -15,7 +15,9 @@ using Raven.Server.Config;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -317,7 +319,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task ModificationOfNonProcessedFieldsWillTriggerEtlTask()
+    public async Task ModificationOfNonProcessedFieldsWillTriggerTaskButWontGenerateEmbeddings()
     {
         using (var store = GetDocumentStore())
         {
@@ -337,6 +339,16 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
                 var stats = etlProcess.GetPerformanceStats();
 
+                Assert.Equal(1, stats[0].NumberOfLoadedItems);
+
+                var loadDetails = stats[0].Details.Operations[^1];
+                
+                Assert.Equal("Load", loadDetails.Name);
+                
+                var embeddingsGenerationStats = (EmbeddingsGenerationPerformanceOperation)loadDetails.Operations.First(x => x.Name == EmbeddingsGenerationOperations.GenerationByAiService);
+
+                Assert.Equal(1, embeddingsGenerationStats.NumberOfGeneratedEmbeddings);
+                
                 aiTaskDone.Reset();
 
                 dto.Age = 37;
@@ -344,7 +356,20 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
-                var etlStats2 = etlProcess.GetPerformanceStats();
+                var stats2 = etlProcess.GetPerformanceStats();
+                
+                // there was new task run
+                
+                Assert.True(stats2.Length > stats.Length, $"{stats2.Length} > {stats.Length}");
+                Assert.Equal(1, stats2[^1].NumberOfLoadedItems);
+
+                var loadDetails2 = stats2[^1].Details.Operations[^1];
+
+                Assert.Equal("Load", loadDetails2.Name);
+
+                var embeddingsGenerationStats2 = (EmbeddingsGenerationPerformanceOperation)loadDetails2.Operations.FirstOrDefault(x => x.Name == EmbeddingsGenerationOperations.GenerationByAiService);
+
+                Assert.Null(embeddingsGenerationStats2); // but there was no need to generate embeddings
             }
         }
     }
