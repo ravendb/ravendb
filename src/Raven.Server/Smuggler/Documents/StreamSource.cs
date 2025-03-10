@@ -538,9 +538,9 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     catch (Exception e)
                     {
-                        databaseRecord.RavenConnectionStrings.Clear();
+                        databaseRecord.AiConnectionStrings.Clear();
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the RavenDB connection strings from smuggler file. Skipping.", e);
+                            _log.Info("Wasn't able to import the AI connection strings from smuggler file. Skipping.", e);
                     }
                 }
 

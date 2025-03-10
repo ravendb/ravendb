@@ -13,26 +13,26 @@ public struct MultiVectorSearchMatch : IQueryMatch
 {
     private readonly IndexSearcher _searcher;
     private readonly FieldMetadata _metadata;
-    private readonly bool _singleVectorSearchDoNotSort;
+    private readonly bool _singleVectorSearchDoNotSortByIds;
     private readonly Hnsw.NearestSearch[] _nearestSearches;
     private readonly bool _isEmpty;
     private GrowableBuffer<long, Constant<long>> _matches;
     private GrowableBuffer<float, Constant<float>> _distances;
     private bool _persisted = false;
     private int _positionOnPersistedValues = 0;
-    
+
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
-        in bool isExact, in bool singleVectorSearchDoNotSort)
+        in bool isExact, in bool singleVectorSearchDoNotSortByIds)
     {
         _searcher = searcher;
         _metadata = metadata;
-        _singleVectorSearchDoNotSort = singleVectorSearchDoNotSort;
+        _singleVectorSearchDoNotSortByIds = singleVectorSearchDoNotSortByIds;
         _nearestSearches = new Hnsw.NearestSearch[vectorsToSearch.Length];
         _isEmpty = true;
         for (var i = 0; i < vectorsToSearch.Length; ++i)
         {
             var vectorToSearch = vectorsToSearch[i];
-            _nearestSearches[i] = isExact
+            _nearestSearches[i] = isExact == false
                 ? Hnsw.ApproximateNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding(),
                     minimumMatch)
                 : Hnsw.ExactNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding(),
@@ -41,7 +41,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             _isEmpty &= _nearestSearches[i].IsEmpty;
             vectorToSearch.Dispose();
         }
-        
+
         IsBoosting = true;
     }
 
@@ -49,8 +49,8 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     public SkipSortingResult AttemptToSkipSorting()
     {
-        return _singleVectorSearchDoNotSort 
-            ? SkipSortingResult.ResultsNativelySorted 
+        return _singleVectorSearchDoNotSortByIds
+            ? SkipSortingResult.ResultsNativelySorted
             : SkipSortingResult.SortingIsRequired;
     }
 
@@ -61,13 +61,13 @@ public struct MultiVectorSearchMatch : IQueryMatch
     {
         if (_isEmpty)
             return 0;
-        
+
         if (_persisted == false)
             FillAndPersistResults();
 
         if (_positionOnPersistedValues == _matches.Count)
             return 0;
-        
+
         var amountToCopy = Math.Min(matches.Length, _matches.Count - _positionOnPersistedValues);
         _matches.Results.Slice(_positionOnPersistedValues, amountToCopy).CopyTo(matches[..amountToCopy]);
         _positionOnPersistedValues += amountToCopy;
@@ -93,17 +93,17 @@ public struct MultiVectorSearchMatch : IQueryMatch
                 _distances.AddUsage(read);
                 Count += read;
             } while (read > 0);
-            
+
             nearestSearch.Dispose();
         }
 
         var uniqueCount = Sorting.SortAndRemoveDuplicates(_matches.Results, _distances.Results);
         _matches.Truncate(uniqueCount);
         _distances.Truncate(uniqueCount);
-        
-        if (_singleVectorSearchDoNotSort)
+
+        if (_singleVectorSearchDoNotSortByIds)
             _distances.Results.Sort(_matches.Results);
-        
+
         _persisted = true;
     }
 
@@ -111,17 +111,17 @@ public struct MultiVectorSearchMatch : IQueryMatch
     {
         if (_isEmpty)
             return 0;
-        
+
         if (_persisted == false)
             FillAndPersistResults();
-        
+
         return MergeHelper.And(buffer, buffer[..matches], _matches.Results);
     }
 
-    public void Score(Span<long> matches, Span<float> scores, float boostFactor)
+    public void Score(Span<long> matches, Span<float> scores, float _)
     {
         Debug.Assert(_persisted, "Score() should be called after Fill() or AndWith()");
-        if (_singleVectorSearchDoNotSort == false)
+        if (_singleVectorSearchDoNotSortByIds == false)
         {
             for (int i = 0; i < matches.Length; ++i)
             {
@@ -139,14 +139,14 @@ public struct MultiVectorSearchMatch : IQueryMatch
             _distances.Results[..scores.Length].CopyTo(scores);
             _nearestSearches[0].DistancesToScores(scores);
         }
-        
+
         _matches.Dispose();
         _distances.Dispose();
     }
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode(nameof(VectorSearchMatch),
+        return new QueryInspectionNode(nameof(MultiVectorSearchMatch),
             parameters: new Dictionary<string, string>()
             {
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },

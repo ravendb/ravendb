@@ -12,7 +12,7 @@ public class AttachmentRemovalLowLevelTest : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.Attachments)]
     public void WillRemoveAttachment()
     {
         using var store = GetDocumentStore();
