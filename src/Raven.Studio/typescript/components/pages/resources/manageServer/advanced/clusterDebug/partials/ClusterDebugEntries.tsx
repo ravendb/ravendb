@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import NavItem from "react-bootstrap/NavItem";
 import NavLink from "react-bootstrap/NavLink";
@@ -8,13 +8,13 @@ import "./ClusterDebugEntries.scss";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useServices } from "hooks/useServices";
-import { useAsync } from "react-async-hook";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useClusterDebugColumns } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/useClusterDebugColumns";
 import Code from "components/common/Code";
 import useDialog from "components/common/Dialog";
 import useConfirm from "components/common/ConfirmDialog";
+import { useVirtualTableWithoutTotalCount } from "components/common/virtualTable/hooks/useVirtualTableWithoutTotalCount";
 
 interface ClusterDebugEntriesProps {
     availableWidth: number;
@@ -32,11 +32,7 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
     const { manageServerService } = useServices();
 
     const [activeTab, setActiveTab] = useState<string>(localNode.nodeTag);
-
-    const { loading, result } = useAsync(
-        (nodeTag: string) => manageServerService.getClusterLog(nodeTag, undefined, 1001),
-        [activeTab]
-    );
+    const [commitIndex, setCommitIndex] = useState<number>();
 
     const showInlinePreview = useCallback(
         async (logIndex: number) => {
@@ -71,14 +67,24 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
         [manageServerService, activeTab, confirm]
     );
 
-    const { columns } = useClusterDebugColumns(availableWidth, result?.Log.CommitIndex, showInlinePreview, deleteEntry);
+    const { dataArray, componentProps } = useVirtualTableWithoutTotalCount({
+        fetchData: async (skip, take) => {
+            try {
+                const result = await manageServerService.getClusterLog(activeTab, skip, take);
+                setCommitIndex(result?.Log.CommitIndex);
+                return { items: result?.Log.Logs ?? [] };
+            } catch {
+                setCommitIndex(null);
+                return { items: [] };
+            }
+        },
+        dependencies: [activeTab],
+    });
 
-    const data = useMemo(() => {
-        return result?.Log.Logs ?? [];
-    }, [result]);
+    const { columns } = useClusterDebugColumns(availableWidth, commitIndex, showInlinePreview, deleteEntry);
 
     const table = useReactTable({
-        data,
+        data: dataArray,
         defaultColumn: {
             enableColumnFilter: false,
             enableSorting: false,
@@ -111,7 +117,7 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
                 ))}
             </Nav>
 
-            <VirtualTable table={table} heightInPx={500} isLoading={loading} />
+            <VirtualTable table={table} heightInPx={500} {...componentProps} />
         </div>
     );
 }
