@@ -172,7 +172,8 @@ namespace Raven.Server.Documents.Indexes
         
         internal void Persist(TransactionOperationContext indexContext)
         {
-            if (_timeFieldsToWrite == null && _vectorFieldsDimensionsToWrite == null && _vectorSourceEmbeddingTypeToWrite == null)
+            if (_timeFieldsToWrite == null && _vectorFieldsDimensionsToWrite == null && _vectorSourceEmbeddingTypeToWrite == null
+                && _embeddingsGenerationTaskIdentifiersToWrite == null)
                 return;
             
             if (_timeFieldsToWrite != null)
