@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public bool CheckTombstoneConflictStatus(DocumentsOperationContext context, string docId, ChangeVector revisionChangeVector)
+        public bool IsExistingTombstoneIsNewer(DocumentsOperationContext context, string docId, ChangeVector revisionChangeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, docId, out var revisionIdSlice))
             using (CreateRevisionTombstoneKeySlice(context, revisionIdSlice, revisionChangeVector.Version.ToString(), out _, out var tombstoneKeySlice))
