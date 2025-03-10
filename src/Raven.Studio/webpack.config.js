@@ -273,8 +273,6 @@ module.exports = (env, args) => {
                 wwwroot: path.resolve(__dirname, 'wwwroot/'),
                 d3: path.resolve(__dirname, 'wwwroot/Content/custom_d3'),
                 qrcodejs: path.resolve(__dirname, 'wwwroot/Content/custom_qrcode'),
-                ["google.analytics"]: path.resolve(__dirname, 'wwwroot/Content/custom_ga'),
-                
                 Favico: path.resolve(__dirname, 'node_modules/favico.js/favico'),
                 durandal: path.resolve(__dirname, 'node_modules/durandal/js'),
                 jquery: path.resolve(__dirname, 'node_modules/jquery/dist/jquery'),

@@ -185,13 +185,13 @@ class shell extends viewModelBase {
         const topologyTask = this.clusterManager.init();
         const clientCertificateTask = clientCertificateModel.fetchClientCertificate();
         
-        licenseTask.done((result) => {
+        const supportTask = licenseTask.then((result) => {
             if (result.Type !== "None") {
-                license.fetchSupportCoverage();
+                return license.fetchSupportCoverage();
             }
         });
-        
-        $.when<any>(buildVersionTask, licenseTask)
+
+        $.when<any>(buildVersionTask, licenseTask, supportTask)
             .done(() => {
                 this.initAnalytics();
             });
@@ -208,8 +208,7 @@ class shell extends viewModelBase {
 
                 // load global settings
                 studioSettings.default.globalSettings()
-                    .done((settings: globalSettings) => this.onGlobalConfiguration(settings));
-                
+                    .then((settings: globalSettings) => this.onGlobalConfiguration(settings));
                 studioSettings.default.registerOnSettingChangedHandler(() => true, (name: string, setting: studioSetting<any>) => {
                     // if any remote configuration was changed, then force reload
                     if (setting.saveLocation === "remote") {
@@ -464,40 +463,34 @@ class shell extends viewModelBase {
     }
 
     private initAnalytics() {
-        if (eventsCollector.gaDefined()) {
-            
-            studioSettings.default.globalSettings()
-                .done(settings => {
-                    const shouldTraceUsageMetrics = settings.sendUsageStats.getValue();
-                    if (_.isUndefined(shouldTraceUsageMetrics)) {
-                        // using location.hash instead of shell activation data - which is not available in shell activate method
-                        const suppressTraceUsage = window.location.hash ? window.location.hash.includes("disableAnalytics=true") : false; 
-                        
-                        if (suppressTraceUsage) {
-                            // persist forced option
-                            settings.sendUsageStats.setValue(false);
-                        } else {
-                            // ask user about GA
-                            this.displayUsageStatsInfo(true);
-
-                            this.trackingTask.done((accepted: boolean) => {
-                                this.displayUsageStatsInfo(false);
-
-                                if (accepted) {
-                                    this.configureAnalytics(true);
-                                }
-
-                                settings.sendUsageStats.setValue(accepted);
-                            });
-                        }
+        studioSettings.default.globalSettings()
+            .done(settings => {
+                const shouldTraceUsageMetrics = settings.sendUsageStats.getValue();
+                if (_.isUndefined(shouldTraceUsageMetrics)) {
+                    // using location.hash instead of shell activation data - which is not available in shell activate method
+                    const suppressTraceUsage = window.location.hash ? window.location.hash.includes("disableAnalytics=true") : false; 
+                    
+                    if (suppressTraceUsage) {
+                        // persist forced option
+                        settings.sendUsageStats.setValue(false);
                     } else {
-                        this.configureAnalytics(shouldTraceUsageMetrics);
+                        // ask user about GA
+                        this.displayUsageStatsInfo(true);
+
+                        this.trackingTask.done((accepted: boolean) => {
+                            this.displayUsageStatsInfo(false);
+
+                            if (accepted) {
+                                this.configureAnalytics(true);
+                            }
+
+                            settings.sendUsageStats.setValue(accepted);
+                        });
                     }
-            });
-        } else {
-            // user has uBlock etc?
-            this.configureAnalytics(false);
-        }
+                } else {
+                    this.configureAnalytics(shouldTraceUsageMetrics);
+                }
+        });
     }
 
     collectUsageData() {
@@ -509,17 +502,22 @@ class shell extends viewModelBase {
     }
 
     private configureAnalytics(track: boolean) {
-        const currentBuildVersion = buildInfo.serverBuildVersion().BuildVersion;
+        const serverBuildVersion = buildInfo.serverBuildVersion();
+        const currentBuildVersion = serverBuildVersion.BuildVersion;
+        const fullVersion = serverBuildVersion.FullVersion;
         const shouldTrack = track && !buildInfo.isDevVersion();
-
-        const licenseStatus = license.licenseStatus();
-        const env = licenseStatus ? licenseStatus.Type : "N/A";
-        const fullVersion = buildInfo.serverBuildVersion().FullVersion;
-        eventsCollector.default.initialize(buildInfo.mainVersion(), currentBuildVersion, env, fullVersion, shouldTrack);
+        
+        eventsCollector.default.initialize(buildInfo.mainVersion(),
+            currentBuildVersion,
+            this.serverEnvironment(),
+            fullVersion,
+            license.licenseStatus,
+            license.supportCoverage,
+            shouldTrack);
         
         studioSettings.default.registerOnSettingChangedHandler(
             name => name === "sendUsageStats",
-            (name, track: simpleStudioSetting<boolean>) => eventsCollector.default.enabled = track.getValue() && eventsCollector.gaDefined());
+            (name, track: simpleStudioSetting<boolean>) => eventsCollector.default.setEnabled(track.getValue()));
     }
 
     static openFeedbackForm() {

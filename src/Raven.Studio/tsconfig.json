@@ -24,7 +24,6 @@
           "durandal",
           "jquery",
           "knockout",
-          "google.analytics",
           "moment",
           "knockout-postbox",
           "knockout.validation",
