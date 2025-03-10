@@ -63,7 +63,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The OpenAI model to use.">
+                    <PopoverWithHoverWrapper message="The OpenAI tex embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

@@ -63,7 +63,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The Azure OpenAI model to use.">
+                    <PopoverWithHoverWrapper message="The Azure OpenAI text embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

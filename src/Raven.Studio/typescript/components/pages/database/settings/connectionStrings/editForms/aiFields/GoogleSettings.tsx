@@ -74,7 +74,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The Google AI model to use.">
+                    <PopoverWithHoverWrapper message="The Google AI text embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

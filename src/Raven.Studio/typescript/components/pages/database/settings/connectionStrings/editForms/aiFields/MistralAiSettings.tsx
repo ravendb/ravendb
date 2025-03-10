@@ -60,7 +60,7 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The Mistral AI model ID to use.">
+                    <PopoverWithHoverWrapper message="The Mistral AI text embedding model ID to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

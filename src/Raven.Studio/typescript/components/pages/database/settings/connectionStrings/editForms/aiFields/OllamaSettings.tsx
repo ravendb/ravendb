@@ -41,7 +41,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The Ollama model to use.">
+                    <PopoverWithHoverWrapper message="The Ollama text embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

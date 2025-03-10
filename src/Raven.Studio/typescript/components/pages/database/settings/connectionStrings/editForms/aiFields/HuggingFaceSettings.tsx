@@ -66,7 +66,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     Model
-                    <PopoverWithHoverWrapper message="The Hugging Face model to use.">
+                    <PopoverWithHoverWrapper message="The Hugging Face text embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
