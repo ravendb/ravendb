@@ -1,7 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -53,7 +53,7 @@ export default function Azure() {
                         ) : (
                             <div className="vstack gap-3 mt-2">
                                 <div className="mb-2">
-                                    <Label className="d-flex gap-1 align-items-center">
+                                    <Form.Label className="d-flex gap-1 align-items-center">
                                         Storage container{" "}
                                         <PopoverWithHoverWrapper
                                             message={
@@ -78,7 +78,7 @@ export default function Azure() {
                                                 Failed connection
                                             </Badge>
                                         ) : null}
-                                    </Label>
+                                    </Form.Label>
                                     <FormInput
                                         name={getName("storageContainer")}
                                         control={control}
@@ -88,9 +88,9 @@ export default function Azure() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>
+                                    <Form.Label>
                                         Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                    </Label>
+                                    </Form.Label>
                                     <FormInput
                                         name={getName("remoteFolderName")}
                                         control={control}
@@ -100,7 +100,7 @@ export default function Azure() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>Account name</Label>
+                                    <Form.Label>Account name</Form.Label>
                                     <FormInput
                                         name={getName("accountName")}
                                         control={control}
@@ -110,7 +110,7 @@ export default function Azure() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>Account key</Label>
+                                    <Form.Label>Account key</Form.Label>
                                     <FormInput
                                         name={getName("accountKey")}
                                         control={control}

@@ -19,6 +19,8 @@ import { OmitIndexSignature } from "components/utils/common";
 import { RavenFormControlProps } from "react-bootstrap/FormControl";
 import { FormRangeProps } from "react-bootstrap/FormRange";
 import { InputType } from "../../../typings/_studio/react-bootstrap";
+import useUniqueId from "hooks/useUniqueId";
+import { FormGroupProps } from "react-bootstrap/FormGroup";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -643,5 +645,15 @@ function FormValidationMessage(props: { children: string }) {
         <div className="validation-message text-start w-100 ">
             <div className="badge bg-danger rounded-pill">{children}</div>
         </div>
+    );
+}
+
+export function FormGroup(props: FormGroupProps) {
+    const uniqueId = useUniqueId("form-group-");
+
+    return (
+        <Form.Group {...props} className={classNames(props.className, "mb-3")} controlId={uniqueId}>
+            {props.children}
+        </Form.Group>
     );
 }

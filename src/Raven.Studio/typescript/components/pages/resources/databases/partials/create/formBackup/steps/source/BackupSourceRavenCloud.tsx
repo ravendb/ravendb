@@ -1,6 +1,6 @@
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
@@ -50,7 +50,7 @@ export default function BackupSourceRavenCloud() {
             {expireDateMoment && (
                 <Row className="mt-2 align-items-center">
                     <Col lg="3">
-                        <Label className="col-form-label">Link will expire in</Label>
+                        <Form.Label className="col-form-label">Link will expire in</Form.Label>
                     </Col>
                     <Col>
                         <Icon icon="clock" />
@@ -84,9 +84,9 @@ function LinkLabel() {
                 </ol>
             }
         >
-            <Label className="col-form-label">
+            <Form.Label className="col-form-label">
                 Backup Link <Icon icon="info" color="info" margin="m-0" />
-            </Label>
+            </Form.Label>
         </PopoverWithHoverWrapper>
     );
 }

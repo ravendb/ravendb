@@ -1,6 +1,6 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { Control, SubmitHandler, UseFormTrigger, UseFormWatch, useFieldArray, useForm } from "react-hook-form";
@@ -52,7 +52,7 @@ export default function RavenConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Label>Name</Label>
+                <Form.Label>Name</Form.Label>
                 <FormInput
                     control={control}
                     name="name"
@@ -63,7 +63,7 @@ export default function RavenConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Label>Database</Label>
+                <Form.Label>Database</Form.Label>
                 <FormInput
                     control={control}
                     name="database"
@@ -73,7 +73,7 @@ export default function RavenConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Label>Discovery URLs</Label>
+                <Form.Label>Discovery URLs</Form.Label>
                 <div className="vstack gap-3">
                     {formState.errors?.topologyDiscoveryUrls?.message && (
                         <div className="text-danger small">{formState.errors.topologyDiscoveryUrls.message}</div>
@@ -128,7 +128,7 @@ function DiscoveryUrl({ idx, control, isDeleteButtonVisible, trigger, watch, onD
 
     return (
         <div className="vstack mb-2 gap-1">
-            <Label className="mb-0 d-flex align-items-center gap-1">
+            <Form.Label className="mb-0 d-flex align-items-center gap-1">
                 <span className="small-label mb-0">URL #{idx + 1}</span>
                 {asyncTest.result?.Success ? (
                     <Badge bg="success" pill>
@@ -141,7 +141,7 @@ function DiscoveryUrl({ idx, control, isDeleteButtonVisible, trigger, watch, onD
                         Failed connection
                     </Badge>
                 ) : null}
-            </Label>
+            </Form.Label>
             <div className="input-group mb-2">
                 <FormInput
                     type="text"

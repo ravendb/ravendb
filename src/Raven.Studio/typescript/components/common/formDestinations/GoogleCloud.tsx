@@ -1,7 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -63,7 +63,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                         ) : (
                             <div className="vstack gap-3 mt-2">
                                 <div className="mb-2">
-                                    <Label className="d-flex align-items-center gap-1">
+                                    <Form.Label className="d-flex align-items-center gap-1">
                                         Bucket{" "}
                                         <PopoverWithHoverWrapper
                                             message={
@@ -95,7 +95,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                                                 Failed connection
                                             </Badge>
                                         ) : null}
-                                    </Label>
+                                    </Form.Label>
 
                                     <FormInput
                                         name={getName("bucketName")}
@@ -106,9 +106,9 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>
+                                    <Form.Label>
                                         Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                    </Label>
+                                    </Form.Label>
                                     <FormInput
                                         name={getName("remoteFolderName")}
                                         control={control}
@@ -118,7 +118,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>Google Credentials Json</Label>
+                                    <Form.Label>Google Credentials Json</Form.Label>
                                     <FormInput
                                         name={getName("googleCredentialsJson")}
                                         control={control}

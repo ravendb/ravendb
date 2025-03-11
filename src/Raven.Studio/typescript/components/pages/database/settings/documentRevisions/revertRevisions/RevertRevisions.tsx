@@ -8,12 +8,12 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Label from "components/common/Label";
+
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { Icon } from "components/common/Icon";
-import { FormDatePicker, FormInput, FormSelect } from "components/common/Form";
+import { FormDatePicker, FormGroup, FormInput, FormSelect } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import assertUnreachable from "components/utils/assertUnreachable";
 import moment from "moment";
@@ -103,8 +103,8 @@ export default function RevertRevisions() {
                     </div>
                     <Card className="mt-3">
                         <Card.Body className="gap-4">
-                            <Form.Group className="mb-3">
-                                <Label htmlFor="pointInTime">Point in Time</Label>
+                            <FormGroup className="mb-3">
+                                <Form.Label htmlFor="pointInTime">Point in Time</Form.Label>
                                 <FormDatePicker
                                     id="pointInTime"
                                     name="pointInTime"
@@ -118,9 +118,9 @@ export default function RevertRevisions() {
                                     placeholderText="Select the point in time"
                                     addon="local"
                                 />
-                            </Form.Group>
-                            <Form.Group>
-                                <Label htmlFor="timeWindow">Time Window</Label>
+                            </FormGroup>
+                            <FormGroup>
+                                <Form.Label htmlFor="timeWindow">Time Window</Form.Label>
                                 <InputGroup>
                                     <FormInput
                                         type="number"
@@ -139,7 +139,7 @@ export default function RevertRevisions() {
                                         }
                                     />
                                 </InputGroup>
-                            </Form.Group>
+                            </FormGroup>
                         </Card.Body>
                     </Card>
                     {hasDatabaseAdminAccess && (

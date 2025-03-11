@@ -1,6 +1,6 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import { FormInput, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -64,7 +64,7 @@ export default function SqlConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Label>Name</Label>
+                <Form.Label>Name</Form.Label>
                 <FormInput
                     control={control}
                     name="name"
@@ -76,7 +76,7 @@ export default function SqlConnectionString({
             </div>
             <div className="mb-2">
                 <div className="d-flex flex-grow align-items-baseline justify-content-between">
-                    <Label>Factory</Label>
+                    <Form.Label>Factory</Form.Label>
                     {formValues.factoryName && (
                         <>
                             <small ref={setSyntaxHelpElement} className="text-primary">
@@ -110,7 +110,7 @@ export default function SqlConnectionString({
                 )}
             </div>
             <div className="mb-2">
-                <Label className="d-flex align-items-center gap-1">
+                <Form.Label className="d-flex align-items-center gap-1">
                     Connection string{" "}
                     {asyncTest.result?.Success ? (
                         <Badge bg="success" pill>
@@ -123,7 +123,7 @@ export default function SqlConnectionString({
                             Failed connection
                         </Badge>
                     ) : null}
-                </Label>
+                </Form.Label>
                 <FormInput
                     control={control}
                     name="connectionString"

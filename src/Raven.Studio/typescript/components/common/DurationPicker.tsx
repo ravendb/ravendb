@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 
 interface Duration {
     days: number;
@@ -45,9 +45,9 @@ export default function DurationPicker(props: DurationPickerProps) {
         <div className="d-flex gap-1">
             {showDays && (
                 <div>
-                    <Label htmlFor="days" className="small-label">
+                    <Form.Label htmlFor="days" className="small-label">
                         Days
-                    </Label>
+                    </Form.Label>
                     <Form.Control
                         type="number"
                         id="days"
@@ -59,9 +59,9 @@ export default function DurationPicker(props: DurationPickerProps) {
                 </div>
             )}
             <div>
-                <Label htmlFor="hours" className="small-label">
+                <Form.Label htmlFor="hours" className="small-label">
                     Hours
-                </Label>
+                </Form.Label>
                 <Form.Control
                     type="number"
                     min={0}
@@ -72,9 +72,9 @@ export default function DurationPicker(props: DurationPickerProps) {
                 />
             </div>
             <div>
-                <Label htmlFor="minutes" className="small-label">
+                <Form.Label htmlFor="minutes" className="small-label">
                     Minutes
-                </Label>
+                </Form.Label>
                 <Form.Control
                     type="number"
                     id="minutes"
@@ -86,9 +86,9 @@ export default function DurationPicker(props: DurationPickerProps) {
             </div>
             {showSeconds && (
                 <div>
-                    <Label htmlFor="seconds" className="small-label">
+                    <Form.Label htmlFor="seconds" className="small-label">
                         Seconds
-                    </Label>
+                    </Form.Label>
                     <Form.Control
                         type="number"
                         id="seconds"

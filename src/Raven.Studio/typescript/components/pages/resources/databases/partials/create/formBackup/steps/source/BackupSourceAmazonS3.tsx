@@ -2,7 +2,7 @@ import { Icon } from "components/common/Icon";
 import Collapse from "react-bootstrap/Collapse";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { FormInput, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
@@ -66,7 +66,7 @@ export default function BackupSourceAmazonS3() {
                     </Row>
                     <Row className="mt-2">
                         <Col lg="3">
-                            <Label className="col-form-label">Custom server URL</Label>
+                            <Form.Label className="col-form-label">Custom server URL</Form.Label>
                         </Col>
                         <Col>
                             <FormInput
@@ -82,7 +82,7 @@ export default function BackupSourceAmazonS3() {
 
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Access key</Label>
+                    <Form.Label className="col-form-label">Access key</Form.Label>
                 </Col>
                 <Col>
                     <FormInput
@@ -95,9 +95,9 @@ export default function BackupSourceAmazonS3() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label" aria-required>
+                    <Form.Label className="col-form-label" aria-required>
                         Secret key
-                    </Label>
+                    </Form.Label>
                 </Col>
                 <Col>
                     <FormInput
@@ -111,11 +111,11 @@ export default function BackupSourceAmazonS3() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">
+                    <Form.Label className="col-form-label">
                         Aws Region
                         <br />
                         {isUseCustomHost && <small>(optional)</small>}
-                    </Label>
+                    </Form.Label>
                 </Col>
                 <Col>
                     {isUseCustomHost ? (
@@ -138,7 +138,7 @@ export default function BackupSourceAmazonS3() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Bucket Name</Label>
+                    <Form.Label className="col-form-label">Bucket Name</Form.Label>
                 </Col>
                 <Col>
                     <FormInput
@@ -151,11 +151,11 @@ export default function BackupSourceAmazonS3() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">
+                    <Form.Label className="col-form-label">
                         Remote Folder Name
                         <br />
                         <small>(optional)</small>
-                    </Label>
+                    </Form.Label>
                 </Col>
                 <Col>
                     <FormInput

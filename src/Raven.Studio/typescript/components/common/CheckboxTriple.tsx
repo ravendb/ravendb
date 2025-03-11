@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import Form from "react-bootstrap/Form";
+import { FormGroup } from "components/common/Form";
 
 interface CheckboxTripleProps {
     state: checkbox;
@@ -19,7 +20,7 @@ export function CheckboxTriple(props: CheckboxTripleProps) {
     }, [state]);
 
     return (
-        <Form.Group className={colorClass + " form-check-lg"}>
+        <FormGroup className={colorClass + " form-check-lg"}>
             <Form.Check
                 type="checkbox"
                 readOnly={state === "some_checked"}
@@ -28,6 +29,6 @@ export function CheckboxTriple(props: CheckboxTripleProps) {
                 onChange={onChanged}
                 title={title}
             />
-        </Form.Group>
+        </FormGroup>
     );
 }

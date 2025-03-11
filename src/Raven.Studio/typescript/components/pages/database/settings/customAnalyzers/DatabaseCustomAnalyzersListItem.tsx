@@ -25,7 +25,7 @@ import {
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import { Icon } from "components/common/Icon";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -128,7 +128,7 @@ export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAna
                         <RichPanelDetails className="vstack gap-3 p-4">
                             {isNew && (
                                 <InputGroup className="vstack mb-1">
-                                    <Label>Name</Label>
+                                    <Form.Label>Name</Form.Label>
                                     <FormInput
                                         type="text"
                                         control={control}
@@ -140,7 +140,7 @@ export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAna
                             <InputGroup className="vstack">
                                 {hasDatabaseAdminAccess && (
                                     <div className="d-flex justify-content-end">
-                                        <Label className="btn btn-link btn-xs text-right">
+                                        <Form.Label className="btn btn-link btn-xs text-right">
                                             <Icon icon="upload" />
                                             Load from a file
                                             <input
@@ -153,7 +153,7 @@ export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAna
                                                 }
                                                 accept=".cs"
                                             />
-                                        </Label>
+                                        </Form.Label>
                                     </div>
                                 )}
                                 <FormAceEditor

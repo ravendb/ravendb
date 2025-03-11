@@ -1,7 +1,7 @@
 ﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import InputGroup from "react-bootstrap/InputGroup";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
@@ -75,7 +75,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
             </Modal.Header>
             <Modal.Body className="pb-0 vstack gap-3">
                 <div className="mb-2">
-                    <Label>Type</Label>
+                    <Form.Label>Type</Form.Label>
                     <InputGroup className="gap-1 flex-wrap flex-column">
                         <Select
                             options={availableConnectionStringsOptions}

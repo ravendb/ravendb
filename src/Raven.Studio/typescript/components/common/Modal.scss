@@ -1,6 +1,8 @@
+@use "Content/scss/variables";
+
 @for $i from 1 through 6 {
-    $zIndexBackdrop: #{1000 + (5 * $i)};
-    $zIndexContent: #{1000 + (5 * $i) + 2};
+    $zIndexBackdrop: #{variables.$zindex-modal + (5 * $i)};
+    $zIndexContent: #{variables.$zindex-modal + (5 * $i) + 2};
     .modal-backdrop.show:nth-of-type(#{$i}) {
         z-index: $zIndexBackdrop;
     }

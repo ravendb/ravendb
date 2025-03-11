@@ -6,7 +6,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
 import BackupSourceLocal from "./BackupSourceLocal";
 import BackupSourceAmazonS3 from "./BackupSourceAmazonS3";
@@ -55,7 +55,7 @@ export default function CreateDatabaseFromBackupStepSource() {
             <h2>Backup Source</h2>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Backup Source</Label>
+                    <Form.Label className="col-form-label">Backup Source</Form.Label>
                 </Col>
                 <Col>
                     <FormSelect

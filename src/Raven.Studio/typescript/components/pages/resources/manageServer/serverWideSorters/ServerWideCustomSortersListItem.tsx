@@ -26,7 +26,7 @@ import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import Button from "react-bootstrap/Button";
 
 interface ServerWideCustomSortersListItemProps {
@@ -131,7 +131,7 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                         <RichPanelDetails className="vstack gap-3 p-4">
                             {isNew && (
                                 <InputGroup className="vstack mb-1">
-                                    <Label>Name</Label>
+                                    <Form.Label>Name</Form.Label>
                                     <FormInput
                                         type="text"
                                         control={control}
@@ -142,7 +142,7 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                             )}
                             <InputGroup className="vstack">
                                 <div className="d-flex justify-content-end">
-                                    <Label className="btn btn-link btn-xs text-right">
+                                    <Form.Label className="btn btn-link btn-xs text-right">
                                         <Icon icon="upload" />
                                         Load from a file
                                         <input
@@ -155,7 +155,7 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                                             }
                                             accept=".cs"
                                         />
-                                    </Label>
+                                    </Form.Label>
                                 </div>
                                 <FormAceEditor control={control} name="code" mode="csharp" height="400px" />
                             </InputGroup>

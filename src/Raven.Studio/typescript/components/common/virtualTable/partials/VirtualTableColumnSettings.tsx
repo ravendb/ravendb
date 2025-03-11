@@ -4,7 +4,7 @@ import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
 import { useMemo, useState } from "react";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
@@ -84,7 +84,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                     </Dropdown.Toggle>
                     <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
                         <div className="px-3 pb-2">
-                            <Label className="small-label">Filter column</Label>
+                            <Form.Label className="small-label">Filter column</Form.Label>
                             <div className="clearable-input">
                                 <Form.Control
                                     type="text"

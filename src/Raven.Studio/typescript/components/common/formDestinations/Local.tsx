@@ -2,7 +2,7 @@
 import Spinner from "react-bootstrap/Spinner";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { FormSwitch, FormPathSelector } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -57,7 +57,7 @@ export default function Local() {
                             <OverrideConfiguration fieldBase={fieldBase} />
                         ) : (
                             <div className="mt-2">
-                                <Label>Folder path</Label>
+                                <Form.Label>Folder path</Form.Label>
                                 <FormPathSelector
                                     control={control}
                                     name={getName("folderPath")}

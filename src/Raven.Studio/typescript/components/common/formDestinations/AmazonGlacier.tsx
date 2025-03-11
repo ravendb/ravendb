@@ -1,7 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -54,7 +54,7 @@ export default function AmazonGlacier() {
                         ) : (
                             <div className="vstack gap-3 mt-2">
                                 <div className="mb-2">
-                                    <Label className="d-flex align-items-center gap-1">
+                                    <Form.Label className="d-flex align-items-center gap-1">
                                         Vault name
                                         <PopoverWithHoverWrapper
                                             message={
@@ -78,7 +78,7 @@ export default function AmazonGlacier() {
                                                 Failed connection
                                             </Badge>
                                         ) : null}
-                                    </Label>
+                                    </Form.Label>
                                     <FormInput
                                         name={getName("vaultName")}
                                         control={control}
@@ -88,9 +88,9 @@ export default function AmazonGlacier() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>
+                                    <Form.Label>
                                         Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                    </Label>
+                                    </Form.Label>
                                     <FormInput
                                         name={getName("remoteFolderName")}
                                         control={control}
@@ -100,7 +100,7 @@ export default function AmazonGlacier() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>Region</Label>
+                                    <Form.Label>Region</Form.Label>
                                     <FormSelectCreatable
                                         name={getName("awsRegionName")}
                                         control={control}
@@ -109,7 +109,7 @@ export default function AmazonGlacier() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>Access key</Label>
+                                    <Form.Label>Access key</Form.Label>
                                     <FormInput
                                         name={getName("awsAccessKey")}
                                         control={control}
@@ -119,7 +119,7 @@ export default function AmazonGlacier() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <Label>Secret key</Label>
+                                    <Form.Label>Secret key</Form.Label>
                                     <FormInput
                                         name={getName("awsSecretKey")}
                                         control={control}

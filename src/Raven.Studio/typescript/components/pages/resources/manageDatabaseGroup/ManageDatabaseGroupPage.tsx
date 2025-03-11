@@ -1,6 +1,6 @@
 ﻿import React, { useCallback } from "react";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownPanel";
 import useUniqueId from "components/hooks/useUniqueId";
 import useBoolean from "hooks/useBoolean";
@@ -78,7 +78,7 @@ export function ManageDatabaseGroupPage() {
                     {!db.isSharded && (
                         <UncontrolledButtonWithDropdownPanel buttonText="Settings">
                             <>
-                                <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
+                                <Form.Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
                                     <div className="d-flex gap-3 form-switch">
                                         <Form.Check
                                             id={settingsUniqueId}
@@ -90,7 +90,7 @@ export function ManageDatabaseGroupPage() {
                                         />
                                         Allow dynamic database distribution
                                     </div>
-                                </Label>
+                                </Form.Label>
                                 {dynamicDatabaseDistributionWarning && (
                                     <div className="bg-faded-warning px-4 py-2">
                                         {dynamicDatabaseDistributionWarning}

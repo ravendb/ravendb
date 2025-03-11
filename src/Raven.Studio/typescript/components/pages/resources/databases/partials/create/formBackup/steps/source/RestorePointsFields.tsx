@@ -2,7 +2,7 @@ import React from "react";
 import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { Icon } from "components/common/Icon";
@@ -37,7 +37,7 @@ export default function RestorePointsFields(props: RestorePointsFieldsProps) {
         <>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Restore Point</Label>
+                    <Form.Label className="col-form-label">Restore Point</Form.Label>
                 </Col>
                 <Col lg={isSharded ? 12 : 9}>
                     {fields.map((field, idx) => (

@@ -11,7 +11,7 @@ import {
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { EditConflictResolutionSyntaxModal } from "components/pages/database/settings/conflictResolution/EditConflictResolutionSyntaxModal";
@@ -128,7 +128,7 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                         <RichPanelDetails className="vstack gap-3 p-3">
                             {!initialConfig.name && (
                                 <InputGroup className="vstack mb-1">
-                                    <Label>Collection</Label>
+                                    <Form.Label>Collection</Form.Label>
                                     <FormSelectCreatable
                                         control={control}
                                         name="collectionName"
@@ -141,7 +141,7 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                                 </InputGroup>
                             )}
                             <InputGroup className="vstack">
-                                <Label className="d-flex flex-wrap justify-content-between">
+                                <Form.Label className="d-flex flex-wrap justify-content-between">
                                     Script
                                     <Button
                                         variant="link"
@@ -152,7 +152,7 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                                         Syntax
                                         <Icon icon="help" margin="ms-1" />
                                     </Button>
-                                </Label>
+                                </Form.Label>
                                 {isSyntaxModalOpen && (
                                     <EditConflictResolutionSyntaxModal toggle={toggleIsSyntaxModalOpen} />
                                 )}

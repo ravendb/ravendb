@@ -30,7 +30,7 @@ import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -142,7 +142,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                         <RichPanelDetails className="vstack gap-3 p-4">
                             {isNew && (
                                 <InputGroup className="vstack mb-1">
-                                    <Label>Name</Label>
+                                    <Form.Label>Name</Form.Label>
                                     <FormInput
                                         type="text"
                                         control={control}
@@ -154,7 +154,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                             <InputGroup className="vstack">
                                 {hasDatabaseAdminAccess && (
                                     <div className="d-flex justify-content-end">
-                                        <Label className="btn btn-link btn-xs text-right">
+                                        <Form.Label className="btn btn-link btn-xs text-right">
                                             <Icon icon="upload" />
                                             Load from a file
                                             <input
@@ -167,7 +167,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                                                 }
                                                 accept=".cs"
                                             />
-                                        </Label>
+                                        </Form.Label>
                                     </div>
                                 )}
                                 <FormAceEditor

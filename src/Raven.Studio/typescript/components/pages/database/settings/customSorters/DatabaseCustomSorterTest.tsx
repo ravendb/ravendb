@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseCustomSorterTestResult from "components/pages/database/settings/customSorters/DatabaseCustomSorterTestResult";
@@ -59,7 +59,7 @@ export default function DatabaseCustomSorterTest({ name }: DatabaseCustomSorterT
                 Run test
             </ButtonWithSpinner>
             <InputGroup className="vstack">
-                <Label>Enter test RQL:</Label>
+                <Form.Label>Enter test RQL:</Form.Label>
                 <AceEditor
                     value={testRql}
                     onChange={setTestRql}

@@ -3,7 +3,7 @@ import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidatio
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Table from "react-bootstrap/Table";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { FormSelect } from "components/common/Form";
 import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Checkbox } from "components/common/Checkbox";
@@ -147,7 +147,7 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                     <NodeSetList>
                         {availableNodeTags.map((nodeTag) => (
                             <NodeSetItem key={nodeTag}>
-                                <Label title={"Node " + nodeTag}>
+                                <Form.Label title={"Node " + nodeTag}>
                                     <Icon icon="node" color="node" />
                                     {nodeTag}
                                     <div className="d-flex justify-content-center">
@@ -156,7 +156,7 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                             selected={manualNodes.includes(nodeTag)}
                                         />
                                     </div>
-                                </Label>
+                                </Form.Label>
                             </NodeSetItem>
                         ))}
                     </NodeSetList>

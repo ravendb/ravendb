@@ -18,7 +18,7 @@ import {
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
-import Label from "components/common/Label";
+
 
 type FormData = ConnectionFormData<OlapConnection>;
 
@@ -52,7 +52,7 @@ export default function OlapConnectionString({
         <FormProvider {...form}>
             <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)}>
                 <div className="mb-4">
-                    <Label>Name</Label>
+                    <Form.Label>Name</Form.Label>
                     <FormInput
                         control={control}
                         name="name"

@@ -1,7 +1,7 @@
 ﻿import React, { useCallback, useEffect } from "react";
 import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetList } from "./NodeSet";
 import { Checkbox } from "./Checkbox";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { Icon } from "./Icon";
 import classNames from "classnames";
 import { produce } from "immer";
@@ -182,7 +182,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                             const uniqueKey = getUniqueKey(nodeTag);
                             return (
                                 <NodeSetItem key={nodeTag}>
-                                    <Label htmlFor={uniqueKey} title={"Node " + nodeTag}>
+                                    <Form.Label htmlFor={uniqueKey} title={"Node " + nodeTag}>
                                         <Icon icon="node" color="node" />
                                         {nodeTag}
                                         <div className="d-flex justify-content-center">
@@ -192,7 +192,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                 selected={isNodeSelected(nodeTag)}
                                             />
                                         </div>
-                                    </Label>
+                                    </Form.Label>
                                 </NodeSetItem>
                             );
                         })}
@@ -218,7 +218,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                             <div key={uniqueKey}>
                                 <NodeSet className={classNames(className, "mt-1")}>
                                     <NodeSetLabel>
-                                        <Label htmlFor={uniqueKey} className="text-node" title={"Node " + nodeTag}>
+                                        <Form.Label htmlFor={uniqueKey} className="text-node" title={"Node " + nodeTag}>
                                             <Icon icon="node" />
                                             {nodeTag}
                                             <div className="d-flex justify-content-center">
@@ -229,7 +229,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                     selected={isNodeSelected(nodeTag)}
                                                 />
                                             </div>
-                                        </Label>
+                                        </Form.Label>
                                     </NodeSetLabel>
                                     <div className="node-set-separator" />
                                     <NodeSetList>
@@ -244,7 +244,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                     }
                                                 >
                                                     <div className="d-inline-block">
-                                                        <Label
+                                                        <Form.Label
                                                             htmlFor={getUniqueKey(nodeTag, true)}
                                                             id={getUniqueKey(nodeTag, true) + "Tooltip"}
                                                             title="Orchestrator"
@@ -262,7 +262,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                                     color="orchestrator"
                                                                 />
                                                             </div>
-                                                        </Label>
+                                                        </Form.Label>
                                                     </div>
                                                 </OverlayTrigger>
                                             </NodeSetItem>
@@ -278,7 +278,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
 
                                                 return (
                                                     <NodeSetItem key={uniqueKey}>
-                                                        <Label htmlFor={uniqueKey} title={"Shard " + shardNumber}>
+                                                        <Form.Label htmlFor={uniqueKey} title={"Shard " + shardNumber}>
                                                             <Icon icon="shard" color="shard" />
                                                             {shardNumber}
                                                             <div className="d-flex justify-content-center">
@@ -291,7 +291,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                                     id={uniqueKey}
                                                                 />
                                                             </div>
-                                                        </Label>
+                                                        </Form.Label>
                                                     </NodeSetItem>
                                                 );
                                             })}

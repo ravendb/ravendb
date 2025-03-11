@@ -2,7 +2,7 @@ import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { FormInput } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
@@ -21,7 +21,7 @@ export default function BackupSourceGoogleCloud() {
         <div className="mt-2">
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Bucket Name</Label>
+                    <Form.Label className="col-form-label">Bucket Name</Form.Label>
                 </Col>
                 <Col>
                     <FormInput
@@ -34,7 +34,7 @@ export default function BackupSourceGoogleCloud() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Google Credentials</Label>
+                    <Form.Label className="col-form-label">Google Credentials</Form.Label>
                 </Col>
                 <Col>
                     <FormInput
@@ -48,9 +48,9 @@ export default function BackupSourceGoogleCloud() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">
+                    <Form.Label className="col-form-label">
                         Remote Folder Name <small>(optional)</small>
-                    </Label>
+                    </Form.Label>
                 </Col>
                 <Col>
                     <FormInput

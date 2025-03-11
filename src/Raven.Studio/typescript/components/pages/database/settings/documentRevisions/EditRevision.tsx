@@ -2,7 +2,7 @@
 import React from "react";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import Label from "components/common/Label";
+
 import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
@@ -117,7 +117,7 @@ export default function EditRevision(props: EditRevisionProps) {
                     <h4>{getTitle(taskType, configType)}</h4>
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
-                            <Label className="mb-0 md-label">Collection</Label>
+                            <Form.Label className="mb-0 md-label">Collection</Form.Label>
                             <FormSelectCreatable
                                 placeholder="Select collection (or enter new collection)"
                                 control={control}

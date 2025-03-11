@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import Local from "./Local";
 import AmazonS3 from "./AmazonS3";
 import Azure from "./Azure";
@@ -18,7 +18,7 @@ export default function FormDestinationList({ isForNewConnection }: FormDestinat
 
     return (
         <>
-            <Label>Destinations</Label>
+            <Form.Label>Destinations</Form.Label>
             <div className="vstack gap-1">
                 <Local />
                 <AmazonS3 />

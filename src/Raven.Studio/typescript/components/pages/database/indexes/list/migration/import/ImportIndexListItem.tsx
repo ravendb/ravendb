@@ -1,7 +1,7 @@
 import { Checkbox } from "components/common/Checkbox";
 import IndexToMigrateTitle from "components/pages/database/indexes/list/migration/common/IndexToMigrateTitle";
 import React from "react";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import ListGroupItem from "react-bootstrap/ListGroupItem";
 
 interface ImportIndexListItemProps {
@@ -19,7 +19,7 @@ export default function ImportIndexListItem({
 }: ImportIndexListItemProps) {
     return (
         <ListGroupItem key={indexDefinition.Name} disabled={!!disabledReason}>
-            <Label className="d-flex gap-1 align-items-center m-0 text-truncate">
+            <Form.Label className="d-flex gap-1 align-items-center m-0 text-truncate">
                 <div className="d-flex gap-1 align-items-center w-100">
                     {!disabledReason && (
                         <Checkbox
@@ -31,7 +31,7 @@ export default function ImportIndexListItem({
                     )}
                     <IndexToMigrateTitle index={indexDefinition} disabledReason={disabledReason} />
                 </div>
-            </Label>
+            </Form.Label>
         </ListGroupItem>
     );
 }

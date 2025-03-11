@@ -1,7 +1,7 @@
 import React from "react";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Label from "components/common/Label";
+import Form from "react-bootstrap/Form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useServices } from "components/hooks/useServices";
@@ -21,7 +21,7 @@ export default function BackupSourceAzure() {
         <div className="mt-2">
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Account Name</Label>
+                    <Form.Label className="col-form-label">Account Name</Form.Label>
                 </Col>
                 <Col>
                     <FormInput
@@ -34,7 +34,7 @@ export default function BackupSourceAzure() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Account Key</Label>
+                    <Form.Label className="col-form-label">Account Key</Form.Label>
                 </Col>
                 <Col>
                     <FormInput
@@ -48,7 +48,7 @@ export default function BackupSourceAzure() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Container</Label>
+                    <Form.Label className="col-form-label">Container</Form.Label>
                 </Col>
                 <Col>
                     <FormInput
@@ -61,9 +61,9 @@ export default function BackupSourceAzure() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">
+                    <Form.Label className="col-form-label">
                         Remote Folder Name <small>(optional)</small>
-                    </Label>
+                    </Form.Label>
                 </Col>
                 <Col>
                     <FormInput
