@@ -43,7 +43,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the Azure OpenAI service.">
+                    <PopoverWithHoverWrapper message="The API key used to authenticate requests to the Azure OpenAI service.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

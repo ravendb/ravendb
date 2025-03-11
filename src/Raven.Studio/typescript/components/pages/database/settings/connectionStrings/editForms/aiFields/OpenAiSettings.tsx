@@ -45,7 +45,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the OpenAI service.">
+                    <PopoverWithHoverWrapper message="The API key used to authenticate requests to OpenAI's API.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

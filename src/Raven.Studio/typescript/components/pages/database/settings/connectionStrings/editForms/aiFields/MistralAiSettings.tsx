@@ -42,7 +42,7 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
             <div className="mb-2">
                 <Label>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the Mistral AI service.">
+                    <PopoverWithHoverWrapper message="The API key used to authenticate requests to Mistral AI's API.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

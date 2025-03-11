@@ -47,7 +47,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <Label>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the Hugging Face service.">
+                    <PopoverWithHoverWrapper message="The API key used to authenticate requests to Hugging Face's text embedding services.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>

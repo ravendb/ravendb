@@ -64,7 +64,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key to use to authenticate with the Google AI service.">
+                    <PopoverWithHoverWrapper message="The API key used to authenticate requests to Google's AI services.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
