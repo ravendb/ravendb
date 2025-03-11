@@ -141,9 +141,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                 {
                     var embeddingsGenerationItems = kvp.Value;
                     
-                    foreach (var embeddingToGenerate in embeddingsGenerationItems)
+                    for (var i = 0; i < embeddingsGenerationItems.Count; i++)
                     {
-                        if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringId, embeddingToGenerate, Configuration.Quantization) == false)
+                        var embeddingToGenerate = embeddingsGenerationItems[i];
+
+                        if (Database.AiIntegrations.Embeddings.Storage.IsEmbeddingValueCached(context, connectionStringId, ref embeddingToGenerate, Configuration.Quantization) == false)
                             _missingEmbeddingsHolder.Add(embeddingToGenerate.TextualValue, embeddingToGenerate);
                         else
                             embeddingsInCache++;
@@ -377,7 +379,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
                 // Load the embeddings document (if it exists) to track which attachments need to be removed (on update)
                 using var embeddingsDocument =
-                    _database.AiIntegrations.Embeddings.Storage.GetDocumentEmbeddings(context, document.DocumentId, out string embeddingsDocumentId);
+                    _database.AiIntegrations.Embeddings.Storage.GetEmbeddingDocument(context, document.DocumentId, out string embeddingsDocumentId);
                 var currentAttachmentsOfEmbeddingsFromThisTransformer = LoadNamesOfExistingAttachmentsOfThisTransformer(embeddingsDocument);
 
                 foreach (var embeddingsByPath in document.Values)

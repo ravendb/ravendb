@@ -1,20 +1,15 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.InteropServices;
-using Corax.Utils;
 using JetBrains.Annotations;
-using NetTopologySuite.Algorithm;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.ETL.Providers.AI;
-using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -26,14 +21,14 @@ public class EmbeddingsStorage
 
     public EmbeddingsStorage([NotNull] DocumentDatabase database)
     {
-        _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(_documentsStorage));
+        _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(database.DocumentsStorage));
     }
 
-    public Document GetDocumentEmbeddings(DocumentsOperationContext context, string sourceDocumentId, out string documentEmbeddingsId)
+    public Document GetEmbeddingDocument(DocumentsOperationContext context, string sourceDocumentId, out string embeddingDocumentId)
     {
-        documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(sourceDocumentId);
+        embeddingDocumentId = EmbeddingsHelper.GetEmbeddingDocumentId(sourceDocumentId);
 
-        var document = _documentsStorage.Get(context, documentEmbeddingsId);
+        var document = _documentsStorage.Get(context, embeddingDocumentId);
         
         return document;
     }
@@ -118,7 +113,7 @@ public class EmbeddingsStorage
         }
     }
 
-    public bool ExistsEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, EmbeddingGenerationItem value, in VectorEmbeddingType targetQuantization)
+    public bool IsEmbeddingValueCached(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, ref EmbeddingGenerationItem value, in VectorEmbeddingType targetQuantization)
     {
         value.CacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, value.ValueHash, targetQuantization);
         using var document = _documentsStorage.Get(context, value.CacheDocumentId);
