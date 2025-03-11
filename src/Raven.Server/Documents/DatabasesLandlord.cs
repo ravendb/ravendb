@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Nito.AsyncEx;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions.Database;
@@ -12,7 +13,6 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(StringSegmentComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
+        private readonly ConcurrentDictionary<string, DatabaseWakeupTimer> _wakeupTimers = new ConcurrentDictionary<string, DatabaseWakeupTimer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         private readonly Logger _logger;
@@ -1093,14 +1093,13 @@ namespace Raven.Server.Documents
         private void AddOrUpdateWakeupTimer(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
         {
             // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
-            var newTimer = new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite);
-
+            
             _wakeupTimers.AddOrUpdate(databaseName,
-                _ => newTimer,
+                _ => new DatabaseWakeupTimer(databaseName, idleDatabaseActivity, NextScheduledActivityCallback),
                 (_, timer) =>
                 {
-                    timer.Dispose();
-                    return newTimer;
+                    timer.Update(idleDatabaseActivity);
+                    return timer;
                 });
         }
 
@@ -1326,6 +1325,45 @@ namespace Raven.Server.Documents
             {
                 throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Indexing.TempPath.FullPath}. " +
                                                     $"There is an intersection with database {currentDatabaseName} Temp file located in {currentConfiguration.Indexing.TempPath.FullPath}.");
+            }
+        }
+
+        private sealed class DatabaseWakeupTimer : IDisposable
+        {
+            private IdleDatabaseActivity _activity;
+
+            private readonly string _databaseName;
+            private readonly Action<string, IdleDatabaseActivity> _callback;
+            private readonly Timer _timer;
+
+            public DatabaseWakeupTimer([NotNull] string databaseName, [NotNull] IdleDatabaseActivity activity, [NotNull] Action<string, IdleDatabaseActivity> callback)
+            {
+                _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
+                _activity = activity ?? throw new ArgumentNullException(nameof(activity));
+                _callback = callback ?? throw new ArgumentNullException(nameof(callback));
+
+                _timer = new Timer(TimerCallback, null, _activity.DueTime, Timeout.Infinite);
+            }
+
+            public void Update(IdleDatabaseActivity activity)
+            {
+                _activity = activity;
+                _timer.Change(activity.DueTime, Timeout.Infinite);
+            }
+
+            private void TimerCallback(object state)
+            {
+                _callback(_databaseName, _activity);
+            }
+
+            public void Dispose()
+            {
+                _timer?.Dispose();
+            }
+
+            public void Dispose(WaitHandle notifyObject)
+            {
+                _timer?.Dispose(notifyObject);
             }
         }
     }
