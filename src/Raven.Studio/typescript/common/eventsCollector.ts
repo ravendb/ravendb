@@ -13,6 +13,7 @@ function gtag() {
 class eventsCollector {
     static readonly TrackingCode = "G-V0B01LBCM5";
     // controls GTag Debug mode
+    static readonly DebugMode = false;
 
     static default = new eventsCollector();
     
@@ -47,25 +48,26 @@ class eventsCollector {
 
         this.initialized = true;
     }
-    
+
+    private initializeTracker() {
+        const gtagProxy = gtag as any;
+        gtagProxy("js", new Date());
+        gtagProxy("config", eventsCollector.TrackingCode, {
+            send_page_view: false,
+            debug_mode: eventsCollector.DebugMode,
+        });
+        gtagProxy("set", "user_properties", this.getUserProperties());
+        
+        this.preInitializationQueue.push(() => {
+            this.initGtag();
+        });
+    }
+
     private initGtag() {
         const url  = "https://www.googletagmanager.com/gtag/js?id=" + eventsCollector.TrackingCode;
         const gtmScript = document.createElement("script");
         gtmScript.setAttribute("src",url);
         document.head.appendChild(gtmScript);
-    }
-
-    private initializeTracker() {
-        this.preInitializationQueue.push((gtagProxy: gtagFn) => {
-            this.initGtag();
-            
-            gtagProxy("js", new Date());
-            gtagProxy("config", eventsCollector.TrackingCode, {
-                send_page_view: false, 
-                debug_mode: eventsCollector.DebugMode,
-            });
-            gtagProxy("set", "user_properties", this.getUserProperties());
-        });
     }
     
     private getUserProperties() {
@@ -101,7 +103,11 @@ class eventsCollector {
     
     reportViewModel() {
         const instr = router.activeInstruction();
-        const viewName = instr?.fragment || "n/a";
+        const viewName = instr?.fragment;
+        if (!viewName) {
+            // it might be initial page load or shell initialization 
+            return;
+        }
         const location = `http://raven.studio/${viewName}${document.location.search}`;
         this.report((gtagProxy: gtagFn) => {
             gtagProxy('event', 'page_view', {

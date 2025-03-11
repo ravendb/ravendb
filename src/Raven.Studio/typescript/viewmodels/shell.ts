@@ -463,6 +463,11 @@ class shell extends viewModelBase {
     }
 
     private initAnalytics() {
+        if (buildInfo.isDevVersion()) {
+            // don't track dev versions
+            return;
+        }
+        
         studioSettings.default.globalSettings()
             .done(settings => {
                 const shouldTraceUsageMetrics = settings.sendUsageStats.getValue();
@@ -501,11 +506,10 @@ class shell extends viewModelBase {
         this.trackingTask.resolve(false);
     }
 
-    private configureAnalytics(track: boolean) {
+    private configureAnalytics(shouldTrack: boolean) {
         const serverBuildVersion = buildInfo.serverBuildVersion();
         const currentBuildVersion = serverBuildVersion.BuildVersion;
         const fullVersion = serverBuildVersion.FullVersion;
-        const shouldTrack = track && !buildInfo.isDevVersion();
         
         eventsCollector.default.initialize(buildInfo.mainVersion(),
             currentBuildVersion,
