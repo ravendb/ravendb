@@ -9,6 +9,10 @@ describe("CreateDatabase", () => {
         it("can disable encryption when the license does not allow it", async () => {
             const { screen, user } = rtlRender(<DefaultCreateDatabase hasEncryption={false} />);
 
+            const openRegularModalBtn = screen.getByTestId("open-create-database-modal-regular");
+            await user.click(openRegularModalBtn);
+            expect(await screen.findByTestId("create-database-modal")).toBeInTheDocument();
+
             const encryptionSwitch = screen.getByLabelText(/Encrypt at Rest/);
             expect(encryptionSwitch).toBeDisabled();
 
@@ -18,6 +22,10 @@ describe("CreateDatabase", () => {
 
         it("can disable encryption when server is not secure", async () => {
             const { screen, user } = rtlRender(<DefaultCreateDatabase isSecureServer={false} />);
+
+            const openRegularModalBtn = screen.getByTestId("open-create-database-modal-regular");
+            await user.click(openRegularModalBtn);
+            expect(await screen.findByTestId("create-database-modal")).toBeInTheDocument();
 
             const encryptionSwitch = screen.getByLabelText(/Encrypt at Rest/);
             expect(encryptionSwitch).toBeDisabled();
@@ -30,6 +38,10 @@ describe("CreateDatabase", () => {
             const { screen, user, fillInput, fireClick } = rtlRender(
                 <DefaultCreateDatabase hasDynamicNodesDistribution={false} />
             );
+
+            const openRegularModalBtn = screen.getByTestId("open-create-database-modal-regular");
+            await user.click(openRegularModalBtn);
+            expect(await screen.findByTestId("create-database-modal")).toBeInTheDocument();
 
             await goNextFromBasicInfoStep(screen, fillInput, fireClick);
 
@@ -44,6 +56,10 @@ describe("CreateDatabase", () => {
             const { screen, user, fillInput, fireClick } = rtlRender(
                 <DefaultCreateDatabase maxReplicationFactorForSharding={2} />
             );
+
+            const openRegularModalBtn = screen.getByTestId("open-create-database-modal-regular");
+            await user.click(openRegularModalBtn);
+            expect(await screen.findByTestId("create-database-modal")).toBeInTheDocument();
 
             await goNextFromBasicInfoStep(screen, fillInput, fireClick);
 
@@ -66,6 +82,10 @@ describe("CreateDatabase", () => {
         it("can disable encryption when the license does not allow it", async () => {
             const { screen, user, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase hasEncryption={false} />);
 
+            const openRegularModalBtn = screen.getByTestId("open-create-database-modal-regular");
+            await user.click(openRegularModalBtn);
+            expect(await screen.findByTestId("create-database-modal")).toBeInTheDocument();
+
             await fireClick(screen.getByRole("button", { name: /Restore from backup/ }));
             await goNextFromBasicInfoStep(screen, fillInput, fireClick);
 
@@ -78,6 +98,10 @@ describe("CreateDatabase", () => {
 
         it("can disable encryption when server is not secure", async () => {
             const { screen, user, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase isSecureServer={false} />);
+
+            const openRegularModalBtn = screen.getByTestId("open-create-database-modal-regular");
+            await user.click(openRegularModalBtn);
+            expect(await screen.findByTestId("create-database-modal")).toBeInTheDocument();
 
             await fireClick(screen.getByRole("button", { name: /Restore from backup/ }));
             await goNextFromBasicInfoStep(screen, fillInput, fireClick);

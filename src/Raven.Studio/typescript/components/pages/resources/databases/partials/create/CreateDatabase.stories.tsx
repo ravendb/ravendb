@@ -45,10 +45,18 @@ export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
         return (
             <>
                 <div className="vstack gap-4">
-                    <Button variant="primary" onClick={() => setCreateDatabaseMode("regular")}>
+                    <Button
+                        data-testid="open-create-database-modal-regular"
+                        variant="primary"
+                        onClick={() => setCreateDatabaseMode("regular")}
+                    >
                         Open Create Database Modal Regular
                     </Button>
-                    <Button variant="primary" onClick={() => setCreateDatabaseMode("fromBackup")}>
+                    <Button
+                        data-testid="open-create-database-modal-from-backup"
+                        variant="primary"
+                        onClick={() => setCreateDatabaseMode("fromBackup")}
+                    >
                         Open Create Database Modal From Backup
                     </Button>
                 </div>

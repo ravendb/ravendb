@@ -360,10 +360,13 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                 )}
                                             </Button>
                                         )}
-                                        <Dropdown.Toggle variant="secondary" />
+                                        <Dropdown.Toggle
+                                            data-testid="database-actions-dropdown-toggle"
+                                            variant="secondary"
+                                        />
                                     </ButtonGroup>
 
-                                    <Dropdown.Menu>
+                                    <Dropdown.Menu data-testid="database-actions-dropdown-menu">
                                         {canPauseAnyIndexing && (
                                             <Dropdown.Item onClick={() => onTogglePauseIndexing(true)}>
                                                 <Icon icon="pause" /> Pause indexing until restart
