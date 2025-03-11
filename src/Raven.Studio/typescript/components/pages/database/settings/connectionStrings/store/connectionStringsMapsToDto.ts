@@ -251,6 +251,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Model: connection.openAiSettings.model,
                       OrganizationId: connection.openAiSettings.organizationId,
                       ProjectId: connection.openAiSettings.projectId,
+                      Dimensions: connection.openAiSettings.dimensions,
                   }
                 : null,
         MistralAiSettings:

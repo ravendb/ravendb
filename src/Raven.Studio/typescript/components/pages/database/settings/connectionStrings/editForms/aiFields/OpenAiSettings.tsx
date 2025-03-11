@@ -122,6 +122,20 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 </Label>
                 <FormInput control={control} name="openAiSettings.projectId" type="text" />
             </div>
+            <div className="mb-2">
+                <Label>
+                    Dimensions <OptionalLabel />
+                    <PopoverWithHoverWrapper message="The number of dimensions for the output embeddings.">
+                        <Icon icon="info" color="info" id="dimensions" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                </Label>
+                <FormInput
+                    control={control}
+                    name="openAiSettings.dimensions"
+                    type="number"
+                    disabled={isUsedByAnyTask}
+                />
+            </div>
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

@@ -160,6 +160,7 @@ export interface AiConnection extends ConnectionBase {
         model?: string;
         organizationId?: string;
         projectId?: string;
+        dimensions?: number;
     };
     mistralAiSettings?: {
         apiKey?: string;

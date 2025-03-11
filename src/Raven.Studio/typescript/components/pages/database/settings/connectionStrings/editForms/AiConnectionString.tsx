@@ -284,6 +284,7 @@ const schema = yupObjectSchema<FormData>({
             }),
         organizationId: yup.string().nullable(),
         projectId: yup.string().nullable(),
+        dimensions: yup.number().nullable().integer().positive(),
     }),
     mistralAiSettings: yup.object({
         apiKey: yup

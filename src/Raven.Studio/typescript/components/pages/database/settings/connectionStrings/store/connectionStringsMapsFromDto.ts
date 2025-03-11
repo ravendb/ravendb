@@ -399,6 +399,7 @@ export function mapAiConnectionsFromDto(
                     model: connection.OpenAiSettings?.Model,
                     organizationId: connection.OpenAiSettings?.OrganizationId,
                     projectId: connection.OpenAiSettings?.ProjectId,
+                    dimensions: connection.OpenAiSettings?.Dimensions,
                 },
                 mistralAiSettings: {
                     apiKey: connection.MistralAiSettings?.ApiKey,
