@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Corax.Pipeline;
 using HtmlAgilityPack;
 using Raven.Client.Documents.Operations.AI;
 
@@ -22,6 +23,41 @@ public static class TextChunker
         var list = new List<string>() { textualValue };
         return ChunkValues(list, chunkingOptions);
     }
+
+    private static List<string> SplitPlainText(string textualValue, int maxTokensPerChunk)
+    {
+        var tokenApproximationLen = textualValue.Length / 4;
+        var whiteSpaceTokenizer = new WhitespaceTokenizer();
+        var tokens = new Token[tokenApproximationLen];
+        var tokensAsRef = tokens.AsSpan();
+        
+        whiteSpaceTokenizer.Tokenize(textualValue.AsSpan(), ref tokensAsRef);
+        List<string> chunks = new(tokenApproximationLen / maxTokensPerChunk);
+        
+        var offset = 0;
+        var currentChunkLenFromStart = 0;
+        for (int i = 0; i < tokensAsRef.Length; i++)
+        {
+            var currentToken = tokensAsRef[i];
+            currentChunkLenFromStart = currentToken.Offset + (int)currentToken.Length;
+
+            if (i != 0 && (i+1) % maxTokensPerChunk == 0)
+            {
+                var subStr = textualValue.Substring(offset, currentChunkLenFromStart - offset);
+                chunks.Add(subStr);
+                offset = currentChunkLenFromStart;
+                currentChunkLenFromStart = -1;
+            }
+        }
+
+        if (currentChunkLenFromStart != -1)
+        {
+            var subStr = textualValue.Substring(offset, currentChunkLenFromStart - offset);
+            chunks.Add(subStr);
+        }
+
+        return chunks;
+    }
     
 #pragma warning disable SKEXP0050
     public static List<string> ChunkValues(List<string> textualValues, ChunkingOptions chunkingOptions)
@@ -34,6 +70,14 @@ public static class TextChunker
         
         switch (chunkingMethod)
         {
+            case ChunkingMethod.PlainTextSplit:
+                foreach (var textualValue in textualValues)
+                {
+                    chunkerResult = SplitPlainText(textualValue, maxTokensPerChunk);
+                    foreach (var chunkedValue in chunkerResult)
+                        chunkedValues.Add(chunkedValue);
+                }
+                break;
             case ChunkingMethod.PlainTextSplitLines:
                 foreach (var textualValue in textualValues)
                 {

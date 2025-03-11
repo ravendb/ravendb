@@ -98,6 +98,9 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         {
             errors.Add($"Configuration must have either {nameof(EmbeddingsPathConfigurations)} or {nameof(EmbeddingsTransformation)} script specified");
         }
+
+        if (EmbeddingsTransformation?.ValidateScript() == false)
+            errors.Add($"Transformation script must use {EmbeddingsTransformation.GenerateEmbeddingsFunctionName} method.");
         
         if (Quantization == VectorEmbeddingType.Text)
             errors.Add($"{nameof(Quantization)} cannot be {nameof(VectorEmbeddingType.Text)}");

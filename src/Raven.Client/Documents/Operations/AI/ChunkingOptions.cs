@@ -20,6 +20,7 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
 
 public enum ChunkingMethod
 {
+    PlainTextSplit,
     PlainTextSplitLines,
     PlainTextSplitParagraphs,
     MarkDownSplitLines,

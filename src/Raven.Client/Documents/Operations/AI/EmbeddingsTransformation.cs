@@ -9,4 +9,11 @@ public class EmbeddingsTransformation
     private static readonly Regex EmbeddingsGenerateRegex = new Regex(GenerateEmbeddingsFunctionName, RegexOptions.Compiled);
 
     public string Script { get; set; }
+
+    public bool ValidateScript()
+    {
+        var match = EmbeddingsGenerateRegex.Match(Script);
+
+        return match.Length > 0;
+    }
 }
