@@ -15,15 +15,11 @@ public class StreamedEmbeddingValue : IEmbeddingValue
 
     public ReadOnlySpan<byte> GetEmbedding()
     {
-        throw new NotSupportedException($"Getting embedding value isn't supported. Use {nameof(ReadTo)}() instead");
+        throw new NotSupportedException($"Getting embedding value from {nameof(StreamedEmbeddingValue)} isn't supported. Use {nameof(GetEmbeddingStream)}() instead");
     }
 
-    public IDisposable ReadTo(ByteStringContext allocator, out Memory<byte> mem, out int usedBytes)
+    public Stream GetEmbeddingStream()
     {
-        usedBytes = (int)_stream.Length;
-        var memScope = allocator.Allocate((int)_stream.Length, out mem);
-        _stream.ReadExactly(mem.Span);
-
-        return memScope;
+        return _stream;
     }
 }

@@ -342,7 +342,7 @@ public static partial class CoraxQueryBuilder
             {
                 var embeddingValue = embeddingValues[0];
 
-                return (GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue, queryingVectorOption), null);
+                return (GenerateEmbeddings.FromValue(builderParameters.Allocator, embeddingValue, queryingVectorOption), null);
             }
             else
             {
@@ -352,7 +352,7 @@ public static partial class CoraxQueryBuilder
                 {
                     var embeddingValue = embeddingValues[i];
 
-                    vectorValues[i] = GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue, queryingVectorOption);
+                    vectorValues[i] = GenerateEmbeddings.FromValue(builderParameters.Allocator, embeddingValue, queryingVectorOption);
                 }
 
                 return (null, vectorValues);

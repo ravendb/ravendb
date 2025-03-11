@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Server.Utils;
 
@@ -20,7 +21,7 @@ public class EmbeddingValue : IEmbeddingValue
         return MemoryMarshal.Cast<float, byte>(_value.Span)[.._usedBytes];
     }
 
-    public ReadOnlyMemoryStream<float> GetEmbeddingStream()
+    public Stream GetEmbeddingStream()
     {
         return new ReadOnlyMemoryStream<float>(_value, _usedBytes);
     }

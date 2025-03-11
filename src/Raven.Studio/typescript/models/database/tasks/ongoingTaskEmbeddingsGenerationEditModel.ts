@@ -31,7 +31,6 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         { value: "PlainTextSplitParagraphs", label: "Plain Text Split Paragraphs" },
         { value: "MarkDownSplitLines", label: "Markdown Split Lines" },
         { value: "MarkDownSplitParagraphs", label: "Markdown Split Paragraphs" },
-        { value: "HtmlSplitLines", label: "HTML Split Lines" },
         { value: "HtmlStrip", label: "HTML Strip" },
     ];
     chunkingMethodLabel: KnockoutComputed<string>;
