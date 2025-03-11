@@ -96,7 +96,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
 
         var etl = Etl.WaitForEtlToComplete(store);
         AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Binary);
-        etl.Wait(DefaultEtlTimeout);
+        Assert.True(etl.Wait(DefaultEtlTimeout));
         
         new Index().Execute(store);
         Indexes.WaitForIndexing(store);
@@ -128,12 +128,12 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
 
         var etl = Etl.WaitForEtlToComplete(store);
         AddEmbeddingsGenerationTask(embeddingsGenerationTaskName: "secondEtl", store: store, targetQuantization: VectorEmbeddingType.Single);
-        etl.Wait(DefaultEtlTimeout);
+        Assert.True(etl.Wait(DefaultEtlTimeout));
         
         etl.Reset();
         
         AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Int8);
-        etl.Wait(DefaultEtlTimeout);
+        Assert.True(etl.Wait(DefaultEtlTimeout));
         
         new Index().Execute(store);
         Indexes.WaitForIndexing(store);
