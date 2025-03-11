@@ -758,4 +758,30 @@ module.exports = {
       };
     },
   },
+  "no-reactstrap-Modal": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Modal" }),
+  },
+  "no-reactstrap-Modal-props": {
+    meta: fixableMeta,
+    create: (context) => {
+      const config = {
+        toMigrate: [{
+          key: "toggle", migrateTo: "onHide",
+        }, {
+          key: "className", migrateTo: "dialogClassName",
+        }, {
+          key: "cssModule", migrateTo: "dialogCssClass",
+        }, {
+          key: "isOpen", migrateTo: "show",
+        }],
+      };
+
+      return handleProps({ context, config, componentName: "Modal" });
+    }
+  },
+  "no-reactstrap-Label": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Label" }),
+  },
 };

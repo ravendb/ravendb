@@ -1,7 +1,7 @@
 ﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
@@ -23,6 +23,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { components, OptionProps } from "react-select";
+import Modal from "components/common/Modal";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -65,18 +66,14 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const availableConnectionStringsOptions = getAvailableConnectionStringsOptions(licenseFeatures);
 
     return (
-        <Modal
-            size="lg"
-            isOpen
-            wrapClassName="bs5"
-            contentClassName="modal-border bulge-info"
-            zIndex="var(--zindex-modal)"
-        >
-            <ModalBody className="pb-0 vstack gap-3">
+        <Modal size="lg" show contentClassName="modal-border bulge-info">
+            <Modal.Header className="vstack gap-3" closeButton={false}>
                 <div className="text-center">
                     <Icon icon="manage-connection-strings" color="info" className="fs-1" margin="m-0" />
                 </div>
                 <div className="text-center lead">{isForNewConnection ? "Create a new" : "Edit"} connection string</div>
+            </Modal.Header>
+            <Modal.Body className="pb-0 vstack gap-3">
                 <div className="mb-2">
                     <Label>Type</Label>
                     <InputGroup className="gap-1 flex-wrap flex-column">
@@ -101,8 +98,8 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         onSave={save}
                     />
                 )}
-            </ModalBody>
-            <ModalFooter className="mt-2">
+            </Modal.Body>
+            <Modal.Footer className="mt-2">
                 <Button
                     type="button"
                     variant="link"
@@ -125,7 +122,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         Save connection string
                     </ButtonWithSpinner>
                 )}
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

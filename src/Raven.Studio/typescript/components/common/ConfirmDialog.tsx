@@ -1,9 +1,9 @@
 import { TextColor } from "components/models/common";
 import React, { createContext, PropsWithChildren, ReactNode, useContext, useRef, useState } from "react";
-import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
 import Button from "react-bootstrap/Button";
+import Modal from "./Modal";
 
 interface ConfirmOptions {
     title: ReactNode;
@@ -45,26 +45,17 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
         <ConfirmDialog.Provider value={exposedConfirm}>
             {children}
             {isOpen && (
-                <Modal
-                    isOpen
-                    toggle={onCancel}
-                    wrapClassName="bs5"
-                    centered
-                    contentClassName={`modal-border bulge-${actionColor}`}
-                >
-                    <ModalBody className="vstack gap-4 position-relative">
+                <Modal show onHide={onCancel} contentClassName={`modal-border bulge-${actionColor}`}>
+                    <Modal.Header closeButton className="vstack gap-4" onCloseClick={onCancel}>
                         {icon && (
                             <div className="text-center">
                                 <Icon icon={icon} color={actionColor} className="fs-1" margin="m-0" />
                             </div>
                         )}
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton onClick={onCancel} />
-                        </div>
                         <div className="text-center lead">{title}</div>
-                        {message}
-                    </ModalBody>
-                    <ModalFooter>
+                    </Modal.Header>
+                    <Modal.Body className="vstack  gap-4">{message}</Modal.Body>
+                    <Modal.Footer>
                         <Button variant="link" onClick={onCancel} className="link-muted">
                             Cancel
                         </Button>
@@ -72,7 +63,7 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
                             {confirmIcon && <Icon icon={confirmIcon} />}
                             {confirmText}
                         </Button>
-                    </ModalFooter>
+                    </Modal.Footer>
                 </Modal>
             )}
         </ConfirmDialog.Provider>

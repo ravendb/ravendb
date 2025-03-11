@@ -1,8 +1,8 @@
 import React from "react";
-import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "../Icon";
 import IconName from "typings/server/icons";
+import Modal from "components/common/Modal";
 
 interface DeleteCustomAnalyzerConfirmProps {
     name: string;
@@ -22,24 +22,21 @@ export default function DeleteCustomAnalyzerConfirm(props: DeleteCustomAnalyzerC
     const iconName: IconName = isServerWide ? "server-wide-custom-analyzers" : "custom-analyzers";
 
     return (
-        <Modal isOpen toggle={toggle} wrapClassName="bs5" centered contentClassName="modal-border bulge-danger">
-            <ModalBody className="vstack gap-4 position-relative">
-                <div className="text-center">
-                    <Icon icon={iconName} color="danger" className="fs-1" margin="m-0" />
-                </div>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={toggle} />
-                </div>
+        <Modal show onHide={toggle} contentClassName="modal-border bulge-danger">
+            <Modal.Header className="vstack gap-4" onCloseClick={toggle}>
+                <Icon icon={iconName} color="danger" className="fs-1" margin="m-0" />
                 <div className="text-center lead">
                     You&apos;re about to <span className="text-danger">delete</span> following{" "}
                     {isServerWide ? "server-wide" : ""} custom analyzer:
                 </div>
+            </Modal.Header>
+            <Modal.Body className="vstack gap-4 position-relative">
                 <span className="d-flex align-items-center word-break bg-faded-primary py-1 px-3 w-fit-content rounded-pill mx-auto">
                     <Icon icon={iconName} />
                     {name}
                 </span>
-            </ModalBody>
-            <ModalFooter>
+            </Modal.Body>
+            <Modal.Footer>
                 <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
@@ -47,7 +44,7 @@ export default function DeleteCustomAnalyzerConfirm(props: DeleteCustomAnalyzerC
                     <Icon icon="trash" />
                     Delete
                 </Button>
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

@@ -3,11 +3,11 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
-import { CloseButton, Modal, ModalBody } from "reactstrap";
 import useBoolean from "components/hooks/useBoolean";
 import Code from "components/common/Code";
 import copyToClipboard from "common/copyToClipboard";
 import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 interface OngoingTaskEtlProgressTooltipProps {
     target: HTMLElement;
@@ -46,36 +46,33 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                 )}
                 <Modal
                     size="xl"
-                    wrapClassName="bs5"
-                    isOpen={isErrorModalOpen}
-                    toggle={toggleErrorModal}
+                    show={isErrorModalOpen}
+                    onHide={toggleErrorModal}
                     contentClassName="modal-border bulge-danger"
                 >
-                    <ModalBody>
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton onClick={toggleErrorModal} />
+                    <Modal.Header className="hstack gap-3" onCloseClick={toggleErrorModal}>
+                        <div className="text-center">
+                            <Icon icon="warning" color="danger" className="fs-1" margin="m-0" />
                         </div>
-                        <div className="hstack gap-3 mb-4">
-                            <div className="text-center">
-                                <Icon icon="warning" color="danger" className="fs-1" margin="m-0" />
-                            </div>
-                            <div className="text-center lead">Unable to load task status:</div>
-                        </div>
-                        <Code code={nodeInfo.details.error} language="csharp" />
-
-                        <div className="text-end">
-                            <Button
-                                className="rounded-pill"
-                                variant="primary"
-                                size="xs"
-                                onClick={() =>
-                                    copyToClipboard.copy(nodeInfo.details.error, "Copied error message to clipboard")
-                                }
-                            >
-                                <Icon icon="copy" /> <span>Copy to clipboard</span>
-                            </Button>
-                        </div>
-                    </ModalBody>
+                        <div className="text-center lead">Unable to load task status</div>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <Code code={nodeInfo.details.error} elementToCopy={nodeInfo.details.error} language="csharp" />
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="link" className="link-muted" onClick={toggleErrorModal}>
+                            Close
+                        </Button>
+                        <Button
+                            className="rounded-pill"
+                            variant="primary"
+                            onClick={() =>
+                                copyToClipboard.copy(nodeInfo.details.error, "Copied error message to clipboard")
+                            }
+                        >
+                            <Icon icon="copy" /> <span>Copy to clipboard</span>
+                        </Button>
+                    </Modal.Footer>
                 </Modal>
             </>
         );

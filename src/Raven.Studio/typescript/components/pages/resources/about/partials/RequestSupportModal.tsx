@@ -3,11 +3,12 @@ import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { CloseButton, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { Checkbox, Switch } from "components/common/Checkbox";
 import React from "react";
 import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 interface RequestSupportModalProps {
     visible: boolean;
@@ -24,23 +25,21 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
 
     return (
         <Modal
-            isOpen={visible}
+            show={visible}
             toggle={toggle}
             wrapClassName="bs5"
             centered
             size="lg"
             contentClassName="modal-border bulge-primary"
         >
-            <ModalBody className="vstack gap-4 position-relative">
+            <Modal.Header className="vstack gap-4 " onCloseClick={toggle}>
                 <div className="text-center">
                     <Icon icon="support" color="primary" className="fs-1" margin="m-0" />
                 </div>
 
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={toggle} />
-                </div>
                 <div className="text-center lead">Request support</div>
-
+            </Modal.Header>
+            <Modal.Body className="vstack">
                 <Form className="vstack gap-2">
                     <Form.Group>
                         <Label for="contactEmail">Contact email</Label>
@@ -108,8 +107,8 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
                         </Collapse>
                     </div>
                 </Form>
-            </ModalBody>
-            <ModalFooter>
+            </Modal.Body>
+            <Modal.Footer>
                 <Button variant="outline-secondary" onClick={toggle} className="rounded-pill px-3">
                     Close
                 </Button>
@@ -117,7 +116,7 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
                     <Icon icon="support" />
                     Request support
                 </Button>
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

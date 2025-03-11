@@ -3,7 +3,6 @@ import { HrHeader } from "components/common/HrHeader";
 import { ReactNode } from "react";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Modal, ModalBody, CloseButton } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -15,6 +14,7 @@ import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
+import Modal from "components/common/Modal";
 
 interface OngoingTaskAddModalProps {
     subscriptionsDatabaseCount: number;
@@ -84,24 +84,19 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
     return (
         <Modal
-            isOpen
-            toggle={toggle}
-            container="modalContainer"
-            contentClassName="modal-border bulge-primary"
-            className="destination-modal"
+            show
+            scrollable
+            onHide={toggle}
+            contentClassName="modal-border destination-modal bulge-primary"
             size="lg"
-            centered
         >
-            <ModalBody>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={toggle} />
+            <Modal.Header className="hstack gap-3 pb-0" onCloseClick={toggle}>
+                <div className="text-center">
+                    <Icon icon="ongoing-tasks" color="primary" addon="plus" className="fs-1" margin="m-0" />
                 </div>
-                <div className="hstack gap-3 mb-4">
-                    <div className="text-center">
-                        <Icon icon="ongoing-tasks" color="primary" addon="plus" className="fs-1" margin="m-0" />
-                    </div>
-                    <div className="text-center lead">Add a Database Task</div>
-                </div>
+                <div className="text-center lead">Add a Database Task</div>
+            </Modal.Header>
+            <Modal.Body>
                 <HrHeader>Replication</HrHeader>
                 <Row className="gy-sm">
                     <TaskItem
@@ -272,7 +267,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         )}
                     </TaskItem>
                 </Row>
-            </ModalBody>
+            </Modal.Body>
         </Modal>
     );
 }

@@ -1,9 +1,10 @@
 import { Meta, StoryObj } from "@storybook/react";
-import CreateDatabase from "./CreateDatabase";
-import React from "react";
+import CreateDatabase, { CreateDatabaseMode } from "./CreateDatabase";
+import React, { useState } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
+import Button from "react-bootstrap/Button";
 
 export default {
     title: "Pages/Databases/Create Database/Create Database",
@@ -20,6 +21,7 @@ interface DefaultCreateDatabaseProps {
 export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
     name: "Create Database",
     render: (props: DefaultCreateDatabaseProps) => {
+        const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
         const { license, accessManager, cluster } = mockStore;
         const { resourcesService, databasesService } = mockServices;
 
@@ -40,7 +42,21 @@ export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
         accessManager.with_isServerSecure(props.isSecureServer);
         cluster.with_Cluster();
 
-        return <CreateDatabase closeModal={() => null} />;
+        return (
+            <>
+                <div className="vstack gap-4">
+                    <Button variant="primary" onClick={() => setCreateDatabaseMode("regular")}>
+                        Open Create Database Modal Regular
+                    </Button>
+                    <Button variant="primary" onClick={() => setCreateDatabaseMode("fromBackup")}>
+                        Open Create Database Modal From Backup
+                    </Button>
+                </div>
+                {createDatabaseMode && (
+                    <CreateDatabase closeModal={() => setCreateDatabaseMode(null)} initialMode={createDatabaseMode} />
+                )}
+            </>
+        );
     },
     args: {
         isSecureServer: true,

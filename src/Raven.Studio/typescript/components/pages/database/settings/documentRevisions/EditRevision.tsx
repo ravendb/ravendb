@@ -2,7 +2,7 @@
 import React from "react";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Label } from "reactstrap";
 import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
@@ -29,6 +29,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import moment from "moment";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
@@ -110,9 +111,9 @@ export default function EditRevision(props: EditRevisionProps) {
             (revisionsToKeepLimit > 0 && formValues.minimumRevisionsToKeep > revisionsToKeepLimit));
 
     return (
-        <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info" centered>
+        <Modal show onHide={toggle} contentClassName="modal-border bulge-info">
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-                <ModalBody className="vstack gap-3">
+                <Modal.Body className="vstack gap-3">
                     <h4>{getTitle(taskType, configType)}</h4>
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
@@ -256,8 +257,8 @@ export default function EditRevision(props: EditRevisionProps) {
                             )}
                         </ul>
                     </RichAlert>
-                </ModalBody>
-                <ModalFooter>
+                </Modal.Body>
+                <Modal.Footer>
                     <Button type="button" variant="link" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
@@ -265,7 +266,7 @@ export default function EditRevision(props: EditRevisionProps) {
                         <Icon icon={getSubmitIcon(taskType)} />
                         {_.startCase(taskType)} config
                     </Button>
-                </ModalFooter>
+                </Modal.Footer>
             </Form>
         </Modal>
     );

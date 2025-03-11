@@ -4,7 +4,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { Modal, ModalBody, ModalFooter } from "reactstrap";
+import Modal from "components/common/Modal";
 
 const upgradeLicenseImg = require("Content/img/upgrade-license.svg");
 
@@ -21,15 +21,11 @@ export default function UpgradeModal() {
 
     return (
         <Modal
-            isOpen
-            toggle={null}
-            wrapClassName="bs5"
-            centered
+            show
             contentClassName="modal-border bulge-warning"
-            zIndex={1085}
             size="lg"
         >
-            <ModalBody className="vstack gap-3 position-relative justify-content-center">
+            <Modal.Body className="vstack gap-3 position-relative justify-content-center">
                 <div className="d-flex justify-content-center mb-3">
                     <img src={upgradeLicenseImg} alt="Upgrade license" width="120" />
                 </div>
@@ -40,13 +36,13 @@ export default function UpgradeModal() {
                     <br />
                     In order to continue using RavenDB please upgrade your server to the latest available version.
                 </p>
-            </ModalBody>
-            <ModalFooter className="justify-content-center">
+            </Modal.Body>
+            <Modal.Footer className="justify-content-center">
                 <a href={downloadLink} target="_blank" className="btn btn-warning rounded-pill">
                     <Icon icon="download" />
                     Download now
                 </a>
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

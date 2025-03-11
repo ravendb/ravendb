@@ -1,5 +1,4 @@
-﻿import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
-import { Icon } from "components/common/Icon";
+﻿import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import React, { ReactNode, useState } from "react";
 import { aboutPageUrls } from "components/pages/resources/about/partials/common";
@@ -14,6 +13,7 @@ import CustomPagination from "components/common/Pagination";
 import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
+import Modal from "components/common/Modal";
 
 interface ChangelogModalProps {
     mode: "whatsNew" | "changeLog" | "hidden";
@@ -72,7 +72,13 @@ export function ChangeLogModal(props: ChangelogModalProps) {
             : asyncGetChangeLog.result.TotalBuildsForUserMajorMinor;
 
     return (
-        <ModalWrapper onClose={onClose} mode={mode}>
+        <ModalWrapper
+            onClose={onClose}
+            mode={mode}
+            page={page}
+            totalPages={Math.ceil(totalResults / changeLogItemsPerPage)}
+            onPageChange={setPage}
+        >
             <div className="changelog-modal">
                 {versionsList.map((build, index) => {
                     const downgradeTooltipId = `canDowngradeTooltip-${index}`;
@@ -171,48 +177,35 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                         </div>
                     );
                 })}
-
-                <div className="mt-1">
-                    <CustomPagination
-                        page={page}
-                        totalPages={Math.ceil(totalResults / changeLogItemsPerPage)}
-                        onPageChange={setPage}
-                    />
-                </div>
             </div>
         </ModalWrapper>
     );
 }
 
-function ModalWrapper(props: { children: ReactNode } & ChangelogModalProps) {
-    const { onClose, children, mode } = props;
+function ModalWrapper(
+    props: {
+        children: ReactNode;
+        page?: number;
+        totalPages?: number;
+        onPageChange?: (page: number) => void;
+    } & ChangelogModalProps
+) {
+    const { onClose, children, mode, page, totalPages, onPageChange } = props;
     return (
-        <Modal
-            isOpen
-            toggle={onClose}
-            wrapClassName="bs5"
-            centered
-            size="lg"
-            contentClassName="modal-border bulge-warning"
-        >
-            <ModalBody className="vstack gap-4 position-relative">
-                <div className="text-center">
-                    <Icon icon="logs" color="warning" className="fs-1" margin="m-0" />
-                </div>
-
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={onClose} />
-                </div>
-                <div className="text-center lead">{mode === "whatsNew" ? "What's New" : "Changelog"}</div>
-                {children}
-            </ModalBody>
-            <ModalFooter>
+        <Modal show scrollable onHide={onClose} size="lg" contentClassName="modal-border bulge-warning">
+            <Modal.Header className="vstack gap-4" onCloseClick={onClose}>
+                <Icon icon="logs" color="warning" className="fs-1" margin="m-0" />
+                <div className=" lead">{mode === "whatsNew" ? "What's New" : "Changelog"}</div>
+            </Modal.Header>
+            <Modal.Body className="vstack gap-4 position-relative">{children}</Modal.Body>
+            <Modal.Footer>
                 <Button variant="outline-secondary" onClick={onClose} className="rounded-pill px-3">
                     Close
                 </Button>
 
                 {mode === "whatsNew" && (
                     <React.Fragment key="footer-part">
+                        <CustomPagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
                         <FlexGrow />
                         <Button
                             variant="outline-primary"
@@ -223,7 +216,7 @@ function ModalWrapper(props: { children: ReactNode } & ChangelogModalProps) {
                         </Button>
                     </React.Fragment>
                 )}
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

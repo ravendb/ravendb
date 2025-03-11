@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Modal, ModalBody, ModalFooter, CloseButton } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import {
     MultipleDatabaseLocationSelector,
@@ -7,6 +6,7 @@ import {
 } from "components/common/MultipleDatabaseLocationSelector";
 import { Icon } from "components/common/Icon";
 import ActionContextUtils from "components/utils/actionContextUtils";
+import Modal from "components/common/Modal";
 
 interface BulkDatabaseResetConfirm {
     dbName: string;
@@ -31,28 +31,27 @@ export default function BulkDatabaseResetConfirm({
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" centered zIndex="var(--zindex-modal)">
-            <ModalBody>
-                <div className="text-right">
-                    <CloseButton onClick={toggle} />
-                </div>
+        <Modal show>
+            <Modal.Header className="vstack gap-2 pb-0" onCloseClick={toggle}>
+                <h3>
+                    Restart{" "}
+                    <small className="d-inline-block bg-faded-primary rounded-pill px-2 py-1 mx-1">
+                        <Icon icon="database" />
+                        {dbName}
+                    </small>
+                    {!ActionContextUtils.showContextSelector(allActionContexts) && (
+                        <>
+                            on node{" "}
+                            <small className="text-node">
+                                <Icon icon="node" margin="m-0" /> <strong>{localNodeTag}</strong>
+                            </small>
+                        </>
+                    )}{" "}
+                    ?
+                </h3>
+            </Modal.Header>
+            <Modal.Body className="pt-0">
                 <div className="vstack align-items-center">
-                    <h3>
-                        Restart{" "}
-                        <small className="d-inline-block bg-faded-primary rounded-pill px-2 py-1 mx-1">
-                            <Icon icon="database" />
-                            {dbName}
-                        </small>
-                        {!ActionContextUtils.showContextSelector(allActionContexts) && (
-                            <>
-                                on node{" "}
-                                <small className="text-node">
-                                    <Icon icon="node" margin="m-0" /> <strong>{localNodeTag}</strong>
-                                </small>
-                            </>
-                        )}{" "}
-                        ?
-                    </h3>
                     {ActionContextUtils.showContextSelector(allActionContexts) && (
                         <div>
                             <p>Select restart context:</p>
@@ -64,15 +63,15 @@ export default function BulkDatabaseResetConfirm({
                         </div>
                     )}
                 </div>
-            </ModalBody>
-            <ModalFooter>
+            </Modal.Body>
+            <Modal.Footer>
                 <Button variant="link" className="link-muted" onClick={toggle}>
                     Cancel
                 </Button>
                 <Button variant="danger" onClick={onSubmit}>
                     <Icon icon="reset" /> Restart
                 </Button>
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

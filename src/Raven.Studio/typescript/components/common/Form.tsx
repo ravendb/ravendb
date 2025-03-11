@@ -595,9 +595,11 @@ export function FormPathSelector<
     });
 
     const pathSelectorStateRef = useRef<PathSelectorStateRef>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const handleInputFocus = () => {
         if (!formValuePath) {
+            inputRef.current.blur();
             pathSelectorStateRef.current.toggle();
         }
     };
@@ -607,6 +609,7 @@ export function FormPathSelector<
             <div className="d-flex flex-grow-1">
                 <InputGroup>
                     <Form.Control
+                        ref={inputRef}
                         name={name}
                         type="text"
                         onChange={(x) => onChange(x.currentTarget.value)}

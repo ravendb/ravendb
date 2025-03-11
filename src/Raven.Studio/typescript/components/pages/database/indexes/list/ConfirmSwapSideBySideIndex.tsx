@@ -1,5 +1,4 @@
 ﻿import React, { useState } from "react";
-import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import {
@@ -8,6 +7,7 @@ import {
 } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import RichAlert from "components/common/RichAlert";
+import Modal from "components/common/Modal";
 
 interface ConfirmSwapSideBySideIndexProps {
     indexName: string;
@@ -27,17 +27,14 @@ export function ConfirmSwapSideBySideIndex(props: ConfirmSwapSideBySideIndexProp
     };
 
     return (
-        <Modal isOpen toggle={toggle} wrapClassName="bs5" centered contentClassName="modal-border bulge-warning">
-            <ModalBody className="vstack gap-4 position-relative">
-                <div className="text-center">
-                    <Icon icon="index" color="warning" addon="swap" className="fs-1" margin="m-0" />
-                </div>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={toggle} />
-                </div>
+        <Modal show onHide={toggle} contentClassName="modal-border bulge-warning">
+            <Modal.Header className="vstack gap-3" onCloseClick={toggle}>
+                <Icon icon="index" color="warning" addon="swap" className="fs-1" margin="m-0" />
                 <div className="text-center lead">
                     You&apos;re about to <span className="text-warning">swap</span> following index
                 </div>
+            </Modal.Header>
+            <Modal.Body className="vstack gap-4 position-relative">
                 <span className="text-center bg-faded-primary py-1 px-3 w-fit-content rounded-pill mx-auto">
                     <Icon icon="index" />
                     {indexName}
@@ -56,8 +53,8 @@ export function ConfirmSwapSideBySideIndex(props: ConfirmSwapSideBySideIndexProp
                         />
                     </div>
                 )}
-            </ModalBody>
-            <ModalFooter>
+            </Modal.Body>
+            <Modal.Footer>
                 <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
@@ -65,7 +62,7 @@ export function ConfirmSwapSideBySideIndex(props: ConfirmSwapSideBySideIndexProp
                     <Icon icon="swap" />
                     Swap Now
                 </Button>
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

@@ -1,5 +1,4 @@
 ﻿import React, { ReactNode, useState } from "react";
-import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { IndexSharedInfo } from "components/models/indexes";
 import {
@@ -13,6 +12,7 @@ import classNames from "classnames";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import IconName from "typings/server/icons";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import Modal from "components/common/Modal";
 
 type operationType = "pause" | "disable" | "start";
 
@@ -60,30 +60,21 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     };
 
     return (
-        <Modal
-            isOpen
-            toggle={toggle}
-            wrapClassName="bs5"
-            contentClassName={`modal-border bulge-${getColorForType(type)}`}
-            centered
-        >
-            <ModalBody className="vstack gap-4 position-relative">
-                <div className="text-center">
-                    <Icon
-                        icon="index"
-                        color={`${getColorForType(type)}`}
-                        addon={`${infinitiveLowerCase}` as IconName}
-                        className="fs-1"
-                        margin="m-0"
-                    />
-                </div>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={toggle} />
-                </div>
-                {indexGroups.map((indexGroup, idx) => (
-                    <div key={"indexGroup" + idx}>
+        <Modal scrollable show onHide={toggle} contentClassName={`modal-border bulge-${getColorForType(type)}`}>
+            {indexGroups.map((indexGroup, idx) => (
+                <>
+                    <Modal.Header className="vstack gap-4" onCloseClick={toggle}>
+                        <Icon
+                            icon="index"
+                            color={`${getColorForType(type)}`}
+                            addon={`${infinitiveLowerCase}` as IconName}
+                            className="fs-1"
+                            margin="m-0"
+                        />
                         <div className="text-center lead">{indexGroup.title}</div>
-                        <div className="vstack gap-1 my-4">
+                    </Modal.Header>
+                    <Modal.Body>
+                        <div key={"indexGroup" + idx} className="vstack gap-1">
                             {indexGroup.indexes.map((index) => (
                                 <div key={index.name} className="d-flex">
                                     <div
@@ -116,27 +107,27 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                             ))}
                         </div>
                         {idx < indexGroups.length - 1 && <hr className="m-0" />}
-                    </div>
-                ))}
-                {ActionContextUtils.showContextSelector(allActionContexts) && (
-                    <div>
-                        <h4>Select context</h4>
-                        <MultipleDatabaseLocationSelector
-                            allActionContexts={allActionContexts}
-                            selectedActionContexts={selectedActionContexts}
-                            setSelectedActionContexts={setSelectedActionContexts}
-                        />
-                    </div>
-                )}
-            </ModalBody>
-            <ModalFooter>
-                <Button variant="link" onClick={toggle} className="link-muted">
-                    Cancel
-                </Button>
-                <Button variant={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
-                    <Icon icon={icon} /> {infinitive}
-                </Button>
-            </ModalFooter>
+                        {ActionContextUtils.showContextSelector(allActionContexts) && (
+                            <div>
+                                <h4>Select context</h4>
+                                <MultipleDatabaseLocationSelector
+                                    allActionContexts={allActionContexts}
+                                    selectedActionContexts={selectedActionContexts}
+                                    setSelectedActionContexts={setSelectedActionContexts}
+                                />
+                            </div>
+                        )}
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="link" onClick={toggle} className="link-muted">
+                            Cancel
+                        </Button>
+                        <Button variant={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
+                            <Icon icon={icon} /> {infinitive}
+                        </Button>
+                    </Modal.Footer>
+                </>
+            ))}
         </Modal>
     );
 }
@@ -154,7 +145,7 @@ function getColorForType(type: operationType) {
         case "start":
             return "success";
         default:
-            "primary";
+            return "primary";
     }
 }
 

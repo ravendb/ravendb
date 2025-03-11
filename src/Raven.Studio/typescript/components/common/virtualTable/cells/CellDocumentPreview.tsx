@@ -2,9 +2,10 @@ import { Getter } from "@tanstack/react-table";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
-import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton } from "reactstrap";
 import document from "models/database/documents/document";
 import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 interface CellDocumentPreviewProps {
     document: document;
@@ -23,8 +24,8 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
             <Button type="button" title="Show preview" variant="link" onClick={toggleIsOpen}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
-            <Modal toggle={toggleIsOpen} isOpen={isOpen} wrapClassName="bs5" size="lg" centered>
-                <ModalBody className="pb-3">
+            <Modal onHide={toggleIsOpen} show={isOpen} size="lg">
+                <Modal.Body className="pb-3">
                     <div className="d-flex justify-content-between">
                         <div>
                             <Icon icon="document" />
@@ -44,13 +45,13 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
                     <pre style={{ maxHeight: "400px" }} className="overflow-auto m-0 mt-3">
                         <Code language="json" code={jsonBody} elementToCopy={jsonBody} />
                     </pre>
-                </ModalBody>
-                <ModalFooter>
+                </Modal.Body>
+                <Modal.Footer>
                     <Button type="button" variant="secondary" onClick={toggleIsOpen}>
                         <Icon icon="close" />
                         Close
                     </Button>
-                </ModalFooter>
+                </Modal.Footer>
             </Modal>
         </>
     );

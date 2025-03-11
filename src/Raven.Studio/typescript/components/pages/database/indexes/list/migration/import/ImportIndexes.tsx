@@ -20,10 +20,10 @@ import { useAsync } from "react-async-hook";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import RichAlert from "components/common/RichAlert";
+import { Modal } from "components/common/Modal";
 
 type IndexDefinition = Raven.Client.Documents.Indexes.IndexDefinition;
 
@@ -178,20 +178,15 @@ export function ImportIndexes(props: ImportIndexesProps) {
     };
 
     return (
-        <Modal
-            isOpen
-            toggle={toggle}
-            size="lg"
-            wrapClassName="bs5"
-            contentClassName="modal-border bulge-primary"
-            centered
-        >
+        <Modal show onHide={toggle} size="lg" contentClassName="modal-border bulge-primary">
             <Form onSubmit={handleSubmit(handleImport)}>
-                <ModalBody className="vstack gap-4 position-relative">
+                <Modal.Header onCloseClick={toggle} className="vstack gap-4">
                     <Icon icon="index-import" color="primary" className="text-center fs-1" margin="m-0" />
                     <div className="lead text-center">
                         You&apos;re about to <span className="fw-bold">import</span> indexes
                     </div>
+                </Modal.Header>
+                <Modal.Body className="vstack gap-4">
                     <div className="mx-auto">
                         <FormRadioToggleWithIcon
                             control={control}
@@ -251,12 +246,8 @@ export function ImportIndexes(props: ImportIndexesProps) {
                             All conflicting indexes will be overwritten after the import is completed
                         </RichAlert>
                     </div>
-
-                    <div className="position-absolute m-2 end-0 top-0">
-                        <CloseButton onClick={toggle} />
-                    </div>
-                </ModalBody>
-                <ModalFooter>
+                </Modal.Body>
+                <Modal.Footer>
                     <Button type="button" variant="link" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
@@ -270,7 +261,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
                     >
                         Import indexes from a {importMode}
                     </ButtonWithSpinner>
-                </ModalFooter>
+                </Modal.Footer>
             </Form>
         </Modal>
     );

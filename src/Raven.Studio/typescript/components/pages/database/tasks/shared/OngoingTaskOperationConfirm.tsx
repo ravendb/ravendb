@@ -3,13 +3,13 @@ import { OngoingTaskSharedInfo } from "components/models/tasks";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { capitalize } from "lodash";
 import { Icon } from "components/common/Icon";
-import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
-import classNames = require("classnames");
 import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
+import Modal from "components/common/Modal";
+import classNames from "classnames";
 
 export type OngoingTaskOperationConfirmType = "enable" | "disable" | "delete";
 
@@ -46,68 +46,56 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
     };
 
     return (
-        <Modal
-            isOpen
-            toggle={toggle}
-            wrapClassName="bs5"
-            contentClassName={`modal-border bulge-${getTypeColor(type)}`}
-            centered
-        >
-            <ModalBody className="vstack gap-4 position-relative">
-                <div className="text-center">
-                    <Icon
-                        icon="ongoing-tasks"
-                        color={getTypeColor(type)}
-                        addon={getTypeIcon(type)}
-                        className="fs-1"
-                        margin="m-0"
-                    />
-                </div>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={toggle} />
-                </div>
-                {taskGroups.map((taskGroup, idx) => (
-                    <div key={"task-group-" + idx}>
+        <Modal show onHide={toggle} contentClassName={`modal-border bulge-${getTypeColor(type)}`}>
+            {taskGroups.map((taskGroup, idx) => (
+                <div key={"task-group-" + idx}>
+                    <Modal.Header className="vstack gap-4" onCloseClick={toggle}>
+                        <Icon
+                            icon="ongoing-tasks"
+                            color={getTypeColor(type)}
+                            addon={getTypeIcon(type)}
+                            className="fs-1"
+                            margin="m-0"
+                        />
                         <div className="text-center lead">{taskGroup.title}</div>
-                        <div className="vstack gap-1 my-4">
-                            {taskGroup.tasks.map((task) => (
-                                <div key={task.taskId} className="d-flex">
-                                    <div
-                                        className={classNames(
-                                            "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
-                                        )}
-                                    >
-                                        <Icon
-                                            icon={getStatusIcon(task.taskState)}
-                                            color={getStatusColor(task.taskState)}
-                                            margin="m-0"
-                                        />
-                                        {taskGroup.destinationStatus && (
-                                            <>
-                                                <Icon
-                                                    icon="arrow-thin-right"
-                                                    margin="mx-1"
-                                                    className="fs-6 align-self-center"
-                                                />
-                                                <Icon
-                                                    icon={getStatusIcon(taskGroup.destinationStatus)}
-                                                    color={getStatusColor(taskGroup.destinationStatus)}
-                                                    margin="m-0"
-                                                />
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className="word-break align-self-center">{task.taskName}</div>
+                    </Modal.Header>
+                    <Modal.Body className="">
+                        {taskGroup.tasks.map((task) => (
+                            <div key={task.taskId} className="d-flex">
+                                <div
+                                    className={classNames(
+                                        "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
+                                    )}
+                                >
+                                    <Icon
+                                        icon={getStatusIcon(task.taskState)}
+                                        color={getStatusColor(task.taskState)}
+                                        margin="m-0"
+                                    />
+                                    {taskGroup.destinationStatus && (
+                                        <>
+                                            <Icon
+                                                icon="arrow-thin-right"
+                                                margin="mx-1"
+                                                className="fs-6 align-self-center"
+                                            />
+                                            <Icon
+                                                icon={getStatusIcon(taskGroup.destinationStatus)}
+                                                color={getStatusColor(taskGroup.destinationStatus)}
+                                                margin="m-0"
+                                            />
+                                        </>
+                                    )}
                                 </div>
-                            ))}
-                        </div>
-                        {idx < taskGroups.length - 1 && <hr className="m-0" />}
-                    </div>
-                ))}
-
-                {warningMessage && <RichAlert variant="warning">{warningMessage}</RichAlert>}
-            </ModalBody>
-            <ModalFooter>
+                                <div className="word-break align-self-center">{task.taskName}</div>
+                            </div>
+                        ))}
+                    </Modal.Body>
+                    {idx < taskGroups.length - 1 && <hr className="m-0" />}
+                </div>
+            ))}
+            {warningMessage && <RichAlert variant="warning">{warningMessage}</RichAlert>}
+            <Modal.Footer>
                 <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
@@ -115,7 +103,7 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                     <Icon icon={getTypeIcon(type)} />
                     {getInfinitiveForType(type)}
                 </Button>
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

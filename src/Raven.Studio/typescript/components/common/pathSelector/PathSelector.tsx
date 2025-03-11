@@ -8,8 +8,10 @@ import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import React, { useEffect, useImperativeHandle, useState } from "react";
 import { AsyncStateStatus } from "react-async-hook";
 import Form from "react-bootstrap/Form";
-import { Modal, ModalBody, Label, ModalFooter, CloseButton } from "reactstrap";
+import { Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
+import { HrHeader } from "components/common/HrHeader";
+import Modal from "components/common/Modal";
 
 export interface PathSelectorStateRef {
     toggle: () => void;
@@ -81,15 +83,12 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                 <Icon icon="folder" margin="m-0" />
             </Button>
             {isModalOpen && (
-                <Modal isOpen wrapClassName="bs5" zIndex="var(--zindex-modal-1)" centered fade>
-                    <ModalBody>
-                        <div className="d-flex">
-                            <h3>{selectorTitle || "Select path"}</h3>
-                            <CloseButton className="ms-auto" onClick={toggleIsModalOpen} />
-                        </div>
-
-                        <hr className="m-0 mb-2" />
-
+                <Modal show onHide={toggleIsModalOpen}>
+                    <Modal.Header onCloseClick={toggleIsModalOpen} className="pb-0">
+                        <h3>{selectorTitle || "Select path"}</h3>
+                    </Modal.Header>
+                    <Modal.Body className="pt-0 mt-0">
+                        <HrHeader margin="mt-1 mb-2" />
                         <div className="hstack">
                             <strong className="flex-grow">
                                 <Button
@@ -149,15 +148,15 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                                 onChange={(x) => setPathInput(x.currentTarget.value)}
                             />
                         </Form.Group>
-                    </ModalBody>
-                    <ModalFooter className="hstack gap-2 justify-content-end">
+                    </Modal.Body>
+                    <Modal.Footer className="hstack gap-2 justify-content-end">
                         <Button variant="secondary" onClick={toggleIsModalOpen}>
                             Cancel
                         </Button>
                         <Button variant="primary" onClick={handleSelectWithClose} disabled={disabled}>
                             Select
                         </Button>
-                    </ModalFooter>
+                    </Modal.Footer>
                 </Modal>
             )}
         </>

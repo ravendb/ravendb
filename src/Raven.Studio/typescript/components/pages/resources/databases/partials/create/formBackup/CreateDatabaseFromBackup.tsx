@@ -1,6 +1,5 @@
 import React, { useCallback } from "react";
 import Form from "react-bootstrap/Form";
-import { CloseButton, ModalBody, ModalFooter } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import Steps from "components/common/steps/Steps";
@@ -17,9 +16,9 @@ import {
     FieldErrors,
     FormProvider,
     SubmitHandler,
+    useForm,
     UseFormSetValue,
     UseFormTrigger,
-    useForm,
     useWatch,
 } from "react-hook-form";
 import StepBasicInfo from "./steps/CreateDatabaseFromBackupStepBasicInfo";
@@ -37,6 +36,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useCreateDatabaseShortcuts } from "../shared/useCreateDatabaseShortcuts";
 import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -132,21 +132,17 @@ export default function CreateDatabaseFromBackup({
     return (
         <FormProvider {...form}>
             <Form onSubmit={handleSubmit(onFinish)}>
-                <ModalBody>
-                    <div className="d-flex  mb-5">
-                        <Steps
-                            current={currentStep}
-                            steps={activeSteps.map(createDatabaseUtils.mapToStepItem)}
-                            onClick={(step) => goToStepWithValidation(step, validateToTargetStep(step - 1))}
-                            className="flex-grow me-4"
-                        ></Steps>
-                        <CloseButton onClick={closeModal} />
-                    </div>
-                    {stepViews[activeSteps[currentStep].id]}
-                </ModalBody>
-
+                <Modal.Header className="d-flex" onCloseClick={closeModal}>
+                    <Steps
+                        current={currentStep}
+                        steps={activeSteps.map(createDatabaseUtils.mapToStepItem)}
+                        onClick={(step) => goToStepWithValidation(step, validateToTargetStep(step - 1))}
+                        className="flex-grow me-4"
+                    ></Steps>
+                </Modal.Header>
+                <Modal.Body>{stepViews[activeSteps[currentStep].id]}</Modal.Body>
                 <hr />
-                <ModalFooter>
+                <Modal.Footer>
                     {isFirstStep ? (
                         <Button
                             type="button"
@@ -178,7 +174,7 @@ export default function CreateDatabaseFromBackup({
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />
                         </Button>
                     )}
-                </ModalFooter>
+                </Modal.Footer>
             </Form>
         </FormProvider>
     );

@@ -15,9 +15,7 @@ export const StoreDecorator = (Story) => {
 
     return (
         <Provider store={store}>
-            <div>
-                <Story />
-            </div>
+            <Story />
         </Provider>
     );
 };
