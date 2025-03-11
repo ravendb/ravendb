@@ -83,7 +83,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <Label>
                     Dimensions <OptionalLabel />
-                    <PopoverWithHoverWrapper message="The number of dimensions that the model should use.">
+                    <PopoverWithHoverWrapper message="The number of dimensions for the output embeddings.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
