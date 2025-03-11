@@ -4,7 +4,7 @@ const fixableMeta = {
   schema: [],
 };
 
-function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = name, canFix = true }) {
+function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = name, canFix = true, newImport }) {
   return {
     ImportDeclaration(node) {
       if (node.source.value !== "reactstrap") {
@@ -51,7 +51,7 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
             fixes.push(
               fixer.replaceText(
                 node,
-                `import ${reactBootstrapName} from "react-bootstrap/${reactBootstrapName}";`,
+                newImport || `import ${reactBootstrapName} from "react-bootstrap/${reactBootstrapName}";`,
               ),
             );
           } else {
@@ -73,7 +73,7 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
             fixes.push(
               fixer.insertTextBefore(
                 node,
-                `import ${reactBootstrapName} from "react-bootstrap/${reactBootstrapName}";\n`,
+                newImport || `import ${reactBootstrapName} from "react-bootstrap/${reactBootstrapName}";\n`,
               ),
             );
           }
@@ -99,7 +99,6 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
     }
   };
 }
-
 function migrateProp({ attr, newProp, message, context }) {
   context.report({
     node: attr,
@@ -782,6 +781,19 @@ module.exports = {
   },
   "no-reactstrap-Label": {
     meta: fixableMeta,
-    create: (context) => createDeprecatedReactstrapImport({ context, name: "Label" }),
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Label", newImport: "import Label from \"components/common/Label\"" }),
   },
+  "no-reactstrap-Label-props": {
+    meta: fixableMeta,
+    create: (context) => {
+      const config = {
+        toMigrate: [{
+          key: "for", migrateTo: "htmlFor",
+        }],
+        toRemove: ["check"]
+      };
+
+      return handleProps({ context, config, componentName: "Label" });
+    }
+  }
 };

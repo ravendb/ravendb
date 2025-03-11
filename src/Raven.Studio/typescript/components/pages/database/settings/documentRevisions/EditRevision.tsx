@@ -2,7 +2,7 @@
 import React from "react";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {

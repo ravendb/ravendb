@@ -3,7 +3,7 @@ import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FlexGrow } from "components/common/FlexGrow";

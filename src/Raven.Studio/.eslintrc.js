@@ -68,7 +68,7 @@ module.exports = {
     "local-rules/no-reactstrap-DropdownToggle-color-prop": "warn",
     "local-rules/no-reactstrap-DropdownToggle-caret-prop": "warn",
     "local-rules/no-reactstrap-Modal": "warn",
-    // "local-rules/no-reactstrap-Label": "warn",
+    "local-rules/no-reactstrap-Label": "warn",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

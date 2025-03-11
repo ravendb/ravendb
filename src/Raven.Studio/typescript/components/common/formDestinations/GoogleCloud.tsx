@@ -1,7 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import Button from "react-bootstrap/Button";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";

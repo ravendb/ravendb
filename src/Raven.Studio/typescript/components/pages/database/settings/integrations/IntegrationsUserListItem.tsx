@@ -10,7 +10,7 @@ import {
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";
 import { HStack } from "components/common/HStack";

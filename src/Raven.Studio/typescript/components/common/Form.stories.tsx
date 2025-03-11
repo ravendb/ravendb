@@ -20,9 +20,9 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import InputGroup from "react-bootstrap/InputGroup";
 import ReactBootstrapForm from "react-bootstrap/Form";
-import { Label } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
+import Label from "components/common/Label";
 
 export default {
     title: "Bits/Form",

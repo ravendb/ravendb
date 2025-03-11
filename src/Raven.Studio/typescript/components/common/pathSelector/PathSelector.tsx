@@ -8,7 +8,7 @@ import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import React, { useEffect, useImperativeHandle, useState } from "react";
 import { AsyncStateStatus } from "react-async-hook";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import Button from "react-bootstrap/Button";
 import { HrHeader } from "components/common/HrHeader";
 import Modal from "components/common/Modal";

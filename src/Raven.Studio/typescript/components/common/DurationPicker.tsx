@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 
 interface Duration {
     days: number;
@@ -44,48 +44,60 @@ export default function DurationPicker(props: DurationPickerProps) {
     return (
         <div className="d-flex gap-1">
             {showDays && (
-                <Label>
-                    <span className="small-label">Days</span>
+                <div>
+                    <Label htmlFor="days" className="small-label">
+                        Days
+                    </Label>
                     <Form.Control
                         type="number"
+                        id="days"
                         min={0}
                         value={days}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
                         disabled={disabled}
                     />
-                </Label>
+                </div>
             )}
-            <Label>
-                <span className="small-label">Hours</span>
+            <div>
+                <Label htmlFor="hours" className="small-label">
+                    Hours
+                </Label>
                 <Form.Control
                     type="number"
                     min={0}
+                    id="hours"
                     value={hours}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                     disabled={disabled}
                 />
-            </Label>
-            <Label>
-                <span className="small-label">Minutes</span>
+            </div>
+            <div>
+                <Label htmlFor="minutes" className="small-label">
+                    Minutes
+                </Label>
                 <Form.Control
                     type="number"
+                    id="minutes"
                     min={0}
                     value={minutes}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
                     disabled={disabled}
                 />
-            </Label>
+            </div>
             {showSeconds && (
-                <Label>
-                    <span className="small-label">Seconds</span>
+                <div>
+                    <Label htmlFor="seconds" className="small-label">
+                        Seconds
+                    </Label>
                     <Form.Control
                         type="number"
+                        id="seconds"
                         min={0}
                         value={seconds}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
                         disabled={disabled}
                     />
-                </Label>
+                </div>
             )}
         </div>
     );

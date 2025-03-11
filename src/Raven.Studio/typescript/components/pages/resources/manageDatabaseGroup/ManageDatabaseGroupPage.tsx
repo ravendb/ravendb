@@ -1,6 +1,6 @@
 ﻿import React, { useCallback } from "react";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownPanel";
 import useUniqueId from "components/hooks/useUniqueId";
 import useBoolean from "hooks/useBoolean";

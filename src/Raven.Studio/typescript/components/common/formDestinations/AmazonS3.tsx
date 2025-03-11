@@ -4,7 +4,7 @@ import { FormDestinations } from "./utils/formDestinationsTypes";
 import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { FormSwitch, FormInput, FormSelectCreatable } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";

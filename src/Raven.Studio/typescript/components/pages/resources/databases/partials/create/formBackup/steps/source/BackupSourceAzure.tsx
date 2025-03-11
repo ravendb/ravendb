@@ -1,7 +1,7 @@
 import React from "react";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useServices } from "components/hooks/useServices";

@@ -1,7 +1,7 @@
 ﻿import React, { useCallback, useEffect } from "react";
 import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetList } from "./NodeSet";
 import { Checkbox } from "./Checkbox";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { Icon } from "./Icon";
 import classNames from "classnames";
 import { produce } from "immer";

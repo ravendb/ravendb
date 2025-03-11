@@ -4,7 +4,7 @@ import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
 import { useMemo, useState } from "react";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";

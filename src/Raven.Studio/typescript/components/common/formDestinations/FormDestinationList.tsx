@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import Local from "./Local";
 import AmazonS3 from "./AmazonS3";
 import Azure from "./Azure";

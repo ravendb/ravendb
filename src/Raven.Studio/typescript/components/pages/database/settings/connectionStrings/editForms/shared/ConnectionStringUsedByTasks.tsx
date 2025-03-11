@@ -1,5 +1,5 @@
 import React from "react";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { ConnectionStringUsedTask } from "../../connectionStringsTypes";
 import { Icon } from "components/common/Icon";
 import { CounterBadge } from "components/common/CounterBadge";

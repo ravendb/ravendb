@@ -30,7 +30,7 @@ import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";

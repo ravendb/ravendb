@@ -2,7 +2,7 @@ import { Icon } from "components/common/Icon";
 import Collapse from "react-bootstrap/Collapse";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { FormInput, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
@@ -82,9 +82,7 @@ export default function BackupSourceAmazonS3() {
 
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label" check>
-                        Access key
-                    </Label>
+                    <Label className="col-form-label">Access key</Label>
                 </Col>
                 <Col>
                     <FormInput

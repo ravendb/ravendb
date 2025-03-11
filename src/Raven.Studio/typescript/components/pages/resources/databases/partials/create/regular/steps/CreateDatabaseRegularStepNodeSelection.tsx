@@ -3,7 +3,7 @@ import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidatio
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Table from "react-bootstrap/Table";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { FormSelect } from "components/common/Form";
 import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Checkbox } from "components/common/Checkbox";

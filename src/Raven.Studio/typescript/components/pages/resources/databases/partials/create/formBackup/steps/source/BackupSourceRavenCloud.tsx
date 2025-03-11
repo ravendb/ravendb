@@ -1,6 +1,6 @@
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { Icon } from "components/common/Icon";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";

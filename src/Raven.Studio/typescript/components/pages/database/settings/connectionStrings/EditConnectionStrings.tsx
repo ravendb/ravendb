@@ -1,7 +1,7 @@
 ﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import Button from "react-bootstrap/Button";
 import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";

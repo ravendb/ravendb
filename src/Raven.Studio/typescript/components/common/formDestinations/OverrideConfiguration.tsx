@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { FormInput } from "components/common/Form";
 import { useFormContext } from "react-hook-form";
 import { BackupConfigurationScript, FormDestinations } from "./utils/formDestinationsTypes";

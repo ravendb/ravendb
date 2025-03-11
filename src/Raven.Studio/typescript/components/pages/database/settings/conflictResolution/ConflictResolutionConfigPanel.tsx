@@ -11,7 +11,7 @@ import {
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { EditConflictResolutionSyntaxModal } from "components/pages/database/settings/conflictResolution/EditConflictResolutionSyntaxModal";

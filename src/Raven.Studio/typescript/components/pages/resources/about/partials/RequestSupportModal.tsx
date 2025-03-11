@@ -3,7 +3,7 @@ import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { Icon } from "components/common/Icon";
 import { Checkbox, Switch } from "components/common/Checkbox";
 import React from "react";
@@ -42,7 +42,7 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
             <Modal.Body className="vstack">
                 <Form className="vstack gap-2">
                     <Form.Group>
-                        <Label for="contactEmail">Contact email</Label>
+                        <Label htmlFor="contactEmail">Contact email</Label>
                         <Form.Control
                             type="email"
                             name="contactEmail"
@@ -53,19 +53,19 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
                     <Row>
                         <Col>
                             <Form.Group>
-                                <Label for="supportId">Support ID</Label>
+                                <Label htmlFor="supportId">Support ID</Label>
                                 <Form.Control type="number" name="supportId" value={supportId} disabled />
                             </Form.Group>
                         </Col>
                         <Col>
                             <Form.Group>
-                                <Label for="LicenseId">License ID</Label>
+                                <Label htmlFor="LicenseId">License ID</Label>
                                 <Form.Control type="text" name="supportId" value={licenseId} disabled />
                             </Form.Group>
                         </Col>
                     </Row>
                     <Form.Group>
-                        <Label for="messageText">
+                        <Label htmlFor="messageText">
                             Message <span className="text-muted">(optional)</span>
                         </Label>
                         <Form.Control as="textarea" name="text" id="messageText" rows={10} />

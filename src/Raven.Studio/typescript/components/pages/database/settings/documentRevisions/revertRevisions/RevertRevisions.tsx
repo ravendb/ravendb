@@ -8,7 +8,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -103,8 +103,8 @@ export default function RevertRevisions() {
                     </div>
                     <Card className="mt-3">
                         <Card.Body className="gap-4">
-                            <Form.Group>
-                                <Label for="pointInTime">Point in Time</Label>
+                            <Form.Group className="mb-3">
+                                <Label htmlFor="pointInTime">Point in Time</Label>
                                 <FormDatePicker
                                     id="pointInTime"
                                     name="pointInTime"
@@ -120,7 +120,7 @@ export default function RevertRevisions() {
                                 />
                             </Form.Group>
                             <Form.Group>
-                                <Label for="timeWindow">Time Window</Label>
+                                <Label htmlFor="timeWindow">Time Window</Label>
                                 <InputGroup>
                                     <FormInput
                                         type="number"

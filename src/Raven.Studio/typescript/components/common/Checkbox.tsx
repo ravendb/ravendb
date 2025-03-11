@@ -1,11 +1,10 @@
 ﻿import React, { ChangeEvent, ReactNode, useEffect, useRef } from "react";
 import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
 import useUniqueId from "components/hooks/useUniqueId";
 import classNames from "classnames";
 import "./Checkbox.scss";
 import { RavenFormControlProps } from "react-bootstrap/FormControl";
-import { InputType } from "reactstrap/types/lib/Input";
+import { InputType } from "../../../typings/_studio/react-bootstrap";
 
 export interface CheckboxProps extends Omit<RavenFormControlProps, "className" | "children"> {
     selected: boolean;
@@ -54,15 +53,11 @@ export function Checkbox(props: CheckboxProps) {
                 ref={inputEl}
                 id={inputId}
                 checked={selected}
+                label={children}
                 onChange={toggleSelection}
                 disabled={disabled}
                 {...rest}
             />
-            {children && (
-                <Label check htmlFor={inputId}>
-                    {children}
-                </Label>
-            )}
         </div>
     );
 }
@@ -83,14 +78,10 @@ export function Switch(props: CheckboxProps) {
                 id={inputId}
                 checked={selected}
                 onChange={toggleSelection}
+                label={children}
                 disabled={disabled}
                 {...rest}
             />
-            {children && (
-                <Label check htmlFor={inputId}>
-                    {children}
-                </Label>
-            )}
         </div>
     );
 }
@@ -111,14 +102,10 @@ export function Radio(props: CheckboxProps) {
                 id={inputId}
                 checked={selected}
                 onChange={toggleSelection}
+                label={children}
                 disabled={disabled}
                 {...rest}
             />
-            {children && (
-                <Label check htmlFor={inputId}>
-                    {children}
-                </Label>
-            )}
         </div>
     );
 }

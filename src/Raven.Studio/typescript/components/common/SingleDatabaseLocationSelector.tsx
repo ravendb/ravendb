@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { NodeSet, NodeSetItem, NodeSetLabel, NodeSetList } from "./NodeSet";
 import { Icon } from "./Icon";
 import { Radio } from "./Checkbox";

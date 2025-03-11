@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Label } from "reactstrap";
+import Label from "components/common/Label";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseCustomSorterTestResult from "components/pages/database/settings/customSorters/DatabaseCustomSorterTestResult";

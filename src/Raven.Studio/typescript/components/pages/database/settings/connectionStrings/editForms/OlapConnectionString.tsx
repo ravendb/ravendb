@@ -1,5 +1,4 @@
 ﻿import Form from "react-bootstrap/Form";
-import { Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
@@ -19,6 +18,7 @@ import {
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import Label from "components/common/Label";
 
 type FormData = ConnectionFormData<OlapConnection>;
 
