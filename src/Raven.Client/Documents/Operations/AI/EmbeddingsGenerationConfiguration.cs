@@ -102,8 +102,8 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         if (Quantization == VectorEmbeddingType.Text)
             errors.Add($"{nameof(Quantization)} cannot be {nameof(VectorEmbeddingType.Text)}");
 
-        if (ChunkingOptionsForQuerying.MaxTokensPerChunk <= 0)
-            errors.Add($"{nameof(ChunkingOptionsForQuerying.MaxTokensPerChunk)} must be greater than 0");
+        if (ChunkingOptionsForQuerying is null || ChunkingOptionsForQuerying.MaxTokensPerChunk <= 0)
+            errors.Add($"{nameof(ChunkingOptionsForQuerying)} must be specified with {nameof(ChunkingOptionsForQuerying.MaxTokensPerChunk)} greater than 0.");
 
         return errors.Count == 0;
     }
@@ -230,6 +230,6 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         if (identifier.EndsWith("-"))
             errors.Add("Identifier ends with a hyphen;");
 
-        return errors.Count != 0 == false;
+        return errors.Count == 0;
     }
 }
