@@ -221,7 +221,13 @@ const schema = yupObjectSchema<FormData>({
         dimensions: yup.number().nullable().integer().positive(),
     }),
     huggingFaceSettings: yup.object({
-        apiKey: yup.string().nullable(),
+        apiKey: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "huggingFaceSettings",
+                then: (schema) => schema.trim().required(),
+            }),
         endpoint: yup
             .string()
             .nullable()

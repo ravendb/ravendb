@@ -1,6 +1,5 @@
 import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import OptionalLabel from "components/common/OptionalLabel";
 import {
     ConnectionFormData,
     AiConnection,
@@ -47,7 +46,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             </RichAlert>
             <div className="mb-2">
                 <Label>
-                    API Key <OptionalLabel />
+                    API Key
                     <PopoverWithHoverWrapper message="The API key to use to authenticate with the Hugging Face service.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
