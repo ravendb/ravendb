@@ -207,11 +207,11 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         const result = await new getExpirationConfigurationCommand(this.db).execute();
 
         if (!result) {
+            this.enableDocumentExpiration(true);
             return this.isDocumentExpirationEnabled(false);
         }
 
         this.enableDocumentExpiration(result.Disabled);
-
         return this.isDocumentExpirationEnabled(!result.Disabled);
     }
 
