@@ -18,7 +18,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Types
                 return Utf8GetBytes(value);
             }
 
-            return BitConverter.GetBytes((float)value).Reverse().ToArray();
+            return Enumerable.Reverse(BitConverter.GetBytes((float)value)).ToArray();
         }
 
         public override object FromBytes(byte[] buffer, PgFormat formatCode)
@@ -28,7 +28,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Types
                 return FromString(Utf8GetString(buffer));
             }
 
-            return BitConverter.ToSingle(buffer.Reverse().ToArray());
+            return BitConverter.ToSingle(Enumerable.Reverse(buffer).ToArray());
         }
 
         public override object FromString(string value)

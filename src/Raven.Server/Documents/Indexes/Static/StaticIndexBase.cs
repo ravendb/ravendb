@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return l;
                 if (v is float f)
                     return f;
-                if (v is LazyStringValue lsv && double.TryParse(lsv, out var r))
+                if (v is LazyStringValue lsv && double.TryParse(lsv.AsReadOnlySpan(), out var r))
                     return r;
 
                 return null;
@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return l;
                 if (v is float f)
                     return (long)f;
-                if (v is LazyStringValue lsv && long.TryParse(lsv, out var r))
+                if (v is LazyStringValue lsv && long.TryParse(lsv.AsReadOnlySpan(), out var r))
                     return r;
 
                 return null;

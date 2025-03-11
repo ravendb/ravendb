@@ -61,7 +61,7 @@ namespace Voron
             if (_generation == 0)
             {
                 _generation = 1;
-                MemoryMarshal.Cast<PageData, byte>(_cache).Fill(0);
+                MemoryMarshal.Cast<PageData, byte>(_cache.AsSpan()).Fill(0);
             }
         }
 
