@@ -74,7 +74,11 @@ namespace Raven.Server.Documents.ETL.Stats
         }
 
         public int NumberOfGeneratedEmbeddings { get; set; }
+        
+        public int NumberOfEmbeddingsInCache { get; set; }
+
         public int NumberOfPutEmbeddingDocuments { get; set; }
+
         public int NumberOfDeletedEmbeddingDocuments { get; set; }
 
         protected override EmbeddingsGenerationStatsScope OpenNewScope(EtlRunStats stats, bool start)
@@ -93,6 +97,7 @@ namespace Raven.Server.Documents.ETL.Stats
             {
                 Name = name,
                 NumberOfGeneratedEmbeddings = NumberOfGeneratedEmbeddings,
+                NumberOfEmbeddingsInCache = NumberOfEmbeddingsInCache,
                 NumberOfPutEmbeddingDocuments = NumberOfPutEmbeddingDocuments,
                 NumberOfDeletedEmbeddingDocuments = NumberOfDeletedEmbeddingDocuments,
             };

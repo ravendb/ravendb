@@ -2,7 +2,7 @@
 
 public sealed class EmbeddingsGenerationOperations
 {
-    public const string Storage = "Embeddings/Storage";
+    public const string Storage = "Storage/Embeddings";
     
-    public const string GenerationByAiService = "Embeddings/GenerationByAIService";
+    public const string GenerateInAiService = "AIService/Generate";
 }

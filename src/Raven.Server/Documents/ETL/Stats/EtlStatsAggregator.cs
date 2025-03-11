@@ -22,11 +22,13 @@ namespace Raven.Server.Documents.ETL.Stats
         where TEtlPerformanceOperation : EtlPerformanceOperation
     {
         private readonly Func<EtlRunStats, TStatsScope> _factory;
+        private readonly string _etlTag;
         private volatile EtlPerformanceStats _performanceStats;
 
-        public EtlStatsAggregator(int id, Func<EtlRunStats, TStatsScope> factory, IEtlStatsAggregator lastStats) : base(id, lastStats)
+        public EtlStatsAggregator(int id, Func<EtlRunStats, TStatsScope> factory, IEtlStatsAggregator lastStats, string etlTag) : base(id, lastStats)
         {
             _factory = factory;
+            _etlTag = etlTag;
         }
 
         public override TStatsScope CreateScope()
@@ -57,7 +59,7 @@ namespace Raven.Server.Documents.ETL.Stats
                 Id = Id,
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
-                Details = Scope.ToPerformanceOperation("ETL"),
+                Details = Scope.ToPerformanceOperation(_etlTag),
                 LastLoadedEtag = Stats.LastLoadedEtag,
                 NumberOfLoadedItems = Stats.NumberOfLoadedItems,
                 LastExtractedEtags = Stats.LastExtractedEtags,

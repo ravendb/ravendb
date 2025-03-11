@@ -345,7 +345,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 
                 Assert.Equal("Load", loadDetails.Name);
                 
-                var embeddingsGenerationStats = (EmbeddingsGenerationPerformanceOperation)loadDetails.Operations.First(x => x.Name == EmbeddingsGenerationOperations.GenerationByAiService);
+                var embeddingsGenerationStats = (EmbeddingsGenerationPerformanceOperation)loadDetails.Operations.First(x => x.Name == EmbeddingsGenerationOperations.GenerateInAiService);
 
                 Assert.Equal(1, embeddingsGenerationStats.NumberOfGeneratedEmbeddings);
                 
@@ -367,7 +367,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
                 Assert.Equal("Load", loadDetails2.Name);
 
-                var embeddingsGenerationStats2 = (EmbeddingsGenerationPerformanceOperation)loadDetails2.Operations.FirstOrDefault(x => x.Name == EmbeddingsGenerationOperations.GenerationByAiService);
+                var embeddingsGenerationStats2 = (EmbeddingsGenerationPerformanceOperation)loadDetails2.Operations.FirstOrDefault(x => x.Name == EmbeddingsGenerationOperations.GenerateInAiService);
 
                 Assert.Null(embeddingsGenerationStats2); // but there was no need to generate embeddings
             }

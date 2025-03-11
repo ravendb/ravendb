@@ -487,9 +487,10 @@ class ongoingTasksStats extends shardViewModelBase {
             "Storage/AttachmentRead": undefined as string,
             "Storage/CounterRead": undefined as string,
             "Storage/TimeSeriesRead": undefined as string,
-            "Embeddings/GenerationByAIService": undefined as string,
-            "Embeddings/Storage": undefined as string,
+            "Storage/Embeddings": undefined as string,
+            "AIService/Generate": undefined as string,
             "ETL": undefined as string,
+            "Embeddings Generation": undefined as string,
             "Extract": undefined as string,
             "Transform": undefined as string,
             "Load" : undefined as string,
@@ -2368,15 +2369,16 @@ class ongoingTasksStats extends shardViewModelBase {
                                 tooltipHtml += `<div class="tooltip-li">Last loaded Etag: <div class="value">${baseElement.LastLoadedEtag} </div></div>`;
                             }
                             break;
-                        case "Embeddings/Storage": {
+                        case "Storage/Embeddings": {
                             const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats.EmbeddingsGenerationPerformanceOperation;
                             tooltipHtml += `<div class="tooltip-li">Put embeddings documents: <div class="value">${elementWithData.NumberOfPutEmbeddingDocuments}</div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Deleted embeddings documents: <div class="value">${elementWithData.NumberOfDeletedEmbeddingDocuments}</div></div>`;
                             break;
                         }
-                        case "Embeddings/GenerationByAIService": {
+                        case "AIService/Generate": {
                             const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats.EmbeddingsGenerationPerformanceOperation;
                             tooltipHtml += `<div class="tooltip-li">Generated embeddings: <div class="value">${elementWithData.NumberOfGeneratedEmbeddings}</div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Embeddings in cache: <div class="value">${elementWithData.NumberOfEmbeddingsInCache}</div></div>`;
                             break;
                         }
                     }

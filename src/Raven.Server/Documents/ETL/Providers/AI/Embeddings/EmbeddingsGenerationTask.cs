@@ -133,6 +133,8 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
         using (_missingEmbeddingsHolder)
         {
+            var embeddingsInCache = 0;
+            
             foreach (var embeddingItem in embeddingsScriptRun.Additions)
             {
                 foreach (var kvp in embeddingItem.Values)
@@ -143,6 +145,8 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                     {
                         if (Database.AiIntegrations.Embeddings.Storage.ExistsEmbeddingCacheDocument(context, connectionStringId, embeddingToGenerate, Configuration.Quantization) == false)
                             _missingEmbeddingsHolder.Add(embeddingToGenerate.TextualValue, embeddingToGenerate);
+                        else
+                            embeddingsInCache++;
                     }
                 }
 
@@ -160,9 +164,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                 IList<ReadOnlyMemory<float>> generatedValues;
                 try
                 {
-                    using var embeddingsGenerationScope = scope.For(EmbeddingsGenerationOperations.GenerationByAiService);
+                    using var embeddingsGenerationScope = scope.For(EmbeddingsGenerationOperations.GenerateInAiService);
                     generatedValues = AiHelper.GenerateEmbeddingsAsync(service, keys).GetAwaiter().GetResult();
-                    embeddingsGenerationScope.NumberOfGeneratedEmbeddings += generatedValues.Count;
+                    embeddingsGenerationScope.NumberOfGeneratedEmbeddings = generatedValues.Count;
+                    embeddingsGenerationScope.NumberOfEmbeddingsInCache = embeddingsInCache;
+
                 }
                 catch (Exception ex)
                 {
@@ -209,6 +215,8 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
     {
         return new EmbeddingsGenerationStatsScope(stats);
     }
+
+    protected override string StatsAggregatorTag => "Embeddings Generation";
 
     protected override bool ShouldFilterOutHiLoDocument()
     {

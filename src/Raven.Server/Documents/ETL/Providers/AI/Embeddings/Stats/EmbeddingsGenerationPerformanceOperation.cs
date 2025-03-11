@@ -11,6 +11,7 @@ public sealed class EmbeddingsGenerationPerformanceOperation : EtlPerformanceOpe
     }
 
     public int NumberOfGeneratedEmbeddings { get; set; }
+    public int NumberOfEmbeddingsInCache { get; set; }
     public int NumberOfPutEmbeddingDocuments { get; set; }
     public int NumberOfDeletedEmbeddingDocuments { get; set; }
 }

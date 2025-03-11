@@ -800,7 +800,7 @@ namespace Raven.Server.Documents.ETL
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var statsAggregator = new EtlStatsAggregator<TStatsScope, TEtlPerformanceOperation>(Interlocked.Increment(ref _statsId), CreateScope, _lastStats);
+                        var statsAggregator = new EtlStatsAggregator<TStatsScope, TEtlPerformanceOperation>(Interlocked.Increment(ref _statsId), CreateScope, _lastStats, StatsAggregatorTag);
                         _lastStats = statsAggregator;
 
                         AddPerformanceStats(statsAggregator);
@@ -955,6 +955,8 @@ namespace Raven.Server.Documents.ETL
                 }
             }
         }
+
+        protected virtual string StatsAggregatorTag => "ETL";
 
         private static void RecordSuccessfulBatch(TStatsScope stats)
         {
