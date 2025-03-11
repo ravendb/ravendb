@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Sparrow.Server;
@@ -44,16 +45,18 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(1, nullElements);
+
+            var ex = Assert.Throws<RavenException>(()=> session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector), v => v.ByText("Joe")).ToList());
+            Assert.Contains("Couldn't find Embeddings Generation task with 'localaitask' identifier", ex.Message);
         }
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store);
-        etlStatus.Wait(TimeSpan.FromSeconds(10));
+        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
-WaitForUserToContinueTheTest(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -63,7 +66,7 @@ WaitForUserToContinueTheTest(store);
                 .VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByText("joe"))
                 .ToList();
-            WaitForUserToContinueTheTest(store);
+
             Assert.Single(byVector);
         }
 
@@ -71,6 +74,7 @@ WaitForUserToContinueTheTest(store);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Joe"], id);
+        etlStatus.Reset();
         using (var session = store.OpenSession())
         {
             var load = session.Load<Dto>(id);
@@ -79,8 +83,7 @@ WaitForUserToContinueTheTest(store);
             session.SaveChanges();
         }
 
-        etlStatus.Reset();
-        etlStatus.Wait(TimeSpan.FromSeconds(10));
+        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {
@@ -130,12 +133,10 @@ WaitForUserToContinueTheTest(store);
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }]);
-        etlStatus.Wait(TimeSpan.FromSeconds(10));
+        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
-
-        WaitForUserToContinueTheTest(store);
 
         using (var session = store.OpenSession())
         {
@@ -153,6 +154,7 @@ WaitForUserToContinueTheTest(store);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Joe", "Jimmy"], id);
+        etlStatus.Reset();
         using (var session = store.OpenSession())
         {
             var load = session.Load<Dto>(id);
@@ -161,8 +163,7 @@ WaitForUserToContinueTheTest(store);
             session.SaveChanges();
         }
 
-        etlStatus.Reset();
-        etlStatus.Wait(TimeSpan.FromSeconds(10));
+        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {
@@ -219,7 +220,8 @@ WaitForUserToContinueTheTest(store);
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: embeddingEtlName);
-        etlStatus.Wait(TimeSpan.FromSeconds(10));
+        
+        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
         AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
         
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
@@ -243,7 +245,7 @@ WaitForUserToContinueTheTest(store);
 
         etlStatus.Reset();
         var (config2, connectionString2) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: embeddingEtlName2);
-        etlStatus.Wait(TimeSpan.FromSeconds(10));
+        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
 
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
