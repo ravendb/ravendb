@@ -224,6 +224,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       ApiKey: connection.googleSettings.apiKey,
                       Model: connection.googleSettings.model,
                       AiVersion: connection.googleSettings.aiVersion,
+                      Dimensions: connection.googleSettings.dimensions,
                   }
                 : null,
         HuggingFaceSettings:

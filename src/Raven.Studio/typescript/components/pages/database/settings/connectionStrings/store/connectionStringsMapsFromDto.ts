@@ -381,6 +381,7 @@ export function mapAiConnectionsFromDto(
                     aiVersion: connection.GoogleSettings?.AiVersion,
                     apiKey: connection.GoogleSettings?.ApiKey,
                     model: connection.GoogleSettings?.Model,
+                    dimensions: connection.GoogleSettings?.Dimensions,
                 },
                 huggingFaceSettings: {
                     apiKey: connection.HuggingFaceSettings?.ApiKey,

@@ -45,7 +45,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 <Label className="col-form-label">
                     AI Version <OptionalLabel />
                     <PopoverWithHoverWrapper message="The Google AI version to use.">
-                        <Icon icon="info" color="info" id="aiVersion" margin="ms-1" />
+                        <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
                 <FormSelect
@@ -65,7 +65,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 <Label>
                     API Key
                     <PopoverWithHoverWrapper message="The API key to use to authenticate with the Google AI service.">
-                        <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
+                        <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
 
@@ -75,10 +75,24 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 <Label>
                     Model
                     <PopoverWithHoverWrapper message="The Google AI text embedding model to use.">
-                        <Icon icon="info" color="info" id="model" margin="ms-1" />
+                        <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
                 <FormInput control={control} name="googleSettings.model" type="text" disabled={isUsedByAnyTask} />
+            </div>
+            <div className="mb-2">
+                <Label>
+                    Dimensions <OptionalLabel />
+                    <PopoverWithHoverWrapper message="The number of dimensions that the model should use.">
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                </Label>
+                <FormInput
+                    control={control}
+                    name="googleSettings.dimensions"
+                    type="number"
+                    disabled={isUsedByAnyTask}
+                />
             </div>
             <div className="d-flex mb-2">
                 <FlexGrow />

@@ -218,6 +218,7 @@ const schema = yupObjectSchema<FormData>({
                 is: "googleSettings",
                 then: (schema) => schema.trim().required(),
             }),
+        dimensions: yup.number().nullable().integer().positive(),
     }),
     huggingFaceSettings: yup.object({
         apiKey: yup.string().nullable(),

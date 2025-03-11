@@ -142,6 +142,7 @@ export interface AiConnection extends ConnectionBase {
         aiVersion?: Raven.Client.Documents.Operations.AI.GoogleAIVersion;
         apiKey?: string;
         model?: string;
+        dimensions?: number;
     };
     huggingFaceSettings?: {
         apiKey?: string;
