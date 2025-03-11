@@ -405,7 +405,7 @@ namespace Raven.Server.Dashboard
                 KafkaSinkCount = kafkaSinkCountOnNode,
                 RabbitMqSinkCount = rabbitMqSinkCountOnNode,
                 SnowflakeEtlCount = snowflakeEtlCountOnNode,
-                EmbeddingGenerationCount = embeddingsGenerationCountOnNode,
+                EmbeddingsGenerationCount = embeddingsGenerationCountOnNode,
             };
         }
 

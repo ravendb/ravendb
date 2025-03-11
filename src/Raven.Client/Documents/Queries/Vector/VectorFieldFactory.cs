@@ -16,12 +16,12 @@ public interface IVectorFieldFactory<T>
     /// Defines the text field that vector search will be performed on.
     /// </summary>
     /// <param name="fieldName">Name of the document field containing text data.</param>
-    /// <param name="embeddingGenerationTaskIdentifier">Identifier of the embeddings generation task that will be used to generate embedding for queried text.</param>
-    public IVectorEmbeddingTextField WithText(string fieldName, string embeddingGenerationTaskIdentifier = null);
+    /// <param name="embeddingsGenerationTaskIdentifier">Identifier of the embeddings generation task that will be used to generate embedding for queried text.</param>
+    public IVectorEmbeddingTextField WithText(string fieldName, string embeddingsGenerationTaskIdentifier = null);
     
     /// <inheritdoc cref="WithText(string,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
     /// <param name="propertySelector">Path to the document field containing text data.</param>
-    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector, string embeddingGenerationTaskIdentifier = null);
+    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector, string embeddingsGenerationTaskIdentifier = null);
     
     /// <summary>
     /// Defines the embedding field that vector search will be performed on.
@@ -93,22 +93,22 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
     public bool IsBase64Encoded { get; set; }
     public string EmbeddingsGenerationTaskIdentifier { get; set; }
     
-    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector, string embeddingGenerationTaskIdentifier)
+    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector, string embeddingsGenerationTaskIdentifier)
     {
         FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
-        EmbeddingsGenerationTaskIdentifier = embeddingGenerationTaskIdentifier;
+        EmbeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
         
         return this;
     }
     
-    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName, string embeddingGenerationTaskIdentifier)
+    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName, string embeddingsGenerationTaskIdentifier)
     {
         FieldName = fieldName;
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
-        EmbeddingsGenerationTaskIdentifier = embeddingGenerationTaskIdentifier;
+        EmbeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
         
         return this;
     }

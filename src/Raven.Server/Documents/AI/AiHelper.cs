@@ -31,9 +31,9 @@ public static class AiHelper
         kernelBuilder.Configure(configuration, withLogging: true);
         var kernel = kernelBuilder.Build();
 
-        var embeddingService = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
+        var embeddingsService = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
         var logger = (InMemoryLoggerProvider)kernel.GetRequiredService<ILoggerProvider>();
-        return (embeddingService, logger);
+        return (embeddingsService, logger);
     }
 
     /// <summary>
@@ -43,11 +43,11 @@ public static class AiHelper
     /// </summary>
     // TODO: Once batch processing is implemented on the SemanticKernel side, or we implement the proper implementation ourselves, we will remove this code.
     [Experimental("SKEXP0001")]
-    public static async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(ITextEmbeddingGenerationService embeddingGenerationService, IList<string> values)
+    public static async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(ITextEmbeddingGenerationService embeddingsGenerationService, IList<string> values)
     {
         IList<ReadOnlyMemory<float>> embeddings;
 
-        if (embeddingGenerationService is HuggingFaceTextEmbeddingGenerationService)
+        if (embeddingsGenerationService is HuggingFaceTextEmbeddingGenerationService)
         {
             embeddings = new List<ReadOnlyMemory<float>>();
             string[] singleItemArray = new string[1];
@@ -55,12 +55,12 @@ public static class AiHelper
             foreach (string value in values)
             {
                 singleItemArray[0] = value;
-                embeddings.AddRange(await embeddingGenerationService.GenerateEmbeddingsAsync(singleItemArray));
+                embeddings.AddRange(await embeddingsGenerationService.GenerateEmbeddingsAsync(singleItemArray));
             }
         }
         else
         {
-            embeddings = await embeddingGenerationService.GenerateEmbeddingsAsync(values);
+            embeddings = await embeddingsGenerationService.GenerateEmbeddingsAsync(values);
         }
 
         return embeddings;

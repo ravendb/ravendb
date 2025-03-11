@@ -20,7 +20,7 @@ public sealed class EmbeddingsGenerationTestCommand : RavenCommand
         
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"{node.Url}/databases/{node.Database}/admin/ai/test";
+        url = $"{node.Url}/databases/{node.Database}/admin/ai/embeddings/test";
             
         var request = new HttpRequestMessage
         {

@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 
-public sealed class TombstonesToAiItems : IEnumerator<AiIntegrationItem>
+public sealed class TombstonesToEmbeddingsGenerationItems : IEnumerator<EmbeddingsGenerationItem>
 {
     private readonly DocumentsOperationContext _context;
     private readonly IEnumerator<Tombstone> _tombstones;
@@ -16,9 +16,9 @@ public sealed class TombstonesToAiItems : IEnumerator<AiIntegrationItem>
     
     object IEnumerator.Current => Current;
     
-    public AiIntegrationItem Current { get; private set; }
+    public EmbeddingsGenerationItem Current { get; private set; }
     
-    public TombstonesToAiItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+    public TombstonesToEmbeddingsGenerationItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
     {
         _context = context;
         _tombstones = tombstones;
@@ -33,13 +33,13 @@ public sealed class TombstonesToAiItems : IEnumerator<AiIntegrationItem>
         if (_tombstones.MoveNext() == false)
             return false;
             
-        Current = new AiIntegrationItem(_tombstones.Current, _collection, EtlItemType.Document);
+        Current = new EmbeddingsGenerationItem(_tombstones.Current, _collection, EtlItemType.Document);
         Current.Filtered = Filter(Current);
 
         return true;
     }
     
-    private bool Filter(AiIntegrationItem item)
+    private bool Filter(EmbeddingsGenerationItem item)
     {
         var tombstone = _tombstones.Current;
         if (tombstone.Flags.Contain(DocumentFlags.Artificial))

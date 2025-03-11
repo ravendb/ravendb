@@ -556,7 +556,7 @@ namespace Raven.Server.Documents.ETL
                 }
             }
             
-            else if (currentItem is AiIntegrationItem)
+            else if (currentItem is EmbeddingsGenerationItem)
             {
                 if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.EmbeddingsGenerationTaskMaxBatchSize)
                 {
@@ -1431,15 +1431,15 @@ namespace Raven.Server.Documents.ETL
                     }
                     
                 case EtlType.EmbeddingsGeneration:
-                    using (var aiEtl = new EmbeddingsGenerationTask(testScript.Configuration.Transforms[0], testScript.Configuration as EmbeddingsGenerationConfiguration, database, database.ServerStore))
-                    using (aiEtl.EnterTestMode(out debugOutput))
+                    using (var embeddingsGenerationTask = new EmbeddingsGenerationTask(testScript.Configuration.Transforms[0], testScript.Configuration as EmbeddingsGenerationConfiguration, database, database.ServerStore))
+                    using (embeddingsGenerationTask.EnterTestMode(out debugOutput))
                     {
-                        aiEtl.EnsureThreadAllocationStats();
+                        embeddingsGenerationTask.EnsureThreadAllocationStats();
+                        
+                        var embeddingsGenerationItem = new EmbeddingsGenerationItem(document, docCollection);
+                        var results = embeddingsGenerationTask.Transform([embeddingsGenerationItem], context, new EmbeddingsGenerationStatsScope(new EtlRunStats()), new EtlProcessState());
 
-                        var aiEtlItem = new AiIntegrationItem(document, docCollection);
-                        var results = aiEtl.Transform([aiEtlItem], context, new EmbeddingsGenerationStatsScope(new EtlRunStats()), new EtlProcessState());
-
-                        var result  = aiEtl.RunTest(results, context);
+                        var result  = embeddingsGenerationTask.RunTest(results, context);
                         result.DebugOutput = debugOutput;
                         return result;
                     }

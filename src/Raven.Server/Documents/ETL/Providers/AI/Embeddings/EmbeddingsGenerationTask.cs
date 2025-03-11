@@ -35,7 +35,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationConfiguration, AiConnectionString,
+public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationConfiguration, AiConnectionString,
     EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
     private const string EmbeddingsTaskTag = "AI/Embeddings Generation";
@@ -56,58 +56,46 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
     
     protected override bool ShouldTrackAttachmentTombstones() => false;
 
-    protected override IEnumerator<AiIntegrationItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+    protected override IEnumerator<EmbeddingsGenerationItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
     {
-        return new DocumentsToAiItems(docs, collection);
+        return new DocumentsToEmbeddingsGenerationItems(docs, collection);
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
+    protected override IEnumerator<EmbeddingsGenerationItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
         bool trackAttachments)
     {
-        return new TombstonesToAiItems(context, tombstones, collection, trackAttachments);
+        return new TombstonesToEmbeddingsGenerationItems(context, tombstones, collection, trackAttachments);
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
+    protected override IEnumerator<EmbeddingsGenerationItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
         List<string> collections)
     {
         throw new NotSupportedException($"{nameof(ConvertAttachmentTombstonesEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
+    protected override IEnumerator<EmbeddingsGenerationItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
         string collection)
     {
         throw new NotSupportedException($"{nameof(ConvertCountersEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
+    protected override IEnumerator<EmbeddingsGenerationItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
         string collection)
     {
         throw new NotSupportedException($"{nameof(ConvertTimeSeriesEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");
     }
 
-    protected override IEnumerator<AiIntegrationItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
+    protected override IEnumerator<EmbeddingsGenerationItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
         IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
     {
         throw new NotSupportedException($"{nameof(ConvertTimeSeriesDeletedRangeEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");
     }
 
-    protected override EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
+    protected override EtlTransformer<EmbeddingsGenerationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
         GetTransformer(DocumentsOperationContext context)
     {
         return new EmbeddingsGenerationScriptTransformer(Database, context, Transformation, null, Configuration);
     }
-
-    /*
-     *             if (lastErrorTime == null)
-                FallbackTime = TimeSpan.FromSeconds(5);
-            else
-            {
-                // double the fallback time (but don't cross Etl.EmbeddingsGenerationTaskMaxFallbackTime)
-                var secondsSinceLastError = (Database.Time.GetUtcNow() - lastErrorTime.Value).TotalSeconds;
-
-                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.EmbeddingsGenerationTaskMaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
-            }
-     */
     
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
@@ -122,7 +110,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
             var secondsToWait = (Database.Configuration.Ai.EmbeddingsGenerationTaskFallbackModeStrategy) switch
             {
                 EmbeddingsGenerationFallbackModeStrategy.Linear => _fallbackCounter * taskRetryDelay.TotalSeconds,
-                EmbeddingsGenerationFallbackModeStrategy.Exponential => Math.Pow(taskRetryDelay.TotalSeconds, _fallbackCounter),
+                EmbeddingsGenerationFallbackModeStrategy.Exponential => taskRetryDelay.TotalSeconds * Math.Pow(2, _fallbackCounter),
                 _ => throw new NotImplementedException($"Strategy: '{Database.Configuration.Ai.EmbeddingsGenerationTaskFallbackModeStrategy}' is not implemented.")
                 
             };

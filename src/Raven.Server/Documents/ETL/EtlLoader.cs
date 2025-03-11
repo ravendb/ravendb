@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.ETL
                 ElasticSearchEtlConfiguration elasticSearchConfig = null;
                 QueueEtlConfiguration queueConfig = null;
                 SnowflakeEtlConfiguration snowflakeConfig = null;
-                EmbeddingsGenerationConfiguration aiConfig = null;
+                EmbeddingsGenerationConfiguration embeddingsGenerationConfig = null;
 
                 var connectionStringNotFound = false;
 
@@ -315,10 +315,10 @@ namespace Raven.Server.Documents.ETL
                         break;
                     
                     case EtlType.EmbeddingsGeneration:
-                        aiConfig = config as EmbeddingsGenerationConfiguration;
+                        embeddingsGenerationConfig = config as EmbeddingsGenerationConfiguration;
                         
                         if (_databaseRecord.AiConnectionStrings.TryGetValue(config.ConnectionStringName, out var aiConnection))
-                            aiConfig.Initialize(aiConnection);
+                            embeddingsGenerationConfig.Initialize(aiConnection);
                         else
                             connectionStringNotFound = true;
                         
@@ -364,8 +364,8 @@ namespace Raven.Server.Documents.ETL
                         process = QueueEtl<QueueItem>.CreateInstance(transform, queueConfig, _database, _serverStore);
                     if (snowflakeConfig != null)
                         process = new SnowflakeEtl(transform, snowflakeConfig, _database, _serverStore);
-                    if (aiConfig != null)
-                        process = new EmbeddingsGenerationTask(transform, aiConfig, _database, _serverStore);
+                    if (embeddingsGenerationConfig != null)
+                        process = new EmbeddingsGenerationTask(transform, embeddingsGenerationConfig, _database, _serverStore);
                     yield return process;
                 }
             }

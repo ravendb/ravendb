@@ -258,15 +258,15 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
             
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["italian food", "vehicle"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingsGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["italian food", "vehicle"])).ToList();
             Assert.Equal(2, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["italian food", "dog"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingsGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["italian food", "dog"])).ToList();
             Assert.Equal(1, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["cat", "dog"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingsGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["cat", "dog"])).ToList();
             Assert.Equal(0, multiVectorTextualQuery.Count);
         }
 
