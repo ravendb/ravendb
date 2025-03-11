@@ -71,7 +71,6 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
 
         ObjectInstance htmlObject = new JsObject(DocumentScript.ScriptEngine);
         htmlObject.FastSetProperty("strip", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "strip", StripHtml), false, false, false));
-        htmlObject.FastSetProperty("splitLines", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitLines", SplitHtmlLines), false, false, false));
         DocumentScript.ScriptEngine.SetValue("html", htmlObject);
     }
 
@@ -392,34 +391,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
 
         return jsArray;
     }
-
-    private JsValue SplitHtmlLines(JsValue self, JsValue[] args)
-    {
-        const string methodSignature = "html.splitLines(text, maxTokensPerLine)";
-
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-
-        if (args[0].IsString() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
-
-        if (args[1].IsNumber() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
-
-        string text = StripHtml(args[0].AsString());
-        var chunks = TextChunker.SplitPlainTextLines(text, (int)args[1].AsNumber());
-
-        var jsChunks = new JsValue[chunks.Count];
-        for (var i = 0; i < chunks.Count; i++)
-        {
-            jsChunks[i] = new JsString(chunks[i]);
-        }
-
-        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
-
-        return jsArray;
-    }
-
+    
     private JsValue StripHtml(JsValue self, JsValue[] args)
     {
         const string methodSignature = "html.strip(htmlText)";

@@ -24,6 +24,5 @@ public enum ChunkingMethod
     PlainTextSplitParagraphs,
     MarkDownSplitLines,
     MarkDownSplitParagraphs,
-    HtmlSplitLines,
     HtmlStrip
 }

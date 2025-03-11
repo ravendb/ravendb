@@ -64,14 +64,6 @@ public static class TextChunker
                 foreach (var textualValue in textualValues)
                     chunkedValues.Add(StripHtml(textualValue));
                 break;
-            case ChunkingMethod.HtmlSplitLines:
-                foreach (var textualValue in textualValues)
-                {
-                    chunkerResult = Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextLines(textualValue, maxTokensPerChunk);
-                    foreach (var chunkedValue in chunkerResult)
-                        chunkedValues.Add(StripHtml(chunkedValue));
-                }
-                break;
             default:
                 throw new ArgumentException($"Unrecognized chunking method - {chunkingMethod}");
         }
