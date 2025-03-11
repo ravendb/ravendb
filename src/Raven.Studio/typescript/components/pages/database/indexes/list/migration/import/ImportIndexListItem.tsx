@@ -2,7 +2,7 @@ import { Checkbox } from "components/common/Checkbox";
 import IndexToMigrateTitle from "components/pages/database/indexes/list/migration/common/IndexToMigrateTitle";
 import React from "react";
 import Label from "components/common/Label";
-import { ListGroupItem } from "reactstrap";
+import ListGroupItem from "react-bootstrap/ListGroupItem";
 
 interface ImportIndexListItemProps {
     indexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;

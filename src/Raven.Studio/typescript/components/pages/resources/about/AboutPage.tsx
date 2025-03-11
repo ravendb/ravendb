@@ -1,9 +1,6 @@
 ﻿import React, { useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import { TabContent, TabPane } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import "./AboutPage.scss";
 
@@ -20,6 +17,8 @@ import { useAboutPage } from "components/pages/resources/about/useAboutPage";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import licenseModel from "models/auth/licenseModel";
+import Tab from "react-bootstrap/Tab";
+import Nav from "react-bootstrap/Nav";
 
 interface AboutPageProps {
     initialChangeLogMode?: "whatsNew" | "changeLog" | "hidden";
@@ -68,55 +67,59 @@ export function AboutPage({ initialChangeLogMode = "hidden" }: AboutPageProps) {
                         </div>
                     </div>
                     <Card className="flex-grow" style={{ flexBasis: "60%" }}>
-                        <Row className="about-page-tabs">
-                            <Col>
-                                <a
-                                    className={classNames("p-3 no-decor", {
-                                        "active bg-faded-primary": activeTab === "license",
-                                    })}
-                                    onClick={() => setActiveTab("license")}
-                                >
-                                    <Icon
-                                        icon="license"
-                                        className="circle-border fs-2"
-                                        color={licenseRegistered ? "success" : "warning"}
-                                        margin="me-2"
-                                    />
-                                    <span className="fs-3">License details</span>
-                                    {/* TODO show if you some extra options to enable in cloud
+                        <Tab.Container defaultActiveKey="license">
+                            <Nav fill className="about-page-tabs">
+                                <Nav.Item>
+                                    <Nav.Link
+                                        eventKey="license"
+                                        className={classNames("p-3 no-decor", {
+                                            "active bg-faded-primary": activeTab === "license",
+                                        })}
+                                        onClick={() => setActiveTab("license")}
+                                    >
+                                        <Icon
+                                            icon="license"
+                                            className="circle-border fs-2"
+                                            color={licenseRegistered ? "success" : "warning"}
+                                            margin="me-2"
+                                        />
+                                        <span className="fs-3">License details</span>
+                                        {/* TODO show if you some extra options to enable in cloud
                                 <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
                                     1
                                 </Badge> */}
-                                </a>
-                            </Col>
-                            <Col>
-                                <a
-                                    className={classNames("p-3 no-decor", {
-                                        "active bg-faded-info": activeTab === "support",
-                                    })}
-                                    onClick={() => setActiveTab("support")}
-                                >
-                                    <Icon icon="support" className="circle-border" margin="fs-2 me-2" />
-                                    <span className="fs-3">Support plan</span>
-                                    {paidSupportAvailable && (
-                                        <Badge className="rounded-pill py-1 ms-1 align-self-start" bg="primary">
-                                            1
-                                        </Badge>
-                                    )}
-                                </a>
-                            </Col>
-                        </Row>
+                                    </Nav.Link>
+                                </Nav.Item>
+                                <Nav.Item>
+                                    <Nav.Link
+                                        eventKey="support"
+                                        className={classNames("p-3 no-decor", {
+                                            "active bg-faded-info": activeTab === "support",
+                                        })}
+                                        onClick={() => setActiveTab("support")}
+                                    >
+                                        <Icon icon="support" className="circle-border" margin="fs-2 me-2" />
+                                        <span className="fs-3">Support plan</span>
+                                        {paidSupportAvailable && (
+                                            <Badge className="rounded-pill py-1 ms-1 align-self-start" bg="primary">
+                                                1
+                                            </Badge>
+                                        )}
+                                    </Nav.Link>
+                                </Nav.Item>
+                            </Nav>
 
-                        <TabContent activeTab={activeTab} className="flex-grow-1">
-                            <TabPane tabId="license">
-                                <LicenseDetails />
-                            </TabPane>
-                            <TabPane tabId="support">
-                                <SupportDetails
-                                    asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity}
-                                />
-                            </TabPane>
-                        </TabContent>
+                            <Tab.Content className="flex-grow-1">
+                                <Tab.Pane eventKey="license">
+                                    <LicenseDetails />
+                                </Tab.Pane>
+                                <Tab.Pane eventKey="support">
+                                    <SupportDetails
+                                        asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity}
+                                    />
+                                </Tab.Pane>
+                            </Tab.Content>
+                        </Tab.Container>
                     </Card>
                 </div>
             </div>

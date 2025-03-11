@@ -5,7 +5,6 @@ import { Control, ControllerProps, FieldPath, FieldValues, useController } from 
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
-import { InputType } from "reactstrap/types/lib/Input";
 import { RadioToggleWithIcon } from "./toggles/RadioToggle";
 import AceEditor, { AceEditorProps } from "./AceEditor";
 import classNames from "classnames";
@@ -19,6 +18,7 @@ import PathSelector, { PathSelectorProps, PathSelectorStateRef } from "component
 import { OmitIndexSignature } from "components/utils/common";
 import { RavenFormControlProps } from "react-bootstrap/FormControl";
 import { FormRangeProps } from "react-bootstrap/FormRange";
+import { InputType } from "../../../typings/_studio/react-bootstrap";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,

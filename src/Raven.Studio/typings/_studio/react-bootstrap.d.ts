@@ -6,7 +6,7 @@ import { BadgeProps } from "react-bootstrap/Badge";
 import { FormControlProps } from "react-bootstrap/FormControl";
 import { DropdownToggleProps } from "react-bootstrap/DropdownToggle";
 
-export type InputType =
+type InputType =
   | 'text'
   | 'email'
   | 'select'

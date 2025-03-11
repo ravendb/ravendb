@@ -2,7 +2,6 @@ import { Getter } from "@tanstack/react-table";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
-import { CloseButton } from "reactstrap";
 import document from "models/database/documents/document";
 import Button from "react-bootstrap/Button";
 import Modal from "components/common/Modal";
@@ -25,7 +24,7 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
                 <Icon icon="preview" margin="m-0" />
             </Button>
             <Modal onHide={toggleIsOpen} show={isOpen} size="lg">
-                <Modal.Body className="pb-3">
+                <Modal.Header onCloseClick={toggleIsOpen} className="pb-0">
                     <div className="d-flex justify-content-between">
                         <div>
                             <Icon icon="document" />
@@ -40,8 +39,9 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
                                 <span>Document Preview</span>
                             )}
                         </div>
-                        <CloseButton onClick={toggleIsOpen} />
                     </div>
+                </Modal.Header>
+                <Modal.Body className="pb-3">
                     <pre style={{ maxHeight: "400px" }} className="overflow-auto m-0 mt-3">
                         <Code language="json" code={jsonBody} elementToCopy={jsonBody} />
                     </pre>
