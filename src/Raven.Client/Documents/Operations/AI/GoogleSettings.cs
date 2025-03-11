@@ -6,11 +6,12 @@ namespace Raven.Client.Documents.Operations.AI;
 
 public sealed class GoogleSettings : AbstractAiSettings
 {
-    public GoogleSettings(string model, string apiKey, GoogleAIVersion? aiVersion = null)
+    public GoogleSettings(string model, string apiKey, GoogleAIVersion? aiVersion = null, int? dimensions = null)
     {
         Model = model;
         ApiKey = apiKey;
         AiVersion = aiVersion;
+        Dimensions = dimensions;
     }
 
     public GoogleSettings()
