@@ -298,7 +298,6 @@ embeddingsGenerationSampleHtmlHighlighted = transformationScriptSyntax.highlight
 static readonly embeddingsGenerationSampleHtml =
 `embeddings.generate({ 
     HtmlContent: html.strip(this.HtmlContent),
-    HtmlDivs: html.splitLines(this.HtmlDivs, 2048)
 });`
     
     
