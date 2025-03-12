@@ -221,6 +221,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 foreach (var field in fields)
                 {
+                    if (field.Vector?.EmbeddingsGenerationTaskIdentifier is null)
+                        continue;
+                    
                     var embeddingsGenerationTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(field.Vector.EmbeddingsGenerationTaskIdentifier);
                     if (Database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsGenerationTaskIdentifier, out _) == false)
                         throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{field.Vector.EmbeddingsGenerationTaskIdentifier}' identifier");
