@@ -109,10 +109,7 @@ namespace Sparrow.Collections
 
             foreach (T item in other)
             {
-                if (_inner.TryAdd(item, null))
-                {
-                    Interlocked.Increment(ref _innerCountForEmpty);
-                }
+                TryAdd(item);
             }
         }
     }
