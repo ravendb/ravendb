@@ -8,11 +8,10 @@ import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import React, { useEffect, useImperativeHandle, useState } from "react";
 import { AsyncStateStatus } from "react-async-hook";
 import Form from "react-bootstrap/Form";
-
 import Button from "react-bootstrap/Button";
 import { HrHeader } from "components/common/HrHeader";
 import Modal from "components/common/Modal";
-import { FormGroup } from "components/common/Form";
+import FormGroup from "react-bootstrap/FormGroup";
 
 export interface PathSelectorStateRef {
     toggle: () => void;
@@ -140,10 +139,9 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                             />
                         </div>
 
-                        <FormGroup className="mt-2">
-                            <Form.Label htmlFor="path-selector-input">Path</Form.Label>
+                        <FormGroup controlId="path-selector-input" className="mt-2 mb-3">
+                            <Form.Label>Path</Form.Label>
                             <Form.Control
-                                id="path-selector-input"
                                 type="text"
                                 value={pathInput}
                                 onChange={(x) => setPathInput(x.currentTarget.value)}

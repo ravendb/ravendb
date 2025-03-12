@@ -19,7 +19,6 @@ import {
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 
-
 type FormData = ConnectionFormData<OlapConnection>;
 
 interface OlapConnectionStringProps extends EditConnectionStringFormProps {

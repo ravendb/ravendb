@@ -90,6 +90,16 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
 
     JSXIdentifier(node) {
       if (name !== reactBootstrapName && node.name === name) {
+        const imports = context.getSourceCode().ast.body.filter(
+          n => n.type === "ImportDeclaration" &&
+               n.source.value === "reactstrap" &&
+               n.specifiers.some(s => s.imported?.name === name)
+        );
+
+        if (imports.length === 0) {
+          return;
+        }
+
         context.report({
           node: node,
           message: `Replace '${name}' with '${reactBootstrapName}'.`,
@@ -99,6 +109,7 @@ function createDeprecatedReactstrapImport({ context, name, reactBootstrapName = 
     }
   };
 }
+
 function migrateProp({ attr, newProp, message, context }) {
   context.report({
     node: attr,
@@ -536,12 +547,11 @@ module.exports = {
   "reactstrap-Form-to-RBootstrap-children": {
     meta: fixableMeta,
     create: (context) => {
-      const dropdownComponentMap = {
-        FormGroup: "Form.Group",
+      const formComponentMap = {
         Input: "Form.Control",
       };
 
-      return replaceReactstrapToReactBootstrap({ context, componentMap: dropdownComponentMap });
+      return replaceReactstrapToReactBootstrap({ context, componentMap: formComponentMap });
     },
   },
   "no-reactstrap-FormControl-props": {

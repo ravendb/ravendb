@@ -60,21 +60,22 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     };
 
     return (
-        <Modal scrollable show onHide={toggle} contentClassName={`modal-border bulge-${getColorForType(type)}`}>
-            {indexGroups.map((indexGroup, idx) => (
-                <>
-                    <Modal.Header className="vstack gap-4" onCloseClick={toggle}>
-                        <Icon
-                            icon="index"
-                            color={`${getColorForType(type)}`}
-                            addon={`${infinitiveLowerCase}` as IconName}
-                            className="fs-1"
-                            margin="m-0"
-                        />
+        <Modal show scrollable onHide={toggle} contentClassName={`modal-border bulge-${getColorForType(type)}`}>
+            <Modal.Header className="p-0" onCloseClick={toggle} />
+            <Modal.Body className="vstack gap-4">
+                <div className="text-center">
+                    <Icon
+                        icon="index"
+                        color={`${getColorForType(type)}`}
+                        addon={`${infinitiveLowerCase}` as IconName}
+                        className="fs-1"
+                        margin="m-0"
+                    />
+                </div>
+                {indexGroups.map((indexGroup, idx) => (
+                    <div key={"indexGroup" + idx}>
                         <div className="text-center lead">{indexGroup.title}</div>
-                    </Modal.Header>
-                    <Modal.Body>
-                        <div key={"indexGroup" + idx} className="vstack gap-1">
+                        <div className="vstack gap-1 my-4">
                             {indexGroup.indexes.map((index) => (
                                 <div key={index.name} className="d-flex">
                                     <div
@@ -107,27 +108,27 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                             ))}
                         </div>
                         {idx < indexGroups.length - 1 && <hr className="m-0" />}
-                        {ActionContextUtils.showContextSelector(allActionContexts) && (
-                            <div>
-                                <h4>Select context</h4>
-                                <MultipleDatabaseLocationSelector
-                                    allActionContexts={allActionContexts}
-                                    selectedActionContexts={selectedActionContexts}
-                                    setSelectedActionContexts={setSelectedActionContexts}
-                                />
-                            </div>
-                        )}
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button variant="link" onClick={toggle} className="link-muted">
-                            Cancel
-                        </Button>
-                        <Button variant={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
-                            <Icon icon={icon} /> {infinitive}
-                        </Button>
-                    </Modal.Footer>
-                </>
-            ))}
+                    </div>
+                ))}
+                {ActionContextUtils.showContextSelector(allActionContexts) && (
+                    <div>
+                        <h4>Select context</h4>
+                        <MultipleDatabaseLocationSelector
+                            allActionContexts={allActionContexts}
+                            selectedActionContexts={selectedActionContexts}
+                            setSelectedActionContexts={setSelectedActionContexts}
+                        />
+                    </div>
+                )}
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="link" onClick={toggle} className="link-muted">
+                    Cancel
+                </Button>
+                <Button variant={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
+                    <Icon icon={icon} /> {infinitive}
+                </Button>
+            </Modal.Footer>
         </Modal>
     );
 }
@@ -186,7 +187,6 @@ function getIcon(type: operationType) {
             assertUnreachable(type);
     }
 }
-
 function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexGroup[] {
     switch (type) {
         case "disable": {
