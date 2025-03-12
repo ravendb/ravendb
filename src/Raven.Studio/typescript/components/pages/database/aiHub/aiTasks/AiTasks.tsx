@@ -196,7 +196,7 @@ export default function AiTasks() {
                             <div key="ai-etls">
                                 <HrHeader className="ai-etl" count={embeddingsGenerations.length}>
                                     <Icon icon="ai-etl" />
-                                    AI
+                                    Embeddings Generation
                                 </HrHeader>
 
                                 {embeddingsGenerations.map((x) => (

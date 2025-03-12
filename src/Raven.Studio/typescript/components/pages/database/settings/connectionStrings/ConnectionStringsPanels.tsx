@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux";
 import Button from "react-bootstrap/Button";
 import ConnectionStringsPanel from "./ConnectionStringsPanel";
 import { Connection, StudioConnectionType } from "./connectionStringsTypes";
-import { connectionStringsActions } from "./store/connectionStringsSlice";
+import { connectionStringsActions, connectionStringSelectors } from "./store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
 
@@ -18,6 +18,7 @@ interface ConnectionStringsPanelsProps {
 export default function ConnectionStringsPanels({ connections, connectionsType }: ConnectionStringsPanelsProps) {
     const dispatch = useDispatch();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
 
     if (connections.length === 0) {
         return null;
@@ -27,7 +28,8 @@ export default function ConnectionStringsPanels({ connections, connectionsType }
         <div className="mb-4 connection-strings-panels">
             <HrHeader
                 right={
-                    hasDatabaseAdminAccess && (
+                    hasDatabaseAdminAccess &&
+                    viewContext !== "ai" && (
                         <Button
                             variant="info"
                             size="sm"
