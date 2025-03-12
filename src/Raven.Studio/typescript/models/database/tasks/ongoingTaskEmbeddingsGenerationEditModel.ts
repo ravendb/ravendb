@@ -21,17 +21,18 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
     // path configuration inputs
     pathConfigurationMaxTokensPerChunk = ko.observable<number>();
-    pathConfigurationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>("PlainTextSplitLines");
+    pathConfigurationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>("PlainTextSplit");
     pathConfigurationChunkingMethodLabel: KnockoutComputed<string>;
     pathConfigurationPath = ko.observable<string>("");
 
-    chunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>("PlainTextSplitLines");
+    chunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>("PlainTextSplit");
     chunkingMethodOptions: valueAndLabelItem<Raven.Client.Documents.Operations.AI.ChunkingMethod, string>[] = [
-        { value: "PlainTextSplitLines", label: "Plain Text Split Lines" },
-        { value: "PlainTextSplitParagraphs", label: "Plain Text Split Paragraphs" },
-        { value: "MarkDownSplitLines", label: "Markdown Split Lines" },
-        { value: "MarkDownSplitParagraphs", label: "Markdown Split Paragraphs" },
-        { value: "HtmlStrip", label: "HTML Strip" },
+        { value: "PlainTextSplit", label: "Plain Text: Split" },
+        { value: "PlainTextSplitLines", label: "Plain Text: Split Lines" },
+        { value: "PlainTextSplitParagraphs", label: "Plain Text: Split Paragraphs" },
+        { value: "MarkDownSplitLines", label: "Markdown: Split Lines" },
+        { value: "MarkDownSplitParagraphs", label: "Markdown: Split Paragraphs" },
+        { value: "HtmlStrip", label: "HTML: Strip" },
     ];
     chunkingMethodLabel: KnockoutComputed<string>;
 

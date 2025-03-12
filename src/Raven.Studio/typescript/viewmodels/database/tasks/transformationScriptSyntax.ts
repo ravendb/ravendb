@@ -280,7 +280,8 @@ embeddingsGenerationSampleTextHighlighted = transformationScriptSyntax.highlight
 
 static readonly embeddingsGenerationSampleText =
 `embeddings.generate({ 
-    Name: this.Name, 
+    Name: this.Name,
+    Note: text.split(this.Note, 2048),
     Description: text.splitLines(this.Description, 2048),
     Paragraphs: text.splitParagraphs(this.Paragraphs, 2048)
 });`;
@@ -297,7 +298,7 @@ embeddingsGenerationSampleHtmlHighlighted = transformationScriptSyntax.highlight
 
 static readonly embeddingsGenerationSampleHtml =
 `embeddings.generate({ 
-    HtmlContent: html.strip(this.HtmlContent),
+    HtmlContent: html.strip(this.HtmlContent, 2048)
 });`
     
     
