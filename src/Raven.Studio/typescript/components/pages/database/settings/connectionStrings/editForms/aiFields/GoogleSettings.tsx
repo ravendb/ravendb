@@ -16,6 +16,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Label } from "reactstrap";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import RichAlert from "components/common/RichAlert";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -41,6 +42,9 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
 
     return (
         <>
+            <RichAlert variant="info">
+                This configuration supports Google AI embeddings only. Not compatible with Vertex AI.
+            </RichAlert>
             <div className="mb-2">
                 <Label className="col-form-label">
                     AI Version <OptionalLabel />
