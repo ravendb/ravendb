@@ -1,5 +1,5 @@
 ﻿import Form from "react-bootstrap/Form";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormLabel } from "components/common/Form";
 import React from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { ConnectionFormData, EditConnectionStringFormProps, OlapConnection } from "../connectionStringsTypes";
@@ -51,7 +51,7 @@ export default function OlapConnectionString({
         <FormProvider {...form}>
             <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)}>
                 <div className="mb-4">
-                    <Form.Label>Name</Form.Label>
+                    <FormLabel>Name</FormLabel>
                     <FormInput
                         control={control}
                         name="name"

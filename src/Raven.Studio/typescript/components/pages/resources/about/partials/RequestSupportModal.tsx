@@ -9,7 +9,7 @@ import { Checkbox, Switch } from "components/common/Checkbox";
 import React from "react";
 import Button from "react-bootstrap/Button";
 import Modal from "components/common/Modal";
-import { FormGroup } from "components/common/Form";
+import { FormGroup, FormLabel } from "components/common/Form";
 
 interface RequestSupportModalProps {
     visible: boolean;
@@ -43,7 +43,7 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
             <Modal.Body className="vstack">
                 <Form className="vstack gap-2">
                     <FormGroup>
-                        <Form.Label htmlFor="contactEmail">Contact email</Form.Label>
+                        <FormLabel htmlFor="contactEmail">Contact email</FormLabel>
                         <Form.Control
                             type="email"
                             name="contactEmail"
@@ -54,21 +54,21 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
                     <Row>
                         <Col>
                             <FormGroup>
-                                <Form.Label htmlFor="supportId">Support ID</Form.Label>
+                                <FormLabel htmlFor="supportId">Support ID</FormLabel>
                                 <Form.Control type="number" name="supportId" value={supportId} disabled />
                             </FormGroup>
                         </Col>
                         <Col>
                             <FormGroup>
-                                <Form.Label htmlFor="LicenseId">License ID</Form.Label>
+                                <FormLabel htmlFor="LicenseId">License ID</FormLabel>
                                 <Form.Control type="text" name="supportId" value={licenseId} disabled />
                             </FormGroup>
                         </Col>
                     </Row>
                     <FormGroup>
-                        <Form.Label htmlFor="messageText">
+                        <FormLabel htmlFor="messageText">
                             Message <span className="text-muted">(optional)</span>
-                        </Form.Label>
+                        </FormLabel>
                         <Form.Control as="textarea" name="text" id="messageText" rows={10} />
                     </FormGroup>
                     <div className="well p-3 rounded-2">

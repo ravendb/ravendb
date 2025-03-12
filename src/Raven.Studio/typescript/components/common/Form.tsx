@@ -657,3 +657,5 @@ export function FormGroup(props: FormGroupProps) {
         </Form.Group>
     );
 }
+
+export const FormLabel = Form.Label;

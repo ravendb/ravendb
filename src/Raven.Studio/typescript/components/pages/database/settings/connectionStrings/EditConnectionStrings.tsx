@@ -1,7 +1,6 @@
 ﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import InputGroup from "react-bootstrap/InputGroup";
-import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
@@ -24,6 +23,7 @@ import { useAppSelector } from "components/store";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { components, OptionProps } from "react-select";
 import Modal from "components/common/Modal";
+import { FormLabel } from "components/common/Form";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -75,7 +75,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
             </Modal.Header>
             <Modal.Body className="pb-0 vstack gap-3">
                 <div className="mb-2">
-                    <Form.Label>Type</Form.Label>
+                    <FormLabel>Type</FormLabel>
                     <InputGroup className="gap-1 flex-wrap flex-column">
                         <Select
                             options={availableConnectionStringsOptions}

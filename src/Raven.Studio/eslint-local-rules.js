@@ -684,7 +684,6 @@ module.exports = {
     create(context) {
       return {
         JSXOpeningElement(node) {
-          // Check for Dropdown.Toggle component
           const isDropdownToggle = node.name?.type === "JSXMemberExpression" &&
             node.name.object?.name === "Dropdown" &&
             node.name.property?.name === "Toggle";

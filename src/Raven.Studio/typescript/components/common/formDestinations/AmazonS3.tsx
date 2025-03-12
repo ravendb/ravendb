@@ -4,8 +4,7 @@ import { FormDestinations } from "./utils/formDestinationsTypes";
 import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
-import { FormSwitch, FormInput, FormSelectCreatable } from "../Form";
+import { FormInput, FormSelectCreatable, FormSwitch } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
@@ -15,6 +14,7 @@ import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
 import { availableS3Regions } from "components/utils/common";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
+import { FormLabel } from "components/common/Form";
 
 export default function AmazonS3() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -97,7 +97,7 @@ export default function AmazonS3() {
                                 <div className="vstack gap-3 mt-2">
                                     {formValues.isUseCustomHost && (
                                         <div className="mb-2">
-                                            <Form.Label>Custom server URL</Form.Label>
+                                            <FormLabel>Custom server URL</FormLabel>
                                             <FormInput
                                                 control={control}
                                                 name={getName("customServerUrl")}
@@ -108,7 +108,7 @@ export default function AmazonS3() {
                                         </div>
                                     )}
                                     <div className="mb-2">
-                                        <Form.Label className="d-flex align-items-center gap-1">
+                                        <FormLabel className="d-flex align-items-center gap-1">
                                             Bucket name
                                             <PopoverWithHoverWrapper
                                                 message={
@@ -133,7 +133,7 @@ export default function AmazonS3() {
                                                     Failed connection
                                                 </Badge>
                                             ) : null}
-                                        </Form.Label>
+                                        </FormLabel>
                                         <FormInput
                                             control={control}
                                             name={getName("bucketName")}
@@ -143,9 +143,9 @@ export default function AmazonS3() {
                                         />
                                     </div>
                                     <div className="mb-2">
-                                        <Form.Label>
+                                        <FormLabel>
                                             Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                        </Form.Label>
+                                        </FormLabel>
                                         <FormInput
                                             control={control}
                                             name={getName("remoteFolderName")}
@@ -155,12 +155,12 @@ export default function AmazonS3() {
                                         />
                                     </div>
                                     <div className="mb-2">
-                                        <Form.Label>
+                                        <FormLabel>
                                             Region{" "}
                                             {formValues.isUseCustomHost && (
                                                 <small className="text-muted fw-light">(optional)</small>
                                             )}
-                                        </Form.Label>
+                                        </FormLabel>
                                         {formValues.isUseCustomHost ? (
                                             <FormInput
                                                 type="text"
@@ -179,7 +179,7 @@ export default function AmazonS3() {
                                         )}
                                     </div>
                                     <div className="mb-2">
-                                        <Form.Label>Access key</Form.Label>
+                                        <FormLabel>Access key</FormLabel>
                                         <FormInput
                                             name={getName("awsAccessKey")}
                                             control={control}
@@ -189,7 +189,7 @@ export default function AmazonS3() {
                                         />
                                     </div>
                                     <div className="mb-2">
-                                        <Form.Label>Secret key</Form.Label>
+                                        <FormLabel>Secret key</FormLabel>
                                         <FormInput
                                             name={getName("awsSecretKey")}
                                             control={control}

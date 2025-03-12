@@ -1,5 +1,4 @@
 ﻿import React from "react";
-import Form from "react-bootstrap/Form";
 import Local from "./Local";
 import AmazonS3 from "./AmazonS3";
 import Azure from "./Azure";
@@ -8,6 +7,7 @@ import AmazonGlacier from "./AmazonGlacier";
 import Ftp from "./Ftp";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { useFormContext } from "react-hook-form";
+import { FormLabel } from "components/common/Form";
 
 interface FormDestinationListProps {
     isForNewConnection: boolean;
@@ -18,7 +18,7 @@ export default function FormDestinationList({ isForNewConnection }: FormDestinat
 
     return (
         <>
-            <Form.Label>Destinations</Form.Label>
+            <FormLabel>Destinations</FormLabel>
             <div className="vstack gap-1">
                 <Local />
                 <AmazonS3 />

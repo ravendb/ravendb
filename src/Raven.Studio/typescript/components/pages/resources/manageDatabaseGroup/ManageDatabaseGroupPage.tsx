@@ -19,6 +19,7 @@ import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import Button from "react-bootstrap/Button";
+import { FormLabel } from "components/common/Form";
 
 function getDynamicDatabaseDistributionWarning(
     hasDynamicNodesDistribution: boolean,
@@ -78,7 +79,7 @@ export function ManageDatabaseGroupPage() {
                     {!db.isSharded && (
                         <UncontrolledButtonWithDropdownPanel buttonText="Settings">
                             <>
-                                <Form.Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
+                                <FormLabel className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
                                     <div className="d-flex gap-3 form-switch">
                                         <Form.Check
                                             id={settingsUniqueId}
@@ -90,7 +91,7 @@ export function ManageDatabaseGroupPage() {
                                         />
                                         Allow dynamic database distribution
                                     </div>
-                                </Form.Label>
+                                </FormLabel>
                                 {dynamicDatabaseDistributionWarning && (
                                     <div className="bg-faded-warning px-4 py-2">
                                         {dynamicDatabaseDistributionWarning}

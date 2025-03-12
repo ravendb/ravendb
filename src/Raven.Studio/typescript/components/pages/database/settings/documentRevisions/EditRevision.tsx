@@ -3,12 +3,12 @@ import React from "react";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 
-import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormLabel, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
-    EditDocumentRevisionsCollectionConfig,
     documentRevisionsCollectionConfigYupResolver,
     documentRevisionsConfigYupResolver,
+    EditDocumentRevisionsCollectionConfig,
 } from "components/pages/database/settings/documentRevisions/DocumentRevisionsValidation";
 import { useDirtyFlag } from "hooks/useDirtyFlag";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -117,7 +117,7 @@ export default function EditRevision(props: EditRevisionProps) {
                     <h4>{getTitle(taskType, configType)}</h4>
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
-                            <Form.Label className="mb-0 md-label">Collection</Form.Label>
+                            <FormLabel className="mb-0 md-label">Collection</FormLabel>
                             <FormSelectCreatable
                                 placeholder="Select collection (or enter new collection)"
                                 control={control}

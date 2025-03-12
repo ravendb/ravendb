@@ -1,7 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 
-import { FormInput, FormSelect } from "components/common/Form";
+import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { OptionWithWarning, SelectOptionWithWarning } from "components/common/select/Select";
@@ -64,7 +64,7 @@ export default function SqlConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Form.Label>Name</Form.Label>
+                <FormLabel>Name</FormLabel>
                 <FormInput
                     control={control}
                     name="name"
@@ -76,7 +76,7 @@ export default function SqlConnectionString({
             </div>
             <div className="mb-2">
                 <div className="d-flex flex-grow align-items-baseline justify-content-between">
-                    <Form.Label>Factory</Form.Label>
+                    <FormLabel>Factory</FormLabel>
                     {formValues.factoryName && (
                         <>
                             <small ref={setSyntaxHelpElement} className="text-primary">
@@ -110,7 +110,7 @@ export default function SqlConnectionString({
                 )}
             </div>
             <div className="mb-2">
-                <Form.Label className="d-flex align-items-center gap-1">
+                <FormLabel className="d-flex align-items-center gap-1">
                     Connection string{" "}
                     {asyncTest.result?.Success ? (
                         <Badge bg="success" pill>
@@ -123,7 +123,7 @@ export default function SqlConnectionString({
                             Failed connection
                         </Badge>
                     ) : null}
-                </Form.Label>
+                </FormLabel>
                 <FormInput
                     control={control}
                     name="connectionString"

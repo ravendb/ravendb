@@ -8,6 +8,7 @@ import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
+import { FormLabel } from "components/common/Form";
 
 export default function VirtualTableColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
     const [localFilter, setLocalFilter] = useState("");
@@ -84,7 +85,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                     </Dropdown.Toggle>
                     <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
                         <div className="px-3 pb-2">
-                            <Form.Label className="small-label">Filter column</Form.Label>
+                            <FormLabel className="small-label">Filter column</FormLabel>
                             <div className="clearable-input">
                                 <Form.Control
                                     type="text"

@@ -1,13 +1,13 @@
 import fileImporter from "common/fileImporter";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormInput, FormAceEditor } from "components/common/Form";
+import { FormAceEditor, FormInput, FormLabel } from "components/common/Form";
 import {
     RichPanel,
+    RichPanelActions,
+    RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
     RichPanelName,
-    RichPanelActions,
-    RichPanelDetails,
 } from "components/common/RichPanel";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import {
@@ -22,7 +22,7 @@ import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
-import { useForm, useWatch, SubmitHandler } from "react-hook-form";
+import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
@@ -131,7 +131,7 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                         <RichPanelDetails className="vstack gap-3 p-4">
                             {isNew && (
                                 <InputGroup className="vstack mb-1">
-                                    <Form.Label>Name</Form.Label>
+                                    <FormLabel>Name</FormLabel>
                                     <FormInput
                                         type="text"
                                         control={control}
@@ -142,7 +142,7 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                             )}
                             <InputGroup className="vstack">
                                 <div className="d-flex justify-content-end">
-                                    <Form.Label className="btn btn-link btn-xs text-right">
+                                    <FormLabel className="btn btn-link btn-xs text-right">
                                         <Icon icon="upload" />
                                         Load from a file
                                         <input
@@ -155,7 +155,7 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                                             }
                                             accept=".cs"
                                         />
-                                    </Form.Label>
+                                    </FormLabel>
                                 </div>
                                 <FormAceEditor control={control} name="code" mode="csharp" height="400px" />
                             </InputGroup>

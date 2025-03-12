@@ -1,7 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 
-import { FormInput } from "components/common/Form";
+import { FormInput, FormLabel } from "components/common/Form";
 import React from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { ConnectionFormData, EditConnectionStringFormProps, RabbitMqConnection } from "../connectionStringsTypes";
@@ -60,7 +60,7 @@ export default function RabbitMqConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Form.Label>Name</Form.Label>
+                <FormLabel>Name</FormLabel>
                 <FormInput
                     control={control}
                     name="name"
@@ -71,7 +71,7 @@ export default function RabbitMqConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Form.Label className="d-flex align-items-center gap-1">
+                <FormLabel className="d-flex align-items-center gap-1">
                     Connection string{" "}
                     {asyncTest.result?.Success ? (
                         <Badge bg="success" pill>
@@ -84,7 +84,7 @@ export default function RabbitMqConnectionString({
                             Failed connection
                         </Badge>
                     ) : null}
-                </Form.Label>
+                </FormLabel>
                 <FormInput
                     control={control}
                     name="connectionString"

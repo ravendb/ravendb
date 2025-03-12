@@ -1,7 +1,7 @@
 ﻿import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormLabel, FormSwitch } from "components/common/Form";
 import { useEffect } from "react";
 import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
@@ -87,7 +87,7 @@ export default function KafkaConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Form.Label>Name</Form.Label>
+                <FormLabel>Name</FormLabel>
                 <FormInput
                     control={control}
                     name="name"
@@ -97,7 +97,7 @@ export default function KafkaConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Form.Label className="d-flex align-items-center gap-1">
+                <FormLabel className="d-flex align-items-center gap-1">
                     Bootstrap Servers
                     {asyncTest.result?.Success ? (
                         <Badge bg="success" pill>
@@ -110,7 +110,7 @@ export default function KafkaConnectionString({
                             Failed connection
                         </Badge>
                     ) : null}
-                </Form.Label>
+                </FormLabel>
                 <div className="input-group">
                     <FormInput
                         control={control}
@@ -149,16 +149,16 @@ export default function KafkaConnectionString({
                 </div>
             )}
             <div className="mb-2">
-                <Form.Label>
+                <FormLabel>
                     Connection Options <small className="text-muted fw-light">(optional)</small>
-                </Form.Label>
+                </FormLabel>
                 <div className="vstack gap-3">
                     {connectionOptionsFieldArray.fields.map((option, idx) => (
                         <div>
                             <div className="vstack mb-2 gap-1">
-                                <Form.Label className="mb-0 d-flex align-items-center gap-1">
+                                <FormLabel className="mb-0 d-flex align-items-center gap-1">
                                     <span className="small-label mb-0">Connection Option #{idx + 1}</span>
-                                </Form.Label>
+                                </FormLabel>
                                 <div key={option.id} className="d-flex gap-1 mb-2">
                                     <FormInput
                                         type="text"

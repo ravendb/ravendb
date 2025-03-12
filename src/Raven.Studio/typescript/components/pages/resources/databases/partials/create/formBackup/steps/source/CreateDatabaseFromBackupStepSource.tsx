@@ -1,12 +1,11 @@
-import { FormSelect, FormSwitch } from "components/common/Form";
+import { FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import { OptionWithIcon, SingleValueWithIcon, SelectOptionWithIcon } from "components/common/select/Select";
+import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import React, { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
 import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
 import BackupSourceLocal from "./BackupSourceLocal";
 import BackupSourceAmazonS3 from "./BackupSourceAmazonS3";
@@ -55,7 +54,7 @@ export default function CreateDatabaseFromBackupStepSource() {
             <h2>Backup Source</h2>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Form.Label className="col-form-label">Backup Source</Form.Label>
+                    <FormLabel className="col-form-label">Backup Source</FormLabel>
                 </Col>
                 <Col>
                     <FormSelect

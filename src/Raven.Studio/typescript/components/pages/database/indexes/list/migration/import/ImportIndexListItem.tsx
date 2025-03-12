@@ -1,8 +1,8 @@
 import { Checkbox } from "components/common/Checkbox";
 import IndexToMigrateTitle from "components/pages/database/indexes/list/migration/common/IndexToMigrateTitle";
 import React from "react";
-import Form from "react-bootstrap/Form";
 import ListGroupItem from "react-bootstrap/ListGroupItem";
+import { FormLabel } from "components/common/Form";
 
 interface ImportIndexListItemProps {
     indexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;
@@ -19,7 +19,7 @@ export default function ImportIndexListItem({
 }: ImportIndexListItemProps) {
     return (
         <ListGroupItem key={indexDefinition.Name} disabled={!!disabledReason}>
-            <Form.Label className="d-flex gap-1 align-items-center m-0 text-truncate">
+            <FormLabel className="d-flex gap-1 align-items-center m-0 text-truncate">
                 <div className="d-flex gap-1 align-items-center w-100">
                     {!disabledReason && (
                         <Checkbox
@@ -31,7 +31,7 @@ export default function ImportIndexListItem({
                     )}
                     <IndexToMigrateTitle index={indexDefinition} disabledReason={disabledReason} />
                 </div>
-            </Form.Label>
+            </FormLabel>
         </ListGroupItem>
     );
 }

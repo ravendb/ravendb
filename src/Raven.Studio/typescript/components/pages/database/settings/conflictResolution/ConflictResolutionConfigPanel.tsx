@@ -1,12 +1,12 @@
 ﻿import React from "react";
 import {
     RichPanel,
+    RichPanelActions,
+    RichPanelDetailItem,
+    RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
     RichPanelName,
-    RichPanelActions,
-    RichPanelDetails,
-    RichPanelDetailItem,
 } from "components/common/RichPanel";
 import Collapse from "react-bootstrap/Collapse";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -21,13 +21,13 @@ import useBoolean from "hooks/useBoolean";
 import useUniqueId from "components/hooks/useUniqueId";
 import genUtils from "common/generalUtils";
 import {
-    ConflictResolutionCollectionConfig,
     conflictResolutionActions,
+    ConflictResolutionCollectionConfig,
     conflictResolutionSelectors,
 } from "./store/conflictResolutionSlice";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import * as yup from "yup";
-import { FormAceEditor, FormSelectCreatable } from "components/common/Form";
+import { FormAceEditor, FormLabel, FormSelectCreatable } from "components/common/Form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
@@ -128,7 +128,7 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                         <RichPanelDetails className="vstack gap-3 p-3">
                             {!initialConfig.name && (
                                 <InputGroup className="vstack mb-1">
-                                    <Form.Label>Collection</Form.Label>
+                                    <FormLabel>Collection</FormLabel>
                                     <FormSelectCreatable
                                         control={control}
                                         name="collectionName"
@@ -141,7 +141,7 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                                 </InputGroup>
                             )}
                             <InputGroup className="vstack">
-                                <Form.Label className="d-flex flex-wrap justify-content-between">
+                                <FormLabel className="d-flex flex-wrap justify-content-between">
                                     Script
                                     <Button
                                         variant="link"
@@ -152,7 +152,7 @@ export default function ConflictResolutionConfigPanel({ initialConfig }: Conflic
                                         Syntax
                                         <Icon icon="help" margin="ms-1" />
                                     </Button>
-                                </Form.Label>
+                                </FormLabel>
                                 {isSyntaxModalOpen && (
                                     <EditConflictResolutionSyntaxModal toggle={toggleIsSyntaxModalOpen} />
                                 )}

@@ -4,7 +4,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 
 import { SubmitHandler, useForm } from "react-hook-form";
-import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
+import { FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -12,7 +12,6 @@ import {
     StudioGlobalConfigurationFormData,
     studioGlobalConfigurationYupResolver,
 } from "./StudioGlobalConfigurationValidation";
-import studioSettings = require("common/settings/studioSettings");
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAsyncCallback } from "react-async-hook";
@@ -31,6 +30,7 @@ import FeatureNotAvailableInYourLicensePopoverBody from "components/common/Featu
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { useRef } from "react";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import studioSettings = require("common/settings/studioSettings");
 
 export default function StudioGlobalConfiguration() {
     const popoverContainerRef = useRef<HTMLDivElement>(null);
@@ -126,7 +126,7 @@ export default function StudioGlobalConfiguration() {
                             <Card ref={popoverContainerRef}>
                                 <Card.Body className="vstack gap-3">
                                     <div className="gap-1">
-                                        <Form.Label className="mb-0 md-label">
+                                        <FormLabel className="mb-0 md-label">
                                             <PopoverWithHoverWrapper
                                                 message={
                                                     <ul>
@@ -143,7 +143,7 @@ export default function StudioGlobalConfiguration() {
                                                 Server Environment{" "}
                                                 <Icon icon="info" color="info" id="EnvironmentInfo" />
                                             </PopoverWithHoverWrapper>
-                                        </Form.Label>
+                                        </FormLabel>
                                         <FormSelect
                                             control={control}
                                             name="environment"
@@ -152,7 +152,7 @@ export default function StudioGlobalConfiguration() {
                                         ></FormSelect>
                                     </div>
                                     <div className="gap-1">
-                                        <Form.Label className="mb-0 md-label">
+                                        <FormLabel className="mb-0 md-label">
                                             Default Replication Factor{" "}
                                             <PopoverWithHoverWrapper
                                                 message={
@@ -177,7 +177,7 @@ export default function StudioGlobalConfiguration() {
                                             >
                                                 <Icon icon="info" color="info" id="ReplicationFactorInfo" />
                                             </PopoverWithHoverWrapper>
-                                        </Form.Label>
+                                        </FormLabel>
                                         <FormInput
                                             control={control}
                                             name="replicationFactor"

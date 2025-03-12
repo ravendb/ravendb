@@ -1,8 +1,8 @@
 import React from "react";
-import Form from "react-bootstrap/Form";
 import { ConnectionStringUsedTask } from "../../connectionStringsTypes";
 import { Icon } from "components/common/Icon";
 import { CounterBadge } from "components/common/CounterBadge";
+import { FormLabel } from "components/common/Form";
 
 interface ConnectionStringUsedByTasks {
     tasks: ConnectionStringUsedTask[];
@@ -16,9 +16,9 @@ export default function ConnectionStringUsedByTasks({ tasks, urlProvider }: Conn
 
     return (
         <div className="mt-2">
-            <Form.Label className="d-flex align-items-center gap-1">
+            <FormLabel className="d-flex align-items-center gap-1">
                 Used in tasks <CounterBadge count={tasks.length} />
-            </Form.Label>
+            </FormLabel>
             <div className="d-flex flex-wrap gap-2">
                 {tasks.map((task) => (
                     <a

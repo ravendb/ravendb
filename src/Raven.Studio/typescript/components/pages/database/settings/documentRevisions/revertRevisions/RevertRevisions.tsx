@@ -13,7 +13,7 @@ import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "compo
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { Icon } from "components/common/Icon";
-import { FormDatePicker, FormGroup, FormInput, FormSelect } from "components/common/Form";
+import { FormDatePicker, FormGroup, FormInput, FormLabel, FormSelect } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import assertUnreachable from "components/utils/assertUnreachable";
 import moment from "moment";
@@ -23,10 +23,10 @@ import { useServices } from "components/hooks/useServices";
 import notificationCenter from "common/notifications/notificationCenter";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { useAsyncCallback } from "react-async-hook";
-import RevertRevisionsRequest = Raven.Server.Documents.Revisions.RevertRevisionsRequest;
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import RevertRevisionsRequest = Raven.Server.Documents.Revisions.RevertRevisionsRequest;
 
 export default function RevertRevisions() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -104,7 +104,7 @@ export default function RevertRevisions() {
                     <Card className="mt-3">
                         <Card.Body className="gap-4">
                             <FormGroup className="mb-3">
-                                <Form.Label htmlFor="pointInTime">Point in Time</Form.Label>
+                                <FormLabel htmlFor="pointInTime">Point in Time</FormLabel>
                                 <FormDatePicker
                                     id="pointInTime"
                                     name="pointInTime"
@@ -120,7 +120,7 @@ export default function RevertRevisions() {
                                 />
                             </FormGroup>
                             <FormGroup>
-                                <Form.Label htmlFor="timeWindow">Time Window</Form.Label>
+                                <FormLabel htmlFor="timeWindow">Time Window</FormLabel>
                                 <InputGroup>
                                     <FormInput
                                         type="number"
