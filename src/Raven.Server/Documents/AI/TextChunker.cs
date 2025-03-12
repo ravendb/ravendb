@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Corax.Pipeline;
 using HtmlAgilityPack;
 using Raven.Client.Documents.Operations.AI;
@@ -8,14 +9,41 @@ namespace Raven.Server.Documents.AI;
 
 public static class TextChunker
 {
-    private static string StripHtml(string input)
+    internal static string StripHtml(string input)
     {
         if (string.IsNullOrEmpty(input))
             return input;
 
         var htmlDoc = new HtmlDocument();
         htmlDoc.LoadHtml(input);
-        return htmlDoc.DocumentNode.InnerText;
+        
+        var sb = new StringBuilder();
+        ExtractPlainTextFromHtml(htmlDoc.DocumentNode, sb);
+        
+        var plainText = sb.ToString();
+        
+        return plainText;
+    }
+
+    private static void ExtractPlainTextFromHtml(HtmlNode node, StringBuilder sb)
+    {
+        foreach (var child in node.ChildNodes)
+        {
+            if (child.NodeType == HtmlNodeType.Text)
+            {
+                string text = child.InnerText.Trim();
+
+                if (text.Length > 0)
+                {
+                    sb.Append(text);
+                    sb.Append(" ");
+                }
+            }
+            else if (child.NodeType == HtmlNodeType.Element)
+            {
+                ExtractPlainTextFromHtml(child, sb);
+            }
+        }
     }
 
     public static List<string> ChunkValue(string textualValue, ChunkingOptions chunkingOptions)
@@ -24,7 +52,7 @@ public static class TextChunker
         return ChunkValues(list, chunkingOptions);
     }
 
-    private static List<string> SplitPlainText(string textualValue, int maxTokensPerChunk)
+    internal static List<string> SplitPlainText(string textualValue, int maxTokensPerChunk)
     {
         var tokenApproximationLen = textualValue.Length / 4;
         var whiteSpaceTokenizer = new WhitespaceTokenizer();
@@ -106,7 +134,11 @@ public static class TextChunker
                 break;
             case ChunkingMethod.HtmlStrip:
                 foreach (var textualValue in textualValues)
-                    chunkedValues.Add(StripHtml(textualValue));
+                {
+                    var plainText = StripHtml(textualValue);
+                    var chunks = SplitPlainText(plainText, maxTokensPerChunk);
+                    chunkedValues.AddRange(chunks);
+                }
                 break;
             default:
                 throw new ArgumentException($"Unrecognized chunking method - {chunkingMethod}");

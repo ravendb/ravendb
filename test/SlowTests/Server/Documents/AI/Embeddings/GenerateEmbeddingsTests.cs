@@ -703,7 +703,7 @@ Console.WriteLine(""Hello, World!"");";
     <!-- This is a comment -->
 </body>
 </html>";
-        string[] expectedChunks = ["Sample HTML", "Hello, World!", "This is a test", "paragraph with a link.", "First item", "Second item", "Third item"];
+        string[] expectedChunks = ["Sample HTML Hello, World! This", " is a test paragraph with", " a link . First item", " Second item Third item"];
 
         var dto = new Dto { Name = htmlTextToChunk };
 
@@ -718,11 +718,59 @@ Console.WriteLine(""Hello, World!"");";
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
-                script: "embeddings.generate({ ChunkedName: html.splitLines(this.Name, 5) });");
+                script: "embeddings.generate({ ChunkedName: html.strip(this.Name, 5) });");
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Ai)]
+    public void CanUseHtmlChunkingInPaths()
+    {
+        const string htmlTextToChunk =
+            @"<html>
+<head>
+    <title>Sample HTML</title>
+</head>
+<body>
+    <h1>Hello, <span style=""color: red;"">World!</span></h1>
+    <p>This is a <strong>test</strong> paragraph with <a href=""https://example.com"">a link</a>.</p>
+    <ul>
+        <li>First item</li>
+        <li>Second item</li>
+        <li>Third item</li>
+    </ul>
+    <!-- This is a comment -->
+</body>
+</html>";
+        string[] expectedChunks = ["Sample HTML Hello, World! This", " is a test paragraph with", " a link . First item", " Second item Third item"];
+
+        var dto = new Dto { Name = htmlTextToChunk };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: new List<EmbeddingPathConfiguration>()
+            {
+                new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions()
+                {
+                    ChunkingMethod = ChunkingMethod.HtmlStrip,
+                    MaxTokensPerChunk = 5
+                }}
+            });
+
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+
+            AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", expectedChunks, dto.Id);
         }
     }
 

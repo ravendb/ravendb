@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.AI;
@@ -14,21 +15,26 @@ public class ChunkingTests : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CanChunkByWhitespace(Options options)
+    [RavenFact(RavenTestCategory.Ai)]
+    public void CanChunkByWhitespace()
     {
         const string text = "some long text that will produce multiple chunks and also contains numbers like 0.5%, 0.1f, 20, 2000";
+        var expectedChunks = new List<string>() { "some long text that", " will produce multiple chunks", " and also contains numbers", " like 0.5%, 0.1f, 20,", " 2000" };
+        
         var chunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplit, MaxTokensPerChunk = 4 };
         
         var result = TextChunker.ChunkValue(text, chunkingOptions);
 
         Assert.Equal(5, result.Count);
+        Assert.Equal(expectedChunks[0], result[0]);
+        Assert.Equal(expectedChunks[1], result[1]);
+        Assert.Equal(expectedChunks[2], result[2]);
+        Assert.Equal(expectedChunks[3], result[3]);
+        Assert.Equal(expectedChunks[4], result[4]);
     }
     
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CanChunkByWhitespaceWithExactNumberOfTokens(Options options)
+    [RavenFact(RavenTestCategory.Ai)]
+    public void CanChunkByWhitespaceWithExactNumberOfTokens()
     {
         const string text = "some long text abc";
         var chunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplit, MaxTokensPerChunk = 4 };

@@ -60,6 +60,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         DocumentScript.ScriptEngine.SetValue("embeddings", embeddingsObject);
 
         ObjectInstance textObject = new JsObject(DocumentScript.ScriptEngine);
+        textObject.FastSetProperty("split", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "split", SplitPlainText), false, false, false));
         textObject.FastSetProperty("splitLines", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitLines", SplitPlainTextLines), false, false, false));
         textObject.FastSetProperty("splitParagraphs", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitParagraphs", SplitPlainTextParagraphs), false, false, false));
         DocumentScript.ScriptEngine.SetValue("text", textObject);
@@ -330,8 +331,33 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         return jsArray;
     }
+    
+    private JsValue SplitPlainText(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "text.split(text, maxTokensPerLine)";
 
-    // todo non-default token counter
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+
+        var chunks = Documents.AI.TextChunker.SplitPlainText(args[0].AsString(), (int)args[1].AsNumber());
+
+        var jsChunks = new JsValue[chunks.Count];
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            jsChunks[i] = new JsString(chunks[i]);
+        }
+
+        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
+
+        return jsArray;
+    }
+    
     private JsValue SplitPlainTextLines(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.splitLines(text, maxTokensPerLine)";
@@ -394,28 +420,30 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
     
     private JsValue StripHtml(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "html.strip(htmlText)";
+        const string methodSignature = "html.strip(htmlText, maxTokensPerLine)";
 
-        if (args.Length != 1)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 1 argument");
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
 
         if (args[0].IsString() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+        
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+        
+        var text = Documents.AI.TextChunker.StripHtml(args[0].AsString());
+        
+        var chunks = Documents.AI.TextChunker.SplitPlainText(text, (int)args[1].AsNumber());
+        
+        var jsChunks = new JsValue[chunks.Count];
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            jsChunks[i] = new JsString(chunks[i]);
+        }
 
+        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
 
-        var text = StripHtml(args[0].AsString());
-
-        return new JsString(text);
-    }
-
-    private string StripHtml(string input)
-    {
-        if (string.IsNullOrEmpty(input))
-            return input;
-
-        var htmlDoc = new HtmlDocument();
-        htmlDoc.LoadHtml(input);
-        return htmlDoc.DocumentNode.InnerText;
+        return jsArray;
     }
 
     private JsValue EmbeddingsGenerate(JsValue self, JsValue[] args)
