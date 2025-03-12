@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.VectorSearch;
@@ -34,7 +35,7 @@ public static partial class CoraxQueryBuilder
         if (VectorHelpers.TryRetrieveEtlTaskName(builderParameters, fieldName, out var embeddingsGenerationTaskIdentifier))
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
-            transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
+            transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions);
         }
         else
         {
@@ -285,14 +286,14 @@ public static partial class CoraxQueryBuilder
         }
 
         internal static (VectorValue? SingleVector, VectorValue[] MultiVector) GetEmbeddingsForQueryParameter(Parameters builderParameters, ValueTokenType valueType, object value,
-            string embeddingsGenerationTaskIdentifier, VectorOptions vectorOptions, string fieldName)
+            string embeddingsGenerationTaskIdentifier, VectorOptions vectorOptions)
         {
             var database = builderParameters.Index.DocumentDatabase;
             
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
             if (database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringId) == false)
-                throw new ArgumentException($"Couldn't find Embeddings Generation task with '{embeddingsGenerationTaskIdentifier}' identifier");
+                throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{embeddingsGenerationTaskIdentifier}' identifier");
 
             var sourceEmbeddingType = VectorEmbeddingType.Single;
 

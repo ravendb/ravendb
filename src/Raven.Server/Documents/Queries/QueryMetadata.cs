@@ -2530,8 +2530,12 @@ function execute(doc, args){
 
                         if (embeddingMethod.Arguments.Count == 2 && embeddingMethod.Arguments[1] is MethodExpression methodExpression)
                         {
-                            var x = methodExpression.Arguments[0] as ValueExpression;
-                            embeddingsGenerationTaskIdentifier = x.Token.Value;
+                            var taskIdentifierExpression = methodExpression.Arguments[0] as ValueExpression;
+
+                            if (taskIdentifierExpression is null)
+                                throw new ArgumentException("Expected string literal as task identifier.");
+                            
+                            embeddingsGenerationTaskIdentifier = taskIdentifierExpression.Token.Value;
                         } 
                     }
                     else

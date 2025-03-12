@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -161,6 +163,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             
             var map = DynamicQueryMapping.Create(query, defaultAutoIndexingEngineType);
 
+            if (query.Metadata.HasVectorSearch)
+                ValidateVectorFields();
+
             (long? Index, Index Instance) result = default;
 
             while (TryMatchExistingIndexToQuery(map, out result.Instance) == false)
@@ -209,6 +214,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             return result;
+
+            void ValidateVectorFields()
+            {
+                var fields = query.Metadata.WhereFields.Values;
+
+                foreach (var field in fields)
+                {
+                    var embeddingsGenerationTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(field.Vector.EmbeddingsGenerationTaskIdentifier);
+                    if (Database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsGenerationTaskIdentifier, out _) == false)
+                        throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{field.Vector.EmbeddingsGenerationTaskIdentifier}' identifier");
+                }
+            }
         }
 
         private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, string raftRequestId, CancellationToken token)

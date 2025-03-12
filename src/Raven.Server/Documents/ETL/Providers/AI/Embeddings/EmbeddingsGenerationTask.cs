@@ -64,7 +64,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
     protected override IEnumerator<EmbeddingsGenerationItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
         bool trackAttachments)
     {
-        return new TombstonesToEmbeddingsGenerationItems(context, tombstones, collection, trackAttachments);
+        return new TombstonesToEmbeddingsGenerationItems(tombstones, collection);
     }
 
     protected override IEnumerator<EmbeddingsGenerationItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,

@@ -2,6 +2,7 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI.Embeddings;
@@ -135,15 +136,19 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
-            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store);
+            AddEmbeddingsGenerationTask(store);
             
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
             using (var session = store.OpenSession())
             {
-                var ex = Assert.Throws<RavenException>(() => session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, "NotExistingTask"), factory => factory.ByText(queriedText)).ToList());
+                var ex = Assert.Throws<InvalidQueryException>(() => session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, "NotExistingTask"), factory => factory.ByText(queriedText)).ToList());
                 
                 Assert.Contains("Couldn't find Embeddings Generation task with 'NotExistingTask' identifier", ex.Message);
+                
+                var indexCount = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length;
+                
+                Assert.Equal(0, indexCount);
             }
         }
     }

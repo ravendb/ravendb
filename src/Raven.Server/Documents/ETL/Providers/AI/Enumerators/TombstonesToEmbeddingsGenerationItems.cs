@@ -2,29 +2,24 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 
 public sealed class TombstonesToEmbeddingsGenerationItems : IEnumerator<EmbeddingsGenerationItem>
 {
-    private readonly DocumentsOperationContext _context;
     private readonly IEnumerator<Tombstone> _tombstones;
     private readonly string _collection;
-    private readonly bool _trackAttachments;
     private readonly bool _allDocs;
     
     object IEnumerator.Current => Current;
     
     public EmbeddingsGenerationItem Current { get; private set; }
     
-    public TombstonesToEmbeddingsGenerationItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+    public TombstonesToEmbeddingsGenerationItems(IEnumerator<Tombstone> tombstones, string collection)
     {
-        _context = context;
         _tombstones = tombstones;
         _collection = collection;
-
-        _trackAttachments = trackAttachments;
+        
         _allDocs = _collection == null;
     }
     
@@ -39,7 +34,7 @@ public sealed class TombstonesToEmbeddingsGenerationItems : IEnumerator<Embeddin
         return true;
     }
     
-    private bool Filter(EmbeddingsGenerationItem item)
+    private bool Filter(EmbeddingsGenerationItem _)
     {
         var tombstone = _tombstones.Current;
         if (tombstone.Flags.Contain(DocumentFlags.Artificial))
@@ -55,13 +50,9 @@ public sealed class TombstonesToEmbeddingsGenerationItems : IEnumerator<Embeddin
 
         switch (tombstone.Type)
         {
-            //case Tombstone.TombstoneType.Attachment:
-            //    if (_trackAttachments == false)
-            //        return true;
-            //
-            //    return AttachmentTombstonesToRavenEtlItems.FilterAttachment(_context, item);
             case Tombstone.TombstoneType.Document:
                 return false;
+            case Tombstone.TombstoneType.Attachment:
             case Tombstone.TombstoneType.Revision:
             case Tombstone.TombstoneType.Counter:
                 return true;
@@ -79,7 +70,7 @@ public sealed class TombstonesToEmbeddingsGenerationItems : IEnumerator<Embeddin
 
     public void Reset()
     {
-        throw new System.NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public void Dispose()

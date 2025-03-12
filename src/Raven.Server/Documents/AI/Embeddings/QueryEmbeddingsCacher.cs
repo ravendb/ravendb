@@ -70,7 +70,7 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
         _mre.Set();
     }
 
-    private sealed class PutQueryEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
+    private sealed class PutQueryEmbeddingsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly List<EmbeddingGenerationItem> _embeddingItems;
         private readonly EmbeddingsStorage _embeddingsStorage;
@@ -93,12 +93,7 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            throw new NotImplementedException();
-        }
-
-        public void Dispose()
-        {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
     }
 }
