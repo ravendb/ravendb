@@ -163,12 +163,12 @@ const schema = yupObjectSchema<FormData>({
     identifier: yup
         .string()
         .nullable()
-        .test("is-identifier", "Only English letters, numbers and hyphens are allowed.", (value) => {
+        .test("is-identifier", "Only lowercase letters (a-z), numbers (0-9) and hyphens (-) are allowed.", (value) => {
             if (!value) {
                 return true;
             }
 
-            return /^[a-zA-Z0-9-]+$/.test(value);
+            return /^[a-z0-9-]+$/.test(value);
         }),
     connectorType: yup.string<FormData["connectorType"]>().nullable().required(),
     azureOpenAiSettings: yup.object({
@@ -228,13 +228,7 @@ const schema = yupObjectSchema<FormData>({
                 is: "huggingFaceSettings",
                 then: (schema) => schema.trim().required(),
             }),
-        endpoint: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "huggingFaceSettings",
-                then: (schema) => schema.trim().required(),
-            }),
+        endpoint: yup.string().nullable(),
         model: yup
             .string()
             .nullable()

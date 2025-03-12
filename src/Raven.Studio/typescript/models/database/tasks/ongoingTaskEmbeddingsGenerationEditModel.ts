@@ -145,6 +145,15 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             required: true
         });
 
+        this.identifier.extend({
+            validation: [
+                {
+                    validator: () => /^[a-z0-9-]+$/.test(this.identifier()),
+                    message: "Only lowercase letters (a-z), numbers (0-9) and hyphens (-) are allowed."
+                }
+            ]
+        });
+
         this.connectionStringName.extend({
             required: true
         });
@@ -176,12 +185,13 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
         this.validationGroup = ko.validatedObservable({
             taskName: this.taskName,
+            identifier: this.identifier,
             connectionStringName: this.connectionStringName,
             mentorNode: this.mentorNode,
             script: this.script,
             embeddingPathConfigurations: this.embeddingPathConfigurations,
             collectionInput: this.collectionInput,
-            maxTokensPerChunk: this.maxTokensPerChunk
+            maxTokensPerChunk: this.maxTokensPerChunk,
         });
     }
 

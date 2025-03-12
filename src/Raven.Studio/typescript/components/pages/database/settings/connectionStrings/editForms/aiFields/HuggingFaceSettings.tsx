@@ -15,6 +15,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAsyncCallback } from "react-async-hook";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
+import OptionalLabel from "components/common/OptionalLabel";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -55,7 +56,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             </div>
             <div className="mb-2">
                 <Label>
-                    Endpoint
+                    Endpoint <OptionalLabel />
                     <PopoverWithHoverWrapper message="The Hugging Face endpoint for generating embeddings from text. If not specified, the default endpoint is used.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
