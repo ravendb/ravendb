@@ -20,6 +20,12 @@ public sealed class QueryEmbeddingsBatchRequest : IDisposable
         _tokenRegistration = _linkedTokenSource.Token.Register(() => TaskCompletionSource.TrySetCanceled(_linkedTokenSource.Token));
     }
 
+    public Task<ReadOnlyMemory<float>[]> CancelWithShutdownMessage()
+    {
+        TaskCompletionSource.TrySetException(new OperationCanceledException(QueryEmbeddingsBatchingService.ShutdownMessage));
+        return TaskCompletionSource.Task;
+    }
+
     public void Dispose()
     {
         _tokenRegistration.Dispose();

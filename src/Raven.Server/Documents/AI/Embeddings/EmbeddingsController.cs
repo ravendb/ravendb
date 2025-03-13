@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.ServerWide.Context;
 using Exception = System.Exception;
@@ -100,7 +101,11 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
         return embeddingValues;
     }
-    
+
+    public Task RemoveBatchingWorkerForConnectionStringIdAsync(AiConnectionStringIdentifier connectionStringId) => _queryBatchingService.RemoveWorkerAsync(connectionStringId);
+
+    public Task UpdateBatchingWorkerForConnectionStringIdAsync(AiConnectionString newConnectionString) => _queryBatchingService.UpdateWorkerIfNecessaryAsync(newConnectionString);
+
     private List<string> ChunkValues(string[] values, ChunkingOptions chunkingOptions)
     {
         var chunks = new List<string>();
@@ -115,8 +120,13 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         return chunks;
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _queryBatchingService?.Dispose();
+        if (_queryBatchingService != null)
+            await _queryBatchingService.DisposeAsync();
+
+        QueryEmbeddingsCacher?.Dispose();
     }
+
+    public void Dispose() => AsyncHelpers.RunSync(DisposeAsync);
 }

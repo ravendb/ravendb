@@ -293,7 +293,7 @@ public static partial class CoraxQueryBuilder
             
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
-            if (database.AiIntegrations.TryGetConnectionStringByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringId) == false)
+            if (database.AiIntegrations.TryGetConnectionStringIdByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringId) == false)
                 throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{embeddingsGenerationTaskIdentifier}' identifier");
 
             var sourceEmbeddingType = VectorEmbeddingType.Single;

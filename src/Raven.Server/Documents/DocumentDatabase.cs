@@ -1727,7 +1727,7 @@ namespace Raven.Server.Documents
             try
             {
                 PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
-                AiIntegrations?.HandleDatabaseRecordChange(record);
+                if (AiIntegrations != null) await AiIntegrations.HandleDatabaseRecordChangeAsync(record);
                 EtlLoader?.HandleDatabaseRecordChange(record);
                 SubscriptionStorage?.HandleDatabaseRecordChange();
             }

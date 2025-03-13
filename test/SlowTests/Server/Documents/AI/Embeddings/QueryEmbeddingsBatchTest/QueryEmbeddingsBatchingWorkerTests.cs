@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.AI.Embeddings;
@@ -48,7 +50,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             _cts.Token);
@@ -71,13 +72,12 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         // Arrange
         const int processedTextsCount = 10;
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service as TestEmbeddingGenerationService;
+        var mockService = service.Instance as TestEmbeddingGenerationService;
 
         using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             _cts.Token);
@@ -113,7 +113,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         _db.Configuration.QueryEmbeddingsBatchRetryDelay = new TimeSetting(50, TimeUnit.Milliseconds);
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service as TestEmbeddingGenerationService;
+        var mockService = service.Instance as TestEmbeddingGenerationService;
 
         // Reset attempt counter
         Assert.NotNull(mockService);
@@ -148,7 +148,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             _cts.Token);
@@ -170,7 +169,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         // Arrange
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service as TestEmbeddingGenerationService;
+        var mockService = service.Instance as TestEmbeddingGenerationService;
         Assert.NotNull(mockService);
         mockService.ProcessingDelayMs = (int)TimeSpan.FromSeconds(5).TotalMilliseconds; // Ensure processing takes time
 
@@ -178,7 +177,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             _cts.Token);
@@ -202,7 +200,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         // Arrange
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service as TestEmbeddingGenerationService;
+        var mockService = service.Instance as TestEmbeddingGenerationService;
         Assert.NotNull(mockService);
         mockService.ProcessingDelayMs = 1000; // Long delay to ensure cancellation can happen
 
@@ -212,7 +210,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             workerCts.Token);
@@ -247,7 +244,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         _db.Configuration.QueryEmbeddingsBatchTimeout = (int)TimeSpan.FromSeconds(10).TotalMilliseconds; // We don't want timeout to interfere
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service as TestEmbeddingGenerationService;
+        var mockService = service.Instance as TestEmbeddingGenerationService;
         Assert.NotNull(mockService);
         mockService.ProcessingDelayMs = 50; // Add some delay
 
@@ -255,7 +252,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             _cts.Token);
@@ -295,7 +291,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             _cts.Token);
@@ -334,7 +329,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         // Arrange
         const string exceptionMessage = "Some understandable exception message";
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service as TestEmbeddingGenerationService;
+        var mockService = service.Instance as TestEmbeddingGenerationService;
 
         // Configure service to throw a non-retriable exception
         Assert.NotNull(mockService);
@@ -345,7 +340,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             _cts.Token);
@@ -370,7 +364,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         _db.Configuration.QueryEmbeddingsBatchRetryDelay = new(50, TimeUnit.Milliseconds);
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service as TestEmbeddingGenerationService;
+        var mockService = service.Instance as TestEmbeddingGenerationService;
 
         // Reset attempt counter
         Assert.NotNull(mockService);
@@ -383,7 +377,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Name,
             _db.Configuration,
             service,
-            _connectionStringId,
             _concurrencyLimiter,
             _logger,
             _cts.Token);
@@ -400,6 +393,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     }
 
     [RavenFact(RavenTestCategory.Ai)]
+    [Experimental("SKEXP0001")]
     public async Task PartialSuccessInBatch_ShouldHandleMixedResults()
     {
         const string successPrefix = "success";
@@ -462,7 +456,10 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         // Replace the service field directly
         var serviceField = typeof(QueryEmbeddingsBatchingWorker).GetField("<service>P", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.True(serviceField != null, "We want to replace the service field, but it wasn't found");
-        serviceField.SetValue(worker, selectiveService);
+        var currentService = ((AiConnectionString ConnectionString, ITextEmbeddingGenerationService Instance))serviceField.GetValue(worker)!;
+        var newService = (ConnectionString: currentService.ConnectionString, Instance: (ITextEmbeddingGenerationService)selectiveService);
+
+        serviceField.SetValue(worker, newService);
 
         // Submit a mix of requests that should succeed or fail
         var successTasks = new List<Task<ReadOnlyMemory<float>[]>>();

@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
-using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Client.Documents.Operations.AI;
 
 #pragma warning disable SKEXP0001
 
@@ -12,17 +12,14 @@ namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest.Help
 
 public static class TestAiHelper
 {
-    public static ITextEmbeddingGenerationService CreateMockEmbeddingService(
+    public static (AiConnectionString ConnectionString, ITextEmbeddingGenerationService Instance) CreateMockEmbeddingService(
         int dimensionSize = 128,
         int failureRate = 0,
         Exception exceptionToThrow = null)
     {
-        return new TestEmbeddingGenerationService
-        {
-            DimensionSize = dimensionSize,
-            FailureRateInPercentage = failureRate,
-            ExceptionToThrow = exceptionToThrow
-        };
+        var connectionString = new AiConnectionString { Name = "ConnectionString for mock embeddings generation service" };
+        var service = new TestEmbeddingGenerationService { DimensionSize = dimensionSize, FailureRateInPercentage = failureRate, ExceptionToThrow = exceptionToThrow };
+        return (connectionString, service);
     }
 }
 
