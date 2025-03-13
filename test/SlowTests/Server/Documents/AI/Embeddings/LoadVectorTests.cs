@@ -46,7 +46,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(1, nullElements);
 
-            var ex = Assert.Throws<RavenException>(()=> session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector), v => v.ByText("Joe")).ToList());
+            var ex = Assert.Throws<InvalidQueryException>(()=> session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector), v => v.ByText("Joe")).ToList());
             Assert.Contains("Couldn't find Embeddings Generation task with 'localaitask' identifier", ex.Message);
         }
 
