@@ -676,7 +676,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public class RachisMergedCommand : IDisposable
+        public class RachisMergedCommand : IAsyncDisposable
         {
             private readonly ClusterContextPool _pool;
             private IDisposable _ctxReturn;
@@ -710,10 +710,24 @@ namespace Raven.Server.Rachis
                 var inner = await Tcs.Task;
                 var r = await inner;
                 return BlittableResultWriter == null ? r : (r.Index, BlittableResultWriter.Result);
-            } 
+            }
 
-            public void Dispose()
+            public async ValueTask DisposeAsync()
             {
+                if (Consumed.Raise() == false && Tcs.Task.IsCompleted == false)
+                {
+                    try
+                    {
+                        // If the command has already been dequeued, we must allow it to continue to maintain its context validity.
+                        await Tcs.Task;
+                    }
+                    catch
+                    {
+                        // ignored
+                        // If we reached this point, another exception has already been thrown, and we want it to be the one that gets raised.
+                    }
+                }
+
                 Command.Raw?.Dispose();
                 Command.Raw = null;
                 BlittableResultWriter?.Dispose();
@@ -727,7 +741,7 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            using var rachisMergedCommand = new RachisMergedCommand(_engine.ContextPool, command);
+            await using var rachisMergedCommand = new RachisMergedCommand(_engine.ContextPool, command);
 
             rachisMergedCommand.Initialize();
 
@@ -747,13 +761,7 @@ namespace Raven.Server.Rachis
                     else
                     {
                         if (await waitAsync == false)
-                        {
-                            if (rachisMergedCommand.Consumed.Raise())
-                                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-
-                            // if the command is already dequeued we must let it continue to keep its context valid.
-                            await rachisMergedCommand.Tcs.Task;
-                        }
+                            throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
                     }
                 }
                 finally
