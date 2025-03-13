@@ -35,7 +35,7 @@ public static partial class CoraxQueryBuilder
         if (VectorHelpers.TryRetrieveEtlTaskName(builderParameters, fieldName, out var embeddingsGenerationTaskIdentifier))
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
-            transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions);
+            transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
         }
         else
         {
@@ -285,8 +285,9 @@ public static partial class CoraxQueryBuilder
                 $"Vector field `{fieldName}` has {storedDimensions} dimensions, but the vector passed to vector.search() has {inputDimensions} dimensions.");
         }
 
-        internal static (VectorValue? SingleVector, VectorValue[] MultiVector) GetEmbeddingsForQueryParameter(Parameters builderParameters, ValueTokenType valueType, object value,
-            string embeddingsGenerationTaskIdentifier, VectorOptions vectorOptions)
+        internal static (VectorValue? SingleVector, VectorValue[] MultiVector) GetEmbeddingsForQueryParameter(Parameters builderParameters, ValueTokenType valueType,
+            object value,
+            string embeddingsGenerationTaskIdentifier, VectorOptions vectorOptions, string fieldName)
         {
             var database = builderParameters.Index.DocumentDatabase;
             
@@ -317,7 +318,7 @@ public static partial class CoraxQueryBuilder
                 case ValueTokenType.Parameter:
                 {
                     if (value is not BlittableJsonReaderArray bjra)
-                        throw new Exception($"Expected array as parameter, got {value.GetType().FullName} instead.");
+                        throw new InvalidQueryException($"Expected array as parameter of vector.search({fieldName}) method, got '{value.GetType().FullName}' type instead.");
                 
                     var values = new string[bjra.Length];
 
@@ -330,7 +331,7 @@ public static partial class CoraxQueryBuilder
                     break;
                 }
                 default:
-                    throw new Exception("Unexpected value type.");
+                    throw new NotSupportedException($"Unexpected value type provided as parameter to vector.search({fieldName}) method. Got '{value.GetType().FullName}' type.");
             }
             
             var queryingVectorOption = new VectorOptions

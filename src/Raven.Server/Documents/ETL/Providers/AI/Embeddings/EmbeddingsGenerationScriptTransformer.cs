@@ -155,7 +155,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         }
 
         throw new InvalidOperationException(
-            $"Cannot create embeddings because neither {nameof(_configuration.EmbeddingsTransformation)} nor {nameof(_configuration.EmbeddingsPathConfigurations)} were specified in the configuration of AI Integration task");
+            $"Cannot create embeddings because neither {nameof(_configuration.EmbeddingsTransformation)} nor {nameof(_configuration.EmbeddingsPathConfigurations)} were specified in the configuration of Embeddings Generation task");
     }
     
      private void CollectEmbeddingValues(ref List<string> values, object value)
@@ -266,12 +266,11 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
                 break;
 
             default:
-                throw new NotSupportedException(valueType + " is not a supported type for AI Integration");
+                throw new NotSupportedException(valueType + " is not a supported type for Embeddings Generation");
         }
     }
 
 #pragma warning disable SKEXP0050
-    // todo non-default token counter
     private JsValue SplitMarkDownLines(JsValue self, JsValue[] args)
     {
         const string methodSignature = "markdown.splitLines(text, maxTokensPerLine)";
@@ -297,8 +296,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         return jsArray;
     }
-
-    // todo optional params
+    
     private JsValue SplitMarkDownParagraphs(JsValue self, JsValue[] args)
     {
         const string methodSignature = "markdown.splitParagraphs(lines, maxTokensPerLine)";
@@ -383,8 +381,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         return jsArray;
     }
-
-    // todo optional params
+    
     private JsValue SplitPlainTextParagraphs(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.splitParagraphs(lines, maxTokensPerLine)";
@@ -420,7 +417,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
     
     private JsValue StripHtml(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "html.strip(htmlText, maxTokensPerLine)";
+        const string methodSignature = "html.strip(htmlText, maxTokensPerChunk)";
 
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");

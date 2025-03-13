@@ -988,12 +988,12 @@ namespace Raven.Server.Monitoring.Snmp
                 public const string TotalNumberOfActiveSnowflakeEtlTasks = "5.1.11.24";
 
                 [SnmpDataType(SnmpType.Integer32)]
-                [Description("Number of enabled AI Integration tasks for all databases")]
-                public const string TotalNumberOfAiIntegrationTasks = "5.1.11.25";
+                [Description("Number of enabled Embeddings Generation tasks for all databases")]
+                public const string TotalNumberOfEmbeddingGenerationTasks = "5.1.11.25";
 
                 [SnmpDataType(SnmpType.Integer32)]
-                [Description("Number of active AI Integration tasks for all databases")]
-                public const string TotalNumberOfActiveAiIntegrationTasks = "5.1.11.26";
+                [Description("Number of active Embeddings Generation tasks for all databases")]
+                public const string TotalNumberOfActiveEmbeddingGenerationTasks = "5.1.11.26";
 
                 internal static Dictionary<string, string> CreateMapping()
                 {

@@ -57,7 +57,7 @@ public sealed class AddEmbeddingsGenerationCommand : AddEtlCommand<EmbeddingsGen
 
             if (identifierConflicts.Length > 0)
                 throw new RachisApplyException(
-                    $"Can't {(isUpdate ? "update" : "create")} AI Integration task: '{Configuration.Name}'. " +
+                    $"Can't {(isUpdate ? "update" : "create")} Embeddings Generation task: '{Configuration.Name}'. " +
                     $"The identifier '{Configuration.Identifier}' is already used by " +
                     $"AI task{(identifierConflicts.Length > 1 ? "s" : "")} " +
                     $"'{string.Join("', '", identifierConflicts.Select(x => x.Name))}'");

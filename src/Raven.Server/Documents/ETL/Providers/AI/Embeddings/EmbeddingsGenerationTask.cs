@@ -96,7 +96,9 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
     {
         return new EmbeddingsGenerationScriptTransformer(Database, context, Transformation, null, Configuration);
     }
-    
+
+    protected override string LoadFailureMessage => $"Failed to generate embeddings in '{Configuration.Name}' task. Going to do the retry using '{Database.Configuration.Ai.EmbeddingsGenerationTaskRetryStrategy}' backoff strategy.";
+
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
         _fallbackCounter++;
@@ -107,11 +109,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
         }
         else
         {
-            var secondsToWait = (Database.Configuration.Ai.EmbeddingsGenerationTaskFallbackModeStrategy) switch
+            var secondsToWait = (Database.Configuration.Ai.EmbeddingsGenerationTaskRetryStrategy) switch
             {
-                EmbeddingsGenerationFallbackModeStrategy.Linear => _fallbackCounter * taskRetryDelay.TotalSeconds,
-                EmbeddingsGenerationFallbackModeStrategy.Exponential => taskRetryDelay.TotalSeconds * Math.Pow(2, _fallbackCounter),
-                _ => throw new NotImplementedException($"Strategy: '{Database.Configuration.Ai.EmbeddingsGenerationTaskFallbackModeStrategy}' is not implemented.")
+                EmbeddingsGenerationRetryStrategy.Linear => _fallbackCounter * taskRetryDelay.TotalSeconds,
+                EmbeddingsGenerationRetryStrategy.Exponential => taskRetryDelay.TotalSeconds * Math.Pow(2, _fallbackCounter),
+                _ => throw new NotImplementedException($"Strategy: '{Database.Configuration.Ai.EmbeddingsGenerationTaskRetryStrategy}' is not implemented.")
                 
             };
             FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Ai.EmbeddingsGenerationTaskMaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(taskRetryDelay.Seconds, secondsToWait)));
@@ -177,7 +179,10 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                     if (ex is HttpOperationException { StatusCode: HttpStatusCode.TooManyRequests })
                     {
                         throw new EmbeddingGenerationException(
-                            $"Failed to generate embeddings due to rate limits. The process will increase the delay between calls to the model. However, decreasing the number of elements processed in a single batch ('{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationTaskMaxBatchSize)}') may help, or you can increase the limits on your model deployment.",
+                            $"Failed to generate embeddings due to rate limits. " +
+                            $"The process will increase the delay between calls to the model using {Database.Configuration.Ai.EmbeddingsGenerationTaskRetryStrategy.ToString().ToLower()} backoff strategy. " +
+                            $"However, decreasing the number of elements processed in a single batch (using '{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationTaskMaxBatchSize)}' " +
+                            $"configuration option) may help, or you can increase the limits on your model deployment.",
                             ex);
                     }
 
@@ -327,14 +332,13 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
             return destination;
         }
 
-        private DynamicJsonValue CreateNewDocument(string collectionName, DynamicJsonValue embeddingsDocumentModification)
+        private DynamicJsonValue CreateEmbeddingDocument(string collectionName, DynamicJsonValue embeddingsDocumentModification)
         {
             return new DynamicJsonValue
             {
                 [_embeddingsTaskIdentifier.Value] = embeddingsDocumentModification,
                 [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
                 {
-                    // todo cache
                     [Constants.Documents.Metadata.Collection] = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collectionName),
                 }
             };
@@ -406,7 +410,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                 }
 
                 object documentToProcess = embeddingsDocument is null
-                    ? CreateNewDocument(document.DocumentCollectionName, embeddingsDocumentModification)
+                    ? CreateEmbeddingDocument(document.DocumentCollectionName, embeddingsDocumentModification)
                     : GetModifiedCurrentDocument(embeddingsDocument, embeddingsDocumentModification);
 
                 using (var reader = GetReader(context, documentToProcess, embeddingsDocumentId, out var isNewDocument))

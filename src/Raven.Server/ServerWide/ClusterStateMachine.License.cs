@@ -174,7 +174,7 @@ public sealed partial class ClusterStateMachine
                 AssertDocumentsCompressionLicenseLimits(serverStore, databaseRecord, context);
                 break;
             case nameof(PutAiConnectionStringCommand):
-                AssertAiIntegrationEtl(databaseRecord, serverStore.LicenseManager.LicenseStatus);
+                AssertEmbeddingsGeneration(databaseRecord, serverStore.LicenseManager.LicenseStatus);
                 break;
         }
     }
@@ -214,7 +214,7 @@ public sealed partial class ClusterStateMachine
             AssertSorters(databaseRecord, newLicenseLimits, context, items, type);
             AssertAnalyzers(databaseRecord, newLicenseLimits, context, items, type);
             AssertSnowflakeEtl(databaseRecord, newLicenseLimits);
-            AssertAiIntegrationEtl(databaseRecord, newLicenseLimits);
+            AssertEmbeddingsGeneration(databaseRecord, newLicenseLimits);
             
             if (AssertPeriodicBackup(newLicenseLimits, context) == false && databaseRecord.PeriodicBackups.Count > 0)
                 throw new LicenseLimitException(LimitType.PeriodicBackup, $"Your license doesn't support periodic backup.");
@@ -928,7 +928,7 @@ public sealed partial class ClusterStateMachine
         throw new LicenseLimitException(LimitType.SnowflakeEtl, "Your license doesn't support using the Snowflake ETL feature.");
     }
 
-    private static void AssertAiIntegrationEtl(DatabaseRecord databaseRecord, LicenseStatus licenseStatus)
+    private static void AssertEmbeddingsGeneration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus)
     {
         if (licenseStatus.HasEmbeddingsGeneration)
             return;
@@ -942,7 +942,7 @@ public sealed partial class ClusterStateMachine
         if (countOfExternalConnectors == 0)
             return;
         
-        throw new LicenseLimitException(LimitType.EmbeddingsGeneration, "Your license doesn't support using the AI Integrations feature.");
+        throw new LicenseLimitException(LimitType.EmbeddingsGeneration, "Your license doesn't support using the Embeddings Generation feature.");
     }
 
     private void AssertTimeSeriesConfigurationLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)

@@ -13,7 +13,7 @@ internal sealed class ShardedEmbeddingsGenerationHandlerProcessorForPostScriptTe
 {
     public ShardedEmbeddingsGenerationHandlerProcessorForPostScriptTest([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-        throw new NotSupportedInShardingException("AI Embeddings Generation is currently not supported in sharding");
+        throw new NotSupportedInShardingException("Embeddings Generation is currently not supported in sharding");
     }
 
     protected override TestEmbeddingsGenerationScript GetTestEtlScript(BlittableJsonReaderObject json) => JsonDeserializationServer.TestEmbeddingsGenerationScript(json);

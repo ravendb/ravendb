@@ -492,7 +492,7 @@ namespace Raven.Server.Documents.ETL
                 {
                     if (CancellationToken.IsCancellationRequested == false)
                     {
-                        string msg = $"Failed to load transformed data for '{Name}'";
+                        string msg = LoadFailureMessage;
 
                         if (Logger.IsWarnEnabled)
                         {
@@ -511,6 +511,8 @@ namespace Raven.Server.Documents.ETL
                 }
             }
         }
+
+        protected virtual string LoadFailureMessage => $"Failed to load transformed data for '{Name}'";
 
         protected virtual void EnterFallbackMode(Exception ex, DateTime? lastErrorTime)
         {

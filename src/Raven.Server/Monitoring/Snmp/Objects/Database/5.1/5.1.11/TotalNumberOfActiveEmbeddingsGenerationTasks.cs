@@ -7,7 +7,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 public class TotalNumberOfActiveEmbeddingsGenerationTasks : ActiveOngoingTasksBase
 {
     public TotalNumberOfActiveEmbeddingsGenerationTasks(ServerStore serverStore) 
-        : base(serverStore, SnmpOids.Databases.General.TotalNumberOfActiveAiIntegrationTasks)
+        : base(serverStore, SnmpOids.Databases.General.TotalNumberOfActiveEmbeddingGenerationTasks)
     {
     }
     protected override int GetCount(TransactionOperationContext context, RachisState rachisState, string nodeTag, RawDatabaseRecord database)

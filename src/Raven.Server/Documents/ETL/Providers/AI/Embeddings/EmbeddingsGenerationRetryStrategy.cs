@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-public enum EmbeddingsGenerationFallbackModeStrategy
+public enum EmbeddingsGenerationRetryStrategy
 {
     Linear,
     Exponential

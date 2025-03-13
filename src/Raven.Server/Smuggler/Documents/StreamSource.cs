@@ -527,7 +527,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (aiConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
                             {
                                 if (_log.IsInfoEnabled)
-                                    _log.Info($"Wasn't able to import the RavenDB connection string {connectionName} from smuggler file. Skipping.");
+                                    _log.Info($"Wasn't able to import the AI connection string {connectionName} from smuggler file. Skipping.");
 
                                 continue;
                             }
