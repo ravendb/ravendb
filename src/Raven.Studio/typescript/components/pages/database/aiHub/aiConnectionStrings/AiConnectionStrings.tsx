@@ -20,7 +20,7 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { AiConnectionStringsInfoHub } from "./AiConnectionStringsInfoHub";
 
 export default function AiConnectionStrings() {
-    const hasAiIntegrations = useAppSelector(licenseSelectors.statusValue("HasAiIntegrations"));
+    const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
@@ -60,7 +60,7 @@ export default function AiConnectionStrings() {
                     {hasDatabaseAdminAccess && (
                         <ConditionalPopover
                             conditions={{
-                                isActive: !hasAiIntegrations,
+                                isActive: !hasEmbeddingsGeneration,
                                 message: "Your license does not allow you to add AI connection string.",
                             }}
                         >
@@ -68,7 +68,7 @@ export default function AiConnectionStrings() {
                                 variant="primary"
                                 onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened("Ai"))}
                                 title="Add new connection string"
-                                disabled={!hasAiIntegrations}
+                                disabled={!hasEmbeddingsGeneration}
                             >
                                 <Icon icon="plus" />
                                 Add new

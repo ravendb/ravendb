@@ -3,7 +3,7 @@
         <div class="flex-horizontal gap-2">
             <i class="icon-ai-etl"></i>
             <h2 data-bind="text: $root.isAddingNewEtlTask() ? 'New Embeddings Generation' : 'Edit Embeddings Generation'" class="mb-0"></h2>
-            <span class="badge license-restricted-badge enterprise" data-bind="if: !hasAiIntegrations">Enterprise</span>
+            <span class="badge license-restricted-badge enterprise" data-bind="if: !hasEmbeddingsGeneration">Enterprise</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
     </div>
@@ -12,7 +12,7 @@
             <form data-bind="submit: saveEtl" autocomplete="off">
                 <div class="flex-header">
                     <span data-placement="right" data-toggle="tooltip" data-html="true" data-animation="true"
-                        data-bind="tooltipText: $root.hasAiIntegrations ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        data-bind="tooltipText: $root.hasEmbeddingsGeneration ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
                         <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save(), !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }"> 
                             <i class="icon-save"></i><span>Save</span>
                         </button>
@@ -21,7 +21,7 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasAiIntegrations }">
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasEmbeddingsGeneration }">
                     <div data-bind="with: editedEmbeddingsGeneration">
                         <div class="panel-body">
                             <div class="form-group" data-bind="validationElement: taskName">
@@ -112,7 +112,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="panel" data-bind="visible: !isDocumentExpirationEnabled(), css: { 'pe-none item-disabled': !$root.hasAiIntegrations }">
+                <div class="panel" data-bind="visible: !isDocumentExpirationEnabled(), css: { 'pe-none item-disabled': !$root.hasEmbeddingsGeneration }">
                     <div class="panel-body">
                         <div class="form-group">
                             <div class="toggle" data-placement="right">
@@ -131,7 +131,7 @@
                 </div>
             </form>
         </div>
-        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedEmbeddingsGeneration(), css: { 'pe-none item-disabled': !$root.hasAiIntegrations }">
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedEmbeddingsGeneration(), css: { 'pe-none item-disabled': !$root.hasEmbeddingsGeneration }">
             <div class="flex-grow">
                 <div class="panel padding">
                     <div class="margin-bottom-sm">

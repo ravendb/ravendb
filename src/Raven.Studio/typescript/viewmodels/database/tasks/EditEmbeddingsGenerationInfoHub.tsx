@@ -7,7 +7,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export function EditEmbeddingsGenerationInfoHub() {
-    const hasAiIntegrations = useAppSelector(licenseSelectors.statusValue("HasAiIntegrations"));
+    const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
 
     const { appUrl } = useAppUrls();
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -17,13 +17,13 @@ export function EditEmbeddingsGenerationInfoHub() {
         overwrites: [
             {
                 featureName: defaultFeatureAvailability[0].featureName,
-                value: hasAiIntegrations,
+                value: hasEmbeddingsGeneration,
             },
         ],
     });
 
     return (
-        <AboutViewFloating defaultOpen={hasAiIntegrations ? null : "licensing"}>
+        <AboutViewFloating defaultOpen={hasEmbeddingsGeneration ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -83,7 +83,7 @@ export function EditEmbeddingsGenerationInfoHub() {
                 </div>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasAiIntegrations}
+                isUnlimited={hasEmbeddingsGeneration}
                 data={featureAvailability}
             />
         </AboutViewFloating>
@@ -92,7 +92,7 @@ export function EditEmbeddingsGenerationInfoHub() {
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "AI",
+        featureName: "Embeddings Generation",
         featureIcon: "ai-etl",
         community: { value: false },
         professional: { value: false },

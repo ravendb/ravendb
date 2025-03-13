@@ -772,6 +772,15 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         link: "https://ravendb.net/features#integration",
         items: [
             {
+                name: "Embeddings Generation",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                fieldInLicense: "HasEmbeddingsGeneration",
+            },
+            {
                 name: "RavenDB ETL",
                 agpl: { value: false },
                 community: { value: false },

@@ -48,7 +48,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
 
     showEditTransformationArea: KnockoutComputed<boolean>;
    
-    hasAiIntegrations = licenseModel.getStatusValue("HasAiIntegrations");
+    hasEmbeddingsGeneration = licenseModel.getStatusValue("HasEmbeddingsGeneration");
     infoHubView: ReactInKnockout<typeof EditEmbeddingsGenerationInfoHub.EditEmbeddingsGenerationInfoHub>;
 
     isNewConnectionStringOpen = ko.observable<boolean>(false);

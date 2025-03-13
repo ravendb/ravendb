@@ -44,7 +44,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
-    const hasAiIntegrations = useAppSelector(licenseSelectors.statusValue("HasAiIntegrations"));
+    const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
 
     const { appUrl } = useAppUrls();
 
@@ -117,7 +117,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     >
                         <Icon icon="ai-etl" margin="m-0" />
                         <h4 className="mt-1 mb-0">Embeddings Generation</h4>
-                        {!hasAiIntegrations && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                        {!hasEmbeddingsGeneration && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
                 </Row>
                 {!isAiOnly && (
