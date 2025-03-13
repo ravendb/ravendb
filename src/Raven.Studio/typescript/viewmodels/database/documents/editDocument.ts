@@ -45,8 +45,8 @@ import globalSettings = require("common/settings/globalSettings");
 import fileDownloader = require("common/fileDownloader");
 import moment = require("moment");
 import generalUtils = require("common/generalUtils");
-import getDocumentRevisionsPhysicalSizeCommand
-    from "commands/database/documents/getDocumentRevisionPhysicalSizeCommand";
+import getDocumentRevisionsPhysicalSizeCommand = require("commands/database/documents/getDocumentRevisionPhysicalSizeCommand");
+
 
 class editDocument extends viewModelBase {
 
