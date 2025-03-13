@@ -64,12 +64,11 @@ public class AiIntegrationsController : IDisposable
             _embeddingsGenerationServiceByConnectionStringIdentifier[connectionStringIdentifier] = AiHelper.CreateService(connectionString);
         }
 
-        var numberOfActiveEmbeddingGenerationTasks = 0;
+        var numberOfEmbeddingGenerationTasks = 0;
 
         foreach (var embeddingGenerationConfiguration in record.EmbeddingsGenerations)
-        {
-            if (embeddingGenerationConfiguration.Disabled == false)
-                numberOfActiveEmbeddingGenerationTasks++;
+        { 
+            numberOfEmbeddingGenerationTasks++;
 
             var embeddingsGeneratorIdentifier = new EmbeddingsGenerationTaskIdentifier(embeddingGenerationConfiguration.Identifier);
             var connectionStringIdentifier = new AiConnectionStringIdentifier(record.AiConnectionStrings[embeddingGenerationConfiguration.ConnectionStringName].Identifier);
@@ -84,12 +83,13 @@ public class AiIntegrationsController : IDisposable
 
         if (Embeddings.QueryEmbeddingsCacher.IsRunning)
         {
-            if (numberOfActiveEmbeddingGenerationTasks == 0)
+            if (numberOfEmbeddingGenerationTasks == 0)
                 Embeddings.QueryEmbeddingsCacher.Stop();
         }
         else
         {
-            Embeddings.QueryEmbeddingsCacher.Start();
+            if (numberOfEmbeddingGenerationTasks > 0)
+                Embeddings.QueryEmbeddingsCacher.Start();
         }
     }
 

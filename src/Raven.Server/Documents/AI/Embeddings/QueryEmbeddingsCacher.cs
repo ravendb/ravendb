@@ -26,36 +26,50 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
 
     protected override async Task DoWork()
     {
-        while (true)
+        while (CancellationToken.IsCancellationRequested == false)
         {
             await _mre.WaitAsync(CancellationToken);
 
             _mre.Reset();
 
-            var maxBatchSize = _database.Configuration.Ai.QueryEmbeddingsGenerationMaxCacheBatchSize;
-
-            var payload = new List<EmbeddingGenerationItem>(Math.Min(_approximateCount, maxBatchSize));
-
-            while (_embeddingsQueue.TryDequeue(out var item))
-            {
-                Interlocked.Decrement(ref _approximateCount);
-
-                payload.Add(item);
-
-                if (payload.Count >= maxBatchSize)
-                {
-                    _mre.Set(); // might be more
-                    break;
-                }
-            }
-
-            if (payload.Count == 0)
-                continue;
-
-            var putEmbeddingsCommand = new PutQueryEmbeddingsCommand(payload, _database);
-
-            _database.TxMerger.EnqueueSync(putEmbeddingsCommand);
+            var mightBeMore = CacheEnqueuedEmbeddings();
+            
+            if (mightBeMore)
+                _mre.Set();
         }
+    }
+
+    internal bool CacheEnqueuedEmbeddings()
+    {
+        var mightBeMore = false;
+        
+        var maxBatchSize = _database.Configuration.Ai.QueryEmbeddingsGenerationMaxCacheBatchSize;
+
+        var payload = new List<EmbeddingGenerationItem>(Math.Min(_approximateCount, maxBatchSize));
+
+        while (_embeddingsQueue.TryDequeue(out var item))
+        {
+            CancellationToken.ThrowIfCancellationRequested();
+                
+            Interlocked.Decrement(ref _approximateCount);
+
+            payload.Add(item);
+
+            if (payload.Count >= maxBatchSize)
+            {
+                mightBeMore = true;
+                break;
+            }
+        }
+
+        if (payload.Count == 0)
+            return mightBeMore;
+
+        var putEmbeddingsCommand = new PutQueryEmbeddingsCommand(payload, _database);
+
+        _database.TxMerger.EnqueueSync(putEmbeddingsCommand);
+
+        return mightBeMore;
     }
 
     public void EnqueueEmbeddingsToCache(List<EmbeddingGenerationItem> embeddings)

@@ -132,12 +132,7 @@ public class EmbeddingsStorage
 
     public void CacheEmbedding(DocumentsOperationContext context, EmbeddingGenerationItem item, DateTime expireAt)
     {
-        var embeddingValue = item.EmbeddingValue as EmbeddingValue;
-
-        if (embeddingValue == null)
-            throw new NotSupportedException($"Caching an embedding value of type different than {nameof(EmbeddingValue)} isn't supported");
-
-        using (var embeddingValueStream = embeddingValue.GetEmbeddingStream())
+        using (var embeddingValueStream = item.EmbeddingValue.GetEmbeddingStream())
         {
             var embeddingHash = AttachmentsStorageHelper.CalculateHash(item.EmbeddingValue.GetEmbedding());
 
