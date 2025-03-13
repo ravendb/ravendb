@@ -49,6 +49,7 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
         var operationDescription = operation.Description;
         var operationType = operationDescription.TaskType;
         var operationState = operation.State;
+        var token = operation.Token;
 
         var notification = new OperationStatusChange
         {
@@ -60,16 +61,19 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
         Monitor.Enter(locker);
         try
         {
-            operation.Task = Task.Run(() => taskFactory(ProgressNotification));
-            operation.Task.ContinueWith(ContinuationFunction);
-            Active.TryAdd(id, operation);
-
-            if (operation.Token == null)
-                return operation.Task;
-
-            return operation.Task.ContinueWith(t =>
+            var activeOperation = Active.GetOrAdd(id, key =>
             {
-                operation.Token.Dispose();
+                operation.Task = Task.Run(() => taskFactory(ProgressNotification));
+                operation.Task.ContinueWith(ContinuationFunction);
+                return operation;
+            });
+
+            if (token == null)
+                return activeOperation.Task;
+
+            return activeOperation.Task.ContinueWith(t =>
+            {
+                token.Dispose();
                 return t;
             }).Unwrap();
         }
