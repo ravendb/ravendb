@@ -24,10 +24,13 @@ using Xunit.Abstractions;
 using Sparrow.Server;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
 using Raven.Client.Exceptions;
+using Raven.Client.Json;
 
 namespace SlowTests.Authentication
 {
@@ -126,6 +129,43 @@ namespace SlowTests.Authentication
 
             await mre.WaitAsync(TimeSpan.FromSeconds(15));
             Assert.NotEqual(first, Server.Certificate.Certificate.Thumbprint);
+        }
+
+        [RavenFact(RavenTestCategory.Certificates)]
+        public async Task ReplaceCertificateWithPassword()
+        {
+            const string password = "mysecretpassword";
+
+            var (_, leader, certificates) = await CreateRaftClusterWithSsl(1);
+
+            X509Certificate2 certificateWithPassword;
+            using (var store = GetDocumentStore(new Options { Server = leader, CreateDatabase = false, ClientCertificate = certificates.ServerCertificate.Value }))
+            {
+                var rawData = certificates.ServerCertificate.Value.Export(X509ContentType.Pkcs12, password);
+                var certificateDefinition = new CertificateDefinition { Certificate = Convert.ToBase64String(rawData), Password = password };
+
+                var requestExecutor = store.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var blittable = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(certificateDefinition, context);
+                    var content = new BlittableJsonContent(async stream => await context.WriteAsync(stream, blittable).ConfigureAwait(false));
+                    var response = await requestExecutor.HttpClient.PostAsync($"{leader.WebUrl}/admin/certificates/replace-cluster-cert", content);
+
+                    if (response.IsSuccessStatusCode == false)
+                        Assert.Fail(await response.Content.ReadAsStringAsync());
+                }
+
+                certificateWithPassword = CertificateLoaderUtil.CreateCertificate(rawData, password);
+            }
+
+            using (var store = GetDocumentStore(new Options { Server = leader, CreateDatabase = true, ClientCertificate = certificateWithPassword }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new {Prop = "value"});
+                    await session.SaveChangesAsync();
+                }
+            }
         }
 
         private async Task CanGetLetsEncryptCertificateAndRenewAfterFailure(string acmeUrl)
