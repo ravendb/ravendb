@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     break;
                 case EtlType.EmbeddingsGeneration:
                     var aiConnectionString = Client.Json.Serialization.JsonDeserializationClient.AiConnectionString(etlConfiguration);
-                    RequestHandler.ServerStore.LicenseManager.AssertCanAddAiIntegration(aiConnectionString);
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddEmbeddingsGenerationTask(aiConnectionString);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");

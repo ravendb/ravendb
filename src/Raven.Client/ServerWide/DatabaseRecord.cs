@@ -486,7 +486,7 @@ namespace Raven.Client.ServerWide
             if (QueueSinks.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Queue Sink task with that name");
             if (EmbeddingsGenerations.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a AI Integration task with that name");
+                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an Embeddings Generation task with that name");
         }
 
         internal string EnsureUniqueTaskName(string defaultTaskName)

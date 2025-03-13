@@ -41,7 +41,7 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
 
     [JsonDeserializationIgnore]
     [JsonIgnore]
-    [Obsolete($"AI Integration configuration doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
+    [Obsolete($"{nameof(EmbeddingsGenerationConfiguration)} doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
     public override List<Transformation> Transforms
 #pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
@@ -70,19 +70,19 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         }
         set
         {
-            throw new NotSupportedException($"AI Integration configuration doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.");
+            throw new NotSupportedException($"{nameof(EmbeddingsGenerationConfiguration)} doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.");
         }
     }
 
     public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
     {
         if (validateConnection && Initialized == false)
-            throw new InvalidOperationException("AI Integration configuration must be initialized");
+            throw new InvalidOperationException("Embeddings Generation configuration must be initialized");
 
         errors = new List<string>();
 
         if (validateName && string.IsNullOrEmpty(Name))
-            errors.Add($"{nameof(Name)} of AI Integration configuration cannot be empty");
+            errors.Add($"{nameof(Name)} of Embeddings Generation configuration cannot be empty");
 
         if (TestMode == false && string.IsNullOrEmpty(ConnectionStringName))
             errors.Add($"{nameof(ConnectionStringName)} cannot be empty");

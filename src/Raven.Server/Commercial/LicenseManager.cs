@@ -1617,7 +1617,7 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
         }
 
-        public void AssertCanAddAiIntegration(AiConnectionString aiConnectionString)
+        public void AssertCanAddEmbeddingsGenerationTask(AiConnectionString aiConnectionString)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
