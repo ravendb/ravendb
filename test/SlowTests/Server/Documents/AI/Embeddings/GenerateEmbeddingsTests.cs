@@ -918,7 +918,7 @@ Console.WriteLine(""Hello, World!"");";
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
                 var result = session.Query<Dto>().VectorSearch(x =>
-                    x.WithText("SubDto.Name", configuration.Identifier), factory => factory.ByText("text")).ToList();
+                    x.WithText("SubDto.Name").UsingTask(configuration.Identifier), factory => factory.ByText("text")).ToList();
 
                 Assert.Single(result);
             }

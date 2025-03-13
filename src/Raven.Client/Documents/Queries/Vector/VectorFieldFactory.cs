@@ -16,12 +16,11 @@ public interface IVectorFieldFactory<T>
     /// Defines the text field that vector search will be performed on.
     /// </summary>
     /// <param name="fieldName">Name of the document field containing text data.</param>
-    /// <param name="embeddingsGenerationTaskIdentifier">Identifier of the embeddings generation task that will be used to generate embedding for queried text.</param>
-    public IVectorEmbeddingTextField WithText(string fieldName, string embeddingsGenerationTaskIdentifier = null);
+    public IVectorEmbeddingTextField WithText(string fieldName);
     
     /// <inheritdoc cref="WithText(string,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
     /// <param name="propertySelector">Path to the document field containing text data.</param>
-    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector, string embeddingsGenerationTaskIdentifier = null);
+    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector);
     
     /// <summary>
     /// Defines the embedding field that vector search will be performed on.
@@ -62,6 +61,12 @@ public interface IVectorEmbeddingTextField
     /// </summary>
     /// <param name="targetEmbeddingQuantization">Desired target quantization type.</param>
     public IVectorEmbeddingTextField TargetQuantization(VectorEmbeddingType targetEmbeddingQuantization);
+
+    /// <summary>
+    /// Defines which task will be used to get embeddings from.
+    /// </summary>
+    /// <param name="embeddingsGenerationTaskIdentifier">Task identifier.</param>
+    public IVectorEmbeddingTextField UsingTask(string embeddingsGenerationTaskIdentifier);
 }
 
 public interface IVectorEmbeddingField
@@ -93,22 +98,20 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
     public bool IsBase64Encoded { get; set; }
     public string EmbeddingsGenerationTaskIdentifier { get; set; }
     
-    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector, string embeddingsGenerationTaskIdentifier)
+    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector)
     {
         FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
-        EmbeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
         
         return this;
     }
     
-    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName, string embeddingsGenerationTaskIdentifier)
+    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName)
     {
         FieldName = fieldName;
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
-        EmbeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
         
         return this;
     }
@@ -188,6 +191,13 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
             throw new InvalidOperationException($"Cannot quantize the embedding to Text. This option is only available for {nameof(SourceQuantizationType)}.");
         
         DestinationQuantizationType = targetEmbeddingQuantization;
+
+        return this;
+    }
+    
+    IVectorEmbeddingTextField IVectorEmbeddingTextField.UsingTask(string embeddingsGenerationTaskIdentifier)
+    {
+        EmbeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
 
         return this;
     }

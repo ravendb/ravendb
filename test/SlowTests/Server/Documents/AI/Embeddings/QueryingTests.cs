@@ -23,14 +23,14 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         {
             using (var session = store.OpenSession())
             {
-                var q1 = session.Query<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName"), factory => factory.ByText("SomeText")).ToString();
+                var q1 = session.Query<Dto>().VectorSearch(x => x.WithText("TextField").UsingTask("ai-task-identifier"), factory => factory.ByText("SomeText")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField,ai.task('EtlConfigName')), $p0)", q1);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField,ai.task('ai-task-identifier')), $p0)", q1);
                 
-                var q2 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField", "EtlConfigName").TargetQuantization(VectorEmbeddingType.Int8),
+                var q2 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField").UsingTask("ai-task-identifier").TargetQuantization(VectorEmbeddingType.Int8),
                     factory => factory.ByText("aaaa")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField,ai.task('EtlConfigName')), $p0)", q2);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField,ai.task('ai-task-identifier')), $p0)", q2);
             }
         }
     }
@@ -64,7 +64,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, configuration.Identifier), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), factory => factory.ByText(queriedText)).ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
@@ -107,7 +107,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, configuration.Identifier), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), factory => factory.ByText(queriedText)).ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
@@ -142,7 +142,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
             using (var session = store.OpenSession())
             {
-                var ex = Assert.Throws<InvalidQueryException>(() => session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue, "NotExistingTask"), factory => factory.ByText(queriedText)).ToList());
+                var ex = Assert.Throws<InvalidQueryException>(() => session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask("NotExistingTask"), factory => factory.ByText(queriedText)).ToList());
                 
                 Assert.Contains("Couldn't find Embeddings Generation task with 'NotExistingTask' identifier", ex.Message);
                 
@@ -263,15 +263,15 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
             
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingsGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["italian food", "vehicle"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"])).ToList();
             Assert.Equal(2, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingsGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["italian food", "dog"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "dog"])).ToList();
             Assert.Equal(1, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue, embeddingsGenerationTaskIdentifier: "localaitask"), v => v.ByTexts(["cat", "dog"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["cat", "dog"])).ToList();
             Assert.Equal(0, multiVectorTextualQuery.Count);
         }
 
