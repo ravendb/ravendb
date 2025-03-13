@@ -377,8 +377,6 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     [RavenFact(RavenTestCategory.Ai)]
     public async Task DefaultBatchSizeMustBeRespected()
     {
-        const string connectionStringName = "AI Connection String Name";
-
         using (var store = GetDocumentStore())
         {
             await using (BulkInsertOperation bulkInsert = store.BulkInsert())
@@ -406,7 +404,6 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     [RavenFact(RavenTestCategory.Ai)]
     public async Task CustomBatchSizeMustBeRespected()
     {
-        const string connectionStringName = "AI Connection String Name";
         const int batchSize = 4;
 
         var options = new Options()
