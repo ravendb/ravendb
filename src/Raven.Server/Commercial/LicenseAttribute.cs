@@ -69,5 +69,5 @@ public enum LicenseAttribute
     MaxNumberOfCustomAnalyzersPerCluster,
     SubscriptionExpiration,
     SnowflakeEtl,
-    AiIntegrations,
+    AiEmbeddingsGen,
 }

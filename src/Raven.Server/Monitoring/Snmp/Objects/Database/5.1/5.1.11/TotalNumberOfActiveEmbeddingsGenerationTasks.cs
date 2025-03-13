@@ -4,14 +4,14 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
-public class TotalNumberOfActiveAiIntegrationTasks : ActiveOngoingTasksBase
+public class TotalNumberOfActiveEmbeddingsGenerationTasks : ActiveOngoingTasksBase
 {
-    public TotalNumberOfActiveAiIntegrationTasks(ServerStore serverStore) 
+    public TotalNumberOfActiveEmbeddingsGenerationTasks(ServerStore serverStore) 
         : base(serverStore, SnmpOids.Databases.General.TotalNumberOfActiveAiIntegrationTasks)
     {
     }
     protected override int GetCount(TransactionOperationContext context, RachisState rachisState, string nodeTag, RawDatabaseRecord database)
     {
-        return GetNumberOfActiveAiIntegrations(rachisState, nodeTag, database);
+        return GetNumberOfActiveEmbeddingsGenerationTasks(rachisState, nodeTag, database);
     }
 }

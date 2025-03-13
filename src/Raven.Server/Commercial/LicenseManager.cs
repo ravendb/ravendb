@@ -1246,10 +1246,10 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
             }
 
-            if (embeddingsGenerationsCount > 0 && newLicenseStatus.HasAiIntegrations == false)
+            if (embeddingsGenerationsCount > 0 && newLicenseStatus.HasEmbeddingsGeneration == false)
             {
-                var message = GenerateDetails(embeddingsGenerationsCount, "AI Integrations");
-                throw GenerateLicenseLimit(LimitType.AiIntegrations, message);
+                var message = GenerateDetails(embeddingsGenerationsCount, "Embeddings Generation");
+                throw GenerateLicenseLimit(LimitType.EmbeddingsGeneration, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
@@ -1622,17 +1622,16 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (LicenseStatus.HasAiIntegrations)
+            if (LicenseStatus.HasEmbeddingsGeneration)
                 return;
             
             if (aiConnectionString.GetActiveProvider() == AiConnectorType.Embedded)
                 return;
-            
-            //todo: uncomment the code below after license work 
-            // if (LicenseStatus.HasAiIntegrations)
-            //     return;
-            // const string message = "Your current license doesn't include the AI Integration feature";
-            // throw GenerateLicenseLimit(LimitType.AiIntegrations, message);
+
+            if (LicenseStatus.HasEmbeddingsGeneration)
+                return;
+            const string message = "Your current license doesn't include the Embeddings Generation feature";
+            throw GenerateLicenseLimit(LimitType.EmbeddingsGeneration, message);
         }
 
         public void AssertCanAddConcurrentDataSubscriptions()

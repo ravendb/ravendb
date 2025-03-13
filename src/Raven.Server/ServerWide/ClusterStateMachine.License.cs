@@ -930,7 +930,7 @@ public sealed partial class ClusterStateMachine
 
     private static void AssertAiIntegrationEtl(DatabaseRecord databaseRecord, LicenseStatus licenseStatus)
     {
-        if (licenseStatus.HasAiIntegrations)
+        if (licenseStatus.HasEmbeddingsGeneration)
             return;
         
         if (databaseRecord.AiConnectionStrings.Count == 0)
@@ -942,7 +942,7 @@ public sealed partial class ClusterStateMachine
         if (countOfExternalConnectors == 0)
             return;
         
-        throw new LicenseLimitException(LimitType.AiIntegrations, "Your license doesn't support using the AI Integrations feature.");
+        throw new LicenseLimitException(LimitType.EmbeddingsGeneration, "Your license doesn't support using the AI Integrations feature.");
     }
 
     private void AssertTimeSeriesConfigurationLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
