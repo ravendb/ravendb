@@ -75,11 +75,9 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
     public void EnqueueEmbeddingsToCache(List<EmbeddingGenerationItem> embeddings)
     {
         foreach (EmbeddingGenerationItem item in embeddings)
-        {
             _embeddingsQueue.Enqueue(item);
 
-            Interlocked.Increment(ref _approximateCount);
-        }
+        Interlocked.Add(ref _approximateCount, embeddings.Count);
 
         _mre.Set();
     }
