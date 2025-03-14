@@ -1246,7 +1246,7 @@ namespace Raven.Server.Documents.Indexes
                 fieldsTree.Add(kvp.Key, kvp.Value.ToString());
         }
 
-        internal Dictionary<string, string> ReadVectorSourceAiTaskIdentifiers()
+        internal Dictionary<string, string> ReadEmbeddingsGenerationTaskIdentifiers()
         {
             var vectorSourceAiTaskIdentifiers = new Dictionary<string, string>();
             using (var tx = _environment.ReadTransaction())

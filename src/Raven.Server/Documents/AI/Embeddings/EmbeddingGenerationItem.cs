@@ -56,7 +56,7 @@ public class EmbeddingGenerationItem
 
     public void GenerateDestinationAttachmentName(string prefix, in VectorEmbeddingType quantization)
     {
-        Debug.Assert(TextualValue is not null, "ValueEmbeddingsSourceAttachmentName is not null");
+        Debug.Assert(TextualValue is not null);
         DestinationAttachmentName = EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, ValueHash, quantization);
     }
 

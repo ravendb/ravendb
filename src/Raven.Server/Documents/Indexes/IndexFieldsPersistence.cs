@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes
             
             _vectorFieldsDimensions = _index._indexStorage.ReadVectorDimensions();
             _vectorSourceEmbeddingType = _index._indexStorage.ReadIndexEmbeddingType();
-            _embeddingsGenerationTaskIdentifiers = _index._indexStorage.ReadVectorSourceAiTaskIdentifiers();
+            _embeddingsGenerationTaskIdentifiers = _index._indexStorage.ReadEmbeddingsGenerationTaskIdentifiers();
             
             foreach (var indexField in _index.Definition.IndexFields.Values)
             {

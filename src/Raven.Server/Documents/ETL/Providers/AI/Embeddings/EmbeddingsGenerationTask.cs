@@ -237,10 +237,9 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
         public void Add(string value, EmbeddingGenerationItem item)
         {
-            if (_embeddingsMap.ContainsKey(value) == false)
-                _embeddingsMap.Add(value, new List<EmbeddingGenerationItem>());
-
-            _embeddingsMap[value].Add(item);
+            ref var list = ref CollectionsMarshal.GetValueRefOrAddDefault(_embeddingsMap, value, out _);
+            list ??= new();
+            list.Add(item);
         }
 
         public IReadOnlyDictionary<string, List<EmbeddingGenerationItem>> GetEmbeddingsMap() => _embeddingsMap;

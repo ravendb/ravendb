@@ -16,7 +16,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.AI.Embeddings;
 using Sparrow;
 using Sparrow.Server;
-using InvalidOperationException = System.InvalidOperationException;
 using VectorValue = Corax.Utils.VectorValue;
 
 namespace Raven.Server.Documents.Indexes.VectorSearch;

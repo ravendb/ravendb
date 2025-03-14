@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Indexes.Static;
 
 public partial class AbstractStaticIndexBase
 {
+    private static readonly object NullVectorValue = new object[] { VectorValue.Null }; 
+    
     /// <summary>
     /// Dictionary training process occurs in IsOnBeforeExecuteIndexing. Since we're not training dictionaries with vectors, and considering computation
     /// power required (e.g., generating embeddings from text), it is better to skip that part as there is no benefit in performing it.
@@ -82,7 +84,7 @@ public partial class AbstractStaticIndexBase
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
         if (IsDictionaryTrainingPhase(currentIndexingScope) || IsNullValue(value))
-            return new object[]{VectorValue.Null};
+            return NullVectorValue;
 
         var indexField = RetrieveCreateVectorField(fieldName, value);
         var vector = indexField!.Vector!.SourceEmbeddingType switch
@@ -103,7 +105,7 @@ public partial class AbstractStaticIndexBase
     internal static object CreateVector(IndexField indexField, object value, bool isAutoIndex)
     {
         if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current) || IsNullValue(value))
-            return new object[]{VectorValue.Null};
+            return NullVectorValue;
 
         return indexField!.Vector!.SourceEmbeddingType switch
         {
@@ -159,7 +161,7 @@ public partial class AbstractStaticIndexBase
             var enumerator = enumerable.GetEnumerator();
             using var _ = enumerator as IDisposable;
             if (enumerator.MoveNext() == false)
-                return VectorValue.Null;
+                return NullVectorValue;
 
             // We've to find first non-null value do determine the underlying type of data.
             List<object> vectorValues = new();
@@ -569,7 +571,7 @@ public partial class AbstractStaticIndexBase
             || IsNullValue(embeddingContainerObject))
         {
             indexField = null;
-            return new object[]{VectorValue.Null};
+            return NullVectorValue;
         }
 
         var embeddingGenerationTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(embeddingGeneratorTaskIdentifier);
@@ -596,7 +598,7 @@ public partial class AbstractStaticIndexBase
 
             var attachments = currentIndexingScope.LoadAttachments(embeddingDocumentId, attachmentNames);
             return attachments is null 
-                ? new object[]{ VectorValue.Null } 
+                ? NullVectorValue 
                 : VectorFromEmbedding(indexField, attachments.Select(x => x.GetContentAsStream()), isAutoIndex: false);
         }
 
@@ -605,11 +607,11 @@ public partial class AbstractStaticIndexBase
             var singleAttachmentName = GetStringFromObject(embeddingContainerObject);
             var attachment = currentIndexingScope.LoadAttachment(embeddingDocument, singleAttachmentName);
             return attachment is null 
-                ? new object[]{ VectorValue.Null }
+                ? NullVectorValue
                 : VectorFromEmbedding(indexField, attachment.GetContentAsStream(), isAutoIndex: false);
         }
         
-        return new object[]{ VectorValue.Null };
+        return NullVectorValue;
     }
     
     private static dynamic LoadVectorDocument(out string embeddingDocument)

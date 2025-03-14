@@ -18,7 +18,7 @@ public sealed class AiConfiguration : ConfigurationCategory
 
     [Description("Base delay for Embedding Generation task retries. The actual wait time between retry attempts depends on the configured FallbackModeStrategy. " +
                  $"When using '{nameof(EmbeddingsGenerationRetryStrategy.Linear)}' strategy, the delay increases linearly (e.g., 15s, 30s, 45s). " +
-                 $"When using '{nameof(EmbeddingsGenerationRetryStrategy.Exponential)}' strategy, the delay increases exponentially with each retry attempt (e.g., 15s, 225s, 3375s).")]
+                 $"When using '{nameof(EmbeddingsGenerationRetryStrategy.Exponential)}' strategy, the delay increases exponentially with each retry attempt (e.g. 15s, 60s, 120s, 240s).")]
     [DefaultValue(15)]
     [TimeUnit(TimeUnit.Seconds)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Task.RetryDelayInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -34,7 +34,7 @@ public sealed class AiConfiguration : ConfigurationCategory
     [Description($"Strategy to use for retry intervals when embeddings generation fails. " +
                  $"'{nameof(EmbeddingsGenerationRetryStrategy.Linear)}' uses fixed intervals between retries, while " +
                  $"'{nameof(EmbeddingsGenerationRetryStrategy.Exponential)}' increases the wait time exponentially after each failure " +
-                 $"(e.g., 15s, 30s, 60s for {nameof(EmbeddingsGenerationRetryStrategy.Linear)}; or 15s, 225s, 3375s for {nameof(EmbeddingsGenerationRetryStrategy.Exponential)} with base 15s).")]
+                 $"(e.g., 15s, 30s, 60s for {nameof(EmbeddingsGenerationRetryStrategy.Linear)}; or 15s, 60s, 120s, 240s for {nameof(EmbeddingsGenerationRetryStrategy.Exponential)} with base 15s).")]
     [DefaultValue(EmbeddingsGenerationRetryStrategy.Exponential)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Task.RetryStrategy", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public EmbeddingsGenerationRetryStrategy EmbeddingsGenerationTaskRetryStrategy { get; set; }
