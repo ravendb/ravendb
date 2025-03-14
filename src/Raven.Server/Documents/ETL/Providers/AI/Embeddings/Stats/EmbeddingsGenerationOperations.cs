@@ -4,5 +4,5 @@ public sealed class EmbeddingsGenerationOperations
 {
     public const string Storage = "Storage/Embeddings";
     
-    public const string GenerateInAiService = "AIService/Generate";
+    public const string GenerateInAiService = "Model/Generate";
 }

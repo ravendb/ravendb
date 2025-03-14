@@ -34,25 +34,18 @@ public class EmbeddingsStorage
     }
 
     public bool TryGetEmbeddingCacheDocument(DocumentsOperationContext context, AiConnectionStringIdentifier connectionStringIdentifier, string valueHash, in VectorEmbeddingType targetQuantization,
-        out string embeddingCacheDocumentId, out EmbeddingCacheDocument result)
+        out string embeddingCacheDocumentId, out Document result)
     {
         embeddingCacheDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, valueHash, targetQuantization);
         
         return TryGetEmbeddingCacheDocument(context, embeddingCacheDocumentId, out result);
     }
 
-    private bool TryGetEmbeddingCacheDocument(DocumentsOperationContext context, string documentId, out EmbeddingCacheDocument result)
+    private bool TryGetEmbeddingCacheDocument(DocumentsOperationContext context, string documentId, out Document result)
     {
-        var document = _documentsStorage.Get(context, documentId);
+        result = _documentsStorage.Get(context, documentId);
 
-        if (document == null)
-        {
-            result = null;
-            return false;
-        }
-
-        result = new EmbeddingCacheDocument(document);
-        return true;
+        return result != null;
     }
 
     public void PutOrUpdateEmbeddingCacheDocument(DocumentsOperationContext context, EmbeddingGenerationItem item, DateTime expireAt,

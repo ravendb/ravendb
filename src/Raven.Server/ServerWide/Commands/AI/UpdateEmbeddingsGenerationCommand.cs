@@ -71,7 +71,7 @@ public sealed class UpdateEmbeddingsGenerationCommand : UpdateEtlCommand<Embeddi
                 if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration))
                 {
                     throw new RachisApplyException(
-                        $"Cannot update Embeddings Generation task '{Configuration.Name}' because it contains critical changes in the connection settings that would affect the structure or creation process of embeddings. " +
+                        $"Cannot update Embeddings Generation task '{Configuration.Name}' because it contains critical changes ({differences}) in the connection settings that would affect the structure or creation process of embeddings. " +
                         $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
                         $"To proceed with these changes:{Environment.NewLine}" +
                         $"1. Delete the existing Embeddings Generation task{Environment.NewLine}" +

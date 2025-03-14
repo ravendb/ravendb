@@ -488,7 +488,7 @@ class ongoingTasksStats extends shardViewModelBase {
             "Storage/CounterRead": undefined as string,
             "Storage/TimeSeriesRead": undefined as string,
             "Storage/Embeddings": undefined as string,
-            "AIService/Generate": undefined as string,
+            "Model/Generate": undefined as string,
             "ETL": undefined as string,
             "Embeddings Generation": undefined as string,
             "Extract": undefined as string,
@@ -2375,7 +2375,7 @@ class ongoingTasksStats extends shardViewModelBase {
                             tooltipHtml += `<div class="tooltip-li">Deleted embeddings documents: <div class="value">${elementWithData.NumberOfDeletedEmbeddingDocuments}</div></div>`;
                             break;
                         }
-                        case "AIService/Generate": {
+                        case "Model/Generate": {
                             const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats.EmbeddingsGenerationPerformanceOperation;
                             tooltipHtml += `<div class="tooltip-li">Generated embeddings: <div class="value">${elementWithData.NumberOfGeneratedEmbeddings}</div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Embeddings in cache: <div class="value">${elementWithData.NumberOfEmbeddingsInCache}</div></div>`;

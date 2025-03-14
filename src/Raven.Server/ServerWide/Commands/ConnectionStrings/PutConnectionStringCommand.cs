@@ -215,7 +215,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
                 var etlNames = string.Join("', '", etlsUsingConnection.Select(x => x.Name));
                 throw new RachisApplyException(
-                    $"Cannot update connection string '{ConnectionString.Name}' because it contains changes that would affect the structure or creation process of embeddings. " +
+                    $"Cannot update connection string '{ConnectionString.Name}' because it contains changes ({differences}) that would affect the structure or creation process of embeddings. " +
                     $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
                     $"To proceed with these changes:{Environment.NewLine}" +
                     $"1. Delete the existing AI Integration task{(etlsUsingConnection.Length == 1 ? "" : "s")}{Environment.NewLine}" +

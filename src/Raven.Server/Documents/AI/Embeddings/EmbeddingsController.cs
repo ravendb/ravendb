@@ -36,7 +36,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, T values, Func<T, ChunkingOptions, List<string>> chunkingMethod)
     {
         if (documentsContext.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingTaskId, out var taskConfig) == false)
-            throw new Exception($"Could not find Embeddings Generation configuration for the task with '{embeddingTaskId.Value}' identifier");
+            throw new InvalidOperationException($"Could not find Embeddings Generation configuration for the task with '{embeddingTaskId.Value}' identifier");
 
         var quantization = taskConfig.Quantization;
         var chunkingOptions = taskConfig.ChunkingOptionsForQuerying;

@@ -97,7 +97,7 @@ public static class GenerateEmbeddings
                 VectorEmbeddingType.Single => embedding.Length * sizeof(float),
                 VectorEmbeddingType.Int8 => embedding.Length + sizeof(float),
                 VectorEmbeddingType.Binary => embedding.Length,
-                _ => throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}")
+                _ => throw new InvalidOperationException($"Unsupported vector embedding type {embeddingDestinationType}")
             };
         }
 
@@ -162,7 +162,7 @@ public static class GenerateEmbeddings
             VectorEmbeddingType.Single => readOnlyMemory.Length * sizeof(float),
             VectorEmbeddingType.Int8 => readOnlyMemory.Length + sizeof(float),
             VectorEmbeddingType.Binary => readOnlyMemory.Length,
-            _ => throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}")
+            _ => throw new InvalidOperationException($"Unsupported vector embedding type {embeddingDestinationType}")
         };
         
         var memoryScope = allocator.Allocate(requiredBytes, out Memory<byte> memory);
@@ -177,7 +177,7 @@ public static class GenerateEmbeddings
                 VectorQuantizer.TryToInt1(readOnlyMemory.Span, memory.Span, out bytesUsed);
                 break;
             default:
-                throw new Exception($"Unsupported vector embedding type {embeddingDestinationType}");
+                throw new InvalidOperationException($"Unsupported vector embedding type {embeddingDestinationType}");
         }
         
         return new VectorValue(memoryScope, memory, bytesUsed);

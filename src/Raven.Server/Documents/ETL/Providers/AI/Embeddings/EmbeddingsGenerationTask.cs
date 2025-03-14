@@ -206,7 +206,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
             using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
             {
-                var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(embeddingsScriptRun, new EmbeddingsGenerationTaskIdentifier(Configuration.Identifier), Database);
+                var putEmbeddingsCommand = new MergedPutEmbeddingsCommand(embeddingsScriptRun, Configuration, Database);
 
                 Database.TxMerger.EnqueueSync(putEmbeddingsCommand);
 
@@ -262,7 +262,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
         {
             foreach (var embeddingItemValue in record.Values.SelectMany(x => x.Value))
             {
-                var embedding = AiHelper.GenerateEmbeddingAsync(embeddingService, embeddingItemValue.TextualValue);
+                var embedding = AiHelper.GenerateEmbedding(embeddingService, embeddingItemValue.TextualValue);
 
                 var embeddingValue = EmbeddingsHelper.CreateEmbeddingValue(embedding, Configuration.Quantization);
 
@@ -287,14 +287,14 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
         private readonly DocumentDatabase _database;
         private readonly EmbeddingsGenerationConfiguration _configuration;
 
-        public MergedPutEmbeddingsCommand(EmbeddingsGenerationScriptRun taskResults, EmbeddingsGenerationTaskIdentifier embeddingsTaskIdentifier,
+        public MergedPutEmbeddingsCommand(EmbeddingsGenerationScriptRun taskResults, EmbeddingsGenerationConfiguration configuration,
             DocumentDatabase database)
         {
-            _taskResults = taskResults;
-            _embeddingsTaskIdentifier = embeddingsTaskIdentifier;
-            _database = database;
-            database.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsTaskIdentifier, out _configuration);
-            Debug.Assert(_configuration != null, "Configuration should not be null");
+            _taskResults = taskResults ?? throw new ArgumentException($"{nameof(taskResults)} must not be null");
+            _configuration = configuration ?? throw new ArgumentException($"{nameof(configuration)} must not be null");
+            _database = database ?? throw new ArgumentException($"{nameof(database)} must not be null");
+
+            _embeddingsTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(configuration.Identifier);
         }
 
         //We need to remove all attachments from this ETL task (but not all of them, as they may be loaded from other tasks.)

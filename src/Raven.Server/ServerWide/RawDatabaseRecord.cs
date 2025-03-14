@@ -912,7 +912,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<EmbeddingsGenerationConfiguration> _aiIntegrations;
+        private List<EmbeddingsGenerationConfiguration> _embeddingsGenerationTasks;
 
         public List<EmbeddingsGenerationConfiguration> EmbeddingsGenerations
         {
@@ -921,17 +921,17 @@ namespace Raven.Server.ServerWide
                 if (_materializedRecord != null)
                     return _materializedRecord.EmbeddingsGenerations;
 
-                if (_aiIntegrations == null)
+                if (_embeddingsGenerationTasks == null)
                 {
-                    _aiIntegrations = [];
+                    _embeddingsGenerationTasks = [];
                     if (_record.TryGet(nameof(DatabaseRecord.EmbeddingsGenerations), out BlittableJsonReaderArray bjra) && bjra != null)
                     {
                         foreach (BlittableJsonReaderObject element in bjra)
-                            _aiIntegrations.Add(JsonDeserializationCluster.EmbeddingsGenerationConfiguration(element));
+                            _embeddingsGenerationTasks.Add(JsonDeserializationCluster.EmbeddingsGenerationConfiguration(element));
                     }
                 }
 
-                return _aiIntegrations;
+                return _embeddingsGenerationTasks;
             }
         }
 

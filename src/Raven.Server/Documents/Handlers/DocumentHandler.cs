@@ -5,19 +5,14 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Constants = Raven.Client.Constants;
