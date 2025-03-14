@@ -700,7 +700,7 @@ Console.WriteLine(""Hello, World!"");";
     <!-- This is a comment -->
 </body>
 </html>";
-        string[] expectedChunks = ["Sample HTML Hello, World! This", " is a test paragraph with", " a link . First item", " Second item Third item"];
+        string[] expectedChunks = ["Sample HTML", "Hello, World!", "This is a test", "paragraph with", "a link . First", "item Second", "item Third item"];
 
         var dto = new Dto { Name = htmlTextToChunk };
 
@@ -742,7 +742,7 @@ Console.WriteLine(""Hello, World!"");";
     <!-- This is a comment -->
 </body>
 </html>";
-        string[] expectedChunks = ["Sample HTML Hello, World! This", " is a test paragraph with", " a link . First item", " Second item Third item"];
+        string[] expectedChunks = ["Sample HTML", "Hello, World!", "This is a test", "paragraph with", "a link . First", "item Second", "item Third item"];
 
         var dto = new Dto { Name = htmlTextToChunk };
 

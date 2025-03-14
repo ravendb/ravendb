@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Corax.Pipeline;
 using HtmlAgilityPack;
 using Raven.Client.Documents.Operations.AI;
 
@@ -54,35 +53,42 @@ public static class TextChunker
 
     internal static List<string> SplitPlainText(string textualValue, int maxTokensPerChunk)
     {
-        var tokenApproximationLen = textualValue.Length / 4;
-        var whiteSpaceTokenizer = new WhitespaceTokenizer();
-        var tokens = new List<Token>();
+        const int tokenLength = 4;
+        const float ratio = 0.75f;
         
-        whiteSpaceTokenizer.Tokenize(textualValue.AsSpan(), ref tokens);
-        List<string> chunks = new(tokenApproximationLen / maxTokensPerChunk);
+        var maxTokensCount = (int)(ratio * maxTokensPerChunk);
+        var expectedChunkLength = maxTokensCount * tokenLength;
+        var textualValueLength = textualValue.Length;
+        var numberOfChunks = textualValueLength / expectedChunkLength;
         
+        var chunks = new List<string>(numberOfChunks);
+
         var offset = 0;
-        var currentChunkLenFromStart = 0;
-        for (int i = 0; i < tokens.Count; i++)
-        {
-            var currentToken = tokens[i];
-            currentChunkLenFromStart = currentToken.Offset + (int)currentToken.Length;
 
-            if (i != 0 && (i+1) % maxTokensPerChunk == 0)
+        while (offset < textualValueLength)
+        {
+            // skip whitespaces at the beginning
+            if (char.IsWhiteSpace(textualValue[offset]))
             {
-                var subStr = textualValue.Substring(offset, currentChunkLenFromStart - offset);
-                chunks.Add(subStr);
-                offset = currentChunkLenFromStart;
-                currentChunkLenFromStart = -1;
+                offset++;
+                continue;
             }
+            
+            var len = expectedChunkLength;
+            
+            // do not cut the word in the middle, look for first following whitespace
+            while (char.IsWhiteSpace(textualValue[Math.Min(offset + len, textualValueLength) - 1]) == false && offset + len < textualValueLength)
+                len++;
+            
+            // if chunk ends on whitespace - trim to the actual value
+            while (char.IsWhiteSpace(textualValue[Math.Min(offset + len, textualValueLength) - 1]))
+                len--;
+            
+            var chunk = textualValue.Substring(offset, Math.Min(len, textualValueLength - offset));
+            chunks.Add(chunk);
+            offset += len;
         }
-
-        if (currentChunkLenFromStart != -1)
-        {
-            var subStr = textualValue.Substring(offset, currentChunkLenFromStart - offset);
-            chunks.Add(subStr);
-        }
-
+        
         return chunks;
     }
     
