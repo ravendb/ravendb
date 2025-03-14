@@ -53,6 +53,7 @@ module.exports = {
     "local-rules/no-reactstrap-InputGroupText": "warn",
     "local-rules/no-reactstrap-Carousel": "warn",
     "local-rules/no-reactstrap-Form": "warn",
+    "local-rules/no-reactstrap-Form-props": "warn",
     "local-rules/no-reactstrap-FormGroup": "warn",
     "local-rules/no-reactstrap-Input": "warn",
     "local-rules/reactstrap-Form-to-RBootstrap-children": "warn",
@@ -68,7 +69,10 @@ module.exports = {
     "local-rules/no-reactstrap-DropdownToggle-color-prop": "warn",
     "local-rules/no-reactstrap-DropdownToggle-caret-prop": "warn",
     "local-rules/no-reactstrap-Modal": "warn",
+    "local-rules/no-reactstrap-ModalBody": "warn",
+    "local-rules/no-reactstrap-ModalFooter": "warn",
     "local-rules/no-reactstrap-Label": "warn",
+    "local-rules/no-reactstrap-Label-rename": "warn",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

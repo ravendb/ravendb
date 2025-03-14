@@ -1,6 +1,7 @@
 import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
-import { CloseButton, FormGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import { FormLabel } from "components/common/Form";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";
@@ -20,20 +21,21 @@ import { useAsync } from "react-async-hook";
 import { LazyLoad } from "components/common/LazyLoad";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useEventsCollector } from "hooks/useEventsCollector";
+import Modal from "components/common/Modal";
 
 interface DocumentIdentitiesModalProps {
-    toggleModal: () => void;
+    onHide: () => void;
     defaultValues?: AddIdentitiesFormData;
     identities?: AddIdentitiesFormData[];
     refetch: () => void;
-    isOpen: boolean;
+    show: boolean;
 }
 
 export default function DocumentIdentitiesModal({
     defaultValues,
     refetch,
     identities,
-    toggleModal,
+    onHide,
     ...props
 }: DocumentIdentitiesModalProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -63,27 +65,26 @@ export default function DocumentIdentitiesModal({
                 eventsCollector.reportEvent("identity", "new");
             }
             refetch();
-            toggleModal();
+            onHide();
             reset();
         });
     };
 
     return (
-        <Modal centered contentClassName="modal-border bulge-primary" wrapClassName="bs5" size="lg" {...props}>
+        <Modal centered contentClassName="modal-border bulge-primary" size="lg" {...props}>
             <form onSubmit={handleSubmit(onSubmit)}>
-                <ModalBody className="pb-0 vstack gap-3">
-                    <div className="position-absolute m-2 end-0 top-0">
-                        <CloseButton onClick={toggleModal} />
-                    </div>
+                <Modal.Header className="vstack gap-3" onCloseClick={onHide}>
                     <div className="text-center">
                         <Icon icon="identities" color="primary" margin="me-0" className="fs-1" />
                     </div>
                     <div className="text-center lead">{isEditing ? "Edit identity" : "Add new identity"}</div>
+                </Modal.Header>
+                <Modal.Body className="pb-0 vstack gap-3">
                     <DocumentIdentitiesModalForm isEditing={isEditing} control={control} />
                     <InformationBadge isEditing={isEditing} {...formValues} />
-                </ModalBody>
-                <ModalFooter className="mt-4">
-                    <Button className="link-muted" variant="link" onClick={toggleModal} type="button">
+                </Modal.Body>
+                <Modal.Footer className="mt-4">
+                    <Button className="link-muted" variant="link" onClick={onHide} type="button">
                         Close
                     </Button>
                     <ButtonWithSpinner
@@ -96,7 +97,7 @@ export default function DocumentIdentitiesModal({
                     >
                         Save identity
                     </ButtonWithSpinner>
-                </ModalFooter>
+                </Modal.Footer>
             </form>
         </Modal>
     );
@@ -165,9 +166,9 @@ interface DocumentIdentitiesModalFormProps {
 
 function DocumentIdentitiesModalForm({ control, isEditing }: DocumentIdentitiesModalFormProps) {
     return (
-        <FormGroup className="vstack gap-3">
+        <Form className="vstack gap-3">
             <InputGroup className="vstack">
-                <Label>Prefix</Label>
+                <FormLabel>Prefix</FormLabel>
                 <FormInput
                     name="prefix"
                     type="text"
@@ -177,9 +178,9 @@ function DocumentIdentitiesModalForm({ control, isEditing }: DocumentIdentitiesM
                 />
             </InputGroup>
             <InputGroup className="vstack">
-                <Label>Value</Label>
+                <FormLabel>Value</FormLabel>
                 <FormInput name="value" type="number" control={control} placeholder="Enter identity value" />
             </InputGroup>
-        </FormGroup>
+        </Form>
     );
 }

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
+    AzureQueueStorageConnection,
     ConnectionFormData,
     EditConnectionStringFormProps,
-    AzureQueueStorageConnection,
 } from "../connectionStringsTypes";
 import { SelectOption } from "components/common/select/Select";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -10,9 +10,9 @@ import * as yup from "yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { FormInput, FormSelect } from "components/common/Form";
+import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import Badge from "react-bootstrap/Badge";
-import { Form, Label, PopoverBody } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
@@ -23,7 +23,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { mapAzureQueueStorageConnectionStringSettingsToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
-import { PopoverWithHover } from "components/common/PopoverWithHover";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type FormData = ConnectionFormData<AzureQueueStorageConnection>;
 
@@ -82,7 +82,7 @@ export default function AzureQueueStorageConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Label>Name</Label>
+                <FormLabel>Name</FormLabel>
                 <FormInput
                     control={control}
                     name="name"
@@ -93,7 +93,7 @@ export default function AzureQueueStorageConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Label className="d-flex align-items-center gap-1">
+                <FormLabel className="d-flex align-items-center gap-1">
                     Authentication{" "}
                     {asyncTest.result?.Success ? (
                         <Badge bg="success" pill>
@@ -106,7 +106,7 @@ export default function AzureQueueStorageConnectionString({
                             Failed connection
                         </Badge>
                     ) : null}
-                </Label>
+                </FormLabel>
                 <FormSelect
                     name="authType"
                     control={control}
@@ -150,21 +150,22 @@ interface SelectedAuthFieldsProps {
 }
 
 function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
-    const [syntaxHelpElement, setSyntaxHelpElement] = useState<HTMLElement>();
-
     if (authMethod === "connectionString") {
         return (
             <div className="mb-2">
                 <div className="d-flex flex-grow align-items-baseline justify-content-between">
-                    <Label>Connection string</Label>
-                    <small ref={setSyntaxHelpElement} className="text-primary">
-                        Syntax <Icon icon="help" margin="m-0" />
-                    </small>
-                    <PopoverWithHover target={syntaxHelpElement}>
-                        <PopoverBody>
-                            Example: <code>{exampleConnectionString}</code>
-                        </PopoverBody>
-                    </PopoverWithHover>
+                    <FormLabel>Connection string</FormLabel>
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Example: <code>{exampleConnectionString}</code>
+                            </>
+                        }
+                    >
+                        <small className="text-primary">
+                            Syntax <Icon icon="help" margin="m-0" />
+                        </small>
+                    </PopoverWithHoverWrapper>
                 </div>
                 <FormInput
                     control={control}
@@ -181,7 +182,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
         return (
             <div className="vstack gap-3">
                 <div className="mb-2">
-                    <Label>Client ID</Label>
+                    <FormLabel>Client ID</FormLabel>
                     <FormInput
                         control={control}
                         name="settings.entraId.clientId"
@@ -190,7 +191,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
                     />
                 </div>
                 <div className="mb-2">
-                    <Label>Client Secret</Label>
+                    <FormLabel>Client Secret</FormLabel>
                     <FormInput
                         control={control}
                         name="settings.entraId.clientSecret"
@@ -200,7 +201,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
                     />
                 </div>
                 <div className="mb-2">
-                    <Label>Storage Account Name</Label>
+                    <FormLabel>Storage Account Name</FormLabel>
                     <FormInput
                         control={control}
                         name="settings.entraId.storageAccountName"
@@ -209,7 +210,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
                     />
                 </div>
                 <div className="mb-2">
-                    <Label>Tenant ID</Label>
+                    <FormLabel>Tenant ID</FormLabel>
                     <FormInput
                         control={control}
                         name="settings.entraId.tenantId"
@@ -224,7 +225,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
     if (authMethod === "passwordless") {
         return (
             <div className="mb-2">
-                <Label>Storage Account Name</Label>
+                <FormLabel>Storage Account Name</FormLabel>
                 <FormInput
                     control={control}
                     name="settings.passwordless.storageAccountName"

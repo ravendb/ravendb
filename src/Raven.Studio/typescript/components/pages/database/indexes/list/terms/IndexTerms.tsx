@@ -1,7 +1,8 @@
 import { Icon } from "components/common/Icon";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import { Col, Row } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import { UseAsyncReturn } from "react-async-hook";
 import React from "react";
 import "./IndexTerms.scss";

@@ -4,7 +4,8 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useServices } from "hooks/useServices";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import { Col, Form, FormGroup, Row } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import {
     RevisionsBinCleanerFormData,
@@ -16,7 +17,7 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormGroup, FormInput, FormSwitch } from "components/common/Form";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
@@ -25,6 +26,7 @@ import useRevisionsBinCleanerFormSideEffects from "components/pages/database/set
 import { revisionsBinCleanerUtils } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerUtils";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import Form from "react-bootstrap/Form";
 
 export default function RevisionsBinCleaner() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);

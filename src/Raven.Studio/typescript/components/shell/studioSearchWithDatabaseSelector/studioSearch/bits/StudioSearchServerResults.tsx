@@ -1,7 +1,7 @@
+import Dropdown from "react-bootstrap/Dropdown";
 import StudioSearchDropdownItem from "../bits/StudioSearchResultItem";
 import { StudioSearchResult, StudioSearchResultItem } from "../studioSearchTypes";
 import React from "react";
-import { DropdownItem } from "reactstrap";
 
 export default function StudioSearchServerResults(props: {
     serverColumnRef: React.RefObject<HTMLDivElement>;
@@ -17,9 +17,9 @@ export default function StudioSearchServerResults(props: {
 
     return (
         <div className="col-md-5 col-sm-12 studio-search__server-col p-0" ref={serverColumnRef}>
-            <DropdownItem header className="studio-search__server-col__header--sticky">
+            <Dropdown.Header className="studio-search__server-col__header--sticky">
                 <span className="small-label">Server</span>
-            </DropdownItem>
+            </Dropdown.Header>
             <div className="studio-search__server-col__group">
                 {serverResults.map((item) => (
                     <StudioSearchDropdownItem key={item.id} item={item} activeItemId={activeItem?.id} />

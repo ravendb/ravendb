@@ -20,6 +20,7 @@ import { InputItem } from "components/models/common";
 import { exhaustiveStringTuple } from "components/utils/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { useOngoingTasksOperations } from "components/pages/database/tasks/shared/shared";
+import OngoingTaskOperationConfirm from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
 
 interface OngoingTasksHeaderProps {
     tasks: OngoingTasksState;
@@ -55,7 +56,8 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
 
     const serverWideTasksUrl = appUrl.forServerWideTasks();
 
-    const { onTaskOperation, isTogglingStateAny, isDeletingAny } = useOngoingTasksOperations(reload);
+    const { onTaskOperation, isTogglingStateAny, isDeletingAny, operationConfirm, cancelOperationConfirm } =
+        useOngoingTasksOperations(reload);
 
     const getSelectedTaskShardedInfos = () =>
         [...tasks.tasks, ...tasks.subscriptions, ...tasks.replicationHubs]
@@ -63,107 +65,109 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
             .map((x) => x.shared);
 
     return (
-        <StickyHeader>
-            <div className="hstack gap-3 flex-wrap">
-                {hasDatabaseWriteAccess && (
-                    <>
-                        {isNewTaskModalOpen && (
-                            <OngoingTaskAddModal
-                                toggle={toggleIsNewTaskModalOpen}
-                                subscriptionsDatabaseCount={subscriptionsDatabaseCount}
-                            />
-                        )}
-                        <div id="NewTaskButton">
-                            <Button onClick={toggleIsNewTaskModalOpen} variant="primary" className="rounded-pill">
-                                <Icon icon="ongoing-tasks" addon="plus" />
-                                Add a Database Task
-                            </Button>
-                        </div>
-                    </>
-                )}
+        <>
+            <StickyHeader>
+                <div className="hstack gap-3 flex-wrap">
+                    {hasDatabaseWriteAccess && (
+                        <>
+                            {isNewTaskModalOpen && (
+                                <OngoingTaskAddModal
+                                    toggle={toggleIsNewTaskModalOpen}
+                                    subscriptionsDatabaseCount={subscriptionsDatabaseCount}
+                                />
+                            )}
+                            <div id="NewTaskButton">
+                                <Button onClick={toggleIsNewTaskModalOpen} variant="primary" className="rounded-pill">
+                                    <Icon icon="ongoing-tasks" addon="plus" />
+                                    Add a Database Task
+                                </Button>
+                            </div>
+                        </>
+                    )}
 
-                <FlexGrow />
+                    <FlexGrow />
 
-                {isClusterAdminOrClusterNode && (
-                    <Button
-                        variant="link"
-                        size="sm"
-                        target="_blank"
-                        href={serverWideTasksUrl}
-                        title="Go to the Server-Wide Tasks view"
-                    >
-                        <Icon icon="server-wide-tasks" />
-                        Server-Wide Tasks
-                    </Button>
-                )}
+                    {isClusterAdminOrClusterNode && (
+                        <Button
+                            variant="link"
+                            size="sm"
+                            target="_blank"
+                            href={serverWideTasksUrl}
+                            title="Go to the Server-Wide Tasks view"
+                        >
+                            <Icon icon="server-wide-tasks" />
+                            Server-Wide Tasks
+                        </Button>
+                    )}
 
-                <AboutViewFloating>
-                    <AccordionItemWrapper
-                        icon="about"
-                        color="info"
-                        heading="About this view"
-                        description="Get additional info on this feature"
-                        targetId="about-view"
-                    >
-                        <div>
-                            <strong>Ongoing-tasks</strong> are work tasks assigned to the database.
-                            <ul className="margin-top-xxs">
-                                <li>
-                                    A few examples are: <br />
-                                    Executing a periodic backup of the database, replicating to another RavenDB
-                                    instance, or transferring data to external frameworks such as Kafka, RabbitMQ, Azure
-                                    Queue Storage etc.
-                                </li>
-                                <li className="margin-top-xxs">
-                                    Click the &quot;Add a Database Task&quot; button to view all available tasks and
-                                    select from the list.
-                                </li>
-                            </ul>
-                        </div>
-                        <div>
-                            <strong>Running in the background</strong>, each ongoing task is handled by a designated
-                            node from the Database-Group nodes.
-                            <ul className="margin-top-xxs">
-                                <li>
-                                    For each task, you can specify which node will be responsible for the task and
-                                    whether the cluster may assign a different node when that node is down.
-                                </li>
-                                <li className="margin-top-xxs">
-                                    If not specified, the cluster will decide which node will handle the task.
-                                </li>
-                            </ul>
-                        </div>
-                        <hr />
-                        <div className="small-label mb-2">useful links</div>
-                        <a href={ongoingTasksDocsLink} target="_blank">
-                            <Icon icon="newtab" /> Docs - Ongoing Tasks
-                        </a>
-                    </AccordionItemWrapper>
-                </AboutViewFloating>
-            </div>
-
-            {allTasksCount > 0 && (
-                <div className="mt-3">
-                    <OngoingTasksFilter
-                        filter={filter}
-                        setFilter={setFilter}
-                        filterByStatusOptions={getFilterByStatusOptions(tasks, hasInternalReplication)}
-                        tasksCount={allTasksCount}
-                    />
+                    <AboutViewFloating>
+                        <AccordionItemWrapper
+                            icon="about"
+                            color="info"
+                            heading="About this view"
+                            description="Get additional info on this feature"
+                            targetId="about-view"
+                        >
+                            <div>
+                                <strong>Ongoing-tasks</strong> are work tasks assigned to the database.
+                                <ul className="margin-top-xxs">
+                                    <li>
+                                        A few examples are: <br />
+                                        Executing a periodic backup of the database, replicating to another RavenDB
+                                        instance, or transferring data to external frameworks such as Kafka, RabbitMQ,
+                                        Azure Queue Storage etc.
+                                    </li>
+                                    <li className="margin-top-xxs">
+                                        Click the &quot;Add a Database Task&quot; button to view all available tasks and
+                                        select from the list.
+                                    </li>
+                                </ul>
+                            </div>
+                            <div>
+                                <strong>Running in the background</strong>, each ongoing task is handled by a designated
+                                node from the Database-Group nodes.
+                                <ul className="margin-top-xxs">
+                                    <li>
+                                        For each task, you can specify which node will be responsible for the task and
+                                        whether the cluster may assign a different node when that node is down.
+                                    </li>
+                                    <li className="margin-top-xxs">
+                                        If not specified, the cluster will decide which node will handle the task.
+                                    </li>
+                                </ul>
+                            </div>
+                            <hr />
+                            <div className="small-label mb-2">useful links</div>
+                            <a href={ongoingTasksDocsLink} target="_blank">
+                                <Icon icon="newtab" /> Docs - Ongoing Tasks
+                            </a>
+                        </AccordionItemWrapper>
+                    </AboutViewFloating>
                 </div>
-            )}
 
-            {allTasksCount > 0 && hasDatabaseAdminAccess && (
-                <OngoingTaskSelectActions
-                    allTasks={filteredDatabaseTaskIds}
-                    selectedTasks={selectedTaskIds}
-                    setSelectedTasks={setSelectedTaskIds}
-                    onTaskOperation={(type) => onTaskOperation(type, getSelectedTaskShardedInfos())}
-                    isTogglingState={isTogglingStateAny}
-                    isDeleting={isDeletingAny}
-                />
-            )}
-        </StickyHeader>
+                {allTasksCount > 0 && (
+                    <div className="mt-3">
+                        <OngoingTasksFilter
+                            filter={filter}
+                            setFilter={setFilter}
+                            filterByStatusOptions={getFilterByStatusOptions(tasks, hasInternalReplication)}
+                            tasksCount={allTasksCount}
+                        />
+                    </div>
+                )}
+                {allTasksCount > 0 && hasDatabaseAdminAccess && (
+                    <OngoingTaskSelectActions
+                        allTasks={filteredDatabaseTaskIds}
+                        selectedTasks={selectedTaskIds}
+                        setSelectedTasks={setSelectedTaskIds}
+                        onTaskOperation={(type) => onTaskOperation(type, getSelectedTaskShardedInfos())}
+                        isTogglingState={isTogglingStateAny}
+                        isDeleting={isDeletingAny}
+                    />
+                )}
+            </StickyHeader>
+            {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
+        </>
     );
 }
 

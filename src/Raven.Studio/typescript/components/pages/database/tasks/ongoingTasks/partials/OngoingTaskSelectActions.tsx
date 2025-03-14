@@ -60,7 +60,7 @@ export default function OngoingTaskSelectActions(props: OngoingTaskSelectActions
                             <Dropdown.Toggle
                                 variant="secondary"
                                 disabled={!anythingSelected || isTogglingState}
-                                title="Set the status (enabled/disabled) of selected databases"
+                                title="Set the status (enabled/disabled) of selected ongoing tasks"
                                 className="rounded-pill"
                             >
                                 {isTogglingState ? <Spinner size="sm" /> : <Icon icon="play" />} Set state

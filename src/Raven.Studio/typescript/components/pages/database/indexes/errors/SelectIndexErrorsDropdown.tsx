@@ -1,7 +1,7 @@
 import React from "react";
 import "./SelectIndexDropdownToggle.scss";
 import Badge from "react-bootstrap/Badge";
-import { DropdownMenu, DropdownToggle, Label, UncontrolledDropdown } from "reactstrap";
+import { FormLabel } from "components/common/Form";
 import { Checkbox } from "components/common/Checkbox";
 import { FlexGrow } from "components/common/FlexGrow";
 import { IndexErrorsDropdownType, NameAndCount } from "components/pages/database/indexes/errors/types";
@@ -9,6 +9,8 @@ import CheckboxSelectAll from "components/common/CheckboxSelectAll";
 import { useCheckboxes } from "hooks/useCheckboxes";
 import { useIndexErrorsDropdown } from "components/pages/database/indexes/errors/hooks/useIndexErrorsDropdown";
 import { ColumnFiltersState, Updater } from "@tanstack/react-table";
+import Dropdown from "react-bootstrap/Dropdown";
+import { CustomDropdownToggle } from "components/common/Dropdown";
 
 interface SelectIndexErrorsDropdownProps {
     indexesList: NameAndCount[];
@@ -42,11 +44,17 @@ export function SelectIndexErrorsDropdown({
     });
 
     return (
-        <UncontrolledDropdown className="select-index-errors-dropdown">
-            <DropdownToggle disabled={isLoading} className="select-index-errors-toggle d-flex align-items-center" caret>
+        <Dropdown className="select-index-errors-dropdown">
+            <Dropdown.Toggle
+                as={CustomDropdownToggle}
+                variant="secondary"
+                disabled={isLoading}
+                className="select-index-errors-toggle d-flex align-items-center"
+                isCaretHidden
+            >
                 <div className="flex-grow d-flex align-items-center">{labelText}</div>
-            </DropdownToggle>
-            <DropdownMenu className="p-3 custom-dropdown-menu">
+            </Dropdown.Toggle>
+            <Dropdown.Menu className="p-3 custom-dropdown-menu">
                 <div className="vstack gap-2">
                     <div className="hstack lh-1 gap-3">
                         <CheckboxSelectAll
@@ -69,16 +77,16 @@ export function SelectIndexErrorsDropdown({
                                     selected={selectedColumnFilters.includes(item.name)}
                                     toggleSelection={() => toggleOne(item.name)}
                                 />
-                                <Label className="m-0 text-truncate">
+                                <FormLabel className="m-0 text-truncate">
                                     <small>{item.name}</small>
-                                </Label>
+                                </FormLabel>
                             </div>
                             <FlexGrow />
                             <Badge bg="faded-danger">{item.count}</Badge>
                         </div>
                     ))}
                 </div>
-            </DropdownMenu>
-        </UncontrolledDropdown>
+            </Dropdown.Menu>
+        </Dropdown>
     );
 }

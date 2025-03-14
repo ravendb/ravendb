@@ -2,7 +2,7 @@ import { Icon } from "components/common/Icon";
 import StudioSearchFuzzyHighlightedText from "../bits/StudioSearchFuzzyHighlightedText";
 import { StudioSearchResultItem } from "../studioSearchTypes";
 import React from "react";
-import { DropdownItem } from "reactstrap";
+import Dropdown from "react-bootstrap/Dropdown";
 
 interface StudioSearchDropdownItemProps {
     item: StudioSearchResultItem;
@@ -13,7 +13,7 @@ export default function StudioSearchDropdownItem({ item, activeItemId }: StudioS
     const isCapitalized = item.type.includes("MenuItem") && !item.isCapitalizedDisabled;
 
     return (
-        <DropdownItem
+        <Dropdown.Item
             onClick={item.onSelected}
             className="d-flex align-items-center studio-search__dropdown-item"
             active={activeItemId === item.id}
@@ -39,6 +39,6 @@ export default function StudioSearchDropdownItem({ item, activeItemId }: StudioS
                     />
                 )}
             </div>
-        </DropdownItem>
+        </Dropdown.Item>
     );
 }
