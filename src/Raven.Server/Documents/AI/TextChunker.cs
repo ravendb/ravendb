@@ -56,17 +56,16 @@ public static class TextChunker
     {
         var tokenApproximationLen = textualValue.Length / 4;
         var whiteSpaceTokenizer = new WhitespaceTokenizer();
-        var tokens = new Token[tokenApproximationLen];
-        var tokensAsRef = tokens.AsSpan();
+        var tokens = new List<Token>();
         
-        whiteSpaceTokenizer.Tokenize(textualValue.AsSpan(), ref tokensAsRef);
+        whiteSpaceTokenizer.Tokenize(textualValue.AsSpan(), ref tokens);
         List<string> chunks = new(tokenApproximationLen / maxTokensPerChunk);
         
         var offset = 0;
         var currentChunkLenFromStart = 0;
-        for (int i = 0; i < tokensAsRef.Length; i++)
+        for (int i = 0; i < tokens.Count; i++)
         {
-            var currentToken = tokensAsRef[i];
+            var currentToken = tokens[i];
             currentChunkLenFromStart = currentToken.Offset + (int)currentToken.Length;
 
             if (i != 0 && (i+1) % maxTokensPerChunk == 0)

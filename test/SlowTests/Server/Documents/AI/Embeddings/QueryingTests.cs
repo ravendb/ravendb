@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
@@ -291,6 +292,46 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
                 .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["cat", "dog"])).ToList();
             Assert.Equal(0, multiVectorTextualQuery.Count);
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public async Task CanSearchByMultipleVectorsByTextsInParallel(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { ChunkingOptions = DefaultChunkingOptions, Path = "TextualValue" }]);
+
+            using (var session1 = store.OpenAsyncSession())
+            using (var session2 = store.OpenAsyncSession())
+            using (var session3 = store.OpenAsyncSession())
+            {
+                await session1.StoreAsync(new Dto() { TextualValue = "pizza" });
+                await session1.StoreAsync(new Dto() { TextualValue = "car" });
+                await session1.StoreAsync(new Dto() { TextualValue = "beach" });
+                await session1.SaveChangesAsync();
+
+                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                
+                var q1 = session1.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]))
+                    .ToListAsync();
+
+                var q2 = session2.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "dog"]))
+                    .ToListAsync();
+
+                var q3 = session3.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["cat", "dog"])).ToListAsync();
+                
+                Task.WaitAll(q1, q2, q3);
+                
+                Assert.Equal(2, q1.Result.Count);
+                Assert.Equal(1, q2.Result.Count);
+                Assert.Equal(0, q3.Result.Count);
+            }
         }
     }
     
