@@ -89,6 +89,7 @@ export default function RabbitMqConnectionString({
                     control={control}
                     name="connectionString"
                     type="textarea"
+                    as="textarea"
                     rows={3}
                     placeholder="Enter a connection string for RabbitMQ"
                     autoComplete="off"

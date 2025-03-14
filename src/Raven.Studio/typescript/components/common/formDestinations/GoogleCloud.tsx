@@ -123,6 +123,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                                         control={control}
                                         placeholder={googleCredentialsJsonPlaceholder}
                                         type="textarea"
+                                        as="textarea"
                                         autoComplete="off"
                                         rows={15}
                                         className={classNames({ "d-none": !isCredentialsJsonVisible })}

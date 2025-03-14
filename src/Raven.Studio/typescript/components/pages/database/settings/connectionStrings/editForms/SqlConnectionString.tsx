@@ -128,6 +128,7 @@ export default function SqlConnectionString({
                     control={control}
                     name="connectionString"
                     type="textarea"
+                    as="textarea"
                     placeholder={getConnectionStringPlaceholder(formValues.factoryName)}
                     rows={3}
                     autoComplete="off"

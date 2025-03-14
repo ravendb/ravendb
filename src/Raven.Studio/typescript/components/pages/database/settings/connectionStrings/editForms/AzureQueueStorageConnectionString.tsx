@@ -170,6 +170,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
                     control={control}
                     name="settings.connectionString.connectionStringValue"
                     type="textarea"
+                    as="textarea"
                     placeholder="Enter a connection string"
                     rows={5}
                 />
