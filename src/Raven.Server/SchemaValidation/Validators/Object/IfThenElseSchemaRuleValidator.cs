@@ -18,7 +18,7 @@ public class IfThenElseSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRe
         _elseValidator = elseValidator;
     }
 
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         //TODO Maybe to build a dedicated error
         return _ifValidator.Validate(value, null, null) 

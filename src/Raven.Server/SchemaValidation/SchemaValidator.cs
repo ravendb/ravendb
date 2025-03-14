@@ -22,7 +22,7 @@ public class SchemaValidator : IDisposable
 
     public bool Validate(BlittableJsonReaderObject obj, out string errors)
     {
-        var errorBuilder = new ErrorBuilder();
+        using var errorBuilder = new ErrorBuilder();
         var isValid = _root.Validate(obj, string.Empty, errorBuilder);
         errors = errorBuilder.GetErrors();
         return isValid;

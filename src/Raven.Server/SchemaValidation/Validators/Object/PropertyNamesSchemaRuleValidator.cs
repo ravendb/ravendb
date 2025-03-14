@@ -15,7 +15,7 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         if (_propertyNameValidators == null)
             return true;

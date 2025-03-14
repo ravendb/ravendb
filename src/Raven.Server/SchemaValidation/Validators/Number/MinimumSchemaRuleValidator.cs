@@ -7,7 +7,7 @@ namespace Raven.Server.SchemaValidation.Validators.Number;
 public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _minimum;
-    private readonly Func<decimal, IErrorBuilder, bool> _validatePredicate;
+    private readonly Func<decimal, ErrorBuilder, bool> _validatePredicate;
 
     // ReSharper disable once IntroduceOptionalParameters.Global
     public MinimumSchemaRuleValidator(decimal minimum, bool exclusiveMinimum)
@@ -16,9 +16,9 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
         _validatePredicate = exclusiveMinimum ? ExclusiveValidate : NonExclusiveValidate;
     }
 
-    protected override bool ValidateInternal(decimal value, IErrorBuilder errorBuilder) => _validatePredicate(value, errorBuilder);
+    protected override bool ValidateInternal(decimal value, ErrorBuilder errorBuilder) => _validatePredicate(value, errorBuilder);
 
-    private bool NonExclusiveValidate(decimal value, IErrorBuilder errorBuilder)
+    private bool NonExclusiveValidate(decimal value, ErrorBuilder errorBuilder)
     {
         if (value.CompareTo(_minimum) >= 0) 
             return true;
@@ -27,7 +27,7 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
         return false;
     }
 
-    private bool ExclusiveValidate(decimal value, IErrorBuilder errorBuilder)
+    private bool ExclusiveValidate(decimal value, ErrorBuilder errorBuilder)
     {
         if (value.CompareTo(_minimum) > 0) 
             return true;

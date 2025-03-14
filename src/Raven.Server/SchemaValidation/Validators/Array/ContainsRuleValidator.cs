@@ -16,7 +16,7 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
         _maxContains = maxContains;
     }
 
-    protected override bool ValidateInternal(BlittableJsonReaderArray value, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderArray value, ErrorBuilder errorBuilder)
     {
         var count = 0;
         for (int j = 0; j < value.Length; j++)

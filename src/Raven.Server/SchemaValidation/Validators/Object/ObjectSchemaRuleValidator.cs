@@ -23,7 +23,7 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         _schemaPath = schemaPath;
     }
 
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         var isValid = true;
         if (_namedPropertyValidators != null)
@@ -67,7 +67,7 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
     }
 
     private static bool ValidateProperty(PropertySchemaRuleValidator validator, BlittableJsonReaderObject value, string prop,
-        IErrorBuilder errorBuilder)
+        ErrorBuilder errorBuilder)
     {
         
         errorBuilder?.Path.StepIn(prop);

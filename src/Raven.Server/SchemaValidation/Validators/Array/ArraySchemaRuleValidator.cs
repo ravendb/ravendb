@@ -21,7 +21,7 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         _schemaPath = schemaPath;
     }
     
-    protected override bool ValidateInternal(BlittableJsonReaderArray value, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(BlittableJsonReaderArray value, ErrorBuilder errorBuilder)
     {
         var isValid = true;
         int i = 0;
