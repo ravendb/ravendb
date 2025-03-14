@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.HashFunction;
-using System.Data.HashFunction.Blake2;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -9,6 +7,7 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -24,19 +23,15 @@ public static class EmbeddingsHelper
     /// language model properly responds to embedding generation requests.
     /// </remarks>
     internal static readonly List<string> ValuesListToVerifyConnection = ["TestValue", "TestValue2"];
-    private static readonly IBlake2B Hash;
-
-    static EmbeddingsHelper()
-    {
-        Hash = Blake2BFactory.Instance.Create(new Blake2BConfig
-        {
-            HashSizeInBits = 256
-        });
-    }
 
     public static string CalculateInputValueHash(string value)
     {
-        return Hash.ComputeHash(value).AsHexString(uppercase: true);
+        Span<byte> hashBuffer = stackalloc byte[Sodium.GenericHashSize];
+        var valueSpan = MemoryMarshal.Cast<char, byte>(value.AsSpan());
+
+        Sodium.GenericHash(valueSpan, hashBuffer);
+
+        return Convert.ToHexString(hashBuffer);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
