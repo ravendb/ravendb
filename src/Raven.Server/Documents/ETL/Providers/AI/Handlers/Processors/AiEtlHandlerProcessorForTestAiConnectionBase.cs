@@ -1,13 +1,12 @@
 ﻿using System;
-using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.SemanticKernel.Embeddings;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Json;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -32,67 +31,68 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
         InMemoryLoggerProvider logger = null;
         try
         {
-            string jsonConfigString;
-            using (var streamReader = new StreamReader(HttpContext.Request.Body))
-                jsonConfigString = await streamReader.ReadToEndAsync();
-
-            var aiConnectionString = new AiConnectionString();
-
-            switch (aiConnectorType)
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                case AiConnectorType.OpenAi:
-                    var openAiSettings = JsonConvert.DeserializeObject<OpenAiSettings>(jsonConfigString);
-                    aiConnectionString.OpenAiSettings = openAiSettings;
-                    break;
+                var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "etl/test/script");
 
-                case AiConnectorType.AzureOpenAi:
-                    var azureOpenAiSettings = JsonConvert.DeserializeObject<AzureOpenAiSettings>(jsonConfigString);
-                    aiConnectionString.AzureOpenAiSettings = azureOpenAiSettings;
-                    break;
+                var aiConnectionString = new AiConnectionString();
 
-                case AiConnectorType.Ollama:
-                    var ollamaSettings = JsonConvert.DeserializeObject<OllamaSettings>(jsonConfigString);
-                    aiConnectionString.OllamaSettings = ollamaSettings;
-                    break;
+                switch (aiConnectorType)
+                {
+                    case AiConnectorType.OpenAi:
+                        var openAiSettings = JsonDeserializationServer.OpenAiSettings(json);
+                        aiConnectionString.OpenAiSettings = openAiSettings;
+                        break;
 
-                case AiConnectorType.Embedded:
-                    var embeddedSettings = JsonConvert.DeserializeObject<EmbeddedSettings>(jsonConfigString);
-                    aiConnectionString.EmbeddedSettings = embeddedSettings;
-                    break;
+                    case AiConnectorType.AzureOpenAi:
+                        var azureOpenAiSettings = JsonDeserializationServer.AzureOpenAiSettings(json);
+                        aiConnectionString.AzureOpenAiSettings = azureOpenAiSettings;
+                        break;
 
-                case AiConnectorType.Google:
-                    var googleSettings = JsonConvert.DeserializeObject<GoogleSettings>(jsonConfigString);
-                    aiConnectionString.GoogleSettings = googleSettings;
-                    break;
+                    case AiConnectorType.Ollama:
+                        var ollamaSettings = JsonDeserializationServer.OllamaSettings(json);
+                        aiConnectionString.OllamaSettings = ollamaSettings;
+                        break;
 
-                case AiConnectorType.HuggingFace:
-                    var huggingFace = JsonConvert.DeserializeObject<HuggingFaceSettings>(jsonConfigString);
-                    aiConnectionString.HuggingFaceSettings = huggingFace;
-                    break;
+                    case AiConnectorType.Embedded:
+                        var embeddedSettings = JsonDeserializationServer.EmbeddedSettings(json);
+                        aiConnectionString.EmbeddedSettings = embeddedSettings;
+                        break;
 
-                case AiConnectorType.MistralAi:
-                    var mistralAiSettings = JsonConvert.DeserializeObject<MistralAiSettings>(jsonConfigString);
-                    aiConnectionString.MistralAiSettings = mistralAiSettings;
-                    break;
+                    case AiConnectorType.Google:
+                        var googleSettings = JsonDeserializationServer.GoogleSettings(json);
+                        aiConnectionString.GoogleSettings = googleSettings;
+                        break;
 
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+                    case AiConnectorType.HuggingFace:
+                        var huggingFace = JsonDeserializationServer.HuggingFaceSettings(json);
+                        aiConnectionString.HuggingFaceSettings = huggingFace;
+                        break;
 
-            var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
+                    case AiConnectorType.MistralAi:
+                        var mistralAiSettings = JsonDeserializationServer.MistralAiSettings(json);
+                        aiConnectionString.MistralAiSettings = mistralAiSettings;
+                        break;
 
-            (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(aiEtlConfiguration);
-            var embeddings = await AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.ValuesListToVerifyConnection);
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
 
-            if (embeddings.Count != EmbeddingsHelper.ValuesListToVerifyConnection.Count)
-                throw new Exception($"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' result, but got '{embeddings.Count}'.");
+                var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
 
-            var result = new DynamicJsonValue { [nameof(NodeConnectionTestResult.Success)] = true };
+                (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(aiEtlConfiguration);
+                var embeddings = await AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.ValuesListToVerifyConnection);
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            {
-                context.Write(writer, result);
+                if (embeddings.Count != EmbeddingsHelper.ValuesListToVerifyConnection.Count)
+                    throw new Exception(
+                        $"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' result, but got '{embeddings.Count}'.");
+
+                var result = new DynamicJsonValue { [nameof(NodeConnectionTestResult.Success)] = true };
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
             }
         }
         catch (Exception e)

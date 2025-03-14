@@ -82,6 +82,7 @@ using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfigur
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 using RevisionsHandler = Raven.Server.Documents.Handlers.RevisionsHandler;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
+using Raven.Client.Documents.Operations.AI;
 
 namespace Raven.Server.Json
 {
@@ -329,6 +330,20 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, UpgradeInfoHandler.UpgradeInfoResponse> UpgradeInfoResponse = GenerateJsonDeserializationRoutine<UpgradeInfoHandler.UpgradeInfoResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, EventListenerToLog.EventListenerConfiguration> EventListenerConfiguration = GenerateJsonDeserializationRoutine<EventListenerToLog.EventListenerConfiguration>();
+
+        internal static readonly Func<BlittableJsonReaderObject, OpenAiSettings> OpenAiSettings = GenerateJsonDeserializationRoutine<OpenAiSettings>();
+
+        internal static readonly Func<BlittableJsonReaderObject, AzureOpenAiSettings> AzureOpenAiSettings = GenerateJsonDeserializationRoutine<AzureOpenAiSettings>();
+
+        internal static readonly Func<BlittableJsonReaderObject, OllamaSettings> OllamaSettings = GenerateJsonDeserializationRoutine<OllamaSettings>();
+
+        internal static readonly Func<BlittableJsonReaderObject, EmbeddedSettings> EmbeddedSettings = GenerateJsonDeserializationRoutine<EmbeddedSettings>();
+
+        internal static readonly Func<BlittableJsonReaderObject, GoogleSettings> GoogleSettings = GenerateJsonDeserializationRoutine<GoogleSettings>();
+
+        internal static readonly Func<BlittableJsonReaderObject, HuggingFaceSettings> HuggingFaceSettings = GenerateJsonDeserializationRoutine<HuggingFaceSettings>();
+
+        internal static readonly Func<BlittableJsonReaderObject, MistralAiSettings> MistralAiSettings = GenerateJsonDeserializationRoutine<MistralAiSettings>();
 
         public sealed class Parameters
         {
