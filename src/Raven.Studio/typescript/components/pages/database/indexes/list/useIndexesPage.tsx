@@ -205,7 +205,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         Promise.all(tasks).finally(() => throttledProgressRefresh.current());
     }, []);
 
-    const currentProcessor = useRef<(e: IndexEvent) => void>();
+    const currentProcessor = useRef<(e: IndexEvent) => void>(null);
 
     useEffect(() => {
         currentProcessor.current = (e: IndexEvent) => {

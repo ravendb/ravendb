@@ -1,5 +1,5 @@
 ﻿import { Icon } from "components/common/Icon";
-import React, { useState } from "react";
+import React, { JSX, useState } from "react";
 import InputGroup from "react-bootstrap/InputGroup";
 import Button from "react-bootstrap/Button";
 import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";

@@ -20,7 +20,7 @@ const ConfirmDialog = createContext<(options: ConfirmOptions) => Promise<boolean
 
 export function ConfirmDialogProvider({ children }: PropsWithChildren) {
     const [options, setOptions] = useState<InnerOptions>({ isOpen: false });
-    const promise = useRef<(choice: boolean) => void>();
+    const promise = useRef<(choice: boolean) => void>(null);
 
     const { isOpen, title, icon, confirmIcon, message } = options;
 

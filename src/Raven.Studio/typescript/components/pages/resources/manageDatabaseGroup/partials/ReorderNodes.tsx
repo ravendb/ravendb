@@ -82,7 +82,7 @@ export function ReorderNodes(props: ReorderNodesProps) {
     const radioToggleSelectedItem = fixOrder ? rightRadioToggleItem.value : leftRadioToggleItem.value;
 
     return (
-        <div ref={drop}>
+        <div ref={drop as TODO}>
             <div className="px-3 pt-3">
                 <RadioToggleWithIcon
                     name="after-recovery"

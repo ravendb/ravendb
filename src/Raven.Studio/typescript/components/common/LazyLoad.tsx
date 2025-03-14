@@ -1,5 +1,5 @@
 ﻿import classNames from "classnames";
-import React, { ReactNode } from "react";
+import React, { JSX, ReactNode } from "react";
 
 interface LazyLoadProps {
     children?: ReactNode | ReactNode[];

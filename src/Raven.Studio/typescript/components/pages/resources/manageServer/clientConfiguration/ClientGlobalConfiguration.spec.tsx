@@ -1,6 +1,9 @@
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";
-import { ClientConfiguration, LicenseRestricted } from "./ClientGlobalConfiguration.stories";
+import * as stories from "./ClientGlobalConfiguration.stories";
+import { composeStories } from "@storybook/react";
+
+const { ClientConfiguration, LicenseRestricted } = composeStories(stories);
 
 describe("ClientGlobalConfiguration", function () {
     it("can render", async () => {

@@ -10,6 +10,7 @@ import { statisticsViewSelectors } from "components/pages/database/status/statis
 import copyToClipboard = require("common/copyToClipboard");
 import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { JSX } from "react";
 
 interface DetailsBlockProps {
     children: (data: DetailedDatabaseStatistics, location: databaseLocationSpecifier) => JSX.Element;

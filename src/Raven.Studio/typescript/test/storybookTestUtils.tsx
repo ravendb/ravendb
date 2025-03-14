@@ -5,9 +5,17 @@ import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
 import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
-import { StoryFn } from "@storybook/react";
+import { ReactRenderer } from "@storybook/react";
+import { PartialStoryFn } from "storybook/internal/types";
 
-export function storybookContainerPublicContainer(Story: StoryFn) {
+type StoryFunction = PartialStoryFn<
+    ReactRenderer,
+    {
+        [x: string]: any;
+    }
+>;
+
+export function storybookContainerPublicContainer(Story: StoryFunction) {
     return (
         <div className="container">
             <Story />
@@ -28,19 +36,21 @@ function forceStoryRerender() {
     };
 }
 
-export function withStorybookContexts(storyFn: any) {
+export function withStorybookContexts(Story: StoryFunction) {
     return (
         <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
             <ConfirmDialogProvider>
                 <ServiceProvider services={mockServices.context}>
-                    <ChangesProvider changes={mockHooks.useChanges.mock}>{storyFn()}</ChangesProvider>
+                    <ChangesProvider changes={mockHooks.useChanges.mock}>
+                        <Story />
+                    </ChangesProvider>
                 </ServiceProvider>
             </ConfirmDialogProvider>
         </DirtyFlagProvider>
     );
 }
 
-export function withBootstrap5(Story: StoryFn) {
+export function withBootstrap5(Story: StoryFunction) {
     return (
         <React.Fragment key="bs5">
             <div
@@ -55,7 +65,7 @@ export function withBootstrap5(Story: StoryFn) {
     );
 }
 
-export function withForceRerender(Story: StoryFn) {
+export function withForceRerender(Story: StoryFunction) {
     const { key, ...rest } = forceStoryRerender();
     return (
         <React.Fragment key={key} {...rest}>

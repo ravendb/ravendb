@@ -35,7 +35,7 @@ export function Checkbox(props: CheckboxProps) {
     } = props;
 
     const defaultId = useUniqueId("checkbox");
-    const inputEl = useRef<HTMLInputElement>();
+    const inputEl = useRef<HTMLInputElement>(null);
 
     const inputId = id ?? defaultId;
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";

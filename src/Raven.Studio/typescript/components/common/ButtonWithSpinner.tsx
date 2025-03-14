@@ -1,4 +1,4 @@
-import React from "react";
+import { JSX } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import { Icon, IconProps } from "components/common/Icon";
 import IconName from "typings/server/icons";

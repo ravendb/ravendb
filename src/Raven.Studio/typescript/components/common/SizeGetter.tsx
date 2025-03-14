@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { JSX, useRef } from "react";
 import { useResizeObserver } from "hooks/useResizeObserver";
 
 interface SizeGetterProps {
@@ -8,7 +8,7 @@ interface SizeGetterProps {
 }
 
 export default function SizeGetter({ render, isHeighRequired = false, className }: SizeGetterProps) {
-    const ref = useRef<HTMLDivElement>();
+    const ref = useRef<HTMLDivElement>(null);
 
     const { width, height } = useResizeObserver({ ref });
 

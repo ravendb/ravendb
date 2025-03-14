@@ -189,7 +189,7 @@ function IndexErrorsPanelDetailsStatus({
     table,
 }: IndexErrorsPanelDetailsStatusProps) {
     const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
-    const ref = useRef<HTMLDivElement>();
+    const ref = useRef<HTMLDivElement>(null);
     const { width } = useResizeObserver({ ref });
     const mostRecentDateId = useUniqueId("most-recent-date");
 

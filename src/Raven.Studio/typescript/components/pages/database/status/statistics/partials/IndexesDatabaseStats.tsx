@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { JSX } from "react";
 import { withPreventDefault } from "components/utils/common";
 import genUtils from "common/generalUtils";
 import { useEventsCollector } from "hooks/useEventsCollector";

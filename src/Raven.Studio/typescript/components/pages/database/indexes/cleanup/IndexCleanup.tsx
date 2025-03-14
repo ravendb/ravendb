@@ -64,28 +64,28 @@ export function IndexCleanup() {
                         indicators={false}
                     >
                         <Carousel.Item key="carousel-0">
-                            <div ref={(el) => (carousel.carouselRefs.current[0] = el)}>
+                            <div ref={(el) => (carousel.carouselRefs.current[0] = el) as TODO}>
                                 <MergeIndexesCard mergable={mergable} />
                             </div>
                         </Carousel.Item>
                         <Carousel.Item key="carousel-1">
-                            <div ref={(el) => (carousel.carouselRefs.current[1] = el)}>
+                            <div ref={(el) => (carousel.carouselRefs.current[1] = el) as TODO}>
                                 <RemoveSubindexesCard surpassing={surpassing} />
                             </div>
                         </Carousel.Item>
                         <Carousel.Item key="carousel-2">
-                            <div ref={(el) => (carousel.carouselRefs.current[2] = el)}>
+                            <div ref={(el) => (carousel.carouselRefs.current[2] = el) as TODO}>
                                 <RemoveUnusedIndexesCard unused={unused} />
                             </div>
                         </Carousel.Item>
                         <Carousel.Item key="carousel-3">
-                            <div ref={(el) => (carousel.carouselRefs.current[3] = el)}>
+                            <div ref={(el) => (carousel.carouselRefs.current[3] = el) as TODO}>
                                 <UnmergableIndexesCard unmergable={unmergable} />
                             </div>
                         </Carousel.Item>
                         {errors.data.length > 0 && (
                             <Carousel.Item key="carousel-4">
-                                <div ref={(el) => (carousel.carouselRefs.current[4] = el)}>
+                                <div ref={(el) => (carousel.carouselRefs.current[4] = el) as TODO}>
                                     <MergeSuggestionsErrorsCarouselCard errors={errors.data} />
                                 </div>
                             </Carousel.Item>

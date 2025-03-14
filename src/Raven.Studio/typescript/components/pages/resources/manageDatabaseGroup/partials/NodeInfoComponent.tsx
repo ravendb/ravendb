@@ -279,7 +279,7 @@ export function NodeInfoReorderComponent(props: NodeInfoReorderComponentProps) {
     const opacity = isDragging ? 0.5 : 1;
 
     return (
-        <div ref={(node) => drag(drop(node))} style={{ opacity }}>
+        <div ref={(node) => drag(drop(node)) as TODO} style={{ opacity }}>
             <DatabaseGroupItem className="item-reorder">
                 <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
 

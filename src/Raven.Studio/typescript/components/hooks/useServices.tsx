@@ -31,7 +31,7 @@ export function configureMockServices(overloads: typeof services) {
 
 const servicesContext = createContext<ServicesContextDto>(services);
 
-export function ServiceProvider(props: { services: ServicesContextDto; children: JSX.Element }) {
+export function ServiceProvider(props: { services: ServicesContextDto; children: React.JSX.Element }) {
     return <servicesContext.Provider value={props.services}>{props.children}</servicesContext.Provider>;
 }
 

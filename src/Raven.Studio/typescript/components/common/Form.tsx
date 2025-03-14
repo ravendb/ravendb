@@ -512,7 +512,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
         shouldUnregister,
     });
 
-    let ToggleComponent: (props: CheckboxProps) => JSX.Element;
+    let ToggleComponent: (props: CheckboxProps) => React.JSX.Element;
     switch (type) {
         case "checkbox":
             ToggleComponent = Checkbox;

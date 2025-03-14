@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { JSX, useCallback } from "react";
 import Form from "react-bootstrap/Form";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";

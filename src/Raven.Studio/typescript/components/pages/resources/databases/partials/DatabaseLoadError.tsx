@@ -3,7 +3,7 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { Icon } from "components/common/Icon";
 
 export function DatabaseLoadError(props: { error: string }) {
-    const tooltipRef = useRef<HTMLElement>();
+    const tooltipRef = useRef<HTMLElement>(null);
 
     return (
         <strong className="text-danger" ref={tooltipRef}>

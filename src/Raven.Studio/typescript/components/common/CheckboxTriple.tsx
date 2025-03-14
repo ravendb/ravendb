@@ -13,7 +13,7 @@ export function CheckboxTriple(props: CheckboxTripleProps) {
     const { state, onChanged, color, title } = props;
     const colorClass = `form-check-${color ?? "secondary"}`;
 
-    const inputEl = useRef<HTMLInputElement>();
+    const inputEl = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         inputEl.current.indeterminate = state === "some_checked";
