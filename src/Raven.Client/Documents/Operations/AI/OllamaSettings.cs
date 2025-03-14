@@ -29,7 +29,7 @@ public sealed class OllamaSettings : AbstractAiSettings
     /// </summary>
     public string Model { get; set; }
 
-    public override void ValidateMandatoryFields(List<string> errors)
+    public override void ValidateFields(List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(Uri))
             errors.Add($"Value of `{nameof(Uri)}` field cannot be empty.");
