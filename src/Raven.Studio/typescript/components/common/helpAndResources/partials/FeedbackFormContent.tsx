@@ -121,29 +121,31 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                 </FormGroup>
                 <div className="d-flex align-items-center">
                     <Collapse in={isFeatureSpecific}>
-                        <div className="d-flex gap-1">
-                            <Button
-                                variant="link"
-                                className={classNames("p-0", {
-                                    "text-body": featureImpression === null,
-                                    "text-success": featureImpression === "positive",
-                                    "text-secondary": featureImpression === "negative",
-                                })}
-                                onClick={() => changeFeatureImpression("positive")}
-                            >
-                                <Icon icon="thumb-up" margin="m-0" title="Positive" />
-                            </Button>
-                            <Button
-                                variant="link"
-                                className={classNames("p-0", {
-                                    "text-body": featureImpression === null,
-                                    "text-danger": featureImpression === "negative",
-                                    "text-secondary": featureImpression === "positive",
-                                })}
-                                onClick={() => changeFeatureImpression("negative")}
-                            >
-                                <Icon icon="thumb-down" margin="m-0" title="Negative" />
-                            </Button>
+                        <div>
+                            <div className="d-flex gap-1">
+                                <Button
+                                    variant="link"
+                                    className={classNames("p-0", {
+                                        "text-body": featureImpression === null,
+                                        "text-success": featureImpression === "positive",
+                                        "text-secondary": featureImpression === "negative",
+                                    })}
+                                    onClick={() => changeFeatureImpression("positive")}
+                                >
+                                    <Icon icon="thumb-up" margin="m-0" title="Positive" />
+                                </Button>
+                                <Button
+                                    variant="link"
+                                    className={classNames("p-0", {
+                                        "text-body": featureImpression === null,
+                                        "text-danger": featureImpression === "negative",
+                                        "text-secondary": featureImpression === "positive",
+                                    })}
+                                    onClick={() => changeFeatureImpression("negative")}
+                                >
+                                    <Icon icon="thumb-down" margin="m-0" title="Negative" />
+                                </Button>
+                            </div>
                         </div>
                     </Collapse>
                     <FlexGrow />
