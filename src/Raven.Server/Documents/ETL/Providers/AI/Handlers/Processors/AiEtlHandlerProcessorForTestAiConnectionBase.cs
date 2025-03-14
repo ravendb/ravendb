@@ -31,6 +31,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
         InMemoryLoggerProvider logger = null;
         try
         {
+            using (var token = RequestHandler.CreateTimeLimitedBackgroundOperationToken())
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "etl/test/script");
@@ -81,7 +82,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                 var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
 
                 (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(aiEtlConfiguration);
-                var embeddings = await AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.ValuesListToVerifyConnection);
+                var embeddings = await AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.ValuesListToVerifyConnection, token.Token);
 
                 if (embeddings.Count != EmbeddingsHelper.ValuesListToVerifyConnection.Count)
                     throw new Exception(
