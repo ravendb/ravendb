@@ -1057,8 +1057,15 @@ class ongoingTasksStats extends shardViewModelBase {
                 + scriptsCount * ongoingTasksStats.betweenScriptsPadding
                 + ongoingTasksStats.openedTrackPadding;
             
-            const heightCount = etlTask.EtlType === "Olap"? 3 : 1; 
-            
+            let heightCount = 1;
+
+            if (etlTask.EtlType === "Olap") {
+                heightCount = 3;
+            }
+            if (etlTask.EtlType === "EmbeddingsGeneration") {
+                heightCount = 2;
+            }
+
             const openedHeight = 2 * ongoingTasksStats.openedTrackPadding
                 + ongoingTasksStats.trackHeight * heightCount
                 + (scriptsCount - 1) * ongoingTasksStats.betweenScriptsPadding
