@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         private const string DestinationFormat = "{0}-destination@{1}";
 
-        protected override void ValidateImpl(ref List<string> errors)
+        protected override void ValidateImpl(List<string> errors)
         {
             if (S3Settings != null)
             {

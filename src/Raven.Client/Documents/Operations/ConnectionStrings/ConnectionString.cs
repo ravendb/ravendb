@@ -9,21 +9,21 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
     {
         public string Name { get; set; }
 
-        public bool Validate(ref List<string> errors)
+        public bool Validate(List<string> errors)
         {
             if (errors == null)
                 throw new ArgumentNullException(nameof(errors));
 
             var count = errors.Count;
 
-            ValidateImpl(ref errors);
+            ValidateImpl(errors);
 
             return count == errors.Count;
         }
 
         public abstract ConnectionStringType Type { get; }
 
-        protected abstract void ValidateImpl(ref List<string> errors);
+        protected abstract void ValidateImpl(List<string> errors);
 
         public virtual DynamicJsonValue ToJson()
         {

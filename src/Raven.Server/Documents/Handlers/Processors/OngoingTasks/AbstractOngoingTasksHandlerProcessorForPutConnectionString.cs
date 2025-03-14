@@ -30,8 +30,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             var connectionStringType = ConnectionString.GetConnectionStringType(configuration);
             var connectionString = GetConnectionString(configuration, connectionStringType);
             
-            List<string> errors = new ();
-            if (connectionString.Validate(ref errors) == false)
+            List<string> errors = [];
+            if (connectionString.Validate(errors) == false)
                 throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
 
             if (RavenLogManager.Instance.IsAuditEnabled)

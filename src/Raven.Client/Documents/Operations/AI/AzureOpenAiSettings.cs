@@ -20,9 +20,9 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
     /// </summary>
     public string DeploymentName { get; set; }
 
-    public override void ValidateMandatoryFields(ref List<string> errors)
+    public override void ValidateMandatoryFields(List<string> errors)
     {
-        base.ValidateMandatoryFields(ref errors);
+        base.ValidateMandatoryFields(errors);
 
         if (string.IsNullOrWhiteSpace(DeploymentName))
             errors.Add($"Value for `{nameof(DeploymentName)}` field cannot be empty.");

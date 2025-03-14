@@ -39,7 +39,7 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
     /// </summary>
     public int? Dimensions { get; set; }
 
-    public override void ValidateMandatoryFields(ref List<string> errors)
+    public override void ValidateMandatoryFields(List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(ApiKey))
             errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");

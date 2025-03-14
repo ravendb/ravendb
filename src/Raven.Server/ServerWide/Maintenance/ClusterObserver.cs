@@ -448,7 +448,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     var status = ChangeVector.GetConflictStatusForDocument(lastFromSrc, currentFromDest);
                     if (status == ConflictStatus.AlreadyMerged)
                     {
-                        confirmCommands ??= new List<DestinationMigrationConfirmCommand>();
+                        confirmCommands ??= [];
                         confirmCommands.Add(new DestinationMigrationConfirmCommand(currentMigration.Bucket,
                             currentMigration.MigrationIndex, tag, databaseName, raftId));
                     }

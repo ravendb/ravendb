@@ -10,7 +10,7 @@ public sealed class SnowflakeConnectionString : ConnectionString
 
     public override ConnectionStringType Type => ConnectionStringType.Snowflake;
 
-    protected override void ValidateImpl(ref List<string> errors)
+    protected override void ValidateImpl(List<string> errors)
     {
         if (string.IsNullOrEmpty(ConnectionString))
             errors.Add($"{nameof(ConnectionString)} cannot be empty");

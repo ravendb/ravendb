@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
 
             if (validateConnection && TestMode == false)
-                Connection.Validate(ref errors);
+                Connection.Validate(errors);
 
             var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Operations.ETL
             
             foreach (var script in Transforms)
             {
-                script.Validate(ref errors, EtlType);
+                script.Validate(errors, EtlType);
 
                 if (uniqueNames.Add(script.Name) == false)
                     errors.Add($"Script name '{script.Name}' name is already defined. The script names need to be unique");

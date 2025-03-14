@@ -104,7 +104,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
                     if (batchMessages.Count == 10)
                     {
                         ProcessBatchMessages(queueName, batchMessages, documentIdToMessageId, queue, ref count,
-                            ref idsToDelete, ref tooLargeDocsErrors);
+                            idsToDelete, tooLargeDocsErrors);
                     }
                 }
                 catch (Exception ex)
@@ -116,8 +116,8 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             // handle remaining messages in batch
             if (batchMessages.Count > 0)
             {
-                ProcessBatchMessages(queueName, batchMessages, documentIdToMessageId, queue, ref count, ref idsToDelete,
-                    ref tooLargeDocsErrors);
+                ProcessBatchMessages(queueName, batchMessages, documentIdToMessageId, queue, ref count, idsToDelete,
+                    tooLargeDocsErrors);
             }
 
             if (tooLargeDocsErrors.Count > 0)
@@ -135,13 +135,13 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
     private void ProcessBatchMessages(string queueName,
         List<SendMessageBatchRequestEntry> batchMessages,
         Dictionary<string, string> documentIdToMessageId,
-        QueueWithItems<AmazonSqsItem> queue, ref int count, ref List<string> idsToDelete,
-        ref Queue<EtlErrorInfo> tooLargeDocsErrors)
+        QueueWithItems<AmazonSqsItem> queue, ref int count, List<string> idsToDelete,
+        Queue<EtlErrorInfo> tooLargeDocsErrors)
     {
         if (TrySendBatchMessages(queueName, batchMessages) == false)
         {
             // If batch sending failed, send each message individually
-            SendMessagesOneByOne(queueName, batchMessages, documentIdToMessageId, queue, ref idsToDelete, ref tooLargeDocsErrors);
+            SendMessagesOneByOne(queueName, batchMessages, documentIdToMessageId, queue, idsToDelete, tooLargeDocsErrors);
         }
         else
         {
@@ -150,7 +150,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             {
                 foreach (var entry in batchMessages)
                 {
-                    HandleIdForDeletion(documentIdToMessageId, ref idsToDelete, entry);
+                    HandleIdForDeletion(documentIdToMessageId, idsToDelete, entry);
                 }
             }
         }
@@ -159,7 +159,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
     }
 
     private static void HandleIdForDeletion(Dictionary<string, string> documentIdToMessageId,
-        ref List<string> idsToDelete,
+        List<string> idsToDelete,
         SendMessageBatchRequestEntry message)
     {
         string documentId = documentIdToMessageId.FirstOrDefault(doc => doc.Value == message.Id).Key;
@@ -195,8 +195,8 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         List<SendMessageBatchRequestEntry> batchMessages,
         Dictionary<string, string> documentIdToMessageId,
         QueueWithItems<AmazonSqsItem> queue,
-        ref List<string> idsToDelete,
-        ref Queue<EtlErrorInfo> tooLargeDocsErrors)
+        List<string> idsToDelete,
+        Queue<EtlErrorInfo> tooLargeDocsErrors)
     {
         foreach (var message in batchMessages)
         {
@@ -214,7 +214,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
                 if (queue.DeleteProcessedDocuments)
                 {
-                    HandleIdForDeletion(documentIdToMessageId, ref idsToDelete, message);
+                    HandleIdForDeletion(documentIdToMessageId, idsToDelete, message);
                 }
             }
             catch (AmazonSQSException sqsEx)

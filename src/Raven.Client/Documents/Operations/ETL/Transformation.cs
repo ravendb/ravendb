@@ -258,7 +258,7 @@ namespace Raven.Client.Documents.Operations.ETL
             TimeSeries = new TimeSeriesTransformation(this);
         }
         
-        public bool Validate(ref List<string> errors, EtlType type)
+        public bool Validate(List<string> errors, EtlType type)
         {
             if (errors == null)
                 throw new ArgumentNullException(nameof(errors));

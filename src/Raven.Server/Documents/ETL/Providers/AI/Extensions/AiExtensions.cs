@@ -53,8 +53,8 @@ public static class AiExtensions
 
     private static void ConfigureInternal(this IKernelBuilder kernelBuilder, AiConnectorType connectorType, AiConnectionString connectionString, bool withLogging)
     {
-        var errors = new List<string>();
-        if (connectionString.Validate(ref errors) == false)
+        List<string> errors = [];
+        if (connectionString.Validate(errors) == false)
             throw new InvalidOperationException($"Connection string is invalid due to the following errors:{Environment.NewLine}" +
                                                 $" - {string.Join($"{Environment.NewLine} - ", errors)}");
         

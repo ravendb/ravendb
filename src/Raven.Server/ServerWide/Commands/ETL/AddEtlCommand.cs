@@ -37,8 +37,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
             Configuration.TaskId = etag;
 
-            if (etls == null)
-                etls = new List<T>();
+            etls ??= [];
 
             etls.Add(Configuration);
         }

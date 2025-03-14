@@ -1113,11 +1113,11 @@ namespace Raven.Server.Documents.ETL
                 // we need to have connection string when testing SQL ETL because we need to have the factory name
                 // and if PerformRolledBackTransaction = true is specified then we need make a connection to SQL
 
-                var csErrors = new List<string>();
+                List<string> csErrors = [];
 
                 if (relationalTestScript.Connection != null)
                 {
-                    if (relationalTestScript.Connection.Validate(ref csErrors) == false)
+                    if (relationalTestScript.Connection.Validate(csErrors) == false)
                         throw new InvalidOperationException($"Invalid connection string due to {string.Join(";", csErrors)}");
 
                     connection = relationalTestScript.Connection as TCS;
@@ -1142,7 +1142,7 @@ namespace Raven.Server.Documents.ETL
                                 $"Connection string named '{testScript.Configuration.ConnectionStringName}' was not found in the database record");
                         }
     
-                        if (sqlConnection.Validate(ref csErrors) == false)
+                        if (sqlConnection.Validate(csErrors) == false)
                             throw new InvalidOperationException(
                                 $"Invalid '{testScript.Configuration.ConnectionStringName}' connection string due to {string.Join(";", csErrors)}");
     
@@ -1166,7 +1166,7 @@ namespace Raven.Server.Documents.ETL
                                 $"Connection string named '{testScript.Configuration.ConnectionStringName}' was not found in the database record");
                         }
     
-                        if (snowflakeConnection.Validate(ref csErrors) == false)
+                        if (snowflakeConnection.Validate(csErrors) == false)
                             throw new InvalidOperationException(
                                 $"Invalid '{testScript.Configuration.ConnectionStringName}' connection string due to {string.Join(";", csErrors)}");
     

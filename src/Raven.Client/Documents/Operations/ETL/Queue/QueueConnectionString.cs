@@ -19,7 +19,7 @@ public sealed class QueueConnectionString : ConnectionString
     
     public override ConnectionStringType Type => ConnectionStringType.Queue;
 
-    protected override void ValidateImpl(ref List<string> errors)
+    protected override void ValidateImpl(List<string> errors)
     {
         switch (BrokerType)
         {

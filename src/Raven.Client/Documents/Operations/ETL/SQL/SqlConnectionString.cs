@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override ConnectionStringType Type => ConnectionStringType.Sql;
 
-        protected override void ValidateImpl(ref List<string> errors)
+        protected override void ValidateImpl(List<string> errors)
         {
             // Validate ConnectionString.FactoryName
             try

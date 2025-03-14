@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         [Obsolete("Elasticsearch compatibility isn't required anymore to connect with Elasticsearch server v8.x.")]
         public bool EnableCompatibilityMode { get; set; }
 
-        protected override void ValidateImpl(ref List<string> errors)
+        protected override void ValidateImpl(List<string> errors)
         {
             if (Nodes == null || Nodes.Length == 0)
                 errors.Add($"{nameof(Nodes)} cannot be empty");

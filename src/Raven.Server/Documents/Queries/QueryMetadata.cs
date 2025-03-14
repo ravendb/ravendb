@@ -498,8 +498,7 @@ function execute(doc, args){
                     NotInRootAliasPaths(expressionPath.LoadFromAlias))
                     ThrowUnknownAlias(expressionPath.LoadFromAlias, parameters);
 
-                if (listToAdd == null)
-                    listToAdd = new List<string>();
+                listToAdd ??= [];
 
                 listToAdd.Add(expressionPath.Path);
             }

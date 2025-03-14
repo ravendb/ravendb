@@ -250,8 +250,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         UpdateReplicationFactor = false
                     };
 
-                    if (deletions == null)
-                        deletions = new List<DeleteDatabaseCommand>();
+                    deletions ??= [];
                     deletions.Add(deletionCmd);
                     return $"The promotable {promotable} is not responsive, replace it with a node {node}";
                 }
@@ -756,7 +755,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 return;
 
             var nodesToDelete = new List<string>();
-            var mentorChangeVector = new Dictionary<string, string>();
 
             foreach (var node in topology.Promotables.Concat(topology.Rehabs))
             {
@@ -771,7 +769,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue;
                 }
                 nodesToDelete.Add(node);
-                mentorChangeVector.Add(node, dbReport.DatabaseChangeVector);
             }
 
             if (nodesToDelete.Count == 0)
@@ -787,8 +784,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 UpdateReplicationFactor = false,
             };
 
-            if (deletions == null)
-                deletions = new List<DeleteDatabaseCommand>();
+            deletions ??= [];
             deletions.Add(deletionCmd);
         }
 

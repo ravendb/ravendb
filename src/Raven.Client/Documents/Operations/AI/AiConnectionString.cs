@@ -25,7 +25,7 @@ public sealed class AiConnectionString : ConnectionString
 
     public override ConnectionStringType Type => ConnectionStringType.Ai;
 
-    protected override void ValidateImpl(ref List<string> errors)
+    protected override void ValidateImpl(List<string> errors)
     {
         var allSettings = new AbstractAiSettings[]
         {
@@ -41,7 +41,7 @@ public sealed class AiConnectionString : ConnectionString
         var configuredSettings = allSettings.Where(s => s != null).ToArray();
 
         foreach (var setting in configuredSettings)
-            setting.ValidateMandatoryFields(ref errors);
+            setting.ValidateMandatoryFields(errors);
 
         switch (configuredSettings.Length)
         {

@@ -79,7 +79,7 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         if (validateConnection && Initialized == false)
             throw new InvalidOperationException("Embeddings Generation configuration must be initialized");
 
-        errors = new List<string>();
+        errors = [];
 
         if (validateName && string.IsNullOrEmpty(Name))
             errors.Add($"{nameof(Name)} of Embeddings Generation configuration cannot be empty");
@@ -88,7 +88,7 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
             errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
 
         if (validateConnection && TestMode == false)
-            Connection.Validate(ref errors);
+            Connection.Validate(errors);
 
         if (string.IsNullOrEmpty(Collection))
             errors.Add($"{nameof(Collection)} must be provided");

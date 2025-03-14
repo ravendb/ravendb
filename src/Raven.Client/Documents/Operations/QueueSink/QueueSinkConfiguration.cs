@@ -86,7 +86,7 @@ public class QueueSinkConfiguration : IDynamicJsonValueConvertible, IDatabaseTas
             errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
 
         if (validateConnection && TestMode == false)
-            Connection.Validate(ref errors);
+            Connection.Validate(errors);
 
         var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

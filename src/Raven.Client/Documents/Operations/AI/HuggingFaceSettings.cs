@@ -32,7 +32,7 @@ public sealed class HuggingFaceSettings : AbstractAiSettings
     /// </summary>
     public string ApiKey { get; set; }
 
-    public override void ValidateMandatoryFields(ref List<string> errors)
+    public override void ValidateMandatoryFields(List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(Model))
             errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");

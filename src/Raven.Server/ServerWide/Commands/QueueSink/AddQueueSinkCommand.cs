@@ -37,8 +37,7 @@ namespace Raven.Server.ServerWide.Commands.QueueSink
 
             Configuration.TaskId = etag;
 
-            if (queueSinks == null)
-                queueSinks = new List<QueueSinkConfiguration>();
+            queueSinks ??= [];
 
             queueSinks.Add(Configuration);
         }

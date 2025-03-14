@@ -142,7 +142,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
                 embeddingValues ??= new();
 
                 var textualValues = new List<string>();
-                CollectEmbeddingValues(ref textualValues, value);
+                CollectEmbeddingValues(textualValues, value);
                 
                 var chunks = Documents.AI.TextChunker.ChunkValues(textualValues, pathConfiguration.ChunkingOptions);
 
@@ -158,7 +158,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
             $"Cannot create embeddings because neither {nameof(_configuration.EmbeddingsTransformation)} nor {nameof(_configuration.EmbeddingsPathConfigurations)} were specified in the configuration of Embeddings Generation task");
     }
     
-     private void CollectEmbeddingValues(ref List<string> values, object value)
+     private void CollectEmbeddingValues(List<string> values, object value)
     {
         var valueType = ConverterBase.GetValueType(value, properlyParseDictionaryToStoredField: true);
         switch (valueType)
@@ -228,7 +228,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
                 RuntimeHelpers.EnsureSufficientExecutionStack();
                 var iterator = (IEnumerable)value;
                 foreach (var item in iterator)
-                    CollectEmbeddingValues(ref values, item);
+                    CollectEmbeddingValues(values, item);
                 break;
 
             case ConverterBase.ValueType.DynamicJsonObject:
@@ -242,12 +242,12 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
                     var val = TypeConverter.ToBlittableSupportedType(value);
                     if (val is not DynamicJsonValue json)
                     {
-                        CollectEmbeddingValues(ref values, val);
+                        CollectEmbeddingValues(values, val);
                         return;
                     }
 
                     using (var result = Context.ReadObject(json, "index field as json"))
-                        CollectEmbeddingValues(ref values, result);
+                        CollectEmbeddingValues(values, result);
                     break;
                 }
 
