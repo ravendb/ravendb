@@ -7,7 +7,7 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
 {
     public ChunkingMethod ChunkingMethod { get; set; }
 
-    public int MaxTokensPerChunk { get; set; } = 2048;
+    public int MaxTokensPerChunk { get; set; } = 512;
     
     public DynamicJsonValue ToJson()
     {

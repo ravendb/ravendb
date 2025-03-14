@@ -11,7 +11,7 @@ public sealed class AiConfiguration : ConfigurationCategory
     #region Embeddings Generation Task
 
     [Description("Maximum number of documents processed in a single batch by the Embeddings Generation task. " +
-                 "Higher values may improve throughput but require more resources and higher limits from the AI service.")]
+                 "Higher values may improve throughput but can increase latency and require more resources and higher limits from the Embeddings Generation service.")]
     [DefaultValue(128)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Task.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int? EmbeddingsGenerationTaskMaxBatchSize { get; set; }
