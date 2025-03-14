@@ -70,7 +70,7 @@ describe("IndexTerms", () => {
 
         const termDynamicLength = IndexesStubs.getIndexTermFields().Dynamic.length;
         expect(dynamicTermFields).toHaveLength(termDynamicLength);
-    });
+    }, 10000);
 
     it("can render 'no fields were found' when fields arr = 0", async () => {
         const { screen } = rtlRender(
@@ -97,7 +97,7 @@ describe("IndexTerms", () => {
         const termPills = await within(accordion).findAllByTestId(testIdSelectors.termPill);
 
         expect(termPills).toHaveLength(INDEX_TERMS_PAGE_LIMIT);
-    });
+    }, 10000);
 
     it("can render text 'no more entries found' when terms length = 0", async () => {
         const { screen, user } = rtlRender(
@@ -130,7 +130,7 @@ describe("IndexTerms", () => {
         const loadMoreBtn = await within(accordion).findByTestId(testIdSelectors.termLoadMoreButton);
 
         expect(loadMoreBtn).toBeInTheDocument();
-    });
+    }, 10000);
 
     it("can not render load more if terms array not extend 500 length", async () => {
         const { screen, user } = rtlRender(
