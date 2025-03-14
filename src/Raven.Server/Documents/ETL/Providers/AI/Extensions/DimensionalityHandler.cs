@@ -1,8 +1,11 @@
 ﻿using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -17,6 +20,8 @@ public class DimensionalityHandler : DelegatingHandler
     private const string Requests = "requests";
     private const string MediaType = "application/json";
     private const string BlittableDocumentId = "requestBody/json";
+
+    private static readonly DocumentConventions ConventionsToUse = new() { UseHttpCompression = false };
 
     private readonly int _dimensions;
 
@@ -54,12 +59,21 @@ public class DimensionalityHandler : DelegatingHandler
 
             var newBlittable = context.ReadObject(blittable, BlittableDocumentId);
 
-            request.Content = new StringContent(
-                newBlittable.ToString(),
-                Encoding.UTF8,
-                MediaType);
+            var content = new BlittableJsonContent(async s => await context.WriteAsync(s, newBlittable, cancellationToken), ConventionsToUse);
+            content.Headers.ContentType = new MediaTypeHeaderValue(MediaType);
+            request.Content = content;
 
-            return await base.SendAsync(request, cancellationToken);
+            try
+            {
+                return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                var requestBodyTask = content.EnsureCompletedAsync();
+
+                if (requestBodyTask.IsCompleted == false)
+                    await requestBodyTask.ConfigureAwait(false);
+            }
         }
     }
 }

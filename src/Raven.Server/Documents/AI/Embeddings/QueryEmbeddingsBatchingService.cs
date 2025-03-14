@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                 return new ValueTask<ReadOnlyMemory<float>[]>(tcs.Task);
             }
 
-            var batchWorker = _batchWorkers.GetOrAdd(connectionStringId, _ => CreateBatchWorker(connectionStringId));
+            var batchWorker = _batchWorkers.GetOrAdd(connectionStringId, CreateBatchWorker);
 
             return new ValueTask<ReadOnlyMemory<float>[]>(batchWorker.EnqueueRequestAsync(values, cancellationToken));
         }
