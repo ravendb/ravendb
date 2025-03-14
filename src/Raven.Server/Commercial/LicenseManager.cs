@@ -1630,6 +1630,7 @@ namespace Raven.Server.Commercial
 
             if (LicenseStatus.HasEmbeddingsGeneration)
                 return;
+
             const string message = "Your current license doesn't include the Embeddings Generation feature";
             throw GenerateLicenseLimit(LimitType.EmbeddingsGeneration, message);
         }

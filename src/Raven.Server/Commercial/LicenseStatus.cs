@@ -225,7 +225,7 @@ namespace Raven.Server.Commercial
         
         public bool HasSnowflakeEtl => Enabled(LicenseAttribute.SnowflakeEtl);
 
-        public bool HasEmbeddingsGeneration => true; // TODO Enabled(LicenseAttribute.AiEmbeddingsGen);
+        public bool HasEmbeddingsGeneration => Enabled(LicenseAttribute.AiEmbeddingsGen);
 
         public bool HasPowerBI => Enabled(LicenseAttribute.PowerBI);
 
