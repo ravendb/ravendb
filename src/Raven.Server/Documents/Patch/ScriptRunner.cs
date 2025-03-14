@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
                         .LocalTimeZone(TimeZoneInfo.Utc)
-                        .StringCompilationAllowed = _configuration.Patching.AllowStringCompilation;
+                        .Host.StringCompilationAllowed = _configuration.Patching.AllowStringCompilation;
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
