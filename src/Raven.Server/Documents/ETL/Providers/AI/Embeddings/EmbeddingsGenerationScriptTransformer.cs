@@ -160,7 +160,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
     
      private void CollectEmbeddingValues(ref List<string> values, object value)
     {
-        var valueType = ConverterBase.GetValueTypeUnlikely(value);
+        var valueType = ConverterBase.GetValueType(value, properlyParseDictionaryToStoredField: true);
         switch (valueType)
         {
             case ConverterBase.ValueType.Double:
@@ -262,7 +262,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
                 break;
 
             case ConverterBase.ValueType.EmptyString:
-                values.Add("");
+                values.Add(string.Empty);
                 break;
 
             default:

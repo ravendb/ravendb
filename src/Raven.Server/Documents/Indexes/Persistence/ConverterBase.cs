@@ -83,8 +83,118 @@ namespace Raven.Server.Documents.Indexes.Persistence
         private static readonly TypeCache<ValueType> _valueTypeCache = new(32);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected ValueType GetValueType(object value)
+        protected ValueType GetValueType(object value) => GetValueType(value, _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static ValueType GetValueType(object value, bool properlyParseDictionaryToStoredField)
         {
+            ValueType GetValueTypeUnlikely(Type type)
+            {
+                ValueType valueType;
+                switch (value)
+                {
+                    case DynamicNullObject:
+                        valueType = ValueType.DynamicNull;
+                        break;
+                    case LazyStringValue:
+                        valueType = ValueType.LazyString;
+                        break;
+                    case LazyCompressedStringValue:
+                        valueType = ValueType.LazyCompressedString;
+                        break;
+                    case Enum:
+                        valueType = ValueType.Enum;
+                        break;
+                    case BoostedValue:
+                        valueType = ValueType.BoostedValue;
+                        break;
+                    case DynamicDictionary:
+                        valueType = ValueType.ConvertToJson;
+                        break;
+                    case DynamicBlittableJson:
+                        valueType = ValueType.DynamicJsonObject;
+                        break;
+                    case BlittableJsonReaderObject:
+                        valueType = ValueType.BlittableJsonObject;
+                        break;
+                    case CoraxSpatialPointEntry:
+                        valueType = ValueType.CoraxSpatialPointEntry;
+                        break;
+                    case CoraxDynamicItem:
+                        valueType = ValueType.CoraxDynamicItem;
+                        break;
+                    case Stream:
+                        valueType = ValueType.Stream;
+                        break;
+                    case AbstractField:
+                        valueType = ValueType.Lucene;
+                        break;
+
+                    case bool:
+                        valueType = ValueType.Boolean;
+                        break;
+
+                    case char:
+                        valueType = ValueType.Char;
+                        break;
+                    
+                    case string:
+                        valueType = ValueType.String;
+                        break;
+
+                    case double:
+                    case float:
+                    case decimal:
+                    case LazyNumberValue:
+                        valueType = ValueType.Double;
+                        break;
+
+                    case long:
+                    case int:
+                    case byte:
+                    case short:
+                    case ushort:
+                    case uint:
+                    case sbyte:
+                    case ulong:
+                        valueType = ValueType.Numeric;
+                        break;
+
+                    case DateTime:
+                        valueType = ValueType.DateTime;
+                        break;
+                    case DateTimeOffset:
+                        valueType = ValueType.DateTimeOffset;
+                        break;
+                    case TimeSpan:
+                        valueType = ValueType.TimeSpan;
+                        break;
+                    case DateOnly:
+                        valueType = ValueType.DateOnly;
+                        break;
+                    case TimeOnly:
+                        valueType = ValueType.TimeOnly;
+                        break;
+
+                    default:
+                        if (value is IDictionary)
+                            valueType = ValueType.Dictionary;
+                        else if (value is IEnumerable)
+                            valueType = ValueType.Enumerable;
+                        else if (value is IConvertible)
+                            valueType = ValueType.Convertible;
+                        else
+                            valueType = ValueType.ConvertToJson;
+                        break;
+                }
+
+                _valueTypeCache.Put(type, valueType);
+
+                // We call GetValueType again because by now we know which type it is and we will return immediately
+                // after checking in the cache.
+                return GetValueType(value, properlyParseDictionaryToStoredField);
+            }
+
             if (value == null)
                 return ValueType.Null;
 
@@ -100,7 +210,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                     case ValueType.LazyCompressedString:
                         return ((LazyCompressedStringValue)value).UncompressedSize == 0 ? ValueType.EmptyString : ValueType.LazyCompressedString;
                     case ValueType.Dictionary:
-                        return (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField)
+                        return properlyParseDictionaryToStoredField
                             ? ValueType.Dictionary
                             : ValueType.Enumerable;
                 }
@@ -108,119 +218,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 return valueType;
             }
 
-            valueType = GetValueTypeUnlikely(value);
-            _valueTypeCache.Put(type, valueType);
-            return valueType;
+            return GetValueTypeUnlikely(type);
         }
 
-        internal static ValueType GetValueTypeUnlikely(object value)
-        {
-            ValueType valueType;
-            switch (value)
-            {
-                case DynamicNullObject:
-                    valueType = ValueType.DynamicNull;
-                    break;
-                case LazyStringValue:
-                    valueType = ValueType.LazyString;
-                    break;
-                case LazyCompressedStringValue:
-                    valueType = ValueType.LazyCompressedString;
-                    break;
-                case Enum:
-                    valueType = ValueType.Enum;
-                    break;
-                case BoostedValue:
-                    valueType = ValueType.BoostedValue;
-                    break;
-                case DynamicDictionary:
-                    valueType = ValueType.ConvertToJson;
-                    break;
-                case DynamicBlittableJson:
-                    valueType = ValueType.DynamicJsonObject;
-                    break;
-                case BlittableJsonReaderObject:
-                    valueType = ValueType.BlittableJsonObject;
-                    break;
-                case CoraxSpatialPointEntry:
-                    valueType = ValueType.CoraxSpatialPointEntry;
-                    break;
-                case CoraxDynamicItem:
-                    valueType = ValueType.CoraxDynamicItem;
-                    break;
-                case Stream:
-                    valueType = ValueType.Stream;
-                    break;
-                case AbstractField:
-                    valueType = ValueType.Lucene;
-                    break;
 
-                case bool:
-                    valueType = ValueType.Boolean;
-                    break;
-
-                case char:
-                    valueType = ValueType.Char;
-                    break;
-                
-                case string:
-                    valueType = ValueType.String;
-                    break;
-
-                case double:
-                case float:
-                case decimal:
-                case LazyNumberValue:
-                    valueType = ValueType.Double;
-                    break;
-
-                case long:
-                case int:
-                case byte:
-                case short:
-                case ushort:
-                case uint:
-                case sbyte:
-                case ulong:
-                    valueType = ValueType.Numeric;
-                    break;
-
-                case DateTime:
-                    valueType = ValueType.DateTime;
-                    break;
-                case DateTimeOffset:
-                    valueType = ValueType.DateTimeOffset;
-                    break;
-                case TimeSpan:
-                    valueType = ValueType.TimeSpan;
-                    break;
-                case DateOnly:
-                    valueType = ValueType.DateOnly;
-                    break;
-                case TimeOnly:
-                    valueType = ValueType.TimeOnly;
-                    break;
-                
-                case VectorValue:
-                    valueType = ValueType.Vector;
-                    break;
-
-                default:
-                    if (value is IDictionary)
-                        valueType = ValueType.Dictionary;
-                    else if (value is IEnumerable)
-                        valueType = ValueType.Enumerable;
-                    else if (value is IConvertible)
-                        valueType = ValueType.Convertible;
-                    else
-                        valueType = ValueType.ConvertToJson;
-                    break;
-            }
-
-            return valueType;
-            // We call GetValueType again because by now we know which type it is and we will return immediately
-            // after checking in the cache.
-        }
+     
         
         protected static byte[] ToArray(ConversionScope scope, Stream stream, out int length)
         {
