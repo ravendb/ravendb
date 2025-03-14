@@ -6,8 +6,8 @@ namespace Raven.Client.Documents.Operations.AI;
 public class ChunkingOptions : IDynamicJsonValueConvertible
 {
     public ChunkingMethod ChunkingMethod { get; set; }
-    
-    public int MaxTokensPerChunk { get; set; }
+
+    public int MaxTokensPerChunk { get; set; } = 2048;
     
     public DynamicJsonValue ToJson()
     {

@@ -62,11 +62,12 @@ public class EmbeddingsStorage
         using var document = context.DocumentDatabase.DocumentsStorage.Get(context, item.CacheDocumentId);
         var metadataExists = document.TryGetMetadata(out var metadata);
         PortableExceptions.ThrowIfNot<InvalidDataException>(metadataExists, $"The embedding cache document exists, but its metadata is missing: {item.CacheDocumentId}");
-
-        var expiresExistsInMetadata = BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, metadata, Constants.Documents.Metadata.Expires, out var expiresObject);
-        PortableExceptions.ThrowIfNot<InvalidDataException>(expiresExistsInMetadata, $"The embedding cache document exists, has metadata, but its expiration is missing: {item.CacheDocumentId}");
-
-        var currentExpireAt = (DateTime)expiresObject;
+        
+        DateTime currentExpireAt;
+        if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, metadata, Constants.Documents.Metadata.Expires, out var expiresObject) == false)
+            currentExpireAt = DateTime.MinValue;
+        else
+            currentExpireAt = (DateTime)expiresObject;
 
         bool shouldUpdateExpiration;
 
@@ -82,21 +83,21 @@ public class EmbeddingsStorage
         var attachmentsExistsInMetadata = BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, metadata, Constants.Documents.Metadata.Attachments, out var attachmentsArrayObject);
         PortableExceptions.ThrowIfNot<InvalidDataException>(attachmentsExistsInMetadata, $"The embedding cache document exists, has metadata and expiration, but attachment field is missing: {item.CacheDocumentId}");
 
-        if (attachmentsArrayObject is BlittableJsonReaderArray attachmentsArray)
-        {
-            PortableExceptions.ThrowIfNot<InvalidDataException>(attachmentsArray.Length == 1, $"The embedding document suppose to have only one attachment, but it has {attachmentsArray.Length}.");
+        var attachmentsArray = attachmentsArrayObject as BlittableJsonReaderArray;
 
-            var attachment = attachmentsArray[0] as BlittableJsonReaderObject;
-            PortableExceptions.ThrowIfNull(attachment, $"The embedding document has no attachment.");
+        PortableExceptions.ThrowIfNull<InvalidDataException>(attachmentsArray);
+        PortableExceptions.ThrowIfNot<InvalidDataException>(attachmentsArray.Length == 1, $"The embedding document suppose to have only one attachment, but it has {attachmentsArray.Length}.");
 
-            var hasHash = BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, attachment, "Hash", out var hashObject);
-            PortableExceptions.ThrowIfNot<InvalidDataException>(hasHash && hashObject is LazyStringValue, "hasHash && hashObject is LazyStringValue");
+        var attachment = attachmentsArray[0] as BlittableJsonReaderObject;
+        PortableExceptions.ThrowIfNull(attachment, $"The embedding document has no attachment.");
 
-            LazyStringValue hash = (LazyStringValue)(hashObject);
-            var existsInStorage = _documentsStorage.AttachmentsStorage.AttachmentExists(context, hash);
-            PortableExceptions.ThrowIfNot<InvalidDataException>(existsInStorage, $"The embedding document has attachment, but it doesn't exist in storage: {item.CacheDocumentId}");
-        }
+        var hasHash = BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, attachment, "Hash", out var hashObject);
+        PortableExceptions.ThrowIfNot<InvalidDataException>(hasHash && hashObject is LazyStringValue, "hasHash && hashObject is LazyStringValue");
 
+        LazyStringValue hash = (LazyStringValue)(hashObject);
+        var existsInStorage = _documentsStorage.AttachmentsStorage.AttachmentExists(context, hash);
+        PortableExceptions.ThrowIfNot<InvalidDataException>(existsInStorage, $"The embedding document has attachment, but it doesn't exist in storage: {item.CacheDocumentId}");
+        
         if (shouldUpdateExpiration)
         {
             document.Data.Modifications = CreateEmbeddingCacheDocumentJson(expireAt);
