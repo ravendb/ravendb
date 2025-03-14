@@ -27,11 +27,6 @@ namespace Corax.Pipeline
             return ScalarTokenizers.TokenizeWhitespace(source, ref tokens);
         }
         
-        public void Tokenize(ReadOnlySpan<char> source, ref List<Token> tokens)
-        {
-            ScalarTokenizers.TokenizeWhitespace(source, ref tokens);
-        }
-
         public void Dispose() { }
     }
 }
