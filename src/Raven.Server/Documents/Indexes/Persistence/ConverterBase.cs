@@ -26,8 +26,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
     public abstract class ConverterBase : IDisposable
     {
         public static readonly BlittableJsonTraverser FlatMapReduceResultsWithTimeOnlyDateOnlySupport = BlittableJsonTraverser.CreateInstanceForIndexing(BlittableJsonTraverser.DefaultFlatMapReduceSeparators, supportTimeOnlyDateOnly: true);
-        public static readonly BlittableJsonTraverser DefaultWithTimeOnlyDateOnlySupport =  BlittableJsonTraverser.CreateInstanceForIndexing(supportTimeOnlyDateOnly: true);
-        
+        public static readonly BlittableJsonTraverser DefaultWithTimeOnlyDateOnlySupport = BlittableJsonTraverser.CreateInstanceForIndexing(supportTimeOnlyDateOnly: true);
+
         protected readonly BlittableJsonTraverser _blittableTraverser;
         protected readonly Index _index;
         protected readonly Dictionary<string, IndexField> _fields;
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 (storeValue: true, Version: _) => BlittableJsonTraverser.FlatMapReduceResults,
                 (storeValue: false, Version: _) => BlittableJsonTraverser.Default
             };
-            
+
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
             _keyFieldName = keyFieldName ??
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected ValueType GetValueType(object value) => GetValueType(value, _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField);
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static ValueType GetValueType(object value, bool properlyParseDictionaryToStoredField)
         {
@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                     case char:
                         valueType = ValueType.Char;
                         break;
-                    
+
                     case string:
                         valueType = ValueType.String;
                         break;
@@ -175,7 +175,9 @@ namespace Raven.Server.Documents.Indexes.Persistence
                     case TimeOnly:
                         valueType = ValueType.TimeOnly;
                         break;
-
+                    case VectorValue:
+                        valueType = ValueType.Vector;
+                        break;
                     default:
                         if (value is IDictionary)
                             valueType = ValueType.Dictionary;
@@ -222,8 +224,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
         }
 
 
-     
-        
+
+
         protected static byte[] ToArray(ConversionScope scope, Stream stream, out int length)
         {
             length = (int)(stream.Length - stream.Position);
@@ -338,13 +340,13 @@ namespace Raven.Server.Documents.Indexes.Persistence
             DateOnly,
 
             TimeOnly,
-            
+
             Vector,
-            
+
             CoraxSpatialPointEntry,
-            
+
             CoraxDynamicItem,
-            
+
             Dictionary
         }
 
