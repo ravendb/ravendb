@@ -98,7 +98,7 @@ public static class TextChunker
         var chunkingMethod = chunkingOptions.ChunkingMethod;
         var maxTokensPerChunk = chunkingOptions.MaxTokensPerChunk;
         
-        List<string> chunkedValues = new List<string>();
+        List<string> chunkedValues = [];
         List<string> chunkerResult;
         
         switch (chunkingMethod)

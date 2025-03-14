@@ -51,7 +51,6 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
         {
             CancellationToken.ThrowIfCancellationRequested();
                 
-            Interlocked.Decrement(ref _approximateCount);
 
             payload.Add(item);
 
@@ -64,6 +63,8 @@ public class QueryEmbeddingsCacher : BackgroundWorkBase
 
         if (payload.Count == 0)
             return mightBeMore;
+        
+        Interlocked.Add(ref _approximateCount, -payload.Count);
 
         var putEmbeddingsCommand = new PutQueryEmbeddingsCommand(payload, _database);
 
