@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Background;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Sparrow.Server.Logging;
 
@@ -18,8 +19,9 @@ namespace Raven.Server.Documents.AI.Embeddings
     public class QueryEmbeddingsBatchingWorker(string databaseName,
         AiConfiguration configuration,
 #pragma warning disable SKEXP0001
-        (AiConnectionString ConnectionString, ITextEmbeddingGenerationService Instance) service,
+        ITextEmbeddingGenerationService service,
 #pragma warning restore SKEXP0001
+        AiConnectionStringIdentifier connectionStringId,
         SemaphoreSlim concurrencyLimiter,
         RavenLogger logger,
         CancellationToken shutdown)
@@ -110,7 +112,7 @@ namespace Raven.Server.Documents.AI.Embeddings
             catch (Exception ex)
             {
                 if (Logger.IsErrorEnabled)
-                    Logger.Error($"Error in QueryEmbeddingsBatchingWorker for connection string '{service.ConnectionString.Name}' in database '{_databaseName}'", ex);
+                    Logger.Error($"Error in QueryEmbeddingsBatchingWorker for connection string '{connectionStringId.Value}' in database '{_databaseName}'", ex);
 
                 // Wait a bit before retrying
                 await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(1));
@@ -162,7 +164,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                     stopwatch.Stop();
 
                     if (Logger.IsDebugEnabled)
-                        Logger.Debug($"Batch processing completed for connection '{service.ConnectionString.Identifier}' in {stopwatch.ElapsedMilliseconds}ms, processed {count} requests");
+                        Logger.Debug($"Batch processing completed for connection '{connectionStringId.Value}' in {stopwatch.ElapsedMilliseconds}ms, processed {count} requests");
                 }
             }
             finally
@@ -208,7 +210,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                     if (attempt > 0)
                     {
                         if (Logger.IsWarnEnabled)
-                            Logger.Warn($"Retrying batch for connection '{service.ConnectionString.Name}', attempt {attempt}/{configuration.QueryEmbeddingsBatchMaxRetries}");
+                            Logger.Warn($"Retrying batch for connection '{connectionStringId.Value}', attempt {attempt}/{configuration.QueryEmbeddingsBatchMaxRetries}");
 
                         // Exponential backoff
                         var delay = configuration.QueryEmbeddingsBatchRetryDelay.AsTimeSpan * Math.Pow(2, attempt - 1);
@@ -216,7 +218,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                     }
 
                     if (Logger.IsDebugEnabled)
-                        Logger.Debug($"Processing batch of {totalValueCount} values from {count} requests for connection '{service.ConnectionString.Name}'");
+                        Logger.Debug($"Processing batch of {totalValueCount} values from {count} requests for connection '{connectionStringId.Value}'");
 
                     // Final check before calling service
                     if (_workerShuttingDown)
@@ -227,7 +229,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                     try
                     {
 #pragma warning disable SKEXP0001
-                        allEmbeddings = await AiHelper.GenerateEmbeddingsAsync(service.Instance, allTextValues);
+                        allEmbeddings = await AiHelper.GenerateEmbeddingsAsync(service, allTextValues);
 #pragma warning restore SKEXP0001
                     }
                     catch (HttpOperationException httpOperationException) when (httpOperationException.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
@@ -266,14 +268,14 @@ namespace Raven.Server.Documents.AI.Embeddings
                 catch (Exception ex) when (attempt < configuration.QueryEmbeddingsBatchMaxRetries && IsNonRetriableException(ex) == false)
                 {
                     if (Logger.IsWarnEnabled)
-                        Logger.Warn($"Error processing batch for connection '{service.ConnectionString.Name}', retrying {attempt + 1}/{configuration.QueryEmbeddingsBatchMaxRetries}", ex);
+                        Logger.Warn($"Error processing batch for connection '{connectionStringId.Value}', retrying {attempt + 1}/{configuration.QueryEmbeddingsBatchMaxRetries}", ex);
 
                     // Continue to next retry iteration
                 }
                 catch (Exception ex)
                 {
                     if (Logger.IsErrorEnabled)
-                        Logger.Error($"Final error processing batch for connection '{service.ConnectionString.Name}' after {attempt} retries", ex);
+                        Logger.Error($"Final error processing batch for connection '{connectionStringId.Value}' after {attempt} retries", ex);
 
                     for (int i = 0; i < count; i++)
                         requestsArray[i].TaskCompletionSource.TrySetException(ex);
@@ -307,7 +309,7 @@ namespace Raven.Server.Documents.AI.Embeddings
                 _ => false
             };
 
-        public AiSettingsCompareDifferences Compare(AiConnectionString connectionString) => service.ConnectionString.Compare(connectionString);
+        public AiSettingsCompareDifferences Compare(AiConnectionString connectionString) => throw new NotImplementedException(); // TODO - it's not used anywhere right now
 
         private static void CancelRequestsWithShutdownMessage(QueryEmbeddingsBatchRequest[] requests, int count)
         {
@@ -318,7 +320,7 @@ namespace Raven.Server.Documents.AI.Embeddings
         protected override void InitializeWork()
         {
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Initializing {nameof(QueryEmbeddingsBatchingWorker)} for connection '{service.ConnectionString.Name}' in database '{_databaseName}'");
+                Logger.Info($"Initializing {nameof(QueryEmbeddingsBatchingWorker)} for connection '{connectionStringId.Value}' in database '{_databaseName}'");
 
             _batchTimer.Reset();
         }

@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.AI.Embeddings
             if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
                 throw new ArgumentException($"Couldn't find embedding generation service for connection string '{connectionStringId.Value}'");
 
-            var worker = new QueryEmbeddingsBatchingWorker(aiIntegrations.Database.Name, aiIntegrations.Database.Configuration.Ai, service, _globalConcurrencyLimiter, _logger, aiIntegrations.Database.DatabaseShutdown);
+            var worker = new QueryEmbeddingsBatchingWorker(aiIntegrations.Database.Name, aiIntegrations.Database.Configuration.Ai, service, connectionStringId, _globalConcurrencyLimiter, _logger, aiIntegrations.Database.DatabaseShutdown);
 
             worker.Start();
             return worker;

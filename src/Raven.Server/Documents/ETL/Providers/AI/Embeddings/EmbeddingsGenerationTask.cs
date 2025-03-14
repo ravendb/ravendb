@@ -169,7 +169,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                 try
                 {
                     using var embeddingsGenerationScope = scope.For(EmbeddingsGenerationOperations.GenerateInAiService);
-                    generatedValues = AiHelper.GenerateEmbeddingsAsync(service.Instance, keys).GetAwaiter().GetResult();
+                    generatedValues = AiHelper.GenerateEmbeddingsAsync(service, keys).GetAwaiter().GetResult();
                     embeddingsGenerationScope.NumberOfGeneratedEmbeddings = generatedValues.Count;
                     embeddingsGenerationScope.NumberOfEmbeddingsInCache = embeddingsInCache;
 

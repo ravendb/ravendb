@@ -12,14 +12,13 @@ namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest.Help
 
 public static class TestAiHelper
 {
-    public static (AiConnectionString ConnectionString, ITextEmbeddingGenerationService Instance) CreateMockEmbeddingService(
+    public static ITextEmbeddingGenerationService CreateMockEmbeddingService(
         int dimensionSize = 128,
         int failureRate = 0,
         Exception exceptionToThrow = null)
     {
-        var connectionString = new AiConnectionString { Name = "ConnectionString for mock embeddings generation service" };
         var service = new TestEmbeddingGenerationService { DimensionSize = dimensionSize, FailureRateInPercentage = failureRate, ExceptionToThrow = exceptionToThrow };
-        return (connectionString, service);
+        return service;
     }
 }
 
