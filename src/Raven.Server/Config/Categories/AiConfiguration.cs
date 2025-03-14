@@ -55,33 +55,16 @@ public sealed class AiConfiguration : ConfigurationCategory
 
     #region Batching
 
-    [Description("Time in milliseconds to wait for additional query embedding requests before sending the current batch to the AI provider. " +
-                 "Lower values decrease latency for query embedding generation but may reduce throughput.")]
-    [DefaultValue(200)]
-    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.TimeoutInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int QueryEmbeddingsBatchTimeout { get; set; }
-
     [Description("Maximum number of query embedding requests to include in a single batch sent to the AI provider. Optimal values depend on the provider's rate limits and pricing model.")]
     [DefaultValue(128)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int QueryEmbeddingsMaxBatchSize { get; set; }
 
-    [Description("Maximum number of retry attempts for failed query embedding generation requests before giving up. Retries are performed using an exponential backoff strategy.")]
-    [DefaultValue(3)]
-    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.MaxRetries", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public int QueryEmbeddingsBatchMaxRetries { get; set; }
-
-    [Description("Base delay in milliseconds between retry attempts for failed query embedding requests. Actual delay increases exponentially with each retry attempt. " +
-                 "For example, with a base delay of 200ms, retries would occur after 200ms, 400ms, 800ms, etc.")]
-    [DefaultValue(200)]
-    [TimeUnit(TimeUnit.Milliseconds)]
-    [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.RetryDelayInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-    public TimeSetting QueryEmbeddingsBatchRetryDelay { get; set; }
-
     [Description("Maximum number of query embedding batches that can be processed concurrently. Controls the degree of parallelism when sending query embedding requests to AI providers. " +
                  "Higher values improve throughput but increase resource usage and may trigger rate limits.")]
     [DefaultValue(4)]
     [ConfigurationEntry("Ai.Embeddings.Generation.Querying.Batching.MaxConcurrentBatches", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    [MinValue(1)]
     public int QueryEmbeddingsMaxConcurrentBatches { get; set; }
     
     #endregion

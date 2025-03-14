@@ -12,21 +12,18 @@ namespace Raven.Server.Documents.AI.Embeddings
 {
     public sealed class QueryEmbeddingsBatchingService(AiIntegrationsController aiIntegrations) : IDisposable
     {
-        private readonly SemaphoreSlim _globalConcurrencyLimiter = new(aiIntegrations.Database.Configuration.Ai.QueryEmbeddingsMaxConcurrentBatches);
         private readonly RavenLogger _logger = aiIntegrations.Database.Loggers.GetLogger<QueryEmbeddingsBatchingService>();
 
         private readonly ConcurrentDictionary<AiConnectionStringIdentifier, QueryEmbeddingsBatchingWorker> _batchWorkers = new();
         // Flag for preventing the addition of new workers during disposal
         private volatile bool _isDisposing;
 
-        public const string ShutdownMessage = $"{nameof(QueryEmbeddingsBatchingService)} is shutting down";
-
         public ValueTask<ReadOnlyMemory<float>[]> GetEmbeddingAsync(AiConnectionStringIdentifier connectionStringId, IList<string> values, CancellationToken cancellationToken = default)
         {
             if (_isDisposing)
             {
                 var tcs = new TaskCompletionSource<ReadOnlyMemory<float>[]>(TaskCreationOptions.RunContinuationsAsynchronously);
-                tcs.SetException(new ObjectDisposedException(ShutdownMessage));
+                tcs.SetException(new ObjectDisposedException($"{nameof(QueryEmbeddingsBatchingService)} is shutting down"));
                 return new ValueTask<ReadOnlyMemory<float>[]>(tcs.Task);
             }
 
@@ -40,26 +37,23 @@ namespace Raven.Server.Documents.AI.Embeddings
             if (aiIntegrations.TryGetServiceByConnectionString(connectionStringId, out var service) == false)
                 throw new ArgumentException($"Couldn't find embedding generation service for connection string '{connectionStringId.Value}'");
 
-            var worker = new QueryEmbeddingsBatchingWorker(aiIntegrations.Database.Name, aiIntegrations.Database.Configuration.Ai, service, connectionStringId, _globalConcurrencyLimiter, _logger, aiIntegrations.Database.DatabaseShutdown);
+            var worker = new QueryEmbeddingsBatchingWorker(aiIntegrations.Database.Name, aiIntegrations.Database.Configuration.Ai, service, connectionStringId, _logger, aiIntegrations.Database.DatabaseShutdown);
 
             worker.Start();
             return worker;
         }
 
-        public async Task UpdateWorkerIfNecessaryAsync(AiConnectionString newConnectionString)
+        public void RecreateWorker(AiConnectionString newConnectionString)
         {
             var connectionStringId = new AiConnectionStringIdentifier(newConnectionString.Identifier);
             if (_batchWorkers.TryGetValue(connectionStringId, out var worker) == false)
                 return;
 
-            if (worker.Compare(newConnectionString) == AiSettingsCompareDifferences.None)
-                return;
-
-            await RemoveWorkerAsync(connectionStringId);
+            RemoveWorker(connectionStringId);
             _batchWorkers.TryAdd(connectionStringId, CreateBatchWorker(connectionStringId));
         }
 
-        public async Task RemoveWorkerAsync(AiConnectionStringIdentifier connectionStringsToRemove)
+        public void RemoveWorker(AiConnectionStringIdentifier connectionStringsToRemove)
         {
             ArgumentNullException.ThrowIfNull(connectionStringsToRemove);
 
@@ -68,7 +62,6 @@ namespace Raven.Server.Documents.AI.Embeddings
 
             try
             {
-                await worker.PrepareForServiceDisposalAsync();
                 worker.Dispose();
 
                 if (_logger.IsInfoEnabled)
@@ -89,7 +82,6 @@ namespace Raven.Server.Documents.AI.Embeddings
             {
                 try
                 {
-                    await worker.PrepareForServiceDisposalAsync();
                     worker.Dispose();
                 }
                 catch (Exception ex)
@@ -100,7 +92,6 @@ namespace Raven.Server.Documents.AI.Embeddings
             }
 
             _batchWorkers.Clear();
-            _globalConcurrencyLimiter.Dispose();
         }
 
         public void Dispose() => AsyncHelpers.RunSync(DisposeAsync);

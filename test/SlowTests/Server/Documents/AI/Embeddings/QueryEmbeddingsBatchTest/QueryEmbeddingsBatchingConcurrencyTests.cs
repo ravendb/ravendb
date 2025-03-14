@@ -59,7 +59,7 @@ public class QueryEmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) :
                 batchCompletionEvents.Add(new ManualResetEventSlim(false));
 
             int batchCounter = 0;
-            worker.ForTestingPurposesOnly().AfterBatchFlushed = () =>
+            worker.ForTestingPurposesOnly().AfterBatchProcessed = () =>
             {
                 // Increment the hook invocation counter to verify the hook is being called
                 Interlocked.Increment(ref hookInvocationCount);
@@ -102,7 +102,7 @@ public class QueryEmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) :
                 tasks.Add(batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, [$"Concurrent test text {i}"], CancellationToken.None).AsTask());
 
             // Wait for the first batch to start processing
-            var  isBatchStarted = firstBatchProcessingStarted.Wait(TimeSpan.FromSeconds(30));
+            var isBatchStarted = firstBatchProcessingStarted.Wait(TimeSpan.FromSeconds(30));
 
             Assert.True(isBatchStarted, "No batches started processing within the timeout period");
             Assert.True(hookInvocationCount > 0, "The AfterBatchFlushed hook should have been invoked, but wasn't. This suggests the hook implementation is missing or broken.");
@@ -143,9 +143,6 @@ public class QueryEmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) :
         // Get the database instance
         var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-        // Configure longer batch timeout to ensure our cancellation happens during batch formation
-        database.Configuration.Ai.QueryEmbeddingsBatchTimeout = (int)TimeSpan.FromSeconds(10).TotalMilliseconds;
-
         // Create the batching service
         var batchService = new QueryEmbeddingsBatchingService(database.AiIntegrations);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
@@ -161,5 +158,50 @@ public class QueryEmbeddingsBatchingConcurrencyTests(ITestOutputHelper output) :
 
         // Assert
         await Assert.ThrowsAsync<TaskCanceledException>(async () => await task.AsTask());
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task NoWaitForBatchTimeout_ImmediateProcessing()
+    {
+        // Create a document store and register AI integration
+        using var store = GetDocumentStore();
+        (_, AiConnectionString connection) = AddEmbeddingsGenerationTask(store);
+
+        // Get the database instance
+        var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+        // Create the batching service
+        var batchService = new QueryEmbeddingsBatchingService(database.AiIntegrations);
+        var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
+
+        // Submit a first request to ensure worker is created
+        await batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["Initial request"], CancellationToken.None);
+
+        // Get the worker
+        var worker = batchService.ForTestingPurposesOnly().GetBatchWorker(aiConnectionStringIdentifier);
+
+        // Set up tracking to measure time to first processing
+        var processingStarted = new ManualResetEventSlim(false);
+
+        worker.ForTestingPurposesOnly().AfterBatchProcessed = () => {
+            processingStarted.Set();
+        };
+
+        // Act - measure time to processing
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var task = batchService.GetEmbeddingAsync(aiConnectionStringIdentifier, ["Test immediate processing"], CancellationToken.None);
+
+        // Wait for processing to start
+        var success = processingStarted.Wait(TimeSpan.FromSeconds(5));
+        sw.Stop();
+
+        // Complete the task
+        await task;
+
+        // Assert
+        Assert.True(success, "Processing should have started within timeout");
+
+        // Processing should start almost immediately (we allow 500ms for test reliability, but in practice it should be much faster)
+        Assert.True(sw.ElapsedMilliseconds < 500, $"Processing should start immediately, took {sw.ElapsedMilliseconds}ms");
     }
 }

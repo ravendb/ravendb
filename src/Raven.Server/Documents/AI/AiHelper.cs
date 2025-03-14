@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.Connectors.HuggingFace;
@@ -43,7 +44,7 @@ public static class AiHelper
     /// </summary>
     // TODO: Once batch processing is implemented on the SemanticKernel side, or we implement the proper implementation ourselves, we will remove this code.
     [Experimental("SKEXP0001")]
-    public static async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(ITextEmbeddingGenerationService embeddingsGenerationService, IList<string> values)
+    public static async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(ITextEmbeddingGenerationService embeddingsGenerationService, IList<string> values, CancellationToken token)
     {
         IList<ReadOnlyMemory<float>> embeddings;
 
@@ -55,12 +56,12 @@ public static class AiHelper
             foreach (string value in values)
             {
                 singleItemArray[0] = value;
-                embeddings.AddRange(await embeddingsGenerationService.GenerateEmbeddingsAsync(singleItemArray));
+                embeddings.AddRange(await embeddingsGenerationService.GenerateEmbeddingsAsync(singleItemArray, cancellationToken: token));
             }
         }
         else
         {
-            embeddings = await embeddingsGenerationService.GenerateEmbeddingsAsync(values);
+            embeddings = await embeddingsGenerationService.GenerateEmbeddingsAsync(values, cancellationToken: token);
         }
 
         return embeddings;

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using FastTests;
 using Raven.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
@@ -7,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings.QueryEmbeddingsBatchTest;
 
-public class QueryEmbeddingsBatchRequestTests(ITestOutputHelper output) : NoDisposalNeeded(output)
+public class QueryEmbeddingsRequestTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     private const string TestValue = "test text";
 
@@ -16,14 +17,14 @@ public class QueryEmbeddingsBatchRequestTests(ITestOutputHelper output) : NoDisp
     {
         // Arrange
         var callerToken = new CancellationTokenSource();
-        var workerToken = new CancellationTokenSource();
 
         // Act
-        using var request = new QueryEmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
+        using var request = new QueryEmbeddingsRequest([TestValue], callerToken.Token);
 
         // Assert
         Assert.Equal(TestValue, request.Values[0]);
         Assert.False(request.TaskCompletionSource.Task.IsCompleted);
+        Assert.False(request.WasCanceled);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -31,31 +32,30 @@ public class QueryEmbeddingsBatchRequestTests(ITestOutputHelper output) : NoDisp
     {
         // Arrange
         var callerToken = new CancellationTokenSource();
-        var workerToken = new CancellationTokenSource();
 
-        using var request = new QueryEmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
+        using var request = new QueryEmbeddingsRequest([TestValue], callerToken.Token);
 
         // Act
         callerToken.Cancel();
 
         // Assert
         Assert.True(request.TaskCompletionSource.Task.IsCanceled, $"Expected task to be canceled, but it was '{request.TaskCompletionSource.Task.Status}'");
+        Assert.True(request.WasCanceled);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void WorkerCancellation_CancelsTask()
+    public void CancelWithShutdownMessage_SetsTaskAsFaulted()
     {
         // Arrange
-        var callerToken = new CancellationTokenSource();
-        var workerToken = new CancellationTokenSource();
-
-        using var request = new QueryEmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
+        using var request = new QueryEmbeddingsRequest([TestValue], CancellationToken.None);
 
         // Act
-        workerToken.Cancel();
+        var task = request.CancelWithShutdownMessage();
 
         // Assert
-        Assert.True(request.TaskCompletionSource.Task.IsCanceled, $"Expected task to be canceled, but it was '{request.TaskCompletionSource.Task.Status}'");
+        Assert.True(task.IsFaulted, $"Expected task to be faulted, but it was '{task.Status}'");
+        Assert.IsType<OperationCanceledException>(task.Exception.InnerException);
+        Assert.Contains(QueryEmbeddingsBatchingService.ShutdownMessage, task.Exception.InnerException.Message);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -63,9 +63,7 @@ public class QueryEmbeddingsBatchRequestTests(ITestOutputHelper output) : NoDisp
     {
         // Arrange
         var callerToken = new CancellationTokenSource();
-        var workerToken = new CancellationTokenSource();
-
-        var request = new QueryEmbeddingsBatchRequest([TestValue], callerToken.Token, workerToken.Token);
+        var request = new QueryEmbeddingsRequest([TestValue], callerToken.Token);
 
         // Act
         request.Dispose();

@@ -74,7 +74,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
 
         List<EmbeddingGenerationItem> embeddingsToCache = null;
 
-        var embeddings = await _queryBatchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration);
+        var embeddings = await _queryBatchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration); // TODO: provide cancellation token
         
         for (int i = 0; i < embeddings.Length; i++)
         {
@@ -102,9 +102,9 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         return embeddingValues;
     }
 
-    public Task RemoveBatchingWorkerForConnectionStringIdAsync(AiConnectionStringIdentifier connectionStringId) => _queryBatchingService.RemoveWorkerAsync(connectionStringId);
+    public void RemoveBatchingWorkerForConnectionStringIdAsync(AiConnectionStringIdentifier connectionStringId) => _queryBatchingService.RemoveWorker(connectionStringId);
 
-    public Task UpdateBatchingWorkerForConnectionStringIdAsync(AiConnectionString newConnectionString) => _queryBatchingService.UpdateWorkerIfNecessaryAsync(newConnectionString);
+    public void UpdateBatchingWorkerForConnectionStringIdAsync(AiConnectionString newConnectionString) => _queryBatchingService.RecreateWorker(newConnectionString);
 
     private List<string> ChunkValues(string[] values, ChunkingOptions chunkingOptions)
     {
