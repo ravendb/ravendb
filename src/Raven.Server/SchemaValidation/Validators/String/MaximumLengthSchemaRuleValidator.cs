@@ -13,7 +13,7 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
         _maxLength = maxLength;
     }
 
-    protected override bool ValidateInternal(string value, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(string value, ErrorBuilder errorBuilder)
     {
         if (value.Length <= _maxLength) 
             return true;

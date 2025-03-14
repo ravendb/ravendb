@@ -12,7 +12,7 @@ public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
         _constantValue = ConvertTypeForComparison(constantValue);
     }
 
-    protected override bool ValidateInternal(object value, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(object value, ErrorBuilder errorBuilder)
     {
         if (_constantValue.Equals(value)) 
             return true;

@@ -1,28 +1,72 @@
-﻿using System.Runtime.CompilerServices;
-using System.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation;
 
-public interface IErrorBuilder
+public class ErrorBuilder : IDisposable
 {
-    ValidationPath Path { get; }
-    void AddError(DefaultInterpolatedStringHandler message);
-}
-public class ErrorBuilder : IErrorBuilder
-{
-    private readonly StringBuilder _errorBuilder = new StringBuilder();
+    //TODO Maybe writing directly on a stream since we are going to write it back to the respose stream
+    private readonly RentedCharBuffer _errorBuffer = new RentedCharBuffer();
 
-    public ValidationPath Path { get; }
+    public ValidationPath Path { get; } = new ValidationPath();
 
-    // ReSharper disable once ConvertConstructorToMemberInitializers
-    public ErrorBuilder()
+    public string GetErrors() => _errorBuffer.Length != 0 ? _errorBuffer.ToString() : null;
+    
+    public override string ToString() => _errorBuffer?.ToString();
+    
+    [InterpolatedStringHandler]
+    public readonly ref struct ErrorInterpolatedStringHandler
     {
-        Path = new ValidationPath();
-    }
-    
-    public void AddError(DefaultInterpolatedStringHandler message) => _errorBuilder.AppendLine(message.ToStringAndClear());
+        private readonly RentedCharBuffer _errorBuffer;
+        public ErrorInterpolatedStringHandler(int literalLength, int formattedCount, ErrorBuilder errorBuilder)
+        {
+            _errorBuffer = errorBuilder._errorBuffer;
+        }
+        
+        public void AppendLiteral(string value) => _errorBuffer.Append(value);
 
-    public string GetErrors() => _errorBuilder.Length != 0 ? _errorBuilder.ToString() : null;
-    
-    public override string ToString() => _errorBuilder?.ToString();
+        //TODO To avoid allocations when appending BlittableJsonReaderObject
+        public void AppendFormatted(BlittableJsonReaderObject value)
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                value.WriteJsonToAsync(memoryStream).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+                memoryStream.Position = 0;
+
+                var streamReader = new StreamReader(memoryStream);
+                _errorBuffer.Read(streamReader);
+            }
+        }
+        
+        public void AppendFormatted(ValidationPath value) => _errorBuffer.Append(value.AsSpan());
+        public void AppendFormatted(Regex value) => _errorBuffer.Append(value.ToString());
+        
+        public void AppendFormatted(IEnumerable<object> value, string format)
+        {
+            var first = true;
+            foreach (var v in value)
+            {
+                if (first == false)
+                    AppendLiteral(format);
+                first = false;
+                AppendFormatted(v);
+            }
+        }
+        
+        public void AppendFormatted<T>(T value) => _errorBuffer.Append(value);
+    }
+
+    public void Dispose() => _errorBuffer?.Dispose();
+}
+
+public static class ErrorBuilderHelper
+{
+    public static void AddError(this ErrorBuilder errorBuilder, [InterpolatedStringHandlerArgument("errorBuilder")]ErrorBuilder.ErrorInterpolatedStringHandler message)
+    {
+        
+    }
 }

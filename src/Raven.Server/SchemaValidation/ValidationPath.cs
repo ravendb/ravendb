@@ -1,16 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace Raven.Server.SchemaValidation;
 
-//TODO To optimize
+
 public class ValidationPath
 {
+    //TODO To remove Stack allocation
     private readonly Stack<int> _sizes = new Stack<int>();
-    private readonly StringBuilder _path = new StringBuilder();
+    private readonly RentedCharBuffer _path = new RentedCharBuffer();
     private string _toString;
 
+    public int Length => _path.Length;
+    
     public void StepIn(string property)
     {
         _toString = null;
@@ -30,13 +33,13 @@ public class ValidationPath
         _path.Append(current);
     }
     
-
     public void StepOut()
     {
         _toString = null;
         var toRemove = _sizes.Pop();
-        _path.Remove(_path.Length - toRemove, toRemove);
+        _path.Trim(toRemove);
     }
 
-    public override string ToString() => _toString ?? _path.ToString();
+    public ReadOnlySpan<char> AsSpan() => _path.AsSpan();
+    public override string ToString() => _toString ??= _path.ToString();
 }

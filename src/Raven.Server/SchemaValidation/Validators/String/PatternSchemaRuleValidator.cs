@@ -13,7 +13,7 @@ public class PatternSchemaRuleValidator : StringSchemaRuleValidator
         _pattern = new Regex(pattern, RegexOptions.Compiled);
     }
 
-    protected override bool ValidateInternal(string value, IErrorBuilder errorBuilder)
+    protected override bool ValidateInternal(string value, ErrorBuilder errorBuilder)
     {
         if (_pattern.IsMatch(value)) 
             return true;

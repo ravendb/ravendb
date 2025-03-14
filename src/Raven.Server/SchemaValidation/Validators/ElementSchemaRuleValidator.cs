@@ -27,14 +27,14 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
         SchemaPath = schemaPath;
     }
     
-    public bool Validate(TParent parent, TAccessor accessor, IErrorBuilder errorBuilder)
+    public bool Validate(TParent parent, TAccessor accessor, ErrorBuilder errorBuilder)
     {
         if (TryGetElement(parent, accessor, out var element) == false)
             return true;
 
         if (IsOfRequiredType(element.Type) == false)
         {
-            errorBuilder?.AddError($"'{errorBuilder.Path}' should be of type '{string.Join("' or '", _publicTypesRestriction)}' but actual type is '{SchemaValidationHelper.GetPublicType(element.Type)}'.");
+            errorBuilder?.AddError($"'{errorBuilder.Path}' should be of type '{_publicTypesRestriction:' or '}' but actual type is '{SchemaValidationHelper.GetPublicType(element.Type)}'.");
             return false;
         }
         
@@ -43,7 +43,7 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
 
     protected abstract bool TryGetElement(TParent parent, TAccessor accessor, out (BlittableJsonToken Type, object Value) element);
 
-    private bool CheckAllValidators(object value, IErrorBuilder errorBuilder)
+    private bool CheckAllValidators(object value, ErrorBuilder errorBuilder)
     {
         if (_ruleValidators == null)
             return true;
