@@ -1,5 +1,6 @@
 import React from "react";
-import { Col, Row } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import { AboutViewHeading } from "components/common/AboutView";
 import { ServerSettingsVirtualTable } from "components/pages/resources/manageServer/serverSettings/ServerSettingsVirtualTable";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";

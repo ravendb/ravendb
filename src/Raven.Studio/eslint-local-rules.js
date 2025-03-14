@@ -554,6 +554,18 @@ module.exports = {
       return replaceReactstrapToReactBootstrap({ context, componentMap: formComponentMap });
     },
   },
+  "no-reactstrap-Form-props": {
+        meta: fixableMeta,
+    create: (context) => {
+      const config = {
+        toMigrate: [ {
+          key: "innerRef", migrateTo: "ref",
+        }],
+      };
+
+      return handleProps({ context, config, componentName: "Form" });
+    },
+  },
   "no-reactstrap-FormControl-props": {
     meta: fixableMeta,
     create: (context) => {
@@ -578,7 +590,7 @@ module.exports = {
   },
   "no-reactstrap-Input": {
     meta: fixableMeta,
-    create: (context) => createDeprecatedReactstrapImport({ context, name: "Input", reactBootstrapName: "Form" }),
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Input", reactBootstrapName: "Form.Control", newImport: `import Form from "react-bootstrap/Form";\n` }),
   },
   "react-bootstrap-FormControl-checkbox-to-FormCheck": {
     meta: fixableMeta,
@@ -768,7 +780,15 @@ module.exports = {
   },
   "no-reactstrap-Modal": {
     meta: fixableMeta,
-    create: (context) => createDeprecatedReactstrapImport({ context, name: "Modal" }),
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Modal", newImport: `import Modal from "components/common/Modal";\n` }),
+  },
+  "no-reactstrap-ModalBody": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "ModalBody", canFix: false }),
+  },
+  "no-reactstrap-ModalFooter": {
+    meta: fixableMeta,
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "ModalFooter", canFix: false }),
   },
   "no-reactstrap-Modal-props": {
     meta: fixableMeta,
@@ -790,7 +810,17 @@ module.exports = {
   },
   "no-reactstrap-Label": {
     meta: fixableMeta,
-    create: (context) => createDeprecatedReactstrapImport({ context, name: "Label", newImport: "import Label from \"components/common/Label\"" }),
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "Label", newImport: "import { FormLabel } from \"components/common/Form\";\n" }),
+  },
+  "no-reactstrap-Label-rename": {
+    meta: fixableMeta,
+    create: (context) => {
+      const componentMap = {
+        Label: "FormLabel",
+      }
+
+      return replaceReactstrapToReactBootstrap({ context, componentMap });
+    },
   },
   "no-reactstrap-Label-props": {
     meta: fixableMeta,

@@ -1,5 +1,6 @@
 import Button from "react-bootstrap/Button";
-import { Col, Row } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import React from "react";
 import { AboutViewHeading } from "components/common/AboutView";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
@@ -37,12 +38,7 @@ export default function DocumentIdentities() {
                 <Col sm={12} md={4}>
                     <DocumentIdentitiesAboutView />
                 </Col>
-                <DocumentIdentitiesModal
-                    identities={identities}
-                    refetch={reload}
-                    isOpen={isOpen}
-                    toggleModal={toggleIsOpen}
-                />
+                <DocumentIdentitiesModal identities={identities} refetch={reload} show={isOpen} onHide={toggleIsOpen} />
             </Row>
         </div>
     );

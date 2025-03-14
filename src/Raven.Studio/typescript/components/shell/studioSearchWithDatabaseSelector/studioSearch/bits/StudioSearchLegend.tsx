@@ -1,6 +1,7 @@
 import React from "react";
-import { Col, DropdownItem } from "reactstrap";
+import Col from "react-bootstrap/Col";
 import { useOS } from "components/hooks/useOS";
+import Dropdown from "react-bootstrap/Dropdown";
 
 const KeyboardShortcuts = () => {
     const os = useOS();
@@ -9,7 +10,7 @@ const KeyboardShortcuts = () => {
     return (
         <Col sm={12} className="studio-search__legend-col p-0">
             <div className="studio-search__legend-col__group">
-                <DropdownItem header className="studio-search__legend-col__group__header">
+                <Dropdown.Header className="studio-search__legend-col__group__header">
                     <div className="d-flex align-items-center gap-1">
                         <kbd>↑</kbd> <span>Move up</span>
                     </div>
@@ -30,7 +31,7 @@ const KeyboardShortcuts = () => {
                     <div className="d-flex align-items-center gap-1">
                         <kbd>Esc</kbd> <span>Close</span>
                     </div>
-                </DropdownItem>
+                </Dropdown.Header>
             </div>
         </Col>
     );

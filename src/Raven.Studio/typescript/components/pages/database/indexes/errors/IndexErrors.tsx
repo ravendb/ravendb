@@ -1,5 +1,6 @@
 import React from "react";
-import { Col, Row } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import { AboutViewHeading } from "components/common/AboutView";
 import IndexErrorsActions from "components/pages/database/indexes/errors/IndexErrorsActions";
 import { IndexErrorsPanel } from "components/pages/database/indexes/errors/IndexErrorsPanel";

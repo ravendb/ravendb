@@ -47,17 +47,16 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
 
     return (
         <Modal scrollable show onHide={toggle} contentClassName={`modal-border bulge-${getTypeColor(type)}`}>
-            <Modal.Header className="p-0" onCloseClick={toggle} />
+            <Modal.Header className="vstack pb-1" onCloseClick={toggle}>
+                <Icon
+                    icon="ongoing-tasks"
+                    color={getTypeColor(type)}
+                    addon={getTypeIcon(type)}
+                    className="fs-1"
+                    margin="m-0"
+                />
+            </Modal.Header>
             <Modal.Body className="vstack gap-4">
-                <div className="text-center">
-                    <Icon
-                        icon="ongoing-tasks"
-                        color={getTypeColor(type)}
-                        addon={getTypeIcon(type)}
-                        className="fs-1"
-                        margin="m-0"
-                    />
-                </div>
                 {taskGroups.map((taskGroup, idx) => (
                     <div key={"task-group-" + idx}>
                         <div className="text-center lead">{taskGroup.title}</div>

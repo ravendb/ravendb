@@ -1,7 +1,7 @@
 import React from "react";
 import StudioSearchDropdownItem from "../bits/StudioSearchResultItem";
 import { StudioSearchResult, StudioSearchResultItem } from "../studioSearchTypes";
-import { DropdownItem } from "reactstrap";
+import Dropdown from "react-bootstrap/Dropdown";
 
 export default function StudioSearchSwitchToDatabaseResults(props: {
     hasSwitchToDatabaseMatch: boolean;
@@ -16,12 +16,9 @@ export default function StudioSearchSwitchToDatabaseResults(props: {
 
     return (
         <div className="studio-search__database-col__group studio-search__switch-database">
-            <DropdownItem
-                header
-                className="studio-search__database-col__group__header studio-search__database-col__group__header--sticky"
-            >
+            <Dropdown.Header className="studio-search__database-col__group__header studio-search__database-col__group__header--sticky">
                 <span className="small-label">Switch active database</span>
-            </DropdownItem>
+            </Dropdown.Header>
             {switchToDatabaseResults.map((item) => (
                 <StudioSearchDropdownItem key={item.id} item={item} activeItemId={activeItem?.id} />
             ))}

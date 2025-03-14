@@ -75,9 +75,9 @@ function CellValueButtonWrapper(args: CellValueButtonWrapperProps) {
             </Button>
             <DocumentIdentitiesModal
                 refetch={args.refetch}
-                isOpen={isOpen}
+                show={isOpen}
                 defaultValues={args.row.original}
-                toggleModal={toggleIsOpen}
+                onHide={toggleIsOpen}
             />
         </>
     );

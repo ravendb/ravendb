@@ -3,9 +3,9 @@ import { EmptySet } from "components/common/EmptySet";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import StudioSearchDatabaseGroupHeader from "../bits/StudioSearchDatabaseGroupHeader";
 import StudioSearchDropdownItem from "../bits/StudioSearchResultItem";
-import { StudioSearchResult, StudioSearchResultItem, StudioSearchResultDatabaseGroup } from "../studioSearchTypes";
+import { StudioSearchResult, StudioSearchResultDatabaseGroup, StudioSearchResultItem } from "../studioSearchTypes";
 import { useAppSelector } from "components/store";
-import { DropdownItem } from "reactstrap";
+import Dropdown from "react-bootstrap/Dropdown";
 
 export default function StudioSearchDatabaseResults(props: {
     hasDatabaseMatch: boolean;
@@ -18,29 +18,29 @@ export default function StudioSearchDatabaseResults(props: {
 
     if (!activeDatabase) {
         return (
-            <DropdownItem disabled className="studio-search__database-col__group pt-0">
+            <Dropdown.Item disabled className="studio-search__database-col__group pt-0">
                 <EmptySet compact>
                     No results found.
                     <br />
                     You can select an active database from the selector or by typing its name.
                 </EmptySet>
-            </DropdownItem>
+            </Dropdown.Item>
         );
     }
 
     if (!hasDatabaseMatch) {
         return (
-            <DropdownItem disabled className="studio-search__database-col__group pt-0">
+            <Dropdown.Item disabled className="studio-search__database-col__group pt-0">
                 <EmptySet compact>No results found</EmptySet>
-            </DropdownItem>
+            </Dropdown.Item>
         );
     }
 
     return getSortedKeys(databaseResults).map((groupType: StudioSearchResultDatabaseGroup) => (
         <div key={groupType} className="studio-search__database-col__group">
-            <DropdownItem header className="studio-search__database-col__group__header">
+            <Dropdown.Header className="studio-search__database-col__group__header">
                 <StudioSearchDatabaseGroupHeader groupType={groupType} />
-            </DropdownItem>
+            </Dropdown.Header>
             {databaseResults[groupType].map((item) => (
                 <StudioSearchDropdownItem key={item.id} item={item} activeItemId={activeItem?.id} />
             ))}

@@ -6,6 +6,7 @@ import {
     FormDatePicker,
     FormDurationPicker,
     FormInput,
+    FormLabel,
     FormPathSelector,
     FormRadio,
     FormRadioToggleWithIcon,
@@ -55,7 +56,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
     return (
         <div className="vstack gap-4 w-50">
             <div>
-                <ReactBootstrapForm.Label>Input text</ReactBootstrapForm.Label>
+                <FormLabel>Input text</FormLabel>
                 <FormInput type="text" control={control} name="inputText" />
             </div>
             <div>
@@ -85,11 +86,11 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 </InputGroup>
             </div>
             <div>
-                <ReactBootstrapForm.Label>Input number</ReactBootstrapForm.Label>
+                <FormLabel>Input number</FormLabel>
                 <FormInput type="number" control={control} name="inputNumber" />
             </div>
             <div>
-                <ReactBootstrapForm.Label>Input with password preview</ReactBootstrapForm.Label>
+                <FormLabel>Input with password preview</FormLabel>
                 <FormInput type="password" control={control} name="inputPasswordPreview" passwordPreview />
             </div>
             <div className="mt-3">
@@ -98,7 +99,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 </FormCheckbox>
             </div>
             <div className="mt-2">
-                <ReactBootstrapForm.Label>Checkboxes</ReactBootstrapForm.Label>
+                <FormLabel>Checkboxes</FormLabel>
                 <FormCheckboxes
                     control={control}
                     name="inputCheckboxes"
@@ -119,7 +120,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 </FormRadio>
             </div>
             <div>
-                <ReactBootstrapForm.Label>Radio toggle with icon</ReactBootstrapForm.Label>
+                <FormLabel>Radio toggle with icon</FormLabel>
                 <FormRadioToggleWithIcon
                     control={control}
                     name="inputRadioToggleWithIcon"
@@ -128,7 +129,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 />
             </div>
             <div>
-                <ReactBootstrapForm.Label>Select</ReactBootstrapForm.Label>
+                <FormLabel>Select</FormLabel>
                 <FormSelect
                     control={control}
                     name="inputSelect"
@@ -139,7 +140,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 />
             </div>
             <div>
-                <ReactBootstrapForm.Label>Select creatable</ReactBootstrapForm.Label>
+                <FormLabel>Select creatable</FormLabel>
                 <FormSelectCreatable
                     control={control}
                     name="inputSelectCreatable"
@@ -150,7 +151,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 />
             </div>
             <div>
-                <ReactBootstrapForm.Label>Multi select</ReactBootstrapForm.Label>
+                <FormLabel>Multi select</FormLabel>
                 <FormSelect
                     control={control}
                     name="inputMultiSelect"
@@ -171,19 +172,19 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
             </div>
 
             <div>
-                <ReactBootstrapForm.Label>Date picker</ReactBootstrapForm.Label>
+                <FormLabel>Date picker</FormLabel>
                 <FormDatePicker control={control} name="inputDatePicker" />
             </div>
             <div>
-                <ReactBootstrapForm.Label>Duration picker</ReactBootstrapForm.Label>
+                <FormLabel>Duration picker</FormLabel>
                 <FormDurationPicker control={control} name="inputDurationPicker" />
             </div>
             <div>
-                <ReactBootstrapForm.Label>Ace editor</ReactBootstrapForm.Label>
+                <FormLabel>Ace editor</FormLabel>
                 <FormAceEditor mode="javascript" control={control} name="inputAceEditor" />
             </div>
             <div>
-                <ReactBootstrapForm.Label>Path selector</ReactBootstrapForm.Label>
+                <FormLabel>Path selector</FormLabel>
                 <FormPathSelector
                     control={control}
                     name="inputPath"

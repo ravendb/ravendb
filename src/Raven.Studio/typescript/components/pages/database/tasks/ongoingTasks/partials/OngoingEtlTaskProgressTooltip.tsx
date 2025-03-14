@@ -7,7 +7,6 @@ import copyToClipboard from "common/copyToClipboard";
 import { NodeInfoFailure } from "components/pages/database/tasks/ongoingTasks/partials/NodeInfoFailure";
 import { loadStatus } from "components/models/common";
 import Button from "react-bootstrap/Button";
-import Modal from "components/common/Modal";
 
 interface OngoingTaskEtlProgressTooltipProps {
     target: HTMLElement;
