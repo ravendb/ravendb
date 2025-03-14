@@ -21,7 +21,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
 {
     private readonly TestDocumentDatabaseStub _db;
     private readonly AiConnectionStringIdentifier _connectionStringId;
-    private readonly SemaphoreSlim _concurrencyLimiter;
     private readonly RavenLogger _logger;
     private readonly CancellationTokenSource _cts;
     
@@ -32,7 +31,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         _db = new TestDocumentDatabaseStub();
         _connectionStringId = new AiConnectionStringIdentifier("test-connection");
-        _concurrencyLimiter = new SemaphoreSlim(_db.Configuration.QueryEmbeddingsMaxConcurrentBatches);
         _logger = RavenLogManager.Instance.CreateNullLogger();
         _cts = new CancellationTokenSource();
     }
@@ -48,7 +46,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Configuration,
             service,
             _connectionStringId,
-            _concurrencyLimiter,
             _logger,
             _cts.Token);
 
@@ -76,7 +73,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Configuration,
             service,
             _connectionStringId,
-            _concurrencyLimiter,
             _logger,
             _cts.Token);
 
@@ -116,7 +112,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Configuration,
             service,
             _connectionStringId,
-            _concurrencyLimiter,
             _logger,
             _cts.Token);
 
@@ -150,7 +145,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Configuration,
             service,
             _connectionStringId,
-            _concurrencyLimiter,
             _logger,
             workerCts.Token);
 
@@ -192,7 +186,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Configuration,
             service,
             _connectionStringId,
-            _concurrencyLimiter,
             _logger,
             _cts.Token);
 
@@ -226,7 +219,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         _db.Configuration.QueryEmbeddingsMaxBatchSize = 5;
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service.Instance as TestEmbeddingGenerationService;
+        var mockService = service as TestEmbeddingGenerationService;
         Assert.NotNull(mockService);
 
         // Add delay so we can observe concurrency
@@ -237,7 +230,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Configuration,
             service,
             _connectionStringId,
-            _concurrencyLimiter,
             _logger,
             _cts.Token);
 
@@ -284,7 +276,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         // Arrange
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service.Instance as TestEmbeddingGenerationService;
+        var mockService = service as TestEmbeddingGenerationService;
         Assert.NotNull(mockService);
         mockService.ProcessingDelayMs = 500; // Add delay for testing
 
@@ -293,7 +285,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Configuration,
             service,
             _connectionStringId,
-            _concurrencyLimiter,
             _logger,
             _cts.Token);
 
@@ -351,7 +342,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         // Arrange
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service.Instance as TestEmbeddingGenerationService;
+        var mockService = service as TestEmbeddingGenerationService;
         Assert.NotNull(mockService);
 
         // Long delay to ensure worker is disposed before processing completes
@@ -362,7 +353,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             _db.Configuration,
             service,
             _connectionStringId,
-            _concurrencyLimiter,
             _logger,
             _cts.Token);
 
@@ -377,7 +367,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
         await Task.Delay(50);
 
         // Act - Prepare for disposal and dispose
-        await worker.PrepareForServiceDisposalAsync();
         worker.Dispose();
 
         // Assert - All tasks should either be canceled or completed
@@ -387,7 +376,6 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
             Assert.NotNull(exception);
             Assert.True(exception is OperationCanceledException,
                 $"Expected OperationCanceledException after disposal, but got {exception.GetType().Name}");
-            Assert.Contains(QueryEmbeddingsBatchingService.ShutdownMessage, exception.Message);
         }
     }
 }

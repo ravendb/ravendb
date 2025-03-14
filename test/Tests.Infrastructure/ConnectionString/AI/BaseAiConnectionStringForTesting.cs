@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
@@ -90,14 +91,18 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
         try
         {
-            (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value);
-            var embeddings = AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.ValuesListToVerifyConnection).GetAwaiter().GetResult();
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+            {
+                (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value);
+                var embeddings = AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.ValuesListToVerifyConnection, cts.Token).GetAwaiter().GetResult();
 
-            var isExpectedResponse = embeddings.Count == EmbeddingsHelper.ValuesListToVerifyConnection.Count;
-            if (isExpectedResponse == false)
-                Console.WriteLine($"ERROR: Unexpected response from {AiConnectorType.Value}: '{embeddings.Count}' embeddings were generated for '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' input values.");
+                var isExpectedResponse = embeddings.Count == EmbeddingsHelper.ValuesListToVerifyConnection.Count;
+                if (isExpectedResponse == false)
+                    Console.WriteLine(
+                        $"ERROR: Unexpected response from {AiConnectorType.Value}: '{embeddings.Count}' embeddings were generated for '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' input values.");
 
-            return isExpectedResponse;
+                return isExpectedResponse;
+            }
         }
         catch (Exception e)
         {

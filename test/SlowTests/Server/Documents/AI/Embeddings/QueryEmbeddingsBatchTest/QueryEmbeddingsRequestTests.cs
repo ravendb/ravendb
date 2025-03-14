@@ -24,7 +24,6 @@ public class QueryEmbeddingsRequestTests(ITestOutputHelper output) : NoDisposalN
         // Assert
         Assert.Equal(TestValue, request.Values[0]);
         Assert.False(request.TaskCompletionSource.Task.IsCompleted);
-        Assert.False(request.WasCanceled);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -40,7 +39,6 @@ public class QueryEmbeddingsRequestTests(ITestOutputHelper output) : NoDisposalN
 
         // Assert
         Assert.True(request.TaskCompletionSource.Task.IsCanceled, $"Expected task to be canceled, but it was '{request.TaskCompletionSource.Task.Status}'");
-        Assert.True(request.WasCanceled);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -49,13 +47,15 @@ public class QueryEmbeddingsRequestTests(ITestOutputHelper output) : NoDisposalN
         // Arrange
         using var request = new QueryEmbeddingsRequest([TestValue], CancellationToken.None);
 
-        // Act
-        var task = request.CancelWithShutdownMessage();
+        throw new NotImplementedException();
 
-        // Assert
-        Assert.True(task.IsFaulted, $"Expected task to be faulted, but it was '{task.Status}'");
-        Assert.IsType<OperationCanceledException>(task.Exception.InnerException);
-        Assert.Contains(QueryEmbeddingsBatchingService.ShutdownMessage, task.Exception.InnerException.Message);
+        //// Act
+        //var task = request.CancelWithShutdownMessage();
+
+        //// Assert
+        //Assert.True(task.IsFaulted, $"Expected task to be faulted, but it was '{task.Status}'");
+        //Assert.IsType<OperationCanceledException>(task.Exception.InnerException);
+        //Assert.Contains(QueryEmbeddingsBatchingService.ShutdownMessage, task.Exception.InnerException.Message);
     }
 
     [RavenFact(RavenTestCategory.Ai)]

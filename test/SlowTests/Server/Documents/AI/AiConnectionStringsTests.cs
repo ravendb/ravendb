@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using FastTests;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
@@ -15,8 +16,6 @@ namespace SlowTests.Server.Documents.AI;
 
 public class AiConnectionStringsTests : RavenTestBase
 {
-    private static readonly ChunkingOptions DefaultChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 };
-
     public AiConnectionStringsTests(ITestOutputHelper output) : base(output)
     {
     }
@@ -174,10 +173,13 @@ public class AiConnectionStringsTests : RavenTestBase
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.All)]
     public void SemanticKernel_WithValidConfiguration_ShouldWork(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
-        (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-        var embeddings = AiHelper.GenerateEmbeddingsAsync(service ,_testValuesList).GetAwaiter().GetResult();
+        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+        {
+            (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
+            var embeddings = AiHelper.GenerateEmbeddingsAsync(service, _testValuesList, cts.Token).GetAwaiter().GetResult();
 
-        Assert.Equal(_testValuesList.Count, embeddings.Count);
+            Assert.Equal(_testValuesList.Count, embeddings.Count);
+        }
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
@@ -187,32 +189,35 @@ public class AiConnectionStringsTests : RavenTestBase
     {
         const int dimensions = 5;
 
-        (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-        var embeddings = AiHelper.GenerateEmbeddingsAsync(service, _testValuesList).GetAwaiter().GetResult();
-
-        for (var i = 0; i < _testValuesList.Count; i++)
-            Assert.False(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
-
-        embeddings = null;
-        Assert.Null(embeddings);
-
-        switch (embeddingsGenerationConfiguration.AiConnectorType)
+        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
         {
-            case AiConnectorType.OpenAi:
-                embeddingsGenerationConfiguration.Connection.OpenAiSettings.Dimensions = dimensions;
-                break;
-            case AiConnectorType.AzureOpenAi:
-                embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.Dimensions = dimensions;
-                break;
-            case AiConnectorType.Google:
-                embeddingsGenerationConfiguration.Connection.GoogleSettings.Dimensions = dimensions;
-                break;
+            (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
+            var embeddings = AiHelper.GenerateEmbeddingsAsync(service, _testValuesList, cts.Token).GetAwaiter().GetResult();
+
+            for (var i = 0; i < _testValuesList.Count; i++)
+                Assert.False(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
+
+            embeddings = null;
+            Assert.Null(embeddings);
+
+            switch (embeddingsGenerationConfiguration.AiConnectorType)
+            {
+                case AiConnectorType.OpenAi:
+                    embeddingsGenerationConfiguration.Connection.OpenAiSettings.Dimensions = dimensions;
+                    break;
+                case AiConnectorType.AzureOpenAi:
+                    embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.Dimensions = dimensions;
+                    break;
+                case AiConnectorType.Google:
+                    embeddingsGenerationConfiguration.Connection.GoogleSettings.Dimensions = dimensions;
+                    break;
+            }
+
+            (service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
+            embeddings = AiHelper.GenerateEmbeddingsAsync(service, _testValuesList, cts.Token).GetAwaiter().GetResult();
+
+            for (var i = 0; i < _testValuesList.Count; i++)
+                Assert.True(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality was configured to {dimensions}, but embeddings were generated with {embeddings[i].Length} dimensions.");
         }
-
-        (service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-        embeddings = AiHelper.GenerateEmbeddingsAsync(service, _testValuesList).GetAwaiter().GetResult();
-
-        for (var i = 0; i < _testValuesList.Count; i++)
-            Assert.True(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality was configured to {dimensions}, but embeddings were generated with {embeddings[i].Length} dimensions.");
     }
 }
