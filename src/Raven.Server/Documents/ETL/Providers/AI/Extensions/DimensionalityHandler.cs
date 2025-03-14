@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -21,7 +22,11 @@ public class DimensionalityHandler : DelegatingHandler
     private const string MediaType = "application/json";
     private const string BlittableDocumentId = "requestBody/json";
 
-    private static readonly DocumentConventions ConventionsToUse = new() { UseHttpCompression = false };
+    private static readonly DocumentConventions ConventionsToUse = new()
+    {
+        UseHttpCompression = true, 
+        HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip
+    };
 
     private readonly int _dimensions;
 
