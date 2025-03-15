@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.AI.Embeddings;
 
 public class EmbeddingGenerationItem
 {
-    public IEmbeddingValue EmbeddingValue { get; private set; }
+    public ReadOnlyMemory<byte> EmbeddingValue { get; private set; }
 
     public string TextualValue { get; }
 
@@ -22,7 +22,7 @@ public class EmbeddingGenerationItem
     private string _inputValueHash;
 
     public EmbeddingGenerationItem(string textualValue,
-        IEmbeddingValue embeddingValue,
+        ReadOnlyMemory<byte> embeddingValue,
         VectorEmbeddingType quantization,
         AiConnectionStringIdentifier connectionStringIdentifier)
     {
@@ -37,7 +37,7 @@ public class EmbeddingGenerationItem
         TextualValue = textualValue;
     }
 
-    public void SetEmbedding(IEmbeddingValue embeddingValue,
+    public void SetEmbedding(ReadOnlyMemory<byte> embeddingValue,
         VectorEmbeddingType quantization,
         AiConnectionStringIdentifier connectionStringIdentifier)
     {

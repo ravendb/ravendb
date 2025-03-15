@@ -306,7 +306,7 @@ public static partial class CoraxQueryBuilder
 
             var destinationEmbeddingType = vectorOptions?.DestinationEmbeddingType ?? sourceEmbeddingType;
             
-            IEmbeddingValue[] embeddingValues;
+            ReadOnlyMemory<byte>[] embeddingValues;
 
             switch (valueType)
             {
@@ -344,7 +344,7 @@ public static partial class CoraxQueryBuilder
             {
                 var embeddingValue = embeddingValues[0];
 
-                return (GenerateEmbeddings.FromValue(builderParameters.Allocator, embeddingValue, queryingVectorOption), null);
+                return (GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue.Span, queryingVectorOption), null);
             }
             else
             {
@@ -354,7 +354,7 @@ public static partial class CoraxQueryBuilder
                 {
                     var embeddingValue = embeddingValues[i];
 
-                    vectorValues[i] = GenerateEmbeddings.FromValue(builderParameters.Allocator, embeddingValue, queryingVectorOption);
+                    vectorValues[i] = GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue.Span, queryingVectorOption);
                 }
 
                 return (null, vectorValues);

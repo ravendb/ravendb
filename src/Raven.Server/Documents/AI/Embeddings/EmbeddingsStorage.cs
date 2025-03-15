@@ -10,19 +10,15 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
-public class EmbeddingsStorage
+public class EmbeddingsStorage([NotNull] DocumentDatabase database)
 {
     private const string EmbeddingAttachmentContentType = "application/octet-stream";
 
-    private readonly DocumentsStorage _documentsStorage;
-
-    public EmbeddingsStorage([NotNull] DocumentDatabase database)
-    {
-        _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(database.DocumentsStorage));
-    }
+    private readonly DocumentsStorage _documentsStorage = database.DocumentsStorage ?? throw new ArgumentNullException(nameof(database.DocumentsStorage));
 
     public Document GetEmbeddingDocument(DocumentsOperationContext context, string sourceDocumentId, out string embeddingDocumentId)
     {
@@ -51,7 +47,7 @@ public class EmbeddingsStorage
     public void PutOrUpdateEmbeddingCacheDocument(DocumentsOperationContext context, EmbeddingGenerationItem item, DateTime expireAt,
         TimeSpan cacheExpiration)
     {
-        if (item.EmbeddingValue != null)
+        if (item.EmbeddingValue.Length > 0)
         {
             CacheEmbedding(context, item, expireAt);
             return;
@@ -86,7 +82,7 @@ public class EmbeddingsStorage
         var attachmentsArray = attachmentsArrayObject as BlittableJsonReaderArray;
 
         PortableExceptions.ThrowIfNull<InvalidDataException>(attachmentsArray);
-        PortableExceptions.ThrowIfNot<InvalidDataException>(attachmentsArray.Length == 1, $"The embedding document suppose to have only one attachment, but it has {attachmentsArray.Length}.");
+        PortableExceptions.ThrowIfNot<InvalidDataException>(attachmentsArray!.Length == 1, $"The embedding document suppose to have only one attachment, but it has {attachmentsArray.Length}.");
 
         var attachment = attachmentsArray[0] as BlittableJsonReaderObject;
         PortableExceptions.ThrowIfNull(attachment, $"The embedding document has no attachment.");
@@ -115,33 +111,30 @@ public class EmbeddingsStorage
         return document != null;
     }
 
-    public IEmbeddingValue GetCachedEmbeddingValue(DocumentsOperationContext documentsContext, string embeddingCacheDocumentId, string valueHash)
+    public ReadOnlyMemory<byte> GetCachedEmbeddingValue(DocumentsOperationContext documentsContext, string embeddingCacheDocumentId, string valueHash)
     {
         var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(documentsContext, embeddingCacheDocumentId, valueHash, AttachmentType.Document, null);
-
         var stream = attachment.Stream;
-
-        return new StreamedEmbeddingValue(stream);
+        byte[] buffer = new byte[attachment.Size];
+        stream.ReadExactly(buffer);
+        return buffer;
     }
 
     public void CacheEmbedding(DocumentsOperationContext context, EmbeddingGenerationItem item, DateTime expireAt)
     {
-        using (var embeddingValueStream = item.EmbeddingValue.GetEmbeddingStream())
+        var embeddingHash = AttachmentsStorageHelper.CalculateHash(item.EmbeddingValue.Span);
+
+        var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(item.ConnectionStringIdentifier, item.ValueHash, item.Quantization);
+
+        var docJson = CreateEmbeddingCacheDocumentJson(expireAt);
+
+        using (var json = context.ReadObject(docJson, docId))
         {
-            var embeddingHash = AttachmentsStorageHelper.CalculateHash(item.EmbeddingValue.GetEmbedding());
-
-            var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(item.ConnectionStringIdentifier, item.ValueHash, item.Quantization);
-
-            var docJson = CreateEmbeddingCacheDocumentJson(expireAt);
-
-            using (var json = context.ReadObject(docJson, docId))
-            {
-                _documentsStorage.Put(context, docId, null, json);
-            }
-
-            _documentsStorage.AttachmentsStorage.PutAttachment(context, docId, item.ValueHash, EmbeddingAttachmentContentType, embeddingHash, null,
-                embeddingValueStream);
+            _documentsStorage.Put(context, docId, null, json);
         }
+
+        _documentsStorage.AttachmentsStorage.PutAttachment(context, docId, item.ValueHash, EmbeddingAttachmentContentType, 
+            embeddingHash, null, new ReadOnlyMemoryStream<byte>(item.EmbeddingValue));
     }
 
     private DynamicJsonValue CreateEmbeddingCacheDocumentJson(DateTime expireAt)

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Sparrow.Platform;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -75,12 +76,12 @@ public static class EmbeddingsHelper
         return $"embeddings-cache/{aiConnectionStringIdentifier.Value}/{valueHash}{suffix}";
     }
 
-    public static EmbeddingValue CreateEmbeddingValue(ReadOnlyMemory<float> embedding, VectorEmbeddingType quantization)
+    public static ReadOnlyMemory<byte> CreateEmbeddingValue(ReadOnlyMemory<float> embedding, VectorEmbeddingType quantization)
     {
         switch (quantization)
         {
             case VectorEmbeddingType.Single:
-                return new EmbeddingValue(embedding, embedding.Length * sizeof(float));
+                return MemoryMarshalEx.Cast<float, byte>(embedding);
             case VectorEmbeddingType.Int8:
             {   var dest = MemoryMarshal.Cast<float, sbyte>(embedding.Span);
                 if (VectorQuantizer.TryToInt8(embedding.Span, dest, out int usedBytes) == false)
@@ -89,18 +90,18 @@ public static class EmbeddingsHelper
                     var span = MemoryMarshal.Cast<float, sbyte>(newMemory.Span);
                     var result = VectorQuantizer.TryToInt8(embedding.Span, span, out usedBytes);
                     Debug.Assert(result, "TryToInt8 should always return true");
-
-                    return new EmbeddingValue(newMemory, usedBytes);
+        
+                    return MemoryMarshalEx.Cast<float, byte>(embedding)[..usedBytes];
                 }
-
-                return new EmbeddingValue(embedding, usedBytes);
+                
+                return MemoryMarshalEx.Cast<float, byte>(embedding)[..usedBytes];
             }
             case VectorEmbeddingType.Binary:
             {
                 var dest = MemoryMarshal.Cast<float, byte>(embedding.Span);
                 VectorQuantizer.TryToInt1(embedding.Span, dest, out int usedBytes);
-
-                return new EmbeddingValue(embedding, usedBytes);
+        
+                return MemoryMarshalEx.Cast<float, byte>(embedding)[..usedBytes];
             }
             default:
                 throw new ArgumentOutOfRangeException($"Quantization type {quantization} is not supported");

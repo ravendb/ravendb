@@ -58,27 +58,6 @@ public static class GenerateEmbeddings
             Quantize(allocator, options.DestinationEmbeddingType, embedding.MemoryScope, embedding.Memory, embedding.UsedBytes);
     }
 
-    public static VectorValue FromValue(ByteStringContext allocator, IEmbeddingValue embedding, in VectorOptions options)
-    {
-        switch (embedding)
-        {
-            case EmbeddingValue ev:
-                return FromArray(allocator, ev.GetEmbedding(), in options);
-            case StreamedEmbeddingValue sev:
-                using (var stream = sev.GetEmbeddingStream())
-                {
-                    var usedBytes = (int)stream.Length;
-                    var memScope = allocator.Allocate((int)stream.Length, out Memory<byte> mem);
-                    stream.ReadExactly(mem.Span);
-
-                    return FromArray(allocator, memScope, mem, options, usedBytes);
-                }
-
-            default:
-                throw new NotSupportedException($"Unknown embedding value type: {embedding.GetType().FullName}");
-        }
-    }
-
     public static VectorValue FromArray(ByteStringContext allocator, ReadOnlySpan<byte> embedding, in VectorOptions options)
     {
         var embeddingDestinationType = options.DestinationEmbeddingType;
