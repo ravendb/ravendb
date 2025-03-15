@@ -8,6 +8,11 @@ public class GoogleConnectorForTesting : BaseAiConnectorForTesting<GoogleConnect
     private const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_GOOGLE_API_KEY";
     private const string Model = "text-embedding-004";
 
+    public GoogleConnectorForTesting()
+    {
+        RequiredEnvironmentVariables = [EnvironmentVariable];
+    }
+    
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Google);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()

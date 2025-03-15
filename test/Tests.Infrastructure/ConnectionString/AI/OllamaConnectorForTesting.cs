@@ -8,6 +8,10 @@ public class OllamaConnectorForTesting : BaseAiConnectorForTesting<OllamaConnect
     private const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_URI";
     private const string Model = "phi:latest";
 
+    public OllamaConnectorForTesting()
+    {
+        RequiredEnvironmentVariables = [EnvironmentVariable];
+    }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()

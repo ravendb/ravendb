@@ -10,6 +10,11 @@ public sealed class AzureOpenAiConnectorForTesting : BaseAiConnectorForTesting<A
     private const string EnvironmentVariableDeploymentName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_NAME";
     private const string Model = "text-embedding-3-small";
 
+    public AzureOpenAiConnectorForTesting()
+    {
+        RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableDeploymentEndpoint, EnvironmentVariableDeploymentName];
+    }
+    
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.AzureOpenAi);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()

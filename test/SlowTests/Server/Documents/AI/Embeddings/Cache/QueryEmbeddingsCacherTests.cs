@@ -45,11 +45,11 @@ public class QueryEmbeddingsCacherTests : RavenLowLevelTestBase
 
         var expireAt = db.Time.GetUtcNow().AddDays(7);
 
-        var embedding1 = new EmbeddingGenerationItem("test1", new EmbeddingTestValue([0.1f, 0.2f, 0.3f]), VectorEmbeddingType.Single, aiCs)
+        var embedding1 = new EmbeddingGenerationItem("test1", MemoryMarshalEx.Cast<float,byte>(new []{0.1f, 0.2f, 0.3f}), VectorEmbeddingType.Single, aiCs)
         {
             ExpireAt = expireAt
         };
-        var embedding2 = new EmbeddingGenerationItem("test2", new EmbeddingTestValue([0.3f, 0.5f, 1.1f]), VectorEmbeddingType.Single, aiCs)
+        var embedding2 = new EmbeddingGenerationItem("test2",MemoryMarshalEx.Cast<float,byte>(new[]{0.3f, 0.5f, 1.1f}), VectorEmbeddingType.Single, aiCs)
         {
             ExpireAt = expireAt
         };
@@ -75,7 +75,7 @@ public class QueryEmbeddingsCacherTests : RavenLowLevelTestBase
                 Assert.NotNull(attachment);
                 
                 Assert.Equal(embedding.ValueHash, attachment.Name);
-                Assert.Equal(3, attachment.Size);
+                Assert.Equal(12, attachment.Size);
             }
         }
     }
@@ -95,7 +95,7 @@ public class QueryEmbeddingsCacherTests : RavenLowLevelTestBase
 
         for (int i = 0; i < db.Configuration.Ai.QueryEmbeddingsGenerationMaxCacheBatchSize * 2 + 5; i++)
         {
-            var embedding = new EmbeddingGenerationItem("test" + i, new EmbeddingTestValue([0.1f, 0.2f, 0.3f, i]), VectorEmbeddingType.Single, aiCs)
+            var embedding = new EmbeddingGenerationItem("test" + i, MemoryMarshalEx.Cast<float,byte>(new[]{0.1f, 0.2f, 0.3f, i}), VectorEmbeddingType.Single, aiCs)
             {
                 ExpireAt = expireAt
             };
@@ -132,21 +132,8 @@ public class QueryEmbeddingsCacherTests : RavenLowLevelTestBase
                 Assert.NotNull(attachment);
 
                 Assert.Equal(embedding.ValueHash, attachment.Name);
-                Assert.Equal(4, attachment.Size);
+                Assert.Equal(16, attachment.Size);
             }
-        }
-    }
-
-    private class EmbeddingTestValue(float[] vector) : IEmbeddingValue
-    {
-        public ReadOnlySpan<byte> GetEmbedding()
-        {
-            return MemoryMarshal.Cast<float, byte>(vector);
-        }
-
-        public Stream GetEmbeddingStream()
-        {
-            return new ReadOnlyMemoryStream<float>(vector, vector.Length);
         }
     }
 }

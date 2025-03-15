@@ -9,6 +9,10 @@ public class MistralAiConnectorForTesting : BaseAiConnectorForTesting<MistralAiC
     private const string Endpoint = "https://api.mistral.ai/v1";
     private const string Model = "mistral-embed";
 
+    public MistralAiConnectorForTesting()
+    {
+        RequiredEnvironmentVariables = [EnvironmentVariable];
+    }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.MistralAi);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()

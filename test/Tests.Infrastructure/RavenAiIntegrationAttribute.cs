@@ -43,7 +43,6 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
 
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
-        var skipMessageCopy = Skip;
         foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
         {
             Func<IEnumerable<IAiConnectorForTesting>> aiConnectionStringForTestingGetter = ReuseConnectionString
@@ -52,10 +51,10 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
 
             foreach (var aiConnectionStringForTesting in aiConnectionStringForTestingGetter.Invoke())
             {
-                using (SetSkipValueIfSkipMessageNotEmpty(ref skipMessageCopy))
-                using (SetSkipValueIfNightlyBuildRequired(ref skipMessageCopy))
-                using (SetSkipValueIfShardedDbOnX86(databaseMode, ref skipMessageCopy))
-                using (SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting, skipMessageCopy))
+                using (SetSkipValueIfNightlyBuildRequired())
+                using (SetSkipValueIfShardedDbOnX86(databaseMode))
+                using (SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting))
+                using (SetSkipValueIfNoApiKeyDefined(aiConnectionStringForTesting))
                 {
                     var aiIntegrationConfiguration = aiConnectionStringForTesting.GetEtlConfiguration();
 
@@ -71,18 +70,9 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
         }
     }
 
-    private DisposableAction SetSkipValueIfSkipMessageNotEmpty(ref string skipMessage)
+    private DisposableAction SetSkipValueIfShardedDbOnX86(RavenDatabaseMode databaseMode)
     {
-        if (string.IsNullOrEmpty(skipMessage))
-            return null;
-
-        Skip = skipMessage;
-        return new DisposableAction(() => Skip = null);
-    }
-
-    private DisposableAction SetSkipValueIfShardedDbOnX86(RavenDatabaseMode databaseMode, ref string skipMessage)
-    {
-        if (string.IsNullOrEmpty(skipMessage) == false)
+        if (string.IsNullOrEmpty(Skip) == false)
             return null;
 
         if (Is32Bit == false)
@@ -94,10 +84,23 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
         Skip = ShardingSkipMessage;
         return new DisposableAction(() => Skip = null);
     }
-
-    private DisposableAction SetSkipValueIfUnableConnectToAi(IAiConnectorForTesting aiConnectorForTesting, string skipMessage)
+    
+    
+    private DisposableAction SetSkipValueIfNoApiKeyDefined(IAiConnectorForTesting aiConnectorForTesting)
     {
-        if (string.IsNullOrEmpty(skipMessage) == false)
+        if (string.IsNullOrEmpty(Skip) == false)
+            return null;
+
+        if (aiConnectorForTesting.MissingRequiredApiKey(out var envVar) is false)
+            return null;
+        
+        Skip = $"API Key is required for {aiConnectorForTesting.AiConnectorType}, but was not specified using: {envVar}";
+        return new DisposableAction(() => Skip = null);
+    }
+
+    private DisposableAction SetSkipValueIfUnableConnectToAi(IAiConnectorForTesting aiConnectorForTesting)
+    {
+        if (string.IsNullOrEmpty(Skip) == false)
             return null;
 
         if (CheckCanConnect == false)
@@ -122,9 +125,9 @@ public  class RavenAiIntegrationDataAttribute : RavenDataAttributeBase
         return false;
     }
 
-    private DisposableAction SetSkipValueIfNightlyBuildRequired(ref string skipMessage)
+    private DisposableAction SetSkipValueIfNightlyBuildRequired()
     {
-        if (string.IsNullOrEmpty(skipMessage) == false)
+        if (string.IsNullOrEmpty(Skip) == false)
             return null;
 
         if (NightlyBuildRequired == false || NightlyBuildTheoryAttribute.IsNightlyBuild)

@@ -18,6 +18,7 @@ public interface IAiConnectorForTesting
     EmbeddingsGenerationConfiguration GetEtlConfiguration();
     Lazy<bool> CanConnect { get; }
     Lazy<AiConnectorType> AiConnectorType { get; }
+    bool MissingRequiredApiKey(out string environmentVariableName);
 }
 
 public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
@@ -34,6 +35,23 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
     public Lazy<bool> CanConnect { get; }
 
     public abstract Lazy<AiConnectorType> AiConnectorType { get; init; }
+
+    protected string[] RequiredEnvironmentVariables = [];
+    
+    public virtual bool MissingRequiredApiKey(out string environmentVariableName)
+    {
+        foreach (var envVar in RequiredEnvironmentVariables)
+        {
+            if (Environment.GetEnvironmentVariable(envVar) == null)
+            {
+                environmentVariableName = envVar;
+                return true;
+            }
+        }
+
+        environmentVariableName = null;
+        return false;
+    }
 
     private Lazy<string> NamePrefix { get; init; }
 

@@ -9,6 +9,10 @@ public class OpenAiConnectorForTesting : BaseAiConnectorForTesting<OpenAiConnect
     private const string Endpoint = "https://api.openai.com/v1";
     private const string Model = "text-embedding-3-small";
 
+    public OpenAiConnectorForTesting()
+    {
+        RequiredEnvironmentVariables = [EnvironmentVariable];
+    }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
