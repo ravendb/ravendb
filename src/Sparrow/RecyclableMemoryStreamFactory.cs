@@ -7,17 +7,16 @@ namespace Sparrow;
 
 internal class RecyclableMemoryStreamFactory
 {
-    private static readonly RecyclableMemoryStreamManager Manager = new()
+    private static readonly RecyclableMemoryStreamManager Manager = new(new RecyclableMemoryStreamManager.Options
     {
-        Settings =
-        {
-            AggressiveBufferReturn = true,
-            MaximumBufferSize = Constants.Size.Megabyte,
-            MaximumSmallPoolFreeBytes = 256 * Constants.Size.Megabyte,
-            MaximumLargePoolFreeBytes = 128 * Constants.Size.Megabyte,
-            ThrowExceptionOnToArray = true
-        }
-    };
+        AggressiveBufferReturn = true,
+        MaximumBufferSize = Constants.Size.Megabyte,
+        MaximumSmallPoolFreeBytes = 256 * Constants.Size.Megabyte,
+        MaximumLargePoolFreeBytes = 128 * Constants.Size.Megabyte,
+        ThrowExceptionOnToArray = true,
+        LargeBufferMultiple = 64 * Constants.Size.Kilobyte,
+        BlockSize = 32 * Constants.Size.Kilobyte
+    });
 
     public static RecyclableMemoryStream GetRecyclableStream()
     {
