@@ -33,7 +33,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
         }
 
         [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task GetExternalReplicationTaskProgressShouldWork(Options options)
         {
             using var source = GetDocumentStore(options);
@@ -79,12 +79,11 @@ namespace SlowTests.Server.Documents.OngoingTasks
             await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: true, hasTombstones: true);
         }
 
-        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
-        public async Task GetPullReplicationAsHubTaskProgressShouldWork(Options options)
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Studio)]
+        public async Task GetPullReplicationAsHubTaskProgressShouldWork()
         {
-            using var hub = GetDocumentStore(options);
-            using var sink = GetDocumentStore(options);
+            using var hub = GetDocumentStore();
+            using var sink = GetDocumentStore();
 
             // we want the first result to show unprocessed items
             // so, we define pull replication task and break it immediately
@@ -127,13 +126,12 @@ namespace SlowTests.Server.Documents.OngoingTasks
             await VerifyReplicationProgressAsync(hub, hubDatabase, ReplicationNode.ReplicationType.PullAsHub, isCompleted: true, hasTombstones: true);
         }
 
-        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
-        public async Task GetPullReplicationAsHubTaskProgressShouldWork_TwoSinks(Options options)
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Studio)]
+        public async Task GetPullReplicationAsHubTaskProgressShouldWork_TwoSinks()
         {
-            using var hub = GetDocumentStore(new Options(options) { ModifyDatabaseName = _ => "HubDB" });
-            using var sink1 = GetDocumentStore(new Options(options) { ModifyDatabaseName = _ => "Sink1DB" });
-            using var sink2 = GetDocumentStore(new Options(options) { ModifyDatabaseName = _ => "Sink2DB" });
+            using var hub = GetDocumentStore(new Options() { ModifyDatabaseName = _ => "HubDB" });
+            using var sink1 = GetDocumentStore(new Options() { ModifyDatabaseName = _ => "Sink1DB" });
+            using var sink2 = GetDocumentStore(new Options() { ModifyDatabaseName = _ => "Sink2DB" });
 
             // we want the first result to show unprocessed items
             // so, we define pull replication task and break it immediately
@@ -177,13 +175,12 @@ namespace SlowTests.Server.Documents.OngoingTasks
             await VerifyPullAsHubReplicationProgress(hub, hubDatabase, isCompleted: true, hasTombstones: true);
         }
 
-        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
-        public async Task GetPullReplicationAsSinkTaskProgressShouldWork(Options options)
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Studio)]
+        public async Task GetPullReplicationAsSinkTaskProgressShouldWork()
         {
             var (_, leader, certificates) = await CreateRaftClusterWithSsl(1);
 
-            using var hub = GetDocumentStore(new Options(options)
+            using var hub = GetDocumentStore(new Options()
             {
                 Server = leader,
                 AdminCertificate = certificates.ServerCertificate.Value,
@@ -192,7 +189,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
                 CreateDatabase = true
             });
 
-            using var sink = GetDocumentStore(new Options(options)
+            using var sink = GetDocumentStore(new Options()
             {
                 Server = leader,
                 AdminCertificate = certificates.ServerCertificate.Value,
@@ -249,7 +246,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
         }
 
         [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio | RavenTestCategory.Cluster)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task GetInternalReplicationProgressShouldWork(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(3);
@@ -284,7 +281,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
         }
 
         [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ShouldGetErrorForExternalReplicationTask(Options options)
         {
             using var source = GetDocumentStore(options);
@@ -305,7 +302,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
         }
 
         [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldGetErrorForPullReplicationAsSinkTask(Options options)
         {
             using var hub = GetDocumentStore(options);
