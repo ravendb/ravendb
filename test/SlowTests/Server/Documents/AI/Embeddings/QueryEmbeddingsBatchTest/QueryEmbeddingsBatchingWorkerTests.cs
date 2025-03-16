@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.SemanticKernel.Embeddings;
@@ -175,6 +177,7 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     {
         // Arrange
         _db.Configuration.QueryEmbeddingsMaxBatchSize = 5; // Small batch size
+        _db.Configuration.QueryEmbeddingsMaxConcurrentBatches = 1;
 
         var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
         var mockService = service as TestEmbeddingGenerationService;
@@ -212,63 +215,109 @@ public class QueryEmbeddingsBatchingWorkerTests : EmbeddingsGenerationTestBase
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task MultipleWorkers_ProcessConcurrently()
+    public async Task QueryEmbeddingsBatchingWorker_RespectsMaxConcurrentBatchesConfiguration()
     {
-        // Arrange - Configure multiple worker threads
-        _db.Configuration.QueryEmbeddingsMaxConcurrentBatches = 4;
-        _db.Configuration.QueryEmbeddingsMaxBatchSize = 5;
+        // Arrange
+        const int expectedConcurrentWorkers = 4;
 
-        var service = TestAiHelper.CreateMockEmbeddingService(DimensionSize);
-        var mockService = service as TestEmbeddingGenerationService;
-        Assert.NotNull(mockService);
+        // Configure database
+        _db.Configuration.QueryEmbeddingsMaxConcurrentBatches = expectedConcurrentWorkers;
+        _db.Configuration.QueryEmbeddingsMaxBatchSize = 1; // Each request is its own batch
 
-        // Add delay so we can observe concurrency
-        mockService.ProcessingDelayMs = 500;
+        // Create synchronization primitives
+        var concurrencyReachedEvent = new ManualResetEventSlim(false);
+        var maxConcurrencyHeldEvent = new ManualResetEventSlim(false);
+        var workerBlockedEvents = new ConcurrentDictionary<int, SemaphoreSlim>();
+
+        // Track active threads and concurrency metrics
+        var activeThreads = new ConcurrentDictionary<int, int>();
+        var concurrencyCounter = 0;
+        var maxConcurrency = 0;
+        var maxConcurrencyHeldDuration = 0;
+
+        // Create custom embedding service
+        var mockService = new TestEmbeddingGenerationService();
+        mockService.CustomBehavior = async (texts, token) =>
+        {
+            // Track thread
+            int threadId = Environment.CurrentManagedThreadId;
+
+            if (activeThreads.TryAdd(threadId, 1))
+            {
+                // Create semaphore for this thread
+                var threadSemaphore = new SemaphoreSlim(0, 1);
+                workerBlockedEvents[threadId] = threadSemaphore;
+
+                // Increment and track concurrent threads
+                var currentConcurrency = Interlocked.Increment(ref concurrencyCounter);
+                Interlocked.Exchange(ref maxConcurrency, Math.Max(currentConcurrency, maxConcurrency));
+
+                // Signal if we've reached expected concurrency
+                if (currentConcurrency == expectedConcurrentWorkers && concurrencyReachedEvent.IsSet == false)
+                {
+                    concurrencyReachedEvent.Set();
+
+                    // Hold at max concurrency for a moment to ensure it's stable
+                    await Task.Delay(200, token);
+                    maxConcurrencyHeldEvent.Set();
+                    Interlocked.Increment(ref maxConcurrencyHeldDuration);
+                }
+
+                try
+                {
+                    // Wait to be released
+                    bool released = await threadSemaphore.WaitAsync(TimeSpan.FromSeconds(30), token);
+                    Assert.True(released, $"Thread blocked for too long without being released");
+                }
+                finally
+                {
+                    // Clean up
+                    Interlocked.Decrement(ref concurrencyCounter);
+                    threadSemaphore.Dispose();
+                    workerBlockedEvents.TryRemove(threadId, out _);
+                }
+            }
+
+            // Generate and return mock embeddings
+            var result = new List<ReadOnlyMemory<float>>();
+            foreach (var text in texts)
+            {
+                var embedding = new float[DimensionSize];
+                for (int i = 0; i < DimensionSize; i++)
+                    embedding[i] = 0.1f * i;
+
+                result.Add(new ReadOnlyMemory<float>(embedding));
+            }
+
+            return result;
+        };
 
         using var worker = new QueryEmbeddingsBatchingWorker(
             _db.Name,
             _db.Configuration,
-            service,
+            mockService,
             _connectionStringId,
             _logger,
             _cts.Token);
 
-        var activeProcessors = 0;
-        var maxConcurrentProcessors = 0;
-
-        // Set up test hook to track concurrency
-        worker.ForTestingPurposesOnly().AfterBatchProcessed = () => {
-            var current = Interlocked.Increment(ref activeProcessors);
-            Interlocked.CompareExchange(ref maxConcurrentProcessors, current, Math.Max(current, maxConcurrentProcessors));
-
-            // Simulate processing work
-            Thread.Sleep(200);
-
-            Interlocked.Decrement(ref activeProcessors);
-        };
-
         worker.Start();
 
-        // Act - Submit multiple requests in quick succession
+        // Act - Submit requests
+        const int totalRequests = expectedConcurrentWorkers * 2;
         var tasks = new List<Task<ReadOnlyMemory<float>[]>>();
-        for (int i = 0; i < 20; i++)
-            tasks.Add(worker.EnqueueRequestAsync([$"text {i}"], CancellationToken.None));
 
-        // Use a stopwatch to measure parallel execution
-        var sw = Stopwatch.StartNew();
-        await Task.WhenAll(tasks);
-        sw.Stop();
+        for (int i = 0; i < totalRequests; i++)
+            tasks.Add(worker.EnqueueRequestAsync([$"request {i}"], CancellationToken.None));
+
+        // Wait for expected concurrency to be reached
+        bool concurrencyReached = concurrencyReachedEvent.Wait(TimeSpan.FromSeconds(30));
+        bool concurrencyHeld = maxConcurrencyHeldEvent.Wait(TimeSpan.FromSeconds(5));
 
         // Assert
-        Assert.True(maxConcurrentProcessors > 1, $"Should have observed multiple concurrent processors, but max was {maxConcurrentProcessors}");
-        Assert.True(maxConcurrentProcessors <= _db.Configuration.QueryEmbeddingsMaxConcurrentBatches,
-            $"Should not exceed {_db.Configuration.QueryEmbeddingsMaxConcurrentBatches} concurrent processors, but observed {maxConcurrentProcessors}");
-
-        // With 20 requests in batches of 5, we expect 4 batches
-        // If running serially with 500ms delay, this would take ~2000ms
-        // With 4 concurrent workers, it should take ~500ms (or a bit more with overhead)
-        // This verifies we're processing in parallel
-        Assert.True(sw.ElapsedMilliseconds < 1500, $"Parallel processing should be faster than serial execution, took {sw.ElapsedMilliseconds}ms");
+        Assert.True(concurrencyReached, $"Failed to reach expected concurrency of {expectedConcurrentWorkers} threads");
+        Assert.True(concurrencyHeld, $"Failed to maintain concurrency at {expectedConcurrentWorkers} long enough to verify stability");
+        Assert.True(expectedConcurrentWorkers == maxConcurrency, $"Expected max concurrency of {expectedConcurrentWorkers}, but observed {maxConcurrency}");
+        Assert.True(activeThreads.Count >= expectedConcurrentWorkers, $"Expected at least {expectedConcurrentWorkers} unique threads, got {activeThreads.Count}");
     }
 
     [RavenFact(RavenTestCategory.Ai)]

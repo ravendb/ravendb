@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.AI.Embeddings
 
                                 totalNumberOfValues += request.Values.Count;
 
-                                if (requests.Count > _configuration.QueryEmbeddingsMaxBatchSize)
+                                if (requests.Count >= _configuration.QueryEmbeddingsMaxBatchSize)
                                 {
                                     mightBeMore = true;
                                     break;
