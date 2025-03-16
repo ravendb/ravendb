@@ -92,7 +92,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
 
             var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByEmbedding("Joe"))
+                    v => v.ByText("Joe"))
                 .ToList();
 
             Assert.Empty(byVector);

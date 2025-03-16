@@ -16,7 +16,7 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Embeddings.Generation.Task.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int? EmbeddingsGenerationTaskMaxBatchSize { get; set; }
 
-    [Description("Base delay for Embedding Generation task retries. The actual wait time between retry attempts depends on the configured FallbackModeStrategy. " +
+    [Description("Base delay for Embedding Generation task retries. The actual wait time between retry attempts depends on the configured retry strategy. " +
                  $"When using '{nameof(EmbeddingsGenerationRetryStrategy.Linear)}' strategy, the delay increases linearly (e.g., 15s, 30s, 45s). " +
                  $"When using '{nameof(EmbeddingsGenerationRetryStrategy.Exponential)}' strategy, the delay increases exponentially with each retry attempt (e.g. 15s, 60s, 120s, 240s).")]
     [DefaultValue(15)]
