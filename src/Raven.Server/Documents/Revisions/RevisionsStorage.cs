@@ -308,6 +308,10 @@ namespace Raven.Server.Documents.Revisions
                 var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, RevisionsTombstonesSlice);
                 if (tombstoneTable.ReadByKey(tombstoneKeySlice, out var tvr))
                 {
+                    var tombstoneFlags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+                    if (tombstoneFlags.Contain(DocumentFlags.Artificial) && tombstoneFlags.Contain(DocumentFlags.FromResharding))
+                        return false;
+
                     var tombstoneChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr);
                     var status = ChangeVectorUtils.GetConflictStatus(revisionChangeVector, tombstoneChangeVector);
 
