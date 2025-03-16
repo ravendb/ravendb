@@ -18,6 +18,4 @@ public sealed class EmbeddedSettings : AbstractAiSettings
         other is EmbeddedSettings
             ? AiSettingsCompareDifferences.None
             : AiSettingsCompareDifferences.All;
-
-    public override DynamicJsonValue ToJson() => new();
 }

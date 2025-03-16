@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using HtmlAgilityPack;
+using Microsoft.ML.Tokenizers;
 using Raven.Client.Documents.Operations.AI;
 
 namespace Raven.Server.Documents.AI;
@@ -51,8 +52,33 @@ public static class TextChunker
         return ChunkValues(list, chunkingOptions);
     }
 
+    private static readonly Tokenizer Tokenizer = TiktokenTokenizer.CreateForEncoding("cl100k_base");
+
+    public static IEnumerable<(string Text, int TokenCount)> ChunkPlainText(string textualValue, int maxTokensPerChunk)
+    {
+        int start = 0;
+        var text = textualValue.AsMemory();
+        var pos = Tokenizer.GetIndexByTokenCount(text[start..].Span, maxTokensPerChunk, out var normalizedText, out var tokenCount,
+            considerNormalization: false, considerPreTokenization: false);
+        if (pos == text.Length) // avoid allocation if we can fit all tokens at once
+        {
+            yield return (textualValue, tokenCount);
+            yield break;
+        }
+
+        do
+        {
+            pos = Tokenizer.GetIndexByTokenCount(text[start..].Span, maxTokensPerChunk, out normalizedText, out tokenCount,
+                considerNormalization: false, considerPreTokenization: false);
+            yield return (textualValue[start..pos], tokenCount);
+            start = pos + 1;
+        } while (start < text.Length);
+    }
+    
     internal static List<string> SplitPlainText(string textualValue, int maxTokensPerChunk)
     {
+        
+
         const int tokenLength = 4;
         const float ratio = 0.75f;
         
@@ -62,7 +88,6 @@ public static class TextChunker
         var numberOfChunks = textualValueLength / expectedChunkLength;
         
         var chunks = new List<string>(numberOfChunks);
-
         var offset = 0;
 
         while (offset < textualValueLength)

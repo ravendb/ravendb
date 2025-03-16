@@ -54,10 +54,12 @@ public sealed class OllamaSettings : AbstractAiSettings
         return differences;
     }
 
-    public override DynamicJsonValue ToJson() =>
-        new()
-        {
-            [nameof(Uri)] = Uri,
-            [nameof(Model)] = Model
-        };
+    public override DynamicJsonValue ToJson()
+    {
+        var json = base.ToJson();
+        json[nameof(Model)] = Model;
+        json[nameof(Uri)] = Uri;
+
+        return json;
+    }
 }

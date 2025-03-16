@@ -472,7 +472,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_loadVectorFields.TryGetValue(fieldName, out var field))
                 return field;
             
-            Debug.Assert(embeddingsGenerationTaskIdentifier is not null, "embeddingsGenerationTaskIdentifier is not null");
+            Debug.Assert(embeddingsGenerationTaskIdentifier.Value is not null);
             var fieldExists = Index.Definition.MapFields.TryGetValue(fieldName, out var mapField);
             var fieldHasVector = fieldExists && mapField is IndexField { Vector: not null };
 

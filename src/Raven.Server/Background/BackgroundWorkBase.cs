@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
@@ -9,6 +10,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Background
 {
+    [SuppressMessage("CancellationToken", "RDB0010:Async method should have a CancellationToken in its argument list")]
     public abstract class BackgroundWorkBase : IDisposable
     {
         private readonly CancellationToken _shutdown;

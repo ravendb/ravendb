@@ -67,11 +67,9 @@ public sealed class GoogleSettings : AbstractAiSettings
 
     public override DynamicJsonValue ToJson()
     {
-        var json = new DynamicJsonValue
-        {
-            [nameof(Model)] = Model,
-            [nameof(ApiKey)] = ApiKey
-        };
+        var json = base.ToJson();
+        json[nameof(Model)] = Model;
+        json[nameof(ApiKey)] = ApiKey;
 
         if (AiVersion != null)
             json[nameof(AiVersion)] = AiVersion.Value.ToString("G"); // Explicitly convert to string to avoid enum serialization

@@ -78,11 +78,9 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
 
     public override DynamicJsonValue ToJson()
     {
-        var json = new DynamicJsonValue
-        {
-            [nameof(ApiKey)] = ApiKey,
-            [nameof(Model)] = Model
-        };
+        var json = base.ToJson();
+        json[nameof(Model)] = Model;
+        json[nameof(ApiKey)] = ApiKey;
 
         if (string.IsNullOrWhiteSpace(Endpoint) == false)
             json[nameof(Endpoint)] = Endpoint;

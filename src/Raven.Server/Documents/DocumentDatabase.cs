@@ -71,6 +71,7 @@ using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Sparrow.Server.Logging;
@@ -78,6 +79,8 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents
 {
+    [SuppressMessage("ConfigureAwait", "RDB0002:Awaited operations must have ConfigureAwait(false)")]
+    [SuppressMessage("CancellationToken", "RDB0010:Async method should have a CancellationToken in its argument list")]
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
@@ -180,7 +183,7 @@ namespace Raven.Server.Documents
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
-                AiIntegrations = new AiIntegrationsController(this);
+                EmbeddingsGenerator = new EmbeddingsGenerator(this,_logger, DatabaseShutdown);
                 
                 IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);
@@ -360,8 +363,7 @@ namespace Raven.Server.Documents
 
         public CompareExchangeStorage CompareExchangeStorage { get; private set; }
 
-        public AiIntegrationsController AiIntegrations { get; private set; }
-
+        public EmbeddingsGenerator EmbeddingsGenerator { get; private set; }
         public OngoingTasks.OngoingTasks OngoingTasks { get; private set; }
 
         public bool Is32Bits { get; }
@@ -450,15 +452,11 @@ namespace Raven.Server.Documents
                 _addToInitLog(LogLevel.Debug, "Initializing Replication");
                 ReplicationLoader?.Initialize(record, index);
 
-                _addToInitLog(LogLevel.Debug, "Initializing AI Integrations");
-                AiIntegrations.Initialize(record);
-
                 _addToInitLog(LogLevel.Debug, "Initializing ETL");
                 EtlLoader.Initialize(record);
 
                 _addToInitLog(LogLevel.Debug, "Initializing Queue Sinks");
                 QueueSinkLoader.Initialize(record);
-
 
                 InitializeAndStartDocumentsMigration();
 
@@ -482,6 +480,9 @@ namespace Raven.Server.Documents
                 _addToInitLog(LogLevel.Debug, "Initializing SubscriptionStorage completed");
 
                 TombstoneCleaner.Start();
+                
+                _addToInitLog(LogLevel.Debug, "Initializing Embeddings Generation");
+                EmbeddingsGenerator.Start();
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
@@ -1105,7 +1106,7 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing AI Integrations");
             exceptionAggregator.Execute(() =>
             {
-                AiIntegrations?.Dispose();
+                EmbeddingsGenerator?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed AI Integrations");
 
@@ -1727,7 +1728,7 @@ namespace Raven.Server.Documents
             try
             {
                 PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
-                AiIntegrations?.HandleDatabaseRecordChange(record);
+                EmbeddingsGenerator?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseRecordChange(record);
                 SubscriptionStorage?.HandleDatabaseRecordChange();
             }

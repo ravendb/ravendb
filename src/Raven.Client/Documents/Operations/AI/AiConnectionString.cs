@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -128,5 +129,22 @@ public sealed class AiConnectionString : ConnectionString
         json[nameof(MistralAiSettings)] = MistralAiSettings?.ToJson();
 
         return json;
+    }
+
+    public int GetQueryEmbeddingsMaxConcurrentBatches(int globalQueryEmbeddingsMaxConcurrentBatches)
+    {
+        var provider = GetActiveProviderInstance(); 
+        return provider?.QueryEmbeddingsMaxConcurrentBatches ?? globalQueryEmbeddingsMaxConcurrentBatches;
+    }
+
+    private AbstractAiSettings GetActiveProviderInstance()
+    {
+        return OpenAiSettings ??
+               AzureOpenAiSettings ??
+               OllamaSettings ??
+               EmbeddedSettings ??
+               GoogleSettings ??
+               HuggingFaceSettings ??
+               (AbstractAiSettings)MistralAiSettings;
     }
 }

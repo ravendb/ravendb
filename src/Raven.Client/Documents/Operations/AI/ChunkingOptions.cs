@@ -11,10 +11,11 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
     
     public DynamicJsonValue ToJson()
     {
-        var djv = new DynamicJsonValue();
-        djv[nameof(ChunkingMethod)] = ChunkingMethod;
-        djv[nameof(MaxTokensPerChunk)] = MaxTokensPerChunk;
-        return djv;
+        return new DynamicJsonValue
+        {
+            [nameof(ChunkingMethod)] = ChunkingMethod, 
+            [nameof(MaxTokensPerChunk)] = MaxTokensPerChunk
+        };
     }
 }
 

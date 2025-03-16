@@ -5,11 +5,16 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Microsoft.Extensions.Azure;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
 using Tests.Infrastructure;
@@ -18,122 +23,61 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings.Cache;
 
-public class QueryEmbeddingsCacherTests : RavenLowLevelTestBase
+public class QueryEmbeddingsCacherTests(ITestOutputHelper output) : RavenTestBase(output)
 {
-    public QueryEmbeddingsCacherTests(ITestOutputHelper output) : base(output)
-    {
-    }
-
     [RavenFact(RavenTestCategory.Ai)]
-    public void CacherShouldNotBeRunningIfThereIsNoEmbeddingsGenerationTask()
+    public async Task ShouldCacheEmbeddings()
     {
-        using var db = CreateDocumentDatabase();
+        var store = GetDocumentStore();
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+        {
+            Name = "local-embedder", Identifier = "local", EmbeddedSettings = new()
+        }));
 
-        var cacher = db.AiIntegrations.Embeddings.QueryEmbeddingsCacher;
+        await store.Maintenance.SendAsync(new AddEtlOperation<AiConnectionString>(new EmbeddingsGenerationConfiguration
+        {
+            Identifier = "local-gen",
+            Name = "Local embedding gen",
+            Collection = "Users",
+            ConnectionStringName = "local-embedder",
+            ChunkingOptionsForQuerying = new ChunkingOptions { MaxTokensPerChunk = 256 },
+            EmbeddingsPathConfigurations =
+            [
+                new EmbeddingPathConfiguration
+                {
+                    Path = "Name", ChunkingOptions = new ChunkingOptions { MaxTokensPerChunk = 256, ChunkingMethod = ChunkingMethod.PlainTextSplit }
+                }
+            ]
+        }));
 
-        Assert.False(cacher.IsRunning);
-    }
-
-    [RavenFact(RavenTestCategory.Ai)]
-    public void ShouldCacheEmbeddings()
-    {
-        using var db = CreateDocumentDatabase();
-
-        var aiCs = new AiConnectionStringIdentifier("embeddings-gen-connection");
+        var db = await GetDatabase(store.Database);
         
-        var cacher = db.AiIntegrations.Embeddings.QueryEmbeddingsCacher;
-
-        var expireAt = db.Time.GetUtcNow().AddDays(7);
-
-        var embedding1 = new EmbeddingGenerationItem("test1", MemoryMarshalEx.Cast<float,byte>(new []{0.1f, 0.2f, 0.3f}), VectorEmbeddingType.Single, aiCs)
+        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext operationContext))
         {
-            ExpireAt = expireAt
-        };
-        var embedding2 = new EmbeddingGenerationItem("test2",MemoryMarshalEx.Cast<float,byte>(new[]{0.3f, 0.5f, 1.1f}), VectorEmbeddingType.Single, aiCs)
-        {
-            ExpireAt = expireAt
-        };
-
-        cacher.EnqueueEmbeddingsToCache([embedding1, embedding2]);
-
-        cacher.CacheEnqueuedEmbeddings();
-
-        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            foreach (var embedding in new[]{embedding1, embedding2})
+            operationContext.OpenReadTransaction();
+            List<Task> tasks = [];
+            var cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test1", ref tasks);
+            Assert.False(cached);
+            cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
+            Assert.False(cached);
+            cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
+            if (cached is false) // race condition - we may have computed the test2 embedding+store
             {
-                var result = db.AiIntegrations.Embeddings.Storage.TryGetEmbeddingCacheDocument(context, aiCs, embedding.ValueHash, VectorEmbeddingType.Single, out string id,
-                    out _);
-
-                Assert.True(result);
-
-                Assert.Equal(EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiCs, embedding.ValueHash, VectorEmbeddingType.Single), id);
-
-                var attachment = db.DocumentsStorage.AttachmentsStorage.GetAttachment(context, id, embedding.ValueHash, AttachmentType.Document, null);
-
-                Assert.NotNull(attachment);
-                
-                Assert.Equal(embedding.ValueHash, attachment.Name);
-                Assert.Equal(12, attachment.Size);
+                // but if we didn't, we should get the same task, since we'll only compute "test2" once
+                Assert.Same(tasks[^1], tasks[^2]);
             }
-        }
-    }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public void ShouldCacheEmbeddingsInMultipleBatches()
-    {
-        using var db = CreateDocumentDatabase();
-
-        var aiCs = new AiConnectionStringIdentifier("embeddings-gen-connection");
-
-        var cacher = db.AiIntegrations.Embeddings.QueryEmbeddingsCacher;
-
-        var expireAt = db.Time.GetUtcNow().AddDays(7);
-
-        var embeddings = new List<EmbeddingGenerationItem>();
-
-        for (int i = 0; i < db.Configuration.Ai.QueryEmbeddingsGenerationMaxCacheBatchSize * 2 + 5; i++)
-        {
-            var embedding = new EmbeddingGenerationItem("test" + i, MemoryMarshalEx.Cast<float,byte>(new[]{0.1f, 0.2f, 0.3f, i}), VectorEmbeddingType.Single, aiCs)
-            {
-                ExpireAt = expireAt
-            };
-            
-            embeddings.Add(embedding);
-        }
-
-        cacher.EnqueueEmbeddingsToCache(embeddings);
-
-        for (int i = 0; i < 3; i++)
-        {
-            var hasMore = cacher.CacheEnqueuedEmbeddings();
-            
-            if (i < 2)
-                Assert.True(hasMore);
-            else
-                Assert.False(hasMore);
+            Task.WaitAll(tasks.ToArray());
         }
         
-        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        using (context.OpenReadTransaction())
+        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext operationContext))
         {
-            foreach (var embedding in embeddings)
-            {
-                var result = db.AiIntegrations.Embeddings.Storage.TryGetEmbeddingCacheDocument(context, aiCs, embedding.ValueHash, VectorEmbeddingType.Single, out string id,
-                    out _);
-
-                Assert.True(result);
-
-                Assert.Equal(EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiCs, embedding.ValueHash, VectorEmbeddingType.Single), id);
-
-                var attachment = db.DocumentsStorage.AttachmentsStorage.GetAttachment(context, id, embedding.ValueHash, AttachmentType.Document, null);
-
-                Assert.NotNull(attachment);
-
-                Assert.Equal(embedding.ValueHash, attachment.Name);
-                Assert.Equal(16, attachment.Size);
-            }
+            operationContext.OpenReadTransaction();
+            List<Task> tasks = [];
+            var cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test1", ref tasks);
+            Assert.True(cached);
+            cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
+            Assert.True(cached);
         }
     }
 }

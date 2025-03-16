@@ -28,7 +28,7 @@ public static class EmbeddingsHelper
     public static string CalculateInputValueHash(string value)
     {
         Span<byte> hashBuffer = stackalloc byte[Sodium.GenericHashSize];
-        var valueSpan = MemoryMarshal.Cast<char, byte>(value.AsSpan());
+        var valueSpan = MemoryMarshal.Cast<char, byte>(value);
 
         Sodium.GenericHash(valueSpan, hashBuffer);
 
@@ -36,7 +36,7 @@ public static class EmbeddingsHelper
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string GenerateDestinationAttachmentName(in string prefix, in string originalAttachmentName, in VectorEmbeddingType quantization)
+    public static string GenerateDestinationAttachmentName(string prefix, in string originalAttachmentName, in VectorEmbeddingType quantization)
     {
         var suffix = quantization switch
         {
@@ -58,22 +58,22 @@ public static class EmbeddingsHelper
         return $"{sourceCollectionName}/embeddings";
     }
 
-    public static string GetPrefixForAttachmentInEmbeddingsDocument(EmbeddingsGenerationTaskIdentifier embeddingsGenerationTaskIdentifier, string path)
+    public static string GetPrefixForAttachmentInEmbeddingsDocument(EmbeddingsGenerationTaskIdentifier id, string path)
     {
-        return $"{embeddingsGenerationTaskIdentifier.Value}_{path}_";
+        return $"{id.Value}_{path}_";
     }
 
-    public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier aiConnectionStringIdentifier, string valueHash, in VectorEmbeddingType targetQuantization)
+    public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier id, string valueHash, in VectorEmbeddingType targetQuantization)
     {
         var suffix = targetQuantization switch
         {
-            Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Single => string.Empty,
-            Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Int8 => "/int8",
-            Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Binary => "/binary",
+            VectorEmbeddingType.Single => string.Empty,
+            VectorEmbeddingType.Int8 => "/int8",
+            VectorEmbeddingType.Binary => "/binary",
             _ => throw new ArgumentException($"Unknown quantization type '{targetQuantization}'")
         };
         
-        return $"embeddings-cache/{aiConnectionStringIdentifier.Value}/{valueHash}{suffix}";
+        return $"embeddings-cache/{id.Value}/{valueHash}{suffix}";
     }
 
     public static ReadOnlyMemory<byte> CreateEmbeddingValue(ReadOnlyMemory<float> embedding, VectorEmbeddingType quantization)

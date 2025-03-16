@@ -293,26 +293,18 @@ public static partial class CoraxQueryBuilder
             
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
-            if (database.AiIntegrations.TryGetConnectionStringIdByEmbeddingsGenerationTask(embeddingsTaskId, out var connectionStringId) == false)
-                throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{embeddingsGenerationTaskIdentifier}' identifier");
 
             var sourceEmbeddingType = VectorEmbeddingType.Single;
 
-            if (builderParameters.Index.DocumentDatabase.AiIntegrations.TryGetEmbeddingsGenerationConfiguration(embeddingsTaskId,
-                    out var embeddingsGenerationConfiguration))
-            {
-                sourceEmbeddingType = embeddingsGenerationConfiguration.Quantization;
-            }
-
             var destinationEmbeddingType = vectorOptions?.DestinationEmbeddingType ?? sourceEmbeddingType;
             
-            ReadOnlyMemory<byte>[] embeddingValues;
+            ReadOnlyMemory<ReadOnlyMemory<byte>> embeddingValues;
 
             switch (valueType)
             {
                 case ValueTokenType.String:
-                    embeddingValues = database.AiIntegrations.Embeddings
-                        .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsTaskId, value.ToString())
+                    embeddingValues = database.EmbeddingsGenerator
+                        .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, embeddingsTaskId, value.ToString())
                         .GetAwaiter().GetResult();
                     break;
                 case ValueTokenType.Parameter:
@@ -325,8 +317,8 @@ public static partial class CoraxQueryBuilder
                     for (var i = 0; i < values.Length; i++)
                         values[i] = bjra[i].ToString();
                 
-                    embeddingValues = database.AiIntegrations.Embeddings
-                        .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, connectionStringId, embeddingsTaskId, values)
+                    embeddingValues = database.EmbeddingsGenerator
+                        .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, embeddingsTaskId, values)
                         .GetAwaiter().GetResult();
                     break;
                 }
@@ -342,7 +334,7 @@ public static partial class CoraxQueryBuilder
 
             if (embeddingValues.Length == 1)
             {
-                var embeddingValue = embeddingValues[0];
+                var embeddingValue = embeddingValues.Span[0];
 
                 return (GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue.Span, queryingVectorOption), null);
             }
@@ -352,7 +344,7 @@ public static partial class CoraxQueryBuilder
 
                 for (int i = 0; i < embeddingValues.Length; i++)
                 {
-                    var embeddingValue = embeddingValues[i];
+                    var embeddingValue = embeddingValues.Span[i];
 
                     vectorValues[i] = GenerateEmbeddings.FromArray(builderParameters.Allocator, embeddingValue.Span, queryingVectorOption);
                 }

@@ -63,11 +63,12 @@ public sealed class MistralAiSettings : AbstractAiSettings
         return differences;
     }
 
-    public override DynamicJsonValue ToJson() =>
-        new()
-        {
-            [nameof(Model)] = Model,
-            [nameof(ApiKey)] = ApiKey,
-            [nameof(Endpoint)] = Endpoint
-        };
+    public override DynamicJsonValue ToJson()
+    {
+        var json = base.ToJson();
+        json[nameof(Model)] = Model;
+        json[nameof(ApiKey)] = ApiKey;
+        json[nameof(Endpoint)] = Endpoint;
+        return json;
+    }
 }

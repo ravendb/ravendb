@@ -10,5 +10,17 @@ public abstract class AbstractAiSettings : IDynamicJsonValueConvertible
 
     public abstract AiSettingsCompareDifferences Compare(AbstractAiSettings other);
 
-    public abstract DynamicJsonValue ToJson();
+    public virtual DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(QueryEmbeddingsMaxConcurrentBatches)] = QueryEmbeddingsMaxConcurrentBatches,
+        };
+    }
+
+    /// <summary>
+    /// Maximum number of query embedding batches that can be processed concurrently.
+    /// Allow users to override the database global value 
+    /// </summary>
+    public int? QueryEmbeddingsMaxConcurrentBatches { get; set; }
 }

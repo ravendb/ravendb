@@ -1,3 +1,3 @@
 ﻿namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-public record EmbeddingsGenerationTaskIdentifier(string Value);
+public readonly record struct EmbeddingsGenerationTaskIdentifier(string Value);
