@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.AI.Embeddings
             }
         }
 
-        public async Task DisposeAsync()
+        public Task DisposeAsync()
         {
             _isDisposing = true;
 
@@ -92,6 +92,8 @@ namespace Raven.Server.Documents.AI.Embeddings
             }
 
             _batchWorkers.Clear();
+
+            return Task.CompletedTask;
         }
 
         public void Dispose() => AsyncHelpers.RunSync(DisposeAsync);
