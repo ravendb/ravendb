@@ -31,12 +31,12 @@ public sealed class AddEmbeddingsGenerationCommand : AddEtlCommand<EmbeddingsGen
             throw new RachisApplyException("Failed to generate Embeddings Generation task identifier", e);
         }
 
-        InClusterValidation(record);
+        Validate(record);
 
         Add(ref record.EmbeddingsGenerations, record, etag);
     }
 
-    private void InClusterValidation(DatabaseRecord databaseRecord)
+    private void Validate(DatabaseRecord databaseRecord)
     {
         try
         {
