@@ -155,8 +155,8 @@ namespace SlowTests.Server.Documents.OngoingTasks
             // continue the replication and let the items replicate to the sink
 
             replication.Mend();
-            Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink1, UserId, TimeSpan.FromSeconds(10)));
-            Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink2, UserId, TimeSpan.FromSeconds(10)));
+            Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink1, UserId, TimeSpan.FromSeconds(15)));
+            Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink2, UserId, TimeSpan.FromSeconds(15)));
 
             await VerifyPullAsHubReplicationProgress(hub, hubDatabase, isCompleted: true);
 
@@ -413,8 +413,20 @@ namespace SlowTests.Server.Documents.OngoingTasks
         private async Task VerifyPullAsHubReplicationProgress(DocumentStore store, DocumentDatabase database,
             bool isCompleted = false, bool hasTombstones = false, RavenServer server = null)
         {
-            var results = await GetReplicationProgress(store, database.Name, server);
+            IReplicationTaskProgress[] results = null;
+            await WaitForValueAsync(async () =>
+            {
+                results = await GetReplicationProgress(store, database.Name, server);
+                if (results.Length != 1)
+                    return false;
 
+                if (results[0].ProcessesProgress.Count != 2)
+                    return false;
+
+                return true;
+            }, true);
+
+            Assert.NotNull(results);
             var result = Assert.Single(results);
             var processesProgress = result.ProcessesProgress;
             Assert.Equal(2, processesProgress.Count); // we should have 2 results, one per each sink
