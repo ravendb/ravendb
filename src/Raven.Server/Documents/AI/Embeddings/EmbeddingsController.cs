@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.ServerWide.Context;
-using Exception = System.Exception;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
@@ -16,21 +15,21 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
     public EmbeddingsStorage Storage { get; private set; } = storage;
     public QueryEmbeddingsCacher QueryEmbeddingsCacher { get; private set; } = queryEmbeddingsCacher;
     private readonly QueryEmbeddingsBatchingService _queryBatchingService = new(aiIntegrations);
-    
+
     public Task<IEmbeddingValue[]> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext,
         AiConnectionStringIdentifier connectionStringId,
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, string[] values)
     {
         return GetEmbeddingsForQueryAsync(documentsContext, connectionStringId, embeddingTaskId, values, ChunkValues);
     }
-    
+
     public Task<IEmbeddingValue[]> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext,
         AiConnectionStringIdentifier connectionStringId,
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value)
     {
         return GetEmbeddingsForQueryAsync(documentsContext, connectionStringId, embeddingTaskId, value, TextChunker.ChunkValue);
     }
-    
+
     private async Task<IEmbeddingValue[]> GetEmbeddingsForQueryAsync<T>(DocumentsOperationContext documentsContext,
         AiConnectionStringIdentifier connectionStringId,
         EmbeddingsGenerationTaskIdentifier embeddingTaskId, T values, Func<T, ChunkingOptions, List<string>> chunkingMethod)
@@ -41,20 +40,20 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         var quantization = taskConfig.Quantization;
         var chunkingOptions = taskConfig.ChunkingOptionsForQuerying;
         var expireAt = aiIntegrations.Database.Time.GetUtcNow().Add(taskConfig.EmbeddingsCacheForQueryingExpiration);
-        
+
         var chunks = chunkingMethod(values, chunkingOptions);
         var embeddingValues = await GetEmbeddingsInternal(documentsContext, connectionStringId, quantization, chunks, expireAt);
 
         return embeddingValues;
     }
-    
+
     private async Task<IEmbeddingValue[]> GetEmbeddingsInternal(DocumentsOperationContext documentsContext, AiConnectionStringIdentifier connectionStringId,
         VectorEmbeddingType quantization, List<string> chunks, DateTime expireAt)
     {
         var embeddingValues = new IEmbeddingValue[chunks.Count];
         var chunksForGeneration = new List<string>();
         int vectorValuesCount = 0;
-        
+
         foreach (var chunk in chunks)
         {
             var chunkHash = EmbeddingsHelper.CalculateInputValueHash(chunk);
@@ -62,7 +61,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
             if (Storage.TryGetEmbeddingCacheDocument(documentsContext, connectionStringId, chunkHash, quantization, out var embeddingCacheDocumentId, out _))
             {
                 var cachedEmbeddingValue = Storage.GetCachedEmbeddingValue(documentsContext, embeddingCacheDocumentId, chunkHash);
-                
+
                 embeddingValues[vectorValuesCount++] = cachedEmbeddingValue;
             }
             else
@@ -75,7 +74,7 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         List<EmbeddingGenerationItem> embeddingsToCache = null;
 
         var embeddings = await _queryBatchingService.GetEmbeddingAsync(connectionStringId, chunksForGeneration); // TODO: provide cancellation token
-        
+
         for (int i = 0; i < embeddings.Length; i++)
         {
             var embedding = embeddings[i];
@@ -92,7 +91,8 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
                 textualValue,
                 embeddingValue,
                 quantization,
-                connectionStringId) { ExpireAt = expireAt };
+                connectionStringId)
+            { ExpireAt = expireAt };
 
             embeddingsToCache.Add(embeddingCacheItem);
         }
@@ -102,10 +102,6 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         return embeddingValues;
     }
 
-    public void RemoveBatchingWorkerForConnectionStringIdAsync(AiConnectionStringIdentifier connectionStringId) => _queryBatchingService.RemoveWorker(connectionStringId);
-
-    public void UpdateBatchingWorkerForConnectionStringIdAsync(AiConnectionString newConnectionString) => _queryBatchingService.RecreateWorker(newConnectionString);
-
     private List<string> ChunkValues(string[] values, ChunkingOptions chunkingOptions)
     {
         var chunks = new List<string>();
@@ -113,10 +109,10 @@ public class EmbeddingsController(AiIntegrationsController aiIntegrations, Embed
         foreach (var value in values)
         {
             var chunksFromSingleValue = TextChunker.ChunkValue(value, chunkingOptions);
-            
+
             chunks.AddRange(chunksFromSingleValue);
         }
-        
+
         return chunks;
     }
 
