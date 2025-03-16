@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
@@ -2634,13 +2635,13 @@ namespace SlowTests.Client.Attachments
                     var attachments3 = db3.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context3, docIdSlice).ToList();
 
                     Assert.NotNull(attachments1);
-                    Assert.Equal(1, attachments1.Count); // we should have only one attachment here 
+                    Assert.True(attachments1.Count == 1, GetErrorDetails(attachments1)); // we should have only one attachment here 
 
                     Assert.NotNull(attachments2);
-                    Assert.Equal(1, attachments2.Count);
+                    Assert.True(attachments2.Count == 1, GetErrorDetails(attachments2));
 
                     Assert.NotNull(attachments3);
-                    Assert.Equal(1, attachments3.Count);
+                    Assert.True(attachments3.Count == 1, GetErrorDetails(attachments3));
 
                     var attachment1 = attachments1.First();
                     var attachment2 = attachments2.First();
@@ -3019,13 +3020,13 @@ namespace SlowTests.Client.Attachments
                     var attachments3 = db3.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context3, docIdSlice).ToList();
 
                     Assert.NotNull(attachments1);
-                    Assert.Equal(1, attachments1.Count); // we should have only one attachment here 
+                    Assert.True(attachments1.Count == 1, GetErrorDetails(attachments1)); // we should have only one attachment here 
 
                     Assert.NotNull(attachments2);
-                    Assert.Equal(1, attachments2.Count);
+                    Assert.True(attachments2.Count == 1, GetErrorDetails(attachments2)); // we should have only one attachment here 
 
                     Assert.NotNull(attachments3);
-                    Assert.Equal(1, attachments3.Count);
+                    Assert.True(attachments3.Count == 1, GetErrorDetails(attachments3)); // we should have only one attachment here 
 
                     var attachment1 = attachments1.First();
                     var attachment2 = attachments2.First();
@@ -3372,5 +3373,15 @@ namespace SlowTests.Client.Attachments
             return false;
         }
 
+        private string GetErrorDetails(List<AttachmentDetails> attachments)
+        {
+            var sb = new StringBuilder($"Expected 1 attachment, but found {attachments.Count}.\nExisting attachments:\n");
+            foreach (var attachment in attachments)
+            {
+                sb.AppendLine($"- Name: '{attachment.Name}', Hash: '{attachment.Hash}', Change Vector: '{attachment.ChangeVector}'");
+            }
+
+            return sb.ToString();
+        }
     }
 }

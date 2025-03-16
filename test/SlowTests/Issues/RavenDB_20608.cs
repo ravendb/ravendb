@@ -293,7 +293,11 @@ namespace SlowTests.Issues
 
                 await AssertRevisionsCountAsync(storeA, 3);
                 await AssertRevisionsCountAsync(storeB, 3);
-                await AssertRevisionsCountAsync(storeC, 7);
+
+                // RavenDB-20322  
+                // after the fix for RavenDB-20322, we expect 10 revisions (instead of 8):  
+                // - 2 extra conflicted revisions are created due to resolving one more time, even though the document content was identical
+                await AssertRevisionsCountAsync(storeC, 10);
 
                 using (var session = storeA.OpenSession())
                 {
@@ -304,7 +308,7 @@ namespace SlowTests.Issues
 
                 Assert.True(WaitForDocument<User>(storeC, "users/shiran", u => u.Age == 30));
 
-                await AssertRevisionsCountAsync(storeC, 7);
+                await AssertRevisionsCountAsync(storeC, 10);
             }
         }
 
@@ -372,18 +376,24 @@ namespace SlowTests.Issues
 
                 await AssertRevisionsCountAsync(storeA, 3);
                 await AssertRevisionsCountAsync(storeB, 3);
-                await AssertRevisionsCountAsync(storeC, 8);
 
+                // RavenDB-20322  
+                // we expected to have 10 revisions after the fix for RavenDB-20322:  
+                // - 3 local revision conflicts before replication from A to B  
+                // - 3 additional revisions via replication from A (after replicating from A to B)  
+                // - 4 (instead of 2) due to resolving one more time, even though the document content was identical
+                await AssertRevisionsCountAsync(storeC, 10);
+             
                 using (var session = storeA.OpenSession())
                 {
                     var user = session.Load<User>("users/shiran");
                     user.Age = 40;
                     session.SaveChanges();
                 }
-
+               
                 Assert.True(WaitForDocument<User>(storeC, "users/shiran", u => u.Age == 40));
 
-                await AssertRevisionsCountAsync(storeC, 11);
+                await AssertRevisionsCountAsync(storeC, 12);
             }
         }
 
