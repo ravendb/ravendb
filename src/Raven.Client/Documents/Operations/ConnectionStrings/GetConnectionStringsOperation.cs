@@ -14,18 +14,25 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ConnectionStrings
 {
+    /// <summary>
+    /// Operation to retrieve connection strings from the database.
+    /// </summary>
     public sealed class GetConnectionStringsOperation: IMaintenanceOperation<GetConnectionStringsResult> 
     {
         private readonly string _connectionStringName;
 
         private readonly ConnectionStringType _type;
 
+        /// <inheritdoc cref="GetConnectionStringsOperation"/>
+        /// <param name="connectionStringName">The name of the connection string to retrieve.</param>
+        /// <param name="type">The type of the connection string.</param>
         public GetConnectionStringsOperation(string connectionStringName, ConnectionStringType type)
         {
             _connectionStringName = connectionStringName;
             _type = type;
         }
 
+        /// <inheritdoc cref="GetConnectionStringsOperation"/>
         public GetConnectionStringsOperation()
         {
             // get them all
