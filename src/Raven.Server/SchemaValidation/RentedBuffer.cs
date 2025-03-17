@@ -8,23 +8,30 @@ public class RentedBuffer<T> : IDisposable
 {
     private const int MinimumArrayPoolLength = 256;
 
-    private T[] _arrayToReturnToPool;
-
-    protected T[] ArrayToUse;
+    private bool _isRented;
+    protected T[] Buffer;
 
     public int Length { get; protected set; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(T value)
+    {
+        CheckAndGrow(1);
+        Buffer[Length] = value;
+        Length += 1;
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Append(ReadOnlySpan<T> value)
     {
-        if (value.TryCopyTo(ArrayToUse.AsSpan(Length)))
+        if (value.TryCopyTo(Buffer.AsSpan(Length)))
         {
             Length += value.Length;
         }
         else
         {
             CheckAndGrow(value.Length);
-            value.CopyTo(ArrayToUse.AsSpan(Length));
+            value.CopyTo(Buffer.AsSpan(Length));
             Length += value.Length;
         }
     }
@@ -33,39 +40,38 @@ public class RentedBuffer<T> : IDisposable
     public void Trim(int count) => Length -= count;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ReadOnlySpan<T> AsSpan() => ArrayToUse.AsSpan(0, Length);
+    public ReadOnlySpan<T> AsSpan() => Buffer.AsSpan(0, Length);
     
     public void Dispose()
     {
-        var toReturn = _arrayToReturnToPool;
-        if (toReturn is null)
+        if (_isRented == false)
             return;
-        ArrayPool<T>.Shared.Return(toReturn);
+        ArrayPool<T>.Shared.Return(Buffer);
     }
 
     protected void CheckAndGrow(int required)
     {
-        if (ArrayToUse == null)
+        if (Buffer == null)
         {
-            ArrayToUse = _arrayToReturnToPool = ArrayPool<T>.Shared.Rent(Math.Max(MinimumArrayPoolLength, required));
+            Buffer = ArrayPool<T>.Shared.Rent(Math.Max(MinimumArrayPoolLength, required));
+            _isRented = true;
             return;
         }
-        
-        if (required < ArrayToUse.Length)
+
+        required += Length;
+        if (required < Buffer.Length)
             return;
         
-        var newCapacity = Math.Max(required, ArrayToUse.Length * 2);
+        var newCapacity = Math.Max(required, Buffer.Length * 2);
         int arraySize = Math.Clamp(newCapacity, MinimumArrayPoolLength, int.MaxValue);
 
         var newArray = ArrayPool<T>.Shared.Rent(arraySize);
-        ArrayToUse.AsSpan(0, Length).CopyTo(newArray);
+        Buffer.AsSpan(0, Length).CopyTo(newArray);
 
-        var toReturn = _arrayToReturnToPool;
-        ArrayToUse = _arrayToReturnToPool = newArray;
-
-        if (toReturn is not null)
-        {
-            ArrayPool<T>.Shared.Return(toReturn);
-        }
+        if (_isRented)
+            ArrayPool<T>.Shared.Return(Buffer);
+        
+        Buffer = newArray;
+        _isRented = true;
     }
 }

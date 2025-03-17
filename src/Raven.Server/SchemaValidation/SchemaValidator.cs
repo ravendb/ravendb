@@ -1,13 +1,18 @@
 ﻿using System;
+using System.Threading;
 using Raven.Server.SchemaValidation.Validators;
 using Sparrow.Json;
+using Sparrow.Threading;
 
 namespace Raven.Server.SchemaValidation;
 
 public class SchemaValidator : IDisposable
 {
     private SelfElementSchemaRuleValidator _root;
+    //The context is only written during the initialization phase. During validation, it is used for reading only.
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
+    private int _activeValidations;
+    private SingleUseFlag _disposing = new SingleUseFlag();
     
     public SchemaValidator(JsonContextPool contextPool)
     {
@@ -22,15 +27,36 @@ public class SchemaValidator : IDisposable
 
     public bool Validate(BlittableJsonReaderObject obj, out string errors)
     {
-        using var errorBuilder = new ErrorBuilder();
-        var isValid = _root.Validate(obj, string.Empty, errorBuilder);
-        errors = errorBuilder.GetErrors();
-        return isValid;
+        ObjectDisposedException.ThrowIf(_disposing.IsRaised(), nameof(SchemaValidator));
+        
+        Interlocked.Increment(ref _activeValidations);
+        try
+        {
+            using var errorBuilder = new ErrorBuilder();
+            var isValid = _root.Validate(obj, string.Empty, errorBuilder);
+            errors = errorBuilder.GetErrors();
+            return isValid;
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _activeValidations);
+        }
     }
 
     public void Dispose()
     {
-        //TODO To make sure no one read
+        _disposing.Raise();
+            
+        while (true)
+        {
+            var origin = Interlocked.CompareExchange(ref _activeValidations, -1, 0);
+            if (origin == -1)
+                return;
+            if (origin == 0)
+                break;
+            Thread.Sleep(10);
+        }
+        
         _context.Return?.Dispose();
     }
 }

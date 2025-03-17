@@ -2,12 +2,13 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Sparrow;
 
 namespace Raven.Server.SchemaValidation;
 
 public class RentedCharBuffer : RentedBuffer<char>
 {
-    public override string ToString() => new string(ArrayToUse.AsSpan(0, Length));
+    public override string ToString() => new string(Buffer.AsSpan(0, Length));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Append(string value) => Append(value.AsSpan());
@@ -24,7 +25,7 @@ public class RentedCharBuffer : RentedBuffer<char>
                 if (formattable is ISpanFormattable spanFormattable)
                 {
                     int charsWritten;
-                    while (!spanFormattable.TryFormat(ArrayToUse.AsSpan(Length), out charsWritten, default, null)) // constrained call avoiding boxing for value types
+                    while (!spanFormattable.TryFormat(Buffer.AsSpan(Length), out charsWritten, default, null)) // constrained call avoiding boxing for value types
                     {
                         CheckAndGrow(1);
                     }
@@ -33,6 +34,7 @@ public class RentedCharBuffer : RentedBuffer<char>
                     return;
                 }
 
+                Debug.Assert(false, "We should implement a dedicated Append to avoid string allocations");
                 Append(formattable.ToString(format: null, null)); // constrained call avoiding boxing for value types
                 break;
             }
@@ -50,8 +52,14 @@ public class RentedCharBuffer : RentedBuffer<char>
     {
         do
         {
-            var read = streamReader.Read(ArrayToUse.AsSpan(Length));
+            var read = streamReader.Read(Buffer.AsSpan(Length));
             Length += read;
         } while (streamReader.EndOfStream == false);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void AppendUtf8(Span<byte> asSpan)
+    {
+        Length += Encodings.Utf8.GetChars(asSpan, Buffer.AsSpan(Length));
     }
 }

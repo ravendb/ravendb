@@ -2,7 +2,7 @@
 
 namespace Raven.Server.SchemaValidation.Validators;
 
-public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
+public class ConstantSchemaRuleValidator : FixedValueSchemaRuleValidator
 {
     private readonly object _constantValue;
 

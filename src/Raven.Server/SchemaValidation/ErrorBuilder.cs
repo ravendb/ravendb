@@ -42,6 +42,7 @@ public class ErrorBuilder : IDisposable
             }
         }
         
+        public void AppendFormatted(LazyStringValue value) => _errorBuffer.AppendUtf8(value.AsSpan());
         public void AppendFormatted(ValidationPath value) => _errorBuffer.Append(value.AsSpan());
         public void AppendFormatted(Regex value) => _errorBuffer.Append(value.ToString());
         
@@ -56,8 +57,28 @@ public class ErrorBuilder : IDisposable
                 AppendFormatted(v);
             }
         }
-        
-        public void AppendFormatted<T>(T value) => _errorBuffer.Append(value);
+
+        public void AppendFormatted<T>(T value)
+        {
+            switch (value)
+            {
+                case BlittableJsonReaderObject blittableValue:
+                    AppendFormatted(blittableValue);
+                    break;
+                case LazyStringValue lazyStringValue:
+                    AppendFormatted(lazyStringValue);
+                    break;
+                case ValidationPath validationPathValue:
+                    AppendFormatted(validationPathValue);
+                    break;
+                case Regex regexValue:
+                    AppendFormatted(regexValue);
+                    break;
+                default:
+                    _errorBuffer.Append(value);
+                    break;
+            }
+        }
     }
 
     public void Dispose() => _errorBuffer?.Dispose();
