@@ -6,11 +6,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to retrieve the names of indexes from the database.
+    /// </summary>
     public sealed class GetIndexNamesOperation : IMaintenanceOperation<string[]>
     {
         private readonly int _start;
         private readonly int _pageSize;
 
+        /// <inheritdoc cref="GetIndexNamesOperation"/>
+        /// <param name="start">The starting position of the index names list.</param>
+        /// <param name="pageSize">The maximum number of index names to retrieve.</param>
         public GetIndexNamesOperation(int start, int pageSize)
         {
             _start = start;
