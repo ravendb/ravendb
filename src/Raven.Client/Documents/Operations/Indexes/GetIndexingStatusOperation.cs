@@ -7,6 +7,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to retrieve the current indexing status of the database.
+    /// </summary>
     public sealed class GetIndexingStatusOperation : IMaintenanceOperation<IndexingStatus>
     {
         public RavenCommand<IndexingStatus> GetCommand(DocumentConventions conventions, JsonOperationContext context)
