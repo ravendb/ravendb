@@ -9,10 +9,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ConnectionStrings
 {
+    /// <summary>
+    /// Operation to add or update a connection string in the database.
+    /// </summary>
+    /// <typeparam name="T">The type of the connection string.</typeparam>
     public sealed class PutConnectionStringOperation<T> : IMaintenanceOperation<PutConnectionStringResult> where T : ConnectionString
     {
         private readonly T _connectionString;
 
+        /// <inheritdoc cref="PutConnectionStringOperation{T}"/>
+        /// <param name="connectionString">The connection string to add or update.</param>
         public PutConnectionStringOperation(T connectionString)
         {
             _connectionString = connectionString;
