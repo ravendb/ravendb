@@ -160,7 +160,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
             Map = dtos => from doc in dtos
                           select new
                           {
-                              Name = LoadVector("localaitask", "Name"),
+                              Name = LoadVector("Name", "localaitask"),
                           };
             
             Vector(x => x.Name, factory => factory.SourceEmbedding(VectorEmbeddingType.Single).DestinationEmbedding(VectorEmbeddingType.Int8));
@@ -173,7 +173,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         {
             Map = dtos => dtos.Select(x => new
             {
-                Name = LoadVector("localaitask", "Name"),
+                Name = LoadVector("Name", "localaitask"),
             });
         }
     }

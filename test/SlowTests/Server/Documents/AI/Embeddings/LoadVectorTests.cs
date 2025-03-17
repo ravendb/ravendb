@@ -275,7 +275,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         public IndexByName()
         {
             Map = dtos => from dto in dtos
-                          select new { Vector = LoadVector("localaitask", "Name") };
+                          select new { Vector = LoadVector("Name", "localaitask") };
 
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
@@ -290,7 +290,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
                 $@"map('Dtos', function (doc) {{
                 return {{
                     Id: id(doc),
-                    Vector: loadVector('localaitask', 'Name'),
+                    Vector: loadVector('Name', 'localaitask'),
                 }};
             }})"
             };
@@ -304,7 +304,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         public IndexByNames()
         {
             Map = dtos => from dto in dtos
-                          select new { Vector = LoadVector("localaitask", "Names") };
+                          select new { Vector = LoadVector("Names", "localaitask") };
 
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
@@ -319,7 +319,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
                 $@"map('Dtos', function (doc) {{
                 return {{
                     Id: id(doc),
-                    Vector: loadVector('localaitask','Names'),
+                    Vector: loadVector('Names', 'localaitask'),
                 }};
             }})"
             };
@@ -336,8 +336,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             Map = dtos => from dto in dtos
                           select new
                           {
-                              Vector = LoadVector("v1", "Name"),
-                              Vector2 = LoadVector("v2", "Names")
+                              Vector = LoadVector("Name", "v1"),
+                              Vector2 = LoadVector("Names", "v2")
                           };
 
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
@@ -353,8 +353,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
                 $@"map('Dtos', function (doc) {{
                 return {{
                     Id: id(doc),
-                    Vector: loadVector('v1','Name'),
-                    Vector2: loadVector('v2', 'Names')
+                    Vector: loadVector('Name', 'v1'),
+                    Vector2: loadVector('Names', 'v2')
                 }};
             }})"
             };

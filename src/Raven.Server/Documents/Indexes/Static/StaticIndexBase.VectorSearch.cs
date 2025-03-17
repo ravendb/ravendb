@@ -513,7 +513,7 @@ public partial class AbstractStaticIndexBase
         return value is null or DynamicNullObject or DynamicJsNull or JsNull;
     }
 
-    public static object LoadVectorJs(string fieldName, string embeddingGeneratorTaskName, string path, out IndexField vectorField)
+    public static object LoadVectorJs(string fieldName, string path, string embeddingGeneratorTaskName, out IndexField vectorField)
     {
         if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current))
         {
@@ -521,7 +521,7 @@ public partial class AbstractStaticIndexBase
             return null;
         }
         
-        var vectors = ProcessLoadVector(fieldName, embeddingGeneratorTaskName, path, out vectorField);
+        var vectors = ProcessLoadVector(fieldName, path, embeddingGeneratorTaskName, out vectorField);
 
         //for js indexes we've no choice than create dynamic field, in such cases let's assume it is single. 
         if (vectorField == null)
@@ -535,17 +535,17 @@ public partial class AbstractStaticIndexBase
             : vectors;
     }
     
-    public object LoadVector(string fieldName, string embeddingGeneratorTaskIdentifier, string path)
+    public object LoadVector(string fieldName, string path, string embeddingGeneratorTaskIdentifier)
     {
-        return LoadVectorBase(fieldName, embeddingGeneratorTaskIdentifier, path);
+        return LoadVectorBase(fieldName, path, embeddingGeneratorTaskIdentifier);
     }
     
-    public static object LoadVectorBase(string fieldName, string embeddingGeneratorTaskIdentifier, string path)
+    public static object LoadVectorBase(string fieldName, string path, string embeddingGeneratorTaskIdentifier)
     {
         if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current))
             return null;
         
-        var vectors = ProcessLoadVector(fieldName, embeddingGeneratorTaskIdentifier, path, out var vectorField);
+        var vectors = ProcessLoadVector(fieldName, path, embeddingGeneratorTaskIdentifier, out var vectorField);
 
         if (vectorField == null)
             return vectors;
@@ -555,7 +555,7 @@ public partial class AbstractStaticIndexBase
             : vectors;
     }
 
-    private static object ProcessLoadVector(string fieldName, string embeddingGeneratorTaskIdentifier, string path, out IndexField indexField)
+    private static object ProcessLoadVector(string fieldName, string path, string embeddingGeneratorTaskIdentifier, out IndexField indexField)
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
         currentIndexingScope.Index.IndexFieldsPersistence.SetEmbeddingsGenerationTaskIdentifier(fieldName, embeddingGeneratorTaskIdentifier);

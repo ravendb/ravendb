@@ -294,7 +294,7 @@ public class RavenDB_23509 : RavenTestBase
                 group result by result.Id into g
                 select new Result()
                 {
-                    Id = g.Key, Vector = LoadVector("test", "abc") 
+                    Id = g.Key, Vector = LoadVector("abc", "test") 
                 };
         }
     }
@@ -304,7 +304,7 @@ public class RavenDB_23509 : RavenTestBase
         public MapReduceLoadVectorInMap()
         {
             Map = dtos => from doc in dtos
-                select new Result() { Id = doc.Id, Vector = LoadVector("test", "abc") };
+                select new Result() { Id = doc.Id, Vector = LoadVector("abc", "test") };
             
             Reduce = results => from result in results
                 group result by result.Id into g

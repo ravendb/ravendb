@@ -342,7 +342,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             Map = dtos => dtos.Select(x => new
             {
                 TextualValue = CreateVector(x.TextualValue),
-                Vector = LoadVector("localaitask", "TextualValue")
+                Vector = LoadVector("TextualValue", "localaitask")
             });
         }
     }
@@ -357,7 +357,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         public SomeIndex()
         {
             Map = dtos => from dto in dtos
-                select new IndexEntry { TextualValueVector = LoadVector("localaitask", "TextualValue") };
+                select new IndexEntry { TextualValueVector = LoadVector("TextualValue", "localaitask") };
         }
     }
 
