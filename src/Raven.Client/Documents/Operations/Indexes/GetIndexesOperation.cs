@@ -8,11 +8,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to retrieve the definitions of multiple indexes from the database.
+    /// </summary>
     public sealed class GetIndexesOperation : IMaintenanceOperation<IndexDefinition[]>
     {
         private readonly int _start;
         private readonly int _pageSize;
 
+        /// <inheritdoc cref="GetIndexesOperation"/>
+        /// <param name="start">The starting position of the indexes list.</param>
+        /// <param name="pageSize">The maximum number of index definitions to retrieve.</param>
         public GetIndexesOperation(int start, int pageSize)
         {
             _start = start;
