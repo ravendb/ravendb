@@ -8,10 +8,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to retrieve the definition of a specific index.
+    /// </summary>
     public sealed class GetIndexOperation : IMaintenanceOperation<IndexDefinition>
     {
         private readonly string _indexName;
 
+        /// <inheritdoc cref="GetIndexOperation"/>
+        /// <param name="indexName">The name of the index to retrieve.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="indexName"/> is null.</exception>
         public GetIndexOperation(string indexName)
         {
             _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
