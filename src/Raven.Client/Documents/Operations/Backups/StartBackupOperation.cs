@@ -8,11 +8,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
+    /// <summary>
+    /// Operation to start a backup task in the database.
+    /// </summary>
     public sealed class StartBackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
     {
         private readonly bool _isFullBackup;
         private readonly long _taskId;
 
+        /// <inheritdoc cref="StartBackupOperation"/>
+        /// <param name="isFullBackup">Determines whether the backup is a full backup (<c>true</c>) or an incremental backup (<c>false</c>).</param>
+        /// <param name="taskId">The identifier of the backup task to start.</param>
         public StartBackupOperation(bool isFullBackup, long taskId)
         {
             _isFullBackup = isFullBackup;
