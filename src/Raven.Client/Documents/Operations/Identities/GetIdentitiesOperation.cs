@@ -6,6 +6,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Identities
 {
+    /// <summary>
+    /// Operation to retrieve all identities and their current values from the database.
+    /// </summary>
     public sealed class GetIdentitiesOperation : IMaintenanceOperation<Dictionary<string, long>>
     {
         public RavenCommand<Dictionary<string, long>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
