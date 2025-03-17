@@ -650,17 +650,23 @@ export function FormValidationMessage(props: { children: string }) {
 
 interface FormGroupProps extends ReactBootstrapFormGroupsProps {
     noMargin?: boolean;
+    margin?: string;
 }
 
-export function FormGroup(props: FormGroupProps) {
+export function FormGroup({ noMargin, margin, ...props }: FormGroupProps) {
     const uniqueId = useUniqueId("form-group-");
 
+    let marginClass: string;
+    if (noMargin) {
+        marginClass = "mb-0";
+    } else if (margin !== undefined) {
+        marginClass = margin;
+    } else {
+        marginClass = "mb-3";
+    }
+
     return (
-        <Form.Group
-            {...props}
-            className={classNames(props.className, props.noMargin ? "mb-0" : "mb-3")}
-            controlId={uniqueId}
-        >
+        <Form.Group {...props} className={classNames(props.className, marginClass)} controlId={uniqueId}>
             {props.children}
         </Form.Group>
     );
