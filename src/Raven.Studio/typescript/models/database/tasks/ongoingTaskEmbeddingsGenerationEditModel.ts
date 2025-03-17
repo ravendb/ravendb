@@ -6,6 +6,9 @@ import genUtils = require("common/generalUtils");
 
 type EmbeddingsSource = "script" | "paths";
 
+const defaultChunkingMethod: Raven.Client.Documents.Operations.AI.ChunkingMethod = "PlainTextSplit";
+const defaultEmbeddingsCacheForQueryingExpiration = TimeInSeconds.TimeInSeconds.Day * 14;
+
 class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     identifier = ko.observable<string>();
     connectionStringName = ko.observable<string>();
@@ -21,11 +24,11 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
     // path configuration inputs
     pathConfigurationMaxTokensPerChunk = ko.observable<number>();
-    pathConfigurationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>("PlainTextSplit");
+    pathConfigurationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
     pathConfigurationChunkingMethodLabel: KnockoutComputed<string>;
     pathConfigurationPath = ko.observable<string>("");
 
-    chunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>("PlainTextSplit");
+    chunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
     chunkingMethodOptions: valueAndLabelItem<Raven.Client.Documents.Operations.AI.ChunkingMethod, string>[] = [
         { value: "PlainTextSplit", label: "Plain Text: Split" },
         { value: "PlainTextSplitLines", label: "Plain Text: Split Lines" },
@@ -45,7 +48,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     quantizationTypeLabel: KnockoutComputed<string>;
 
     embeddingsCacheExpiration = ko.observable<number>(TimeInSeconds.TimeInSeconds.Day * 90);
-    embeddingsCacheForQueryingExpiration = ko.observable<number>(TimeInSeconds.TimeInSeconds.Day * 14);
+    embeddingsCacheForQueryingExpiration = ko.observable<number>(defaultEmbeddingsCacheForQueryingExpiration);
 
     embeddingsSource = ko.observable<EmbeddingsSource>("paths");
     embeddingsSourceLabel: KnockoutComputed<string>;
@@ -64,6 +67,8 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
     transforms = ko.observableArray<Raven.Client.Documents.Operations.ETL.Transformation>([]);
 
+    isQueryingOpen = ko.observable<boolean>(false);
+
     get studioTaskType(): StudioTaskType {
         return "EmbeddingsGeneration";
     }
@@ -77,9 +82,9 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
         this.aiConnectionStrings = aiConnectionStrings;
 
-        this.update(dto);
         this.initializeObservables();
         this.initializeValidation();
+        this.update(dto);
     }
     
     protected initializeObservables() {
@@ -196,6 +201,10 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         });
     }
 
+    toggleQueryingAccordion() {
+        this.isQueryingOpen(!this.isQueryingOpen());
+    }
+
     setResetScriptIfEdit() {
         if (!this.isNew() && !this.isResetAlreadySet()) {
             this.resetScript(true);
@@ -271,6 +280,17 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 this.embeddingsSource("script");
             } else {
                 this.embeddingsSource("paths");
+            }
+
+            // Open the querying section if some value is different from the default
+            if (
+                configuration.EmbeddingsCacheForQueryingExpiration !== genUtils.formatAsTimeSpan(defaultEmbeddingsCacheForQueryingExpiration * 1000) ||
+                (configuration.ChunkingOptionsForQuerying && (
+                    configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk !== this.maxTokensPerChunkDefaultValue() ||
+                    configuration.ChunkingOptionsForQuerying.ChunkingMethod !== defaultChunkingMethod
+                ))
+            ) {
+                this.isQueryingOpen(true);
             }
         }
     }

@@ -267,14 +267,14 @@
                     </div>
                 </div>
                 <div class="panel margin-top-xs">
-                    <div class="panel-heading padding" data-bind="click: $root.toggleAccordion" style="cursor: pointer;">
+                    <div class="panel-heading padding" data-bind="click: toggleQueryingAccordion" style="cursor: pointer;">
                         <h3 class="panel-title">
                             Querying
                             <i class="icon-info text-info" title="When making a vector search query, embeddings are also generated from the provided search term to compare against stored vectors."></i>
-                            <span class="pull-right toggle-icon" data-bind="css: { 'icon-chevron-down': !$root.isAccordionOpen(), 'icon-chevron-up': $root.isAccordionOpen() }"></span>
+                            <span class="pull-right toggle-icon" data-bind="css: { 'icon-chevron-down': !isQueryingOpen(), 'icon-chevron-up': isQueryingOpen() }"></span>
                         </h3>
                     </div>
-                    <div id="queryingPanel" class="panel-collapse" data-bind="css: { 'collapse': !$root.isAccordionOpen(), 'in': $root.isAccordionOpen() }">
+                    <div id="queryingPanel" class="panel-collapse" data-bind="css: { 'collapse': !isQueryingOpen(), 'in': isQueryingOpen() }">
                         <div class="panel-body pt-0">
                             <div class="form-group">
                                 <label class="control-label">Chunking Method</label>
