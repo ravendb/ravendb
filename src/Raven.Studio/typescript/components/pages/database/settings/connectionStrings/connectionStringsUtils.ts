@@ -1,6 +1,6 @@
 import * as yup from "yup";
 
-interface NameSchemaContext {
+export interface ConnectionStringsNameContext {
     isForNewConnection: boolean;
     usedNames: string[];
 }
@@ -11,7 +11,7 @@ export const connectionStringsUtils = {
         .nullable()
         .required()
         .test("is-name-unique", "Name must be unique", (value, ctx) => {
-            const { isForNewConnection, usedNames } = ctx.options.context as NameSchemaContext;
+            const { isForNewConnection, usedNames } = ctx.options.context as ConnectionStringsNameContext;
 
             if (isForNewConnection) {
                 return !usedNames.includes(value);

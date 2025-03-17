@@ -22,7 +22,7 @@ import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { useAppSelector } from "components/store";
-import { connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -43,7 +43,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     connectorType: data.connectorType,
                     isForNewConnection,
                     usedNames,
-                },
+                } satisfies ConnectionStringsNameContext & { connectorType: FormData["connectorType"] },
                 options
             ),
     });

@@ -19,7 +19,7 @@ import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
 import { useAppSelector } from "components/store";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
-import { connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<RavenConnection>;
 
@@ -41,7 +41,7 @@ export default function RavenConnectionString({
         context: {
             isForNewConnection,
             usedNames,
-        },
+        } satisfies ConnectionStringsNameContext,
     });
 
     const urlFieldArray = useFieldArray({

@@ -18,7 +18,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
-import { connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<SnowflakeConnection>;
 
@@ -41,7 +41,7 @@ export default function SnowflakeConnectionString({
         context: {
             isForNewConnection,
             usedNames,
-        },
+        } satisfies ConnectionStringsNameContext,
     });
 
     const formValues = useWatch({ control });

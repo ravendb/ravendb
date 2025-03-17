@@ -31,7 +31,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
-import { connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<ElasticSearchConnection>;
 
@@ -53,7 +53,7 @@ export default function ElasticSearchConnectionString({
         context: {
             isForNewConnection,
             usedNames,
-        },
+        } satisfies ConnectionStringsNameContext,
     });
 
     const urlFieldArray = useFieldArray({

@@ -18,7 +18,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAppSelector } from "components/store";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
-import { connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<OlapConnection>;
 
@@ -40,7 +40,7 @@ export default function OlapConnectionString({
         context: {
             isForNewConnection,
             usedNames,
-        },
+        } satisfies ConnectionStringsNameContext,
     });
 
     const { control, handleSubmit } = form;

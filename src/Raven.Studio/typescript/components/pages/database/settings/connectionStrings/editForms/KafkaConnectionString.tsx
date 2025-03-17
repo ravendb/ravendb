@@ -21,7 +21,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
-import { connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<KafkaConnection>;
 
@@ -43,7 +43,7 @@ export default function KafkaConnectionString({
         context: {
             isForNewConnection,
             usedNames,
-        },
+        } satisfies ConnectionStringsNameContext,
     });
 
     const connectionOptionsFieldArray = useFieldArray({

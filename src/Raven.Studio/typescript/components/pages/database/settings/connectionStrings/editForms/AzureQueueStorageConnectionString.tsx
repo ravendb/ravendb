@@ -25,7 +25,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
-import { connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<AzureQueueStorageConnection>;
 
@@ -50,7 +50,7 @@ export default function AzureQueueStorageConnectionString({
                     authType: data.authType,
                     isForNewConnection,
                     usedNames,
-                },
+                } satisfies ConnectionStringsNameContext & { authType: FormData["authType"] },
                 options
             ),
     });

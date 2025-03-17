@@ -19,7 +19,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { Icon } from "components/common/Icon";
 import { mapAmazonSqsConnectionStringSettingsToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
-import { connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<AmazonSqsConnection>;
 
@@ -44,7 +44,7 @@ export default function AmazonSqsConnectionString({
                     authType: data.authType,
                     isForNewConnection,
                     usedNames,
-                },
+                } satisfies ConnectionStringsNameContext & { authType: FormData["authType"] },
                 options
             ),
     });
