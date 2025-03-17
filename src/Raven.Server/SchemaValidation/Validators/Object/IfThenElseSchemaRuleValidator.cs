@@ -5,7 +5,6 @@ namespace Raven.Server.SchemaValidation.Validators.Object;
 
 public class IfThenElseSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    //TODO To change RootSchemaRuleValidator name or implement new class
     private readonly SelfElementSchemaRuleValidator _ifValidator;
     private readonly SelfElementSchemaRuleValidator _thenValidator;
     private readonly SelfElementSchemaRuleValidator _elseValidator;

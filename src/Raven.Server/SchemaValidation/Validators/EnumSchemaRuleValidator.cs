@@ -1,39 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators;
 
-public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
+public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
 {
     private readonly object[] _enums;
 
+    // ReSharper disable once ConvertToPrimaryConstructor
     public EnumSchemaRuleValidator(IEnumerable<object> enums)
     {
-        _enums = enums.Select(ConvertType).ToArray();
-    }
-
-    //TODO Consider defining base class with ConstantSchemaRuleValidator
-    private object ConvertType(object x)
-    {
-        if (x is LazyNumberValue lnx)
-            return (decimal)lnx;
-
-        if (x is LazyStringValue or LazyCompressedStringValue)
-            return x.ToString();
-
-        if (x is BlittableJsonReaderObject or BlittableJsonReaderArray)
-            //TODO To have context in the validator and clone the blittables and maybe also LazyStringValue and LazyNumberValue
-            return x.ToString();
-
-        if (x is long lx)
-            return (decimal)lx;
-        
-        if (x is decimal)
-            return x;
-
-        throw new InvalidOperationException($"The type {x.GetType()} is not supported.");
+        _enums = enums.Select(ConvertTypeForComparison).ToArray();
     }
 
     protected override bool ValidateInternal(object value, ErrorBuilder errorBuilder)
@@ -48,12 +26,13 @@ public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
     
     protected override bool CheckTypeAndGetValue(object value, out object tValue)
     {
-        tValue = ConvertType(value);
+        tValue = ConvertTypeForComparison(value);
         return true;
     }
 }
 
 [SchemaRule(SchemaValidatorConstants.@enum)]
+// ReSharper disable once UnusedType.Global
 public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<EnumSchemaRuleValidator>
 {
     public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)

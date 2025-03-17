@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Raven.Server.SchemaValidation;
@@ -8,7 +7,7 @@ namespace Raven.Server.SchemaValidation;
 public class ValidationPath
 {
     //TODO To remove Stack allocation
-    private readonly Stack<int> _sizes = new Stack<int>();
+    private readonly RentedBuffer<int> _sizes = new RentedBuffer<int>();
     private readonly RentedCharBuffer _path = new RentedCharBuffer();
     private string _toString;
 
@@ -17,18 +16,19 @@ public class ValidationPath
     public void StepIn(string property)
     {
         _toString = null;
+        var before = _path.Length;
         if (_path.Length != 0)
-            property = "." + property;
+            _path.Append('.');
         
-        _sizes.Push(property.Length);
         _path.Append(property);
+        _sizes.Append(_path.Length - before);
     }
     public void StepIn(int index)
     {
         _toString = null;
         Debug.Assert(_path.Length != 0);
         var current = $"[{index}]";
-        _sizes.Push(current.Length);
+        _sizes.Append(current.Length);
         
         _path.Append(current);
     }
@@ -36,7 +36,8 @@ public class ValidationPath
     public void StepOut()
     {
         _toString = null;
-        var toRemove = _sizes.Pop();
+        var toRemove = _sizes.AsSpan()[_sizes.Length - 1];
+        _sizes.Trim(1);
         _path.Trim(toRemove);
     }
 

@@ -8,7 +8,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation;
 
-//TODO Find better name
 public abstract class SchemaRuleValidatorFactoryHelper
 {
     private static readonly Dictionary<string, ISchemaRuleValidatorFactory> SchemaRuleValidatorFactories;
