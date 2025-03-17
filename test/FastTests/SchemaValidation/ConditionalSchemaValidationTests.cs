@@ -194,4 +194,47 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
                 AssertError("'prop2' should be of type 'string' but actual type is 'integer'.", errors);
             });
     }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnNot()
+    {
+        var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaDefinition = new DynamicJsonValue 
+        { 
+            [SVC.not] = new DynamicJsonValue 
+            { 
+                [SVC.required] = new DynamicJsonArray
+                {
+                    "prop"
+                } 
+            } 
+        };
+        
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["anotherPropName"] = 1 }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue {  }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "somevalue" }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The value at '' is invalid because it matches a `not` schema.", errors);
+            });
+    }
 }

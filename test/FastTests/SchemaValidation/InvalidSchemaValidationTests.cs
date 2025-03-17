@@ -36,6 +36,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
             new object[] { SVC.dependentRequired, 1, "The value of 'dependentRequired' must be an object, but received '1' of type 'integer'. Schema path 'properties.prop'." },
             new object[] { SVC.@if, 1, "The value of 'if' must be an object, but received '1' of type 'integer'. Schema path 'properties.prop'." },
             new object[] { SVC.dependentSchemas, 1, "The value of 'dependentSchemas' must be an object, but received '1' of type 'integer'. Schema path 'properties.prop'." },
+            new object[] { SVC.not, 1, "The value of 'not' must be an object, but received '1' of type 'integer'. Schema path 'properties.prop'." },
         };
 
     [RavenFact(RavenTestCategory.JavaScript)]
