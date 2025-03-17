@@ -10,10 +10,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
+    /// <summary>
+    /// Operation to add a new ETL task to the database.
+    /// </summary>
+    /// <typeparam name="T">The type of the connection string used for the ETL configuration.</typeparam>
     public sealed class AddEtlOperation<T> : IMaintenanceOperation<AddEtlOperationResult> where T : ConnectionString
     {
         private readonly EtlConfiguration<T> _configuration;
 
+        /// <inheritdoc cref="AddEtlOperation{T}"/>
+        /// <param name="configuration">The ETL configuration to add.</param>
         public AddEtlOperation(EtlConfiguration<T> configuration)
         {
             _configuration = configuration;
