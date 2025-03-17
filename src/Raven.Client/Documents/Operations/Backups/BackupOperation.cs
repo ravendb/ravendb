@@ -9,10 +9,19 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
+    /// <summary>
+    /// Operation to start a one-time backup using the specified backup configuration.
+    /// </summary>
     public sealed class BackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
     {
         private readonly BackupConfiguration _backupConfiguration;
-        
+
+        /// <inheritdoc cref="BackupOperation"/>
+        /// <param name="backupConfiguration">The backup configuration defining the backup settings.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="backupConfiguration"/> is null.</exception>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if the provided backup configuration does not specify any backup destinations.
+        /// </exception>
         public BackupOperation(BackupConfiguration backupConfiguration)
         {
             _backupConfiguration = backupConfiguration ?? throw new ArgumentNullException(nameof(backupConfiguration));
