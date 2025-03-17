@@ -6,6 +6,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Configuration
 {
+    /// <summary>
+    /// Operation to retrieve the client configuration settings for the database.
+    /// </summary>
     public sealed class GetClientConfigurationOperation : IMaintenanceOperation<GetClientConfigurationOperation.Result>
     {
         public RavenCommand<Result> GetCommand(DocumentConventions conventions, JsonOperationContext context)
