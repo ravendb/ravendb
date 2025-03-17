@@ -7,8 +7,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to retrieve statistics for all indexes in the database.
+    /// </summary>
     public sealed class GetIndexesStatisticsOperation : IMaintenanceOperation<IndexStats[]>
     {
+        /// <inheritdoc cref="GetIndexesStatisticsOperation"/>
         public GetIndexesStatisticsOperation()
         {
             
