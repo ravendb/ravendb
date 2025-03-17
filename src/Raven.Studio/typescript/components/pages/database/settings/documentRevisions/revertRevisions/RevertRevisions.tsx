@@ -110,7 +110,7 @@ export default function RevertRevisions() {
                     </div>
                     <Card className="mt-3">
                         <Card.Body className="gap-4">
-                            <FormGroup className="mb-3">
+                            <FormGroup>
                                 <FormLabel htmlFor="pointInTime">Point in Time</FormLabel>
                                 <FormDatePicker
                                     id="pointInTime"

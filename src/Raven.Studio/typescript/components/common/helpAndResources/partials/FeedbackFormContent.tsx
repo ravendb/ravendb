@@ -104,16 +104,16 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
     return (
         <Form onSubmit={handleSubmit(handleSendFeedback)}>
             <ul className="action-menu__list">
-                <FormGroup noMargin>
+                <FormGroup marginClass="m-0">
                     <FormInput placeholder="Your name" type="text" control={control} name="name" />
                 </FormGroup>
-                <FormGroup noMargin>
+                <FormGroup marginClass="m-0">
                     <FormInput placeholder="Your email" type="email" control={control} name="email" />
                 </FormGroup>
-                <FormGroup noMargin>
+                <FormGroup marginClass="m-0">
                     <FormInput placeholder="Message" type="textarea" rows={8} control={control} name="message" />
                 </FormGroup>
-                <FormGroup noMargin>
+                <FormGroup marginClass="m-0">
                     <FormCheckbox control={control} name="isFeatureSpecific">
                         <span className="fw-normal">
                             Is your feedback related to the <strong>{moduleTitle}</strong> feature?
