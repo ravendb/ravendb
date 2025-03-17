@@ -25,21 +25,14 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core50,
+                        Runtime = CoreRuntime.Core80,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit,
-                    },
-                    Run =
-                    {
-                        // TODO: Next line is just for testing. Fine tune parameters.
-                        //RunStrategy = RunStrategy.Monitoring,
                     }
                 });
 
                 // Exporters for data
                 AddExporter(GetExporters().ToArray());
-                // Generate plots using R if %R_HOME% is correctly set
-                AddExporter(RPlotExporter.Default);
 
                 AddValidator(BaselineValidator.FailOnError);
                 AddValidator(JitOptimizationsValidator.FailOnError);

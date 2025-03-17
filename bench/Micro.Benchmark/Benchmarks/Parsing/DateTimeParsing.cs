@@ -23,8 +23,6 @@ public class DateTimeParsing
 
             // Exporters for data
             AddExporter(GetExporters().ToArray());
-            // Generate plots using R if %R_HOME% is correctly set
-            AddExporter(RPlotExporter.Default);
 
             AddColumn(StatisticColumn.AllStatistics);
 

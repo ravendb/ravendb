@@ -27,7 +27,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core70,
+                        Runtime = CoreRuntime.Core80,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     }

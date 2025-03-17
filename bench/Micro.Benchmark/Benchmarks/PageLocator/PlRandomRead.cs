@@ -24,24 +24,14 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core22,
+                        Runtime = CoreRuntime.Core80,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     },
-                    // TODO: Next line is just for testing. Fine tune parameters.
-                    //Run =
-                    //{
-                    //    RunStrategy = RunStrategy.Monitoring,
-                    //    LaunchCount = 1,
-                    //    WarmupCount = 2,
-                    //    TargetCount = 40
-                    //}
                 });
 
                 // Exporters for data
                 AddExporter(GetExporters().ToArray());
-                // Generate plots using R if %R_HOME% is correctly set
-                AddExporter(RPlotExporter.Default);
 
                 AddColumn(StatisticColumn.AllStatistics);
 

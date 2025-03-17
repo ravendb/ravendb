@@ -22,14 +22,9 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core70,
+                        Runtime = CoreRuntime.Core80,
                         Platform = Platform.X64,
                         Jit = Jit.Default,
-                    },
-                    Run =
-                    {
-                        // TODO: Next line is just for testing. Fine tune parameters.
-                        //RunStrategy = RunStrategy.Monitoring,
                     }
                 });
 

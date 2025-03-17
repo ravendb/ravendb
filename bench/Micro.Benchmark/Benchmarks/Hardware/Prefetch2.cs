@@ -27,7 +27,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core22,
+                        Runtime = CoreRuntime.Core80,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     }
@@ -35,8 +35,6 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
                 // Exporters for data
                 AddExporter(GetExporters().ToArray());
-                // Generate plots using R if %R_HOME% is correctly set
-                AddExporter(RPlotExporter.Default);
 
                 AddColumn(StatisticColumn.AllStatistics);
 

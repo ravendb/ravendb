@@ -17,10 +17,6 @@ namespace Micro.Benchmark
             Console.WriteLine($"{nameof(Avx)} support: {Avx.IsSupported}");
             Console.WriteLine($"{nameof(Avx2)} support: {Avx2.IsSupported}");
 
-            var test = new ZstdPageBenchmark();
-            test.Setup();
-            test.Zstd();
-
             BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
         }
     }
