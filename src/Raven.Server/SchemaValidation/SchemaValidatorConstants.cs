@@ -30,11 +30,6 @@ internal static class SchemaValidatorConstants
     public const string minProperties = "minProperties";
     public const string propertyNames = "propertyNames";
     public const string required = "required";
-    public const string dependentRequired = "dependentRequired";
-    public const string dependentSchemas = "dependentSchemas";
-    public const string @if = "if";
-    public const string then = "then";
-    public const string @else = "else";
     #endregion
     
     #region Array
@@ -44,6 +39,15 @@ internal static class SchemaValidatorConstants
     public const string contains = "contains";
     public const string minContains = "minContains";
     public const string maxContains = "maxContains";
+    #endregion
+
+    #region conditional
+    public const string dependentRequired = "dependentRequired";
+    public const string dependentSchemas = "dependentSchemas";
+    public const string @if = "if";
+    public const string then = "then";
+    public const string @else = "else";
+    public const string not = "not";
     #endregion
     // ReSharper restore InconsistentNaming
 }
