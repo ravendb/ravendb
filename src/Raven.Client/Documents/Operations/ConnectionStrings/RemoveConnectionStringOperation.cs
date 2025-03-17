@@ -8,10 +8,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ConnectionStrings
 {
+    /// <summary>
+    /// Operation to remove a connection string from the database.
+    /// </summary>
+    /// <typeparam name="T">The type of the connection string to remove.</typeparam>
     public sealed class RemoveConnectionStringOperation<T> : IMaintenanceOperation<RemoveConnectionStringResult> where T : ConnectionString
     {
         private readonly T _connectionString;
 
+        /// <inheritdoc cref="RemoveConnectionStringOperation{T}"/>
+        /// <param name="connectionString">The connection string to remove.</param>
         public RemoveConnectionStringOperation(T connectionString)
         {
             _connectionString = connectionString;
