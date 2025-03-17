@@ -5,6 +5,7 @@ import {
     FormCheckboxes,
     FormDatePicker,
     FormDurationPicker,
+    FormGroup,
     FormInput,
     FormLabel,
     FormPathSelector,
@@ -55,11 +56,11 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
 
     return (
         <div className="vstack gap-4 w-50">
-            <div>
+            <FormGroup>
                 <FormLabel>Input text</FormLabel>
                 <FormInput type="text" control={control} name="inputText" />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <InputGroup>
                     <InputGroup.Text>@</InputGroup.Text>
                     <ReactBootstrapForm.Control placeholder="username" />
@@ -84,21 +85,21 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                     <InputGroup.Text>$</InputGroup.Text>
                     <InputGroup.Text>$</InputGroup.Text>
                 </InputGroup>
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Input number</FormLabel>
                 <FormInput type="number" control={control} name="inputNumber" />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Input with password preview</FormLabel>
                 <FormInput type="password" control={control} name="inputPasswordPreview" passwordPreview />
-            </div>
-            <div className="mt-3">
+            </FormGroup>
+            <FormGroup>
                 <FormCheckbox control={control} name="inputCheckbox">
                     Checkbox
                 </FormCheckbox>
-            </div>
-            <div className="mt-2">
+            </FormGroup>
+            <FormGroup className="mt-2">
                 <FormLabel>Checkboxes</FormLabel>
                 <FormCheckboxes
                     control={control}
@@ -108,18 +109,18 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                         { label: "Option 2", value: false },
                     ]}
                 />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormSwitch control={control} name="inputSwitch">
                     Switch
                 </FormSwitch>
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormRadio control={control} name="inputRadio">
                     Radio
                 </FormRadio>
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Radio toggle with icon</FormLabel>
                 <FormRadioToggleWithIcon
                     control={control}
@@ -127,8 +128,8 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                     leftItem={{ label: "True", value: true, iconName: "check" }}
                     rightItem={{ label: "False", value: false, iconName: "cancel" }}
                 />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Select</FormLabel>
                 <FormSelect
                     control={control}
@@ -138,8 +139,8 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                         { label: "Option 2", value: 2 },
                     ]}
                 />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Select creatable</FormLabel>
                 <FormSelectCreatable
                     control={control}
@@ -149,8 +150,8 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                         { label: "Option 2", value: 2 },
                     ]}
                 />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Multi select</FormLabel>
                 <FormSelect
                     control={control}
@@ -161,29 +162,31 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                     ]}
                     isMulti
                 />
-            </div>
+            </FormGroup>
 
-            <div className="input-group">
-                <FormInput type="text" control={control} name="inputText" />
-                <Button variant="secondary" title="Test connection">
-                    <Icon icon="rocket" />
-                    Test connection
-                </Button>
-            </div>
+            <FormGroup>
+                <InputGroup>
+                    <FormInput type="text" control={control} name="inputText" />
+                    <Button variant="secondary" title="Test connection">
+                        <Icon icon="rocket" />
+                        Test connection
+                    </Button>
+                </InputGroup>
+            </FormGroup>
 
-            <div>
+            <FormGroup>
                 <FormLabel>Date picker</FormLabel>
                 <FormDatePicker control={control} name="inputDatePicker" />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Duration picker</FormLabel>
                 <FormDurationPicker control={control} name="inputDurationPicker" />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Ace editor</FormLabel>
                 <FormAceEditor mode="javascript" control={control} name="inputAceEditor" />
-            </div>
-            <div>
+            </FormGroup>
+            <FormGroup>
                 <FormLabel>Path selector</FormLabel>
                 <FormPathSelector
                     control={control}
@@ -191,7 +194,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                     getPathsProvider={() => () => Promise.resolve(["C:\\", "D:\\"])}
                     getPathDependencies={(path: string) => [path]}
                 />
-            </div>
+            </FormGroup>
         </div>
     );
 }
