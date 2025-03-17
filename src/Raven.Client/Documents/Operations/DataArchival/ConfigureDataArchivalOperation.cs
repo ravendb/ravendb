@@ -9,10 +9,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.DataArchival
 {
+    /// <summary>
+    /// Operation to configure data archival settings in the database.
+    /// </summary>
     public class ConfigureDataArchivalOperation : IMaintenanceOperation<ConfigureDataArchivalOperationResult>
     {
         private readonly DataArchivalConfiguration _configuration;
 
+        /// <inheritdoc cref="ConfigureDataArchivalOperation"/>
+        /// <param name="configuration">The data archival configuration to apply.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="configuration"/> is null.</exception>
         public ConfigureDataArchivalOperation(DataArchivalConfiguration configuration)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
