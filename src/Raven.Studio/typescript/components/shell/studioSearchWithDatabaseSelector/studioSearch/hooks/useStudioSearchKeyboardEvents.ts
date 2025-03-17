@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 interface UseStudioSearchKeyboardEventsProps {
     refs: {
         inputRef: React.RefObject<HTMLInputElement>;
-        dropdownRef: React.RefObject<any>;
         serverColumnRef: React.RefObject<HTMLDivElement>;
         databaseColumnRef: React.RefObject<HTMLDivElement>;
     };
@@ -17,9 +16,9 @@ interface UseStudioSearchKeyboardEventsProps {
 }
 
 export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEventsProps) {
-    const { refs, results, activeItem, setIsDropdownOpen, setActiveItem, setSearchQuery, studioSearchInputId } = props;
+    const { refs, results, activeItem, setIsDropdownOpen, setActiveItem } = props;
 
-    const { inputRef, dropdownRef, serverColumnRef, databaseColumnRef } = refs;
+    const { inputRef, serverColumnRef, databaseColumnRef } = refs;
 
     // Handle toggle dropdown by keyboard
     useEffect(() => {

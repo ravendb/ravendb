@@ -19,7 +19,6 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
             <Dropdown
                 show={isSearchDropdownOpen}
                 onToggle={() => {}} // handled manually in useStudioSearchMouseEvents() to avoid button click behavior
-                ref={refs.dropdownRef}
                 className="studio-search"
             >
                 <Dropdown.Toggle variant="secondary" className="studio-search__toggle">

@@ -11,7 +11,6 @@ import { useStudioSearchMouseEvents } from "./useStudioSearchMouseEvents";
 export function useStudioSearch(menuItems: menuItem[]) {
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
 
-    const dropdownRef = useRef<any>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const serverColumnRef = useRef<HTMLDivElement>(null);
@@ -24,7 +23,6 @@ export function useStudioSearch(menuItems: menuItem[]) {
 
     const refs = {
         inputRef,
-        dropdownRef,
         serverColumnRef,
         databaseColumnRef,
     };

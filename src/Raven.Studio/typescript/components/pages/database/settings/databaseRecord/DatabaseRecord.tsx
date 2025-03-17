@@ -56,7 +56,7 @@ export default function DatabaseRecord() {
     );
 
     const asyncSaveDatabaseRecord = useAsyncCallback(async () => {
-        const dto: documentDto = JSON.parse(visibleDocument.text);
+        const dto: documentDto = JSON.parse(visibleDocument?.text);
         dto.Settings = genUtils.flattenObj(dto.Settings, "");
 
         await databasesService.saveDatabaseRecord(databaseName, dto, dto.Etag);
