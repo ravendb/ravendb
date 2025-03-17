@@ -8,10 +8,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups.Sharding
 {
+    /// <summary>
+    /// Operation to retrieve the status of a periodic backup task in a sharded database.
+    /// </summary>
     public sealed class GetShardedPeriodicBackupStatusOperation : IMaintenanceOperation<GetShardedPeriodicBackupStatusOperationResult>
     {
         private readonly long _taskId;
 
+        /// <inheritdoc cref="GetShardedPeriodicBackupStatusOperation"/>
+        /// <param name="taskId">The identifier of the periodic backup task to retrieve the status for.</param>
         public GetShardedPeriodicBackupStatusOperation(long taskId)
         {
             _taskId = taskId;
