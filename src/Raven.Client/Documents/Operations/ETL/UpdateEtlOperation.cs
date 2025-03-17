@@ -10,11 +10,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
+    /// <summary>
+    /// Operation to update an existing ETL task in the database.
+    /// </summary>
+    /// <typeparam name="T">The type of the connection string used for the ETL configuration.</typeparam>
     public sealed class UpdateEtlOperation<T> : IMaintenanceOperation<UpdateEtlOperationResult> where T : ConnectionString
     {
         private readonly long _taskId;
         private readonly EtlConfiguration<T> _configuration;
 
+        /// <inheritdoc cref="UpdateEtlOperation{T}"/>
+        /// <param name="taskId">The identifier of the ETL task to update.</param>
+        /// <param name="configuration">The new ETL configuration to apply.</param>
         public UpdateEtlOperation(long taskId, EtlConfiguration<T> configuration)
         {
             _taskId = taskId;
