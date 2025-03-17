@@ -9,10 +9,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Expiration
 {
+    /// <summary>
+    /// Operation to configure the expiration settings for documents in the database.
+    /// </summary>
     public sealed class ConfigureExpirationOperation : IMaintenanceOperation<ConfigureExpirationOperationResult>
     {
         private readonly ExpirationConfiguration _configuration;
 
+        /// <inheritdoc cref="ConfigureExpirationOperation"/>
+        /// <param name="configuration">The expiration configuration settings to apply.</param>
         public ConfigureExpirationOperation(ExpirationConfiguration configuration)
         {
             _configuration = configuration;
