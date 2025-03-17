@@ -8,20 +8,29 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to retrieve indexing errors for all or specific indexes in the database.
+    /// </summary>
     public sealed class GetIndexErrorsOperation : IMaintenanceOperation<IndexErrors[]>
     {
         private readonly string[] _indexNames;
         private readonly string _nodeTag;
 
+        /// <inheritdoc cref="GetIndexErrorsOperation"/>
         public GetIndexErrorsOperation()
         {
         }
 
+        /// <inheritdoc cref="GetIndexErrorsOperation"/>
+        /// <param name="indexNames">The names of the indexes to retrieve errors for.</param>
         public GetIndexErrorsOperation(string[] indexNames)
         {
             _indexNames = indexNames;
         }
 
+        /// <inheritdoc cref="GetIndexErrorsOperation"/>
+        /// <param name="indexNames">The names of the indexes to retrieve errors for.</param>
+        /// <param name="nodeTag">The specific node from which to fetch index errors.</param>
         internal GetIndexErrorsOperation(string[] indexNames, string nodeTag)
         {
             _indexNames = indexNames;
