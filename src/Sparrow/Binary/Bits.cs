@@ -10,6 +10,7 @@ namespace Sparrow.Binary
     {
         public const int InByte = 8;
         public const int InShort = 16;
+        public const int InChar = InShort;
         public const int InInt = 32;
         public const int InLong = 64;
 

@@ -52,36 +52,60 @@ namespace Sparrow.Json.Parsing
         {
             return FindMaxEscapePositionAndControlCharSize(str.AsSpan(), out controlCount);
         }
-        
+
+        private static ReadOnlySpan<int> EscapePositionsCountTable =>
+        [
+            0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ];
+
+        private static ReadOnlySpan<int> EscapePositionsControlTable =>
+        [
+            1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ];
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int FindMaxEscapePositionAndControlCharSize(ReadOnlySpan<char> str, out int controlCount)
         {
             var count = 0;
             controlCount = 0;
 
-            for (int i = 0; i < str.Length; i++)
+            foreach (var value in str)
             {
-                var value = str[i];
-                // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
-                // 8  => '\b' => 0000 1000
-                // 9  => '\t' => 0000 1001
-                // 10 => '\n' => 0000 1010
-
-                // 12 => '\f' => 0000 1100
-                // 13 => '\r' => 0000 1101
-
-                // 34 => '"'  => 0010 0010
-                // 92 => '\\' => 0101 1100
-
-                if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
-                {
-                    count++;
+                if (value >= 255)
                     continue;
-                }
 
-                if (value < 32)
-                {
-                    controlCount++;
-                }
+                count += EscapePositionsCountTable[value];
+                controlCount += EscapePositionsControlTable[value];
             }
 
             // we take 5 because that is the max number of bytes for variable size int
@@ -98,29 +122,12 @@ namespace Sparrow.Json.Parsing
 
             for (int i = 0; i < size; i++)
             {
-                byte value = str[i];
-
-                // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
-                // 8  => '\b' => 0000 1000
-                // 9  => '\t' => 0000 1001
-                // 10 => '\n' => 0000 1010
-
-                // 12 => '\f' => 0000 1100
-                // 13 => '\r' => 0000 1101
-
-                // 34 => '"'  => 0010 0010
-                // 92 => '\\' => 0101 1100
-
-                if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
-                {
-                    count++;
+                var value = str[i];
+                if (value >= 255)
                     continue;
-                }
 
-                if (value < 32)
-                {
-                    controlCount++;
-                }
+                count += EscapePositionsCountTable[value];
+                controlCount += EscapePositionsControlTable[value];
             }
 
             escapedCount = controlCount;
@@ -202,9 +209,9 @@ namespace Sparrow.Json.Parsing
             var originalBuffer = buffer;
             WriteVariableSizeInt(ref buffer, escapePositions.Count);
 
-            // PERF: Using a for in this way will evict the bounds-check and also avoid the cost of using an struct enumerator. 
-            for (int i = 0; i < escapePositions.Count; i++)
-                WriteVariableSizeInt(ref buffer, escapePositions[i]);
+            // PERF: Using a for-each in this way will evict the bounds-check and also avoid the cost of using a struct enumerator. 
+            foreach (var escapePosition in escapePositions)
+                WriteVariableSizeInt(ref buffer, escapePosition);
 
             return (int)(buffer - originalBuffer);
         }
