@@ -9,10 +9,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
+    /// <summary>
+    /// Operation to update the configuration of a periodic backup task in the database.
+    /// </summary>
     public sealed class UpdatePeriodicBackupOperation : IMaintenanceOperation<UpdatePeriodicBackupOperationResult>
     {
         private readonly PeriodicBackupConfiguration _configuration;
 
+        /// <inheritdoc cref="UpdatePeriodicBackupOperation"/>
+        /// <param name="configuration">The periodic backup configuration to apply.</param>
         public UpdatePeriodicBackupOperation(PeriodicBackupConfiguration configuration)
         {
             _configuration = configuration;
