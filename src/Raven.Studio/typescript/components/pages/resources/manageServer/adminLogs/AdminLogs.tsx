@@ -22,7 +22,7 @@ import { useEffect } from "react";
 import { StylesConfig } from "react-select";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { Switch } from "components/common/Checkbox";
 import { FlexGrow } from "components/common/FlexGrow";
 import AdminLogsFilterState from "components/pages/resources/manageServer/adminLogs/bits/AdminLogsFilterState";
@@ -232,7 +232,7 @@ export default function AdminLogs() {
             </div>
             <div className="d-flex gap-2 flex-lg-row flex-column">
                 <div className="clearable-input flex-grow-1">
-                    <Input
+                    <Form.Control
                         type="text"
                         placeholder="Search..."
                         value={localFilter}

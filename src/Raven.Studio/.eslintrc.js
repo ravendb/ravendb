@@ -69,6 +69,8 @@ module.exports = {
     "local-rules/no-reactstrap-DropdownToggle-color-prop": "warn",
     "local-rules/no-reactstrap-DropdownToggle-caret-prop": "warn",
     "local-rules/no-reactstrap-Modal": "warn",
+    "local-rules/no-reactstrap-Modal-props": "warn",
+    "local-rules/no-reactstrap-Modal-replace": "warn",
     "local-rules/no-reactstrap-ModalBody": "warn",
     "local-rules/no-reactstrap-ModalFooter": "warn",
     "local-rules/no-reactstrap-Label": "warn",

@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormInput, FormSelect, FormSwitch, FormValidationMessage } from "components/common/Form";
+import { FormGroup, FormInput, FormLabel, FormSelect, FormSwitch, FormValidationMessage } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { SelectOption } from "components/common/select/Select";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -10,17 +10,18 @@ import { useServices } from "components/hooks/useServices";
 import AdminLogsPersistInfoIcon from "components/pages/resources/manageServer/adminLogs/bits/AdminLogsPersistInfoIcon";
 
 import {
-    adminLogsSelectors,
     adminLogsActions,
+    adminLogsSelectors,
 } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { exhaustiveStringTuple, tryHandleSubmit } from "components/utils/common";
-import { useForm, useWatch, SubmitHandler, useFieldArray } from "react-hook-form";
+import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import Collapse from "react-bootstrap/Collapse";
 import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
-import { AccordionItem, AccordionHeader, AccordionBody, Form, FormGroup, Label } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import * as yup from "yup";
+import Accordion from "react-bootstrap/Accordion";
 
 type TrafficWatchChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType;
 type TrafficWatchConfiguration =
@@ -72,9 +73,9 @@ export default function AdminLogsConfigTrafficWatch({ targetId }: { targetId: st
     };
 
     return (
-        <AccordionItem className="p-1 rounded-3">
-            <AccordionHeader targetId={targetId}>Traffic watch</AccordionHeader>
-            <AccordionBody accordionId={targetId}>
+        <Accordion.Item eventKey={targetId} className="p-1 rounded-3">
+            <Accordion.Header>Traffic watch</Accordion.Header>
+            <Accordion.Body>
                 <Form onSubmit={handleSubmit(handleSave)} key={targetId}>
                     <FormGroup>
                         <FormSwitch control={control} name="isEnabled">
@@ -242,7 +243,7 @@ export default function AdminLogsConfigTrafficWatch({ targetId }: { targetId: st
                                 </FormGroup>
                             )}
                             <FormGroup>
-                                <Label>Minimum Request Size</Label>
+                                <FormLabel>Minimum Request Size</FormLabel>
                                 <FormInput
                                     type="number"
                                     control={control}
@@ -252,7 +253,7 @@ export default function AdminLogsConfigTrafficWatch({ targetId }: { targetId: st
                                 />
                             </FormGroup>
                             <FormGroup>
-                                <Label>Minimum Request Duration</Label>
+                                <FormLabel>Minimum Request Duration</FormLabel>
                                 <FormInput
                                     type="number"
                                     control={control}
@@ -262,7 +263,7 @@ export default function AdminLogsConfigTrafficWatch({ targetId }: { targetId: st
                                 />
                             </FormGroup>
                             <FormGroup>
-                                <Label>Minimum Response Size</Label>
+                                <FormLabel>Minimum Response Size</FormLabel>
                                 <FormInput
                                     type="number"
                                     control={control}
@@ -292,8 +293,8 @@ export default function AdminLogsConfigTrafficWatch({ targetId }: { targetId: st
                         Save
                     </ButtonWithSpinner>
                 </Form>
-            </AccordionBody>
-        </AccordionItem>
+            </Accordion.Body>
+        </Accordion.Item>
     );
 }
 

@@ -132,14 +132,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
     };
 
     return (
-        <Modal
-            show
-            onHide={toggle}
-            size="lg"
-            wrapClassName="bs5"
-            contentClassName="modal-border bulge-primary"
-            centered
-        >
+        <Modal show onHide={toggle} size="lg" contentClassName="modal-border bulge-primary">
             <Form onSubmit={handleSubmit(handleExport)}>
                 <Modal.Header className="vstack gap-4" onCloseClick={toggle}>
                     <Icon icon="index-import" color="primary" className="text-center fs-1" margin="m-0" />

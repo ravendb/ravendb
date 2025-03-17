@@ -7,7 +7,8 @@ import AdminLogsConfigTrafficWatch from "components/pages/resources/manageServer
 import { adminLogsActions } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppDispatch } from "components/store";
 import { useState } from "react";
-import { Accordion, CloseButton, Modal, ModalBody } from "reactstrap";
+import Modal from "components/common/Modal";
+import Accordion from "react-bootstrap/Accordion";
 
 type ConfigSection = "logs" | "auditLogs" | "microsoftLogs" | "trafficWatch" | "eventListener";
 
@@ -24,23 +25,18 @@ export default function AdminLogsDiskSettingsModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" centered size="lg">
-            <ModalBody>
-                <div className="d-flex">
-                    <h3>
-                        <Icon icon="drive" addon="settings" />
-                        Settings - logs on disk
-                    </h3>
-                    <CloseButton
-                        className="ms-auto"
-                        onClick={() => dispatch(adminLogsActions.isDiscSettingOpenToggled())}
-                    />
-                </div>
-
+        <Modal show size="lg" onHide={() => dispatch(adminLogsActions.isDiscSettingOpenToggled())}>
+            <Modal.Header onCloseClick={() => dispatch(adminLogsActions.isDiscSettingOpenToggled())}>
+                <h3>
+                    <Icon icon="drive" addon="settings" />
+                    Settings - logs on disk
+                </h3>
+            </Modal.Header>
+            <Modal.Body>
                 <Accordion
-                    open={open ?? ""}
-                    toggle={toggleAccordion}
-                    className="bs5 overflow-scroll vstack gap-1"
+                    activeKey={open ?? ""}
+                    onSelect={(eventKey) => toggleAccordion(eventKey as ConfigSection)}
+                    className="overflow-auto d-flex flex-column gap-1"
                     style={{ maxHeight: "500px" }}
                 >
                     <AdminLogsConfigLogs targetId="logs" />
@@ -49,7 +45,7 @@ export default function AdminLogsDiskSettingsModal() {
                     <AdminLogsConfigTrafficWatch targetId="trafficWatch" />
                     <AdminLogsConfigEventListener targetId="eventListener" />
                 </Accordion>
-            </ModalBody>
+            </Modal.Body>
         </Modal>
     );
 }

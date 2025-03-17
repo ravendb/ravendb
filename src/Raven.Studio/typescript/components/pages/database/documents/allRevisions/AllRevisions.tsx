@@ -1,5 +1,5 @@
 import SizeGetter from "components/common/SizeGetter";
-import { Label } from "reactstrap";
+import { FormLabel } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
 import SelectCreatable from "components/common/select/SelectCreatable";
 import AllRevisionsWithSize from "components/pages/database/documents/allRevisions/partials/AllRevisionsWithSize";
@@ -114,7 +114,7 @@ export default function AllRevisions() {
                 )}
                 <HStack gap={2} className={classNames({ "my-3": hasDatabaseAdminAccess })}>
                     <div>
-                        <Label className="small-label">Filter by collection</Label>
+                        <FormLabel className="small-label">Filter by collection</FormLabel>
                         <SelectCreatable
                             options={collection.options}
                             isLoading={collection.isLoading}
@@ -127,7 +127,7 @@ export default function AllRevisions() {
                         />
                     </div>
                     <div>
-                        <Label className="small-label">Filter by type</Label>
+                        <FormLabel className="small-label">Filter by type</FormLabel>
                         <MultiRadioToggle<RevisionType>
                             inputItems={type.options}
                             selectedItem={type.value}

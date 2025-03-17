@@ -97,7 +97,7 @@ export function Modals() {
                     Modal with Scrolling Content
                 </Modal.Header>
                 <Modal.Body>
-                    {Array.from({ length: 20 }).map((_, i) => (
+                    {Array.from({ length: 30 }).map((_, i) => (
                         <p key={i}>Content line {i + 1} - This is example text to demonstrate scrolling.</p>
                     ))}
                 </Modal.Body>

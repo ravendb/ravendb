@@ -165,59 +165,49 @@ function replaceReactstrapToReactBootstrap({ context, componentMap }) {
 function handleProps({ context, config, componentName }) {
   return {
     JSXOpeningElement(node) {
-      if (componentName.includes(".")) {
-        const [parentName, childName] = componentName.split(".");
-        if (
-          !(
-            node.name &&
-            node.name.type === "JSXMemberExpression" &&
-            node.name.object &&
-            node.name.object.name === parentName &&
-            node.name.property &&
-            node.name.property.name === childName
-          )
-        ) {
-          return;
-        }
+      let isMatch = false;
+
+      if (componentName.includes('.')) {
+        const [parentName, childName] = componentName.split('.');
+        isMatch = node.name?.type === 'JSXMemberExpression' &&
+                 node.name.object?.name === parentName &&
+                 node.name.property?.name === childName;
       } else {
-        if (!(node.name && node.name.type === "JSXIdentifier" && node.name.name === componentName)) {
-          return;
-        }
+        isMatch = node.name?.type === 'JSXIdentifier' &&
+                 node.name.name === componentName;
       }
 
-      node.attributes.forEach((attr) => {
-        if (!attr || !attr.name || !attr.name.name) {
-          return;
-        }
+      if (!isMatch) return;
+
+      node.attributes.forEach(attr => {
+        if (!attr?.name?.name) return;
+
         const propName = attr.name.name;
 
-        if (config.toRemove && config.toRemove.includes(propName)) {
-          context.report({
-            node: attr,
-            message: `'${propName}' prop is not supported and should be removed.`,
-            fix(fixer) {
-              return fixer.remove(attr);
-            },
-          });
-        }
-
         if (config.toMigrate) {
-          const migration = config.toMigrate.find((m) => m.key === propName);
+          const migration = config.toMigrate.find(m => m.key === propName);
           if (migration) {
-            context.report({
-              node: attr,
+            migrateProp({
+              attr,
+              newProp: migration.migrateTo,
               message: `'${propName}' prop is deprecated. Use '${migration.migrateTo}' instead.`,
-              fix(fixer) {
-                return fixer.replaceText(attr.name, migration.migrateTo);
-              },
+              context
             });
+            return;
           }
         }
+
+        if (config.toRemove && config.toRemove.includes(propName)) {
+          removeProp({
+            attr,
+            message: `'${propName}' prop is not supported and should be removed.`,
+            context
+          });
+        }
       });
-    },
+    }
   };
 }
-
 module.exports = {
   "no-reactstrap-alert": {
     create: function(context) {
@@ -586,7 +576,7 @@ module.exports = {
   },
   "no-reactstrap-FormGroup": {
     meta: fixableMeta,
-    create: (context) => createDeprecatedReactstrapImport({ context, name: "FormGroup", reactBootstrapName: "Form" }),
+    create: (context) => createDeprecatedReactstrapImport({ context, name: "FormGroup", reactBootstrapName: "FormGroup", newImport: `import {FormGroup} from "components/common/Form";\n` }),
   },
   "no-reactstrap-Input": {
     meta: fixableMeta,
@@ -782,6 +772,18 @@ module.exports = {
     meta: fixableMeta,
     create: (context) => createDeprecatedReactstrapImport({ context, name: "Modal", newImport: `import Modal from "components/common/Modal";\n` }),
   },
+    "no-reactstrap-Modal-replace": {
+      meta: fixableMeta,
+    create: (context) => {
+      const componentMap = {
+        ModalBody: "Modal.Body",
+        ModalHeader: "Modal.Header",
+        ModalFooter: "Modal.Footer",
+      }
+
+      return replaceReactstrapToReactBootstrap({ context, componentMap });
+    },
+    },
   "no-reactstrap-ModalBody": {
     meta: fixableMeta,
     create: (context) => createDeprecatedReactstrapImport({ context, name: "ModalBody", canFix: false }),
@@ -791,22 +793,23 @@ module.exports = {
     create: (context) => createDeprecatedReactstrapImport({ context, name: "ModalFooter", canFix: false }),
   },
   "no-reactstrap-Modal-props": {
-    meta: fixableMeta,
-    create: (context) => {
-      const config = {
-        toMigrate: [{
-          key: "toggle", migrateTo: "onHide",
-        }, {
-          key: "className", migrateTo: "dialogClassName",
-        }, {
-          key: "cssModule", migrateTo: "dialogCssClass",
-        }, {
-          key: "isOpen", migrateTo: "show",
-        }],
-      };
+      meta: fixableMeta,
+      create: (context) => {
+          const config = {
+              toMigrate: [{
+                  key: "toggle", migrateTo: "onHide",
+              }, {
+                  key: "className", migrateTo: "dialogClassName",
+              }, {
+                  key: "cssModule", migrateTo: "dialogCssClass",
+              }, {
+                  key: "isOpen", migrateTo: "show",
+              }],
+              toRemove: ["wrapClassName", "centered"],
+          };
 
-      return handleProps({ context, config, componentName: "Modal" });
-    }
+          return handleProps({ context, config, componentName: "Modal" });
+      },
   },
   "no-reactstrap-Label": {
     meta: fixableMeta,

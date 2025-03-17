@@ -15,7 +15,7 @@ export default function CreateDatabase({ closeModal, initialMode }: CreateDataba
     const [createMode, setCreateMode] = useState<CreateDatabaseMode>(initialMode ?? "regular");
 
     return (
-        <Modal data-testid="create-database-modal" show size="lg" animation className="create-database">
+        <Modal data-testid="create-database-modal" show size="lg" animation dialogClassName="create-database">
             {createMode === "regular" && (
                 <CreateDatabaseRegular
                     closeModal={closeModal}

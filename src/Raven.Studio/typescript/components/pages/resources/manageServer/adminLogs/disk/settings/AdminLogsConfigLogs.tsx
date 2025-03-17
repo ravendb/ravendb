@@ -1,9 +1,11 @@
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
-import { AccordionBody, AccordionHeader, AccordionItem, Col, Form, FormGroup, Label, Row } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
+import { FormCheckbox, FormGroup, FormLabel, FormSelect } from "components/common/Form";
+import Row from "react-bootstrap/Row";
 import * as yup from "yup";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
-import { FormCheckbox, FormSelect } from "components/common/Form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { logFilterActionOptions, logLevelOptions, tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
@@ -21,6 +23,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AdminLogsPersistInfoIcon from "components/pages/resources/manageServer/adminLogs/bits/AdminLogsPersistInfoIcon";
 import { adminLogsUtils } from "components/pages/resources/manageServer/adminLogs/common/adminLogsUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import Accordion from "react-bootstrap/Accordion";
 
 export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) {
     const dispatch = useAppDispatch();
@@ -51,15 +54,15 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
     };
 
     return (
-        <AccordionItem className="p-1 rounded-3">
-            <AccordionHeader targetId={targetId}>Logs</AccordionHeader>
-            <AccordionBody accordionId={targetId}>
+        <Accordion.Item eventKey={targetId} className="p-1 rounded-3">
+            <Accordion.Header>Logs</Accordion.Header>
+            <Accordion.Body>
                 <h5 className="text-center text-muted text-uppercase">Set Filters & min level</h5>
                 <Form onSubmit={handleSubmit(handleSave)} key={targetId}>
                     <Row>
                         <Col>
                             <FormGroup>
-                                <Label>
+                                <FormLabel>
                                     Current Minimum Level
                                     <PopoverWithHoverWrapper
                                         message="Only log entries at this level or higher will be logged, even if a filter
@@ -67,7 +70,7 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                                     >
                                         <Icon icon="info" color="info" margin="ms-1" />
                                     </PopoverWithHoverWrapper>
-                                </Label>
+                                </FormLabel>
                                 <FormSelect control={control} name="minLevel" options={logLevelOptions} />
                                 {!isCloud && (
                                     <FormCheckbox control={control} name="isPersist" className="mt-1">
@@ -79,7 +82,7 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                         </Col>
                         <Col>
                             <FormGroup>
-                                <Label>
+                                <FormLabel>
                                     Default Filter Action
                                     <PopoverWithHoverWrapper
                                         message={
@@ -104,7 +107,7 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                                     >
                                         <Icon icon="info" color="info" margin="ms-1" />
                                     </PopoverWithHoverWrapper>
-                                </Label>
+                                </FormLabel>
                                 <FormSelect
                                     control={control}
                                     name="logFilterDefaultAction"
@@ -115,7 +118,7 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                         </Col>
                     </Row>
                     <FormGroup className="vstack">
-                        <Label>Filters</Label>
+                        <FormLabel>Filters</FormLabel>
                         <div className="vstack gap-1 mb-1">
                             {filterFieldArray.fields.map((field, idx) => (
                                 <AdminLogsFilterField
@@ -195,8 +198,8 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                         </tr>
                     </tbody>
                 </Table>
-            </AccordionBody>
-        </AccordionItem>
+            </Accordion.Body>
+        </Accordion.Item>
     );
 }
 

@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormSelect } from "components/common/Form";
+import { FormGroup, FormLabel, FormSelect } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { useServices } from "components/hooks/useServices";
@@ -14,7 +14,8 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { logFilterActionOptions, tryHandleSubmit } from "components/utils/common";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import Button from "react-bootstrap/Button";
-import { CloseButton, Form, FormGroup, Label, Modal, ModalBody } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import Modal from "components/common/Modal";
 import * as yup from "yup";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
@@ -48,22 +49,17 @@ export default function AdminLogsViewSettingsModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" centered size="lg">
-            <ModalBody>
-                <div className="d-flex">
+        <Modal show size="lg" onHide={() => dispatch(adminLogsActions.isViewSettingOpenToggled())}>
+            <Form onSubmit={handleSubmit(handleSave)}>
+                <Modal.Header onCloseClick={() => dispatch(adminLogsActions.isViewSettingOpenToggled())}>
                     <h3>
                         <Icon icon="client" addon="settings" />
                         Settings - logs on this view
                     </h3>
-                    <CloseButton
-                        className="ms-auto"
-                        onClick={() => dispatch(adminLogsActions.isViewSettingOpenToggled())}
-                    />
-                </div>
-
-                <Form onSubmit={handleSubmit(handleSave)}>
+                </Modal.Header>
+                <Modal.Body>
                     <FormGroup>
-                        <Label>
+                        <FormLabel>
                             Default Filter Action
                             <PopoverWithHoverWrapper
                                 message={
@@ -87,7 +83,7 @@ export default function AdminLogsViewSettingsModal() {
                             >
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
-                        </Label>
+                        </FormLabel>
                         <FormSelect
                             control={control}
                             name="logFilterDefaultAction"
@@ -96,7 +92,7 @@ export default function AdminLogsViewSettingsModal() {
                         />
                     </FormGroup>
                     <FormGroup className="vstack">
-                        <Label>Filters</Label>
+                        <FormLabel>Filters</FormLabel>
                         <div className="vstack gap-1 mb-1">
                             {filterFieldArray.fields.map((field, idx) => (
                                 <AdminLogsFilterField
@@ -117,27 +113,27 @@ export default function AdminLogsViewSettingsModal() {
                             Add Filter
                         </Button>
                     </FormGroup>
-                    <div className="d-flex justify-content-end gap-2">
-                        <Button
-                            variant="secondary"
-                            type="button"
-                            onClick={() => dispatch(adminLogsActions.isViewSettingOpenToggled())}
-                        >
-                            <Icon icon="cancel" />
-                            Close
-                        </Button>
-                        <ButtonWithSpinner
-                            type="submit"
-                            icon="save"
-                            variant="success"
-                            isSpinning={formState.isSubmitting}
-                            disabled={!formState.isDirty}
-                        >
-                            Save
-                        </ButtonWithSpinner>
-                    </div>
-                </Form>
-            </ModalBody>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={() => dispatch(adminLogsActions.isViewSettingOpenToggled())}
+                    >
+                        <Icon icon="cancel" />
+                        Close
+                    </Button>
+                    <ButtonWithSpinner
+                        type="submit"
+                        icon="save"
+                        variant="success"
+                        isSpinning={formState.isSubmitting}
+                        disabled={!formState.isDirty}
+                    >
+                        Save
+                    </ButtonWithSpinner>
+                </Modal.Footer>
+            </Form>
         </Modal>
     );
 }

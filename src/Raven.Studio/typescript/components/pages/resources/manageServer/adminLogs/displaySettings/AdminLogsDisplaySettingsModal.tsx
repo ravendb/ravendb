@@ -1,15 +1,16 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import { FormInput } from "components/common/Form";
+import { FormGroup, FormInput, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import {
-    adminLogsSelectors,
     adminLogsActions,
+    adminLogsSelectors,
 } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
-import { useAppSelector, useAppDispatch } from "components/store";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { SubmitHandler, useForm } from "react-hook-form";
 import Button from "react-bootstrap/Button";
-import { Modal, ModalBody, CloseButton, FormGroup, Label, Form } from "reactstrap";
+import Modal from "components/common/Modal";
+import Form from "react-bootstrap/Form";
 import * as yup from "yup";
 
 export default function AdminLogsDisplaySettingsModal() {
@@ -33,22 +34,17 @@ export default function AdminLogsDisplaySettingsModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" centered size="lg">
-            <ModalBody>
-                <div className="d-flex">
+        <Modal show size="lg" onHide={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}>
+            <Form onSubmit={handleSubmit(handleSave)}>
+                <Modal.Header onCloseClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}>
                     <h3>
                         <Icon icon="client" addon="settings" />
                         Settings - display
                     </h3>
-                    <CloseButton
-                        className="ms-auto"
-                        onClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}
-                    />
-                </div>
-
-                <Form onSubmit={handleSubmit(handleSave)}>
+                </Modal.Header>
+                <Modal.Body>
                     <FormGroup>
-                        <Label>Maximum logs count</Label>
+                        <FormLabel>Maximum logs count</FormLabel>
                         <FormInput
                             type="number"
                             control={control}
@@ -56,23 +52,22 @@ export default function AdminLogsDisplaySettingsModal() {
                             placeholder="Maximum logs count"
                         />
                     </FormGroup>
-
-                    <div className="d-flex justify-content-end gap-2">
-                        <Button
-                            variant="secondary"
-                            type="button"
-                            onClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}
-                        >
-                            <Icon icon="cancel" />
-                            Close
-                        </Button>
-                        <Button type="submit" variant="success" disabled={!formState.isDirty}>
-                            <Icon icon="save" />
-                            Save
-                        </Button>
-                    </div>
-                </Form>
-            </ModalBody>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}
+                    >
+                        <Icon icon="cancel" />
+                        Close
+                    </Button>
+                    <Button type="submit" variant="success" disabled={!formState.isDirty}>
+                        <Icon icon="save" />
+                        Save
+                    </Button>
+                </Modal.Footer>
+            </Form>
         </Modal>
     );
 }

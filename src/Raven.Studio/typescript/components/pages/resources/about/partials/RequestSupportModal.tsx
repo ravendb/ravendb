@@ -25,14 +25,7 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
     const { value: includeAllDatabases, toggle: toggleIncludeAllDatabases } = useBoolean(true);
 
     return (
-        <Modal
-            show={visible}
-            toggle={toggle}
-            wrapClassName="bs5"
-            centered
-            size="lg"
-            contentClassName="modal-border bulge-primary"
-        >
+        <Modal show={visible} onHide={toggle} size="lg" contentClassName="modal-border bulge-primary">
             <Modal.Header className="vstack gap-4 " onCloseClick={toggle}>
                 <div className="text-center">
                     <Icon icon="support" color="primary" className="fs-1" margin="m-0" />

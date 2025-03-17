@@ -1,12 +1,15 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import messagePublisher from "common/messagePublisher";
-import { FormDatePicker, FormSwitch } from "components/common/Form";
+import { FormDatePicker, FormGroup, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { adminLogsActions } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppDispatch } from "components/store";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import Button from "react-bootstrap/Button";
-import { CloseButton, Col, Form, FormGroup, Modal, ModalBody, Row } from "reactstrap";
+import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
+import Modal from "components/common/Modal";
+import Row from "react-bootstrap/Row";
 import * as yup from "yup";
 import endpoints from "endpoints";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -52,20 +55,15 @@ export default function AdminLogsDiskDownloadModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" centered size="lg">
-            <ModalBody>
-                <div className="d-flex">
+        <Modal show size="lg" onHide={() => dispatch(adminLogsActions.isDownloadDiskLogsOpenToggled())}>
+            <Form onSubmit={handleSubmit(handleDownload)}>
+                <Modal.Header onCloseClick={() => dispatch(adminLogsActions.isDownloadDiskLogsOpenToggled())}>
                     <h3>
                         <Icon icon="storage" addon="download" />
                         Download - logs on disk
                     </h3>
-                    <CloseButton
-                        className="ms-auto"
-                        onClick={() => dispatch(adminLogsActions.isDownloadDiskLogsOpenToggled())}
-                    />
-                </div>
-
-                <Form onSubmit={handleSubmit(handleDownload)}>
+                </Modal.Header>
+                <Modal.Body>
                     <Row>
                         <Col>
                             <FormGroup>
@@ -102,23 +100,22 @@ export default function AdminLogsDiskDownloadModal() {
                             </FormGroup>
                         </Col>
                     </Row>
-
-                    <div className="d-flex justify-content-end gap-2">
-                        <Button
-                            variant="secondary"
-                            type="button"
-                            onClick={() => dispatch(adminLogsActions.isDownloadDiskLogsOpenToggled())}
-                        >
-                            <Icon icon="cancel" />
-                            Close
-                        </Button>
-                        <Button type="submit" variant="success">
-                            <Icon icon="download" />
-                            Download
-                        </Button>
-                    </div>
-                </Form>
-            </ModalBody>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={() => dispatch(adminLogsActions.isDownloadDiskLogsOpenToggled())}
+                    >
+                        <Icon icon="cancel" />
+                        Close
+                    </Button>
+                    <Button type="submit" variant="success">
+                        <Icon icon="download" />
+                        Download
+                    </Button>
+                </Modal.Footer>
+            </Form>
             <div className="hidden">
                 <form method="get" target="hidden-form" id="downloadLogsForm">
                     <input type="hidden" name="from" />

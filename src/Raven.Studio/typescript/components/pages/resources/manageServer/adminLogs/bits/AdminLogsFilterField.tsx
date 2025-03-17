@@ -1,16 +1,17 @@
 import { ConditionalPopover } from "components/common/ConditionalPopover";
-import { FormSelect, FormInput } from "components/common/Form";
+import { FormGroup, FormInput, FormLabel, FormSelect } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { SelectOption } from "components/common/select/Select";
 import { AdminLogsConfigLogsFormData } from "components/pages/resources/manageServer/adminLogs/disk/settings/AdminLogsConfigLogs";
 import { AdminLogsViewSettingsFormData } from "components/pages/resources/manageServer/adminLogs/view/AdminLogsViewSettingsModal";
-import { logLevelOptions, logFilterActionOptions, logLevelRelevances } from "components/utils/common";
+import { logFilterActionOptions, logLevelOptions, logLevelRelevances } from "components/utils/common";
 import { Control, useWatch } from "react-hook-form";
 import { components, OptionProps } from "react-select";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
-import { Row, Col, FormGroup, Label } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type FormData = AdminLogsViewSettingsFormData | AdminLogsConfigLogsFormData;
@@ -61,7 +62,7 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
             <Row>
                 <Col md={4}>
                     <FormGroup className="flex-grow-1">
-                        <Label>Minimum level</Label>
+                        <FormLabel>Minimum level</FormLabel>
                         <FormSelect
                             control={control}
                             name={`filters.${idx}.minLevel`}
@@ -72,7 +73,7 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                 </Col>
                 <Col md={4}>
                     <FormGroup className="flex-grow-1">
-                        <Label>Maximum level</Label>
+                        <FormLabel>Maximum level</FormLabel>
                         <FormSelect
                             control={control}
                             name={`filters.${idx}.maxLevel`}
@@ -83,7 +84,7 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                 </Col>
                 <Col md={4}>
                     <FormGroup className="flex-grow-1">
-                        <Label>
+                        <FormLabel>
                             Action
                             <PopoverWithHoverWrapper
                                 message={
@@ -122,13 +123,13 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                             >
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
-                        </Label>
+                        </FormLabel>
                         <FormSelect control={control} name={`filters.${idx}.action`} options={logFilterActionOptions} />
                     </FormGroup>
                 </Col>
             </Row>
             <div className="flex-grow-1 mb-0">
-                <Label className="d-flex">
+                <FormLabel className="d-flex">
                     Condition
                     <PopoverWithHoverWrapper
                         message={
@@ -187,7 +188,7 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                     >
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <InputGroup>
                     <FormInput
                         control={control}

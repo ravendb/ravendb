@@ -20,7 +20,7 @@ import { RavenFormControlProps } from "react-bootstrap/FormControl";
 import { FormRangeProps } from "react-bootstrap/FormRange";
 import { InputType } from "../../../typings/_studio/react-bootstrap";
 import useUniqueId from "hooks/useUniqueId";
-import { FormGroupProps } from "react-bootstrap/FormGroup";
+import { FormGroupProps as ReactBootstrapFormGroupsProps } from "react-bootstrap/FormGroup";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -648,11 +648,19 @@ export function FormValidationMessage(props: { children: string }) {
     );
 }
 
+interface FormGroupProps extends ReactBootstrapFormGroupsProps {
+    noMargin?: boolean;
+}
+
 export function FormGroup(props: FormGroupProps) {
     const uniqueId = useUniqueId("form-group-");
 
     return (
-        <Form.Group {...props} className={classNames(props.className, "mb-3")} controlId={uniqueId}>
+        <Form.Group
+            {...props}
+            className={classNames(props.className, props.noMargin ? "mb-0" : "mb-3")}
+            controlId={uniqueId}
+        >
             {props.children}
         </Form.Group>
     );

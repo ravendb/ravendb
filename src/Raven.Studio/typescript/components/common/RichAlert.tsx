@@ -1,6 +1,6 @@
 /* eslint-disable local-rules/no-reactstrap-alert */
 import classNames from "classnames";
-import { CloseButton } from "reactstrap";
+import CloseButton from "react-bootstrap/CloseButton";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../typings/server/icons";
 import Alert, { AlertProps } from "react-bootstrap/Alert";
@@ -48,17 +48,7 @@ export function RichAlert({ className, variant, children, icon, iconAddon, title
                 <Icon icon={renderAlertIcon} addon={iconAddon} margin="m-0" className="title-icon fs-3" />
             )}
             <div className="w-100">{children}</div>
-            {onCancel && (
-                <CloseButton
-                    className="pt-0"
-                    onClick={onCancel}
-                    style={{
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                    }}
-                />
-            )}
+            {onCancel && <CloseButton className="position-absolute end-0 top-0" onClick={onCancel} />}
         </Alert>
     );
 }

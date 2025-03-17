@@ -2,17 +2,17 @@ import AdminLogsConfigTableValue from "components/pages/resources/manageServer/a
 import { adminLogsSelectors } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppSelector } from "components/store";
 import Table from "react-bootstrap/Table";
-import { AccordionItem, AccordionBody, AccordionHeader } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import Accordion from "react-bootstrap/Accordion";
 
 export default function AdminLogsConfigAuditLogs({ targetId }: { targetId: string }) {
     const config = useAppSelector(adminLogsSelectors.configs).adminLogsConfig.AuditLogs;
 
     return (
-        <AccordionItem className="p-1 rounded-3">
-            <AccordionHeader targetId={targetId}>Audit logs</AccordionHeader>
-            <AccordionBody accordionId={targetId}>
+        <Accordion.Item eventKey={targetId} className="p-1 rounded-3">
+            <Accordion.Header>Audit logs</Accordion.Header>
+            <Accordion.Body>
                 <h5 className="text-center text-muted text-uppercase">
                     Read-only
                     <PopoverWithHoverWrapper message="These settings are not editable here but can be configured through the server configuration.">
@@ -61,7 +61,7 @@ export default function AdminLogsConfigAuditLogs({ targetId }: { targetId: strin
                         </tr>
                     </tbody>
                 </Table>
-            </AccordionBody>
-        </AccordionItem>
+            </Accordion.Body>
+        </Accordion.Item>
     );
 }

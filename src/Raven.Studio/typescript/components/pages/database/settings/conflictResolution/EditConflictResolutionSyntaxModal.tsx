@@ -8,7 +8,7 @@ interface EditConflictResolutionSyntaxModalProps {
 
 export function EditConflictResolutionSyntaxModal({ toggle }: EditConflictResolutionSyntaxModalProps) {
     return (
-        <Modal show size="lg" toggle={toggle} contentClassName="modal-border bulge-primary">
+        <Modal show size="lg" onHide={toggle} contentClassName="modal-border bulge-primary">
             <Modal.Header onCloseClick={toggle} />
             <Modal.Body>
                 <h5 className="mb-1">Conflicted documents</h5>

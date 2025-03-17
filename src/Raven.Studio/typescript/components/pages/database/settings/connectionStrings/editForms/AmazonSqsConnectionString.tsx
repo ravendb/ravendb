@@ -1,14 +1,14 @@
 import React, { useEffect } from "react";
-import { ConnectionFormData, EditConnectionStringFormProps, AmazonSqsConnection } from "../connectionStringsTypes";
+import { AmazonSqsConnection, ConnectionFormData, EditConnectionStringFormProps } from "../connectionStringsTypes";
 import { SelectOption } from "components/common/select/Select";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { FormInput, FormSelect } from "components/common/Form";
+import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import Badge from "react-bootstrap/Badge";
-import { Form, Label } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
@@ -76,7 +76,7 @@ export default function AmazonSqsConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Label>Name</Label>
+                <FormLabel>Name</FormLabel>
                 <FormInput
                     control={control}
                     name="name"
@@ -87,7 +87,7 @@ export default function AmazonSqsConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Label className="d-flex align-items-center gap-1">
+                <FormLabel className="d-flex align-items-center gap-1">
                     Authentication{" "}
                     {asyncTest.result?.Success ? (
                         <Badge bg="success" pill>
@@ -100,7 +100,7 @@ export default function AmazonSqsConnectionString({
                             Failed connection
                         </Badge>
                     ) : null}
-                </Label>
+                </FormLabel>
                 <FormSelect
                     name="authType"
                     control={control}
@@ -148,7 +148,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
         return (
             <div className="vstack gap-3">
                 <div className="mb-2">
-                    <Label>Access Key</Label>
+                    <FormLabel>Access Key</FormLabel>
                     <FormInput
                         control={control}
                         name="settings.basic.accessKey"
@@ -157,7 +157,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
                     />
                 </div>
                 <div className="mb-2">
-                    <Label>Secret Key</Label>
+                    <FormLabel>Secret Key</FormLabel>
                     <FormInput
                         control={control}
                         name="settings.basic.secretKey"
@@ -167,7 +167,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
                     />
                 </div>
                 <div className="mb-2">
-                    <Label>Region Name</Label>
+                    <FormLabel>Region Name</FormLabel>
                     <FormInput
                         control={control}
                         name="settings.basic.regionName"
