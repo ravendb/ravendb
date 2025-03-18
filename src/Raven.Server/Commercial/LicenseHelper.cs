@@ -378,7 +378,7 @@ namespace Raven.Server.Commercial
                 _errorBuilder.AppendLine();
                 _errorBuilder.AppendLine("To resolve this issue, you may consider the following options:");
                 _errorBuilder.AppendLine("- Ensure your license key is correctly embedded in 'settings.json' or set as an environment variable.");
-                _errorBuilder.AppendLine("- Or, check the 'License.Path' in your configuration to ensure it points to a valid 'license.json' file.");
+                _errorBuilder.AppendLine($"- Or, check the '{RavenConfiguration.GetKey(x => x.Licensing.LicensePath)}' in your configuration to ensure it points to a valid 'license.json' file.");
 
                 if (Configuration.Embedded.ParentProcessId.HasValue)
                 {
@@ -403,20 +403,15 @@ namespace Raven.Server.Commercial
                               IMPORTANT: This configuration must be done in a static constructor before any server initialization.
 
                             * For EmbeddedServer:
-                              using (var embedded = new EmbeddedServer())
+                              EmbeddedServer.Instance.StartServer(new ServerOptions
                               {
-                                  var serverOptions = new ServerOptions
+                                  Licensing = new ServerOptions.LicensingOptions
                                   {
-                                      Licensing = new ServerOptions.LicensingOptions
-                                      {
-                                          License = "your license here", // Replace with your actual license,
-                                          // or
-                                          LicensePath = "path to license.json file" // Replace with the actual path to your license.json file
-                                      }
-                                  };
-
-                                  embedded.StartServer(serverOptions);
-                              }
+                                      License = "your license here", // Replace with your actual license,
+                                      // or
+                                      LicensePath = "path to license.json file" // Replace with the actual path to your license.json file
+                                  }
+                              });
                         """);
                 }
             }
