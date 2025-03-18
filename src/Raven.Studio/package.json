@@ -160,7 +160,6 @@
         "react-hook-form": "^7.52.1",
         "react-redux": "^9.1.2",
         "react-select": "^5.8.0",
-        "reactstrap": "^9.2.3",
         "sortablejs": "^1.15.2",
         "storybook-addon-swc": "^1.2.0",
         "style-loader": "^4.0.0",
