@@ -92,7 +92,7 @@ namespace FastTests
             if (dbRecord.IsSharded)
                 return await Sharding.GetDatabaseStatisticsAsync(store, database ?? store.Database, dbRecord, servers);
 
-            return await store.Maintenance.SendAsync(new GetStatisticsOperation());
+            return await store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new GetStatisticsOperation());
         }
 
         public bool WaitForDocument<T>(IDocumentStore store,

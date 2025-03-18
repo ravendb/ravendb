@@ -300,8 +300,11 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public bool IsExistingTombstoneIsNewer(DocumentsOperationContext context, string docId, ChangeVector revisionChangeVector)
+        public bool IsExistingNewerTombstone(DocumentsOperationContext context, string docId, ChangeVector revisionChangeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, long lastModifiedTicks)
         {
+            if(nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation)) // creation of the ForceCreated revision after deletion of old revision with the same cv 
+                return false;
+
             using (DocumentIdWorker.GetSliceFromId(context, docId, out var revisionIdSlice))
             using (CreateRevisionTombstoneKeySlice(context, revisionIdSlice, revisionChangeVector.Version.ToString(), out _, out var tombstoneKeySlice))
             {
@@ -309,14 +312,18 @@ namespace Raven.Server.Documents.Revisions
                 if (tombstoneTable.ReadByKey(tombstoneKeySlice, out var tvr))
                 {
                     var tombstoneFlags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
-                    if (tombstoneFlags.Contain(DocumentFlags.Artificial) && tombstoneFlags.Contain(DocumentFlags.FromResharding))
+                    if (tombstoneFlags.Contain(DocumentFlags.Artificial | DocumentFlags.FromResharding))
                         return false;
 
-                    var tombstoneChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr);
-                    var status = ChangeVectorUtils.GetConflictStatus(revisionChangeVector, tombstoneChangeVector);
+                    if (flags.Contain(DocumentFlags.ForceCreated) &&
+                        nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
+                        TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr).Ticks < lastModifiedTicks)
+                    {
+                        // The force-created revision created after deletion of old revision with the same cv, and then got by replication
+                        return false;
+                    }
 
-                    if (status is ConflictStatus.AlreadyMerged)
-                        return true;
+                    return true;
                 }
             }
 
@@ -329,6 +336,9 @@ namespace Raven.Server.Documents.Revisions
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
             Debug.Assert(lastModifiedTicks != DateTime.MinValue.Ticks, "last modified ticks must be set");
+
+            if (IsExistingNewerTombstone(context, id, changeVector, flags, nonPersistentFlags, lastModifiedTicks)) 
+                return false;
 
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
 
@@ -1260,7 +1270,7 @@ namespace Raven.Server.Documents.Revisions
             });
         }
 
-        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, Slice changeVectorSlice, bool fromReplication)
+        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, Slice changeVectorSlice, bool fromReplication, DocumentFlags flags = DocumentFlags.None)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -1292,7 +1302,7 @@ namespace Raven.Server.Documents.Revisions
                 revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
             }
 
-            CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks, fromReplication);
+            CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks, fromReplication, flags);
         }
 
         private unsafe void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag,
@@ -1370,6 +1380,9 @@ namespace Raven.Server.Documents.Revisions
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
         {
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
+                return;
+
+            if (IsExistingNewerTombstone(context, id, changeVector, flags, nonPersistentFlags, lastModifiedTicks)) 
                 return;
 
             Debug.Assert(changeVector != null, "Change vector must be set");

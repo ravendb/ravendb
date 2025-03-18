@@ -1,13 +1,22 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
+using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents.Sharding;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,6 +27,103 @@ namespace SlowTests.Issues
     {
         public RavenDB_23730(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
+        public async Task ReshardingBeforeBackupTest()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using var src = Sharding.GetDocumentStore();
+
+            await RevisionsHelper.SetupRevisionsAsync(src, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+
+            const string id = "Users/1";
+            using (var session = src.OpenSession())
+            {
+                session.Store(new User { Name = "Old" }, id);
+                session.SaveChanges();
+            }
+
+            using (var session = src.OpenSession())
+            {
+                var user = session.Load<User>(id);
+                Assert.NotNull(user);
+                user.Name = "New";
+                session.SaveChanges();
+            }
+
+            var oldLocation = await Sharding.GetShardNumberForAsync(src, id);
+            await Sharding.Resharding.MoveShardForId(src, id, toShard: Math.Abs(oldLocation - 1));
+            // Now "Users/1" in shard 0.
+
+            var nodes = new List<RavenServer>() { Server };
+            var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(nodes, src.Database);
+            var config = Backup.CreateBackupConfiguration(backupPath);
+            await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes, src, config);
+            Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+            var dirs = Directory.GetDirectories(backupPath);
+            var sharding = await Sharding.GetShardingConfigurationAsync(src);
+            var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+
+            var restoredDatabaseName = $"restored_{Guid.NewGuid()}-{src.Database}";
+            using (Sharding.Backup.ReadOnly(backupPath))
+            using (Backup.RestoreDatabase(src, new RestoreBackupConfiguration
+                   {
+                       DatabaseName = restoredDatabaseName,
+                       ShardRestoreSettings = settings
+                   }, timeout: TimeSpan.FromSeconds(60)))
+            {
+                // Get the shards with the 'Artificial | FromResharding' revisions tombstones
+                var shardDb = await GetShardWithTombstones(restoredDatabaseName);
+
+                // Wait until 'shardDb' success to perform 'ExecuteMoveDocumentsAsync'
+                await WaitForShardsMigration(shardDb);
+
+                using (var session = src.OpenAsyncSession(restoredDatabaseName))
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("New", user.Name);
+                    var revCount = await session.Advanced.Revisions.GetCountForAsync(id);
+                    Assert.Equal(2, revCount);
+
+                    var user1Revisions = await GetRevisionsCvs(session, id);
+                    Assert.Equal(2, user1Revisions.Count);
+                }
+            }
+        }
+
+        private async Task<ShardedDocumentDatabase> GetShardWithTombstones(string databaseName)
+        {
+            await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(databaseName))
+            {
+                using (shard.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    if (shard.ShardedDocumentsStorage.RevisionsStorage.GetNumberOfRevisionTombstones(ctx) > 0)
+                        return shard;
+                }
+            }
+
+            return null;
+        }
+
+        private Task WaitForShardsMigration(ShardedDocumentDatabase shardDb)
+        {
+            return WaitAndAssertForValueAsync<Exception>(async () =>
+            {
+                try
+                {
+                    await shardDb.DocumentsMigrator.ExecuteMoveDocumentsAsync();
+                    return null;
+                }
+                catch (RachisApplyException ex) when (ex.Message.Contains("Failed to update database record."))
+                {
+                    // Shard isn't initialized yet
+                    return ex;
+                }
+            }, null);
         }
 
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
@@ -165,9 +271,77 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        public async Task CanRecreateForceCreatedRevisionAndReplicate()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+
+            using var store = GetDocumentStore(new Options()
+            {
+                Server = leader, 
+                ReplicationFactor = 3,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString();
+                }
+            });
+
+            List<string> revisions;
+
+            var user1 = new User { Id = "Users/1-A", Name = "Shahar_old" };
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user1);
+                await session.SaveChangesAsync();
+
+                session.Advanced.Revisions.ForceRevisionCreationFor(id: user1.Id);
+                await session.SaveChangesAsync();
+
+                revisions = await GetRevisionsCvs(session, user1.Id);
+                Assert.Equal(1, revisions.Count);
+            }
+
+            await store.Maintenance.SendAsync(new DeleteRevisionsOperation(user1.Id, revisions, removeForceCreatedRevisions: true));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var revisions2 = await GetRevisionsCvs(session, user1.Id);
+                Assert.Empty(revisions2);
+
+                session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(15));
+
+                session.Advanced.Revisions.ForceRevisionCreationFor(id: user1.Id);
+                await session.SaveChangesAsync();
+            }
+
+            foreach (var n in nodes)
+            {
+                using var nodeStore = GetStoreForServer(n, store.Database);
+                // Wait for (force-created) revision replication
+                await WaitForValueAsync(async () =>
+                {
+                    using (var session = nodeStore.OpenAsyncSession())
+                    {
+                        return (await GetRevisionsCvs(session, user1.Id)).Count;
+                    }
+                }, 1);
+            }
+
+            IDocumentStore GetStoreForServer(RavenServer server, string database)
+            {
+                return new DocumentStore
+                    {
+                        Database = database, 
+                        Urls = new[] { server.WebUrl }, 
+                        Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+                    }
+                    .Initialize();
+            }
+        }
+
         private async Task ModifyExternalReplication(DocumentStore from, DocumentStore to, long ongoingTaskId, bool disable)
         {
-            var external = new ExternalReplication(from.Database, $"ConnectionString-{to.Identifier}") { TaskId = ongoingTaskId, Disabled = true };
+            var external = new ExternalReplication(from.Database, $"ConnectionString-{to.Identifier}") { TaskId = ongoingTaskId, Disabled = disable };
             await from.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
         }
 

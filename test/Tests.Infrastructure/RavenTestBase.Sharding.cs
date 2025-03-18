@@ -337,7 +337,7 @@ public partial class RavenTestBase
         {
             var shardingConfiguration = record != null ? record.Sharding : await GetShardingConfigurationAsync(store, database);
             DatabaseStatistics combined = new DatabaseStatistics();
-            var essential = await store.Maintenance.SendAsync(new GetEssentialStatisticsOperation());
+            var essential = await store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new GetEssentialStatisticsOperation());
 
             combined.CountOfConflicts = essential.CountOfConflicts;
             combined.CountOfCounterEntries = essential.CountOfCounterEntries;
