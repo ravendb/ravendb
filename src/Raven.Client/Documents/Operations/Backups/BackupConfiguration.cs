@@ -5,17 +5,59 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
+    /// <summary>
+    /// The backup configuration settings.
+    /// </summary>
     public class BackupConfiguration : IDynamicJson
     {
+        /// <summary>
+        /// The type of backup (e.g., snapshot or incremental).
+        /// </summary>
         public BackupType BackupType { get; set; }
+
+        /// <summary>
+        /// The upload mode for the backup.
+        /// </summary>
         public BackupUploadMode BackupUploadMode { get; set; }
+
+        /// <summary>
+        /// Settings related to snapshot backups.
+        /// </summary>
         public SnapshotSettings SnapshotSettings { get; set; }
+
+        /// <summary>
+        /// Encryption settings for the backup.
+        /// </summary>
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
+
+        /// <summary>
+        /// Settings for local storage backup.
+        /// </summary>
         public LocalSettings LocalSettings { get; set; }
+
+        /// <summary>
+        /// Settings for Amazon S3 backup.
+        /// </summary>
         public S3Settings S3Settings { get; set; }
+
+        /// <summary>
+        /// Settings for Amazon Glacier backup.
+        /// </summary>
         public GlacierSettings GlacierSettings { get; set; }
+
+        /// <summary>
+        /// Settings for Azure backup.
+        /// </summary>
         public AzureSettings AzureSettings { get; set; }
+
+        /// <summary>
+        /// Settings for FTP-based backup.
+        /// </summary>
         public FtpSettings FtpSettings { get; set; }
+
+        /// <summary>
+        /// Settings for Google Cloud backup.
+        /// </summary>
         public GoogleCloudSettings GoogleCloudSettings { get; set; }
 
         internal bool HasBackup()

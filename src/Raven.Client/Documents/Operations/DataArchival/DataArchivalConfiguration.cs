@@ -2,12 +2,27 @@
 
 namespace Raven.Client.Documents.Operations.DataArchival
 {
+    /// <summary>
+    /// The configuration for data archival in RavenDB.
+    /// Allows setting archive frequency, maximum items to process, and enabling/disabling the feature.
+    /// </summary>
     public class DataArchivalConfiguration : IDynamicJson
     {
+        /// <summary>
+        ///  Indicates whether data archival is disabled.
+        /// </summary>
         public bool Disabled { get; set; }
 
+        /// <summary>
+        /// The frequency of archival operations in seconds.
+        /// If null, the default frequency is used.
+        /// </summary>
         public long? ArchiveFrequencyInSec { get; set; }
 
+        /// <summary>
+        /// The maximum number of items to process in each archival operation.
+        /// If null, it defaults to <see cref="int.MaxValue"/>.
+        /// </summary>
         public long? MaxItemsToProcess { get; set; }
 
         public override int GetHashCode()

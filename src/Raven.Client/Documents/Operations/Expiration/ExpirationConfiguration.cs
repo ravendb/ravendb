@@ -2,12 +2,27 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Expiration
 {
+    /// <summary>
+    /// The configuration for document expiration feature.
+    /// Allows setting deletion frequency, maximum items to process, and enabling/disabling expiration.
+    /// </summary>
     public sealed class ExpirationConfiguration : IDynamicJson
     {
+        /// <summary>
+        /// Indicates whether document expiration is disabled.
+        /// </summary>
         public bool Disabled { get; set; }
 
+        /// <summary>
+        /// The frequency of document deletion operations in seconds.
+        /// If null, the default frequency is used.
+        /// </summary>
         public long? DeleteFrequencyInSec { get; set; }
 
+        /// <summary>
+        /// The maximum number of items to process in each expiration operation.
+        /// If null, it defaults to <see cref="int.MaxValue"/>.
+        /// </summary>
         public long? MaxItemsToProcess { get; set; }
 
         public override int GetHashCode()

@@ -12,14 +12,45 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
+    /// <summary>
+    /// Defines the configuration for periodic backup tasks.
+    /// Supports full and incremental backups with configurable frequencies, retention policies, and mentor node assignments.
+    /// </summary>
     public class PeriodicBackupConfiguration : BackupConfiguration, IDatabaseTask, IDynamicJsonValueConvertible
     {
+        /// <summary>
+        /// The name of the periodic backup task.
+        /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// The unique identifier for the backup task.
+        /// </summary>
         public long TaskId { get; set; }
+
+        /// <summary>
+        /// Indicates whether the backup task is disabled.
+        /// </summary>
         public bool Disabled { get; set; }
+
+        /// <summary>
+        /// The mentor node responsible for executing the backup task.
+        /// </summary>
         public string MentorNode { get; set; }
+
+        /// <summary>
+        /// Determines if the backup task should always run on the mentor node.
+        /// </summary>
         public bool PinToMentorNode { get; set; }
+
+        /// <summary>
+        /// The retention policy associated with the backup task.
+        /// </summary>
         public RetentionPolicy RetentionPolicy { get; set; }
+
+        /// <summary>
+        /// The timestamp when the backup task was created.
+        /// </summary>
         public DateTime? CreatedAt { get; set; }
 
         /// <summary>
