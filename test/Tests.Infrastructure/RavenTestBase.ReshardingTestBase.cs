@@ -81,15 +81,16 @@ public partial class RavenTestBase
             return bucket;
         }
 
-        public async Task WaitForMigrationComplete(IDocumentStore store, int bucket, TimeSpan? timeout = null)
+        public async Task WaitForMigrationComplete(IDocumentStore store, int bucket, string database = null, TimeSpan? timeout = null)
         {
+            database ??= store.Database;
             using (var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(30)))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), cts.Token);
                 while (record.Sharding.BucketMigrations.ContainsKey(bucket))
                 {
                     await Task.Delay(250, cts.Token);
-                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), cts.Token);
                 }
             }
         }
@@ -100,7 +101,7 @@ public partial class RavenTestBase
             {
                 servers ??= _parent.GetServers();
                 var bucket = await StartMovingShardForId(store, id, toShard, servers);
-                await WaitForMigrationComplete(store, bucket, timeout ?? TimeSpan.FromSeconds(30));
+                await WaitForMigrationComplete(store, bucket, timeout: timeout ?? TimeSpan.FromSeconds(30));
             }
             catch (Exception e)
             {

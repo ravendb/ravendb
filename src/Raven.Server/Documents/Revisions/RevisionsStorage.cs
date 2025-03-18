@@ -302,7 +302,7 @@ namespace Raven.Server.Documents.Revisions
 
         public bool IsExistingNewerTombstone(DocumentsOperationContext context, string docId, ChangeVector revisionChangeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, long lastModifiedTicks)
         {
-            if(nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation)) // creation of the ForceCreated revision after deletion of old revision with the same cv 
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation)) // creation of the ForceCreated revision after deletion of old revision with the same cv 
                 return false;
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out var revisionIdSlice))

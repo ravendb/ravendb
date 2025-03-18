@@ -185,9 +185,9 @@ public partial class RavenTestBase
                 return ShardHelper.GetBucketFor(config, allocator, id);
         }
 
-        public async Task<int> GetBucketAsync(IDocumentStore store, string id)
+        public async Task<int> GetBucketAsync(IDocumentStore store, string id, string database = null)
         {
-            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database ?? store.Database));
             return GetBucket(record.Sharding, id);
         }
 

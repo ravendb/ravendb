@@ -14,9 +14,6 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Documents.Sharding;
-using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -55,7 +52,6 @@ namespace SlowTests.Issues
 
             var oldLocation = await Sharding.GetShardNumberForAsync(src, id);
             await Sharding.Resharding.MoveShardForId(src, id, toShard: Math.Abs(oldLocation - 1));
-            // Now "Users/1" in shard 0.
 
             var nodes = new List<RavenServer>() { Server };
             var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(nodes, src.Database);
@@ -69,17 +65,12 @@ namespace SlowTests.Issues
 
             var restoredDatabaseName = $"restored_{Guid.NewGuid()}-{src.Database}";
             using (Sharding.Backup.ReadOnly(backupPath))
-            using (Backup.RestoreDatabase(src, new RestoreBackupConfiguration
-                   {
-                       DatabaseName = restoredDatabaseName,
-                       ShardRestoreSettings = settings
-                   }, timeout: TimeSpan.FromSeconds(60)))
+            using (Backup.RestoreDatabase(src, new RestoreBackupConfiguration { DatabaseName = restoredDatabaseName, ShardRestoreSettings = settings },
+                       timeout: TimeSpan.FromSeconds(60)))
             {
-                // Get the shards with the 'Artificial | FromResharding' revisions tombstones
-                var shardDb = await GetShardWithTombstones(restoredDatabaseName);
-
                 // Wait until 'shardDb' success to perform 'ExecuteMoveDocumentsAsync'
-                await WaitForShardsMigration(shardDb);
+                var bucket = await Sharding.GetBucketAsync(src, id, restoredDatabaseName);
+                await Sharding.Resharding.WaitForMigrationComplete(src, bucket, restoredDatabaseName);
 
                 using (var session = src.OpenAsyncSession(restoredDatabaseName))
                 {
@@ -92,38 +83,6 @@ namespace SlowTests.Issues
                     Assert.Equal(2, user1Revisions.Count);
                 }
             }
-        }
-
-        private async Task<ShardedDocumentDatabase> GetShardWithTombstones(string databaseName)
-        {
-            await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(databaseName))
-            {
-                using (shard.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    if (shard.ShardedDocumentsStorage.RevisionsStorage.GetNumberOfRevisionTombstones(ctx) > 0)
-                        return shard;
-                }
-            }
-
-            return null;
-        }
-
-        private Task WaitForShardsMigration(ShardedDocumentDatabase shardDb)
-        {
-            return WaitAndAssertForValueAsync<Exception>(async () =>
-            {
-                try
-                {
-                    await shardDb.DocumentsMigrator.ExecuteMoveDocumentsAsync();
-                    return null;
-                }
-                catch (RachisApplyException ex) when (ex.Message.Contains("Failed to update database record."))
-                {
-                    // Shard isn't initialized yet
-                    return ex;
-                }
-            }, null);
         }
 
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
@@ -278,7 +237,7 @@ namespace SlowTests.Issues
 
             using var store = GetDocumentStore(new Options()
             {
-                Server = leader, 
+                Server = leader,
                 ReplicationFactor = 3,
                 ModifyDatabaseRecord = record =>
                 {
