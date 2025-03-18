@@ -43,7 +43,7 @@ namespace SlowTests.Issues
         [Fact]
         public void SettingMaxScratchBufferSizeMustNotExceed32BitsLimit()
         {
-            using (var options = StorageEnvironmentOptions.ForPath(NewDataPath()))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(NewDataPath()))
             {
                 options.ForceUsing32BitsPager = true;
                 options.MaxScratchBufferSize = 512 * Constants.Size.Megabyte;
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
         [Fact]
         public void SettingMaxScratchBufferSizeCanBeLimitedOn32Bits()
         {
-            using (var options = StorageEnvironmentOptions.ForPath(NewDataPath()))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(NewDataPath()))
             {
                 options.ForceUsing32BitsPager = true;
                 options.MaxScratchBufferSize = 4 * Constants.Size.Megabyte;

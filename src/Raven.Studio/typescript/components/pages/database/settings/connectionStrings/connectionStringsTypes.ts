@@ -3,8 +3,10 @@ import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.Olap
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import AzureQueueStorageConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings;
+import AmazonSqsConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings;
 
 type SqlConnectionStringDto = SqlConnectionString;
+type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 import { FormDestinations } from "components/common/formDestinations/utils/formDestinationsTypes";
 
 export interface ConnectionStringUsedTask {
@@ -29,6 +31,11 @@ export interface SqlConnection extends ConnectionBase {
     type: Extract<StudioEtlType, "Sql">;
     connectionString?: string;
     factoryName?: SqlConnectionStringFactoryName;
+}
+
+export interface SnowflakeConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "Snowflake">;
+    connectionString?: string;
 }
 
 export interface OlapConnection extends ConnectionBase, FormDestinations {
@@ -87,14 +94,29 @@ export interface AzureQueueStorageConnection extends ConnectionBase {
     };
 }
 
+export interface AmazonSqsConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "AmazonSqs">;
+    authType?: AmazonSqsAuthenticationType;
+    settings?: {
+        basic?: {
+            accessKey?: string;
+            regionName?: string;
+            secretKey?: string;
+        };
+        passwordless?: boolean;
+    };
+}
+
 export type Connection =
     | RavenConnection
     | SqlConnection
+    | SnowflakeConnection
     | OlapConnection
     | ElasticSearchConnection
     | KafkaConnection
     | RabbitMqConnection
-    | AzureQueueStorageConnection;
+    | AzureQueueStorageConnection
+    | AmazonSqsConnection;
 
 export type ConnectionStringDto = Partial<
     | ElasticSearchConnectionStringDto
@@ -102,7 +124,9 @@ export type ConnectionStringDto = Partial<
     | QueueConnectionStringDto
     | RavenConnectionStringDto
     | SqlConnectionStringDto
+    | SnowflakeConnectionStringDto
     | AzureQueueStorageConnectionSettingsDto
+    | AmazonSqsConnectionSettingsDto
 >;
 
 export interface EditConnectionStringFormProps {

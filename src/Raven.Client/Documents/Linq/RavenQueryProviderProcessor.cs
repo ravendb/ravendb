@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -24,6 +25,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;
@@ -1596,6 +1598,60 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case nameof(LinqExtensions.Skip):
                     VisitQueryableMethodCall(expression);
+                    break;
+                
+                // Root, field factory, value factory, similarity, number of neighbors, isExact 
+                // e.g. Query<Dto>.VectorSearch(x => x.WithText("TextField"), factory => factory.ByText("SomeText"), minimumSimilarity (nullable): 0.7, numberOfCandidates: (nullable) 16, isExact: true (default: Raven.Client.Constants.VectorSearch.DefaultIsExact))
+                case nameof(LinqExtensions.VectorSearch):
+                    _insideWhereOrSearchCounter++;
+                    
+                    VisitExpression(expression.Arguments[0]);
+
+                    if (_chainedWhere)
+                    {
+                        DocumentQuery.AndAlso();
+                        DocumentQuery.OpenSubclause();
+                    }
+                    
+                    if (_chainedWhere == false && _insideWhereOrSearchCounter > 1)
+                        DocumentQuery.OpenSubclause();
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var minimumSimilarityObject);
+
+                    if (minimumSimilarityObject != null)
+                    {
+                        if (minimumSimilarityObject is not float minimumSimilarity || minimumSimilarity is < -1.0f or > 1.0f)
+                            throw new InvalidDataException($"The minimum similarity parameter should be a float in the range [-1, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
+                    }
+                    
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[4], out var numberOfCandidatesObject);
+
+                    if (numberOfCandidatesObject != null)
+                    {
+                        if (numberOfCandidatesObject is not int numberOfCandidates || numberOfCandidates <= 0)
+                            throw new InvalidDataException("Number of candidates has to be positive.");
+                    }
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out var isExactObject);
+
+                    if (isExactObject is not bool isExact)
+                        throw new NotSupportedException($"{nameof(isExact)} has to be boolean.");
+                    
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var fieldFactoryObject);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var fieldValueFactoryObject);
+
+                    var fieldFactoryAccessor = fieldFactoryObject as IVectorEmbeddingFieldFactoryAccessor;
+                    var fieldValueFactoryAccessor = fieldValueFactoryObject as IVectorFieldValueFactoryAccessor;
+                    
+                    ((IAbstractDocumentQueryAccessor)DocumentQuery).VectorSearch(fieldFactoryAccessor, fieldValueFactoryAccessor, minimumSimilarityObject as float?, numberOfCandidatesObject as int?, isExact);
+                    
+                    if (_chainedWhere == false && _insideWhereOrSearchCounter > 1)
+                        DocumentQuery.CloseSubclause();
+                    if (_chainedWhere)
+                        DocumentQuery.CloseSubclause();
+                    _chainedWhere = true;
+                    _insideWhereOrSearchCounter--;
+                    
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -32,17 +33,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public bool CanRunBackup
-        {
-            get
-            {
-                lock (_locker)
-                {
-                    return _runningBackupsPerDatabase.Count - 1 > 0;
-                }
-            }
-        }
-
         public ConcurrentBackupsCounter(BackupConfiguration backupConfiguration, LicenseManager licenseManager)
         {
             _licenseManager = licenseManager;
@@ -65,7 +55,21 @@ namespace Raven.Server.Documents.PeriodicBackup
             _skipModifications = skipModifications;
         }
 
-        public void StartBackup(string databaseName, string backupName, Logger logger)
+        public bool CanRunBackup(string databaseName)
+        {
+            lock (_locker)
+            {
+                if (_runningBackupsPerDatabase.TryGetValue(databaseName, out _))
+                {
+                    //  allow to backup all shards of the same database concurrently
+                    return true;
+                }
+
+                return MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count >= 1;
+            }
+        }
+
+        public void StartBackup(string databaseName, string backupName, RavenLogger logger)
         {
             lock (_locker)
             {
@@ -89,11 +93,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _runningBackupsPerDatabase[databaseName] = 1;
             }
 
-            if (logger.IsOperationsEnabled)
-                logger.Operations($"Starting backup task '{backupName}'");
+            if (logger.IsInfoEnabled)
+                logger.Info($"Starting backup task '{backupName}'");
         }
 
-        public void FinishBackup(string databaseName, string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, Logger logger)
+        public void FinishBackup(string databaseName, string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, RavenLogger logger)
         {
             lock (_locker)
             {
@@ -110,14 +114,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
             }
 
-            if (logger.IsOperationsEnabled)
+            if (logger.IsInfoEnabled)
             {
                 string backupTypeString = "backup";
                 string extendedBackupTimings = string.Empty;
                 if (backupStatus != null)
                 {
                     backupTypeString = BackupTask.GetBackupDescription(backupStatus.BackupType, backupStatus.IsFull);
-                    
+
                     var first = true;
                     AddBackupTimings(backupStatus.LocalBackup, "local");
                     AddBackupTimings(backupStatus.UploadToS3, "Amazon S3");
@@ -128,7 +132,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     void AddBackupTimings(BackupStatus perDestinationBackupStatus, string backupTypeName)
                     {
-                        if (perDestinationBackupStatus == null || 
+                        if (perDestinationBackupStatus == null ||
                             perDestinationBackupStatus is CloudUploadStatus cus && cus.Skipped)
                             return;
 
@@ -148,7 +152,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 message += $" {extendedBackupTimings}";
 
-                logger.Operations(message);
+                logger.Info(message);
             }
         }
 

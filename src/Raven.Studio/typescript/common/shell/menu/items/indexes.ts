@@ -5,6 +5,8 @@ import reactUtils = require("common/reactUtils");
 import IndexesPage = require("components/pages/database/indexes/list/IndexesPage");
 import IndexCleanup = require("components/pages/database/indexes/cleanup/IndexCleanup");
 import IndexErrors = require("components/pages/database/indexes/errors/IndexErrors");
+import IndexTerms = require("components/pages/database/indexes/list/terms/IndexTerms");
+
 export = getIndexesMenuItem;
 
 function getIndexesMenuItem(appUrls: computedAppUrls) {
@@ -131,7 +133,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             title: 'Terms',
             route: 'databases/indexes/terms/(:indexName)',
-            moduleId: require('viewmodels/database/indexes/indexTerms'),
+            moduleId: reactUtils.bridgeToReact(IndexTerms.default, "shardedView"),
             shardingMode: "allShards",
             css: 'icon-terms',
             nav: false,

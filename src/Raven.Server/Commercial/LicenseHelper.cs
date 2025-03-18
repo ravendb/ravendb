@@ -12,6 +12,7 @@ using Raven.Client.Properties;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -19,14 +20,14 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 using Voron;
-using Logger = Sparrow.Logging.Logger;
 
 namespace Raven.Server.Commercial
 {
     public sealed class LicenseHelper
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseHelper>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<LicenseHelper>();
         public static readonly string LicenseStringConfigurationName = RavenConfiguration.GetKey(x => x.Licensing.License);
 
         private readonly ServerStore _serverStore;

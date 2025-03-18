@@ -18,12 +18,16 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
-import { Button, Collapse, Form, InputGroup, Label } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
+
 import { Icon } from "components/common/Icon";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormAceEditor, FormInput } from "components/common/Form";
+import { FormAceEditor, FormInput, FormLabel } from "components/common/Form";
 import fileImporter from "common/fileImporter";
+import Button from "react-bootstrap/Button";
 
 interface ServerWideCustomAnalyzersListItemProps {
     initialAnalyzer: CustomAnalyzerFormData;
@@ -91,17 +95,17 @@ export default function ServerWideCustomAnalyzersListItem(props: ServerWideCusto
                     <RichPanelActions>
                         {isEditMode ? (
                             <>
-                                <Button key="save" type="submit" color="success" disabled={formState.isSubmitting}>
+                                <Button key="save" type="submit" variant="success" disabled={formState.isSubmitting}>
                                     <Icon icon="save" /> Save changes
                                 </Button>
-                                <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
+                                <Button key="cancel" type="button" variant="secondary" onClick={onDiscard}>
                                     <Icon icon="cancel" />
                                     Discard
                                 </Button>
                             </>
                         ) : (
                             <>
-                                <Button key="edit" onClick={toggleIsEditMode}>
+                                <Button variant="secondary" key="edit" onClick={toggleIsEditMode}>
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                                 {nameToConfirmDelete != null && (
@@ -113,7 +117,7 @@ export default function ServerWideCustomAnalyzersListItem(props: ServerWideCusto
                                 )}
                                 <ButtonWithSpinner
                                     key="delete"
-                                    color="danger"
+                                    variant="danger"
                                     onClick={() => setNameToConfirmDelete(formValues.name)}
                                     icon="trash"
                                     isSpinning={asyncDeleteAnalyzer.status === "loading"}
@@ -122,37 +126,41 @@ export default function ServerWideCustomAnalyzersListItem(props: ServerWideCusto
                         )}
                     </RichPanelActions>
                 </RichPanelHeader>
-                <Collapse isOpen={isEditMode}>
-                    <RichPanelDetails className="vstack gap-3 p-4">
-                        {isNew && (
-                            <InputGroup className="vstack mb-1">
-                                <Label>Name</Label>
-                                <FormInput
-                                    type="text"
-                                    control={control}
-                                    name="name"
-                                    placeholder="Enter analyzer name"
-                                />
-                            </InputGroup>
-                        )}
-                        <InputGroup className="vstack">
-                            <div className="d-flex justify-content-end">
-                                <Label className="btn btn-link btn-xs text-right">
-                                    <Icon icon="upload" />
-                                    Load from a file
-                                    <input
-                                        type="file"
-                                        className="d-none"
-                                        onChange={(e) =>
-                                            fileImporter.readAsBinaryString(e.currentTarget, (x) => setValue("code", x))
-                                        }
-                                        accept=".cs"
+                <Collapse in={isEditMode}>
+                    <div>
+                        <RichPanelDetails className="vstack gap-3 p-4">
+                            {isNew && (
+                                <InputGroup className="vstack mb-1">
+                                    <FormLabel>Name</FormLabel>
+                                    <FormInput
+                                        type="text"
+                                        control={control}
+                                        name="name"
+                                        placeholder="Enter analyzer name"
                                     />
-                                </Label>
-                            </div>
-                            <FormAceEditor name="code" control={control} mode="csharp" height="400px" />
-                        </InputGroup>
-                    </RichPanelDetails>
+                                </InputGroup>
+                            )}
+                            <InputGroup className="vstack">
+                                <div className="d-flex justify-content-end">
+                                    <FormLabel className="btn btn-link btn-xs text-right">
+                                        <Icon icon="upload" />
+                                        Load from a file
+                                        <input
+                                            type="file"
+                                            className="d-none"
+                                            onChange={(e) =>
+                                                fileImporter.readAsBinaryString(e.currentTarget, (x) =>
+                                                    setValue("code", x)
+                                                )
+                                            }
+                                            accept=".cs"
+                                        />
+                                    </FormLabel>
+                                </div>
+                                <FormAceEditor name="code" control={control} mode="csharp" height="400px" />
+                            </InputGroup>
+                        </RichPanelDetails>
+                    </div>
                 </Collapse>
             </Form>
         </RichPanel>

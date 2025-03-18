@@ -8,10 +8,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to check if an index definition has changed compared to its existing version in the database.
+    /// </summary>
     public sealed class IndexHasChangedOperation : IMaintenanceOperation<bool>
     {
         private readonly IndexDefinition _definition;
 
+        /// <inheritdoc cref="IndexHasChangedOperation"/>
+        /// <param name="definition">The index definition to compare against the existing version.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="definition"/> is null.</exception>
         public IndexHasChangedOperation(IndexDefinition definition)
         {
             _definition = definition ?? throw new ArgumentNullException(nameof(definition));

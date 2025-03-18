@@ -22,6 +22,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -179,7 +180,7 @@ namespace FastTests.Server.Documents.Indexing
 
         private class TestOperation : IndexOperationBase
         {
-            public TestOperation(Index index, Logger logger) : base(index, logger)
+            public TestOperation(Index index, RavenLogger logger) : base(index, logger)
             {
             }
 

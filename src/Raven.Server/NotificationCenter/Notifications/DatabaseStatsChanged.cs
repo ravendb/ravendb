@@ -33,6 +33,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public List<ModifiedCollection> ModifiedCollections { get; private set; }
 
+        public long CountOfRevisions;
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -46,6 +48,7 @@ namespace Raven.Server.NotificationCenter.Notifications
             json[nameof(CountOfIndexingErrors)] = CountOfIndexingErrors;
             json[nameof(LastIndexingErrorTime)] = LastIndexingErrorTime;
             json[nameof(ModifiedCollections)] = new DynamicJsonArray(ModifiedCollections.Select(x => x.ToJson()));
+            json[nameof(CountOfRevisions)] = CountOfRevisions;
 
             return json;
         }
@@ -60,7 +63,8 @@ namespace Raven.Server.NotificationCenter.Notifications
             long lastEtag,
             long countOfIndexingErrors,
             DateTime? lastIndexingErrorTime,
-            List<ModifiedCollection> modifiedCollections)
+            List<ModifiedCollection> modifiedCollections,
+            long countOfRevisions)
         {
             return new DatabaseStatsChanged(database)
             {
@@ -76,7 +80,8 @@ namespace Raven.Server.NotificationCenter.Notifications
                 CountOfIndexes = countOfIndexes,
                 CountOfStaleIndexes = countOfStaleIndexes,
                 LastIndexingErrorTime = lastIndexingErrorTime,
-                ModifiedCollections = modifiedCollections
+                ModifiedCollections = modifiedCollections,
+                CountOfRevisions = countOfRevisions
             };
         }
 

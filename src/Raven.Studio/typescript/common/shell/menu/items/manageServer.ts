@@ -10,6 +10,7 @@ import GatherDebugInfo = require("components/pages/resources/manageServer/gather
 import ServerWideCustomAnalyzers = require("components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers");
 import ServerWideCustomSorters = require("components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSorters");
 import ServerSettings = require("components/pages/resources/manageServer/serverSettings/ServerSettings");
+import AdminLogs = require("components/pages/resources/manageServer/adminLogs/AdminLogs");
 
 export = getManageServerMenuItem;
 
@@ -185,7 +186,7 @@ function getManageServerMenuItem() {
         new separatorMenuItem('Debug'),
         new leafMenuItem({
             route: 'admin/settings/adminLogs',
-            moduleId: require("viewmodels/manage/adminLogs"),
+            moduleId: reactUtils.bridgeToReact(AdminLogs.default, "nonShardedView"),
             title: 'Admin Logs',
             nav: true,
             css: 'icon-admin-logs',

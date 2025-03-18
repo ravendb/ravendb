@@ -69,7 +69,9 @@ namespace SlowTests.Issues
 
                 autoIndex.SetState(IndexState.Idle);
 
-                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users where FirstName = 'Arek'"));
+                var defaultAutoIndexingEngineType = database.Configuration.Indexing.AutoIndexingEngineType;
+
+                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users where FirstName = 'Arek'"), defaultAutoIndexingEngineType);
 
                 var result = matcher.Match(dynamicQuery, null);
 
@@ -101,8 +103,10 @@ namespace SlowTests.Issues
                 }), Guid.NewGuid().ToString())).Instance;
 
                 autoIndex.SetState(IndexState.Idle);
+                
+                var defaultAutoIndexingEngineType = database.Configuration.Indexing.AutoIndexingEngineType;
 
-                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users group by Location select count()"));
+                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users group by Location select count()"), defaultAutoIndexingEngineType);
 
                 var result = matcher.Match(dynamicQuery, null);
 

@@ -52,7 +52,7 @@ describe("RevisionsBinCleaner", () => {
         const user = userEvent.setup();
         const { screen } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const refreshFrequencyBefore = await screen.findByName("refreshFrequencyInSec");
+        const refreshFrequencyBefore = await screen.findByName("cleanerFrequencyInSec");
 
         await user.click(screen.getByRole("checkbox", { name: "Set custom cleaner frequency" }));
 
@@ -60,7 +60,7 @@ describe("RevisionsBinCleaner", () => {
 
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
-        const refreshFrequencyAfter = await screen.findByName("refreshFrequencyInSec");
+        const refreshFrequencyAfter = await screen.findByName("cleanerFrequencyInSec");
 
         expect(refreshFrequencyAfter).toBeDisabled();
         expect(refreshFrequencyAfter).toHaveValue(null);
@@ -107,7 +107,7 @@ describe("RevisionsBinCleaner", () => {
                 revisionsBinCleanerDto={{
                     Disabled: false,
                     MinimumEntriesAgeToKeepInMin: null,
-                    RefreshFrequencyInSec: 500,
+                    CleanerFrequencyInSec: 500,
                 }}
             />
         );
@@ -115,7 +115,7 @@ describe("RevisionsBinCleaner", () => {
         const refreshFrequencySwitchBefore = (await screen.findByRole("checkbox", {
             name: "Set custom cleaner frequency",
         })) as HTMLInputElement;
-        const refreshFrequencyBefore = await screen.findByName("refreshFrequencyInSec");
+        const refreshFrequencyBefore = await screen.findByName("cleanerFrequencyInSec");
 
         expect(refreshFrequencyBefore).toHaveValue(500);
         expect(refreshFrequencySwitchBefore.checked).toBe(true);
@@ -124,7 +124,7 @@ describe("RevisionsBinCleaner", () => {
         const refreshFrequencySwitchAfter = (await screen.findByRole("checkbox", {
             name: "Set custom cleaner frequency",
         })) as HTMLInputElement;
-        const refreshFrequencyAfter = await screen.findByName("refreshFrequencyInSec");
+        const refreshFrequencyAfter = await screen.findByName("cleanerFrequencyInSec");
 
         expect(refreshFrequencyAfter).toHaveValue(null);
         expect(refreshFrequencyAfter).toBeDisabled();

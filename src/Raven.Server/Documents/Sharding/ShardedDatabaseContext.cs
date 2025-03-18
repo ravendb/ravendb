@@ -14,6 +14,7 @@ using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.NotificationCenter;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -21,6 +22,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
 using static Raven.Server.Documents.DatabasesLandlord;
@@ -37,7 +39,7 @@ namespace Raven.Server.Documents.Sharding
 
         private DatabaseRecord _record;
         public QueryMetadataCache QueryMetadataCache = new();
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public ShardExecutor ShardExecutor;
         public AllOrchestratorNodesExecutor AllOrchestratorNodesExecutor;
@@ -63,7 +65,9 @@ namespace Raven.Server.Documents.Sharding
 
             ServerStore = serverStore;
             _record = record;
-            _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
+
+            Loggers = new ShardedLoggersContext(this);
+            _logger = Loggers.GetLogger<ShardedDatabaseContext>();
 
             _orchestratorStateChange = new DatabasesLandlord.StateChange(ServerStore, record.DatabaseName, _logger, OnDatabaseRecordChange, 0, _databaseShutdown.Token);
             _urlUpdateStateChange = new DatabasesLandlord.StateChange(ServerStore, record.DatabaseName, _logger, OnUrlChange, 0, _databaseShutdown.Token);

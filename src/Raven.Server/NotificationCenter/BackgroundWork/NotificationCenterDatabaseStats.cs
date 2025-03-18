@@ -29,6 +29,8 @@ public sealed class NotificationCenterDatabaseStats
 
     public Dictionary<string, DatabaseStatsChanged.ModifiedCollection> Collections;
 
+    public long CountOfRevisions;
+
     public bool Equals(NotificationCenterDatabaseStats other)
     {
         if (ReferenceEquals(null, other))
@@ -42,7 +44,8 @@ public sealed class NotificationCenterDatabaseStats
                LastEtag == other.LastEtag &&
                CountOfStaleIndexes == other.CountOfStaleIndexes &&
                GlobalChangeVector == other.GlobalChangeVector &&
-               DictionaryExtensions.ContentEquals(Collections, other.Collections);
+               DictionaryExtensions.ContentEquals(Collections, other.Collections) &&
+               CountOfRevisions == other.CountOfRevisions;
     }
 
     public override bool Equals(object obj)
@@ -70,6 +73,7 @@ public sealed class NotificationCenterDatabaseStats
             hashCode = (hashCode * 397) ^ CountOfStaleIndexes.GetHashCode();
             hashCode = (hashCode * 397) ^ GlobalChangeVector.GetHashCode();
             hashCode = (hashCode * 397) ^ (Collections != null ? Collections.GetHashCode() : 0);
+            hashCode = (hashCode * 397) ^ CountOfRevisions.GetHashCode();
             return hashCode;
         }
     }
@@ -77,6 +81,7 @@ public sealed class NotificationCenterDatabaseStats
     public void CombineWith(NotificationCenterDatabaseStats stats,  IChangeVectorOperationContext context)
     {
         CountOfDocuments += stats.CountOfDocuments;
+        CountOfRevisions += stats.CountOfRevisions;
         CountOfConflicts += stats.CountOfConflicts;
         
         CountOfIndexes = stats.CountOfIndexes; // every node has the same amount of indexes

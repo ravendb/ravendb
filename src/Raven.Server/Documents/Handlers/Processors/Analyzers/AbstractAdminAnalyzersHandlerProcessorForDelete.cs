@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
             var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var databaseName = RequestHandler.DatabaseName;
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 RequestHandler.LogAuditFor(databaseName, "DELETE", $"Analyzer '{name}'");
             }

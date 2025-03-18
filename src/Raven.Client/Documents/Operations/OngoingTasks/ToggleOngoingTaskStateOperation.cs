@@ -8,6 +8,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
 {
+    /// <summary>
+    /// Operation to enable or disable an ongoing task.
+    /// </summary>
     public sealed class ToggleOngoingTaskStateOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly long _taskId;
@@ -15,6 +18,10 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         private readonly OngoingTaskType _type;
         private readonly bool _disable;
 
+        /// <inheritdoc cref="ToggleOngoingTaskStateOperation"/>
+        /// <param name="taskId">The unique identifier of the ongoing task.</param>
+        /// <param name="type">The type of the ongoing task.</param>
+        /// <param name="disable">A boolean flag indicating whether to disable (true) or enable (false) the task.</param>
         public ToggleOngoingTaskStateOperation(long taskId, OngoingTaskType type, bool disable)
         {
             _taskId = taskId;
@@ -22,6 +29,11 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             _disable = disable;
         }
 
+        /// <inheritdoc cref="ToggleOngoingTaskStateOperation"/>
+        /// <param name="taskName">The name of the ongoing task.</param>
+        /// <param name="type">The type of the ongoing task.</param>
+        /// <param name="disable">A boolean flag indicating whether to disable (true) or enable (false) the task.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="taskName"/> is null or whitespace.</exception>
         internal ToggleOngoingTaskStateOperation(string taskName, OngoingTaskType type, bool disable)
         {
             if (string.IsNullOrWhiteSpace(taskName)) 

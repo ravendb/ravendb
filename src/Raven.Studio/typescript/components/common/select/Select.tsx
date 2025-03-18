@@ -123,7 +123,9 @@ export function MultiValueLabelWithIcon({ children, ...props }: MultiValueProps<
 
 // https://github.com/JedWatson/react-select/issues/3068
 export function InputNotHidden({ ...props }: InputProps) {
+    /* eslint-disable local-rules/reactstrap-Form-to-RBootstrap-children, local-rules/no-reactstrap-Input */
     return <components.Input {...props} isHidden={false} />;
+    /* eslint-enable local-rules/reactstrap-Form-to-RBootstrap-children, local-rules/no-reactstrap-Input */
 }
 
 export function applyRoundedPillStyle(styles: StylesConfig) {

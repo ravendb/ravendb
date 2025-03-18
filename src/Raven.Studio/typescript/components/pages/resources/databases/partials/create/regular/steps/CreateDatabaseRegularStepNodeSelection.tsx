@@ -1,14 +1,16 @@
 import { Icon } from "components/common/Icon";
 import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidation";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Table, Label, UncontrolledTooltip } from "reactstrap";
-import { FormSelect } from "components/common/Form";
+import Table from "react-bootstrap/Table";
+import { FormLabel, FormSelect } from "components/common/Form";
 import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Checkbox } from "components/common/Checkbox";
-import { NodeSet, NodeSetLabel, NodeSetList, NodeSetItem } from "components/common/NodeSet";
+import { NodeSet, NodeSetItem, NodeSetLabel, NodeSetList } from "components/common/NodeSet";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 // TODO Add Auto fill button
 
@@ -105,15 +107,17 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                 ))}
                                 <td className="px-0" id={"nodeSelectionWarning" + shardNumber}>
                                     {getShardError(shardNumber) && (
-                                        <>
-                                            <Icon icon="warning" color="danger" margin="m-0" />
-                                            <UncontrolledTooltip
-                                                target={"nodeSelectionWarning" + shardNumber}
-                                                placement="left"
-                                            >
-                                                {getShardError(shardNumber)}
-                                            </UncontrolledTooltip>
-                                        </>
+                                        <OverlayTrigger
+                                            overlay={
+                                                <Tooltip id={"nodeSelectionWarning" + shardNumber}>
+                                                    {getShardError(shardNumber)}
+                                                </Tooltip>
+                                            }
+                                        >
+                                            <div className="d-inline-block">
+                                                <Icon icon="warning" color="danger" margin="m-0" />
+                                            </div>
+                                        </OverlayTrigger>
                                     )}
                                 </td>
                             </tr>
@@ -142,7 +146,7 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                     <NodeSetList>
                         {availableNodeTags.map((nodeTag) => (
                             <NodeSetItem key={nodeTag}>
-                                <Label title={"Node " + nodeTag}>
+                                <FormLabel title={"Node " + nodeTag}>
                                     <Icon icon="node" color="node" />
                                     {nodeTag}
                                     <div className="d-flex justify-content-center">
@@ -151,7 +155,7 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                             selected={manualNodes.includes(nodeTag)}
                                         />
                                     </div>
-                                </Label>
+                                </FormLabel>
                             </NodeSetItem>
                         ))}
                     </NodeSetList>

@@ -4,6 +4,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
@@ -16,7 +17,7 @@ public sealed class DatabaseIndexReadOperationFactory : IIndexReadOperationFacto
         return new LuceneIndexReadOperation(index, directory, searcherHolder, queryBuilderFactories, readTransaction, query);
     }
 
-    public CoraxIndexReadOperation CreateCoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
+    public CoraxIndexReadOperation CreateCoraxIndexReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query)
     {
         return new CoraxIndexReadOperation(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query);

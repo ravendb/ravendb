@@ -17,11 +17,13 @@ type FetchData<T extends pagedResultWithToken<unknown>> = (
 interface UseVirtualTableWithTokenProps<T extends pagedResultWithToken<unknown>> {
     fetchData: FetchData<T>;
     initialOverscan?: number;
+    dependencies?: any[];
 }
 
 export function useVirtualTableWithToken<T extends pagedResultWithToken<unknown>>({
     fetchData,
     initialOverscan = 50,
+    dependencies = [],
 }: UseVirtualTableWithTokenProps<T>) {
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +39,7 @@ export function useVirtualTableWithToken<T extends pagedResultWithToken<unknown>
         setDataArray(result.items);
         setContinuationToken(result.continuationToken);
         setTotalResultCount(result.totalResultCount);
-    }, []);
+    }, dependencies);
 
     const asyncLoadData = useAsyncCallback(async () => {
         const result = await fetchData(null, null, continuationToken);
@@ -89,6 +91,7 @@ export function useVirtualTableWithToken<T extends pagedResultWithToken<unknown>
             tableContainerRef,
             isLoading: asyncLoadInitialData.loading || asyncLoadData.loading,
         },
+        reload: asyncLoadInitialData.execute,
     };
 }
 

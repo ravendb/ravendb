@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -10,7 +11,7 @@ public sealed class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperat
 {
     private readonly OutputReduceIndexWriteOperationScope<OutputReduceCoraxIndexWriteOperation> _outputScope;
 
-    public OutputReduceCoraxIndexWriteOperation(MapReduceIndex index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger,
+    public OutputReduceCoraxIndexWriteOperation(MapReduceIndex index, Transaction writeTransaction, CoraxDocumentConverterBase converter, RavenLogger logger,
         JsonOperationContext indexContext) : base(index, writeTransaction, converter, logger)
     {
         Debug.Assert(index.OutputReduceToCollection != null);

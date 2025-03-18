@@ -26,7 +26,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Corax.Indexing;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow.Binary;
 using static Raven.Server.Config.Categories.IndexingConfiguration;
 
@@ -75,7 +77,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         var currentIndexingScope = CurrentIndexingScope.Current;
 
         return SetDocumentFields(key, sourceDocumentId, doc, indexContext, builder, currentIndexingScope?.Source);
-
     }
     
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, bool canContainSourceDocumentId, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
@@ -303,7 +304,25 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 @long = iConvertible.ToInt64(CultureInfo.InvariantCulture);
                 @double = iConvertible.ToDouble(CultureInfo.InvariantCulture);
 
-                builder.Write(fieldId, path,  iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double);
+                builder.Write(fieldId, path, iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double);
+                break;
+            
+            case ValueType.Vector:
+                using (var vectorField = (VectorValue)value)
+                {
+                    if (vectorField.IsNull)
+                    {
+                        builder.WriteNull(fieldId, path);
+                        break;
+                    }
+                    
+                    var embedding = vectorField.GetEmbedding();
+                    var destinationEmbeddingType = field.Vector.DestinationEmbeddingType;
+                    
+                    _index.IndexFieldsPersistence.SetFieldEmbeddingDimension(field.Name, vectorField.Length, destinationEmbeddingType);
+                    
+                    builder.WriteVector(fieldId, path, embedding);
+                }
                 break;
 
             case ValueType.Enumerable:
@@ -447,7 +466,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             
         _nonExistingFieldsOfDocument.Clear();
     }
-
+    
     [DoesNotReturn]
     private static void ThrowFieldIsNoIndexedAndStored(IndexField field)
     {
@@ -577,7 +596,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
         exceptionMessage.Append(
             "If you really need to use this field for searching purposes, you have to call ToString() on the field value in the index definition. Although it's recommended to index individual fields of this complex object. " +
-            "Read more at: https://ravendb.net/l/OB9XW4/6.2");
+            "Read more at: https://ravendb.net/l/OB9XW4/7.0");
 
         throw new NotSupportedInCoraxException(exceptionMessage.ToString());
     }

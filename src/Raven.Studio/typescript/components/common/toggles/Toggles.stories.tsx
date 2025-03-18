@@ -1,6 +1,6 @@
 ﻿import { InputItem } from "components/models/common";
 import { useState } from "react";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { MultiCheckboxToggle } from "./MultiCheckboxToggle";
 import { MultiRadioToggle } from "./MultiRadioToggle";

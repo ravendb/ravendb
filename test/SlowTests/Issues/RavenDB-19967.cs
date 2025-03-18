@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -283,7 +284,8 @@ namespace SlowTests.Issues
                 EtlType.Sql,
                 EtlType.Olap,
                 EtlType.ElasticSearch,
-                EtlType.Queue
+                EtlType.Queue,
+                EtlType.Snowflake
                 };
 
             var currentEtlTypes = Enum.GetValues(typeof(EtlType)).Cast<EtlType>();
@@ -292,13 +294,13 @@ namespace SlowTests.Issues
             if (newEtlTypes.Any())
                 throw new Exception($"New EtlType values detected: {string.Join(", ", newEtlTypes)}. Update {nameof(TombstoneCleaningAfterEtlLoaderDisabled)} test to cover it.");
         }
-
         [Theory]
         [InlineData(EtlType.Raven)]
         [InlineData(EtlType.Sql)]
         [InlineData(EtlType.Olap)]
         [InlineData(EtlType.ElasticSearch)]
         [InlineData(EtlType.Queue)]
+        [InlineData(EtlType.Snowflake)]
         public async Task TombstoneCleaningAfterEtlLoaderDisabled(EtlType etlType)
         {
             using (var store = GetDocumentStore())
@@ -354,6 +356,12 @@ namespace SlowTests.Issues
                         var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms }, BrokerType = QueueBrokerType.RabbitMq };
                         taskId = await AddEtlAndDisableIt(store, queueConnectionString, queueConfiguration, OngoingTaskType.QueueEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.QueueEtl;
+                        break;
+                    case EtlType.Snowflake:
+                        var snowflakeConnectionString = new SnowflakeConnectionString { Name = store.Identifier, ConnectionString = global::Tests.Infrastructure.ConnectionString.SnowflakeConnectionString.Instance.VerifiedConnectionString.Value};
+                        var snowflakeConfiguration = new SnowflakeEtlConfiguration { Name = _customTaskName, ConnectionStringName = snowflakeConnectionString.Name, Transforms = { transforms }, SnowflakeTables = { new SnowflakeEtlTable {TableName = "Orders", DocumentIdColumn = "Id"}}};
+                        taskId = await AddEtlAndDisableIt(store, snowflakeConnectionString, snowflakeConfiguration, OngoingTaskType.SnowflakeEtl);
+                        blockerType = ITombstoneAware.TombstoneDeletionBlockerType.SnowflakeEtl;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(etlType), etlType, "New EtlType values detected");

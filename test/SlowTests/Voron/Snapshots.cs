@@ -11,7 +11,7 @@ namespace SlowTests.Voron
     public class Snapshots : StorageTest
     {
         public Snapshots(ITestOutputHelper output)
-            : base(StorageEnvironmentOptions.CreateMemoryOnly(), output)
+            : base(StorageEnvironmentOptions.CreateMemoryOnlyForTests(), output)
         {
 
         }

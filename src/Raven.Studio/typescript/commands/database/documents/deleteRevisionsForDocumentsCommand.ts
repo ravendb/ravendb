@@ -16,7 +16,8 @@ class deleteRevisionsForDocumentsCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const url = endpoints.databases.adminRevisions.adminRevisions;
 
-        return this.del<void>(url, JSON.stringify(this.parameters), this.databaseName, { dataType: undefined });
+        return this.del<void>(url, JSON.stringify(this.parameters), this.databaseName, { dataType: undefined })
+            .fail((response: JQueryXHR) => this.reportError("Failed to delete document revisions", response.responseText, response.statusText));
     }
  }
 

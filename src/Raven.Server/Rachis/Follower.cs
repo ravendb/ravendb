@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
@@ -56,9 +58,9 @@ namespace Raven.Server.Rachis
         {
             var entries = new List<RachisEntry>();
             long lastCommit = 0, lastTruncate = 0, lastAcknowledgedIndex = 0;
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Entering steady state");
+                _engine.Log.Debug($"{ToString()}: Entering steady state");
             }
 
             AppendEntriesResponse lastAer = null;
@@ -95,9 +97,9 @@ namespace Raven.Server.Rachis
                             Message = "The current term that I have " + _engine.CurrentTerm + " doesn't match " + appendEntries.Term,
                             Success = false
                         });
-                        if (_engine.Log.IsInfoEnabled)
+                        if (_engine.Log.IsWarnEnabled)
                         {
-                            _engine.Log.Info($"{ToString()}: Got invalid term {appendEntries.Term} while the current term is {_engine.CurrentTerm}, aborting connection...");
+                            _engine.Log.Warn($"{ToString()}: Got invalid term {appendEntries.Term} while the current term is {_engine.CurrentTerm}, aborting connection...");
                         }
 
                         return;
@@ -126,9 +128,9 @@ namespace Raven.Server.Rachis
                             }
                             _engine.Timeout.Defer(_connection.Source);
                         }
-                        if (_engine.Log.IsInfoEnabled)
+                        if (_engine.Log.IsDebugEnabled)
                         {
-                            _engine.Log.Info($"{ToString()}: Got non empty append entries request with {entries.Count} entries. Last: ({entries[entries.Count - 1].Index} - {entries[entries.Count - 1].Flags})"
+                            _engine.Log.Debug($"{ToString()}: Got non empty append entries request with {entries.Count} entries. Last: ({entries[entries.Count - 1].Index} - {entries[entries.Count - 1].Flags})"
 #if DEBUG
                                 + $"[{string.Join(" ,", entries.Select(x => x.ToString()))}]"
 #endif
@@ -275,17 +277,17 @@ namespace Raven.Server.Rachis
         private (bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate, long LastCommit) ApplyLeaderStateToLocalState(Stopwatch sp, List<RachisEntry> entries, AppendEntries appendEntries)
         {
             // we start the tx after we finished reading from the network
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Ready to start tx in {sp.Elapsed}");
+                _engine.Log.Debug($"{ToString()}: Ready to start tx in {sp.Elapsed}");
             }
 
             var command = new FollowerApplyCommand(_engine, _term, entries, appendEntries, sp);
             _engine.TxMerger.EnqueueSync(command);
 
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
+                _engine.Log.Debug($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
             }
 
             var lastAcknowledgedIndex = entries.Count == 0 ? appendEntries.PrevLogIndex : entries[^1].Index;
@@ -315,9 +317,9 @@ namespace Raven.Server.Rachis
                     connection.Dispose();
                     return (false, null);
                 }
-                if (engine.Log.IsInfoEnabled)
+                if (engine.Log.IsDebugEnabled)
                 {
-                    engine.Log.Info($"The incoming term {logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
+                    engine.Log.Debug($"The incoming term {logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
                 }
                 engine.FoundAboutHigherTerm(logLength.Term, "Setting the term of the new leader");
                 engine.Timeout.Defer(connection.Source);
@@ -330,9 +332,9 @@ namespace Raven.Server.Rachis
         {
             _debugRecorder.Start();
             // only the leader can send append entries, so if we accepted it, it's the leader
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Got a negotiation request for term {negotiation.Term} where our term is {_term}.");
+                _engine.Log.Debug($"{ToString()}: Got a negotiation request for term {negotiation.Term} where our term is {_term}.");
             }
 
             if (negotiation.Term != _term)
@@ -373,9 +375,9 @@ namespace Raven.Server.Rachis
             }
             else if (prevTerm != negotiation.PrevLogTerm)
             {
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info($"{ToString()}: Got a negotiation request with PrevLogTerm={negotiation.PrevLogTerm} while our PrevLogTerm={prevTerm}" +
+                    _engine.Log.Debug($"{ToString()}: Got a negotiation request with PrevLogTerm={negotiation.PrevLogTerm} while our PrevLogTerm={prevTerm}" +
                                      " will negotiate to find next matched index");
                 }
                 // we now have a mismatch with the log position, and need to negotiate it with 
@@ -384,9 +386,9 @@ namespace Raven.Server.Rachis
             }
             else
             {
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info($"{ToString()}: Got a negotiation request with identical PrevLogTerm will continue to steady state");
+                    _engine.Log.Debug($"{ToString()}: Got a negotiation request with identical PrevLogTerm will continue to steady state");
                 }
                 // this (or the negotiation above) completes the negotiation process
                 _connection.Send(context, new LogLengthNegotiationResponse
@@ -403,7 +405,7 @@ namespace Raven.Server.Rachis
             // at this point, the leader will send us a snapshot message
             // in most cases, it is an empty snapshot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
-            
+
             Phase = FollowerDebugView.FollowerPhase.Snapshot;
             var snapshot = _connection.ReadInstallSnapshot(context);
             _debugRecorder.Record($"Got snapshot info: last included index:{snapshot.LastIncludedIndex} at term {snapshot.LastIncludedTerm}");
@@ -640,7 +642,7 @@ namespace Raven.Server.Rachis
                             if (negotiation.PrevLogIndex < midpointIndex)
                                 //If the value from the leader is lower, it mean that the term of the follower mid value in the leader doesn't match to the term in the follower 
                                 maxIndex = Math.Max(midpointIndex - 1, minIndex);
-                            
+
                             minIndex = Math.Min(negotiation.PrevLogIndex, maxIndex);
                         }
                         else
@@ -655,9 +657,9 @@ namespace Raven.Server.Rachis
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
 
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: agreed upon last matched index = {midpointIndex} on term = {midpointTerm}");
+                _engine.Log.Debug($"{ToString()}: agreed upon last matched index = {midpointIndex} on term = {midpointTerm}");
             }
 
             connection.Send(context, new LogLengthNegotiationResponse
@@ -819,9 +821,13 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                if (_engine.Log.IsInfoEnabled)
+                var logLevel = e is IOException
+                    ? LogLevel.Debug
+                    : LogLevel.Info;
+
+                if (_engine.Log.IsEnabled(logLevel))
                 {
-                    _engine.Log.Info("Failed to dispose follower when talking to the leader: " + _engine.Tag, e);
+                    _engine.Log.Log(logLevel, "Failed to dispose follower when talking to the leader: " + _engine.Tag, e);
                 }
             }
         }
@@ -829,9 +835,9 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             _connection.Dispose();
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Disposing");
+                _engine.Log.Debug($"{ToString()}: Disposing");
             }
 
             if (_followerLongRunningWork != null && _followerLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)

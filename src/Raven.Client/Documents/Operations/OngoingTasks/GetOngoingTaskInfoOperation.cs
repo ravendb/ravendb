@@ -109,6 +109,9 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                         case OngoingTaskType.QueueEtl:
                             Result = JsonDeserializationClient.GetOngoingTaskQueueEtlResult(response);
                             break;
+                        case OngoingTaskType.SnowflakeEtl:
+                            Result = JsonDeserializationClient.GetOngoingTaskSnowflakeEtlResult(response);
+                            break;
                         case OngoingTaskType.Backup:
                             Result = JsonDeserializationClient.GetOngoingTaskBackupResult(response);
                             break;

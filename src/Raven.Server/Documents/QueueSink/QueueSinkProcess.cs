@@ -17,6 +17,7 @@ using Raven.Server.Documents.QueueSink.Commands;
 using Raven.Server.Documents.QueueSink.Stats;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Test;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands.QueueSink;
@@ -28,6 +29,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -51,7 +53,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
     private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
     private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-    protected readonly Logger Logger;
+    protected readonly RavenLogger Logger;
 
     private int _statsId;
     private QueueSinkStatsAggregator _lastStats;
@@ -64,7 +66,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         DocumentDatabase database, string tag)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
-        Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
+        Logger = database.Loggers.GetLogger(GetType());
         Database = database;
         Configuration = configuration;
         Script = script;
@@ -188,8 +190,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                     {
                         string msg = $"[{Name}] Failed to create queue consumer";
 
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations(msg, e);
+                        if (Logger.IsErrorEnabled)
+                            Logger.Error(msg, e);
 
                         var key = $"{Tag}/{Name}";
 
@@ -253,8 +255,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                             {
                                 string msg = "Failed to consume message.";
 
-                                if (Logger.IsOperationsEnabled)
-                                    Logger.Operations(msg, e);
+                                if (Logger.IsErrorEnabled)
+                                    Logger.Error(msg, e);
 
                                 readScope.RecordReadError();
                                 Statistics.RecordConsumeError(e.Message);
@@ -298,8 +300,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                     {
                         var message = $"{Tag} Exception in queue sink process '{Name}'";
 
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations(message, e);
+                        if (Logger.IsErrorEnabled)
+                            Logger.Error(message, e);
                     }
 
                     statsAggregator.Complete();
@@ -323,8 +325,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                         {
                             if (CancellationToken.IsCancellationRequested == false)
                             {
-                                if (Logger.IsOperationsEnabled)
-                                    Logger.Operations($"{Tag} Failed to update state of queue sink process '{Name}'", e);
+                                if (Logger.IsErrorEnabled)
+                                    Logger.Error($"{Tag} Failed to update state of queue sink process '{Name}'", e);
                             }
                         }
                     }
@@ -334,9 +336,9 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             {
                 var msg = $"Unexpected error in {Tag} process: '{Name}'";
 
-                if (Logger.IsOperationsEnabled)
+                if (Logger.IsErrorEnabled)
                 {
-                    Logger.Operations(msg, e);
+                    Logger.Error(msg, e);
                 }
             }
             finally
@@ -382,13 +384,13 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to run Queue Sink {Name}", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"Failed to run Queue Sink {Name}", e);
             }
         }, null, ThreadNames.ForQueueSinkProcess(threadName, Tag, Name));
 
-        if (Logger.IsOperationsEnabled)
-            Logger.Operations($"Starting {Tag} process: '{Name}'.");
+        if (Logger.IsInfoEnabled)
+            Logger.Info($"Starting {Tag} process: '{Name}'.");
 
     }
 
@@ -440,9 +442,9 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
         string msg = $"Stopping {Tag} process: '{Name}'. Reason: {reason}";
 
-        if (Logger.IsOperationsEnabled)
+        if (Logger.IsInfoEnabled)
         {
-            Logger.Operations(msg);
+            Logger.Info(msg);
         }
 
         _cts.Cancel();
@@ -461,8 +463,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
     {
         var message = $"[{Name}] Could not parse script. Stopping Queue Sink process.";
 
-        if (Logger.IsOperationsEnabled)
-            Logger.Operations(message, e);
+        if (Logger.IsInfoEnabled)
+            Logger.Info(message, e);
 
         var key = $"{Tag}/{Name}";
         var details = new QueueSinkErrorsDetails();

@@ -96,7 +96,7 @@ class documents extends shardViewModelBase {
     private initObservables() {
         this.inSpecificCollection = ko.pureComputed(() => {
             const currentCollection = this.currentCollection();
-            return currentCollection && !currentCollection.isAllDocuments && !currentCollection.isRevisionsBin;
+            return currentCollection && !currentCollection.isAllDocuments && !currentCollection.isRevisionsBin && !currentCollection.isAllRevisions;
         });
         
         this.selectedItemsCount = ko.pureComputed(() => {

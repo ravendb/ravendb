@@ -1,6 +1,8 @@
 ﻿import React from "react";
 import { Icon } from "components/common/Icon";
-import { Button, Card, CardBody, Collapse, Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import Collapse from "react-bootstrap/Collapse";
+import Card from "react-bootstrap/Card";
 import "./CreateSampleData.scss";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsync, useAsyncCallback } from "react-async-hook";
@@ -16,6 +18,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import Button from "react-bootstrap/Button";
 
 function CreateSampleData() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -72,7 +75,7 @@ function CreateSampleData() {
                             <ButtonWithSpinner
                                 size="lg"
                                 className="rounded-pill"
-                                color="primary"
+                                variant="primary"
                                 onClick={asyncCreateSampleData.execute}
                                 isSpinning={asyncCreateSampleData.status === "loading"}
                                 icon={asyncCreateSampleData.status === "success" ? "check" : "magic-wand"}
@@ -103,45 +106,53 @@ function CreateSampleData() {
                                 </div>
                             )}
                         </div>
-                        <Button size="sm" className="rounded-pill margin-bottom-md" onClick={toggleCodeSample}>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            className="rounded-pill margin-bottom-md"
+                            onClick={toggleCodeSample}
+                        >
                             <Icon icon="hash" /> {isCodeSampleOpen ? "Hide" : "Show"} C# classes
                         </Button>
                     </div>
-                    <Collapse isOpen={isCodeSampleOpen}>
-                        <Card className="sample-code">
-                            <CardBody>
-                                <div className="sample-code-header">
-                                    <h3>Sample data C# code</h3>
-                                    {asyncGetSampleDataClasses.result && (
-                                        <Button
-                                            className="rounded-pill"
-                                            onClick={() =>
-                                                copyToClipboard.copy(
-                                                    asyncGetSampleDataClasses.result,
-                                                    "Copied C# classes to clipboard."
-                                                )
-                                            }
-                                        >
-                                            <Icon icon="copy" /> <span>Copy C# classes</span>
-                                        </Button>
-                                    )}
-                                </div>
-                                {asyncGetSampleDataClasses.loading && (
-                                    <div className="d-flex justify-content-center">
-                                        <Spinner className="spinner-gradient" />
+                    <Collapse in={isCodeSampleOpen}>
+                        <div>
+                            <Card className="sample-code">
+                                <Card.Body>
+                                    <div className="sample-code-header">
+                                        <h3>Sample data C# code</h3>
+                                        {asyncGetSampleDataClasses.result && (
+                                            <Button
+                                                variant="secondary"
+                                                className="rounded-pill"
+                                                onClick={() =>
+                                                    copyToClipboard.copy(
+                                                        asyncGetSampleDataClasses.result,
+                                                        "Copied C# classes to clipboard."
+                                                    )
+                                                }
+                                            >
+                                                <Icon icon="copy" /> <span>Copy C# classes</span>
+                                            </Button>
+                                        )}
                                     </div>
-                                )}
-                                {asyncGetSampleDataClasses.error && (
-                                    <LoadError
-                                        error="Unable to load sample data classes"
-                                        refresh={asyncGetSampleDataClasses.execute}
-                                    />
-                                )}
-                                {asyncGetSampleDataClasses.result && (
-                                    <Code code={asyncGetSampleDataClasses.result} language="csharp" />
-                                )}
-                            </CardBody>
-                        </Card>
+                                    {asyncGetSampleDataClasses.loading && (
+                                        <div className="d-flex justify-content-center">
+                                            <Spinner className="spinner-gradient" />
+                                        </div>
+                                    )}
+                                    {asyncGetSampleDataClasses.error && (
+                                        <LoadError
+                                            error="Unable to load sample data classes"
+                                            refresh={asyncGetSampleDataClasses.execute}
+                                        />
+                                    )}
+                                    {asyncGetSampleDataClasses.result && (
+                                        <Code code={asyncGetSampleDataClasses.result} language="csharp" />
+                                    )}
+                                </Card.Body>
+                            </Card>
+                        </div>
                     </Collapse>
                 </div>
             </div>

@@ -33,5 +33,12 @@ namespace Raven.Server.Documents.Handlers
             using (var processor = new CollectionsHandlerProcessorForGetLastChangeVector(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenAction("/databases/*/revisions/collections/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetRevisionsStats()
+        {
+            using (var processor = new CollectionsHandlerProcessorForGetCollectionRevisionsStats(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

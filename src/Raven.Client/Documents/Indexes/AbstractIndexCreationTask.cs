@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -195,7 +196,49 @@ namespace Raven.Client.Documents.Indexes
         {
             throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         }
-
+        
+        /// <summary>
+        /// Creates a vector field in the index from the provided value
+        /// </summary>
+        /// <param name="value">Source of embedding</param>
+        public object CreateVector(IEnumerable<float> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <summary>
+        /// Creates a vector field in the index from the provided value
+        /// </summary>
+        /// <param name="value">Source of embedding</param>
+        public object CreateVector(Stream value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <summary>
+        /// Creates a vector field in the index from the provided values
+        /// </summary>
+        /// <param name="value">Source of embedding</param>
+        public object CreateVector(IEnumerable<Stream> values) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <summary>
+        /// Creates a vector field in the index from the provided values
+        /// </summary>
+        /// <param name="value">Source of embeddings</param>
+        public object CreateVector(IEnumerable<IEnumerable<float>> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{float})"/>
+        public object CreateVector(IEnumerable<sbyte> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{float}})"/>
+        public object CreateVector(IEnumerable<IEnumerable<sbyte>> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{float})"/>
+        public object CreateVector(IEnumerable<byte> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{float}})"/>
+        public object CreateVector(IEnumerable<IEnumerable<byte>> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{float})"/>
+        public object CreateVector(string value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{float}})"/>
+        public object CreateVector(IEnumerable<string> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
@@ -311,7 +354,9 @@ namespace Raven.Client.Documents.Indexes
                 TermVectors = TermVectors,
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexes = SpatialIndexes,
+                VectorIndexes = VectorIndexes,
                 SpatialIndexesStrings = SpatialIndexesStrings,
+                VectorIndexesStrings = VectorIndexesStrings,
                 OutputReduceToCollection = OutputReduceToCollection,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 PatternReferencesCollectionName = PatternReferencesCollectionName,

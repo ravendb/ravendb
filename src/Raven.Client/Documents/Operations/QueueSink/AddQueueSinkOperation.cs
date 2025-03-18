@@ -10,10 +10,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.QueueSink
 {
+    /// <summary>
+    /// <para>Operation to add a queue sink configuration.</para>
+    /// A queue sink task is a data integration feature that allows RavenDB to receive data from external message queue systems 
+    /// such as Kafka or RabbitMQ and store it in the database.
+    /// </summary>
+    /// <typeparam name="T">The type of the connection string, which must inherit from <see cref="ConnectionString"/>.</typeparam>
     public class AddQueueSinkOperation<T> : IMaintenanceOperation<AddQueueSinkOperationResult> where T : ConnectionString
     {
         private readonly QueueSinkConfiguration _configuration;
 
+        /// <inheritdoc cref="AddQueueSinkOperation{T}"/>
+        /// <param name="configuration">The queue sink configuration to be added.</param>
         public AddQueueSinkOperation(QueueSinkConfiguration configuration)
         {
             _configuration = configuration;

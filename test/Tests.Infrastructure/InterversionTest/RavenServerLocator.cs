@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Tests.Infrastructure.InterversionTest
 {
     public abstract class RavenServerLocator
@@ -9,5 +11,7 @@ namespace Tests.Infrastructure.InterversionTest
         public virtual string Command => ServerPath;
 
         public virtual string CommandArguments => string.Empty;
+
+        public abstract Dictionary<string, string> EnvironmentVariables { get; }
     }
 }

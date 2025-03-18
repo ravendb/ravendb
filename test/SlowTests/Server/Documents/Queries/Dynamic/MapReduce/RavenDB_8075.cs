@@ -19,12 +19,14 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             using (var db = CreateDocumentDatabase())
             {
+                var defaultAutoIndexingEngineType = db.Configuration.Indexing.AutoIndexingEngineType;
+                
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from LastFms
 group by Artist
 where search(Artist, ""Rapper"")
 order by Count as long desc
-select count() as Count, Artist"));
+select count() as Count, Artist"), defaultAutoIndexingEngineType);
 
                 await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
@@ -33,7 +35,7 @@ from LastFms
 group by Artist
 where Count > 100
 order by Count as long desc
-select count() as Count, Artist"));
+select count() as Count, Artist"), defaultAutoIndexingEngineType);
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
@@ -48,16 +50,18 @@ select count() as Count, Artist"));
         {
             using (var db = CreateDocumentDatabase())
             {
+                var defaultAutoIndexingEngineType = db.Configuration.Indexing.AutoIndexingEngineType;
+                
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from LastFms
-where search(Artist, ""Chri"") and Genre = ""jazz"""));
+where search(Artist, ""Chri"") and Genre = ""jazz"""), defaultAutoIndexingEngineType);
 
                 await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from LastFms
 where Genre = ""jazz""
-select Artist"));
+select Artist"), defaultAutoIndexingEngineType);
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 

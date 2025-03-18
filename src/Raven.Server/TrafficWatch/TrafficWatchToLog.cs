@@ -5,16 +5,18 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Logging;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.TrafficWatch;
 
 internal sealed class TrafficWatchToLog : IDynamicJson
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("TrafficWatchManager");
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<TrafficWatchToLog>();
 
     private TrafficWatchMode _trafficWatchMode;
     private List<string> _databases;
@@ -26,7 +28,7 @@ internal sealed class TrafficWatchToLog : IDynamicJson
     private List<TrafficWatchChangeType> _changeTypes;
     private List<string> _certificateThumbprints;
 
-    public bool LogToFile => _trafficWatchMode == TrafficWatchMode.ToLogFile && Logger.IsOperationsEnabled;
+    public bool LogToFile => _trafficWatchMode == TrafficWatchMode.ToLogFile && Logger.IsInfoEnabled;
 
     private TrafficWatchToLog() { }
 
@@ -37,7 +39,7 @@ internal sealed class TrafficWatchToLog : IDynamicJson
         if (_trafficWatchMode == TrafficWatchMode.Off)
             return;
 
-        if (Logger.IsOperationsEnabled == false)
+        if (Logger.IsInfoEnabled == false)
             return;
 
         var stringBuilder = new StringBuilder();
@@ -123,7 +125,7 @@ internal sealed class TrafficWatchToLog : IDynamicJson
                 .Append(twtc.CertificateThumbprint);
         }
 
-        Logger.Operations(stringBuilder.ToString());
+        Logger.Info(stringBuilder.ToString());
     }
 
     public void UpdateConfiguration(TrafficWatchConfiguration configuration)

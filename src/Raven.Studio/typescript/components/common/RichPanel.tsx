@@ -1,9 +1,10 @@
-﻿import React, { ForwardedRef, forwardRef, HTMLAttributes, LegacyRef, ReactNode } from "react";
+﻿import React, { ComponentProps, ForwardedRef, forwardRef, HTMLAttributes, LegacyRef, ReactNode } from "react";
 import "./RichPanel.scss";
 import classNames from "classnames";
-import { Badge, Card, CardHeader } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Card from "react-bootstrap/Card";
 
-interface RichPanelProps {
+interface RichPanelProps extends ComponentProps<typeof Card> {
     className?: string;
     children: ReactNode | ReactNode[];
     innerRef?: any;
@@ -12,12 +13,13 @@ interface RichPanelProps {
 }
 
 export function RichPanel(props: RichPanelProps) {
-    const { children, className, innerRef, hover, id } = props;
+    const { children, className, innerRef, hover, id, ...rest } = props;
     return (
         <Card
             className={classNames("rich-panel-item", className, { "rich-panel-hover": hover })}
             ref={innerRef}
             id={id}
+            {...rest}
         >
             {children}
         </Card>
@@ -34,7 +36,7 @@ interface RichPanelStatusProps {
 export function RichPanelStatus(props: RichPanelStatusProps) {
     const { children, className, color, ...rest } = props;
     return (
-        <Badge className={classNames("rich-panel-status", className)} color={color} {...rest}>
+        <Badge className={classNames("rich-panel-status", className)} bg={color} {...rest}>
             <span className="position-sticky">{children}</span>
         </Badge>
     );
@@ -49,9 +51,9 @@ interface RichPanelHeaderProps extends HTMLAttributes<HTMLDivElement> {
 export function RichPanelHeader(props: RichPanelHeaderProps) {
     const { children, className, ...rest } = props;
     return (
-        <CardHeader className={classNames("rich-panel-header gap-2", className)} {...rest}>
+        <Card.Header className={classNames("rich-panel-header gap-2", className)} {...rest}>
             {children}
-        </CardHeader>
+        </Card.Header>
     );
 }
 

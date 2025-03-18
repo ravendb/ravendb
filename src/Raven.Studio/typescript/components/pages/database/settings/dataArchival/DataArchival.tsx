@@ -1,5 +1,8 @@
-﻿import React, { useEffect } from "react";
-import { Card, CardBody, Col, Form, Row } from "reactstrap";
+﻿import { useEffect } from "react";
+import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { useServices } from "hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import {
@@ -25,10 +28,11 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function DataArchival() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -108,10 +112,15 @@ export default function DataArchival() {
                                 icon="data-archival"
                                 licenseBadgeText={hasDataArchival ? null : "Enterprise"}
                             />
-                            <div id="saveDataArchival" className="w-fit-content">
+                            <ConditionalPopover
+                                conditions={{
+                                    isActive: !hasDataArchival,
+                                    message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                }}
+                            >
                                 <ButtonWithSpinner
                                     type="submit"
-                                    color="primary"
+                                    variant="primary"
                                     className="mb-3"
                                     icon="save"
                                     disabled={!formState.isDirty || !hasDatabaseAdminAccess}
@@ -119,11 +128,10 @@ export default function DataArchival() {
                                 >
                                     Save
                                 </ButtonWithSpinner>
-                            </div>
-                            {!hasDataArchival && <FeatureNotAvailableInYourLicensePopover target="saveDataArchival" />}
+                            </ConditionalPopover>
                             <Col className={hasDataArchival ? "" : "item-disabled pe-none"}>
                                 <Card>
-                                    <CardBody>
+                                    <Card.Body>
                                         <div className="vstack gap-2">
                                             <FormSwitch
                                                 name="isDataArchivalEnabled"
@@ -155,7 +163,7 @@ export default function DataArchival() {
                                                 />
                                             </div>
                                         </div>
-                                    </CardBody>
+                                    </Card.Body>
                                 </Card>
                             </Col>
                         </Form>

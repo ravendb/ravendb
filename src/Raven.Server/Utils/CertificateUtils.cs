@@ -24,9 +24,11 @@ using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config.Categories;
+using Raven.Server.Logging;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
@@ -36,7 +38,7 @@ namespace Raven.Server.Utils
     {
         private const int BitsPerByte = 8;
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer(typeof(CertificateUtils));
 
         private static string GetCertificateName(X509Certificate2 certificate)
         {

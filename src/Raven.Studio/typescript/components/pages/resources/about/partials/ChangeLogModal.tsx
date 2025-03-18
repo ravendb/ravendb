@@ -1,5 +1,4 @@
-﻿import { Button, Modal, ModalBody, ModalFooter, UncontrolledTooltip } from "reactstrap";
-import { Icon } from "components/common/Icon";
+﻿import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import React, { ReactNode, useState } from "react";
 import { aboutPageUrls } from "components/pages/resources/about/partials/common";
@@ -11,6 +10,10 @@ import genUtils from "common/generalUtils";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import CustomPagination from "components/common/Pagination";
+import Button from "react-bootstrap/Button";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
+import Modal from "components/common/Modal";
 
 interface ChangelogModalProps {
     mode: "whatsNew" | "changeLog" | "hidden";
@@ -69,7 +72,13 @@ export function ChangeLogModal(props: ChangelogModalProps) {
             : asyncGetChangeLog.result.TotalBuildsForUserMajorMinor;
 
     return (
-        <ModalWrapper onClose={onClose} mode={mode}>
+        <ModalWrapper
+            onClose={onClose}
+            mode={mode}
+            page={page}
+            totalPages={Math.ceil(totalResults / changeLogItemsPerPage)}
+            onPageChange={setPage}
+        >
             <div className="changelog-modal">
                 {versionsList.map((build, index) => {
                     const downgradeTooltipId = `canDowngradeTooltip-${index}`;
@@ -94,72 +103,69 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                                 <div className="flex-horizontal">
                                     {!isCloud && (
                                         <React.Fragment key="upgrade-downgrade-info">
-                                            <div
-                                                className="well mx-1 px-3 py-1 small rounded-pill"
-                                                id={downgradeTooltipId}
+                                            <OverlayTrigger
+                                                overlay={
+                                                    <Tooltip id={downgradeTooltipId}>
+                                                        <div className="px-2 py-1">
+                                                            {build.CanDowngradeFollowingUpgrade ? (
+                                                                <>
+                                                                    This update allows you to switch back to the current
+                                                                    version
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    This update doesn&apos;t allow you to switch back to
+                                                                    the current version
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </Tooltip>
+                                                }
                                             >
-                                                {build.CanDowngradeFollowingUpgrade ? (
-                                                    <>
-                                                        <Icon icon="check" color="success" /> Can downgrade
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Icon icon="cancel" color="danger" /> Can&apos;t downgrade
-                                                    </>
-                                                )}
-                                            </div>
-                                            <UncontrolledTooltip
-                                                trigger="hover"
-                                                className="bs5"
-                                                placement="top"
-                                                target={downgradeTooltipId}
-                                            >
-                                                <div className="px-2 py-1">
+                                                <div className="well mx-1 px-3 py-1 small rounded-pill">
                                                     {build.CanDowngradeFollowingUpgrade ? (
                                                         <>
-                                                            This update allows you to switch back to the current version
+                                                            <Icon icon="check" color="success" /> Can downgrade
                                                         </>
                                                     ) : (
                                                         <>
-                                                            This update doesn&apos;t allow you to switch back to the
-                                                            current version
+                                                            <Icon icon="cancel" color="danger" /> Can&apos;t downgrade
                                                         </>
                                                     )}
                                                 </div>
-                                            </UncontrolledTooltip>
-                                            <div
-                                                className="well mx-1 px-3 py-1 small rounded-pill"
-                                                id={upgradeTooltipId}
+                                            </OverlayTrigger>
+                                            <OverlayTrigger
+                                                overlay={
+                                                    <Tooltip id={upgradeTooltipId}>
+                                                        <div className="px-2 py-1">
+                                                            {build.CanUpgrade ? (
+                                                                <>
+                                                                    Your license is eligible for upgrade to this version
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    Your license can&apos;t be used with the target
+                                                                    version. Prior updating, please contact us and
+                                                                    update your license beforehand.
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </Tooltip>
+                                                }
                                             >
-                                                {build.CanUpgrade ? (
-                                                    <>
-                                                        <Icon icon="check" color="success" /> Can upgrade
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Icon icon="license" color="danger" /> Your license needs to be
-                                                        upgraded in order to update
-                                                    </>
-                                                )}
-                                            </div>
-                                            <UncontrolledTooltip
-                                                trigger="hover"
-                                                className="bs5"
-                                                placement="top"
-                                                target={upgradeTooltipId}
-                                            >
-                                                <div className="px-2 py-1">
+                                                <div className="well mx-1 px-3 py-1 small rounded-pill">
                                                     {build.CanUpgrade ? (
-                                                        <>Your license is eligible for upgrade to this version</>
+                                                        <>
+                                                            <Icon icon="check" color="success" /> Can upgrade
+                                                        </>
                                                     ) : (
                                                         <>
-                                                            Your license can&apos;t be used with the target version.
-                                                            Prior updating, please contact us and update your license
-                                                            beforehand.
+                                                            <Icon icon="license" color="danger" /> Your license needs to
+                                                            be upgraded in order to update
                                                         </>
                                                     )}
                                                 </div>
-                                            </UncontrolledTooltip>
+                                            </OverlayTrigger>
                                         </React.Fragment>
                                     )}
                                 </div>
@@ -171,55 +177,46 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                         </div>
                     );
                 })}
-
-                <div className="mt-1">
-                    <CustomPagination
-                        page={page}
-                        totalPages={Math.ceil(totalResults / changeLogItemsPerPage)}
-                        onPageChange={setPage}
-                    />
-                </div>
             </div>
         </ModalWrapper>
     );
 }
 
-function ModalWrapper(props: { children: ReactNode } & ChangelogModalProps) {
-    const { onClose, children, mode } = props;
+function ModalWrapper(
+    props: {
+        children: ReactNode;
+        page?: number;
+        totalPages?: number;
+        onPageChange?: (page: number) => void;
+    } & ChangelogModalProps
+) {
+    const { onClose, children, mode, page, totalPages, onPageChange } = props;
     return (
-        <Modal
-            isOpen
-            toggle={onClose}
-            wrapClassName="bs5"
-            centered
-            size="lg"
-            contentClassName="modal-border bulge-warning"
-        >
-            <ModalBody className="vstack gap-4 position-relative">
-                <div className="text-center">
-                    <Icon icon="logs" color="warning" className="fs-1" margin="m-0" />
-                </div>
-
-                <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={onClose} />
-                </div>
-                <div className="text-center lead">{mode === "whatsNew" ? "What's New" : "Changelog"}</div>
-                {children}
-            </ModalBody>
-            <ModalFooter>
-                <Button color="secondary" outline onClick={onClose} className="rounded-pill px-3">
+        <Modal show scrollable onHide={onClose} size="lg" contentClassName="modal-border bulge-warning">
+            <Modal.Header className="vstack gap-4" onCloseClick={onClose}>
+                <Icon icon="logs" color="warning" className="fs-1" margin="m-0" />
+                <div className=" lead">{mode === "whatsNew" ? "What's New" : "Changelog"}</div>
+            </Modal.Header>
+            <Modal.Body className="vstack gap-4 position-relative">{children}</Modal.Body>
+            <Modal.Footer>
+                <Button variant="outline-secondary" onClick={onClose} className="rounded-pill px-3">
                     Close
                 </Button>
 
                 {mode === "whatsNew" && (
                     <React.Fragment key="footer-part">
+                        <CustomPagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
                         <FlexGrow />
-                        <Button color="primary" className="rounded-pill px-3" href={aboutPageUrls.updateInstructions}>
+                        <Button
+                            variant="outline-primary"
+                            className="rounded-pill px-3"
+                            href={aboutPageUrls.updateInstructions}
+                        >
                             Update instructions <Icon icon="newtab" margin="m-0" />
                         </Button>
                     </React.Fragment>
                 )}
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

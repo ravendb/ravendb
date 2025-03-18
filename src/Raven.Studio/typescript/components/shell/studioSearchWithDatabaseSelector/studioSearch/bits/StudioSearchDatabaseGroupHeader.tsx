@@ -23,6 +23,13 @@ export default function StudioSearchDatabaseGroupHeader({ groupType }: StudioSea
                     Documents
                 </>
             );
+        case "revisions":
+            return (
+                <>
+                    <Icon icon="revisions" />
+                    Revisions
+                </>
+            );
         case "indexes":
             return (
                 <>

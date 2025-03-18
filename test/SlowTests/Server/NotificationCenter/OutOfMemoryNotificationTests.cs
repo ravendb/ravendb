@@ -27,7 +27,7 @@ namespace SlowTests.Server.NotificationCenter
             using (var database = CreateDocumentDatabase())
             {
                 WeakReference weakReference;
-                using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(RavenTestHelper.NewDataPath(nameof(OutOfMemoryNotificationTests), 0))))
+                using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(RavenTestHelper.NewDataPath(nameof(OutOfMemoryNotificationTests), 0))))
                 {
                     weakReference = new WeakReference(env);
                     database.NotificationCenter.OutOfMemory.Add(env, new OutOfMemoryException());

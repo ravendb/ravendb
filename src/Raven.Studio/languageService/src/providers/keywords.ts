@@ -77,6 +77,10 @@ const specialWhereFunctions: Pick<autoCompleteWordList, "value" | "caption">[] =
     {
         value: "proximity(",
         caption: "proximity(whereClause, proximity)"
+    },
+    {
+        value: "vector.search(",
+        caption: "vector.search(field/embedding, embedding)"
     }
 ];
 
@@ -127,7 +131,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         
         return [];
     } 
-    
+
     static handleSpecialWhereFunctions(candidates: CandidatesCollection, rule: CandidateRule, writtenText: string) {
         // check if we are not inside another special function! - we can't nest them
         const inSpecialFunction = rule.ruleList.find(x => x === RqlParser.RULE_specialParam);
@@ -157,7 +161,52 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             meta: AUTOCOMPLETE_META.function
         }));
     }
-    
+
+    static handleEmbedding(): autoCompleteWordList[] {
+        return [{
+            value: "embedding.f32_i8(",
+            caption: "embedding.f32_i8(field)",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function,
+            snippet: `embedding.f32_i8(\${1}) `
+        },{
+            value: "embedding.f32_i1(",
+            caption: "embedding.f32_i1(field)",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function,
+            snippet: `embedding.f32_i1(\${1}) `
+        },{
+            value: "embedding.i8(",
+            caption: "embedding.i8(field)",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function,
+            snippet: `embedding.i8(\${1}) `
+        },{
+            value: "embedding.i1(",
+            caption: "embedding.i1(field)",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function,
+            snippet: `embedding.i1(\${1}) `
+        },{
+            value: "embedding.text(",
+            caption: "embedding.text(field)",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function,
+            snippet: `embedding.text(\${1}) `
+        },{
+            value: "embedding.text_i8(",
+            caption: "embedding.text_i8(field)",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function,
+            snippet: `embedding.text_i8(\${1}) `
+        },{
+            value: "embedding.text_i1(",
+            caption: "embedding.text_i1(field)",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function,
+            snippet: `embedding.text_i8(\${1}) `
+        }]
+    }
     
     static handleEqual(writtenText: string): autoCompleteWordList[] {
         if (writtenText.endsWith(".")) {
@@ -391,6 +440,9 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             completions.push(...AutocompleteKeywords.handleSpecialFunctions(candidates, writtenText));
         }
         
+        if (candidates.tokens.has(RqlParser.EMBEDDING))
+            completions.push(...AutocompleteKeywords.handleEmbedding())
+            
         if (candidates.tokens.has(RqlParser.EQUAL)) {
             completions.push(...AutocompleteKeywords.handleEqual(writtenText))
         }
@@ -438,7 +490,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         if (candidates.tokens.has(RqlParser.ALL)) {
             completions.push(AutocompleteKeywords.handleAllOperator());
         }
-
+        
         if (candidates.tokens.has(RqlParser.BETWEEN)) {
             completions.push(AutocompleteKeywords.handleBetweenOperator());
         }

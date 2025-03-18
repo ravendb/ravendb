@@ -282,6 +282,7 @@ namespace SlowTests.Cluster
                 }
             }
         }
+        
         [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(1, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
@@ -606,7 +607,7 @@ namespace SlowTests.Cluster
             };
             var mre1 = new AsyncManualResetEvent();
             var mre2 = new AsyncManualResetEvent();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var task1 = Task.Run(async () =>
                 {
@@ -766,7 +767,7 @@ namespace SlowTests.Cluster
 
         [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Counters)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ClusterTxWithCounters(Options options)
+        public async Task ClusterWideTransactionWithCounters(Options options)
         {
             using (var storeA = GetDocumentStore(options))
             {
@@ -1426,9 +1427,8 @@ namespace SlowTests.Cluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ClusterTransactionShouldBeRedirectedFromPromotableNode(Options options)
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionShouldBeRedirectedFromPromotableNode()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
@@ -1642,12 +1642,12 @@ namespace SlowTests.Cluster
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ClusterTransaction_WhenLoadReturnEmptyAndCompareExchangeExit_ShouldStillThrowConcurrency(Options options, bool clusterTrxBefore)
+        public async Task ClusterTransaction_WhenLoadReturnEmptyAndCompareExchangeExit_ShouldStillThrowConcurrency(Options options, bool clusterTxBefore)
         {
             const string id = "testObjs/1";
             using var store = GetDocumentStore(options);
 
-            if (clusterTrxBefore)
+            if (clusterTxBefore)
             {
                 using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
                 await session.StoreAsync(new TestObj());
@@ -1707,7 +1707,7 @@ namespace SlowTests.Cluster
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task LoadAndIncludeClusterTrxCmpxchg_WhenCmpxchgIsFromLastClusterTransactionWithNoDatabaseCommand_ShouldGetCmpxchg(Options options)
+        public async Task LoadAndIncludeClusterWideTransactionCmpxchg_WhenCmpxchgIsFromLastClusterTransactionWithNoDatabaseCommand_ShouldGetCmpxchg(Options options)
         {
             const string cmpxchgId = "cmpxchg/0";
             const string id = "testObjs/1";
@@ -1738,7 +1738,7 @@ namespace SlowTests.Cluster
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task QueryAndIncludeClusterTrxCmpxchg_WhenDocumentsCommandsDidntFinished_ShouldNotReturnNull(Options options)
+        public async Task QueryAndIncludeClusterWideTransactionCmpxchg_WhenDocumentsCommandsDidntFinished_ShouldNotReturnNull(Options options)
         {
             const string id1 = "testObjs/0";
             const string id2 = "testObjs/1";
@@ -1804,7 +1804,7 @@ select incl(c)"
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task QueryIndexAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull(Options options)
+        public async Task QueryIndexAndIncludeClusterWideTransactionCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull(Options options)
         {
             const string id1 = "testObjs/0";
             const string id2 = "testObjs/1";
@@ -1872,7 +1872,7 @@ select incl(c)"
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task QueryAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull(Options options)
+        public async Task QueryAndIncludeClusterWideTransactionCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull(Options options)
         {
             const string id1 = "testObjs/0";
             const string id2 = "testObjs/1";
@@ -2075,7 +2075,7 @@ select incl(c)"
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task DatabaseRequest_WhenHasLastClusterTransaction_ShouldWaitForIndex(Options options, bool withClusterTrxBefore)
+        public async Task DatabaseRequest_WhenHasLastClusterTransaction_ShouldWaitForIndex(Options options, bool withClusterTxBefore)
         {
             const string id = "testObjs/0";
             var cmpXchgKey = "cmpXchgKey";
@@ -2085,7 +2085,7 @@ select incl(c)"
             using var store = GetDocumentStore(options);
             using var store2 = new DocumentStore { Urls = store.Urls, Database = store.Database }.Initialize();
 
-            if (withClusterTrxBefore)
+            if (withClusterTxBefore)
             {
                 using var session = store2.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
                 await session.StoreAsync(new TestObj());
@@ -2134,7 +2134,7 @@ select incl(c)"
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task DatabaseRequest_WhenLastClusterTrxWasDeleteCmpxchg_ShouldNotHang(Options options, bool withClusterTrxBefore)
+        public async Task DatabaseRequest_WhenLastClusterWideTransactionWasDeleteCmpxchg_ShouldNotHang(Options options, bool withClusterTxBefore)
         {
             const string id = "TestObjs/1";
             var cmpXchgKey = "cmpXchgKey";
@@ -2157,7 +2157,7 @@ select incl(c)"
                 Urls = store.Urls
             }.Initialize();
 
-            if (withClusterTrxBefore)
+            if (withClusterTxBefore)
             {
                 using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
                 await session.StoreAsync(new TestObj(), "TestObjs/0");
@@ -2249,9 +2249,9 @@ select incl(c)"
 
         [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ClusterWideTrx_WhenLoadingDeletedDoc_ShouldNotIncludingMissingAtomicGard(Options options)
+        public async Task ClusterWideTransaction_WhenLoadingDeletedDoc_ShouldNotIncludingMissingAtomicGard(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string id;
 
@@ -2277,7 +2277,7 @@ select incl(c)"
 
         [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi, RavenArchitecture.AllX64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task ClusterWideTrx_WhenExecutedBatchExceedsSpaceLimit_ShouldStoreAllDocumentsSuccessfully(Options options)
+        public async Task ClusterWideTransaction_WhenExecutedBatchExceedsSpaceLimit_ShouldStoreAllDocumentsSuccessfully(Options options)
         {
             int count = 256;
 

@@ -564,6 +564,8 @@ class databaseGroupGraph {
                     return icomoonHelpers.getCodePointForCanvas("external-replication");
                 case "SqlEtl":
                     return icomoonHelpers.getCodePointForCanvas("sql-etl");
+                case "SnowflakeEtl":
+                    return icomoonHelpers.getCodePointForCanvas("snowflake-etl");
                 case "OlapEtl":
                     return icomoonHelpers.getCodePointForCanvas("olap-etl");
                 case "ElasticSearchEtl":
@@ -574,6 +576,8 @@ class databaseGroupGraph {
                     return icomoonHelpers.getCodePointForCanvas("rabbitmq-etl");
                 case "AzureQueueStorageQueueEtl":
                     return icomoonHelpers.getCodePointForCanvas("azure-queue-storage-etl");
+                case "AmazonSqsQueueEtl":
+                    return icomoonHelpers.getCodePointForCanvas("amazon-sqs-etl");
                 case "KafkaQueueSink":
                     return icomoonHelpers.getCodePointForCanvas("kafka-sink");
                 case "RabbitQueueSink":

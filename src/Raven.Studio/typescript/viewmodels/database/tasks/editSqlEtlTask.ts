@@ -28,6 +28,7 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
 import EditSqlEtlInfoHub = require("viewmodels/database/tasks/EditSqlEtlInfoHub");
 import typeUtils = require("common/typeUtils");
+import SqlEtlConfiguration = Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration;
 
 class sqlTaskTestMode {
     
@@ -52,7 +53,7 @@ class sqlTaskTestMode {
     loadedDocument = ko.observable<string>();
     loadedDocumentId = ko.observable<string>();
     
-    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.SQL.Test.TableQuerySummary.CommandData>([]);
+    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test.TableQuerySummary.CommandData>([]);
     debugOutput = ko.observableArray<string>([]);
     
     // all kinds of alerts:
@@ -145,13 +146,13 @@ class sqlTaskTestMode {
                 PerformRolledBackTransaction: this.performRolledBackTransaction(),
                 Configuration: this.configurationProvider(),
                 Connection: this.connectionProvider()
-            } as Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.TestSqlEtlScript;
+            } as Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>;
 
             eventsCollector.default.reportEvent("sql-etl", "test-script");
             
             new testSqlReplicationCommand(this.db, dto)
                 .execute()
-                .done((testResult: Raven.Server.Documents.ETL.Providers.SQL.Test.SqlEtlTestScriptResult) => {
+                .done((testResult: Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test.RelationalDatabaseEtlTestScriptResult) => {
                     this.testResults(testResult.Summary.flatMap(x => x.Commands));
                     this.debugOutput(testResult.DebugOutput);
                     this.loadErrors(testResult.LoadErrors);

@@ -1,11 +1,11 @@
-import React from "react";
-import { Row, Col, Label, UncontrolledPopover, PopoverBody } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { Icon } from "components/common/Icon";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { useServices } from "components/hooks/useServices";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormLabel } from "components/common/Form";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import { useRestorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/useRestorePointUtils";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
@@ -14,6 +14,7 @@ import RestorePointsFields, {
 } from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
 import moment from "moment";
 import generalUtils from "common/generalUtils";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export default function BackupSourceRavenCloud() {
     const { control } = useFormContext<FormData>();
@@ -48,7 +49,7 @@ export default function BackupSourceRavenCloud() {
             {expireDateMoment && (
                 <Row className="mt-2 align-items-center">
                     <Col lg="3">
-                        <Label className="col-form-label">Link will expire in</Label>
+                        <FormLabel className="col-form-label">Link will expire in</FormLabel>
                     </Col>
                     <Col>
                         <Icon icon="clock" />
@@ -66,27 +67,26 @@ export default function BackupSourceRavenCloud() {
 
 function LinkLabel() {
     return (
-        <>
-            <Label className="col-form-label" id="CloudBackupLinkInfo">
+        <PopoverWithHoverWrapper
+            message={
+                <ol className="m-0">
+                    <li>
+                        Login to your <code>RavenDB Cloud Account</code>
+                    </li>
+                    <li>
+                        Go to <code>Backups</code> view
+                    </li>
+                    <li>Select desired Instance and a Backup File</li>
+                    <li>
+                        Click <code>Generate Backup Link</code>
+                    </li>
+                </ol>
+            }
+        >
+            <FormLabel className="col-form-label">
                 Backup Link <Icon icon="info" color="info" margin="m-0" />
-            </Label>
-            <UncontrolledPopover target="CloudBackupLinkInfo" trigger="hover" className="bs5">
-                <PopoverBody>
-                    <ol className="m-0">
-                        <li>
-                            Login to your <code>RavenDB Cloud Account</code>
-                        </li>
-                        <li>
-                            Go to <code>Backups</code> view
-                        </li>
-                        <li>Select desired Instance and a Backup File</li>
-                        <li>
-                            Click <code>Generate Backup Link</code>
-                        </li>
-                    </ol>
-                </PopoverBody>
-            </UncontrolledPopover>
-        </>
+            </FormLabel>
+        </PopoverWithHoverWrapper>
     );
 }
 

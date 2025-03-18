@@ -42,7 +42,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
         operationId ??= GetOperationId();
         await BulkImport(files, directory, operationId.Value);
 
-        if (LoggingSource.AuditLog.IsInfoEnabled)
+        if (RavenLogManager.Instance.IsAuditEnabled)
             RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "IMPORT", $"{EnumHelper.GetDescription(Operations.OperationType.DatabaseImport)} " +
                                                  $"from directory: '{directory}', files count: '{files.Count}'");
     }

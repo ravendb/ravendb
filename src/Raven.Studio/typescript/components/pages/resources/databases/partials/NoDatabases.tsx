@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { EmptySet } from "components/common/EmptySet";
 import { FlexGrow } from "components/common/FlexGrow";
 import CreateDatabase, {
@@ -18,13 +18,13 @@ export function NoDatabases() {
                 <EmptySet>No databases have been created</EmptySet>
 
                 {isOperatorOrAbove && (
-                    <div className="d-flex gap-1">
+                    <div className="d-flex align-items-center gap-1">
                         <FlexGrow />
-                        <Button outline color="primary" onClick={() => setCreateDatabaseMode("regular")}>
+                        <Button variant="outline-primary" onClick={() => setCreateDatabaseMode("regular")}>
                             Create new database
                         </Button>
                         <div>or</div>
-                        <Button outline color="primary" onClick={() => setCreateDatabaseMode("fromBackup")}>
+                        <Button variant="outline-primary" onClick={() => setCreateDatabaseMode("fromBackup")}>
                             Restore one from backup
                         </Button>
                         <FlexGrow />

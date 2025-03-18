@@ -8,11 +8,13 @@ using Raven.Client.Util;
 using Sparrow.Utils;
 using Voron;
 using Voron.Impl;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Indexing
 {
     public sealed unsafe class LuceneVoronDirectory : Lucene.Net.Store.Directory
     {
+        private readonly Index _index;
         private readonly StorageEnvironment _environment;
         private readonly TempFileCache _tempFileCache;
         private readonly string _name;
@@ -25,7 +27,7 @@ namespace Raven.Server.Indexing
 
         public string TempFullPath => _environment.Options.TempPath.FullPath;
 
-        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, LuceneIndexInputType indexInputType) : this(tx, environment, tempFileCache, "Files", indexInputType)
+        public LuceneVoronDirectory(Index index, Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, LuceneIndexInputType indexInputType) : this(index, tx, environment, tempFileCache, "Files", indexInputType)
         { }
 
         static LuceneVoronDirectory()
@@ -34,11 +36,12 @@ namespace Raven.Server.Indexing
             ArrayHolder.OnArrayHolderDisposed = NativeMemory.DecrementLuceneManagedAllocations;
         }
 
-        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, string name, LuceneIndexInputType indexInputType)
+        public LuceneVoronDirectory(Index index, Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, string name, LuceneIndexInputType indexInputType)
         {
             if (tx.IsWriteTransaction == false)
                 throw new InvalidOperationException($"Creation of the {nameof(LuceneVoronDirectory)} must be done under a write transaction.");
 
+            _index = index;
             _environment = environment;
             _tempFileCache = tempFileCache;
             _name = name;
@@ -208,7 +211,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
             
-            return new VoronIndexOutput(_tempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
+            return new VoronIndexOutput(_index, _tempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
         }
 
         public IDisposable SetTransaction(Transaction tx, out IState state)

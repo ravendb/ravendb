@@ -22,6 +22,7 @@ using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -31,6 +32,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Global;
@@ -52,7 +54,7 @@ namespace Raven.Server.Documents.Subscriptions
         internal readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
 
         internal SubscriptionWorkerOptions _options;
-        internal readonly Logger _logger;
+        internal readonly RavenLogger _logger;
 
         public string LastSentChangeVectorInThisConnection { get; set; }
         public readonly ConcurrentQueue<string> RecentSubscriptionStatuses = new();
@@ -109,7 +111,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             DatabaseName = database;
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
-            _logger = LoggingSource.Instance.GetLogger(ExtractDatabaseNameForLogging(tcpConnection), GetType().FullName);
+            _logger = GetLogger(GetType(), tcpConnection);
 
             ClientUri = tcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
 
@@ -127,6 +129,15 @@ namespace Raven.Server.Documents.Subscriptions
             if (tcpConnection.DatabaseContext != null)
                 return tcpConnection.DatabaseContext.DatabaseName;
 
+            return null;
+        }
+
+        private static RavenLogger GetLogger(Type type, TcpConnectionOptions tcpConnection)
+        {
+            if (tcpConnection.DocumentDatabase != null)
+                return tcpConnection.DocumentDatabase.Loggers.GetLogger(type);
+            if (tcpConnection.DatabaseContext != null)
+                return tcpConnection.DatabaseContext.Loggers.GetLogger(type);
             return null;
         }
 
@@ -182,8 +193,8 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         internal virtual async Task HandleBatchStatusAsync<TState, TConnection>(
-            TState state, SubscriptionBatchStatus status, 
-            Stopwatch sendingCurrentBatchStopwatch, 
+            TState state, SubscriptionBatchStatus status,
+            Stopwatch sendingCurrentBatchStopwatch,
             SubscriptionConnectionInUse markInUse,
             SubscriptionBatchStatsScope batchScope) where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
@@ -522,14 +533,14 @@ namespace Raven.Server.Documents.Subscriptions
                 if (subscription.ArchivedDataProcessingBehavior is null)
                 {
                     // from 5.x version
-                    subscription.ArchivedDataProcessingBehavior = _subscriptions.GetDefaultArchivedDataProcessingBehavior();  
+                    subscription.ArchivedDataProcessingBehavior = _subscriptions.GetDefaultArchivedDataProcessingBehavior();
                 }
 
                 var whoseTaskIsIt = _subscriptions.GetSubscriptionResponsibleNode(context, subscription);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(ServerStore.NodeTag))
                     throw new DatabaseDoesNotExistException(
                         $"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
-                
+
                 if (record.IsDisabled)
                     throw new DatabaseDisabledException($"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is disabled.");
 
@@ -950,9 +961,9 @@ namespace Raven.Server.Documents.Subscriptions
                 await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length, CancellationTokenSource.Token);
                 await TcpConnection.Stream.FlushAsync();
 
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
-                    _logger.Info($"Subscription {Options.SubscriptionName} is sending a Heartbeat message to the client. Reason: {reason}");
+                    _logger.Debug($"Subscription {Options.SubscriptionName} is sending a Heartbeat message to the client. Reason: {reason}");
                 }
             }
             catch (Exception ex)
@@ -1050,7 +1061,7 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         internal static async Task FlushDocsToClientAsync(long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer,
-            TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, Logger logger, int flushedDocs, bool endOfBatch = false,
+            TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, RavenLogger logger, int flushedDocs, bool endOfBatch = false,
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();

@@ -1,7 +1,7 @@
 import React from "react";
 import RichAlert, { richAlertColors } from "components/common/RichAlert";
-import { Button } from "reactstrap";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import Button from "react-bootstrap/Button";
 
 export default {
     title: "Bits/Rich Alert",

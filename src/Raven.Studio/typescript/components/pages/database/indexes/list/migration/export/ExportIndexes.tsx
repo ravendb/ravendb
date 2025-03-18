@@ -18,9 +18,12 @@ import IndexUtils from "components/utils/IndexUtils";
 import moment from "moment";
 import React, { useEffect, useMemo, useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
 import * as yup from "yup";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 type ExportMode = "database" | "file";
 
@@ -130,25 +133,23 @@ export function ExportIndexes(props: ExportIndexesProps) {
 
     return (
         <Modal
-            isOpen
-            toggle={toggle}
+            show
+            onHide={toggle}
             size="lg"
             wrapClassName="bs5"
             contentClassName="modal-border bulge-primary"
             centered
         >
-            <Form control={control} onSubmit={handleSubmit(handleExport)}>
-                <ModalBody className="vstack gap-4 position-relative">
-                    <div className="position-absolute m-2 end-0 top-0">
-                        <Button close onClick={toggle} />
-                    </div>
-
+            <Form onSubmit={handleSubmit(handleExport)}>
+                <Modal.Header className="vstack gap-4" onCloseClick={toggle}>
                     <Icon icon="index-import" color="primary" className="text-center fs-1" margin="m-0" />
                     <div className="lead text-center">
                         You&apos;re about to <span className="fw-bold">export</span> selected{" "}
                         <span className="fw-bold">({filteredIndexes.availableIndexes.length})</span>{" "}
                         {pluralizeHelpers.pluralize(filteredIndexes.availableIndexes.length, "index", "indexes", true)}
                     </div>
+                </Modal.Header>
+                <Modal.Body className="vstack gap-4">
                     <div className="mx-auto">
                         <FormRadioToggleWithIcon
                             control={control}
@@ -159,9 +160,9 @@ export function ExportIndexes(props: ExportIndexesProps) {
                     </div>
                     {exportMode === "database" && (
                         <InputGroup>
-                            <InputGroupText>
+                            <InputGroup.Text>
                                 <Icon icon="database" margin="m-0" />
-                            </InputGroupText>
+                            </InputGroup.Text>
                             <FormSelect
                                 control={control}
                                 name="databaseName"
@@ -188,14 +189,14 @@ export function ExportIndexes(props: ExportIndexesProps) {
                             </RichAlert>
                         )}
                     </div>
-                </ModalBody>
-                <ModalFooter>
-                    <Button type="button" color="link" title="Cancel" className="link-muted" onClick={toggle}>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button type="button" variant="link" title="Cancel" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
                     <ButtonWithSpinner
                         type="submit"
-                        color="success"
+                        variant="success"
                         title="Export indexes"
                         className="rounded-pill"
                         isSpinning={formState.isSubmitting}
@@ -203,7 +204,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
                     >
                         Export indexes to a {exportMode}
                     </ButtonWithSpinner>
-                </ModalFooter>
+                </Modal.Footer>
             </Form>
         </Modal>
     );

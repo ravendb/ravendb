@@ -23,6 +23,8 @@ public unsafe struct NativeList<T>
 
     public T* RawItems => Capacity > 0 ? (T*)_storage.Ptr : null;
 
+    public Span<T> Items => new Span<T>(_storage.Ptr, Count);
+
     public int Capacity => _storage.Length / sizeof(T);
     public int Count;
 
@@ -75,6 +77,12 @@ public unsafe struct NativeList<T>
         ToSpan().Fill(value);
     }
 
+    public void ResetAndCopyFrom(ByteStringContext allocator,Span<T> src)
+    {
+        ResetAndEnsureCapacity(allocator, src.Length);
+        AddRangeUnsafe(src);
+    }
+
     public void AddRangeUnsafe(ReadOnlySpan<T> range)
     {
         Debug.Assert(Count + range.Length <= Capacity);
@@ -107,7 +115,6 @@ public unsafe struct NativeList<T>
         Debug.Assert(Count < Capacity);
         return ref RawItems[Count++];
     }
-
 
     public void Shrink(int newSize)
     {
@@ -255,4 +262,34 @@ public unsafe struct NativeList<T>
 #if CORAX_MEMORY_WATCHER
     public (long BytesUsed, long BytesAllocated) Allocations => (Count * sizeof(T), Capacity * sizeof(T));
 #endif
+    
+    public void Reverse()
+    {
+        ToSpan().Reverse();
+    }
+    
+    public void SetCapacity(ByteStringContext allocator, int size)
+    {
+        if (Count >= size)
+            return;
+        
+        EnsureCapacityFor(allocator, size);
+        for (int i = Count; i < size; i++)
+        {
+            RawItems[i] = default;
+        }
+        Count = size;
+    }
+
+    internal Span<T> ToFullCapacitySpan()
+    {
+        return new Span<T>(_storage.Ptr, Capacity);
+    }
+
+    public static NativeList<T> Create(ByteStringContext allocator, T item)
+    {
+        var list = new NativeList<T>();
+        list.Add(allocator, item);
+        return list;
+    }
 }

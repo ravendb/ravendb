@@ -34,7 +34,7 @@ namespace FastTests.Voron
         protected StorageTest(ITestOutputHelper output) : base(output)
         {
             IOExtensions.DeleteDirectory(DataDir);
-            Options = StorageEnvironmentOptions.CreateMemoryOnly();
+            Options = StorageEnvironmentOptions.CreateMemoryOnlyForTests();
             ForceConstantCompressionAcceleration(Options);
 
             Configure(Options);
@@ -49,7 +49,7 @@ namespace FastTests.Voron
 
             if (isFileBasedEnv)
             {
-                Options = StorageEnvironmentOptions.ForPath(DataDir);
+                Options = StorageEnvironmentOptions.ForPathForTests(DataDir);
                 ForceConstantCompressionAcceleration(Options);
                 Configure(Options);
             }
@@ -65,7 +65,7 @@ namespace FastTests.Voron
                 return;
 
             IOExtensions.DeleteDirectory(DataDir);
-            Options = StorageEnvironmentOptions.ForPath(DataDir);
+            Options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             ForceConstantCompressionAcceleration(Options);
             Configure(Options);
         }

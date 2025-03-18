@@ -1,17 +1,18 @@
 ﻿import React, { ChangeEvent, ReactNode, useEffect, useRef } from "react";
-import { Input, InputProps, Label } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import useUniqueId from "components/hooks/useUniqueId";
 import classNames from "classnames";
-
 import "./Checkbox.scss";
+import { RavenFormControlProps } from "react-bootstrap/FormControl";
+import { InputType } from "../../../typings/_studio/react-bootstrap";
 
-export interface CheckboxProps extends Omit<InputProps, "className" | "children"> {
+export interface CheckboxProps extends Omit<RavenFormControlProps, "className" | "children"> {
     selected: boolean;
     indeterminate?: boolean;
     toggleSelection: (x: ChangeEvent<HTMLInputElement>) => void;
     children?: ReactNode | ReactNode[];
     color?: string;
-    size?: string;
+    type?: Extract<InputType, "checkbox" | "switch" | "radio">;
     reverse?: boolean;
     disabled?: boolean;
     className?: string;
@@ -47,20 +48,16 @@ export function Checkbox(props: CheckboxProps) {
 
     return (
         <div className={classNames(checkboxClass, colorClass, sizeClass, className)}>
-            <Input
+            <Form.Check
                 type="checkbox"
-                innerRef={inputEl}
+                ref={inputEl}
                 id={inputId}
                 checked={selected}
+                label={children}
                 onChange={toggleSelection}
                 disabled={disabled}
                 {...rest}
             />
-            {children && (
-                <Label check htmlFor={inputId}>
-                    {children}
-                </Label>
-            )}
         </div>
     );
 }
@@ -76,19 +73,15 @@ export function Switch(props: CheckboxProps) {
 
     return (
         <div className={classNames(colorClass, sizeClass, checkboxClass, "form-switch", className)}>
-            <Input
-                type="checkbox"
+            <Form.Check
+                type="switch"
                 id={inputId}
                 checked={selected}
                 onChange={toggleSelection}
+                label={children}
                 disabled={disabled}
                 {...rest}
             />
-            {children && (
-                <Label check htmlFor={inputId}>
-                    {children}
-                </Label>
-            )}
         </div>
     );
 }
@@ -103,20 +96,16 @@ export function Radio(props: CheckboxProps) {
     const sizeClass = size ? `form-check-${size}` : undefined;
 
     return (
-        <div className={classNames(checkboxClass, colorClass, sizeClass, className)} {...rest}>
-            <Input
+        <div className={classNames(checkboxClass, colorClass, sizeClass, className)}>
+            <Form.Check
                 type="radio"
                 id={inputId}
                 checked={selected}
                 onChange={toggleSelection}
+                label={children}
                 disabled={disabled}
                 {...rest}
             />
-            {children && (
-                <Label check htmlFor={inputId}>
-                    {children}
-                </Label>
-            )}
         </div>
     );
 }

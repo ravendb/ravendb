@@ -19,10 +19,12 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Sparrow;
 
 namespace Raven.Client.Documents
 {
@@ -1226,6 +1228,75 @@ namespace Raven.Client.Documents
             var expression = ConvertExpressionIfNecessary(source);
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(count)));
+            return (IRavenQueryable<T>)queryable;
+        }
+        
+        /// <summary>
+        /// Performs vector search on text data, by queried text.
+        /// </summary>
+        /// <param name="textFieldFactory">Factory creating textual vector field for indexing purposes.</param>
+        /// <param name="textValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried text and text stored in a document to be matched by the query.</param>
+        /// <param name="numberOfCandidates">Number of candidate nodes for HNSW algorithm. The bigger the value, the more accurate search will be performed for the cost of more computation.</param>
+        /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
+        public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact)
+        {
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            textFieldFactory.Invoke(fieldBuilder);
+            textValueFactory.Invoke(valueBuilder);
+
+            return VectorSearch(source, fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
+        }
+        
+        /// <summary>
+        /// Performs vector search on embedding data, by queried embedding.
+        /// </summary>
+        /// <param name="embeddingFieldFactory">Factory creating embedding vector field for indexing purposes.</param>
+        /// <param name="embeddingValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried embedding and embedding stored in a document to be matched by the query.</param>
+        /// <param name="numberOfCandidates">Number of candidate nodes for HNSW algorithm. The bigger the value, the more accurate search will be performed for the cost of more computation.</param>
+        /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
+        public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact)
+        {
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            embeddingFieldFactory.Invoke(fieldBuilder);
+            embeddingValueFactory.Invoke(valueBuilder);
+
+            return VectorSearch(source, fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
+        }
+        
+        /// <summary>
+        /// Performs vector search on existing vector field.
+        /// </summary>
+        /// <param name="vectorFieldFactory">Factory using existing, already indexed vector field.</param>
+        /// <param name="vectorValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried value and indexed value of a document to be matched by the query.</param>
+        /// <param name="numberOfCandidates">Number of candidate nodes for HNSW algorithm. The bigger the value, the more accurate search will be performed for the cost of more computation.</param>
+        /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
+        public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorField> embeddingFieldFactory, Action<IVectorFieldValueFactory> embeddingValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact)
+        {
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            embeddingFieldFactory.Invoke(fieldBuilder);
+            embeddingValueFactory.Invoke(valueBuilder);
+
+            return VectorSearch(source, fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
+        }
+        
+        private static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, IVectorEmbeddingFieldFactoryAccessor embeddingFieldFactory, IVectorFieldValueFactoryAccessor embeddingValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(embeddingFieldFactory), Expression.Constant(embeddingValueFactory), Expression.Constant(minimumSimilarity, typeof(float?)), Expression.Constant(numberOfCandidates, typeof(int?)), Expression.Constant(isExact)));
+
             return (IRavenQueryable<T>)queryable;
         }
 

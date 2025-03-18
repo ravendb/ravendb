@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Esprima.Ast;
+using Acornima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     throw new InvalidOperationException($"Expected statement returning simple object expression inside group by block");
 
                 // x => x.Name
-                case StaticMemberExpression sme:
+                case MemberExpression sme:
                     if (sme.Property is Identifier id)
                     {
                         _groupByFields = new[] { CreateField(id.Name, GetPropertyPath(sme).ToArray()) };

@@ -81,8 +81,8 @@ function UpdateRavenVersion ( $projectDir, $buildNumber, $version, $commit, $ver
     $content = (Get-Content $versionInfoFile) |
         Foreach-Object { 
             $_ -replace `
-                'RavenVersion\(Build = ".*", CommitHash = ".*", Version = "6.2", FullVersion = ".*", ReleaseDateString = ".*"\)', `
-                "RavenVersion(Build = ""$buildNumber"", CommitHash = ""$commit"", Version = ""6.2"", FullVersion = ""$version"", ReleaseDateString = ""$releaseDate"")" 
+                'RavenVersion\(Build = ".*", CommitHash = ".*", Version = "7.0", FullVersion = ".*", ReleaseDateString = ".*"\)', `
+                "RavenVersion(Build = ""$buildNumber"", CommitHash = ""$commit"", Version = ""7.0"", FullVersion = ""$version"", ReleaseDateString = ""$releaseDate"")" 
             }
 
     Set-Content -Path $versionInfoFile -Value $content -Encoding UTF8

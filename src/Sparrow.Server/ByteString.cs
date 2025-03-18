@@ -96,6 +96,22 @@ namespace Sparrow.Server
         }
     }
 
+    public class ByteStringContentComparer : IEqualityComparer<ByteString>
+    {
+        public static ByteStringContentComparer Instance = new();
+
+        public bool Equals(ByteString x, ByteString y)
+        {
+            return x.Match(y);
+
+        }
+
+        public int GetHashCode([DisallowNull] ByteString obj)
+        {
+            return obj.GetHashCode();
+        }
+    }
+
     public unsafe struct ByteString : IEquatable<ByteString>
     {
         internal ByteStringStorage* _pointer;
@@ -321,7 +337,7 @@ namespace Sparrow.Server
 
             EnsureIsNotBadPointer();
 
-            return UTF8Encoding.UTF8.GetString(_pointer->Ptr, _pointer->Length);
+            return Encoding.UTF8.GetString(_pointer->Ptr, _pointer->Length);
         }
 
         public string ToString(UTF8Encoding encoding)
@@ -756,7 +772,8 @@ namespace Sparrow.Server
         /// This list keeps all the segments already instantiated in order to release them after context finalization. 
         /// </summary>
         private readonly List<SegmentInformation> _wholeSegments;
-        private int _allocationBlockSize;
+        private readonly int _initialAllocationBlockSize;
+        public int AllocationBlockSize { get; private set; }
 
         internal long _totalAllocated, _currentlyAllocated;
 
@@ -786,7 +803,8 @@ namespace Sparrow.Server
                 throw new ArgumentException($"It is not a good idea to allocate chunks of less than the {nameof(ByteStringContext.MinBlockSizeInBytes)} value of {ByteStringContext.MinBlockSizeInBytes}");
 
             _lowMemoryFlag = lowMemoryFlag;
-            _allocationBlockSize = allocationBlockSize;
+            _initialAllocationBlockSize = allocationBlockSize;
+            AllocationBlockSize = allocationBlockSize;
 
             _wholeSegments = new List<SegmentInformation>();
             _internalReadyToUseMemorySegments = new List<SegmentInformation>();
@@ -831,6 +849,7 @@ namespace Sparrow.Server
                 stack?.Clear();
             }
             _internalReadyToUseMemorySegments.Clear();// memory here will be released from _wholeSegments
+            AllocationBlockSize = _initialAllocationBlockSize;
 
             _externalStringPool.Clear();
             _externalFastPoolCount = 0;
@@ -907,7 +926,10 @@ namespace Sparrow.Server
         public int GrowAllocation(ref ByteString str, ref InternalScope scope, int additionalSize)
         {
             var newScope = Allocate(str.Length + additionalSize, out var newStr);
-            Memory.Copy(newStr.Ptr, str.Ptr, str.Length);
+            if (str.HasValue)
+            {
+                Memory.Copy(newStr.Ptr, str.Ptr, str.Length);
+            }
             scope.Dispose();
             str = newStr;
             scope = newScope;
@@ -1059,9 +1081,9 @@ namespace Sparrow.Server
             {
                 if (_externalCurrentLeft == 0)
                 {
-                    var tmp = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, _allocationBlockSize * 2);
+                    var tmp = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, AllocationBlockSize * 2);
                     AllocateExternalSegment(tmp);
-                    _allocationBlockSize = tmp;
+                    AllocationBlockSize = tmp;
                 }
 
                 storagePtr = (ByteStringStorage*)_externalCurrent.Current;
@@ -1100,7 +1122,7 @@ namespace Sparrow.Server
             // This is even bigger than the configured allocation block size. There is no reason why we shouldn't
             // allocate it directly. When released (if released) this will be reused as a segment, ensuring that the context
             // could handle that.
-            if (allocationSize > _allocationBlockSize)
+            if (allocationSize > AllocationBlockSize)
             {
                 var segment = GetFromReadyToUseMemorySegments(allocationUnit);
                 if (segment != null)
@@ -1215,8 +1237,8 @@ namespace Sparrow.Server
             }
             else
             {
-                _allocationBlockSize = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, _allocationBlockSize * 2);
-                var toAllocate = Math.Max(_allocationBlockSize, allocationUnit);
+                AllocationBlockSize = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, AllocationBlockSize * 2);
+                var toAllocate = Math.Max(AllocationBlockSize, allocationUnit);
                 _internalCurrent = AllocateSegment(toAllocate);
                 Debug.Assert(_internalCurrent.SizeLeft >= allocationUnit, $"{_internalCurrent.SizeLeft} >= {allocationUnit}");
             }

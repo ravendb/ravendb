@@ -1,6 +1,7 @@
-import { FormInput } from "components/common/Form";
+import { FormInput, FormLabel } from "components/common/Form";
 import React from "react";
-import { Row, Col, Label } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -28,9 +29,9 @@ export default function EncryptionField({ sourceType }: EncryptionFieldProps) {
     return (
         <Row className="mt-2">
             <Col lg="3">
-                <Label className="col-form-label">
+                <FormLabel className="col-form-label">
                     Backup Encryption Key <small className="text-muted">(Base64 Encoding)</small>
-                </Label>
+                </FormLabel>
             </Col>
             <Col>
                 <FormInput

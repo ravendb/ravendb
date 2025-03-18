@@ -1,7 +1,7 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import IndexUtils from "components/utils/IndexUtils";
 import React from "react";
-import { Card } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import { IndexPanel } from "./IndexPanel";
 import { IndexSharedInfo } from "components/models/indexes";
 import { Icon } from "components/common/Icon";
@@ -78,7 +78,7 @@ export default function IndexesPageList({
                                         <Icon icon="swap" /> Side by side
                                     </div>
                                     <ButtonWithSpinner
-                                        color="warning"
+                                        variant="warning"
                                         size="sm"
                                         onClick={() => swapSideBySideData.setIndexName(index.name)}
                                         title="Click to replace the current index definition with the replacement index"

@@ -5,5 +5,6 @@ public enum QueueBrokerType
     None,
     Kafka,
     RabbitMq,
-    AzureQueueStorage
+    AzureQueueStorage,
+    AmazonSqs
 }

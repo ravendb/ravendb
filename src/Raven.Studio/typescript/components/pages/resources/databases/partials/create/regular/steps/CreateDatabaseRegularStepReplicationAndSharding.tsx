@@ -1,10 +1,13 @@
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormRange, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Col, Collapse, InputGroup, InputGroupText, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import InputGroup from "react-bootstrap/InputGroup";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
@@ -14,6 +17,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import classNames from "classnames";
 import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
 import RichAlert from "components/common/RichAlert";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
@@ -75,83 +79,79 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
             <h2 className="text-center">Replication & Sharding</h2>
 
             <Row>
-                <Col lg={{ size: 8, offset: 2 }} className="text-center">
+                <Col lg={{ span: 8, offset: 2 }} className="text-center">
                     <p>
                         Database replication provides benefits such as improved data availability, increased
                         scalability, and enhanced disaster recovery capabilities.
                     </p>
                     <p>
                         <span>
-                            <Icon id="ShardingInfo" icon="info" color="info" margin="m-0" /> What is sharding?
-                            <UncontrolledPopover target="ShardingInfo" placement="top" trigger="hover" className="bs5">
-                                <PopoverBody>
-                                    <p>
-                                        <strong className="text-shard">
-                                            <Icon icon="sharding" margin="m-0" /> Sharding
-                                        </strong>{" "}
-                                        is a database partitioning technique that breaks up large databases into
-                                        smaller, more manageable pieces called{" "}
-                                        <strong className="text-shard">
-                                            {" "}
-                                            <Icon icon="shard" margin="m-0" />
-                                            shards
-                                        </strong>
-                                        .
-                                    </p>
-                                    <p>
-                                        Each shard contains a subset of the data and can be stored on a separate server,
-                                        allowing for <strong>horizontal scalability and improved performance</strong>.
-                                    </p>
-                                    <a href={docsShardingLink}>
-                                        Learn more <Icon icon="newtab" margin="m-0" />
-                                    </a>
-                                </PopoverBody>
-                            </UncontrolledPopover>
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        <p>
+                                            <strong className="text-shard">
+                                                <Icon icon="sharding" margin="m-0" /> Sharding
+                                            </strong>{" "}
+                                            is a database partitioning technique that breaks up large databases into
+                                            smaller, more manageable pieces called{" "}
+                                            <strong className="text-shard">
+                                                {" "}
+                                                <Icon icon="shard" margin="m-0" />
+                                                shards
+                                            </strong>
+                                            .
+                                        </p>
+                                        <p>
+                                            Each shard contains a subset of the data and can be stored on a separate
+                                            server, allowing for{" "}
+                                            <strong>horizontal scalability and improved performance</strong>.
+                                        </p>
+                                        <a href={docsShardingLink}>
+                                            Learn more <Icon icon="newtab" margin="m-0" />
+                                        </a>
+                                    </>
+                                }
+                            >
+                                <Icon icon="info" color="info" margin="m-0" />
+                            </PopoverWithHoverWrapper>{" "}
+                            What is sharding?
                         </span>
                     </p>
                 </Col>
             </Row>
 
             <Row>
-                <Col lg={{ offset: 1, size: 10 }}>
+                <Col lg={{ offset: 1, span: 10 }}>
                     <Row className="pt-2">
                         <Col sm="6" className="d-flex gap-1 align-items-center">
-                            <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
-                            <UncontrolledPopover
-                                target="ReplicationInfo"
-                                placement="right"
-                                trigger="hover"
-                                className="bs5"
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        Add more{" "}
+                                        <strong className="text-node">
+                                            <Icon icon="node" margin="m-0" /> Instance nodes
+                                        </strong>{" "}
+                                        in <a href={appUrl.forCluster()}>Manage cluster</a> view
+                                    </>
+                                }
                             >
-                                <PopoverBody>
-                                    Add more{" "}
-                                    <strong className="text-node">
-                                        <Icon icon="node" margin="m-0" /> Instance nodes
-                                    </strong>{" "}
-                                    in <a href={appUrl.forCluster()}>Manage cluster</a> view
-                                </PopoverBody>
-                            </UncontrolledPopover>
-                            <Icon icon="node" color="node" margin="ms-1" />{" "}
+                                <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" />
+                            </PopoverWithHoverWrapper>{" "}
+                            Available nodes: <Icon icon="node" color="node" margin="ms-1" />{" "}
                             <strong className={classNames({ "text-warning": isReplicationFactorWarning })}>
                                 {maxReplicationFactor}{" "}
                                 {isReplicationFactorWarning && (
-                                    <>
-                                        <Icon id="LicenseWarning" icon="warning" margin="m-0" />
-                                        <UncontrolledPopover
-                                            target="LicenseWarning"
-                                            placement="right"
-                                            trigger="hover"
-                                            className="bs5"
-                                        >
-                                            <PopoverBody>
-                                                <LicenseRestrictedMessage>
-                                                    Your license doesn&apos;t allow replication factor higher than{" "}
-                                                    <strong>{maxReplicationFactorForSharding}</strong> for sharded
-                                                    database.
-                                                </LicenseRestrictedMessage>
-                                            </PopoverBody>
-                                        </UncontrolledPopover>
-                                    </>
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <LicenseRestrictedMessage>
+                                                Your license doesn&apos;t allow replication factor higher than{" "}
+                                                <strong>{maxReplicationFactorForSharding}</strong> for sharded database.
+                                            </LicenseRestrictedMessage>
+                                        }
+                                    >
+                                        <Icon icon="warning" margin="m-0" />
+                                    </PopoverWithHoverWrapper>
                                 )}
                             </strong>
                         </Col>
@@ -171,67 +171,70 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     </Row>
                     <Row className="pt-2">
                         <Col sm="6">
-                            <Collapse isOpen={isReplicationFactorVisible}>
-                                <InputGroup>
-                                    <InputGroupText>Replication Factor</InputGroupText>
-                                    <FormInput
-                                        type="number"
+                            <Collapse in={isReplicationFactorVisible}>
+                                <div>
+                                    <InputGroup>
+                                        <InputGroup.Text>Replication Factor</InputGroup.Text>
+                                        <FormInput
+                                            type="number"
+                                            control={control}
+                                            name="replicationAndShardingStep.replicationFactor"
+                                            className="replication-input"
+                                            min="1"
+                                            max={maxReplicationFactor}
+                                        />
+                                    </InputGroup>
+                                    <FormRange
                                         control={control}
                                         name="replicationAndShardingStep.replicationFactor"
-                                        className="replication-input"
                                         min="1"
                                         max={maxReplicationFactor}
+                                        className="mt-3"
                                     />
-                                </InputGroup>
-                                <FormInput
-                                    type="range"
-                                    control={control}
-                                    name="replicationAndShardingStep.replicationFactor"
-                                    min="1"
-                                    max={maxReplicationFactor}
-                                    className="mt-3"
-                                />
+                                </div>
                             </Collapse>
                         </Col>
                         <Col sm="6">
-                            <Collapse isOpen={isSharded}>
-                                <InputGroup>
-                                    <InputGroupText>Number of shards</InputGroupText>
-                                    <FormInput
-                                        type="number"
+                            <Collapse in={isSharded}>
+                                <div>
+                                    <InputGroup>
+                                        <InputGroup.Text>Number of shards</InputGroup.Text>
+                                        <FormInput
+                                            type="number"
+                                            control={control}
+                                            name="replicationAndShardingStep.shardsCount"
+                                            className="replication-input"
+                                            min="1"
+                                            max="100"
+                                        />
+                                    </InputGroup>
+                                    <FormSwitch
                                         control={control}
-                                        name="replicationAndShardingStep.shardsCount"
-                                        className="replication-input"
-                                        min="1"
-                                        max="100"
-                                    />
-                                </InputGroup>
-                                <FormSwitch
-                                    control={control}
-                                    name="replicationAndShardingStep.isPrefixesForShards"
-                                    color="primary"
-                                    className="mt-3"
-                                >
-                                    Add <strong>prefixes</strong> for shards
-                                    <br />
-                                    <small className="text-muted">
-                                        Manage document distribution by defining
-                                        <br />a prefix for document IDs
-                                    </small>
-                                </FormSwitch>
+                                        name="replicationAndShardingStep.isPrefixesForShards"
+                                        color="primary"
+                                        className="mt-3"
+                                    >
+                                        Add <strong>prefixes</strong> for shards
+                                        <br />
+                                        <small className="text-muted">
+                                            Manage document distribution by defining
+                                            <br />a prefix for document IDs
+                                        </small>
+                                    </FormSwitch>
+                                </div>
                             </Collapse>
                         </Col>
                     </Row>
                     <RichAlert variant="info" className="mt-4">
-                        <Collapse isOpen={isSharded}>
-                            <>
+                        <Collapse in={isSharded}>
+                            <div>
                                 Data will be divided into{" "}
                                 <strong>
                                     {shardsCount}
                                     <Icon icon="shard" margin="m-0" /> Shards
                                 </strong>
                                 .<br />
-                            </>
+                            </div>
                         </Collapse>
                         {replicationFactor > 1 ? (
                             <>
@@ -249,7 +252,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
             </Row>
 
             <Row className="mt-4">
-                <Col lg={{ offset: 1, size: 5 }}>
+                <Col lg={{ offset: 1, span: 5 }}>
                     <ConditionalPopover
                         conditions={{
                             isActive: !hasDynamicNodesDistribution,
@@ -274,7 +277,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         </FormSwitch>
                     </ConditionalPopover>
                 </Col>
-                <Col lg={{ size: 5 }}>
+                <Col lg={{ span: 5 }}>
                     <ConditionalPopover
                         conditions={[
                             {

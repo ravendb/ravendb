@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -84,6 +85,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         public Dictionary<string, OlapConnectionString> OlapConnectionStrings { get; set; }
         public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings { get; set; }
         public Dictionary<string, QueueConnectionString> QueueConnectionStrings { get; set; }
+        public Dictionary<string, SnowflakeConnectionString> SnowflakeConnectionStrings { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -92,6 +94,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             var elasticSearchConnections = new DynamicJsonValue();
             var olapConnections = new DynamicJsonValue();
             var queueConnections = new DynamicJsonValue();
+            var snowflakeConnections = new DynamicJsonValue();
 
             foreach (var kvp in RavenConnectionStrings)
             {
@@ -113,6 +116,10 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             {
                 queueConnections[kvp.Key] = kvp.Value.ToJson();
             }
+            foreach (var kvp in SnowflakeConnectionStrings)
+            {
+                snowflakeConnections[kvp.Key] = kvp.Value.ToJson();
+            }
 
 
             return new DynamicJsonValue
@@ -122,6 +129,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 [nameof(OlapConnectionStrings)] = olapConnections,
                 [nameof(ElasticSearchConnectionStrings)] = elasticSearchConnections,
                 [nameof(QueueConnectionStrings)] = queueConnections,
+                [nameof(SnowflakeConnectionStrings)] = snowflakeConnections,
             };
         }
     }

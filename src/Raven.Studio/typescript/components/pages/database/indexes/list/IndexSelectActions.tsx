@@ -1,14 +1,16 @@
 ﻿import React, { useState } from "react";
-import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import { Button, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
-import genUtils = require("common/generalUtils");
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
 import { IndexSharedInfo } from "components/models/indexes";
 import { ExportIndexes } from "components/pages/database/indexes/list/migration/export/ExportIndexes";
 import useBoolean from "components/hooks/useBoolean";
+import Dropdown from "react-bootstrap/Dropdown";
+import genUtils = require("common/generalUtils");
+import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 
 interface IndexSelectActionProps {
     allIndexes: IndexSharedInfo[];
@@ -67,7 +69,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                     </div>
                     <div className="hstack gap-2 flex-wrap justify-content-center">
                         <Button
-                            color="primary"
+                            variant="primary"
                             disabled={selectedIndexes.length === 0}
                             onClick={toggleIsExportIndexModalOpen}
                             className="rounded-pill flex-grow-0"
@@ -83,69 +85,69 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                             />
                         )}
 
-                        <UncontrolledDropdown>
-                            <DropdownToggle
+                        <Dropdown>
+                            <Dropdown.Toggle
+                                variant="secondary"
                                 title="Set the indexing state for the selected indexes"
                                 disabled={selectedIndexes.length === 0}
                                 data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges()"
                                 className="rounded-pill"
-                                caret
                             >
                                 {globalLockChanges && <Spinner size="sm" className="me-1" />}
                                 {!globalLockChanges && <Icon icon="play" />}
                                 Set indexing state
-                            </DropdownToggle>
-                            <DropdownMenu>
-                                <DropdownItem onClick={startSelectedIndexes} title="Start indexing">
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                                <Dropdown.Item onClick={startSelectedIndexes} title="Start indexing">
                                     <Icon icon="play" /> <span>Start indexing</span>
-                                </DropdownItem>
-                                <DropdownItem onClick={disableSelectedIndexes} title="Disable indexing">
+                                </Dropdown.Item>
+                                <Dropdown.Item onClick={disableSelectedIndexes} title="Disable indexing">
                                     <Icon icon="stop" color="danger" /> <span>Disable indexing</span>
-                                </DropdownItem>
-                                <DropdownItem onClick={pauseSelectedIndexes} title="Pause indexing until restart">
+                                </Dropdown.Item>
+                                <Dropdown.Item onClick={pauseSelectedIndexes} title="Pause indexing until restart">
                                     <Icon icon="pause" color="warning" /> <span>Pause indexing until restart</span>
-                                </DropdownItem>
-                            </DropdownMenu>
-                        </UncontrolledDropdown>
+                                </Dropdown.Item>
+                            </Dropdown.Menu>
+                        </Dropdown>
 
-                        <UncontrolledDropdown>
-                            <DropdownToggle
+                        <Dropdown>
+                            <Dropdown.Toggle
+                                variant="secondary"
                                 title="Set the lock mode for the selected indexes"
                                 disabled={selectedIndexes.length === 0}
                                 data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges()"
                                 className="rounded-pill"
-                                caret
                             >
                                 {globalLockChanges && <Spinner size="sm" className="me-1" />}
                                 {!globalLockChanges && <Icon icon="lock" />}
                                 Set lock mode
-                            </DropdownToggle>
+                            </Dropdown.Toggle>
 
-                            <DropdownMenu>
-                                <DropdownItem
+                            <Dropdown.Menu>
+                                <Dropdown.Item
                                     onClick={() => setLockModeSelectedIndexes("Unlock")}
                                     title="Unlock selected indexes"
                                 >
                                     <Icon icon="unlock" /> <span>Unlock</span>
-                                </DropdownItem>
-                                <DropdownItem
+                                </Dropdown.Item>
+                                <Dropdown.Item
                                     onClick={() => setLockModeSelectedIndexes("LockedIgnore")}
                                     title="Lock selected indexes"
                                 >
                                     <Icon icon="lock" /> <span>Lock</span>
-                                </DropdownItem>
-                                <DropdownItem divider />
-                                <DropdownItem
+                                </Dropdown.Item>
+                                <Dropdown.Divider />
+                                <Dropdown.Item
                                     onClick={() => setLockModeSelectedIndexes("LockedError")}
                                     title="Lock (Error) selected indexes"
                                 >
                                     <Icon icon="lock-error" /> <span>Lock (Error)</span>
-                                </DropdownItem>
-                            </DropdownMenu>
-                        </UncontrolledDropdown>
+                                </Dropdown.Item>
+                            </Dropdown.Menu>
+                        </Dropdown>
                         <ResetIndexesButton isRounded resetIndex={resetSelectedIndexes} />
                         <Button
-                            color="danger"
+                            variant="danger"
                             disabled={selectedIndexes.length === 0}
                             onClick={deleteSelectedIndexes}
                             className="rounded-pill flex-grow-0"
@@ -154,7 +156,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                             <span>Delete</span>
                         </Button>
                     </div>
-                    <Button onClick={onCancel} color="link">
+                    <Button onClick={onCancel} variant="link">
                         Cancel
                     </Button>
                 </div>

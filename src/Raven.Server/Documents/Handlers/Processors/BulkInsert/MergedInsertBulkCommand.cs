@@ -9,13 +9,14 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 
 public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
 {
-    public Logger Logger;
+    public RavenLogger Logger;
     public DocumentDatabase Database;
     public BatchRequestParser.CommandData[] Commands;
     public int NumberOfCommands;

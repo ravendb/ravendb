@@ -63,6 +63,6 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Index this field using the default internal analyzer: LowerCaseKeywordAnalyzer
         /// </summary>
-        Default = 1 << 4
+        Default = 1 << 4, 
     }
 }

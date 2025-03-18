@@ -1,13 +1,13 @@
 import fileImporter from "common/fileImporter";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormInput, FormAceEditor } from "components/common/Form";
+import { FormAceEditor, FormInput, FormLabel } from "components/common/Form";
 import {
     RichPanel,
+    RichPanelActions,
+    RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
     RichPanelName,
-    RichPanelActions,
-    RichPanelDetails,
 } from "components/common/RichPanel";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -23,14 +23,19 @@ import {
 import { useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
-import React from "react";
-import { useState } from "react";
-import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
-import { useForm, useWatch, SubmitHandler } from "react-hook-form";
-import { Form, UncontrolledTooltip, Button, Collapse, InputGroup, Label } from "reactstrap";
+import React, { useState } from "react";
+import { useAsyncCallback, UseAsyncReturn } from "react-async-hook";
+import { SubmitHandler, useForm, useWatch } from "react-hook-form";
+import Collapse from "react-bootstrap/Collapse";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
+
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import Button from "react-bootstrap/Button";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
@@ -103,12 +108,11 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                         </RichPanelName>
                     </RichPanelInfo>
                     {serverWideSorterNames.includes(formValues.name) && (
-                        <>
-                            <UncontrolledTooltip target={tooltipId} placement="left">
-                                Overrides server-wide sorter
-                            </UncontrolledTooltip>
-                            <Icon id={tooltipId} icon="info" color="info" />
-                        </>
+                        <OverlayTrigger overlay={<Tooltip id={tooltipId}>Overrides server-wide sorter</Tooltip>}>
+                            <div className="d-inline-block">
+                                <Icon id={tooltipId} icon="info" color="info" />
+                            </div>
+                        </OverlayTrigger>
                     )}
                     <RichPanelActions>
                         <CustomSortersActions
@@ -126,51 +130,55 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                     </RichPanelActions>
                 </RichPanelHeader>
 
-                <Collapse isOpen={isTestMode}>
-                    <DatabaseCustomSorterTest name={formValues.name} />
+                <Collapse in={isTestMode}>
+                    <div>
+                        <DatabaseCustomSorterTest name={formValues.name} />
+                    </div>
                 </Collapse>
 
-                <Collapse isOpen={isEditMode}>
-                    <RichPanelDetails className="vstack gap-3 p-4">
-                        {isNew && (
-                            <InputGroup className="vstack mb-1">
-                                <Label>Name</Label>
-                                <FormInput
-                                    type="text"
+                <Collapse in={isEditMode}>
+                    <div>
+                        <RichPanelDetails className="vstack gap-3 p-4">
+                            {isNew && (
+                                <InputGroup className="vstack mb-1">
+                                    <FormLabel>Name</FormLabel>
+                                    <FormInput
+                                        type="text"
+                                        control={control}
+                                        name="name"
+                                        placeholder="Enter a sorter name"
+                                    />
+                                </InputGroup>
+                            )}
+                            <InputGroup className="vstack">
+                                {hasDatabaseAdminAccess && (
+                                    <div className="d-flex justify-content-end">
+                                        <FormLabel className="btn btn-link btn-xs text-right">
+                                            <Icon icon="upload" />
+                                            Load from a file
+                                            <input
+                                                type="file"
+                                                className="d-none"
+                                                onChange={(e) =>
+                                                    fileImporter.readAsBinaryString(e.currentTarget, (x) =>
+                                                        setValue("code", x)
+                                                    )
+                                                }
+                                                accept=".cs"
+                                            />
+                                        </FormLabel>
+                                    </div>
+                                )}
+                                <FormAceEditor
                                     control={control}
-                                    name="name"
-                                    placeholder="Enter a sorter name"
+                                    name="code"
+                                    mode="csharp"
+                                    height="400px"
+                                    readOnly={!hasDatabaseAdminAccess}
                                 />
                             </InputGroup>
-                        )}
-                        <InputGroup className="vstack">
-                            {hasDatabaseAdminAccess && (
-                                <div className="d-flex justify-content-end">
-                                    <Label className="btn btn-link btn-xs text-right">
-                                        <Icon icon="upload" />
-                                        Load from a file
-                                        <input
-                                            type="file"
-                                            className="d-none"
-                                            onChange={(e) =>
-                                                fileImporter.readAsBinaryString(e.currentTarget, (x) =>
-                                                    setValue("code", x)
-                                                )
-                                            }
-                                            accept=".cs"
-                                        />
-                                    </Label>
-                                </div>
-                            )}
-                            <FormAceEditor
-                                control={control}
-                                name="code"
-                                mode="csharp"
-                                height="400px"
-                                readOnly={!hasDatabaseAdminAccess}
-                            />
-                        </InputGroup>
-                    </RichPanelDetails>
+                        </RichPanelDetails>
+                    </div>
                 </Collapse>
             </Form>
         </RichPanel>
@@ -206,11 +214,11 @@ function CustomSortersActions({
 
     if (!hasDatabaseAdminAccess) {
         return isEditMode ? (
-            <Button key="preview" onClick={toggleIsEditMode}>
+            <Button variant="secondary" key="preview" onClick={toggleIsEditMode}>
                 <Icon icon="preview-off" margin="m-0" />
             </Button>
         ) : (
-            <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
+            <Button variant="secondary" key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
         );
@@ -224,17 +232,17 @@ function CustomSortersActions({
                     message: "To test, first exit edit mode",
                 }}
             >
-                <Button key="test" onClick={toggleIsTestMode} disabled={isEditMode}>
+                <Button variant="secondary" key="test" onClick={toggleIsTestMode} disabled={isEditMode}>
                     <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
                 </Button>
             </ConditionalPopover>
 
             {isEditMode ? (
                 <>
-                    <Button key="save" type="submit" color="success" disabled={isSubmitting}>
+                    <Button key="save" type="submit" variant="success" disabled={isSubmitting}>
                         <Icon icon="save" /> Save changes
                     </Button>
-                    <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
+                    <Button key="cancel" type="button" variant="secondary" onClick={onDiscard}>
                         <Icon icon="cancel" />
                         Discard
                     </Button>
@@ -247,7 +255,7 @@ function CustomSortersActions({
                             message: "To edit, first exit test mode",
                         }}
                     >
-                        <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
+                        <Button variant="secondary" key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
                             <Icon icon={hasDatabaseAdminAccess ? "edit" : "preview"} margin="m-0" />
                         </Button>
                     </ConditionalPopover>
@@ -262,7 +270,7 @@ function CustomSortersActions({
                             )}
                             <ButtonWithSpinner
                                 key="delete"
-                                color="danger"
+                                variant="danger"
                                 onClick={() => setNameToConfirmDelete(name)}
                                 icon="trash"
                                 isSpinning={asyncDeleteSorter.status === "loading"}

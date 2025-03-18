@@ -1,9 +1,5 @@
 ﻿import React, { ForwardedRef, forwardRef, MouseEvent, useState } from "react";
 import classNames from "classnames";
-import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
-import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
-import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import { IndexSharedInfo } from "components/models/indexes";
 import { useAppUrls } from "hooks/useAppUrls";
 import IndexUtils from "../../../../utils/IndexUtils";
@@ -21,19 +17,12 @@ import {
     RichPanelName,
     RichPanelSelect,
 } from "components/common/RichPanel";
-import {
-    Badge,
-    Button,
-    ButtonGroup,
-    Collapse,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    Input,
-    Spinner,
-    UncontrolledDropdown,
-    UncontrolledTooltip,
-} from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
+import Badge from "react-bootstrap/Badge";
+import Collapse from "react-bootstrap/Collapse";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Form from "react-bootstrap/Form";
+import Button from "react-bootstrap/Button";
 import assertUnreachable from "components/utils/assertUnreachable";
 import useUniqueId from "components/hooks/useUniqueId";
 import useBoolean from "hooks/useBoolean";
@@ -44,6 +33,14 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
 import { ExportIndexes } from "components/pages/database/indexes/list/migration/export/ExportIndexes";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
+import Dropdown from "react-bootstrap/Dropdown";
+import { CustomDropdownToggle } from "components/common/Dropdown";
+import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
+import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
+import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 
 export interface IndexPanelProps {
     index: IndexSharedInfo;
@@ -67,11 +64,11 @@ export const IndexPanel = forwardRef(IndexPanelInternal);
 function getPriorityColor(index: IndexSharedInfo) {
     switch (index.priority) {
         case "Normal":
-            return "secondary";
+            return "outline-secondary";
         case "High":
-            return "warning";
+            return "outline-warning";
         case "Low":
-            return "info";
+            return "outline-info";
         default:
             assertUnreachable(index.priority);
     }
@@ -80,11 +77,11 @@ function getPriorityColor(index: IndexSharedInfo) {
 function getLockColor(index: IndexSharedInfo) {
     switch (index.lockMode) {
         case "LockedIgnore":
-            return "warning";
+            return "outline-warning";
         case "LockedError":
-            return "warning";
+            return "outline-warning";
         case "Unlock":
-            return "secondary";
+            return "outline-secondary";
         default:
             assertUnreachable(index.lockMode);
     }
@@ -200,7 +197,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     <RichPanelInfo>
                         <RichPanelSelect>
                             {hasDatabaseWriteAccess && (
-                                <Input type="checkbox" onChange={toggleSelection} checked={selected} />
+                                <Form.Check type="checkbox" onChange={toggleSelection} checked={selected} />
                             )}
                         </RichPanelSelect>
                         <div className="flex-grow">
@@ -215,10 +212,11 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {!IndexUtils.hasAnyFaultyNode(index) && (
                             <>
                                 {!IndexUtils.isSideBySide(index) && (
-                                    <UncontrolledDropdown>
-                                        <DropdownToggle
-                                            outline
-                                            color={priorityButtonColor}
+                                    <Dropdown>
+                                        <Dropdown.Toggle
+                                            as={CustomDropdownToggle}
+                                            isCaretHidden
+                                            variant={priorityButtonColor}
                                             disabled={!hasDatabaseWriteAccess}
                                         >
                                             {updatingLocalPriority && <Spinner size="sm" className="me-2" />}
@@ -240,29 +238,30 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                                     <span>High Priority</span>
                                                 </span>
                                             )}
-                                        </DropdownToggle>
+                                        </Dropdown.Toggle>
 
-                                        <DropdownMenu>
-                                            <DropdownItem onClick={(e) => setPriority(e, "Low")} title="Low">
+                                        <Dropdown.Menu>
+                                            <Dropdown.Item onClick={(e) => setPriority(e, "Low")} title="Low">
                                                 <Icon icon="coffee" /> <span>Low Priority</span>
-                                            </DropdownItem>
-                                            <DropdownItem onClick={(e) => setPriority(e, "Normal")} title="Normal">
+                                            </Dropdown.Item>
+                                            <Dropdown.Item onClick={(e) => setPriority(e, "Normal")} title="Normal">
                                                 <Icon icon="check" /> <span>Normal Priority</span>
-                                            </DropdownItem>
-                                            <DropdownItem onClick={(e) => setPriority(e, "High")} title="High">
+                                            </Dropdown.Item>
+                                            <Dropdown.Item onClick={(e) => setPriority(e, "High")} title="High">
                                                 <Icon icon="force" /> <span>High Priority</span>
-                                            </DropdownItem>
-                                        </DropdownMenu>
-                                    </UncontrolledDropdown>
+                                            </Dropdown.Item>
+                                        </Dropdown.Menu>
+                                    </Dropdown>
                                 )}
 
                                 {index.type !== "AutoMap" &&
                                     index.type !== "AutoMapReduce" &&
                                     !IndexUtils.isSideBySide(index) && (
-                                        <UncontrolledDropdown>
-                                            <DropdownToggle
-                                                outline
-                                                color={lockButtonColor}
+                                        <Dropdown>
+                                            <Dropdown.Toggle
+                                                as={CustomDropdownToggle}
+                                                isCaretHidden
+                                                variant={lockButtonColor}
                                                 disabled={!hasDatabaseWriteAccess}
                                             >
                                                 {updatingLockMode && <Spinner size="sm" className="me-2" />}
@@ -284,95 +283,100 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                                         <span>Locked (Error)</span>
                                                     </span>
                                                 )}
-                                            </DropdownToggle>
+                                            </Dropdown.Toggle>
 
-                                            <DropdownMenu>
-                                                <DropdownItem
+                                            <Dropdown.Menu>
+                                                <Dropdown.Item
                                                     onClick={(e) => setLockMode(e, "Unlock")}
                                                     title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes()."
                                                 >
                                                     <Icon icon="unlock" /> <span>Unlock</span>
-                                                </DropdownItem>
-                                                <DropdownItem divider />
-                                                <DropdownItem
+                                                </Dropdown.Item>
+                                                <Dropdown.Divider />
+                                                <Dropdown.Item
                                                     onClick={(e) => setLockMode(e, "LockedIgnore")}
                                                     title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored."
                                                 >
                                                     <Icon icon="lock" /> <span>Lock</span>
-                                                </DropdownItem>
-                                                <DropdownItem
+                                                </Dropdown.Item>
+                                                <Dropdown.Item
                                                     onClick={(e) => setLockMode(e, "LockedError")}
                                                     title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it."
                                                 >
                                                     <Icon icon="lock-error" /> <span>Lock (Error)</span>
-                                                </DropdownItem>
-                                            </DropdownMenu>
-                                        </UncontrolledDropdown>
+                                                </Dropdown.Item>
+                                            </Dropdown.Menu>
+                                        </Dropdown>
                                     )}
                             </>
                         )}
 
                         {!IndexUtils.hasAnyFaultyNode(index) && (
-                            <UncontrolledDropdown>
-                                <DropdownToggle
+                            <Dropdown>
+                                <Dropdown.Toggle
+                                    as={CustomDropdownToggle}
+                                    isCaretHidden
+                                    variant="secondary"
                                     data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }"
                                 >
                                     {updatingState && <Spinner size="sm" className="me-2" />}
                                     <span>Set State</span>
-                                </DropdownToggle>
+                                </Dropdown.Toggle>
 
-                                <DropdownMenu>
-                                    <DropdownItem onClick={startIndexing} title="Start indexing">
+                                <Dropdown.Menu>
+                                    <Dropdown.Item onClick={startIndexing} title="Start indexing">
                                         <Icon icon="play" /> <span>Start indexing</span>
-                                    </DropdownItem>
-                                    <DropdownItem onClick={disableIndexing} title="Disable indexing">
+                                    </Dropdown.Item>
+                                    <Dropdown.Item onClick={disableIndexing} title="Disable indexing">
                                         <Icon icon="stop" color="danger" /> <span>Disable indexing</span>
-                                    </DropdownItem>
-                                    <DropdownItem onClick={pauseIndexing} title="Pause until restart">
+                                    </Dropdown.Item>
+                                    <Dropdown.Item onClick={pauseIndexing} title="Pause until restart">
                                         <Icon icon="pause" color="warning" /> <span>Pause indexing until restart</span>
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
+                                    </Dropdown.Item>
+                                </Dropdown.Menu>
+                            </Dropdown>
                         )}
 
                         {!IndexUtils.hasAnyFaultyNode(index) && (
-                            <UncontrolledDropdown group>
+                            <Dropdown as={ButtonGroup}>
                                 <Button variant="secondary" href={queryUrl}>
                                     <Icon icon="search" />
                                     <span>Query</span>
                                 </Button>
-                                <DropdownToggle className="dropdown-toggle" />
+                                <Dropdown.Toggle variant="secondary" className="dropdown-toggle" />
 
-                                <DropdownMenu end>
-                                    <DropdownItem href={termsUrl}>
+                                <Dropdown.Menu>
+                                    <Dropdown.Item href={termsUrl}>
                                         {" "}
                                         <Icon icon="terms" /> Terms{" "}
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
+                                    </Dropdown.Item>
+                                </Dropdown.Menu>
+                            </Dropdown>
                         )}
 
                         <ButtonGroup>
                             {!IndexUtils.isAutoIndex(index) && hasDatabaseWriteAccess && (
-                                <Button href={editUrl} title="Edit index">
+                                <Button variant="secondary" href={editUrl} title="Edit index">
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                             )}
                             {(IndexUtils.isAutoIndex(index) || !hasDatabaseWriteAccess) && (
-                                <Button href={editUrl} title="View index">
+                                <Button href={editUrl} variant="secondary" title="View index">
                                     <Icon icon="preview" margin="m-0" />
                                 </Button>
                             )}
                         </ButtonGroup>
 
                         {localFaultyNodeInfo && (
-                            <Button onClick={() => openFaulty(localFaultyNodeInfo.location)}>Open faulty index</Button>
+                            <Button variant="secondary" onClick={() => openFaulty(localFaultyNodeInfo.location)}>
+                                Open faulty index
+                            </Button>
                         )}
                         {!IndexUtils.isAutoIndex(index) && (
                             <>
-                                <Button title="Export index" onClick={toggleIsExportIndexModalOpen}>
+                                <Button variant="secondary" title="Export index" onClick={toggleIsExportIndexModalOpen}>
                                     <Icon icon="export" margin="m-0" />
                                 </Button>
                                 {isExportIndexModalOpen && (
@@ -390,7 +394,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                     resetIndex={resetIndex}
                                     sideBySideDisabledReason={getSideBySideResetDisabledReason(index)}
                                 />
-                                <Button color="danger" onClick={deleteIndex} title="Delete the index">
+                                <Button variant="danger" onClick={deleteIndex} title="Delete the index">
                                     <Icon icon="trash" margin="m-0" />
                                 </Button>
                             </>
@@ -400,6 +404,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 <RichPanelDetails className="pb-1">
                     <RichPanelDetailItem>
                         <Button
+                            variant="secondary"
                             onClick={togglePanelCollapsed}
                             title={panelCollapsed ? "Expand distribution details" : "Collapse distribution details"}
                             className="btn-toggle-panel rounded-pill"
@@ -409,59 +414,65 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     </RichPanelDetailItem>
                     {(index.reduceOutputCollectionName || index.patternForReferencesToReduceOutputCollection) && (
                         <RichPanelDetailItem>
-                            <div className="index-type-icon" id={reduceOutputId}>
-                                {index.reduceOutputCollectionName &&
-                                    !index.patternForReferencesToReduceOutputCollection && (
-                                        <span>
-                                            <Icon icon="output-collection" margin="m-0" />
-                                        </span>
-                                    )}
-                                {index.patternForReferencesToReduceOutputCollection && (
-                                    <span>
-                                        <Icon icon="reference-pattern" margin="m-0" />
-                                    </span>
-                                )}
-                                <UncontrolledTooltip target={reduceOutputId} animation placement="right">
-                                    <>
-                                        {index.reduceOutputCollectionName && (
-                                            <span>
-                                                Reduce Results are saved in Collection:
-                                                <br />
-                                                <strong>{index.reduceOutputCollectionName}</strong>
-                                            </span>
-                                        )}
-                                        {index.collectionNameForReferenceDocuments && (
-                                            <span>
-                                                <br />
-                                                Referencing Documents are saved in Collection:
-                                                <br />
-                                                <strong>{index.collectionNameForReferenceDocuments}</strong>
-                                            </span>
-                                        )}
-                                        {!index.collectionNameForReferenceDocuments &&
-                                            index.patternForReferencesToReduceOutputCollection && (
+                            <OverlayTrigger
+                                placement="right"
+                                overlay={
+                                    <Tooltip id={reduceOutputId}>
+                                        <>
+                                            {index.reduceOutputCollectionName && (
+                                                <span>
+                                                    Reduce Results are saved in Collection:
+                                                    <br />
+                                                    <strong>{index.reduceOutputCollectionName}</strong>
+                                                </span>
+                                            )}
+                                            {index.collectionNameForReferenceDocuments && (
                                                 <span>
                                                     <br />
                                                     Referencing Documents are saved in Collection:
                                                     <br />
-                                                    <strong>{index.reduceOutputCollectionName}/References</strong>
+                                                    <strong>{index.collectionNameForReferenceDocuments}</strong>
                                                 </span>
                                             )}
-                                    </>
-                                </UncontrolledTooltip>
-                            </div>
+                                            {!index.collectionNameForReferenceDocuments &&
+                                                index.patternForReferencesToReduceOutputCollection && (
+                                                    <span>
+                                                        <br />
+                                                        Referencing Documents are saved in Collection:
+                                                        <br />
+                                                        <strong>{index.reduceOutputCollectionName}/References</strong>
+                                                    </span>
+                                                )}
+                                        </>
+                                    </Tooltip>
+                                }
+                            >
+                                <div className="index-type-icon" id={reduceOutputId}>
+                                    {index.reduceOutputCollectionName &&
+                                        !index.patternForReferencesToReduceOutputCollection && (
+                                            <span>
+                                                <Icon icon="output-collection" margin="m-0" />
+                                            </span>
+                                        )}
+                                    {index.patternForReferencesToReduceOutputCollection && (
+                                        <span>
+                                            <Icon icon="reference-pattern" margin="m-0" />
+                                        </span>
+                                    )}
+                                </div>
+                            </OverlayTrigger>
                         </RichPanelDetailItem>
                     )}
                     <ReferencedCollections collections={index.referencedCollections} />
                     {(hasReplacement || isReplacement) && (
                         <RichPanelDetailItem>
                             {hasReplacement && (
-                                <Badge pill color="warning" className="ms-3">
+                                <Badge pill bg="warning" className="ms-3">
                                     OLD
                                 </Badge>
                             )}
                             {isReplacement && (
-                                <Badge pill color="warning" className="ms-3">
+                                <Badge pill bg="warning" className="ms-3">
                                     NEW
                                 </Badge>
                             )}
@@ -486,13 +497,15 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     )}
                 </RichPanelDetails>
                 <div className="px-3 pb-2">
-                    <Collapse isOpen={!panelCollapsed}>
-                        <IndexDistribution
-                            index={index}
-                            globalIndexingStatus={globalIndexingStatus}
-                            showStaleReason={(location) => showStaleReasons(index, location)}
-                            openFaulty={openFaulty}
-                        />
+                    <Collapse in={!panelCollapsed}>
+                        <div>
+                            <IndexDistribution
+                                index={index}
+                                globalIndexingStatus={globalIndexingStatus}
+                                showStaleReason={(location) => showStaleReasons(index, location)}
+                                openFaulty={openFaulty}
+                            />
+                        </div>
                     </Collapse>
                 </div>
             </RichPanel>

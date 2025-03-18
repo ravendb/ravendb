@@ -1,5 +1,7 @@
 import React from "react";
-import { Card, CardBody, Col, Form } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
+import Col from "react-bootstrap/Col";
 import "./GatherDebugInfo.scss";
 import { useForm, useWatch } from "react-hook-form";
 import {
@@ -33,7 +35,7 @@ function GatherDebugInfo() {
         <Col lg="6" md="9" sm="12" className="gather-debug-info content-margin">
             <Card>
                 <Form onSubmit={handleSubmit(onSave)}>
-                    <CardBody className="d-flex flex-center flex-column">
+                    <Card.Body className="d-flex flex-center flex-column">
                         <img src={infoPackageImg} alt="Info Package" width="120" />
                         <h3 className="mt-3">Create Debug Package</h3>
                         <p className="lead text-center w-75 fs-5">
@@ -89,7 +91,7 @@ function GatherDebugInfo() {
                                         />
                                         <ButtonWithSpinner
                                             type="submit"
-                                            color="primary"
+                                            variant="primary"
                                             className="rounded-pill align-self-center"
                                             icon="default"
                                             isSpinning={isDownloading}
@@ -100,7 +102,7 @@ function GatherDebugInfo() {
                                             <ButtonWithSpinner
                                                 className="rounded-pill align-self-center"
                                                 icon="cancel"
-                                                color="warning"
+                                                variant="warning"
                                                 isSpinning={abortData.isAborting}
                                                 onClick={abortData.toggleIsConfirmVisible}
                                             >
@@ -111,7 +113,7 @@ function GatherDebugInfo() {
                                 </div>
                             </div>
                         </div>
-                    </CardBody>
+                    </Card.Body>
                 </Form>
             </Card>
             <GatherDebugInfoAbortConfirm

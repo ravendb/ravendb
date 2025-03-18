@@ -2,13 +2,14 @@
 using System.IO;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Platform;
 
 namespace Raven.Server.Utils;
 
 public static class ThreadHelper
 {
-    public static bool TrySetThreadPriority(ThreadPriority priority, string threadName, Logger logger)
+    public static bool TrySetThreadPriority(ThreadPriority priority, string threadName, RavenLogger logger)
     {
         try
         {

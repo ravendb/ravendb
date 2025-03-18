@@ -2,6 +2,7 @@
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Logging;
 using Sparrow.Server.LowMemory;
 using Sparrow.Utils;
 
@@ -14,7 +15,7 @@ namespace Raven.Server.ServerWide.Memory
             Size currentlyInUse,
             bool isRunningOn32Bits,
             ServerMetricCacher metricCacher,
-            Logger logger,
+            RavenLogger logger,
             out ProcessMemoryUsage currentUsage)
         {
             if (isRunningOn32Bits)

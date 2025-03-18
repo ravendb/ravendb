@@ -10,12 +10,14 @@ interface UseVirtualTableWithLazyLoadingProps<T extends pagedResult<unknown>> {
     fetchData: FetchData<T>;
     overscan?: number;
     tableHeightInPx?: number;
+    dependencies?: any[];
 }
 
 export function useVirtualTableWithLazyLoading<T extends pagedResult<unknown>>({
     fetchData,
     overscan = 50,
     tableHeightInPx = window.innerHeight,
+    dependencies = [],
 }: UseVirtualTableWithLazyLoadingProps<T>) {
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +38,10 @@ export function useVirtualTableWithLazyLoading<T extends pagedResult<unknown>>({
         const result = await fetchData(0, initialItemsCount);
         setTotalResultCount(result.totalResultCount);
         setDataPreview(result.items);
-    }, []);
+
+        setLastSkipAfterLoad(0);
+        setIsOnBottom(initialItemsCount === totalResultCount);
+    }, dependencies);
 
     const asyncLoadData = useAsyncCallback(async (skip: number, take: number) => {
         const result = await fetchData(skip, take);
@@ -119,6 +124,7 @@ export function useVirtualTableWithLazyLoading<T extends pagedResult<unknown>>({
             bodyHeightInPx,
             getRowPositionY,
         },
+        reload: asyncLoadInitialData.execute,
     };
 }
 

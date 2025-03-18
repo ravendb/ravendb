@@ -1,7 +1,4 @@
-﻿using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.ETL.Providers.SQL.Test;
-using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.ServerWide.Context;
+﻿using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using SlowTests.Server.Documents.Migration;
 using System.Collections.Generic;
@@ -16,6 +13,9 @@ using System.Threading;
 using System;
 using Tests.Infrastructure;
 using Npgsql;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 
 namespace SlowTests.Server.Documents.ETL.SQL;
 
@@ -62,7 +62,7 @@ public class RavenDB_19518 : SqlAwareTestBase
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var testResult = SqlEtl.TestScript(
-                    new TestSqlEtlScript
+                    new TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>
                     {
                         PerformRolledBackTransaction = false,
                         DocumentId = docId,
@@ -90,7 +90,7 @@ loadToItems(data);"
                         }
                     }, database, database.ServerStore, context);
                 
-                var result = (SqlEtlTestScriptResult)testResult;
+                var result = (RelationalDatabaseEtlTestScriptResult)testResult;
                 Assert.Equal(0, result.TransformationErrors.Count);
                 Assert.Equal(0, result.LoadErrors.Count);
                 Assert.Equal(0, result.SlowSqlWarnings.Count);

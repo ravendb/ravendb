@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import { Col, Row, Card, Collapse, Form } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
@@ -21,7 +25,7 @@ import classNames from "classnames";
 import { tryHandleSubmit } from "components/utils/common";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import DocumentsCompressionConfiguration = Raven.Client.ServerWide.DocumentsCompressionConfiguration;
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { SelectOption } from "components/common/select/Select";
@@ -30,6 +34,7 @@ import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import RichAlert from "components/common/RichAlert";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function DocumentCompression() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -116,23 +121,23 @@ export default function DocumentCompression() {
                         <Form onSubmit={handleSubmit(onSave)}>
                             <div className="hstack mb-3">
                                 {hasDatabaseAdminAccess && (
-                                    <>
-                                        <div id="saveConfigButton" className="w-fit-content">
-                                            <ButtonWithSpinner
-                                                type="submit"
-                                                color="primary"
-                                                className="mb-3"
-                                                icon="save"
-                                                disabled={!formState.isDirty}
-                                                isSpinning={formState.isSubmitting}
-                                            >
-                                                Save
-                                            </ButtonWithSpinner>
-                                        </div>
-                                        {!hasDocumentsCompression && (
-                                            <FeatureNotAvailableInYourLicensePopover target="saveConfigButton" />
-                                        )}
-                                    </>
+                                    <ConditionalPopover
+                                        conditions={{
+                                            isActive: !hasDocumentsCompression,
+                                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                        }}
+                                    >
+                                        <ButtonWithSpinner
+                                            type="submit"
+                                            variant="primary"
+                                            className="mb-3"
+                                            icon="save"
+                                            disabled={!formState.isDirty}
+                                            isSpinning={formState.isSubmitting}
+                                        >
+                                            Save
+                                        </ButtonWithSpinner>
+                                    </ConditionalPopover>
                                 )}
                                 <FlexGrow />
                                 <a href={appUrl.forStatusStorageReport(databaseName)}>
@@ -152,18 +157,20 @@ export default function DocumentCompression() {
                                     customOptions={customCollectionOptions}
                                     isReadOnly={!hasDatabaseAdminAccess}
                                 />
-                                <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
-                                    <RichAlert variant="info" icon="documents-compression" className="mt-4">
-                                        <div>
-                                            Documents that will be compressed:
-                                            <ul className="m-0">
-                                                <li>New documents created in {infoTextSuffix}</li>
-                                                <li>
-                                                    Existing documents that are modified & saved in {infoTextSuffix}
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </RichAlert>
+                                <Collapse in={CompressAllCollections || Collections.length > 0}>
+                                    <div>
+                                        <RichAlert variant="info" icon="documents-compression" className="mt-4">
+                                            <div>
+                                                Documents that will be compressed:
+                                                <ul className="m-0">
+                                                    <li>New documents created in {infoTextSuffix}</li>
+                                                    <li>
+                                                        Existing documents that are modified & saved in {infoTextSuffix}
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </RichAlert>
+                                    </div>
                                 </Collapse>
                             </Card>
                             <Card

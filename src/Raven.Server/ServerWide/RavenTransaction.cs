@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
+using Raven.Server.Logging;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Impl;
 
 namespace Raven.Server.ServerWide
 {
     public class RavenTransaction : IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenTransaction>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<RavenTransaction>();
 
         public Transaction InnerTransaction;
 
@@ -79,8 +81,8 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Failed to raise notifications", e);
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error("Failed to raise notifications", e);
                 }
             }, this);
         }

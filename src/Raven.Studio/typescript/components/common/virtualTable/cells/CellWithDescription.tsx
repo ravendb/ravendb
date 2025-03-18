@@ -1,9 +1,10 @@
 import { CellContext } from "@tanstack/react-table";
 import copyToClipboard from "common/copyToClipboard";
 import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
-import { Button, UncontrolledPopover } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import React from "react";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type CellContextSubset<TData, TValue> = Pick<CellContext<TData, TValue>, "cell" | "getValue">;
 
@@ -25,32 +26,24 @@ export function CellWithDescription<TData, TValue>({
     };
 
     return (
-        <>
-            <CellValueWrapper className={cellClassName} id={`popover-${cell.id}`} getValue={getValue} />
-            <UncontrolledPopover
-                target={`popover-${cell.id}`}
-                trigger="hover"
-                delay={{
-                    show: 100,
-                    hide: 0,
-                }}
-                placement="top"
-                className="bs5"
-            >
-                <div className="p-1">
+        <PopoverWithHoverWrapper
+            message={
+                <>
                     <div>{description}</div>
                     {isActionsMenuVisible && (
                         <>
                             <span className="small-label">Actions</span>
                             <div>
-                                <Button onClick={handleCopyToClipboard} color="primary" title="Copy to clipboard">
+                                <Button onClick={handleCopyToClipboard} variant="primary" title="Copy to clipboard">
                                     <Icon icon="copy-to-clipboard" margin="m-0" />
                                 </Button>
                             </div>
                         </>
                     )}
-                </div>
-            </UncontrolledPopover>
-        </>
+                </>
+            }
+        >
+            <CellValueWrapper className={cellClassName} id={`popover-${cell.id}`} getValue={getValue} />
+        </PopoverWithHoverWrapper>
     );
 }

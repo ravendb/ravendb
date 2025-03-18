@@ -134,6 +134,14 @@ namespace Raven.Client.Documents.Indexes.Spatial
             return result;
         }
 
+        public static bool Equals(SpatialOptions left, SpatialOptions right)
+        {
+            if (left is null && right is null)
+                return true;
+
+            return left?.Equals(right) ?? false;
+        }
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))

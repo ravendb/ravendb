@@ -21,18 +21,20 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
     public bool S3Required { get; set; }
 
     public bool AzureRequired { get; set; }
+    
+    public bool SnowflakeRequired { get; set; }
 
     public override string Skip
     {
         get
         {
-            return ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
+            return ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired, snowflakeRequired: SnowflakeRequired);
         }
 
         set => _skip = value;
     }
 
-    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool s3Required, bool azureRequired)
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool s3Required, bool azureRequired, bool snowflakeRequired)
     {
         var s = RavenFactAttribute.ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
@@ -44,6 +46,9 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
         if (azureRequired && AzureRetryTheoryAttribute.ShouldSkip(out skip))
             return skip;
 
+        if (snowflakeRequired && SnowflakeHelper.ShouldSkip(out skip))
+            return skip;
+        
         return null;
     }
 

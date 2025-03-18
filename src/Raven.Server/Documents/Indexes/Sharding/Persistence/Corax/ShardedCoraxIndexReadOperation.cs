@@ -15,6 +15,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Corax;
 
 public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 {
-    public ShardedCoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
+    public ShardedCoraxIndexReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query)
     {
     }
@@ -175,5 +176,5 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
         return result;
     }
     
-    internal override void AssertCanOrderByScoreAutomaticallyWhenBoostingIsInvolved() => throw new NotSupportedInShardingException($"Ordering by score is not supported in sharding. You received this exception because your index has boosting, and we attempted to sort the results since the configuration `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)}` is enabled.");
+    internal override void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved() => throw new NotSupportedInShardingException($"Ordering by score is not supported in sharding. You received this exception because your index has boosting, and we attempted to sort the results since the configuration `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)}` is enabled or, when you used `vector.search` method in the query when having `{RavenConfiguration.GetKey(i => i.Indexing.CoraxVectorSearchOrderByScoreAutomatically)}` enabled.");
 }

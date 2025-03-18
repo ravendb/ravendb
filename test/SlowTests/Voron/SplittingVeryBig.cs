@@ -58,7 +58,7 @@ namespace SlowTests.Voron
             var buffer = new byte[1024 * 512];
             random.NextBytes(buffer);
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             using (var env = new StorageEnvironment(options))
@@ -76,7 +76,7 @@ namespace SlowTests.Voron
                 }
             }
 
-            options = StorageEnvironmentOptions.ForPath(DataDir);
+            options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             using (var env = new StorageEnvironment(options))

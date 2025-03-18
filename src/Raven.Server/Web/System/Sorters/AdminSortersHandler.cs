@@ -29,7 +29,7 @@ namespace Raven.Server.Web.System.Sorters
                     var sorterDefinition = JsonDeserializationServer.SorterDefinition((BlittableJsonReaderObject)sorterToAdd);
                     sorterDefinition.Name = sorterDefinition.Name?.Trim();
 
-                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                    if (RavenLogManager.Instance.IsAuditEnabled)
                     {
                         LogAuditFor("Server", "PUT", $"Sorter '{sorterDefinition.Name}' with definition: {sorterToAdd}");
                     }
@@ -59,7 +59,7 @@ namespace Raven.Server.Web.System.Sorters
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 LogAuditFor("Server", "DELETE", $"Sorter '{name}'");
             }

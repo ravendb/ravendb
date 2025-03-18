@@ -3,12 +3,16 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { RevertRevisionsFormData, revertRevisionsYupResolver } from "./RevertRevisionsValidation";
-import { Row, Col, Form, Card, CardBody, Label, FormGroup, InputGroup } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { Icon } from "components/common/Icon";
-import { FormDatePicker, FormInput, FormSelect } from "components/common/Form";
+import { FormDatePicker, FormGroup, FormInput, FormLabel, FormSelect } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import assertUnreachable from "components/utils/assertUnreachable";
 import moment from "moment";
@@ -89,7 +93,7 @@ export default function RevertRevisions() {
                     <div className="d-flex justify-content-between align-items-end">
                         <ButtonWithSpinner
                             type="submit"
-                            color="primary"
+                            variant="primary"
                             icon="revert-revisions"
                             disabled={!formState.isDirty}
                             isSpinning={asyncRevertRevisions.status === "loading"}
@@ -105,9 +109,9 @@ export default function RevertRevisions() {
                         </small>
                     </div>
                     <Card className="mt-3">
-                        <CardBody className="gap-4">
-                            <FormGroup>
-                                <Label for="pointInTime">Point in Time</Label>
+                        <Card.Body className="gap-4">
+                            <FormGroup className="mb-3">
+                                <FormLabel htmlFor="pointInTime">Point in Time</FormLabel>
                                 <FormDatePicker
                                     id="pointInTime"
                                     name="pointInTime"
@@ -123,7 +127,7 @@ export default function RevertRevisions() {
                                 />
                             </FormGroup>
                             <FormGroup>
-                                <Label for="timeWindow">Time Window</Label>
+                                <FormLabel htmlFor="timeWindow">Time Window</FormLabel>
                                 <InputGroup>
                                     <FormInput
                                         type="number"
@@ -143,11 +147,11 @@ export default function RevertRevisions() {
                                     />
                                 </InputGroup>
                             </FormGroup>
-                        </CardBody>
+                        </Card.Body>
                     </Card>
                     {hasDatabaseAdminAccess && (
                         <Card className="mt-3">
-                            <CardBody>
+                            <Card.Body>
                                 <FormCollectionsSelect
                                     control={control}
                                     collectionsFormName="collections"
@@ -157,7 +161,7 @@ export default function RevertRevisions() {
                                     allCollectionNames={allCollectionNames}
                                     setValue={setValue}
                                 />
-                            </CardBody>
+                            </Card.Body>
                         </Card>
                     )}
                 </Form>

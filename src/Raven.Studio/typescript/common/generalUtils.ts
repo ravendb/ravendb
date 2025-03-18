@@ -798,6 +798,14 @@ class genUtils {
     static normalizeString(value: string) {
         return value.toLowerCase().trim();
     }
+
+    static getSingleRoute(route: string | string[]): string {
+        if (!route) {
+            return null;
+        }
+        
+        return Array.isArray(route) ? route.filter((x) => x)[0] : route;
+    }
 } 
 
 export = genUtils;

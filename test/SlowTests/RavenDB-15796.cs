@@ -80,7 +80,7 @@ namespace SlowTests
                         {
                             var result = new InMemoryDocumentSessionOperations.SaveChangesData((InMemoryDocumentSessionOperations)session2);
                             result.SessionCommands.Add(new PutCommandDataWithBlittableJson("users/1", null, null, blittableJson));
-                            var sbc = new SingleNodeBatchCommand(DocumentConventions.Default, context, result.SessionCommands, result.Options);
+                            var sbc = new SingleNodeBatchCommand(DocumentConventions.Default, result.SessionCommands, result.Options);
                             await requestExecutor.ExecuteAsync(sbc, context);
                         }
                     }

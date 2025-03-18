@@ -5,10 +5,12 @@ import { useServices } from "components/hooks/useServices";
 import queryCriteria from "models/database/query/queryCriteria";
 import { useMemo, useState } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
-import { Card, InputGroup, Label } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import InputGroup from "react-bootstrap/InputGroup";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseCustomSorterTestResult from "components/pages/database/settings/customSorters/DatabaseCustomSorterTestResult";
+import { FormLabel } from "components/common/Form";
 
 interface DatabaseCustomSorterTestProps {
     name: string;
@@ -48,7 +50,7 @@ export default function DatabaseCustomSorterTest({ name }: DatabaseCustomSorterT
     return (
         <Card className="gap-2 p-4">
             <ButtonWithSpinner
-                color="primary"
+                variant="primary"
                 onClick={asyncTest.execute}
                 className="w-fit-content"
                 icon="play"
@@ -57,7 +59,7 @@ export default function DatabaseCustomSorterTest({ name }: DatabaseCustomSorterT
                 Run test
             </ButtonWithSpinner>
             <InputGroup className="vstack">
-                <Label>Enter test RQL:</Label>
+                <FormLabel>Enter test RQL:</FormLabel>
                 <AceEditor
                     value={testRql}
                     onChange={setTestRql}

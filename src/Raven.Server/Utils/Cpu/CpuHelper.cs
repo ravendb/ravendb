@@ -2,19 +2,21 @@
 using System.Diagnostics;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
+using Raven.Server.Logging;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.NotificationCenter;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Cpu
 {
     public static class CpuHelper
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineCpu>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer(typeof(CpuHelper));
 
         internal static ICpuUsageCalculator GetOSCpuUsageCalculator()
         {

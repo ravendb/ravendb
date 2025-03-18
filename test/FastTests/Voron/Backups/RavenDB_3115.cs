@@ -37,7 +37,7 @@ namespace FastTests.Voron.Backups
 
             new Random().NextBytes(bytes);
 
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir))))
+            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPathForTests(DataDir))))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -65,7 +65,7 @@ namespace FastTests.Voron.Backups
             }
 
             // restart
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir))))
+            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPathForTests(DataDir))))
             {
             }
         }

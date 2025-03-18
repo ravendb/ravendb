@@ -18,9 +18,7 @@ describe("IndexCleanup", function () {
         expect(screen.getByText("Review suggested merge")).toBeInTheDocument();
     });
     it("is license restricted", async () => {
-        const { screen, fireClick } = await rtlRender_WithWaitForLoad(<LicenseRestricted />);
-
-        await fireClick(screen.getByText("Info Hub"));
+        const { screen } = await rtlRender_WithWaitForLoad(<LicenseRestricted />);
 
         const licensingText = await screen.findByText(/Licensing/i);
         expect(licensingText).toBeInTheDocument();

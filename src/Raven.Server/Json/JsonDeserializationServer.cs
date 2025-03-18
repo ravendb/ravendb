@@ -4,8 +4,11 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Revisions;
@@ -38,7 +41,7 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Handlers.Processors.Replication;
@@ -125,7 +128,9 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ScriptResolver> ScriptResolver = GenerateJsonDeserializationRoutine<ScriptResolver>();
 
-        public static readonly Func<BlittableJsonReaderObject, TestSqlEtlScript> TestSqlEtlScript = GenerateJsonDeserializationRoutine<TestSqlEtlScript>();
+        public static readonly Func<BlittableJsonReaderObject, TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>> TestRelationalEtlScriptSql = GenerateJsonDeserializationRoutine<TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>>();
+        
+        public static readonly Func<BlittableJsonReaderObject, TestRelationalDatabaseEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>> TestRelationalEtlScriptSnowflake = GenerateJsonDeserializationRoutine<TestRelationalDatabaseEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>>();
 
         public static readonly Func<BlittableJsonReaderObject, TestRavenEtlScript> TestRavenEtlScript = GenerateJsonDeserializationRoutine<TestRavenEtlScript>();
 
@@ -278,6 +283,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TestIndexParameters> TestIndexParameters = GenerateJsonDeserializationRoutine<TestIndexParameters>();
 
         internal static readonly Func<BlittableJsonReaderObject, AutoSpatialOptions> AutoSpatialOptions = GenerateJsonDeserializationRoutine<AutoSpatialOptions>();
+        internal static readonly Func<BlittableJsonReaderObject, AutoVectorOptions> AutoVectorOptions = GenerateJsonDeserializationRoutine<AutoVectorOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, BlockingTombstoneDetails> BlockingTombstoneDetails = GenerateJsonDeserializationRoutine<BlockingTombstoneDetails>();
 
@@ -330,8 +336,6 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, DeleteDatabasesOperation.Parameters> DeleteDatabasesParameters = GenerateJsonDeserializationRoutine<DeleteDatabasesOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ReorderDatabaseMembersOperation.Parameters> MembersOrder = GenerateJsonDeserializationRoutine<ReorderDatabaseMembersOperation.Parameters>();
-
-            public static readonly Func<BlittableJsonReaderObject, RevisionsHandler.GetRevisionsSizeParameters> GetRevisionsSizeParameters = GenerateJsonDeserializationRoutine<RevisionsHandler.GetRevisionsSizeParameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ToggleDatabasesStateOperation.Parameters> DisableDatabaseToggleParameters = GenerateJsonDeserializationRoutine<ToggleDatabasesStateOperation.Parameters>();
 

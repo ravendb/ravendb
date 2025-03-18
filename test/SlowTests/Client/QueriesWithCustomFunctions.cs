@@ -2757,7 +2757,7 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
                             MaxWithSelector = u.Details.Max(d => d.Number),
                             Min = u.Roles.Min(),
                             MinWithSelector = u.Details.Min(d => d.Number),
-                            Reverse = u.Roles.Reverse(),
+                            Reverse = Enumerable.Reverse(u.Roles),
                             IndexOf = u.Roles.ToList().IndexOf("3"),
                             Concat = u.Roles.Concat(roles),
                             Distinct = u.Roles.Distinct(),

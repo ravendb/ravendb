@@ -71,7 +71,7 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUs
 
         users.Remove(userToDelete);
 
-        if (LoggingSource.AuditLog.IsInfoEnabled)
+        if (RavenLogManager.Instance.IsAuditEnabled)
         {
             RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"User '{userToDelete.Username}' in Postgres integration");
         }

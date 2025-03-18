@@ -1,7 +1,7 @@
 import { IndexSharedInfo } from "components/models/indexes";
 import ExportIndexesListItem from "components/pages/database/indexes/list/migration/export/ExportIndexesListItem";
 import React from "react";
-import { ListGroup } from "reactstrap";
+import ListGroup from "react-bootstrap/ListGroup";
 
 interface ExportIndexesListProps {
     availableIndexes: IndexSharedInfo[];

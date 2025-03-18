@@ -17,7 +17,7 @@ namespace FastTests.Corax.Bugs
         {
             const int size = 6;
             var buffer = new byte[3 * sizeof(long) * size];
-            var longBuffer = MemoryMarshal.Cast<byte, long>(buffer);
+            var longBuffer = MemoryMarshal.Cast<byte, long>(buffer.AsSpan());
 
             var left = longBuffer.Slice(size, size);
             left[0] = 5708;

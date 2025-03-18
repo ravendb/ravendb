@@ -46,6 +46,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             icon: "icon-sql-etl",
             colorClass: "sql-etl"
         },
+        "SnowflakeEtl": {
+            nameForUI: "Snowflake ETL",
+            icon: "icon-snowflake-etl",
+            colorClass: "snowflake-etl"
+        },
         "ElasticSearchEtl": {
             nameForUI: "Elasticsearch ETL",
             icon: "icon-elastic-search-etl",
@@ -65,6 +70,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             nameForUI: "Azure Queue Storage ETL",
             icon: "icon-azure-queue-storage-etl",
             colorClass: "azure-queue-storage-etl",
+        },
+        "AmazonSqsQueueEtl": {
+            nameForUI: "Amazon SQS ETL",
+            icon: "icon-amazon-sqs-etl",
+            colorClass: "amazon-sqs-etl",
         },
         "KafkaQueueSink": {
             nameForUI: "Kafka Sink",
@@ -301,6 +311,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "RabbitQueueEtl";
             case "AzureQueueStorageEtlCount":
                 return "AzureQueueStorageQueueEtl";
+            case "AmazonSqsEtlCount":
+                return "AmazonSqsQueueEtl";
             case "KafkaSinkCount":
                 return "KafkaQueueSink";
             case "RabbitMqSinkCount":
@@ -309,6 +321,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "Backup";
             case "SubscriptionCount":
                 return "Subscription";
+            case "SnowflakeEtlCount":
+                return "SnowflakeEtl";
             default:
                 throw new Error("Unknown task type count received:" + input);
             }

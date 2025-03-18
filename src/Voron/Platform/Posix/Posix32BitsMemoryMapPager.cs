@@ -8,11 +8,13 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Logging;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform.Posix;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Logging;
 using Voron.Util.Settings;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
@@ -35,7 +37,7 @@ namespace Voron.Platform.Posix
         public override long TotalAllocationSize => _totalAllocationSize;
 
         public Posix32BitsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null,
-            bool usePageProtection = false) : base(options, canPrefetchAhead: false, usePageProtection: usePageProtection, supportsUnmapping: false)
+            bool usePageProtection = false) : base(options, RavenLogManager.Instance.GetLoggerForVoron<Posix32BitsMemoryMapPager>(options, file.FullPath), canPrefetchAhead: false, usePageProtection: usePageProtection, supportsUnmapping: false)
         {
             _options = options;
             FileName = file;

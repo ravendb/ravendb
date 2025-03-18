@@ -7,7 +7,11 @@ import useBoolean from "components/hooks/useBoolean";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import React, { useEffect, useImperativeHandle, useState } from "react";
 import { AsyncStateStatus } from "react-async-hook";
-import { Button, Modal, ModalBody, FormGroup, Label, Input, ModalFooter, CloseButton } from "reactstrap";
+import Form from "react-bootstrap/Form";
+import Button from "react-bootstrap/Button";
+import { HrHeader } from "components/common/HrHeader";
+import Modal from "components/common/Modal";
+import FormGroup from "react-bootstrap/FormGroup";
 
 export interface PathSelectorStateRef {
     toggle: () => void;
@@ -70,7 +74,7 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
     return (
         <>
             <Button
-                color="link"
+                variant="link"
                 onClick={toggleIsModalOpen}
                 disabled={disabled}
                 title={selectorTitle || "Select path"}
@@ -79,18 +83,19 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                 <Icon icon="folder" margin="m-0" />
             </Button>
             {isModalOpen && (
-                <Modal isOpen wrapClassName="bs5" zIndex="var(--zindex-modal-1)" centered fade>
-                    <ModalBody>
-                        <div className="d-flex">
-                            <h3>{selectorTitle || "Select path"}</h3>
-                            <CloseButton className="ms-auto" onClick={toggleIsModalOpen} />
-                        </div>
-
-                        <hr className="m-0 mb-2" />
-
+                <Modal show onHide={toggleIsModalOpen}>
+                    <Modal.Header onCloseClick={toggleIsModalOpen} className="pb-0">
+                        <h3>{selectorTitle || "Select path"}</h3>
+                    </Modal.Header>
+                    <Modal.Body className="pt-0 mt-0">
+                        <HrHeader margin="mt-1 mb-2" />
                         <div className="hstack">
                             <strong className="flex-grow">
-                                <Button className="btn-link text-info p-0 border-0" onClick={() => setPathInput("")}>
+                                <Button
+                                    variant="secondary"
+                                    className="btn-link text-info p-0 border-0"
+                                    onClick={() => setPathInput("")}
+                                >
                                     Computer
                                 </Button>
                                 <span className="mx-1">&gt;</span>
@@ -98,6 +103,7 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                                     .filter((x) => x)
                                     .map((part) => (
                                         <Button
+                                            variant="secondary"
                                             key={part}
                                             className="btn-link text-info p-0 border-0"
                                             onClick={() => setPathToDir(part)}
@@ -109,8 +115,8 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                             </strong>
                             {canGoBack && (
                                 <Button
+                                    variant="link"
                                     className="btn-link"
-                                    color="link"
                                     onClick={() => setPathInput(parentDir)}
                                     title="Go back"
                                 >
@@ -133,24 +139,23 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                             />
                         </div>
 
-                        <FormGroup className="mt-2">
-                            <Label htmlFor="path-selector-input">Path</Label>
-                            <Input
-                                id="path-selector-input"
+                        <FormGroup controlId="path-selector-input" className="mt-2 mb-3">
+                            <Form.Label>Path</Form.Label>
+                            <Form.Control
                                 type="text"
                                 value={pathInput}
                                 onChange={(x) => setPathInput(x.currentTarget.value)}
                             />
                         </FormGroup>
-                    </ModalBody>
-                    <ModalFooter className="hstack gap-2 justify-content-end">
-                        <Button color="secondary" onClick={toggleIsModalOpen}>
+                    </Modal.Body>
+                    <Modal.Footer className="hstack gap-2 justify-content-end">
+                        <Button variant="secondary" onClick={toggleIsModalOpen}>
                             Cancel
                         </Button>
-                        <Button color="primary" onClick={handleSelectWithClose} disabled={disabled}>
+                        <Button variant="primary" onClick={handleSelectWithClose} disabled={disabled}>
                             Select
                         </Button>
-                    </ModalFooter>
+                    </Modal.Footer>
                 </Modal>
             )}
         </>
@@ -189,7 +194,7 @@ function PathList({ fetchStatus, paths, pathInput, setPathInput }: PathSelectorL
     };
 
     return paths.map((path) => (
-        <Button key={path} className="btn-link hstack gap-2" onClick={() => handleItemClick(path)}>
+        <Button key={path} variant="secondary" className="btn-link hstack gap-2" onClick={() => handleItemClick(path)}>
             <Icon icon="folder" color="info" />
             <span className="text-info text-start text-break">{formatPathInList(path, pathInput)}</span>
         </Button>

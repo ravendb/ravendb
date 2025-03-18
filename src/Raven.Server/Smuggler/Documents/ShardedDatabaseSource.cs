@@ -2,6 +2,7 @@
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -9,7 +10,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly ShardedDocumentDatabase _database;
 
-        public ShardedDatabaseSource(ShardedDocumentDatabase database, long startDocumentEtag, long startRaftIndex, Logger logger) 
+        public ShardedDatabaseSource(ShardedDocumentDatabase database, long startDocumentEtag, long startRaftIndex, RavenLogger logger) 
             : base(database, startDocumentEtag, startRaftIndex, logger)
         {
             _database = database;

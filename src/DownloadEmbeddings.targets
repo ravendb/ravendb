@@ -1,0 +1,54 @@
+<Project>
+    <PropertyGroup>
+        <LocalEmbeddingsModelCacheDir Condition="'$(LocalEmbeddingsModelCacheDir)' == ''">$(MSBuildThisFileDirectory)..\.cache\</LocalEmbeddingsModelCacheDir>
+
+        <!-- To use a custom model, developers must specify LocalEmbeddingsModelName and either LocalEmbeddingsModelUrl or LocalEmbeddingsModelPath -->
+        <!-- (likewise with LocalEmbeddingsVocabUrl or LocalEmbeddingsVocabPath) -->
+        <!-- Then at runtime, pass the model name to the LocalEmbeddings constructor, and it will use the corresponding model+vocab pair. -->
+        <LocalEmbeddingsModelName Condition="'$(LocalEmbeddingsModelName)' == ''">bge-micro-v2</LocalEmbeddingsModelName>
+
+        <!--
+            bge-micro-v2 comes from https://huggingface.co/TaylorAI/bge-micro-v2, which is forked to
+            https://huggingface.co/SmartComponents/bge-micro-v2 purely to ensure it remains available.
+            The license for the model remains MIT, but it's not redistributed in this repo or the NuGet
+            package anyway, since it's downloaded at build time.
+        -->
+        <LocalEmbeddingsModelUrl Condition="'$(LocalEmbeddingsModelUrl)' == ''">https://huggingface.co/SmartComponents/bge-micro-v2/resolve/72908b7/onnx/model_quantized.onnx</LocalEmbeddingsModelUrl>
+        <LocalEmbeddingsVocabUrl Condition="'$(LocalEmbeddingsVocabUrl)' == ''">https://huggingface.co/SmartComponents/bge-micro-v2/resolve/72908b7/vocab.txt</LocalEmbeddingsVocabUrl>
+
+        <!-- Or, forget the URLs and just give paths to files on disk -->
+        <LocalEmbeddingsModelPath Condition="'$(LocalEmbeddingsModelPath)' == ''">$(LocalEmbeddingsModelCacheDir)$([System.Text.RegularExpressions.Regex]::Replace($(LocalEmbeddingsModelUrl), "[^a-zA-Z0-9\.]", "_"))</LocalEmbeddingsModelPath>
+        <LocalEmbeddingsVocabPath Condition="'$(LocalEmbeddingsVocabPath)' == ''">$(LocalEmbeddingsModelCacheDir)$([System.Text.RegularExpressions.Regex]::Replace($(LocalEmbeddingsVocabUrl), "[^a-zA-Z0-9\.]", "_"))</LocalEmbeddingsVocabPath>
+    </PropertyGroup>
+
+    <Target Name="AttachEmbeddingsContentFiles" BeforeTargets="AssignTargetPaths" DependsOnTargets="AcquireLocalEmbeddingsModel; AcquireLocalEmbeddingsVocab">
+        <ItemGroup>
+            <Content CopyToOutputDirectory="PreserveNewest"
+                     Include="$(LocalEmbeddingsModelPath)"
+                     TargetPath="LocalEmbeddings\$(LocalEmbeddingsModelName)\model.onnx" />
+            <Content CopyToOutputDirectory="PreserveNewest"
+                     Include="$(LocalEmbeddingsVocabPath)"
+                     TargetPath="LocalEmbeddings\$(LocalEmbeddingsModelName)\vocab.txt" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="AcquireLocalEmbeddingsModel" Condition="!Exists('$(LocalEmbeddingsModelPath)')">
+        <PropertyGroup>
+            <_TempFilePath>$([System.IO.Path]::GetTempFileName())</_TempFilePath>
+        </PropertyGroup>
+        <DownloadFile SourceUrl="$(LocalEmbeddingsModelUrl)"
+                      DestinationFolder="$([System.IO.Path]::GetDirectoryName($(_TempFilePath)))"
+                      DestinationFileName="$([System.IO.Path]::GetFileName($(_TempFilePath)))" />
+        <Move SourceFiles="$(_TempFilePath)" DestinationFiles="$(LocalEmbeddingsModelPath)" />
+    </Target>
+
+    <Target Name="AcquireLocalEmbeddingsVocab" Condition="!Exists('$(LocalEmbeddingsVocabPath)')">
+        <PropertyGroup>
+            <_TempFilePath>$([System.IO.Path]::GetTempFileName())</_TempFilePath>
+        </PropertyGroup>
+        <DownloadFile SourceUrl="$(LocalEmbeddingsVocabUrl)"
+                      DestinationFolder="$([System.IO.Path]::GetDirectoryName($(_TempFilePath)))"
+                      DestinationFileName="$([System.IO.Path]::GetFileName($(_TempFilePath)))" />
+        <Move SourceFiles="$(_TempFilePath)" DestinationFiles="$(LocalEmbeddingsVocabPath)" />
+    </Target>
+</Project>

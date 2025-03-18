@@ -1,5 +1,6 @@
 ﻿import React from "react";
-import { Card, CardBody } from "reactstrap";
+import Card from "react-bootstrap/Card";
+
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 
 export default {
@@ -10,7 +11,7 @@ export default {
 export function Type() {
     return (
         <Card>
-            <CardBody>
+            <Card.Body>
                 <h1>Header 1</h1>
                 <h2>Header 2</h2>
                 <h3>Header 3</h3>
@@ -22,7 +23,7 @@ export function Type() {
                 <p className="text-muted">Text muted</p>
                 <p className="text-emphasis">Text emphasis</p>
                 <p className="lead">Text lead</p>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

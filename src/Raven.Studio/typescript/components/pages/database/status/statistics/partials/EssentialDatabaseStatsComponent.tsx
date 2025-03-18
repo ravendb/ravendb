@@ -1,6 +1,7 @@
-﻿import React from "react";
-import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
-import { Button, Card, Col, Row, UncontrolledPopover } from "reactstrap";
+﻿import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
+import Card from "react-bootstrap/Card";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { LazyLoad } from "components/common/LazyLoad";
 import {
     refresh,
@@ -9,6 +10,8 @@ import {
 import { useAppDispatch, useAppSelector } from "components/store";
 import { LoadError } from "components/common/LoadError";
 import { Icon } from "components/common/Icon";
+import Button from "react-bootstrap/Button";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface EssentialDatabaseStatsComponentProps {
     rawJsonUrl: string;
@@ -34,7 +37,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                 <Col>
                     <h2 className="on-base-background">
                         General Database Stats
-                        <Button color="link" target="_blank" href={rawJsonUrl} title="Show raw output">
+                        <Button variant="link" target="_blank" href={rawJsonUrl} title="Show raw output">
                             <Icon icon="json" margin="m-0" />
                         </Button>
                     </h2>
@@ -160,26 +163,24 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Icon icon="timeseries-settings" margin="m-0" />
                     <div className="name">
                         <span>Time Series Segments Count</span>
-                        <span id="js-timeseries-segments">
-                            <Icon icon="info" color="info" margin="ms-1" />
-                        </span>
-                        <UncontrolledPopover
-                            target="js-timeseries-segments"
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    <div className="mb-2">
+                                        <strong>Time series</strong> data is stored within <strong>segments</strong>.
+                                        Each segment contains consecutive entries from the same time series.
+                                    </div>
+                                    <div>
+                                        Segments&apos; maximum size is 2KB. Segments are added as needed when the number
+                                        of entries grows, or when a certain amount of time has passed since the last
+                                        entry.
+                                    </div>
+                                </>
+                            }
                             placement="right"
-                            trigger="hover"
-                            container="js-timeseries-segments"
                         >
-                            <div className="p-3">
-                                <div className="mb-2">
-                                    <strong>Time series</strong> data is stored within <strong>segments</strong>. Each
-                                    segment contains consecutive entries from the same time series.
-                                </div>
-                                <div>
-                                    Segments&apos; maximum size is 2KB. Segments are added as needed when the number of
-                                    entries grows, or when a certain amount of time has passed since the last entry.
-                                </div>
-                            </div>
-                        </UncontrolledPopover>
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
                     </div>
                     <LazyLoad active={!stats}>
                         <div className="value">

@@ -95,7 +95,7 @@ namespace Raven.Server.Utils
 
         public void WriteStartArray()
         {
-            _inner.WriteStartArray(); 
+            _inner.WriteStartArray();
         }
 
         public void WriteEndArray()
@@ -145,6 +145,17 @@ namespace Raven.Server.Utils
                 _isOnlyWrite = false;
                 WriteComma();
             }
+            _inner.WritePropertyName(prop);
+        }
+
+        public void WritePropertyName(LazyStringValue prop)
+        {
+            if (_isOnlyWrite)
+            {
+                _isOnlyWrite = false;
+                WriteComma();
+            }
+
             _inner.WritePropertyName(prop);
         }
 

@@ -114,7 +114,7 @@ namespace Voron.Impl.Paging
 
         public override long NumberOfAllocatedPages => Inner.NumberOfAllocatedPages;
 
-        public CryptoPager(AbstractPager inner) : base(inner.Options, inner.UsePageProtection)
+        public CryptoPager(AbstractPager inner) : base(inner.Options, inner.Logger, inner.UsePageProtection)
         {
             if (inner.Options.Encryption.IsEnabled == false)
                 throw new InvalidOperationException("Cannot use CryptoPager if IsEnabled is false (no key defined)");

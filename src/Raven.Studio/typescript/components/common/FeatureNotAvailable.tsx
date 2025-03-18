@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 import { EmptySet } from "./EmptySet";
 
 interface FeatureNotAvailableProps {
@@ -14,7 +14,7 @@ export default function FeatureNotAvailable(props: FeatureNotAvailableProps) {
             <EmptySet icon="disabled" color="warning">
                 <div className="vstack gap-3">
                     <span>
-                        <Badge pill color="faded-warning">
+                        <Badge pill bg="faded-warning">
                             {badgeText ?? "Feature not available"}
                         </Badge>
                     </span>

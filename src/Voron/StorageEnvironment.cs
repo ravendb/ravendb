@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -34,6 +35,7 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Logging;
 using Voron.Schema;
 using Voron.Util;
 using Voron.Util.Conversion;
@@ -116,7 +118,7 @@ namespace Voron
         public DateTime LastWorkTime;
 
         public bool Disposed;
-        private readonly Logger _log;
+        private readonly RavenLogger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
         public int TimeToSyncAfterFlushInSec;
 
@@ -137,7 +139,7 @@ namespace Voron
             {
                 SelfReference.Owner = this;
                 SelfReference.WeekReference = new WeakReference<StorageEnvironment>(this);
-                _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath.FullPath);
+                _log = RavenLogManager.Instance.GetLoggerForVoron<StorageEnvironment>(options, options.BasePath.FullPath);
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
@@ -189,8 +191,8 @@ namespace Voron
 
         ~StorageEnvironment()
         {
-            if (_log.IsOperationsEnabled)
-                _log.Operations($"Finalizer of storage environment was called. Env: {this}");
+            if (_log.IsErrorEnabled)
+                _log.Error($"Finalizer of storage environment was called. Env: {this}");
 
             try
             {
@@ -198,8 +200,8 @@ namespace Voron
             }
             catch (Exception e)
             {
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Failed to dispose storage environment via finalizer. Env: {this}", e);
+                if (_log.IsErrorEnabled)
+                    _log.Error($"Failed to dispose storage environment via finalizer. Env: {this}", e);
             }
         }
 
@@ -266,9 +268,9 @@ namespace Voron
 
                 string message = $"{nameof(IdleFlushTimer)} failed (numberOfFailures: {numberOfFailures}), unable to schedule flush / syncs of data file. Will be restarted on new write transaction";
 
-                if (env._log.IsOperationsEnabled)
+                if (env._log.IsErrorEnabled)
                 {
-                    env._log.Operations(message, e);
+                    env._log.Error(message, e);
                 }
 
                 try
@@ -290,10 +292,10 @@ namespace Voron
         {
             var header = stackalloc TransactionHeader[1];
 
-            Options.AddToInitLog?.Invoke(LogMode.Information, "Starting Recovery");
+            Options.AddToInitLog?.Invoke(LogLevel.Debug, "Starting Recovery");
             bool hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
             var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
-            Options.AddToInitLog?.Invoke(LogMode.Information, $"Recovery Ended {successString}");
+            Options.AddToInitLog?.Invoke(LogLevel.Debug, $"Recovery Ended {successString}");
 
             if (hadIntegrityIssues)
             {

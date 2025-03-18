@@ -7,14 +7,23 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to retrieve performance statistics for some or all indexes.
+    /// </summary>
     public sealed class GetIndexPerformanceStatisticsOperation : IMaintenanceOperation<IndexPerformanceStats[]>
     {
         private readonly string[] _indexNames;
 
+        /// <summary>
+        /// Operation to retrieve performance statistics for all indexes.
+        /// </summary>
         public GetIndexPerformanceStatisticsOperation()
         {
         }
 
+        /// <inheritdoc cref="GetIndexPerformanceStatisticsOperation"/>
+        /// <param name="indexNames">An array of index names for which to retrieve performance statistics.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="indexNames"/> is null.</exception>
         public GetIndexPerformanceStatisticsOperation(string[] indexNames)
         {
             _indexNames = indexNames ?? throw new ArgumentNullException(nameof(indexNames));

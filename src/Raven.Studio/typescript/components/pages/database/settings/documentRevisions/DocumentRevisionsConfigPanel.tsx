@@ -1,4 +1,3 @@
-import React from "react";
 import {
     RichPanel,
     RichPanelStatus,
@@ -10,7 +9,7 @@ import {
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
-import { Button, UncontrolledPopover } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import {
     DocumentRevisionsConfig,
@@ -25,6 +24,7 @@ import { Checkbox } from "components/common/Checkbox";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import generalUtils from "common/generalUtils";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
@@ -85,7 +85,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                         {hasDatabaseAdminAccess && (
                             <>
                                 <Button
-                                    color={config.Disabled ? "success" : "secondary"}
+                                    variant={config.Disabled ? "success" : "secondary"}
                                     onClick={onToggle}
                                     title={`Click to ${
                                         config.Disabled ? "enable" : "disable"
@@ -95,12 +95,12 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                                     {config.Disabled ? "Enable" : "Disable"}
                                 </Button>
 
-                                <Button color="secondary" onClick={onEdit} title="Edit this revision configuration">
+                                <Button variant="secondary" onClick={onEdit} title="Edit this revision configuration">
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                                 {onDelete && (
                                     <Button
-                                        color="danger"
+                                        variant="danger"
                                         onClick={() => {
                                             reportEvent("revisions", "remove");
                                             onDelete();
@@ -173,12 +173,11 @@ function DefaultConfigInfoIcon({ name }: { name: DocumentRevisionsConfigName }) 
         return null;
     }
 
-    const id = "info-" + name.split(" ").join("-");
-
     return (
-        <>
-            <UncontrolledPopover target={id} placement="left" trigger="hover">
-                <ul className="margin-top margin-top-xs">
+        <PopoverWithHoverWrapper
+            placement="left"
+            message={
+                <ul>
                     {name === documentRevisionsConfigNames.defaultConflicts ? (
                         <>
                             <li>
@@ -206,8 +205,9 @@ function DefaultConfigInfoIcon({ name }: { name: DocumentRevisionsConfigName }) 
                         </>
                     )}
                 </ul>
-            </UncontrolledPopover>
-            <Icon id={id} icon="info" />
-        </>
+            }
+        >
+            <Icon icon="info" />
+        </PopoverWithHoverWrapper>
     );
 }

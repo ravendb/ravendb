@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
@@ -199,6 +200,7 @@ public class AutoToStaticIndexConverter
                     {
                         HandleFieldIndexing(f.FieldName, f.Indexing);
                         HandleSpatial(f.FieldName, kvp.Value.Spatial, context);
+                        HandleVector(f.FieldName, kvp.Value.Vector, context);
                         HandleStorage(f.FieldName, kvp.Value.Storage);
                         HandleSuggestions(f.FieldName, kvp.Value.Suggestions);
                     }
@@ -280,6 +282,17 @@ public class AutoToStaticIndexConverter
 
                 var options = GetFieldOptions(realFieldName);
                 options.Spatial = spatialOptions;
+            }
+            
+            void HandleVector(string fieldName, AutoVectorOptions vectorOptions, AutoIndexConversionContext context)
+            {
+                if (vectorOptions == null)
+                    return;
+
+                var realFieldName = context.FieldNameMapping[fieldName];
+
+                var options = GetFieldOptions(realFieldName);
+                options.Vector = vectorOptions;
             }
         }
     }
@@ -410,6 +423,7 @@ public class AutoToStaticIndexConverter
                     HandleStorage(f.FieldName, kvp.Value.Storage);
                     HandleSuggestions(f.FieldName, kvp.Value.Suggestions);
                     HandleSpatial(f.FieldName, kvp.Value.Spatial, context);
+                    HandleVector(f.FieldName, kvp.Value.Vector, context);
                 }
             }
 
@@ -446,6 +460,18 @@ public class AutoToStaticIndexConverter
                     return;
 
                 sb.AppendLine($"Suggestion(x => x.{fieldName});");
+            }
+
+            void HandleVector(string fieldName, AutoVectorOptions vectorOptions, AutoIndexConversionContext context)
+            {
+                if (vectorOptions == null)
+                    return;
+                
+                var realFieldName = context.FieldNameMapping[fieldName];
+                sb.Append($"Vector(\"{realFieldName}\", factory => factory");
+                sb.Append($".SourceEmbedding({nameof(VectorEmbeddingType)}.{vectorOptions.SourceEmbeddingType})");
+                sb.Append($".DestinationEmbedding({nameof(VectorEmbeddingType)}.{vectorOptions.DestinationEmbeddingType})");
+                sb.Append(");");
             }
 
             void HandleSpatial(string fieldName, AutoSpatialOptions spatial, AutoIndexConversionContext context)
@@ -515,6 +541,7 @@ public class AutoToStaticIndexConverter
             throw new NotSupportedException("Cannot convert auto index with 0 fields");
 
         var spatialCounter = 0;
+        var vectorCounter = 0;
         foreach (var kvp in autoIndex.MapFields)
         {
             var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
@@ -524,7 +551,7 @@ public class AutoToStaticIndexConverter
                 if (f.FieldName.Contains("[]"))
                     throw new NotSupportedException($"Invalid field name '{f.FieldName}'.");
 
-                if (kvp.Value.Spatial == null)
+                if (kvp.Value.Spatial == null && kvp.Value.Vector == null)
                 {
                     if (f.FieldName.StartsWith("spatial_"))
                         throw new NotSupportedException($"Invalid field name '{f.FieldName}' with no spatial information.");
@@ -549,7 +576,7 @@ public class AutoToStaticIndexConverter
                             throw new ArgumentOutOfRangeException(nameof(kvp.Value.Aggregation), $"Not supported aggregation operation '{kvp.Value.Aggregation}'.");
                     }
                 }
-                else
+                else if (kvp.Value.Spatial != null)
                 {
                     var newFieldName = spatialCounter == 0 ? "Coordinates" : $"Coordinates{spatialCounter}";
                     context.FieldNameMapping.Add(f.FieldName, newFieldName);
@@ -565,6 +592,13 @@ public class AutoToStaticIndexConverter
                     }
 
                     spatialCounter++;
+                }
+                else if (kvp.Value.Vector != null)
+                {
+                    var newFieldName = vectorCounter == 0 ? "Vector" : $"Vector{vectorCounter}";
+                    context.FieldNameMapping.Add(f.FieldName, newFieldName);
+                    sb.AppendLine($"{newFieldName} = {nameof(AbstractIndexCreationTask.CreateVector)}(item.{kvp.Value.Vector.SourceFieldName})");
+                    vectorCounter++;
                 }
             }
         }

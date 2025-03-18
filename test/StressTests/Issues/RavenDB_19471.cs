@@ -26,7 +26,7 @@ namespace StressTests.Issues
         [NightlyBuildFact]
         public void ValidPagesShouldNotChangeOnPageOrChecksumInvalidException()
         {
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             Configure(options);
             using (var env = new StorageEnvironment(options))
             {
@@ -84,7 +84,7 @@ namespace StressTests.Issues
                 fileStream.Write(buffer, 0, buffer.Length);
             }
 
-            options = StorageEnvironmentOptions.ForPath(DataDir);
+            options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             Configure(options);
             using (var env = new StorageEnvironment(options))
             {

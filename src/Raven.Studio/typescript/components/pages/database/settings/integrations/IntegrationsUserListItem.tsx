@@ -7,10 +7,13 @@ import {
     RichPanelActions,
     RichPanelDetails,
 } from "components/common/RichPanel";
-import { Button, Collapse, Form, InputGroup, Label } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
+
 import { Icon } from "components/common/Icon";
-import { FormInput } from "components/common/Form";
-import { HStack } from "components/common/HStack";
+import { FormInput, FormLabel } from "components/common/Form";
+import { HStack } from "components/common/utilities/HStack";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
@@ -24,6 +27,7 @@ import { tryHandleSubmit } from "components/utils/common";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import copyToClipboard from "common/copyToClipboard";
+import Button from "react-bootstrap/Button";
 
 interface IntegrationsUserListProps {
     initialUsername: string;
@@ -105,7 +109,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                                 <>
                                     <ButtonWithSpinner
                                         type="submit"
-                                        color="success"
+                                        variant="success"
                                         title="Save credentials"
                                         isSpinning={formState.isSubmitting}
                                         icon="save"
@@ -114,7 +118,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                                     </ButtonWithSpinner>
                                     <Button
                                         type="button"
-                                        color="secondary"
+                                        variant="secondary"
                                         title="Discard changes"
                                         onClick={removeUser}
                                     >
@@ -125,7 +129,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                             ) : (
                                 <ButtonWithSpinner
                                     type="button"
-                                    color="danger"
+                                    variant="danger"
                                     title="Delete credentials"
                                     onClick={onDeleteUser}
                                     isSpinning={asyncDeleteUser.loading}
@@ -135,51 +139,58 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                         </RichPanelActions>
                     )}
                 </RichPanelHeader>
-                <Collapse isOpen={isNew}>
-                    <RichPanelDetails className="vstack gap-3 p-4">
-                        <InputGroup className="vstack mb-1">
-                            <Label>Username</Label>
-                            <FormInput
-                                control={control}
-                                name="username"
-                                type="text"
-                                placeholder="Enter your username"
-                                autoComplete="off"
-                            />
-                        </InputGroup>
-                        <InputGroup className="vstack">
-                            <Label>Password</Label>
-                            <HStack className="gap-1">
-                                <div className="position-relative flex-grow">
-                                    <FormInput
-                                        control={control}
-                                        name="password"
-                                        type="password"
-                                        placeholder="Enter your password"
-                                        passwordPreview
-                                    />
-                                </div>
-                                <ButtonWithSpinner
-                                    type="button"
-                                    title="Generate a random password"
-                                    onClick={asyncGeneratePassword.execute}
-                                    icon="random"
-                                    isSpinning={asyncGeneratePassword.loading}
-                                >
-                                    Generate password
-                                </ButtonWithSpinner>
-                                <Button
-                                    type="button"
-                                    title="Copy to clipboard"
-                                    onClick={() =>
-                                        copyToClipboard.copy(formValues.password, "Password was copied to clipboard.")
-                                    }
-                                >
-                                    <Icon icon="copy-to-clipboard" margin="m-0" />
-                                </Button>
-                            </HStack>
-                        </InputGroup>
-                    </RichPanelDetails>
+                <Collapse in={isNew}>
+                    <div>
+                        <RichPanelDetails className="vstack gap-3 p-4">
+                            <InputGroup className="vstack mb-1">
+                                <FormLabel>Username</FormLabel>
+                                <FormInput
+                                    control={control}
+                                    name="username"
+                                    type="text"
+                                    placeholder="Enter your username"
+                                    autoComplete="off"
+                                />
+                            </InputGroup>
+                            <InputGroup className="vstack">
+                                <FormLabel>Password</FormLabel>
+                                <HStack className="gap-1">
+                                    <div className="position-relative flex-grow">
+                                        <FormInput
+                                            control={control}
+                                            name="password"
+                                            type="password"
+                                            placeholder="Enter your password"
+                                            passwordPreview
+                                        />
+                                    </div>
+                                    <ButtonWithSpinner
+                                        variant="secondary"
+                                        type="button"
+                                        title="Generate a random password"
+                                        onClick={asyncGeneratePassword.execute}
+                                        icon="random"
+                                        isSpinning={asyncGeneratePassword.loading}
+                                    >
+                                        Generate password
+                                    </ButtonWithSpinner>
+                                    <Button
+                                        variant="secondary"
+                                        type="button"
+                                        title="Copy to clipboard"
+                                        onClick={() =>
+                                            copyToClipboard.copy(
+                                                formValues.password,
+                                                "Password was copied to clipboard."
+                                            )
+                                        }
+                                    >
+                                        <Icon icon="copy-to-clipboard" margin="m-0" />
+                                    </Button>
+                                </HStack>
+                            </InputGroup>
+                        </RichPanelDetails>
+                    </div>
                 </Collapse>
             </Form>
         </RichPanel>

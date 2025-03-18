@@ -2,6 +2,7 @@ import getCloudBackupCredentialsFromLinkCommand from "commands/resources/getClou
 import getDatabaseLocationCommand from "commands/resources/getDatabaseLocationCommand";
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getRestorePointsCommand from "commands/resources/getRestorePointsCommand";
+import sendFeedbackCommand from "commands/resources/sendFeedbackCommand";
 import validateNameCommand from "commands/resources/validateNameCommand";
 
 export default class ResourcesService {
@@ -41,5 +42,9 @@ export default class ResourcesService {
         ...args: ConstructorParameters<typeof getCloudBackupCredentialsFromLinkCommand>
     ) {
         return new getCloudBackupCredentialsFromLinkCommand(...args).execute();
+    }
+
+    async sendFeedback(...args: ConstructorParameters<typeof sendFeedbackCommand>) {
+        return new sendFeedbackCommand(...args).execute();
     }
 }

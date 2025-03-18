@@ -33,7 +33,7 @@ export function useStudioSearchOmniSearch(searchQuery: string) {
     const handleOmniSearch = useCallback(() => {
         const searchResults = search(searchQuery.trim());
         const resultTypes = new Set(searchResults.items.map((x) => x.item.type));
-        const newResult = JSON.parse(JSON.stringify(emptyResult));
+        const newResult: StudioSearchResult = JSON.parse(JSON.stringify(emptyResult));
 
         for (const resultType of resultTypes) {
             const resultsByType = searchResults.items.filter((x) => x.item.type === resultType);
@@ -50,6 +50,9 @@ export function useStudioSearchOmniSearch(searchQuery: string) {
                 case "document":
                 case "documentsMenuItem":
                     newResult.database.documents = items;
+                    break;
+                case "revision":
+                    newResult.database.revisions = items;
                     break;
                 case "collection":
                     newResult.database.collections = items;

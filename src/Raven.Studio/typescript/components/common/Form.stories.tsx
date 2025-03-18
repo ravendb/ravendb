@@ -1,24 +1,27 @@
 import { Meta } from "@storybook/react";
 import {
-    FormInput,
+    FormAceEditor,
     FormCheckbox,
     FormCheckboxes,
-    FormRadio,
     FormDatePicker,
     FormDurationPicker,
+    FormInput,
+    FormPathSelector,
+    FormRadio,
     FormRadioToggleWithIcon,
     FormSelect,
     FormSelectCreatable,
     FormSwitch,
-    FormAceEditor,
-    FormPathSelector,
 } from "./Form";
 import { useEffect } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Button, Input, InputGroup, InputGroupText, Label } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import ReactBootstrapForm from "react-bootstrap/Form";
+import Button from "react-bootstrap/Button";
+import { Icon } from "components/common/Icon";
 
 export default {
     title: "Bits/Form",
@@ -52,41 +55,41 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
     return (
         <div className="vstack gap-4 w-50">
             <div>
-                <Label>Input text</Label>
+                <ReactBootstrapForm.Label>Input text</ReactBootstrapForm.Label>
                 <FormInput type="text" control={control} name="inputText" />
             </div>
             <div>
                 <InputGroup>
-                    <InputGroupText>@</InputGroupText>
-                    <Input placeholder="username" />
+                    <InputGroup.Text>@</InputGroup.Text>
+                    <ReactBootstrapForm.Control placeholder="username" />
                 </InputGroup>
                 <br />
                 <InputGroup>
-                    <InputGroupText>
+                    <InputGroup.Text>
                         <FormCheckbox control={control} name="inputGroupCheckbox" />
-                    </InputGroupText>
-                    <Input placeholder="Check it out" />
+                    </InputGroup.Text>
+                    <ReactBootstrapForm.Control placeholder="Check it out" />
                 </InputGroup>
                 <br />
                 <InputGroup>
-                    <Input placeholder="username" />
-                    <InputGroupText>@example.com</InputGroupText>
+                    <ReactBootstrapForm.Control placeholder="username" />
+                    <InputGroup.Text>@example.com</InputGroup.Text>
                 </InputGroup>
                 <br />
                 <InputGroup>
-                    <InputGroupText>$</InputGroupText>
-                    <InputGroupText>$</InputGroupText>
-                    <Input placeholder="Dolla dolla billz yo!" />
-                    <InputGroupText>$</InputGroupText>
-                    <InputGroupText>$</InputGroupText>
+                    <InputGroup.Text>$</InputGroup.Text>
+                    <InputGroup.Text>$</InputGroup.Text>
+                    <ReactBootstrapForm.Control placeholder="Dolla dolla billz yo!" />
+                    <InputGroup.Text>$</InputGroup.Text>
+                    <InputGroup.Text>$</InputGroup.Text>
                 </InputGroup>
             </div>
             <div>
-                <Label>Input number</Label>
+                <ReactBootstrapForm.Label>Input number</ReactBootstrapForm.Label>
                 <FormInput type="number" control={control} name="inputNumber" />
             </div>
             <div>
-                <Label>Input with password preview</Label>
+                <ReactBootstrapForm.Label>Input with password preview</ReactBootstrapForm.Label>
                 <FormInput type="password" control={control} name="inputPasswordPreview" passwordPreview />
             </div>
             <div className="mt-3">
@@ -95,7 +98,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 </FormCheckbox>
             </div>
             <div className="mt-2">
-                <Label>Checkboxes</Label>
+                <ReactBootstrapForm.Label>Checkboxes</ReactBootstrapForm.Label>
                 <FormCheckboxes
                     control={control}
                     name="inputCheckboxes"
@@ -116,7 +119,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 </FormRadio>
             </div>
             <div>
-                <Label>Radio toggle with icon</Label>
+                <ReactBootstrapForm.Label>Radio toggle with icon</ReactBootstrapForm.Label>
                 <FormRadioToggleWithIcon
                     control={control}
                     name="inputRadioToggleWithIcon"
@@ -125,7 +128,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 />
             </div>
             <div>
-                <Label>Select</Label>
+                <ReactBootstrapForm.Label>Select</ReactBootstrapForm.Label>
                 <FormSelect
                     control={control}
                     name="inputSelect"
@@ -136,7 +139,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 />
             </div>
             <div>
-                <Label>Select creatable</Label>
+                <ReactBootstrapForm.Label>Select creatable</ReactBootstrapForm.Label>
                 <FormSelectCreatable
                     control={control}
                     name="inputSelectCreatable"
@@ -147,7 +150,7 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 />
             </div>
             <div>
-                <Label>Multi select</Label>
+                <ReactBootstrapForm.Label>Multi select</ReactBootstrapForm.Label>
                 <FormSelect
                     control={control}
                     name="inputMultiSelect"
@@ -161,25 +164,26 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
 
             <div className="input-group">
                 <FormInput type="text" control={control} name="inputText" />
-                <Button color="secondary" icon="rocket" title="Test connection">
+                <Button variant="secondary" title="Test connection">
+                    <Icon icon="rocket" />
                     Test connection
                 </Button>
             </div>
 
             <div>
-                <Label>Date picker</Label>
+                <ReactBootstrapForm.Label>Date picker</ReactBootstrapForm.Label>
                 <FormDatePicker control={control} name="inputDatePicker" />
             </div>
             <div>
-                <Label>Duration picker</Label>
+                <ReactBootstrapForm.Label>Duration picker</ReactBootstrapForm.Label>
                 <FormDurationPicker control={control} name="inputDurationPicker" />
             </div>
             <div>
-                <Label>Ace editor</Label>
+                <ReactBootstrapForm.Label>Ace editor</ReactBootstrapForm.Label>
                 <FormAceEditor mode="javascript" control={control} name="inputAceEditor" />
             </div>
             <div>
-                <Label>Path selector</Label>
+                <ReactBootstrapForm.Label>Path selector</ReactBootstrapForm.Label>
                 <FormPathSelector
                     control={control}
                     name="inputPath"

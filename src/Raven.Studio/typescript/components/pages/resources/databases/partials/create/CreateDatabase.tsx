@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Modal } from "reactstrap";
 import CreateDatabaseRegular from "./regular/CreateDatabaseRegular";
 import CreateDatabaseFromBackup from "./formBackup/CreateDatabaseFromBackup";
 import "./CreateDatabase.scss";
+import Modal from "components/common/Modal";
 
 export type CreateDatabaseMode = "regular" | "fromBackup";
 
@@ -15,7 +15,7 @@ export default function CreateDatabase({ closeModal, initialMode }: CreateDataba
     const [createMode, setCreateMode] = useState<CreateDatabaseMode>(initialMode ?? "regular");
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered autoFocus fade className="create-database">
+        <Modal data-testid="create-database-modal" show size="lg" animation className="create-database">
             {createMode === "regular" && (
                 <CreateDatabaseRegular
                     closeModal={closeModal}

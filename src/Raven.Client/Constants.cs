@@ -1,3 +1,6 @@
+using System;
+using Raven.Client.Documents.Indexes.Vector;
+
 namespace Raven.Client
 {
     public static class Constants
@@ -387,6 +390,8 @@ namespace Raven.Client
                         public const string SpatialPropertyName = "$spatial";
 
                         public const string BoostPropertyName = "$boost";
+                        
+                        public const string VectorPropertyName = "$vector";
                     }
                 }
 
@@ -581,6 +586,37 @@ namespace Raven.Client
 
                 public const string ThrowRevisionKeyTooBigFix = "ThrowRevisionKeyTooBigFix";
             }
+        }
+        
+        internal static class VectorSearch
+        {
+            private const string EmbeddingPrefix = "embedding.";
+
+            internal const string EmbeddingText = EmbeddingPrefix + "text";
+            internal const string EmbeddingTextInt8 = EmbeddingPrefix + "text_i8";
+            internal const string EmbeddingTextInt1 = EmbeddingPrefix + "text_i1";
+            internal const string EmbeddingSingle = EmbeddingPrefix + "f32";
+            internal const string EmbeddingSingleInt8 = EmbeddingPrefix + "f32_i8";
+            internal const string EmbeddingSingleInt1 = EmbeddingPrefix + "f32_i1";
+            internal const string EmbeddingInt8 = EmbeddingPrefix + "i8";
+            internal const string EmbeddingInt1 = EmbeddingPrefix + "i1";
+
+            internal static string ConfigurationToMethodName(VectorEmbeddingType source, VectorEmbeddingType dest) => (source, dest) switch
+            {
+                (VectorEmbeddingType.Single, VectorEmbeddingType.Single) => string.Empty,
+                (VectorEmbeddingType.Single, VectorEmbeddingType.Int8) => EmbeddingSingleInt8,
+                (VectorEmbeddingType.Single, VectorEmbeddingType.Binary) => EmbeddingSingleInt1,
+                (VectorEmbeddingType.Text, VectorEmbeddingType.Single) => EmbeddingText,
+                (VectorEmbeddingType.Text, VectorEmbeddingType.Int8) => EmbeddingTextInt8,
+                (VectorEmbeddingType.Text, VectorEmbeddingType.Binary) => EmbeddingTextInt1,
+                (VectorEmbeddingType.Int8, VectorEmbeddingType.Int8) => EmbeddingInt8,
+                (VectorEmbeddingType.Binary, VectorEmbeddingType.Binary) => EmbeddingInt1,
+                _ => throw new InvalidOperationException($"Invalid embedding configuration. SourceEmbedding: {source}, DestinationEmbedding: {dest}")
+            };
+            
+
+            public const VectorEmbeddingType DefaultEmbeddingType = VectorEmbeddingType.Single;
+            public const bool DefaultIsExact = false;
         }
     }
 }

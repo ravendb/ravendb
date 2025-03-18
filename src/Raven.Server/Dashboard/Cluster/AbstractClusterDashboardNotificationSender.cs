@@ -9,8 +9,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Background;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Dashboard.Cluster
 {
@@ -21,7 +23,7 @@ namespace Raven.Server.Dashboard.Cluster
         
         private DateTime _lastSentNotification = DateTime.MinValue;
 
-        protected AbstractClusterDashboardNotificationSender(int widgetId, ConnectedWatcher watcher, CancellationToken shutdown) : base(nameof(AbstractClusterDashboardNotificationSender), shutdown)
+        protected AbstractClusterDashboardNotificationSender(int widgetId, ConnectedWatcher watcher, CancellationToken shutdown) : base(nameof(AbstractClusterDashboardNotificationSender), RavenLogManager.Instance.GetLoggerForServer<AbstractClusterDashboardNotificationSender>(), shutdown)
         {
             _widgetId = widgetId;
             _watcher = watcher;

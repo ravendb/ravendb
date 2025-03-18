@@ -22,6 +22,7 @@ import {
     OngoingTaskReplicationSinkSharedInfo,
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlSharedInfo,
+    OngoingTaskSnowflakeEtlSharedInfo,
     OngoingTaskSubscriptionInfo,
     OngoingTaskSubscriptionSharedInfo,
     OngoingReplicationProgressAwareTaskNodeInfo,
@@ -29,6 +30,7 @@ import {
     OngoingTaskExternalReplicationNodeInfoDetails,
     OngoingTaskReplicationHubNodeInfoDetails,
     OngoingInternalReplicationNodeInfo,
+    OngoingTaskAmazonSqsEtlSharedInfo,
 } from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
@@ -36,6 +38,7 @@ import { databaseLocationComparator } from "components/utils/common";
 import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
 import genUtils from "common/generalUtils";
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl;
+import OngoingTaskSnowflakeEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
 import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
@@ -292,6 +295,15 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
             };
             return result;
         }
+        case "SnowflakeEtl": {
+            const incoming = task as OngoingTaskSnowflakeEtlListView;
+            // noinspection UnnecessaryLocalVariableJS
+            const result: OngoingTaskSnowflakeEtlSharedInfo = {
+                ...commonProps,
+                connectionStringName: incoming.ConnectionStringName,
+            };
+            return result;
+        }
         case "RavenEtl": {
             const incoming = task as OngoingTaskRavenEtlListView;
             // noinspection UnnecessaryLocalVariableJS
@@ -338,6 +350,15 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 case "AzureQueueStorage": {
                     // noinspection UnnecessaryLocalVariableJS
                     const result: OngoingTaskAzureQueueStorageEtlSharedInfo = {
+                        ...commonProps,
+                        connectionStringName: incoming.ConnectionStringName,
+                        url: incoming.Url,
+                    };
+                    return result;
+                }
+                case "AmazonSqs": {
+                    // noinspection UnnecessaryLocalVariableJS
+                    const result: OngoingTaskAmazonSqsEtlSharedInfo = {
                         ...commonProps,
                         connectionStringName: incoming.ConnectionStringName,
                         url: incoming.Url,

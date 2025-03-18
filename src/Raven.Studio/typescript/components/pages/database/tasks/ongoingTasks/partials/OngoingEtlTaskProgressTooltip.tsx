@@ -3,10 +3,11 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { OngoingTaskNodeEtlProgressDetails } from "components/models/tasks";
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
-import { Button } from "reactstrap";
 import copyToClipboard from "common/copyToClipboard";
 import { NodeInfoFailure } from "components/pages/database/tasks/ongoingTasks/partials/NodeInfoFailure";
 import { loadStatus } from "components/models/common";
+import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 interface OngoingTaskEtlProgressTooltipProps {
     target: HTMLElement;
@@ -39,7 +40,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
             <div className="vstack gap-3 py-2">
                 {hasError && (
                     <div className="text-center">
-                        <Button color="danger" key="button" onClick={toggleErrorModal} className="rounded-pill">
+                        <Button variant="danger" key="button" onClick={toggleErrorModal} className="rounded-pill">
                             Open error in modal <Icon icon="newtab" margin="ms-1" />
                         </Button>
                     </div>
@@ -50,7 +51,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                             <div className="d-flex align-items-center justify-content-center gap-1">
                                 {transformationScriptProgress.transformationName}
                                 <Button
-                                    color="link"
+                                    variant="link"
                                     className="p-0"
                                     size="xs"
                                     title="Show script preview"
@@ -68,7 +69,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                                         <div className="small-label d-flex align-items-center justify-content-center gap-1">
                                             Transactional Id
                                             <Button
-                                                color="link"
+                                                variant="link"
                                                 className="p-0"
                                                 size="xs"
                                                 onClick={() =>

@@ -18,7 +18,7 @@ namespace SlowTests.Voron.Bugs
         {
             IOExtensions.DeleteDirectory(DataDir);
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
 
             using (var env = new StorageEnvironment(options))
             {
@@ -56,7 +56,7 @@ namespace SlowTests.Voron.Bugs
         {
             IOExtensions.DeleteDirectory(DataDir);
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
 
             using (var env = new StorageEnvironment(options))
             {
@@ -117,7 +117,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void ScratchPagesShouldNotBeReleasedUntilNotUsed()
         {
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
 
             options.ManualFlushing = true;
             using (var env = new StorageEnvironment(options))

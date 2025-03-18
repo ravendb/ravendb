@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Button, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import * as yup from "yup";
@@ -9,6 +9,8 @@ import { collectionsTrackerSelectors } from "components/common/shell/collections
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { FormSwitch } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 interface EnforceConfigurationProps {
     toggle: () => void;
@@ -39,16 +41,9 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
     };
 
     return (
-        <Modal
-            isOpen
-            toggle={toggle}
-            wrapClassName="bs5"
-            contentClassName="modal-border bulge-warning"
-            centered
-            size="lg"
-        >
-            <Form onSubmit={handleSubmit(onEnforce)}>
-                <ModalBody className="vstack gap-2">
+        <Modal show onHide={toggle} contentClassName="modal-border bulge-warning" size="lg">
+            <Modal.Body>
+                <Form id="enforce-configuration" className="vstack gap-2" onSubmit={handleSubmit(onEnforce)}>
                     <FormCollectionsSelect
                         control={control}
                         collectionsFormName="collections"
@@ -91,17 +86,17 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                             </li>
                         </ul>
                     </RichAlert>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color="link" className="link-muted" onClick={toggle}>
-                        Cancel
-                    </Button>
-                    <Button type="submit" color="warning">
-                        <Icon icon="rocket" />
-                        Enforce Configuration
-                    </Button>
-                </ModalFooter>
-            </Form>
+                </Form>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="link" className="link-muted" onClick={toggle}>
+                    Cancel
+                </Button>
+                <Button form="enforce-configuration" type="submit" variant="warning">
+                    <Icon icon="rocket" />
+                    Enforce Configuration
+                </Button>
+            </Modal.Footer>
         </Modal>
     );
 }

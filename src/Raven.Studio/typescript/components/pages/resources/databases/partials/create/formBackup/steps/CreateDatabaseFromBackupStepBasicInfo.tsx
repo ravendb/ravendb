@@ -1,6 +1,8 @@
 import { Icon } from "components/common/Icon";
 import React, { useEffect } from "react";
-import { Row, Col, Button } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+import Button from "react-bootstrap/Button";
 import { CreateDatabaseFromBackupFormData } from "../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FormInput } from "components/common/Form";
@@ -27,7 +29,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
             <h2 className="text-center mb-4">Restore from backup</h2>
 
             <Row>
-                <Col lg={{ offset: 2, size: 8 }}>
+                <Col lg={{ offset: 2, span: 8 }}>
                     <FormInput
                         type="text"
                         control={control}
@@ -40,13 +42,12 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
             </Row>
 
             <Row className="mt-2 gy-xs">
-                <Col sm="6" lg={{ offset: 2, size: 4 }}>
+                <Col sm="6" lg={{ offset: 2, span: 4 }}>
                     <Button
                         active={!isSharded}
                         onClick={() => setValue("basicInfoStep.isSharded", false)}
-                        outline
                         className=" me-2 px-4 pt-3 w-100"
-                        color="node"
+                        variant="outline-node"
                     >
                         <Icon icon="database" margin="m-0" className="fs-2" />
                         <br />
@@ -57,8 +58,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                     <Button
                         active={isSharded}
                         onClick={() => setValue("basicInfoStep.isSharded", true)}
-                        color="shard"
-                        outline
+                        variant="outline-shard"
                         className="px-4 pt-3 w-100"
                     >
                         <Icon icon="sharding" margin="m-0" className="fs-2" />

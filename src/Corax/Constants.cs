@@ -77,9 +77,9 @@ namespace Corax
 
             public static ReadOnlySpan<byte> LongTreeSuffix => "-L"u8;
 
-            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
+            public static readonly Slice LargePostingListsSetSlice = Voron.Global.Constants.PostingList.PostingListRegister, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
                 StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice,
-                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists, NonExistingPostingLists;            
+                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists, NonExistingPostingLists, VectorFieldsRootPagesSlice;            
             
             public const int DynamicField = -2;
 
@@ -92,13 +92,19 @@ namespace Corax
             public const int FrequencyTermFreeSpace = 0b1111_1111;
             public const int MaxSizeOfTermVectorList = int.MaxValue >> 1;
 
+            internal const long UninitializedFieldRootPage = -1L;
+
+            public static class Hnsw
+            {
+                public const int TreeExists = -1;
+            }
+            
             static IndexWriter()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))
                 {
                     Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
                     Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
-                    Slice.From(ctx, "LargePostingListsSet", ByteStringType.Immutable, out LargePostingListsSetSlice);
                     Slice.From(ctx, "StoredFields", ByteStringType.Immutable, out StoredFieldsSlice);
                     Slice.From(ctx, "EntriesTerms", ByteStringType.Immutable, out EntriesTermsContainerSlice);
                     Slice.From(ctx, "EntryIdToLocation", ByteStringType.Immutable, out EntryIdToLocationSlice);
@@ -111,6 +117,7 @@ namespace Corax
                     Slice.From(ctx, "MultipleTermsInField", ByteStringType.Immutable, out MultipleTermsInField);
                     Slice.From(ctx, "NullPostingLists", ByteStringType.Immutable, out NullPostingLists);
                     Slice.From(ctx, "NonExistingPostingLists", ByteStringType.Immutable, out NonExistingPostingLists);
+                    Slice.From(ctx, "VectorFieldsRootPages", ByteStringType.Immutable, out VectorFieldsRootPagesSlice);
                 }
             }
         }

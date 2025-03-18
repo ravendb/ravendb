@@ -50,8 +50,18 @@ namespace Raven.Server.Config.Categories
             var children = section.GetChildren().ToList();
 
             return children.Count != 0
-                ? string.Join(";", children.Where(x => x.Value != null).Select(x => x.Value))
+                ? string.Join(";", children.Where(x => x.Value != null).Select(CreateValue))
                 : null;
+
+            static string CreateValue(IConfigurationSection section)
+            {
+                // array
+                if (int.TryParse(section.Key, out _))
+                    return section.Value;
+
+                // dictionary
+                return $"{section.Key}:{section.Value}";
+            }
         }
 
         protected internal static string GetValueForKey(string keyName, IConfiguration cfg)
@@ -95,7 +105,6 @@ namespace Raven.Server.Config.Categories
                 var val = GetValueForKey(keyName, cfg);
 
                 keyExistsInConfiguration = cfgNames.Contains(keyName) || val != null;
-
                 return val;
             }
 
@@ -256,6 +265,17 @@ namespace Raven.Server.Config.Categories
                                 for (var i = 0; i < values.Length; i++)
                                 {
                                     settings[i] = new UriSetting(values[i]);
+                                }
+                                property.Info.SetValue(this, settings);
+                            }
+                            else if (property.Info.PropertyType == typeof(Dictionary<string, string>))
+                            {
+                                var values = SplitValue(value);
+                                var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                                foreach (var v in values)
+                                {
+                                    var kvp = SplitValue(v, separator: ':');
+                                    settings[kvp[0]] = kvp[1];
                                 }
                                 property.Info.SetValue(this, settings);
                             }
@@ -470,9 +490,9 @@ namespace Raven.Server.Config.Categories
             return value;
         }
 
-        private static string[] SplitValue(string value)
+        private static string[] SplitValue(string value, char separator = ';')
         {
-            var values = value.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            var values = value.Split(separator, StringSplitOptions.RemoveEmptyEntries);
             for (var i = 0; i < values.Length; i++)
                 values[i] = values[i].Trim();
             return values;

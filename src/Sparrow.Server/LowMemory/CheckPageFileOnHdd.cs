@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 
@@ -19,7 +20,7 @@ namespace Sparrow.Server.LowMemory
 {
     public static class CheckPageFileOnHdd
     {
-        private static readonly Logger Log = LoggingSource.Instance.GetLogger("Server", typeof(CheckPageFileOnHdd).FullName);
+        private static readonly RavenLogger Log = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(CheckPageFileOnHdd));
 
         private const string PageFileName = "pagefile.sys";
 
@@ -52,8 +53,8 @@ namespace Sparrow.Server.LowMemory
                             break;
 
                         case RavenDriveType.Unknown:
-                            if (Log.IsOperationsEnabled)
-                                Log.Operations($"Failed to determine if drive {currentDriveLetter} is SSD or HDD");
+                            if (Log.IsWarnEnabled)
+                                Log.Warn($"Failed to determine if drive {currentDriveLetter} is SSD or HDD");
                             //we can't figure out the drive type
                             continue;
                         default:
@@ -425,8 +426,8 @@ namespace Sparrow.Server.LowMemory
                         foundRotationalDiskDrive = filename;
                     else if (isHdd != 0)
                     {
-                        if (Log.IsOperationsEnabled)
-                            Log.Operations($"Got invalid value (not 0 or 1) from {filename} = {isHdd}, assumes this is not a rotational disk");
+                        if (Log.IsWarnEnabled)
+                            Log.Warn($"Got invalid value (not 0 or 1) from {filename} = {isHdd}, assumes this is not a rotational disk");
                         foundRotationalDiskDrive = null;
                     }
                 }

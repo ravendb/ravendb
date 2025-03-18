@@ -3,7 +3,9 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { UseIndexCleanupResult } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { NavItem, Card, Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Card from "react-bootstrap/Card";
+import Nav from "react-bootstrap/Nav";
 
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
 
@@ -16,13 +18,13 @@ export default function RemoveSubindexesNavItem({ carousel, surpassing }: Remove
     const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
 
     return (
-        <NavItem>
+        <Nav.Item>
             <Card
                 className={classNames("p-3", "card-tab", { active: carousel.activeTab === 1 })}
                 onClick={() => carousel.setActiveTab(1)}
             >
                 <img src={removeSubindexesImg} alt="Remove subindexes" />
-                <Badge className="rounded-pill fs-5" color={surpassing.data.length !== 0 ? "primary" : "secondary"}>
+                <Badge className="rounded-pill fs-5" bg={surpassing.data.length !== 0 ? "primary" : "secondary"}>
                     {hasIndexCleanup ? surpassing.data.length : "?"}
                 </Badge>
                 <h4 className="text-center">
@@ -31,6 +33,6 @@ export default function RemoveSubindexesNavItem({ carousel, surpassing }: Remove
                     sub-indexes
                 </h4>
             </Card>
-        </NavItem>
+        </Nav.Item>
     );
 }

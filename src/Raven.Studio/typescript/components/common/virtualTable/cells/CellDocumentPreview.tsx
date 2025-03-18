@@ -2,8 +2,9 @@ import { Getter } from "@tanstack/react-table";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
-import { Button, CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
 import document from "models/database/documents/document";
+import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 interface CellDocumentPreviewProps {
     document: document;
@@ -19,11 +20,11 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
 
     return (
         <>
-            <Button type="button" title="Show preview" color="link" onClick={toggleIsOpen}>
+            <Button type="button" title="Show preview" variant="link" onClick={toggleIsOpen}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
-            <Modal toggle={toggleIsOpen} isOpen={isOpen} wrapClassName="bs5" size="lg" centered>
-                <ModalBody className="pb-3">
+            <Modal onHide={toggleIsOpen} show={isOpen} size="lg">
+                <Modal.Header onCloseClick={toggleIsOpen} className="pb-0">
                     <div className="d-flex justify-content-between">
                         <div>
                             <Icon icon="document" />
@@ -38,18 +39,19 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
                                 <span>Document Preview</span>
                             )}
                         </div>
-                        <CloseButton onClick={toggleIsOpen} />
                     </div>
+                </Modal.Header>
+                <Modal.Body className="pb-3">
                     <pre style={{ maxHeight: "400px" }} className="overflow-auto m-0 mt-3">
                         <Code language="json" code={jsonBody} elementToCopy={jsonBody} />
                     </pre>
-                </ModalBody>
-                <ModalFooter>
-                    <Button type="button" onClick={toggleIsOpen}>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button type="button" variant="secondary" onClick={toggleIsOpen}>
                         <Icon icon="close" />
                         Close
                     </Button>
-                </ModalFooter>
+                </Modal.Footer>
             </Modal>
         </>
     );

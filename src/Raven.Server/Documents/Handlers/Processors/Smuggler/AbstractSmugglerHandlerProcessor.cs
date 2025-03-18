@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 return;
 
             // only all 4.0 and 4.1 less or equal to 41006
-            if (version.Revision < 70 || version.Revision > 41006)
+            if (version.Revision is < 100 or > 41006)
                 return;
 
             if (options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))

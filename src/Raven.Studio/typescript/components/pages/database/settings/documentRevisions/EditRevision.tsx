@@ -1,6 +1,8 @@
 ﻿import { Icon } from "components/common/Icon";
-import { Button, Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
-import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
+
+import { FormDurationPicker, FormInput, FormLabel, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import {
     EditDocumentRevisionsCollectionConfig,
@@ -25,6 +27,10 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import moment from "moment";
 import RichAlert from "components/common/RichAlert";
 import useEditRevisionFormSideEffects from "components/pages/database/settings/documentRevisions/useEditRevisionFormSideEffects";
+import { useAppUrls } from "hooks/useAppUrls";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
@@ -107,14 +113,17 @@ export default function EditRevision(props: EditRevisionProps) {
         ((revisionsAgeInDaysLimit > 0 && minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit) ||
             (revisionsToKeepLimit > 0 && formValues.minimumRevisionsToKeep > revisionsToKeepLimit));
 
+    const { appUrl } = useAppUrls();
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
     return (
-        <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info" centered>
+        <Modal show onHide={toggle} contentClassName="modal-border bulge-info">
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-                <ModalBody className="vstack gap-3">
+                <Modal.Body className="vstack gap-3">
                     <h4>{getTitle(taskType, configType)}</h4>
                     {configType === "collectionSpecific" && (
                         <InputGroup className="gap-1 flex-wrap flex-column">
-                            <Label className="mb-0 md-label">Collection</Label>
+                            <FormLabel className="mb-0 md-label">Collection</FormLabel>
                             <FormSelectCreatable
                                 placeholder="Select collection (or enter new collection)"
                                 control={control}
@@ -201,13 +210,20 @@ export default function EditRevision(props: EditRevisionProps) {
                     <RichAlert variant="primary" title="Summary" className="mt-2">
                         <ul className="m-0 ps-2 vstack gap-1">
                             <li>
-                                A revision will be created anytime a document is modified
-                                {!formValues.isPurgeOnDeleteEnabled && <span> or deleted</span>}.
+                                A revision will be created anytime a document is created
+                                {formValues.isPurgeOnDeleteEnabled ? " or modified." : ", modified, or deleted."}
                             </li>
                             {formValues.isPurgeOnDeleteEnabled ? (
                                 <li>When a document is deleted all its revisions will be removed.</li>
                             ) : (
-                                <li>Revisions of a deleted document can be accessed in the Revisions Bin view.</li>
+                                <li>
+                                    Revisions of a deleted document can be accessed in the{" "}
+                                    <a href={appUrl.forRevisionsBin(activeDatabaseName)} target="_blank">
+                                        {" "}
+                                        Revisions Bin{" "}
+                                    </a>{" "}
+                                    view.
+                                </li>
                             )}
                             {formValues.minimumRevisionsToKeep > 0 && (
                                 <>
@@ -254,16 +270,16 @@ export default function EditRevision(props: EditRevisionProps) {
                             )}
                         </ul>
                     </RichAlert>
-                </ModalBody>
-                <ModalFooter>
-                    <Button type="button" color="link" className="link-muted" onClick={toggle}>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button type="button" variant="link" className="link-muted" onClick={toggle}>
                         Cancel
                     </Button>
-                    <Button type="submit" color="success" disabled={isLimitExceeded} title="Add this configuration">
+                    <Button type="submit" variant="success" disabled={isLimitExceeded} title="Add this configuration">
                         <Icon icon={getSubmitIcon(taskType)} />
                         {_.startCase(taskType)} config
                     </Button>
-                </ModalFooter>
+                </Modal.Footer>
             </Form>
         </Modal>
     );

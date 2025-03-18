@@ -17,7 +17,7 @@ export function RevisionsBinCleanerInfoHub() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
-                <p>
+                <div>
                     <strong>Automatic deletion</strong>:
                     <br />
                     This view allows you to configure automatic deletion of{" "}
@@ -31,19 +31,19 @@ export function RevisionsBinCleanerInfoHub() {
                     . You can set the following:
                     <ul className="mt-1">
                         <li className="mb-1">
-                            <strong>Minimum age</strong>:
+                            <strong>Minimum age</strong>
                             <br />
                             Revisions that have been in the Revisions Bin for longer than this duration will be removed
                             when the cleaner executes.
                         </li>
                         <li>
-                            <strong>Cleaner frequency</strong>:
+                            <strong>Cleaner frequency</strong>
                             <br />
                             Defines how often the cleaner executes to remove revisions.
                         </li>
                     </ul>
-                </p>
-                <p>
+                </div>
+                <div>
                     <strong>Manual deletion</strong>:
                     <br />
                     Manual deletion of individual &quot;Delete Revisions&quot; can be performed from the{" "}
@@ -51,7 +51,7 @@ export function RevisionsBinCleanerInfoHub() {
                         Revisions Bin View
                     </a>
                     .
-                </p>
+                </div>
             </AccordionItemWrapper>
         </AboutViewAnchored>
     );

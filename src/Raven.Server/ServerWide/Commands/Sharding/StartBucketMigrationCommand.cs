@@ -4,6 +4,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Sharding;
@@ -72,7 +73,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             record.Sharding.BucketMigrations.Add(Bucket, _migration);
         }
 
-        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog)
         {
             if (_migration == null)
                 return;

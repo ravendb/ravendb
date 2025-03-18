@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -12,6 +13,8 @@ namespace Raven.Client.Documents.Indexes
         public FieldTermVector? TermVector { get; set; }
 
         public SpatialOptions Spatial { get; set; }
+        
+        public VectorOptions Vector { get; set; }
 
         public string Analyzer { get; set; }
 
@@ -24,7 +27,8 @@ namespace Raven.Client.Documents.Indexes
                    && TermVector == other.TermVector
                    && Equals(Spatial, other.Spatial)
                    && string.Equals(Analyzer, other.Analyzer, StringComparison.OrdinalIgnoreCase)
-                   && Suggestions == other.Suggestions;
+                   && Suggestions == other.Suggestions
+                   && Equals(Vector, other.Vector);
         }
 
         public override bool Equals(object obj)
@@ -54,6 +58,7 @@ namespace Raven.Client.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (Spatial?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Analyzer) : 0);
                 hashCode = (hashCode * 397) ^ Suggestions.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Vector?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }

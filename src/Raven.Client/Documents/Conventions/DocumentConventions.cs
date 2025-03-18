@@ -47,7 +47,11 @@ namespace Raven.Client.Documents.Conventions
         internal static TimeSpan? DefaultHttpPooledConnectionIdleTimeout;
 #endif
 
+#if FEATURE_ZSTD_SUPPORT
+        internal static HttpCompressionAlgorithm DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Zstd;
+#else
         internal static HttpCompressionAlgorithm DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+#endif
 
         internal static readonly DocumentConventions Default = new();
 
@@ -1585,12 +1589,25 @@ namespace Raven.Client.Documents.Conventions
             if (ForTestingPurposes != null)
                 return ForTestingPurposes;
 
-            return ForTestingPurposes = new TestingStuff();
+            return ForTestingPurposes = new TestingStuff(this);
         }
 
         internal class TestingStuff
         {
+            private readonly DocumentConventions _conventions;
+
+            public TestingStuff(DocumentConventions conventions)
+            {
+                _conventions = conventions;
+            }
+
             internal Action<RequestExecutor> OnBeforeTopologyUpdate;
+
+            internal HttpCompressionAlgorithm HttpCompressionAlgorithm
+            {
+                get => _conventions._httpCompressionAlgorithm;
+                set => _conventions._httpCompressionAlgorithm = value;
+            }
         }
     }
 }

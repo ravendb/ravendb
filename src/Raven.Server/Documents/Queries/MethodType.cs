@@ -49,6 +49,16 @@
 
         TimeSeries,
 
-        Unknown
+        Unknown,
+        
+        Vector_Search,
+        Embedding_Text, //text
+        Embedding_Text_I8, // text_i8
+        Embedding_Text_I1,
+        Embedding_F32_I8,
+        Embedding_F32_I1,
+        Embedding_F32,
+        Embedding_I8,
+        Embedding_I1,
     }
 }

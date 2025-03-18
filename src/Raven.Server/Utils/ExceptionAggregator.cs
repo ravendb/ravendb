@@ -2,12 +2,13 @@ using System;
 using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils
 {
     public sealed class ExceptionAggregator
     {
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly string _errorMsg;
         private readonly ConcurrentSet<Exception> _list = new ConcurrentSet<Exception>();
 
@@ -16,7 +17,7 @@ namespace Raven.Server.Utils
         {
         }
 
-        public ExceptionAggregator(Logger logger, string errorMsg)
+        public ExceptionAggregator(RavenLogger logger, string errorMsg)
         {
             _logger = logger;
             _errorMsg = errorMsg;

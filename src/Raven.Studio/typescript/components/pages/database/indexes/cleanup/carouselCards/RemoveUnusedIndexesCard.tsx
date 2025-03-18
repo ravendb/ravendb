@@ -11,7 +11,9 @@ import {
 } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { Card, Badge, Table } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Table from "react-bootstrap/Table";
+import Card from "react-bootstrap/Card";
 
 interface RemoveUnusedIndexesCardProps {
     unused: UseIndexCleanupResult["unused"];
@@ -38,7 +40,7 @@ function MainPanel({ unused }: RemoveUnusedIndexesCardProps) {
     return (
         <div className="p-2">
             <ButtonWithSpinner
-                color="primary"
+                variant="primary"
                 className="mb-2 rounded-pill"
                 onClick={unused.deleteSelected}
                 isSpinning={unused.isDeleting}
@@ -46,7 +48,7 @@ function MainPanel({ unused }: RemoveUnusedIndexesCardProps) {
             >
                 <Icon icon="trash" />
                 Delete selected indexes
-                <Badge color="faded-primary" className="rounded-pill ms-1">
+                <Badge bg="faded-primary" className="rounded-pill ms-1">
                     {unused.selected.length}
                 </Badge>
             </ButtonWithSpinner>

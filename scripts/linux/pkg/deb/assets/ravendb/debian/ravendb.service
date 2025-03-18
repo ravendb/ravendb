@@ -15,7 +15,8 @@ Restart=on-failure
 Type=exec
 TimeoutStopSec=300
 Environment="RAVEN_DataDir=/var/lib/ravendb/data"
-Environment="RAVEN_Indexing_NugetPackagesPath=/var/lib/ravendb/nuget"
+Environment="RAVEN_Indexing_NugetPackagesPath=/var/lib/ravendb/packages/nuget/indexing"
+Environment="RAVEN_Logs_NuGet_PackagesPath=/var/lib/ravendb/packages/nuget/logging"
 Environment="RAVEN_Logs_Path=/var/log/ravendb/logs"
 Environment="RAVEN_Security_AuditLog_FolderPath=/var/log/ravendb/audit"
 Environment="RAVEN_Security_MasterKey_Path=/etc/ravendb/security/master.key"

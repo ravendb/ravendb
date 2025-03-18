@@ -7,7 +7,7 @@ import router = require("plugins/router");
 
 class savedQueriesStorage {
 
-    static saveAndNavigate(db: database, query: storedQueryDto, opts: { extraParameters?: string; newWindow?: boolean } = {}) {
+    static saveAndNavigate(db: database | string, query: storedQueryDto, opts: { extraParameters?: string; newWindow?: boolean } = {}) {
         const recentQueries = savedQueriesStorage.getSavedQueries(db);
         savedQueriesStorage.appendQuery(query, ko.observableArray(recentQueries));
         savedQueriesStorage.storeSavedQueries(db, recentQueries);
@@ -21,8 +21,8 @@ class savedQueriesStorage {
         }
     }
     
-    static getSavedQueries(db: database): storedQueryDto[] {
-        const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
+    static getSavedQueries(db: database | string): storedQueryDto[] {
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(typeof db === 'string' ? db : db.name);
         let savedQueriesFromLocalStorage: storedQueryDto[] = this.getSavedQueriesFromLocalStorage(localStorageName);
 
         if (savedQueriesFromLocalStorage == null || savedQueriesFromLocalStorage instanceof Array === false) {
@@ -33,8 +33,8 @@ class savedQueriesStorage {
         return savedQueriesFromLocalStorage;
     }
 
-    static storeSavedQueries(db: database, savedQueries: storedQueryDto[]) {
-        const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
+    static storeSavedQueries(db: database | string, savedQueries: storedQueryDto[]) {
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(typeof db === 'string' ? db : db.name);
         localStorage.setObject(localStorageName, savedQueries);
     }
 
@@ -49,8 +49,8 @@ class savedQueriesStorage {
         localStorage.setObject(localStorageName, newSavedQueries);
     }
 
-    static removeSavedQueryByHash(db: database, hash: number) {
-        const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
+    static removeSavedQueryByHash(db: database | string, hash: number) {
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(typeof db === "string" ? db : db.name);
         const savedQueriesFromLocalStorage: storedQueryDto[] = this.getSavedQueriesFromLocalStorage(localStorageName);
         if (savedQueriesFromLocalStorage == null) {
             return;

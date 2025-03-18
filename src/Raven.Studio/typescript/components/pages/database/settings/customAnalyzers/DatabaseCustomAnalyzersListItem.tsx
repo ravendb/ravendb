@@ -22,12 +22,18 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
-import { Button, Collapse, Form, InputGroup, Label, UncontrolledTooltip } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
+
 import { Icon } from "components/common/Icon";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormAceEditor, FormInput } from "components/common/Form";
+import { FormAceEditor, FormInput, FormLabel } from "components/common/Form";
 import fileImporter from "common/fileImporter";
+import Button from "react-bootstrap/Button";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface DatabaseCustomAnalyzersListItemProps {
     initialAnalyzer: CustomAnalyzerFormData;
@@ -97,12 +103,11 @@ export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAna
                         </RichPanelName>
                     </RichPanelInfo>
                     {serverWideAnalyzerNames.includes(formValues.name) && (
-                        <>
-                            <UncontrolledTooltip target={tooltipId} placement="left">
-                                Override server-wide analyzer
-                            </UncontrolledTooltip>
-                            <Icon id={tooltipId} icon="info" color="info" />
-                        </>
+                        <OverlayTrigger overlay={<Tooltip id={tooltipId}>Override server-wide analyzer</Tooltip>}>
+                            <div className="d-inline-block">
+                                <Icon id={tooltipId} icon="info" color="info" />
+                            </div>
+                        </OverlayTrigger>
                     )}
                     <RichPanelActions>
                         <CustomAnalyzersActions
@@ -118,47 +123,49 @@ export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAna
                     </RichPanelActions>
                 </RichPanelHeader>
 
-                <Collapse isOpen={isEditMode}>
-                    <RichPanelDetails className="vstack gap-3 p-4">
-                        {isNew && (
-                            <InputGroup className="vstack mb-1">
-                                <Label>Name</Label>
-                                <FormInput
-                                    type="text"
+                <Collapse in={isEditMode}>
+                    <div>
+                        <RichPanelDetails className="vstack gap-3 p-4">
+                            {isNew && (
+                                <InputGroup className="vstack mb-1">
+                                    <FormLabel>Name</FormLabel>
+                                    <FormInput
+                                        type="text"
+                                        control={control}
+                                        name="name"
+                                        placeholder="Enter analyzer name"
+                                    />
+                                </InputGroup>
+                            )}
+                            <InputGroup className="vstack">
+                                {hasDatabaseAdminAccess && (
+                                    <div className="d-flex justify-content-end">
+                                        <FormLabel className="btn btn-link btn-xs text-right">
+                                            <Icon icon="upload" />
+                                            Load from a file
+                                            <input
+                                                type="file"
+                                                className="d-none"
+                                                onChange={(e) =>
+                                                    fileImporter.readAsBinaryString(e.currentTarget, (x) =>
+                                                        setValue("code", x)
+                                                    )
+                                                }
+                                                accept=".cs"
+                                            />
+                                        </FormLabel>
+                                    </div>
+                                )}
+                                <FormAceEditor
                                     control={control}
-                                    name="name"
-                                    placeholder="Enter analyzer name"
+                                    name="code"
+                                    mode="csharp"
+                                    height="400px"
+                                    readOnly={!hasDatabaseAdminAccess}
                                 />
                             </InputGroup>
-                        )}
-                        <InputGroup className="vstack">
-                            {hasDatabaseAdminAccess && (
-                                <div className="d-flex justify-content-end">
-                                    <Label className="btn btn-link btn-xs text-right">
-                                        <Icon icon="upload" />
-                                        Load from a file
-                                        <input
-                                            type="file"
-                                            className="d-none"
-                                            onChange={(e) =>
-                                                fileImporter.readAsBinaryString(e.currentTarget, (x) =>
-                                                    setValue("code", x)
-                                                )
-                                            }
-                                            accept=".cs"
-                                        />
-                                    </Label>
-                                </div>
-                            )}
-                            <FormAceEditor
-                                control={control}
-                                name="code"
-                                mode="csharp"
-                                height="400px"
-                                readOnly={!hasDatabaseAdminAccess}
-                            />
-                        </InputGroup>
-                    </RichPanelDetails>
+                        </RichPanelDetails>
+                    </div>
                 </Collapse>
             </Form>
         </RichPanel>
@@ -190,11 +197,11 @@ function CustomAnalyzersActions({
 
     if (!hasDatabaseAdminAccess) {
         return isEditMode ? (
-            <Button key="preview" onClick={toggleIsEditMode}>
+            <Button variant="secondary" key="preview" onClick={toggleIsEditMode}>
                 <Icon icon="preview-off" margin="m-0" />
             </Button>
         ) : (
-            <Button key="edit" onClick={toggleIsEditMode}>
+            <Button variant="secondary" key="edit" onClick={toggleIsEditMode}>
                 <Icon icon="preview" margin="m-0" />
             </Button>
         );
@@ -204,16 +211,16 @@ function CustomAnalyzersActions({
         <>
             {isEditMode ? (
                 <>
-                    <Button key="save" type="submit" color="success" disabled={isSubmitting}>
+                    <Button key="save" type="submit" variant="success" disabled={isSubmitting}>
                         <Icon icon="save" /> Save changes
                     </Button>
-                    <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
+                    <Button key="cancel" type="button" variant="secondary" onClick={onDiscard}>
                         <Icon icon="cancel" /> Discard
                     </Button>
                 </>
             ) : (
                 <>
-                    <Button key="edit" onClick={toggleIsEditMode}>
+                    <Button variant="secondary" key="edit" onClick={toggleIsEditMode}>
                         <Icon icon={hasDatabaseAdminAccess ? "edit" : "preview"} margin="m-0" />
                     </Button>
                     {hasDatabaseAdminAccess && (
@@ -227,7 +234,7 @@ function CustomAnalyzersActions({
                             )}
                             <ButtonWithSpinner
                                 key="delete"
-                                color="danger"
+                                variant="danger"
                                 onClick={() => setNameToConfirmDelete(name)}
                                 icon="trash"
                                 isSpinning={asyncDeleteAnalyzer.status === "loading"}

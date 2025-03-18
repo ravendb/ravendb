@@ -9,12 +9,14 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
@@ -23,6 +25,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DatabaseRecord _databaseRecord;
         private readonly ServerStore _server;
+        private readonly RavenLogger _logger;
 
         public ShardedDatabaseSmuggler(
             ISmugglerSource source,
@@ -38,6 +41,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _databaseRecord = databaseRecord;
             _server = server;
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<ShardedDatabaseSmuggler>(_databaseRecord.DatabaseName);
         }
 
         public override SmugglerPatcher CreatePatcher() => new ServerSmugglerPatcher(_options, _server);
@@ -45,7 +49,7 @@ namespace Raven.Server.Smuggler.Documents
         protected override async Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordAsync(SmugglerResult result)
         {
             await using (var action = new DatabaseRecordActions(_server, _databaseRecord, _databaseRecord.DatabaseName,
-                             LoggingSource.Instance.GetLogger<DatabaseDestination>(_databaseRecord.DatabaseName)))
+                            _logger))
             {
                 return await ProcessDatabaseRecordInternalAsync(result, action);
             }
@@ -136,6 +140,15 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     AddMentorNodeWarning(DatabaseRecordItemType.SqlEtls, sqlEtl.Name);
                     sqlEtl.MentorNode = null;
+                }
+            }
+            
+            foreach (var snowflakeEtl in databaseRecord.SnowflakeEtls)
+            {
+                if (string.IsNullOrEmpty(snowflakeEtl.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.SnowflakeEtls, snowflakeEtl.Name);
+                    snowflakeEtl.MentorNode = null;
                 }
             }
 

@@ -6,6 +6,7 @@ using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication.Outgoing
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 $"{bucket}@{migrationIndex}/{merged}").Wait(_shardedDatabase.DatabaseShutdown);
         }
 
-        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger) => 
+        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger) => 
             new MigrationReplicationDocumentSender(stream, this, logger);
 
         protected override DynamicJsonValue GetInitialHandshakeRequest()

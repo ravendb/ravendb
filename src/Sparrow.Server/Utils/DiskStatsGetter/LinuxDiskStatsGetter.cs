@@ -5,13 +5,14 @@ using System.Runtime.Versioning;
 using System.Text;
 using Mono.Unix.Native;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Sparrow.Server.Utils.DiskStatsGetter;
 
 [SupportedOSPlatform("linux")]
 internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LinuxDiskStatsGetter>("Server");
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(LinuxDiskStatsGetter));
 
     public LinuxDiskStatsGetter(TimeSpan minInterval) : base(minInterval)
     {
@@ -41,8 +42,8 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         }
         catch (Exception e)
         {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Could not get GetDiskInfo of {path}", e);
+            if (Logger.IsWarnEnabled)
+                Logger.Warn($"Could not get GetDiskInfo of {path}", e);
             return null;
         }
     }
@@ -109,8 +110,8 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         }
         else
         {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"The stats file {statPath} should contain at least 4 values. File content '{Encoding.UTF8.GetString(contents)}'");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"The stats file {statPath} should contain at least 4 values. File content '{Encoding.UTF8.GetString(contents)}'");
             return null;
         }
 

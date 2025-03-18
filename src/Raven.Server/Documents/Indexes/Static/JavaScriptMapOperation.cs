@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Esprima.Ast;
+using Acornima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Indexes.Static
         public bool HasDynamicReturns;
 
         public bool HasBoostedFields;
+
+        public bool HasVectorFields;
 
         public HashSet<string> Fields = new HashSet<string>();
         public Dictionary<string, IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
@@ -62,7 +64,8 @@ namespace Raven.Server.Documents.Indexes.Static
                         catch (JavaScriptException jse) when (jse.Message.Contains("String compilation has been disabled in engine options"))
                         {
                             throw new Client.Exceptions.Documents.Patching.JavaScriptException(
-                                $"String compilation has been disabled in engine options. You can configure it by modifying the configuration option: '{RavenConfiguration.GetKey(x => x.Indexing.AllowStringCompilation)}'.", jse);;
+                                $"String compilation has been disabled in engine options. You can configure it by modifying the configuration option: '{RavenConfiguration.GetKey(x => x.Indexing.AllowStringCompilation)}'.", jse);
+                            ;
                         }
                         catch (JavaScriptException jse)
                         {
@@ -150,6 +153,8 @@ namespace Raven.Server.Documents.Indexes.Static
                                     var fieldValue = property.Value;
                                     if (IsBoostExpression(fieldValue))
                                         HasBoostedFields = true;
+                                    if (IsCreateVectorExpression(fieldValue))
+                                        HasVectorFields = true;
                                 }
                             }
                         }
@@ -170,6 +175,11 @@ namespace Raven.Server.Documents.Indexes.Static
                             if (ce.Arguments[0] is ObjectExpression oe)
                                 AddObjectFieldsToIndexFields(oe);
                         }
+                        else if (IsCreateVectorExpression(ce))
+                        {
+                            HasVectorFields = true;
+                            HasDynamicReturns = true;
+                        }
                         else if (IsArrowFunctionExpressionWithObjectExpressionBody(ce, out var oea))
                             AddObjectFieldsToIndexFields(oea);
                         else
@@ -187,12 +197,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "boost";
             }
             
+            static bool IsCreateVectorExpression(Node expression)
+            {
+                return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "createVector";
+            }
+            
             static bool IsArrowFunctionExpressionWithObjectExpressionBody(CallExpression callExpression, out ObjectExpression oea)
             {
                 oea = null;
                 if (callExpression.Arguments.Count == 1 && callExpression.Arguments.AsNodes()[0] is ArrowFunctionExpression afe && afe.Body is ObjectExpression _oea)
                     oea = _oea;
-                
+
                 return oea != null;
             }
 
@@ -221,8 +236,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var properties = new List<Node>
             {
-                new Property(PropertyKind.Init, new Identifier(field), false,
-                    new StaticMemberExpression(self, new Identifier(field), optional: false), false, false)
+                new ObjectProperty(PropertyKind.Init, new Identifier(field),
+                    new MemberExpression(self, new Identifier(field), optional: false, computed: false), false, false, false)
             };
 
             if (MoreArguments != null)
@@ -236,27 +251,27 @@ namespace Raven.Server.Documents.Indexes.Static
                     field = moreFuncAst.TryGetFieldFromSimpleLambdaExpression();
                     if (field != null)
                     {
-                        properties.Add(new Property(PropertyKind.Init, new Identifier(field), false,
-                        new StaticMemberExpression(self, new Identifier(field), optional: false), false, false));
+                        properties.Add(new ObjectProperty(PropertyKind.Init, new Identifier(field), new MemberExpression(self, new Identifier(field), optional: false, computed: false), false, false, false));
                     }
                 }
             }
 
+            var strict = (function.Body as FunctionBody)?.Strict ?? false;
+
             var functionExp = new FunctionExpression(
                 function.Id,
-                NodeList.Create(new List<Node> { self }),
-                new BlockStatement(NodeList.Create(new List<Statement>
+                NodeList.From(new List<Node> { self }),
+                new FunctionBody(NodeList.From(new List<Statement>
                 {
-                    new ReturnStatement(new ObjectExpression(NodeList.Create(properties)))
-                })),
+                    new ReturnStatement(new ObjectExpression(NodeList.From(properties)))
+                }), strict),
                 generator: false,
-                function.Strict,
                 async: false);
 
             var functionObject = new ScriptFunction(
                 engine,
                 functionExp,
-                function.Strict
+                strict
             );
 
             return (functionObject, functionExp);

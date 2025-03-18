@@ -18,6 +18,7 @@ using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -27,6 +28,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -42,7 +44,7 @@ namespace Raven.Server.Documents.Replication
 
         internal readonly ServerStore _server;
 
-        protected readonly Logger _logger;
+        protected readonly RavenLogger _logger;
         protected readonly ConcurrentDictionary<string, IAbstractIncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IAbstractIncomingReplicationHandler>();
 
         // PERF: _incoming locks if you do _incoming.Values. Using .Select
@@ -61,7 +63,7 @@ namespace Raven.Server.Documents.Replication
             ContextPool = contextPool;
             Token = token;
             _server = serverStore;
-            _logger = LoggingSource.Instance.GetLogger(GetType().FullName, databaseName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), databaseName);
         }
         
         internal TestingStuff ForTestingPurposes;
@@ -197,9 +199,9 @@ namespace Raven.Server.Documents.Replication
                     throw new Exception(exceptionSchema.Message);
 
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
-                    _logger.Info(
+                    _logger.Debug(
                         $"GetLastEtag: {getLatestEtagMessage.SourceTag}({getLatestEtagMessage.SourceMachineName}) / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}. Type: {getLatestEtagMessage.ReplicationsType}");
                 }
             }
@@ -217,8 +219,8 @@ namespace Raven.Server.Documents.Replication
                 throw;
             }
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info(
+            if (_logger.IsDebugEnabled)
+                _logger.Debug(
                     $"Initialized document replication connection from {connectionInfo.SourceDatabaseName} located at {connectionInfo.SourceUrl}");
 
             return getLatestEtagMessage;

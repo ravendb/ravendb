@@ -210,7 +210,49 @@ namespace Raven.Server.Documents.Sharding
 
                 public static DocumentLastModifiedComparer Instance = new ();
             }
-            
+
+            public sealed class RevisionLastModifiedComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
+            {
+                public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
+                {
+                    var xLastModified = GetLastModified(x);
+                    var yLastModified = GetLastModified(y);
+
+                    return yLastModified.CompareTo(xLastModified);
+                }
+
+                private DateTime GetLastModified(ShardStreamItem<BlittableJsonReaderObject> x)
+                {
+                    if (x.Item.TryGet(nameof(Document.LastModified), out DateTime lastModified) == false)
+                        throw new InvalidOperationException("Revision does not contain 'LastModified' field.");
+
+                    return lastModified;
+                }
+
+                public static RevisionLastModifiedComparer Instance = new();
+            }
+
+            public sealed class RevisionIdComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
+            {
+                public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
+                {
+                    var xId = GetId(x);
+                    var yId = GetId(y);
+
+                    return xId.CompareTo(yId);
+                }
+
+                private LazyStringValue GetId(ShardStreamItem<BlittableJsonReaderObject> x)
+                {
+                    if (x.Item.TryGet(nameof(Document.Id), out LazyStringValue id) == false)
+                        throw new InvalidOperationException("Revision does not contain 'Id' field.");
+
+                    return id;
+                }
+
+                public static RevisionIdComparer Instance = new();
+            }
+
             public IEnumerable<BlittableJsonReaderObject> PagedShardedItemDocumentsByLastModified<TInput>(
                 Dictionary<int, ShardExecutionResult<TInput>> results,
                 Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,

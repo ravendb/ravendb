@@ -61,7 +61,7 @@ namespace SlowTests.Issues
                             Count = x.Tags.Length,
 
                             ToDictionary = x.Tags.ToDictionary(t => t.Length),
-                            Reverse = x.Tags.Reverse(),
+                            Reverse = Enumerable.Reverse(x.Tags),
                             Distinct = x.Tags.Distinct()
                         })
                         .SingleOrDefault();

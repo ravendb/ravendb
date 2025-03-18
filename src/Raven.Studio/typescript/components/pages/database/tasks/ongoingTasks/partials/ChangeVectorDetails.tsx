@@ -1,6 +1,8 @@
 import copyToClipboard from "common/copyToClipboard";
 import changeVectorUtils from "common/changeVectorUtils";
-import { Button, Input, InputGroup, Label } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import InputGroup from "react-bootstrap/InputGroup";
+import { Input, Label } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import React from "react";
 
@@ -48,7 +50,7 @@ export function ChangeVectorDetails(props: ChangeVectorDetailsProps) {
                                     sourceDatabaseChangeVectorFormatted.map((x) => x.fullFormat).join(",")
                                 )
                             }
-                            color="primary"
+                            variant="primary"
                             size="sm"
                             title="Copy to clipboard"
                         >
@@ -77,7 +79,7 @@ export function ChangeVectorDetails(props: ChangeVectorDetailsProps) {
                                     lastAcceptedChangeVectorFromDestinationFormatted.map((x) => x.fullFormat).join(", ")
                                 )
                             }
-                            color="primary"
+                            variant="primary"
                             size="sm"
                             title="Copy to clipboard"
                         >

@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
         }
 
-        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger)
+        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger)
         {
             return new InternalReplicationDocumentSender(stream, this, logger);
         }

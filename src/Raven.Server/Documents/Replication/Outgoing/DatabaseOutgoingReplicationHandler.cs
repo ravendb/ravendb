@@ -23,6 +23,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
@@ -189,7 +190,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public long NextReplicateTicks;
 
-        public abstract ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger);
+        public abstract ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger);
 
         protected override void Replicate()
         {

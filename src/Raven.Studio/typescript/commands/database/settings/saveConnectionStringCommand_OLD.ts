@@ -3,21 +3,25 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
+import connectionStringSnowflakeEtlModel = require("models/database/settings/connectionStringSnowflakeEtlModel");
 import connectionStringOlapEtlModel = require("models/database/settings/connectionStringOlapEtlModel");
 import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
 import connectionStringKafkaModel = require("models/database/settings/connectionStringKafkaModel");
 import connectionStringRabbitMqModel = require("models/database/settings/connectionStringRabbitMqModel");
 import connectionStringAzureQueueStorageModel = require("models/database/settings/connectionStringAzureQueueStorageModel");
+import connectionStringAmazonSqsModel = require("models/database/settings/connectionStringAmazonSqsModel");
 
 class saveConnectionStringCommand_OLD extends commandBase {
 
     constructor(private db: database, private connectionString: connectionStringRavenEtlModel |
         connectionStringSqlEtlModel |
+        connectionStringSnowflakeEtlModel |
         connectionStringOlapEtlModel |
         connectionStringElasticSearchEtlModel |
         connectionStringKafkaModel |
         connectionStringRabbitMqModel |
-        connectionStringAzureQueueStorageModel) {
+        connectionStringAzureQueueStorageModel |
+        connectionStringAmazonSqsModel) {
         super();
     }
  

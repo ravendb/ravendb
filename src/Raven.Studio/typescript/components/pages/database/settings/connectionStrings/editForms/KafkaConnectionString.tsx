@@ -1,6 +1,8 @@
-﻿import { Badge, Button, Form, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
-import { FormInput, FormSwitch } from "components/common/Form";
-import React, { useEffect } from "react";
+﻿import Badge from "react-bootstrap/Badge";
+import Form from "react-bootstrap/Form";
+
+import { FormInput, FormLabel, FormSwitch } from "components/common/Form";
+import { useEffect } from "react";
 import { SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, KafkaConnection } from "../connectionStringsTypes";
@@ -16,6 +18,8 @@ import ConnectionTestError from "components/common/connectionTests/ConnectionTes
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import Button from "react-bootstrap/Button";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type FormData = ConnectionFormData<KafkaConnection>;
 
@@ -83,7 +87,7 @@ export default function KafkaConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Label>Name</Label>
+                <FormLabel>Name</FormLabel>
                 <FormInput
                     control={control}
                     name="name"
@@ -94,20 +98,20 @@ export default function KafkaConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Label className="d-flex align-items-center gap-1">
+                <FormLabel className="d-flex align-items-center gap-1">
                     Bootstrap Servers
                     {asyncTest.result?.Success ? (
-                        <Badge color="success" pill>
+                        <Badge bg="success" pill>
                             <Icon icon="check" />
                             Successfully connected
                         </Badge>
                     ) : asyncTest.result?.Error ? (
-                        <Badge color="danger" pill>
+                        <Badge bg="danger" pill>
                             <Icon icon="warning" />
                             Failed connection
                         </Badge>
                     ) : null}
-                </Label>
+                </FormLabel>
                 <div className="input-group">
                     <FormInput
                         control={control}
@@ -117,7 +121,7 @@ export default function KafkaConnectionString({
                         autoComplete="off"
                     />
                     <ButtonWithSpinner
-                        color="secondary"
+                        variant="secondary"
                         icon="rocket"
                         title="Test connection"
                         onClick={asyncTest.execute}
@@ -137,23 +141,25 @@ export default function KafkaConnectionString({
                 <div className="mb-2">
                     <FormSwitch control={control} name="isUseRavenCertificate">
                         <span className="d-flex align-items-center gap-1">
-                            Use RavenDB Certificate <Icon icon="info" color="info" id="useCertInfo" />
+                            Use RavenDB Certificate{" "}
+                            <PopoverWithHoverWrapper message={<UseCertificateInfoPopoverBody />}>
+                                <Icon icon="info" color="info" id="useCertInfo" />
+                            </PopoverWithHoverWrapper>
                         </span>
                     </FormSwitch>
-                    <UseCertificateInfoPopover />
                 </div>
             )}
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Connection Options <small className="text-muted fw-light">(optional)</small>
-                </Label>
+                </FormLabel>
                 <div className="vstack gap-3">
                     {connectionOptionsFieldArray.fields.map((option, idx) => (
                         <div>
                             <div className="vstack mb-2 gap-1">
-                                <Label className="mb-0 d-flex align-items-center gap-1">
+                                <FormLabel className="mb-0 d-flex align-items-center gap-1">
                                     <span className="small-label mb-0">Connection Option #{idx + 1}</span>
-                                </Label>
+                                </FormLabel>
                                 <div key={option.id} className="d-flex gap-1 mb-2">
                                     <FormInput
                                         type="text"
@@ -170,7 +176,10 @@ export default function KafkaConnectionString({
                                         autoComplete="off"
                                     />
                                     {isDeleteUrlVisible(option.key) && (
-                                        <Button color="danger" onClick={() => connectionOptionsFieldArray.remove(idx)}>
+                                        <Button
+                                            variant="danger"
+                                            onClick={() => connectionOptionsFieldArray.remove(idx)}
+                                        >
                                             <Icon icon="trash" margin="m-0" title="Delete" />
                                         </Button>
                                     )}
@@ -180,7 +189,7 @@ export default function KafkaConnectionString({
                     ))}
                 </div>
                 <Button
-                    color="info"
+                    variant="info"
                     className={connectionOptionsFieldArray.fields.length > 0 ? "mt-3" : "mt-1"}
                     onClick={() => connectionOptionsFieldArray.append({ key: null, value: null })}
                 >
@@ -259,26 +268,24 @@ function isMultiLineKey(key: string) {
     return multiLineKeys.includes(key);
 }
 
-function UseCertificateInfoPopover() {
+function UseCertificateInfoPopoverBody() {
     return (
-        <UncontrolledPopover placement="right" trigger="hover" target="useCertInfo">
-            <PopoverBody>
-                <div>
-                    The following <strong>configuration options</strong> will be set for you when using RavenDB server
-                    certificate:
-                </div>
-                <ul>
-                    <li>
-                        <code>security.protocol = SSL</code>
-                    </li>
-                    <li>
-                        <code>ssl.key.pem = &lt;RavenDB Server Private Key&gt;</code>
-                    </li>
-                    <li>
-                        <code>ssl.certificate.pem = &lt;RavenDB Server Public Key&gt;</code>
-                    </li>
-                </ul>
-            </PopoverBody>
-        </UncontrolledPopover>
+        <>
+            <div>
+                The following <strong>configuration options</strong> will be set for you when using RavenDB server
+                certificate:
+            </div>
+            <ul>
+                <li>
+                    <code>security.protocol = SSL</code>
+                </li>
+                <li>
+                    <code>ssl.key.pem = &lt;RavenDB Server Private Key&gt;</code>
+                </li>
+                <li>
+                    <code>ssl.certificate.pem = &lt;RavenDB Server Public Key&gt;</code>
+                </li>
+            </ul>
+        </>
     );
 }

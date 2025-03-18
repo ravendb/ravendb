@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using OperationCanceledException = System.OperationCanceledException;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -73,6 +74,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var index in _indexStore.GetIndexesForCollection(query.ForCollection))
             {
+                if (query.SearchEngineType != index.SearchEngineType)
+                    continue;
+                
                 if (query.IsGroupBy)
                 {
                     if (index.Type != IndexType.AutoMapReduce)
@@ -188,6 +192,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.TryGetField(field.Name, out var indexField))
                 {
+                    if (field.Vector != null)
+                    {
+                        if (field.Vector.Equals(indexField.Vector) == false)
+                        {
+                            explanations?.Add(new Explanation(indexName,
+                                $"The following field is not vector searchable {indexField.Name}, while the query needs to vector.search() on it"));
+                            return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
+                        }
+                        
+                        //When both VectorOptions are equal, the field is equal. No other options should be considered.
+                        continue;
+                    }
                     if (field.IsFullTextSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Search) == false)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following field is not searchable {indexField.Name}, while the query needs to search() on it"));

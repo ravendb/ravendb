@@ -1,9 +1,10 @@
 ﻿import React, { ReactNode } from "react";
 import "./SortDropdown.scss";
 import { Icon } from "./Icon";
-import { DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { Radio } from "./Checkbox";
 import IconName from "typings/server/icons";
+import Dropdown from "react-bootstrap/Dropdown";
+import { CustomDropdownToggle } from "components/common/Dropdown";
 
 interface SortDropdownProps {
     label: ReactNode | ReactNode[];
@@ -13,14 +14,19 @@ interface SortDropdownProps {
 export function SortDropdown(props: SortDropdownProps) {
     const { label, children } = props;
     return (
-        <UncontrolledDropdown className="sort-dropdown">
-            <DropdownToggle className="sort-dropdown-toggle d-flex align-items-center" caret>
+        <Dropdown className="sort-dropdown">
+            <Dropdown.Toggle
+                as={CustomDropdownToggle}
+                variant="secondary"
+                className="sort-dropdown-toggle d-flex align-items-center"
+                isCaretHidden
+            >
                 <div className="flex-grow d-flex align-items-center">{label}</div>
-            </DropdownToggle>
-            <DropdownMenu className="py-4 px-5">
+            </Dropdown.Toggle>
+            <Dropdown.Menu className="py-4 px-5">
                 <div className="hstack gap-5">{children}</div>
-            </DropdownMenu>
-        </UncontrolledDropdown>
+            </Dropdown.Menu>
+        </Dropdown>
     );
 }
 

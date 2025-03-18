@@ -3,7 +3,9 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { UseIndexCleanupResult } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { NavItem, Card, Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Card from "react-bootstrap/Card";
+import Nav from "react-bootstrap/Nav";
 
 const mergeSuggestionErrors = require("Content/img/pages/indexCleanup/merge-suggestion-errors.svg");
 
@@ -16,7 +18,7 @@ export default function MergeSuggestionsErrorsNavItem({ carousel, errors }: Merg
     const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
 
     return (
-        <NavItem>
+        <Nav.Item>
             <Card
                 className={classNames("p-3", "card-tab", {
                     active: carousel.activeTab === 4,
@@ -24,7 +26,7 @@ export default function MergeSuggestionsErrorsNavItem({ carousel, errors }: Merg
                 onClick={() => carousel.setActiveTab(4)}
             >
                 <img src={mergeSuggestionErrors} alt="Merge suggestion errors" />
-                <Badge className="rounded-pill fs-5" color="primary">
+                <Badge className="rounded-pill fs-5" bg="primary">
                     {hasIndexCleanup ? errors.data.length : "?"}
                 </Badge>
                 <h4 className="text-center">
@@ -33,6 +35,6 @@ export default function MergeSuggestionsErrorsNavItem({ carousel, errors }: Merg
                     errors
                 </h4>
             </Card>
-        </NavItem>
+        </Nav.Item>
     );
 }

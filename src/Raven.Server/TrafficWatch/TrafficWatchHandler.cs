@@ -11,18 +11,20 @@ using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.TrafficWatch
 {
     public sealed class TrafficWatchHandler : ServerRequestHandler
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchHandler>("Server");
+        private static readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<TrafficWatchHandler>();
 
         [RavenAction("/admin/traffic-watch", "GET", AuthorizationStatus.Operator)]
         public async Task TrafficWatchWebsockets()

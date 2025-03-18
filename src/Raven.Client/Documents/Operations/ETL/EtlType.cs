@@ -6,6 +6,7 @@
         Sql,
         Olap,
         ElasticSearch,
-        Queue
+        Queue,
+        Snowflake
     }
 }

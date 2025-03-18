@@ -1,12 +1,15 @@
 using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -98,7 +101,15 @@ public sealed unsafe class CoraxIndexedEntriesReader : IDisposable
                 // span.Length == 0 may be set if we stored an empty array (List | Raw | Empty) is marked
                 if (span.Length > 0)
                 {
-                    SetValue(fieldName, new BlittableJsonReaderObject(span.Address, span.Length, _ctx));
+                    if (entryReader.IsVectorHash)
+                    {
+                        SetValue(fieldName, Convert.ToBase64String(new Span<byte>(span.Address, span.Length)));
+                    }
+                    else
+                    {
+                        var blit = new BlittableJsonReaderObject(span.Address, span.Length, _ctx);
+                        SetValue(fieldName, blit);
+                    }
                 }
             }
             else

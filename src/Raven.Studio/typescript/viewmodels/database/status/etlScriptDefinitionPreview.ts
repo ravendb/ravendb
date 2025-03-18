@@ -23,6 +23,7 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
                 transformationName: string,
                 task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>) {

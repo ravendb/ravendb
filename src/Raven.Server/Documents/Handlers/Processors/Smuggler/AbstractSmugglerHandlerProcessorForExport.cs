@@ -80,8 +80,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Export failed .", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error("Export failed.", e);
 
                 result.AddError($"Error occurred during export. Exception: {e.Message}");
                 await WriteSmugglerResultAsync(context, result, RequestHandler.ResponseBodyStream());

@@ -19,7 +19,10 @@ customHooks.forEach(hook => {
     jest.mock("hooks/" + hook);
 });
 
-jest.mock("../typescript/common/eventsCollector");
+jest.mock("../typescript/common/eventsCollector", () => ({
+    default: new (require("../typescript/test/mocks/hooks/MockEventsCollector").default)()
+}));
+
 jest.mock("../typescript/common/bindingHelpers/aceEditorBindingHandler");
 
 jest.mock("../typescript/common/versionProvider");

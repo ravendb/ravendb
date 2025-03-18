@@ -1780,6 +1780,8 @@ class ongoingTasksStats extends shardViewModelBase {
                 return "RavenDB ETL";
             case "Sql":
                 return "SQL ETL";
+            case "Snowflake":
+                return "Snowflake";
             case "Olap":
                 return "OLAP ETL";
             case "ElasticSearch":
@@ -1790,6 +1792,8 @@ class ongoingTasksStats extends shardViewModelBase {
                 return "RabbitMQ ETL";
             case "AzureQueueStorage":
                 return "Azure Queue Storage";
+            case "AmazonSqs":
+                return "Amazon SQS";
             case "SubscriptionConnection":
                 return "Subscription";
             case "SubscriptionBatch":
@@ -2085,10 +2089,12 @@ class ongoingTasksStats extends shardViewModelBase {
             
             const isEtl = type === "Raven" || 
                 type === "Sql" || 
+                type === "Snowflake" ||
                 type === "Olap" || 
                 type === "ElasticSearch" || 
                 type === "Kafka" || 
                 type === "AzureQueueStorage" ||
+                type === "AmazonSqs" ||
                 type === "RabbitMQ";
             
             const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
@@ -2151,9 +2157,11 @@ class ongoingTasksStats extends shardViewModelBase {
                         break;
                     case "Raven":
                     case "Sql":
+                    case "Snowflake":
                     case "Olap":
                     case "ElasticSearch":
                     case "AzureQueueStorage":
+                    case "AmazonSqs":
                     case "Kafka":
                     case "RabbitMQ": { 
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;

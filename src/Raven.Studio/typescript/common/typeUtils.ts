@@ -81,3 +81,16 @@ export function isEmpty(obj: any): boolean {
     }
     return true;
 };
+export function capitalize<Value extends string, Result extends Capitalize<Lowercase<Value>>>(value: Value): Result {
+    if (value == null) {
+        return "" as Result;
+    }
+
+    const stringValue = String(value);
+
+    if (!stringValue.length) {
+        return "" as Result;
+    }
+
+    return (stringValue.toLowerCase()[0].toUpperCase() + stringValue.slice(1).toLowerCase()) as Result;
+}

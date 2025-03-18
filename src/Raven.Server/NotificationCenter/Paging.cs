@@ -4,10 +4,12 @@ using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -24,13 +26,13 @@ namespace Raven.Server.NotificationCenter
         private readonly ConcurrentQueue<PagingInformation> _pagingQueue = new();
         private readonly DateTime[] _pagingUpdates = new DateTime[Enum.GetNames(typeof(PagingOperationType)).Length];
         private Timer _pagingTimer;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public Paging([NotNull] AbstractDatabaseNotificationCenter notificationCenter)
         {
             _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
 
-            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<Paging>(notificationCenter.Database);
         }
 
         public void Add(PagingOperationType operation, string action, string details, long numberOfResults, long pageSize, long duration, long totalDocumentsSizeInBytes)

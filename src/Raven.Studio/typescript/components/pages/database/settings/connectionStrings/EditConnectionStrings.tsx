@@ -1,6 +1,7 @@
 ﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
-import { Button, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import Button from "react-bootstrap/Button";
 import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
 import RavenConnectionString from "./editForms/RavenConnectionString";
@@ -22,6 +23,10 @@ import { useAppSelector } from "components/store";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { components, OptionProps } from "react-select";
 import AzureQueueStorageConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureQueueStorageConnectionString";
+import SnowflakeConnectionString from "components/pages/database/settings/connectionStrings/editForms/SnowflakeConnectionString";
+import AmazonSqsConnectionString from "components/pages/database/settings/connectionStrings/editForms/AmazonSqsConnectionString";
+import Modal from "components/common/Modal";
+import { FormLabel } from "components/common/Form";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -64,20 +69,16 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const availableConnectionStringsOptions = getAvailableConnectionStringsOptions(licenseFeatures);
 
     return (
-        <Modal
-            size="lg"
-            isOpen
-            wrapClassName="bs5"
-            contentClassName="modal-border bulge-info"
-            zIndex="var(--zindex-modal)"
-        >
-            <ModalBody className="pb-0 vstack gap-3">
+        <Modal size="lg" show contentClassName="modal-border bulge-info">
+            <Modal.Header className="vstack gap-3" closeButton={false}>
                 <div className="text-center">
                     <Icon icon="manage-connection-strings" color="info" className="fs-1" margin="m-0" />
                 </div>
                 <div className="text-center lead">{isForNewConnection ? "Create a new" : "Edit"} connection string</div>
+            </Modal.Header>
+            <Modal.Body className="pb-0 vstack gap-3">
                 <div className="mb-2">
-                    <Label>Type</Label>
+                    <FormLabel>Type</FormLabel>
                     <InputGroup className="gap-1 flex-wrap flex-column">
                         <Select
                             options={availableConnectionStringsOptions}
@@ -100,11 +101,11 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         onSave={save}
                     />
                 )}
-            </ModalBody>
-            <ModalFooter className="mt-2">
+            </Modal.Body>
+            <Modal.Footer className="mt-2">
                 <Button
                     type="button"
-                    color="link"
+                    variant="link"
                     className="link-muted"
                     onClick={() => dispatch(connectionStringsActions.editConnectionModalClosed())}
                     title="Cancel"
@@ -115,7 +116,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                     <ButtonWithSpinner
                         form="connection-string-form"
                         type="submit"
-                        color="success"
+                        variant="success"
                         title="Save credentials"
                         icon="save"
                         className="rounded-pill"
@@ -124,7 +125,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         Save connection string
                     </ButtonWithSpinner>
                 )}
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }
@@ -135,6 +136,8 @@ function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConn
             return RavenConnectionString;
         case "Sql":
             return SqlConnectionString;
+        case "Snowflake":
+            return SnowflakeConnectionString;
         case "Olap":
             return OlapConnectionString;
         case "ElasticSearch":
@@ -145,6 +148,8 @@ function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConn
             return RabbitMqConnectionString;
         case "AzureQueueStorage":
             return AzureQueueStorageConnectionString;
+        case "AmazonSqs":
+            return AmazonSqsConnectionString;
         default:
             return null;
     }
@@ -202,7 +207,21 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
         {
             value: "AzureQueueStorage",
             label: "Azure Queue Storage",
-            icon: "azure-queue-storage-etl",
+            icon: "azure-queue-storage",
+            licenseRequired: "Enterprise",
+            isDisabled: !features.hasQueueEtl,
+        },
+        {
+            value: "Snowflake",
+            label: "Snowflake",
+            icon: "snowflake",
+            licenseRequired: "Enterprise",
+            isDisabled: !features.hasSnowflakeEtl,
+        },
+        {
+            value: "AmazonSqs",
+            label: "Amazon SQS",
+            icon: "amazon-sqs",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasQueueEtl,
         },

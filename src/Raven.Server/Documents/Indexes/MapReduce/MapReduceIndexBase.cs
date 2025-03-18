@@ -27,13 +27,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal const string ReducePhaseTreeName = "ReducePhaseTree";
         internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
 
-        internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
+        internal readonly MapReduceIndexingContext MapReduceWorkContext;
 
         private IndexingStatsScope _statsInstance;
         private readonly MapPhaseStats _stats = new MapPhaseStats();
 
         protected MapReduceIndexBase(IndexType type, IndexSourceType sourceType, T definition, AbstractStaticIndexBase compiled) : base(type, sourceType, definition, compiled)
         {
+            MapReduceWorkContext = new MapReduceIndexingContext(this);
         }
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)

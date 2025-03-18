@@ -90,12 +90,13 @@ namespace Sparrow.Json
                 BlittableJsonToken.StartArray |
                 BlittableJsonToken.StartObject |
                 BlittableJsonToken.String |
-                BlittableJsonToken.CompressedString;
+                BlittableJsonToken.CompressedString | 
+                BlittableJsonToken.Vector;
         
         public static BlittableJsonToken ProcessTokenTypeFlags(BlittableJsonToken currentType)
         {
             var token = currentType & TypesMask;
-            if (token is >= BlittableJsonToken.StartObject and <= BlittableJsonToken.RawBlob)
+            if (token is >= BlittableJsonToken.StartObject and < BlittableJsonToken.Reserved3)
                 return currentType & TypesMask;
 
             ThrowInvalidType(currentType);

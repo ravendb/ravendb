@@ -16,6 +16,8 @@ export default class TaskUtils {
                     return "RabbitQueueEtl";
                 case "AzureQueueStorage":
                     return "AzureQueueStorageQueueEtl";
+                case "AmazonSqs":
+                    return "AmazonSqsQueueEtl";
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
@@ -30,6 +32,7 @@ export default class TaskUtils {
                     return "KafkaQueueSink";
                 case "RabbitMq":
                     return "RabbitQueueSink";
+                case "AmazonSqs":
                 case "AzureQueueStorage":
                     throw new Error("Not yet supported");
                 case "None":
@@ -42,17 +45,6 @@ export default class TaskUtils {
         return task.TaskType;
     }
 
-    static studioEtlTypeToEtlType(type: StudioEtlType): EtlType {
-        switch (type) {
-            case "Kafka":
-            case "RabbitMQ":
-            case "AzureQueueStorage":
-                return "Queue";
-            default:
-                return type;
-        }
-    }
-
     static queueTypeToStudioType(
         brokerType: Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType
     ): StudioQueueSinkType {
@@ -62,6 +54,7 @@ export default class TaskUtils {
             case "RabbitMq":
                 return "RabbitQueueSink";
             case "AzureQueueStorage":
+            case "AmazonSqs":
                 throw new Error("Not yet supported");
             case "None":
                 return null;
@@ -71,7 +64,12 @@ export default class TaskUtils {
     }
 
     static studioTaskTypeToTaskType(type: StudioTaskType): OngoingTaskType {
-        if (type === "KafkaQueueEtl" || type === "RabbitQueueEtl" || type === "AzureQueueStorageQueueEtl") {
+        if (
+            type === "KafkaQueueEtl" ||
+            type === "RabbitQueueEtl" ||
+            type === "AzureQueueStorageQueueEtl" ||
+            type === "AmazonSqsQueueEtl"
+        ) {
             return "QueueEtl";
         }
 
@@ -89,6 +87,8 @@ export default class TaskUtils {
                     return "Kafka";
                 case "RabbitMq":
                     return "RabbitMQ";
+                case "AmazonSqs":
+                    return "AmazonSqs";
                 case "AzureQueueStorage":
                     return "AzureQueueStorage";
             }
@@ -107,6 +107,8 @@ export default class TaskUtils {
                 return "RavenEtl";
             case "Sql":
                 return "SqlEtl";
+            case "Snowflake":
+                return "SnowflakeEtl";
             case "Queue":
                 return "QueueEtl";
             default:
@@ -124,31 +126,12 @@ export default class TaskUtils {
                 return "ElasticSearch";
             case "SqlEtl":
                 return "Sql";
+            case "SnowflakeEtl":
+                return "Snowflake";
             case "QueueEtl":
                 return "Queue";
             default:
                 throw new Error("Unsupported task type: " + taskType);
-        }
-    }
-
-    static formatStudioEtlType(etlType: StudioEtlType) {
-        switch (etlType) {
-            case "Raven":
-                return "RavenDB";
-            case "Sql":
-                return "SQL";
-            case "Olap":
-                return "OLAP";
-            case "ElasticSearch":
-                return "Elasticsearch";
-            case "Kafka":
-                return "Kafka";
-            case "RabbitMQ":
-                return "RabbitMQ";
-            case "AzureQueueStorage":
-                return "Azure Queue Storage";
-            default:
-                assertUnreachable(etlType);
         }
     }
 }

@@ -22,6 +22,7 @@ class etlScriptDefinitionCache {
 
             let command: getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl |
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>;
@@ -34,6 +35,9 @@ class etlScriptDefinitionCache {
                     break;
                 case "Sql":
                     command = getOngoingTaskInfoCommand.forSqlEtl(databaseName, taskId);
+                    break;
+                case "Snowflake":
+                    command = getOngoingTaskInfoCommand.forSnowflakeEtl(databaseName, taskId);
                     break;
                 case "Olap":
                     command = getOngoingTaskInfoCommand.forOlapEtl(databaseName, taskId);

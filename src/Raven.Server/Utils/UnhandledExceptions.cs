@@ -1,45 +1,44 @@
 ﻿using System;
 using System.Threading.Tasks;
+using NLog;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils
 {
     public sealed class UnhandledExceptions
     {
-        internal static readonly TimeSpan TimeToWaitForLog = TimeSpan.FromSeconds(15);
-
-        public static void Track(Logger logger)
+        public static void Track(RavenLogger logger)
         {
             AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
             {
-                if (logger.IsOperationsEnabled == false)
+                if (logger.IsFatalEnabled == false)
                     return;
-                Task task;
                 if (args.ExceptionObject is Exception ex)
                 {
-                    task = logger.OperationsWithWait("UnhandledException occurred.", ex);
+                    logger.Fatal("UnhandledException occurred.", ex);
                 }
                 else
                 {
                     var exceptionString = $"UnhandledException: { args.ExceptionObject?.ToString()  ?? "null" }.";
-                    task = logger.OperationsWithWait(exceptionString);
+                    logger.Fatal(exceptionString);
                 }
 
                 Console.Error.WriteLine("UnhandledException occurred");
                 Console.Error.WriteLine(args.ExceptionObject);
 
-                task.Wait(TimeToWaitForLog);
+                LogManager.Shutdown();
             };
 
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
-                if (logger.IsInfoEnabled == false)
+                if (logger.IsDebugEnabled == false)
                     return;
 
                 if (args.Observed)
                     return;
 
-                logger.InfoWithWait("UnobservedTaskException occurred.", args.Exception).Wait(TimeToWaitForLog);
+                logger.Debug("UnobservedTaskException occurred.", args.Exception);
             };
         }
     }

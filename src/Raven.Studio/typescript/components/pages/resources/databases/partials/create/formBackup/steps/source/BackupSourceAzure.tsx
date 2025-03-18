@@ -1,12 +1,13 @@
 import React from "react";
-import { Row, Col, Label } from "reactstrap";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { useRestorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/useRestorePointUtils";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormLabel } from "components/common/Form";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields, {
     RestorePointElementProps,
@@ -19,7 +20,7 @@ export default function BackupSourceAzure() {
         <div className="mt-2">
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Account Name</Label>
+                    <FormLabel className="col-form-label">Account Name</FormLabel>
                 </Col>
                 <Col>
                     <FormInput
@@ -32,7 +33,7 @@ export default function BackupSourceAzure() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Account Key</Label>
+                    <FormLabel className="col-form-label">Account Key</FormLabel>
                 </Col>
                 <Col>
                     <FormInput
@@ -46,7 +47,7 @@ export default function BackupSourceAzure() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Container</Label>
+                    <FormLabel className="col-form-label">Container</FormLabel>
                 </Col>
                 <Col>
                     <FormInput
@@ -59,9 +60,9 @@ export default function BackupSourceAzure() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">
+                    <FormLabel className="col-form-label">
                         Remote Folder Name <small>(optional)</small>
-                    </Label>
+                    </FormLabel>
                 </Col>
                 <Col>
                     <FormInput

@@ -3,7 +3,6 @@ import { DatabasePanel } from "./partials/DatabasePanel";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { Button } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -21,6 +20,7 @@ import { StickyHeader } from "components/common/StickyHeader";
 import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import CreateDatabase, { CreateDatabaseMode } from "./partials/create/CreateDatabase";
+import Button from "react-bootstrap/Button";
 
 interface DatabasesPageProps {
     compact?: string;
@@ -28,7 +28,7 @@ interface DatabasesPageProps {
     restore?: boolean;
 }
 
-export function DatabasesPage(props: ReactProps<any, DatabasesPageProps>) {
+export function DatabasesPage({ queryParams }: ReactQueryParamsProps<DatabasesPageProps>) {
     const databases = useAppSelector(databaseSelectors.allDatabases);
     const nodeTags = useAppSelector(clusterSelectors.allNodeTags);
     const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
@@ -85,13 +85,13 @@ export function DatabasesPage(props: ReactProps<any, DatabasesPageProps>) {
     }, []);
 
     useEffect(() => {
-        if (props?.queryParams?.compact) {
-            const toCompact = databases.find((x) => x.name === props?.queryParams?.compact);
+        if (queryParams?.compact) {
+            const toCompact = databases.find((x) => x.name === queryParams?.compact);
             if (toCompact) {
-                dispatch(compactDatabase(toCompact, props?.queryParams?.shard));
+                dispatch(compactDatabase(toCompact, queryParams?.shard));
             }
         }
-        if (props?.queryParams?.restore) {
+        if (queryParams?.restore) {
             setCreateDatabaseMode("fromBackup");
         }
 
@@ -100,7 +100,7 @@ export function DatabasesPage(props: ReactProps<any, DatabasesPageProps>) {
             trigger: false,
             replace: true,
         });
-    }, [props?.queryParams?.compact, props?.queryParams?.restore, databases, dispatch, props?.queryParams?.shard]);
+    }, [queryParams?.compact, queryParams?.restore, databases, dispatch, queryParams?.shard]);
 
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 
@@ -113,7 +113,7 @@ export function DatabasesPage(props: ReactProps<any, DatabasesPageProps>) {
                     {isOperatorOrAbove && (
                         <>
                             <Button
-                                color="primary"
+                                variant="primary"
                                 onClick={() => setCreateDatabaseMode("regular")}
                                 className="rounded-pill"
                             >
@@ -129,7 +129,7 @@ export function DatabasesPage(props: ReactProps<any, DatabasesPageProps>) {
                         </>
                     )}
                     {showToggleButton && (
-                        <Button color="secondary" className="rounded-pill" onClick={toggleFilterOptions}>
+                        <Button variant="secondary" className="rounded-pill" onClick={toggleFilterOptions}>
                             <Icon icon="filter" />
                             {showFilterOptions ? "Hide Filtering Options" : "Show Filtering Options"}
                         </Button>
@@ -147,7 +147,6 @@ export function DatabasesPage(props: ReactProps<any, DatabasesPageProps>) {
                     setSelectedDatabaseNames={setSelectedDatabaseNames}
                 />
             </StickyHeader>
-            <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
             <div className="mt-3">
                 {filteredDatabaseNames.map((dbName) => (
                     <DatabasePanel

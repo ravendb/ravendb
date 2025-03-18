@@ -1,50 +1,36 @@
 /// <reference path="../../typings/tsd.d.ts" />
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
-import adminLogsConfig = require("models/database/debug/adminLogsConfig");
-import appUrl = require("common/appUrl");
+import adminLogsSlice = require("components/pages/resources/manageServer/adminLogs/store/adminLogsSlice");
 
-class adminLogsWebSocketClient extends abstractWebSocketClient<string> {
+type AdminLogsServerMessage = Omit<adminLogsSlice.AdminLogsMessage, "_meta">;
 
-    private readonly onData: (data: string) => void;
+class adminLogsWebSocketClient extends abstractWebSocketClient<AdminLogsServerMessage> {
 
-    constructor(config: adminLogsConfig, onData: (data: string) => void) {
-        super(null, config);
+    private readonly onData: (data: AdminLogsServerMessage) => void;
+
+    constructor(onData: (data: AdminLogsServerMessage) => void) {
+        super(null);
         this.onData = onData;
     }
 
     protected isJsonBasedClient() {
-        return false;
+        return true;
     }
 
     get connectionDescription() {
         return "Admin Logs";
     }
 
-    protected webSocketUrlFactory(config: adminLogsConfig) {
-        const includes = config
-            .entries()
-            .filter(x => x.mode() === "include")
-            .map(x => x.toFilter());
-        
-        const excludes = config
-            .entries()
-            .filter(x => x.mode() === "exclude")
-            .map(x => x.toFilter());
-        
-        const args = {
-            only: includes,
-            except: excludes
-        };
-        
-        return endpoints.global.adminLogs.adminLogsWatch + appUrl.urlEncodeArgs(args);
+    protected webSocketUrlFactory() {
+        return endpoints.global.adminLogs.adminLogsWatch;
     }
 
     get autoReconnect() {
         return true;
     }
 
-    protected onMessage(e: string) {
+    protected onMessage(e: AdminLogsServerMessage) {
         this.onData(e);
     }
 }

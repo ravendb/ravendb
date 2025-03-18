@@ -3,6 +3,7 @@
 DEFAULT_SETTINGS_PATH="/etc/ravendb/settings.json"
 RAVEN_SERVER_SCHEME="http"
 
+
 # ====== Helper functions ======
 
 # Determines server scheme (http/https)

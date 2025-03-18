@@ -1,4 +1,5 @@
-import { Button, Modal, ModalBody } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import { CloseButton, Modal, ModalBody } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import Code from "components/common/Code";
 import copyToClipboard from "common/copyToClipboard";
@@ -21,7 +22,7 @@ export function ErrorModal(props: ErrorModalProps) {
         >
             <ModalBody>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggleErrorModal} />
+                    <CloseButton onClick={toggleErrorModal} />
                 </div>
                 <div className="hstack gap-1 mb-4">
                     <Icon icon="warning" color="danger" margin="m-0" />
@@ -32,7 +33,7 @@ export function ErrorModal(props: ErrorModalProps) {
                 <div className="text-end mt-3">
                     <Button
                         className="rounded-pill"
-                        color="primary"
+                        variant="primary"
                         onClick={() => copyToClipboard.copy(error, "Copied error message to clipboard")}
                     >
                         <Icon icon="copy" /> <span>Copy to clipboard</span>

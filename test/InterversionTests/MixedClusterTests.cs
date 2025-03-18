@@ -1054,7 +1054,25 @@ namespace InterversionTests
             {
                 await CreateDatabase(stores, database, nodes.Count);
             }
+        }
 
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Cluster, RavenPlatform.Windows | RavenPlatform.Linux)]
+        public async Task ClusterTcpCompressionTest_70()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var nodes = await CreateCluster(new[] { "5.4.0", "5.4.0", "5.4.0" });
+            await UpgradeServerAsync("7.0.0-nightly-20250103-0446", nodes[0], new Dictionary<string, string>
+            {
+                ["RAVEN_HTTP_COMPRESSION_ALGORITHM"] = "gzip"
+            });
+
+            var database = GetDatabaseName();
+            var (disposable, stores) = await GetStores(database, nodes);
+            using (disposable)
+            {
+                await CreateDatabase(stores, database, nodes.Count);
+            }
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Counters, RavenPlatform.Windows, Skip = "WIP")]

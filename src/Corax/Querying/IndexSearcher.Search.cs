@@ -10,6 +10,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Utils;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.PostingLists;

@@ -3,6 +3,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -62,7 +63,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             record.PeriodicBackups.Add(Configuration);
         }
 
-        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog)
         {
             if (_shouldRemoveBackupStatus == false)
                 return;

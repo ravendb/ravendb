@@ -11,6 +11,7 @@ interface computedAppUrls {
     clientConfiguration: KnockoutComputed<string>;
     studioConfiguration: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
+    allRevisions: KnockoutComputed<string>;
     revisionsBin: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
@@ -28,11 +29,13 @@ interface computedAppUrls {
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editSqlEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editSnowflakeEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editOlapEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editElasticSearchEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editKafkaEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRabbitMqEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editAzureQueueStorageEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editAmazonSqsEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editKafkaSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRabbitMqSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
@@ -52,11 +55,13 @@ interface computedAppUrls {
     editSubscriptionTaskUrl: KnockoutComputed<string>;
     editRavenEtlTaskUrl: KnockoutComputed<string>;
     editSqlEtlTaskUrl: KnockoutComputed<string>;
+    editSnowflakeEtlTaskUrl: KnockoutComputed<string>;
     editOlapEtlTaskUrl: KnockoutComputed<string>;
     editElasticSearchEtlTaskUrl: KnockoutComputed<string>;
     editKafkaEtlTaskUrl: KnockoutComputed<string>;
     editRabbitMqEtlTaskUrl: KnockoutComputed<string>;
     editAzureQueueStorageEtlTaskUrl: KnockoutComputed<string>;
+    editAmazonSqsEtlTaskUrl: KnockoutComputed<string>;
     editKafkaSinkTaskUrl: KnockoutComputed<string>;
     editRabbitMqSinkTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;

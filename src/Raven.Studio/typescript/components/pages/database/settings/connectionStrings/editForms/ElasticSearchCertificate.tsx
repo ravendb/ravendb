@@ -2,8 +2,9 @@ import certificateUtils from "common/certificateUtils";
 import { Icon } from "components/common/Icon";
 import moment from "moment";
 import React from "react";
-import { Button, Card, CardBody, CardHeader } from "reactstrap";
+import Card from "react-bootstrap/Card";
 import IconName from "typings/server/icons";
+import Button from "react-bootstrap/Button";
 
 interface ElasticSearchCertificateProps {
     certBase64: string;
@@ -25,16 +26,16 @@ export default function ElasticSearchCertificate({ certBase64, onDelete }: Elast
 
     return (
         <Card className="well">
-            <CardHeader className="d-flex p-1 justify-content-between align-items-center">
+            <Card.Header className="d-flex p-1 justify-content-between align-items-center">
                 <div>
                     <Icon icon="certificate" />
                     {certInfo.thumbprint}
                 </div>
-                <Button onClick={onDelete} color="danger">
+                <Button onClick={onDelete} variant="danger">
                     <Icon icon="trash" margin="m-0" />
                 </Button>
-            </CardHeader>
-            <CardBody className="d-flex p-1 justify-content-around">
+            </Card.Header>
+            <Card.Body className="d-flex p-1 justify-content-around">
                 <div className="d-flex gap-1">
                     <div>
                         <Icon icon="clock" />
@@ -49,7 +50,7 @@ export default function ElasticSearchCertificate({ certBase64, onDelete }: Elast
                     </div>
                     <strong className={expirationClass}>{expirationText}</strong>
                 </div>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

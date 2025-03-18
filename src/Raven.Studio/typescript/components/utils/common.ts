@@ -124,3 +124,44 @@ export const availableS3Regions: SelectOption<string>[] = typeUtils.sortBy(
 export type OmitIndexSignature<T> = {
     [K in keyof T as string extends K ? never : K]: T[K];
 };
+
+export type StringWithAutocomplete<T> = T | (string & NonNullable<unknown>);
+
+export const allLogLevels = exhaustiveStringTuple<Sparrow.Logging.LogLevel>()(
+    "Trace",
+    "Debug",
+    "Info",
+    "Warn",
+    "Error",
+    "Fatal",
+    "Off"
+);
+
+export const logLevelRelevances: Record<Sparrow.Logging.LogLevel, number> = {
+    Trace: 0,
+    Debug: 1,
+    Info: 2,
+    Warn: 3,
+    Error: 4,
+    Fatal: 5,
+    Off: 6,
+};
+
+export const allLogFilterActions = exhaustiveStringTuple<Sparrow.Logging.LogFilterAction>()(
+    "Ignore",
+    "IgnoreFinal",
+    "Log",
+    "LogFinal",
+    "Neutral"
+);
+export const logLevelOptions: SelectOption<Sparrow.Logging.LogLevel>[] = allLogLevels.map((level) => ({
+    label: level,
+    value: level,
+}));
+
+export const logFilterActionOptions: SelectOption<Sparrow.Logging.LogFilterAction>[] = allLogFilterActions.map(
+    (action) => ({
+        label: action,
+        value: action,
+    })
+);

@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Queries.Timings;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Util;
@@ -662,6 +663,48 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> queriedTextFactory, float? minimumSimilarity, int? numberOfCandidates, bool isExact)
+        {
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            textFieldFactory.Invoke(fieldBuilder);
+            queriedTextFactory.Invoke(valueBuilder);
+            
+            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
+            
+            return this;
+        }
+        
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> queriedEmbeddingFactory, float? minimumSimilarity, int? numberOfCandidates, bool isExact)
+        {
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            embeddingFieldFactory.Invoke(fieldBuilder);
+            queriedEmbeddingFactory.Invoke(valueBuilder);
+
+            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
+            
+            return this;
+        }
+        
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> queriedEmbeddingFactory, float? minimumSimilarity, int? numberOfCandidates, bool isExact)
+        {
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorFieldValueFactory();
+
+            vectorFieldFactory.Invoke(fieldBuilder);
+            queriedEmbeddingFactory.Invoke(valueBuilder);
+
+            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
+            
+            return this;
+        }
+  
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso()
         {

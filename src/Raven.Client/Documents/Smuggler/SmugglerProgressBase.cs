@@ -82,6 +82,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public bool RavenEtlsUpdated { get; set; }
 
         public bool SqlEtlsUpdated { get; set; }
+        
+        public bool SnowflakeEtlsUpdated { get; set; }
 
         public bool ExternalReplicationsUpdated { get; set; }
 
@@ -104,6 +106,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public bool RavenConnectionStringsUpdated { get; set; }
 
         public bool SqlConnectionStringsUpdated { get; set; }
+        
+        public bool SnowflakeConnectionStringsUpdated { get; set; }
 
         public bool ClientConfigurationUpdated { get; set; }
 
@@ -156,6 +160,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (SqlConnectionStringsUpdated)
                 json[nameof(SqlConnectionStringsUpdated)] = SqlConnectionStringsUpdated;
+            
+            if (SnowflakeConnectionStringsUpdated)
+                json[nameof(SnowflakeConnectionStringsUpdated)] = SnowflakeConnectionStringsUpdated;
 
             if (ClientConfigurationUpdated)
                 json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
@@ -171,6 +178,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (SqlEtlsUpdated)
                 json[nameof(SqlEtlsUpdated)] = SqlEtlsUpdated;
+            
+            if (SnowflakeEtlsUpdated)
+                json[nameof(SnowflakeEtlsUpdated)] = SnowflakeEtlsUpdated;
 
             if (RavenEtlsUpdated)
                 json[nameof(RavenEtlsUpdated)] = RavenEtlsUpdated;
@@ -243,6 +253,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (SqlConnectionStringsUpdated)
                 sb.AppendLine("- SQL Connection Strings");
+            
+            if (SnowflakeConnectionStringsUpdated)
+                sb.AppendLine("- Snowflake Connection Strings");
 
             if (ConflictSolverConfigUpdated)
                 sb.AppendLine("- Conflicts Solvers");
@@ -258,6 +271,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (SqlEtlsUpdated)
                 sb.AppendLine("- SQL ETLs");
+            
+            if (SnowflakeEtlsUpdated)
+                sb.AppendLine("- Snowflake ETLs");
 
             if (SortersUpdated)
                 sb.AppendLine("- Sorters");

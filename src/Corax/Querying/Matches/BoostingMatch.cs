@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
+using Sparrow;
 
 namespace Corax.Querying.Matches
 {
@@ -37,6 +38,8 @@ namespace Corax.Querying.Matches
         public float BoostFactor;
         public BoostingMatch(Querying.IndexSearcher searcher, in IQueryMatch inner, float boostFactor)
         {
+            PortableExceptions.ThrowIf<NotSupportedException>(inner is VectorSearchMatch, $"Boosting the {nameof(VectorSearchMatch)} is not supported yet.");
+            
             _inner = inner;
             BoostFactor = boostFactor;
         }

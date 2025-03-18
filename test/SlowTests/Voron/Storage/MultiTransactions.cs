@@ -16,7 +16,7 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void ShouldWork()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))
             {
                 for (int x = 0; x < 10; x++)
                 {

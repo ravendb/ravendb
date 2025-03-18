@@ -2,10 +2,12 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using Raven.Client.Documents.Conventions;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Logging;
 using Sparrow.Json;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.NotificationCenter;
@@ -25,12 +27,12 @@ public class ConflictRevisionsExceeded
     }
 
     private Timer _timer;
-    private readonly Logger _logger;
+    private readonly RavenLogger _logger;
 
     public ConflictRevisionsExceeded(AbstractDatabaseNotificationCenter notificationCenter)
     {
         _notificationCenter = notificationCenter;
-        _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
+        _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), notificationCenter.Database);
     }
 
     public void Add(ConflictInfo info)

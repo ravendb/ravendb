@@ -6,7 +6,7 @@ import { ChangeVectorDetails } from "components/pages/database/tasks/ongoingTask
 import { NodeInfoFailure } from "components/pages/database/tasks/ongoingTasks/partials/NodeInfoFailure";
 import { loadStatus } from "components/models/common";
 import { Icon } from "components/common/Icon";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface ReplicationTaskProgressTooltipProps {
     target: HTMLElement;
@@ -53,7 +53,7 @@ export function ReplicationTaskProgressTooltip(props: ReplicationTaskProgressToo
                 />
                 {hasError && (
                     <div className="text-center">
-                        <Button color="danger" key="button" onClick={toggleErrorModal} className="rounded-pill">
+                        <Button variant="danger" key="button" onClick={toggleErrorModal} className="rounded-pill">
                             Open error in modal <Icon icon="newtab" margin="ms-1" />
                         </Button>
                     </div>

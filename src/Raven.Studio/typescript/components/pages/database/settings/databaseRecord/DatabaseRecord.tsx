@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Card, CardBody, Col, InputGroup, Row } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import InputGroup from "react-bootstrap/InputGroup";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import useConfirm from "components/common/ConfirmDialog";
@@ -21,6 +24,7 @@ import ReactAce from "react-ace/lib/ace";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 interface VisibleDocument {
     text: string;
@@ -175,21 +179,21 @@ export default function DatabaseRecord() {
                             {isEditMode ? (
                                 <>
                                     <ButtonWithSpinner
-                                        color="primary"
+                                        variant="primary"
                                         icon="save"
                                         onClick={saveDatabaseRecord}
                                         isSpinning={asyncSaveDatabaseRecord.loading}
                                     >
                                         Save
                                     </ButtonWithSpinner>
-                                    <Button color="secondary" onClick={discardDatabaseRecord}>
+                                    <Button variant="secondary" onClick={discardDatabaseRecord}>
                                         Cancel
                                     </Button>
                                 </>
                             ) : (
                                 <>
                                     <ButtonWithSpinner
-                                        color="primary"
+                                        variant="primary"
                                         onClick={refresh}
                                         isSpinning={asyncGetDatabaseRecord.loading}
                                         icon="refresh"
@@ -197,7 +201,7 @@ export default function DatabaseRecord() {
                                         Refresh
                                     </ButtonWithSpinner>
                                     <Button
-                                        color="secondary"
+                                        variant="secondary"
                                         onClick={toggleEditMode}
                                         disabled={asyncGetDatabaseRecord.loading}
                                     >
@@ -209,7 +213,7 @@ export default function DatabaseRecord() {
                         </div>
 
                         <Card>
-                            <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
+                            <Card.Body className="d-flex flex-center flex-column flex-wrap gap-4">
                                 <InputGroup className="gap-1 flex-wrap flex-column">
                                     <div
                                         className={classNames(
@@ -228,7 +232,7 @@ export default function DatabaseRecord() {
                                             </Switch>
                                         )}
                                         <Button
-                                            color="link"
+                                            variant="link"
                                             size="xs"
                                             className="p-0"
                                             onClick={isCollapsed ? expand : collapse}
@@ -254,7 +258,7 @@ export default function DatabaseRecord() {
                                         readOnly={!isEditMode}
                                     />
                                 </InputGroup>
-                            </CardBody>
+                            </Card.Body>
                         </Card>
                     </Col>
                     <Col sm={12} lg={4}>

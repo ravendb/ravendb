@@ -21,6 +21,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -106,7 +107,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected virtual string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context, string changeVector)
         {
-           return changeVector;
+            return changeVector;
         }
 
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
@@ -223,9 +224,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
                 if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
                 {
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
-                        Logger.Info(
+                        Logger.Debug(
                             $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
                             $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
                     }
@@ -234,9 +235,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                     {
-                        if (Logger.IsInfoEnabled)
+                        if (Logger.IsDebugEnabled)
                         {
-                            Logger.Info(
+                            Logger.Debug(
                                 $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
                                 "nevertheless we create an additional task.");
                         }
@@ -291,9 +292,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             }
 
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                Logger.Info($"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, " +
+                Logger.Debug($"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, " +
                             $"last document change vector: {databaseChangeVector}");
             }
 
@@ -439,7 +440,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local2) == ConflictStatus.AlreadyMerged)
                                     continue;
 
-                                string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key); 
+                                string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key);
                                 pendingAttachmentsTombstoneUpdates ??= new();
                                 pendingAttachmentsTombstoneUpdates.Add((documentId, incomingChangeVector, attachmentTombstone.LastModifiedTicks));
 
@@ -459,7 +460,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(revisionTombstone.Id, out string id, out string revisionChangeVector);
                                 HandleRevisionTombstone(context, id, revisionChangeVector, out var changeVectorSlice, out var idKeySlice, toDispose);
-                                
+
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, idKeySlice, revisionTombstone.Collection,
                                     changeVectorVersion, revisionTombstone.LastModifiedTicks, changeVectorSlice, fromReplication: true);
                                 break;
@@ -490,7 +491,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     To = deletedRange.To
                                 };
                                 tss.DeleteTimestampRange(context, deletionRangeRequest, incomingChangeVector, updateMetadata: false);
-                               
+
                                 break;
 
                             case TimeSeriesReplicationItem segment:
@@ -512,7 +513,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     throw new LegacyReplicationViolationException(msg);
                                 }
                                 UpdateTimeSeriesNameIfNeeded(context, docId, segment, tss);
-                                
+
                                 if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, incomingChangeVector, baseline))
                                 {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
@@ -699,7 +700,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 continue;
                             }
 
-                            if (ChangeVector.GetConflictStatus(context, cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged || 
+                            if (ChangeVector.GetConflictStatus(context, cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged ||
                                 doc.Flags.Contain(DocumentFlags.HasAttachments | DocumentFlags.Resolved))
                             {
                                 // have to load the full document
@@ -888,7 +889,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 ReplicatedItems = replicationItems,
                 ReplicatedAttachmentStreams = replicatedAttachmentStreams,
                 SupportedFeatures = SupportedFeatures,
-                Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
+                Logger = database.Loggers.GetLogger<MergedDocumentReplicationCommandDto>()
             };
 
             return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag);

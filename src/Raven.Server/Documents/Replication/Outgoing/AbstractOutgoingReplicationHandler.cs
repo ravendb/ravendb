@@ -24,6 +24,7 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -36,6 +37,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -68,7 +70,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         protected readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         protected InterruptibleRead<TContextPool, TOperationContext> _interruptibleRead;
         protected OutgoingReplicationStatsAggregator _lastStats;
-        protected Logger Logger;
+        protected RavenLogger Logger;
 
         public ServerStore Server => _server;
         public long LastSentDocumentEtag => _lastSentDocumentEtag;
@@ -108,7 +110,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             _connectionDisposed = new AsyncManualResetEvent(token);
 
-            Logger = LoggingSource.Instance.GetLogger(_databaseName, GetType().FullName);
+            Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), _databaseName);
             Destination = node;
             Metrics = new ReplicationMetricsCountersManager();
         }
@@ -184,8 +186,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     }
 
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Will replicate to {Destination.FromString()} via {socketResult.Url}");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Will replicate to {Destination.FromString()} via {socketResult.Url}");
 
                     _tcpConnectionOptions.TcpClient = socketResult.TcpClient;
 
@@ -391,25 +393,25 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     UpdateDestinationChangeVector(replicationBatchReply);
                     OnSuccessfulTwoWaysCommunication();
 
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
-                        Logger.Info(
+                        Logger.Debug(
                             $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {LastAcceptedChangeVector}");
                     }
                     break;
 
                 case ReplicationMessageReply.ReplyType.Error:
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsErrorEnabled)
                     {
-                        Logger.Info(
+                        Logger.Error(
                             $"Received reply for replication batch from {Destination.FromString()}. There has been a failure, error string received : {replicationBatchReply.Exception}");
                     }
                     throw new InvalidOperationException(
                         $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
-                        Logger.Info(
+                        Logger.Debug(
                             $"Received reply for replication batch from {Destination.FromString()}. Destination is reporting missing attachments.");
                     }
 
@@ -434,9 +436,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         private void RaiseAlertAndThrowMissingAttachmentException(string msg, string exceptionDetails)
         {
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsErrorEnabled)
             {
-                Logger.Info(
+                Logger.Error(
                     $"Received reply for replication batch from {Destination.FromString()}. Error string received = {msg}");
             }
 
@@ -508,8 +510,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 var young = (DateTime.UtcNow - _startedAt).TotalSeconds < 30;
                 if (young)
                     msg += "This can happen if the other node wasn't yet notified about being assigned this database and should be resolved shortly.";
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg, e);
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug(msg, e);
 
                 AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
 
@@ -525,16 +527,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
             {
                 const string msg = "Got operation canceled notification while opening outgoing replication channel. " +
                                    "Aborting and closing the channel.";
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg, e);
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug(msg, e);
                 AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
                 throw;
             }
             catch (Exception e)
             {
                 var msg = $"{OutgoingReplicationThreadName} got an unexpected exception during initial handshake";
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg, e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error(msg, e);
 
                 AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
                 AddAlertOnFailureToReachOtherSide(msg, e);
@@ -568,8 +570,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Sending heartbeat failed. ({FromToString})", e);
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"Sending heartbeat failed. ({FromToString})", e);
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeatError, "Sending heartbeat failed.");
                     throw;
                 }
@@ -582,16 +584,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 catch (OperationCanceledException)
                 {
                     const string msg = "Got cancellation notification while parsing heartbeat response. Closing replication channel.";
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"{msg} ({FromToString})");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"{msg} ({FromToString})");
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeatAcknowledgeError, msg);
                     throw;
                 }
                 catch (Exception e)
                 {
                     const string msg = "Parsing heartbeat result failed.";
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"{msg} ({FromToString})", e);
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"{msg} ({FromToString})", e);
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeatAcknowledgeError, msg);
                     throw;
                 }
@@ -725,8 +727,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             void HandleOperationCancelException(OperationCanceledException e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Operation canceled on replication thread ({FromToString}). " +
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Operation canceled on replication thread ({FromToString}). " +
                                 $"This is not necessarily due to an issue. Stopped the thread.");
                 if (_cts.IsCancellationRequested == false)
                 {
@@ -736,29 +738,29 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             void HandleIOException(IOException e)
             {
-                if (Logger.IsInfoEnabled)
+                if (Logger.IsDebugEnabled)
                 {
                     if (e.InnerException is SocketException)
-                        Logger.Info($"SocketException was thrown from the connection to remote node ({FromToString}). " +
+                        Logger.Debug($"SocketException was thrown from the connection to remote node ({FromToString}). " +
                                     $"This might mean that the remote node is done or there is a network issue.", e);
                     else
-                        Logger.Info($"IOException was thrown from the connection to remote node ({FromToString}).", e);
+                        Logger.Debug($"IOException was thrown from the connection to remote node ({FromToString}).", e);
                 }
                 OnFailed(e);
             }
 
             void HandleLegacyReplicationViolationException(LegacyReplicationViolationException e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"LegacyReplicationViolationException occurred on replication thread ({FromToString}). " +
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"LegacyReplicationViolationException occurred on replication thread ({FromToString}). " +
                                 "Replication is stopped and will not continue until the violation is resolved. ", e);
                 OnFailed(e);
             }
 
             void HandleException(Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Unexpected exception occurred on replication thread ({FromToString}). " +
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"Unexpected exception occurred on replication thread ({FromToString}). " +
                                 $"Replication stopped (will be retried later).", e);
                 OnFailed(e);
             }
@@ -831,8 +833,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 return;
 
             var timeout = _server.Engine.TcpConnectionTimeout;
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Disposing {GetType().FullName} ({FromToString}) [Timeout:{timeout}]");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Disposing {GetType().FullName} ({FromToString}) [Timeout:{timeout}]");
 
             OnBeforeDispose();
 
@@ -847,8 +849,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             {
                 while (_longRunningSendingWork.Join((int)timeout.TotalMilliseconds) == false)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Waited {timeout} for timeout to occur, but still this thread is keep on running. Will wait another {timeout} ");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Waited {timeout} for timeout to occur, but still this thread is keep on running. Will wait another {timeout} ");
                     DisposeTcpClient();
                 }
             }

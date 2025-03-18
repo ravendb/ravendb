@@ -15,13 +15,13 @@ namespace FastTests.Issues
         [Fact]
         public void ShouldWork()
         {
-            Validate("RAVEN_Logs_Mode");
-            Validate("RAVEN.Logs.Mode");            
+            Validate("RAVEN_Logs_MinLevel");
+            Validate("RAVEN.Logs.MinLevel");            
         }
 
         private static void Validate(string key)
         {
-            Environment.SetEnvironmentVariable(key, LogMode.Information.ToString());
+            Environment.SetEnvironmentVariable(key, LogLevel.Info.ToString());
 
             try
             {
@@ -29,7 +29,7 @@ namespace FastTests.Issues
 
                 configuration.Initialize();
 
-                Assert.Equal(LogMode.Information, configuration.Logs.Mode);
+                Assert.Equal(LogLevel.Info, configuration.Logs.MinLevel);
             }
             finally
             {

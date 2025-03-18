@@ -64,7 +64,7 @@
                         <span>Clone</span>
                     </button>
                     <button type="button" class="delete-btn btn btn-danger"
-                            data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode() && !isClone() && !isCreatingNewDocument(), requiredAccess: 'DatabaseReadWrite'">
+                            data-bind="click: isRevision() ? deleteRevision : deleteDocument, enable: !isCreatingNewDocument(), visible: isRevision() || !inReadOnlyMode() && !inDiffMode() && !isClone() && !isCreatingNewDocument(), requiredAccess: 'DatabaseReadWrite'">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>

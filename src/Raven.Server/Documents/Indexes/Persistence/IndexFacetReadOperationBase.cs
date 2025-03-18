@@ -9,6 +9,7 @@ using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
 
@@ -16,7 +17,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
 {
     protected readonly QueryBuilderFactories _queryBuilderFactories;
 
-    public IndexFacetReadOperationBase(Index index, QueryBuilderFactories queryBuilderFactories, Logger logger) : base(index, logger)
+    public IndexFacetReadOperationBase(Index index, QueryBuilderFactories queryBuilderFactories, RavenLogger logger) : base(index, logger)
     {
         _queryBuilderFactories = queryBuilderFactories;
     }

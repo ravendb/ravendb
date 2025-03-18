@@ -15,14 +15,6 @@ namespace Raven.Client.Documents.Identity
         private readonly Func<object, string> _generateId;
         private readonly Func<object, Task<string>> _generateIdAsync;
 
-        [Obsolete("This constructor is not supported anymore. Will be removed in next major version of the product. Use constructor with 'generateIdAsync' parameter instead.")]
-        public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, string> generateId)
-        {
-            _conventions = conventions;
-            _generateIdAsync = entity => Task.FromResult(generateId(entity));
-            _generateId = generateId;
-        }
-
         public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, Task<string>> generateIdAsync)
         {
             _conventions = conventions;

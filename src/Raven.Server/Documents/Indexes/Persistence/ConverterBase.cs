@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -170,6 +171,10 @@ namespace Raven.Server.Documents.Indexes.Persistence
                         break;
                     case TimeOnly:
                         valueType = ValueType.TimeOnly;
+                        break;
+                    
+                    case VectorValue:
+                        valueType = ValueType.Vector;
                         break;
 
                     default:
@@ -331,6 +336,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
             DateOnly,
 
             TimeOnly,
+            
+            Vector,
             
             CoraxSpatialPointEntry,
             

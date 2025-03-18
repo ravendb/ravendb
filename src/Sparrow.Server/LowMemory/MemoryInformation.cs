@@ -8,6 +8,7 @@ using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Posix.macOS;
 using Sparrow.Server.Utils;
@@ -18,7 +19,7 @@ namespace Sparrow.Server.LowMemory
 {
     public static class MemoryInformation
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(MemoryInformation));
 
         private static readonly byte[] VmRss = Encoding.UTF8.GetBytes("VmRSS:");
         private static readonly byte[] VmSwap = Encoding.UTF8.GetBytes("VmSwap:");
@@ -612,10 +613,10 @@ namespace Sparrow.Server.LowMemory
                     out int limitsOutputSize) == false || 
                 limitsOutputSize != sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
             {
-                if (_reportedQueryJobObjectFailure == false && Logger.IsInfoEnabled)
+                if (_reportedQueryJobObjectFailure == false && Logger.IsWarnEnabled)
                 {
                     _reportedQueryJobObjectFailure = true;
-                    Logger.Info(
+                    Logger.Warn(
                         $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
                 }
             }

@@ -11,9 +11,11 @@ using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Meters;
 using Sparrow.Utils;
+using Voron.Logging;
 using Voron.Platform.Win32;
 using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32MemoryMapNativeMethods;
@@ -70,7 +72,7 @@ namespace Voron.Impl.Paging
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
             bool usePageProtection = false)
-            : base(options, canPrefetchAhead: false, usePageProtection: usePageProtection)
+            : base(options, RavenLogManager.Instance.GetLoggerForVoron<Windows32BitsMemoryMapPager>(options, file.FullPath), canPrefetchAhead: false, usePageProtection: usePageProtection)
         {
             _memoryMappedFileAccess = access == Win32NativeFileAccess.GenericRead
               ? MemoryMappedFileAccess.Read

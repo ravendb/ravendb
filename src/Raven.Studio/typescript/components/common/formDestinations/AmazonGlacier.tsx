@@ -1,6 +1,7 @@
-﻿import React from "react";
-import { Badge, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
-import { FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
+﻿import Badge from "react-bootstrap/Badge";
+import Collapse from "react-bootstrap/Collapse";
+import Card from "react-bootstrap/Card";
+import { FormInput, FormLabel, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { Icon } from "components/common/Icon";
@@ -12,6 +13,7 @@ import { mapGlacierToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { availableGlacierRegions } from "components/utils/common";
+import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 
 export default function AmazonGlacier() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -32,122 +34,122 @@ export default function AmazonGlacier() {
 
     return (
         <Card className="well">
-            <CardBody>
+            <Card.Body>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Amazon Glacier
                 </FormSwitch>
-                <Collapse isOpen={formValues.isEnabled} className="vstack gap-2 mt-2">
-                    <FormSwitch
-                        name={`${fieldBase}.config.isOverrideConfig`}
-                        control={control}
-                        className="ms-3 w-100"
-                        color="secondary"
-                    >
-                        Override configuration via external script
-                    </FormSwitch>
-                    {formValues.config.isOverrideConfig ? (
-                        <OverrideConfiguration fieldBase={fieldBase} />
-                    ) : (
-                        <div className="vstack gap-3 mt-2">
-                            <div className="mb-2">
-                                <Label className="d-flex align-items-center gap-1">
-                                    Vault name
-                                    <Icon icon="info" color="info" id="vaultNameTooltip" margin="m-0" />
-                                    {asyncTest.result?.Success ? (
-                                        <Badge color="success" pill>
-                                            <Icon icon="check" />
-                                            Successfully connected
-                                        </Badge>
-                                    ) : asyncTest.result?.Error ? (
-                                        <Badge color="danger" pill>
-                                            <Icon icon="warning" />
-                                            Failed connection
-                                        </Badge>
-                                    ) : null}
-                                </Label>
-                                <UncontrolledPopover
-                                    target="vaultNameTooltip"
-                                    trigger="hover"
-                                    placement="top"
-                                    className="bs5"
-                                >
-                                    <PopoverBody>
-                                        Vault should be created manually in order for this OLAP to work. You can use the{" "}
-                                        <span className="text-info">Test credentials</span> button to verify its
-                                        existence.
-                                    </PopoverBody>
-                                </UncontrolledPopover>
-                                <FormInput
-                                    name={getName("vaultName")}
-                                    control={control}
-                                    placeholder="Enter a vault name"
-                                    type="text"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <Label>
-                                    Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                </Label>
-                                <FormInput
-                                    name={getName("remoteFolderName")}
-                                    control={control}
-                                    placeholder="Enter a remote folder name"
-                                    type="text"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <Label>Region</Label>
-                                <FormSelectCreatable
-                                    name={getName("awsRegionName")}
-                                    control={control}
-                                    placeholder="Select an AWS region (or enter new one)"
-                                    options={availableGlacierRegions}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <Label>Access key</Label>
-                                <FormInput
-                                    name={getName("awsAccessKey")}
-                                    control={control}
-                                    placeholder="Enter an access key"
-                                    type="text"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <Label>Secret key</Label>
-                                <FormInput
-                                    name={getName("awsSecretKey")}
-                                    control={control}
-                                    placeholder="Enter a secret key"
-                                    type="password"
-                                    passwordPreview
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div className="d-flex justify-content-end">
-                                <FlexGrow />
-                                <ButtonWithSpinner
-                                    type="button"
-                                    color="secondary"
-                                    onClick={asyncTest.execute}
-                                    isSpinning={asyncTest.loading}
-                                    icon="rocket"
-                                >
-                                    Test credentials
-                                </ButtonWithSpinner>
-                            </div>
-                            {asyncTest.result?.Error && (
-                                <div className="mt-3">
-                                    <ConnectionTestResult testResult={asyncTest.result} />
+                <Collapse in={formValues.isEnabled} className="vstack gap-2 mt-2">
+                    <div>
+                        <FormSwitch
+                            name={`${fieldBase}.config.isOverrideConfig`}
+                            control={control}
+                            className="ms-3 w-100"
+                            color="secondary"
+                        >
+                            Override configuration via external script
+                        </FormSwitch>
+                        {formValues.config.isOverrideConfig ? (
+                            <OverrideConfiguration fieldBase={fieldBase} />
+                        ) : (
+                            <div className="vstack gap-3 mt-2">
+                                <div className="mb-2">
+                                    <FormLabel className="d-flex align-items-center gap-1">
+                                        Vault name
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                <>
+                                                    Vault should be created manually in order for this OLAP to work. You
+                                                    can use the <span className="text-info">Test credentials</span>{" "}
+                                                    button to verify its existence.
+                                                </>
+                                            }
+                                        >
+                                            <Icon icon="info" color="info" margin="m-0" />
+                                        </PopoverWithHoverWrapper>
+                                        {asyncTest.result?.Success ? (
+                                            <Badge bg="success" pill>
+                                                <Icon icon="check" />
+                                                Successfully connected
+                                            </Badge>
+                                        ) : asyncTest.result?.Error ? (
+                                            <Badge bg="danger" pill>
+                                                <Icon icon="warning" />
+                                                Failed connection
+                                            </Badge>
+                                        ) : null}
+                                    </FormLabel>
+                                    <FormInput
+                                        name={getName("vaultName")}
+                                        control={control}
+                                        placeholder="Enter a vault name"
+                                        type="text"
+                                        autoComplete="off"
+                                    />
                                 </div>
-                            )}
-                        </div>
-                    )}
+                                <div className="mb-2">
+                                    <FormLabel>
+                                        Remote folder name <small className="text-muted fw-light">(optional)</small>
+                                    </FormLabel>
+                                    <FormInput
+                                        name={getName("remoteFolderName")}
+                                        control={control}
+                                        placeholder="Enter a remote folder name"
+                                        type="text"
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                <div className="mb-2">
+                                    <FormLabel>Region</FormLabel>
+                                    <FormSelectCreatable
+                                        name={getName("awsRegionName")}
+                                        control={control}
+                                        placeholder="Select an AWS region (or enter new one)"
+                                        options={availableGlacierRegions}
+                                    />
+                                </div>
+                                <div className="mb-2">
+                                    <FormLabel>Access key</FormLabel>
+                                    <FormInput
+                                        name={getName("awsAccessKey")}
+                                        control={control}
+                                        placeholder="Enter an access key"
+                                        type="text"
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                <div className="mb-2">
+                                    <FormLabel>Secret key</FormLabel>
+                                    <FormInput
+                                        name={getName("awsSecretKey")}
+                                        control={control}
+                                        placeholder="Enter a secret key"
+                                        type="password"
+                                        passwordPreview
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                <div className="d-flex justify-content-end">
+                                    <FlexGrow />
+                                    <ButtonWithSpinner
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={asyncTest.execute}
+                                        isSpinning={asyncTest.loading}
+                                        icon="rocket"
+                                    >
+                                        Test credentials
+                                    </ButtonWithSpinner>
+                                </div>
+                                {asyncTest.result?.Error && (
+                                    <div className="mt-3">
+                                        <ConnectionTestResult testResult={asyncTest.result} />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </Collapse>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

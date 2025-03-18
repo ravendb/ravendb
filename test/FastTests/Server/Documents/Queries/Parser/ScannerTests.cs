@@ -52,7 +52,7 @@ namespace FastTests.Server.Documents.Queries.Parser
             qs.Init(q);
 
             Assert.True(qs.String(out var a));
-            Assert.Equal(escape, a);
+            Assert.Equal(escape, a.ToString());
         }
 
         [Theory]

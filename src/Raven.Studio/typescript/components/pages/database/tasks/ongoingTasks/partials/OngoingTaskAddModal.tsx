@@ -1,7 +1,8 @@
 import { CounterBadge } from "components/common/CounterBadge";
 import { HrHeader } from "components/common/HrHeader";
-import React, { ReactNode } from "react";
-import { Modal, ModalBody, Button, Row, Col, UncontrolledTooltip } from "reactstrap";
+import { ReactNode } from "react";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -11,6 +12,9 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
+import Modal from "components/common/Modal";
 
 interface OngoingTaskAddModalProps {
     subscriptionsDatabaseCount: number;
@@ -31,9 +35,11 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
     const hasKafkaEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
+    const hasSnowflakeEtl = useAppSelector(licenseSelectors.statusValue("HasSnowflakeEtl"));
     const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
     const hasRabbitMqEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasAzureQueueStorageEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasAmazonSqsEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
@@ -81,24 +87,19 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
     return (
         <Modal
-            isOpen
-            toggle={toggle}
-            container="modalContainer"
-            contentClassName="modal-border bulge-primary"
-            className="destination-modal"
+            show
+            scrollable
+            onHide={toggle}
+            contentClassName="modal-border destination-modal bulge-primary"
             size="lg"
-            centered
         >
-            <ModalBody>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+            <Modal.Header className="hstack gap-3 pb-0" onCloseClick={toggle}>
+                <div className="text-center">
+                    <Icon icon="ongoing-tasks" color="primary" addon="plus" className="fs-1" margin="m-0" />
                 </div>
-                <div className="hstack gap-3 mb-4">
-                    <div className="text-center">
-                        <Icon icon="ongoing-tasks" color="primary" addon="plus" className="fs-1" margin="m-0" />
-                    </div>
-                    <div className="text-center lead">Add a Database Task</div>
-                </div>
+                <div className="text-center lead">Add a Database Task</div>
+            </Modal.Header>
+            <Modal.Body>
                 <HrHeader>Replication</HrHeader>
                 <Row className="gy-sm">
                     <TaskItem
@@ -218,6 +219,17 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     </TaskItem>
 
                     <TaskItem
+                        title="Create new Snowflake ETL task"
+                        href={appUrl.forEditSnowflakeEtl(db.name)}
+                        className="snowflake-etl"
+                        target="SnowflakeETL"
+                    >
+                        <Icon icon="snowflake-etl" />
+                        <h4 className="mt-1 mb-0">Snowflake ETL</h4>
+                        {!hasSnowflakeEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                    </TaskItem>
+
+                    <TaskItem
                         title="Create new OLAP ETL task"
                         href={appUrl.forEditOlapEtl(db.name)}
                         className="olap-etl"
@@ -253,6 +265,18 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         <h4 className="mt-1 mb-0">Azure Queue Storage ETL</h4>
                         {!hasAzureQueueStorageEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
+                    <TaskItem
+                        title="Create new Amazon SQS ETL task"
+                        href={appUrl.forEditAmazonSqsEtl(db.name)}
+                        className="amazon-sqs-etl"
+                        target="AmazonSqsETL"
+                        disabled={isSharded}
+                        disableReason={getDisableReasonForSharded()}
+                    >
+                        <Icon icon="amazon-sqs-etl" />
+                        <h4 className="mt-1 mb-0">Amazon SQS ETL</h4>
+                        {!hasAmazonSqsEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                    </TaskItem>
                 </Row>
                 <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>
                 <Row className="gy-sm">
@@ -282,7 +306,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         {!hasRabbitMqSink && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
                 </Row>
-            </ModalBody>
+            </Modal.Body>
         </Modal>
     );
 }
@@ -305,9 +329,11 @@ function TaskItem(props: TaskItemProps) {
     return (
         <Col xs="6" md="4" className="justify-content-center" title={title}>
             {disabled ? (
-                <div id={target} className={classNames("task-item", className, { "item-disabled": disabled })}>
-                    {children}
-                </div>
+                <OverlayTrigger overlay={<Tooltip id={target}>{disableReason}</Tooltip>}>
+                    <div id={target} className={classNames("task-item", className, { "item-disabled": disabled })}>
+                        {children}
+                    </div>
+                </OverlayTrigger>
             ) : (
                 <a
                     href={href}
@@ -318,7 +344,6 @@ function TaskItem(props: TaskItemProps) {
                     {children}
                 </a>
             )}
-            {disableReason && <UncontrolledTooltip target={target}>{disableReason}</UncontrolledTooltip>}
         </Col>
     );
 }

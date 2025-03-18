@@ -6,6 +6,14 @@
     @include button-outline-variant($secondary-outline); //fix outline button contrast
 }
 
+.btn-outline-node {
+    @include button-outline-variant($node-color);
+}
+
+.btn-outline-shard {
+    @include button-outline-variant($shard-color);
+}
+
 .rounded-group {
     & > .btn {
         border-radius: $border-radius-lg;

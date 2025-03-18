@@ -9,15 +9,14 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static Raven.Server.Documents.Handlers.RevisionsHandler;
 
 namespace SlowTests.Issues;
 
@@ -28,7 +27,7 @@ public class RavenDB_22491 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Studio)]
-    public async Task RemoveDefaultConfig_ThenChangingDoc_ShouldDeleteRevisions()
+    public async Task GetRevisionsSize()
     {
         using var store = GetDocumentStore(new Options() { ModifyDocumentStore = s => s.Conventions.PreserveDocumentPropertiesNotFoundOnModel = true });
 
@@ -62,19 +61,22 @@ public class RavenDB_22491 : RavenTestBase
 
         Assert.Equal(2, cvs.Count);
 
-        cvs.Add("Non Existing Change Vector");
+        var result0 = await store.Maintenance.SendAsync(new GetRevisionsSizeOperation(cvs[0]));
+        Assert.NotNull(result0);
 
-        var results = await store.Maintenance.SendAsync(new GetRevisionsSizeOperation(cvs));
-        Assert.NotNull(results);
-        Assert.NotNull(results.Sizes);
-        Assert.Equal(3, results.Sizes.Length);
+        var result1 = await store.Maintenance.SendAsync(new GetRevisionsSizeOperation(cvs[1]));
+        Assert.NotNull(result0);
 
-        var newSize = results.Sizes[0].ActualSize;
-        var oldSize = results.Sizes[1].ActualSize;
+        var newSize = result0.ActualSize;
+        var oldSize = result1.ActualSize;
 
         Assert.True(newSize > oldSize);
 
-        Assert.False(results.Sizes[2].Exist);
+        var result3 = await store.Maintenance.SendAsync(new GetRevisionsSizeOperation("Non Existing Change Vector"));
+        Assert.Null(result3);
+        
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new GetRevisionsSizeOperation(string.Empty)));
+        Assert.StartsWith("System.ArgumentException: Query string value 'changeVector' must have a non empty value", e.Message);
     }
 
     private class User
@@ -83,52 +85,52 @@ public class RavenDB_22491 : RavenTestBase
         public string Name { get; set; }
     }
 
-    private class GetRevisionsSizeOperation : IMaintenanceOperation<GetRevisionsSizeOperation.Results>
+    private class GetRevisionsSizeOperation : IMaintenanceOperation<RevisionSizeDetails>
     {
-        private readonly GetRevisionsSizeParameters _parameters;
+        private string _changeVector;
 
-        public class Results
+        private static readonly Func<BlittableJsonReaderObject, RevisionSizeDetails> ToResults = JsonDeserializationClient.GenerateJsonDeserializationRoutine<RevisionSizeDetails>();
+
+        public GetRevisionsSizeOperation(string changeVector)
         {
-            public RevisionSizeDetails[] Sizes { get; set; }
+            _changeVector = changeVector;
         }
 
-        public static readonly Func<BlittableJsonReaderObject, Results> ToResults = JsonDeserializationClient.GenerateJsonDeserializationRoutine<Results>();
-
-        public GetRevisionsSizeOperation(List<string> changeVectors)
+        public RavenCommand<RevisionSizeDetails> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            _parameters = new GetRevisionsSizeParameters { ChangeVectors = changeVectors };
+            return new GetRevisionsMetadataAndMetricsCommand(_changeVector);
         }
 
-        public RavenCommand<Results> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        private class GetRevisionsMetadataAndMetricsCommand : RavenCommand<RevisionSizeDetails>
         {
-            return new GetRevisionsMetadataAndMetricsCommand(_parameters);
-        }
+            private string _changeVector;
 
-        private class GetRevisionsMetadataAndMetricsCommand : RavenCommand<Results>
-        {
-            private readonly GetRevisionsSizeParameters _parameters;
 
-            public GetRevisionsMetadataAndMetricsCommand(GetRevisionsSizeParameters parameters)
+            public GetRevisionsMetadataAndMetricsCommand(string changeVector)
             {
-                _parameters = parameters;
+                _changeVector = changeVector;
             }
 
             public override bool IsReadRequest { get; }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/revisions/size";
+                url = $"{node.Url}/databases/{node.Database}/revisions/size?changeVector={Uri.EscapeDataString(_changeVector)}";
 
                 return new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream =>
-                        await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false), DocumentConventions.Default)
+                    Method = HttpMethod.Get
                 };
             }
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
+                if (response == null)
+                {
+                    Result = null;
+                    return;
+                }
+
                 Result = ToResults(response);
             }
         }

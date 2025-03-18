@@ -44,8 +44,8 @@ namespace rvn
             var masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
             var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Encryption");
 
-            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
-            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
+            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir, tempPath: null, journalPath: null, ioChangesNotifications: null, catastrophicFailureNotification: null, loggingResource: null, loggingComponent: null);
+            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir, tempPath: null, journalPath: null, ioChangesNotifications: null, catastrophicFailureNotification: null, loggingResource: null, loggingComponent: null);
 
             dstOptions.Encryption.MasterKey = masterKey;
 
@@ -70,8 +70,8 @@ namespace rvn
             var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Decryption");
             var bytes = File.ReadAllBytes(Path.Combine(srcDir, SecretKeyEncrypted));
 
-            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
-            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
+            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir, tempPath: null, journalPath: null, ioChangesNotifications: null, catastrophicFailureNotification: null, loggingResource: null, loggingComponent: null);
+            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir, tempPath: null, journalPath: null, ioChangesNotifications: null, catastrophicFailureNotification: null, loggingResource: null, loggingComponent: null);
 
             srcOptions.Encryption.MasterKey = new SecretProtection(new SecurityConfiguration()).Unprotect(bytes);
 

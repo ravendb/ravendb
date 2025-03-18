@@ -34,6 +34,8 @@ abstract class ongoingTaskModel {
                 return "External Replication";
             case "SqlEtl":
                 return "SQL ETL";
+            case "SnowflakeEtl":
+                return "Snowflake ETL";
             case "OlapEtl":
                 return "OLAP ETL";
             case "ElasticSearchEtl":
@@ -48,6 +50,8 @@ abstract class ongoingTaskModel {
                 return "RabbitMQ ETL";
             case "AzureQueueStorageQueueEtl":
                 return "Azure Queue Storage ETL";
+            case "AmazonSqsQueueEtl":
+                return "Amazon SQS ETL";
             default:
                 return taskType;
         }

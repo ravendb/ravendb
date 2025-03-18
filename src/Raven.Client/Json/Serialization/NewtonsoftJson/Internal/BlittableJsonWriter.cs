@@ -672,6 +672,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             else
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
+        
+        public void WriteVector<T>(ReadOnlySpan<T> value) where T : unmanaged
+        {
+            _manualBlittableJsonDocumentBuilder.WriteVector(value);
+        }
 
         public override void WriteValue(object value)
         {

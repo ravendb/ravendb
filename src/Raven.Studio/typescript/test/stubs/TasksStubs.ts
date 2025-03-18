@@ -21,6 +21,7 @@ import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.Ong
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.ReplicationProcessProgress;
+import OngoingTaskSnowflakeEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -32,12 +33,14 @@ export class TasksStubs {
             OngoingTasks: [
                 TasksStubs.getRavenEtl(),
                 TasksStubs.getSql(),
+                TasksStubs.getSnowflake(),
                 TasksStubs.getOlap(),
                 TasksStubs.getElasticSearch(),
                 TasksStubs.getPeriodicBackupListItem(),
                 TasksStubs.getKafkaEtl(),
                 TasksStubs.getRabbitEtl(),
                 TasksStubs.getAzureQueueStorageEtl(),
+                TasksStubs.getAmazonSqsEtl(),
                 TasksStubs.getKafkaSink(),
                 TasksStubs.getRabbitSink(),
                 TasksStubs.getReplicationSink(),
@@ -55,11 +58,13 @@ export class TasksStubs {
             Results: [
                 TasksStubs.getRavenEtlProgress(),
                 TasksStubs.getSqlProgress(),
+                TasksStubs.getSnowflakeProgress(),
                 TasksStubs.getOlapProgress(),
                 TasksStubs.getElasticsearchProgress(),
                 TasksStubs.getKafkaProgress(),
                 TasksStubs.getRabbitProgress(),
                 TasksStubs.getAzureQueueStorageProgress(),
+                TasksStubs.getAmazonSqsProgress(),
             ],
         };
     }
@@ -205,6 +210,11 @@ export class TasksStubs {
         return TasksStubs.getEtlProgress(taskName, "Sql");
     }
 
+    static getSnowflakeProgress(): EtlTaskProgress {
+        const taskName = TasksStubs.getSnowflake().TaskName;
+        return TasksStubs.getEtlProgress(taskName, "Snowflake");
+    }
+
     static getOlapProgress(): EtlTaskProgress {
         const taskName = TasksStubs.getOlap().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Olap");
@@ -222,6 +232,11 @@ export class TasksStubs {
 
     static getAzureQueueStorageProgress(): EtlTaskProgress {
         const taskName = TasksStubs.getAzureQueueStorageEtl().TaskName;
+        return TasksStubs.getEtlProgress(taskName, "Queue");
+    }
+
+    static getAmazonSqsProgress(): EtlTaskProgress {
+        const taskName = TasksStubs.getAmazonSqsEtl().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Queue");
     }
 
@@ -322,6 +337,23 @@ export class TasksStubs {
         };
     }
 
+    static getSnowflake(): OngoingTaskSnowflakeEtl {
+        return {
+            TaskName: "SnowflakeTask",
+            TaskId: 116,
+            TaskType: "SnowflakeEtl",
+            ConnectionStringName: "Snowflake-CS",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            MentorNode: null,
+            TaskConnectionStatus: "Active",
+            ConnectionString: "SNOWFLAKE-CS",
+            PinToMentorNode: false,
+            Configuration: null,
+        };
+    }
+
     static getOlap(): OngoingTaskOlapEtl {
         return {
             TaskName: "OlapTask",
@@ -388,6 +420,24 @@ export class TasksStubs {
             MentorNode: null,
             Url: "localhost:6056",
             BrokerType: "AzureQueueStorage",
+            PinToMentorNode: false,
+            Configuration: null,
+        };
+    }
+
+    static getAmazonSqsEtl(): OngoingTaskQueueEtl {
+        return {
+            TaskName: "AmazonSqsTask",
+            TaskId: 305,
+            TaskType: "QueueEtl",
+            ConnectionStringName: "AQS-CS",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            Url: "https://queue.amazonaws.com",
+            BrokerType: "AmazonSqs",
             PinToMentorNode: false,
             Configuration: null,
         };

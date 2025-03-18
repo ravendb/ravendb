@@ -8,6 +8,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
@@ -16,7 +17,7 @@ public class DirectUploadBackupTask : BackupTask
     private readonly BackupConfiguration.BackupDestination _destination;
 
     internal DirectUploadBackupTask(DocumentDatabase database, BackupParameters backupParameters,
-        BackupConfiguration configuration, OperationCancelToken token, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null) : base(database, backupParameters, configuration, token, logger, forTestingPurposes)
+        BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null) : base(database, backupParameters, configuration, token, logger, forTestingPurposes)
     {
         _destination = BackupConfigurationHelper.GetBackupDestinationForDirectUpload(backupParameters.BackupToLocalFolder, configuration, database.Configuration.Backup);
     }

@@ -12,6 +12,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -27,7 +28,7 @@ namespace Raven.Server.Rachis
 
         private int _logHistoryMaxEntries;
 
-        private Logger _log;
+        private RavenLogger _log;
 
         public enum LogHistoryColumn
         {
@@ -96,7 +97,7 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public void Initialize(RavenTransaction tx, RavenConfiguration configuration, Logger log)
+        public void Initialize(RavenTransaction tx, RavenConfiguration configuration, RavenLogger log)
         {
             _logHistoryMaxEntries = configuration.Cluster.LogHistoryMaxEntries;
             LogHistoryTable.Create(tx.InnerTransaction, RachisLogHistory.LogHistorySlice, 16);

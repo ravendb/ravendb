@@ -149,7 +149,7 @@ $developer: #c7ff6b;
     $pre-bg: $white;
     $ace-gutter-bg: $panel-bg-2;
 
-    $link-color: $primary;
+    $link-color: #c072ee;
     $shadow-color: $gray-500;
 
     $hover-filter: brightness(1.03) saturate(1.3);
@@ -251,7 +251,7 @@ $developer: #c7ff6b;
     $pre-bg: $white;
     $ace-gutter-bg: $panel-header-bg;
 
-    $link-color: $primary;
+    $link-color: #c072ee;
     $shadow-color: $gray-600;
 
     $hover-filter: brightness(1.03) saturate(1.4);
@@ -357,18 +357,19 @@ $table-bg-scale: 30% !default;
     @return color.mix(color.scale(color.scale($color, $lightness: -40%), $saturation: 30%), $panel-bg-1, $weight);
 }
 
-$color-support-free: $color-4;
-$color-support-professional: $color-4-2;
-$color-support-production: $color-5;
+$free: $color-4;
+$community: $color-4;
+$professional: $color-4-2;
+$enterprise: $color-5;
+
+$color-support-free: $community;
+$color-support-professional: $professional;
+$color-support-production: $enterprise;
 
 $node-color: $color-3-1;
 $shard-color: $color-4-1;
 $orchestrator-color: $color-2-1;
 $progress-color: $color-2-3;
-
-$free: $color-4;
-$professional: $color-4-2;
-$enterprise: $color-5;
 
 // Color system
 // scss-docs-end gray-color-variables
@@ -435,6 +436,7 @@ $theme-colors: (
     "shard": $shard-color,
     "orchestrator": $orchestrator-color,
     "progress": $progress-color,
+    "community": $community,
     "professional": $professional,
     "enterprise": $enterprise,
     "developer": $developer,
@@ -507,6 +509,8 @@ $pre-bg-var: var(--pre-bg);
 $ace-gutter-bg-var: var(--ace-gutter-bg);
 $shadow-color-var: var(--shadow-color);
 
+$link-color-var: var(--link-color);
+
 $row-bg-var: var(--row-bg);
 $row-even-bg-var: var(--row-even-bg);
 
@@ -516,17 +520,19 @@ $task-colors: (
     "external-replication": $color-5,
     "pull-replication-hub": $color-5-1,
     "pull-replication-sink": $color-5-2,
-    "ravendb-etl": $color-1-1,
-    "elastic-etl": $color-1-2,
-    "kafka-etl": $color-1-3,
-    "sql-etl": $color-2,
-    "olap-etl": $color-2-1,
-    "rabbitmq-etl": $color-2-2,
-    "azure-queue-storage-etl": $color-4-2,
-    "kafka-sink": $color-3,
-    "rabbitmq-sink": $color-3-1,
     "backup": $color-4,
     "subscription": $color-4-1,
+    "ravendb-etl": $color-1,
+    "elastic-etl": $color-1-1,
+    "kafka-etl": $color-1-2,
+    "sql-etl": $color-1-3,
+    "snowflake-etl": $color-2,
+    "olap-etl": $color-2-1,
+    "rabbitmq-etl": $color-2-2,
+    "azure-queue-storage-etl": $color-2-3,
+    "amazon-sqs-etl": $color-3,
+    "kafka-sink": $color-3-1,
+    "rabbitmq-sink": $color-3-2,
 ) !default;
 
 $tokens: (
@@ -545,4 +551,5 @@ $flags: (
     "counters": $color-3-3,
     "time-series": $color-2-3,
     "archived": $color-1-1,
+    "deleted-revision": $color-1,
 ) !default;

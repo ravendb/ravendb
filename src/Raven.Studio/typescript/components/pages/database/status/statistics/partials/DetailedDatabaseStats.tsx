@@ -1,13 +1,15 @@
 ﻿import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
-import React from "react";
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
-import { Button, Card, PopoverBody, Table, UncontrolledPopover } from "reactstrap";
+import Table from "react-bootstrap/Table";
+import Card from "react-bootstrap/Card";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { statisticsViewSelectors } from "components/pages/database/status/statistics/store/statisticsViewSlice";
 import copyToClipboard = require("common/copyToClipboard");
+import Button from "react-bootstrap/Button";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface DetailsBlockProps {
     children: (data: DetailedDatabaseStatistics, location: databaseLocationSpecifier) => JSX.Element;
@@ -94,10 +96,16 @@ export function DetailedDatabaseStats() {
                                     }
 
                                     return (
-                                        <>
+                                        <PopoverWithHoverWrapper
+                                            message={formattedChangeVector.map((cv) => (
+                                                <div key={cv.fullFormat}>
+                                                    <small>{cv.fullFormat}</small>
+                                                </div>
+                                            ))}
+                                        >
                                             <div id={id} className="d-inline-flex flex-wrap gap-1">
                                                 <Button
-                                                    color="primary"
+                                                    variant="primary"
                                                     size="xs"
                                                     title="Copy to clipboard"
                                                     onClick={() => copyChangeVector(formattedChangeVector)}
@@ -114,22 +122,7 @@ export function DetailedDatabaseStats() {
                                                     </div>
                                                 ))}
                                             </div>
-
-                                            <UncontrolledPopover
-                                                target={id}
-                                                placement="top"
-                                                trigger="hover"
-                                                container="popoverContainer"
-                                            >
-                                                <PopoverBody>
-                                                    {formattedChangeVector.map((cv) => (
-                                                        <div key={cv.fullFormat}>
-                                                            <small>{cv.fullFormat}</small>
-                                                        </div>
-                                                    ))}
-                                                </PopoverBody>
-                                            </UncontrolledPopover>
-                                        </>
+                                        </PopoverWithHoverWrapper>
                                     );
                                 }}
                             </DetailsBlock>
@@ -143,19 +136,9 @@ export function DetailedDatabaseStats() {
                                 {(data, location) => {
                                     const id = "js-size-on-disk-" + location.nodeTag + "-" + location.shardNumber;
                                     return (
-                                        <>
-                                            <span id={id}>
-                                                {genUtils.formatBytesToSize(
-                                                    data.SizeOnDisk.SizeInBytes + data.TempBuffersSizeOnDisk.SizeInBytes
-                                                )}
-                                            </span>
-                                            <UncontrolledPopover
-                                                target={id}
-                                                placement="top"
-                                                trigger="hover"
-                                                container={id}
-                                            >
-                                                <PopoverBody>
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                <>
                                                     Data:{" "}
                                                     <strong>
                                                         {genUtils.formatBytesToSize(data.SizeOnDisk.SizeInBytes)}
@@ -175,9 +158,15 @@ export function DetailedDatabaseStats() {
                                                                 data.TempBuffersSizeOnDisk.SizeInBytes
                                                         )}
                                                     </strong>
-                                                </PopoverBody>
-                                            </UncontrolledPopover>
-                                        </>
+                                                </>
+                                            }
+                                        >
+                                            <span id={id}>
+                                                {genUtils.formatBytesToSize(
+                                                    data.SizeOnDisk.SizeInBytes + data.TempBuffersSizeOnDisk.SizeInBytes
+                                                )}
+                                            </span>
+                                        </PopoverWithHoverWrapper>
                                     );
                                 }}
                             </DetailsBlock>

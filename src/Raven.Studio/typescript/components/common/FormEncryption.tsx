@@ -1,8 +1,11 @@
 import { FormCheckbox, FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import React, { useEffect, useRef, useState, ElementRef, PropsWithChildren } from "react";
+import { useEffect, useRef, useState, ElementRef, PropsWithChildren } from "react";
 import { FieldPath, FieldValues, Control } from "react-hook-form";
-import { Row, Col, InputGroup, Button, UncontrolledPopover, PopoverBody } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+import Button from "react-bootstrap/Button";
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { QRCode } from "qrcodejs";
@@ -10,6 +13,7 @@ import copyToClipboard from "common/copyToClipboard";
 import fileDownloader from "common/fileDownloader";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import RichAlert from "components/common/RichAlert";
+import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
 
 const encryptionImg = require("Content/img/createDatabase/encryption.svg");
 
@@ -111,6 +115,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                             {!isReadOnly && (
                                 <Button
                                     type="button"
+                                    variant="secondary"
                                     title="Regenerate key"
                                     onClick={() => asyncGenerateSecret.execute(true)}
                                 >
@@ -120,6 +125,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                         </InputGroup>
                         <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                             <Button
+                                variant="secondary"
                                 type="button"
                                 title="Copy to clipboard"
                                 onClick={() =>
@@ -138,8 +144,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                             <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                                 <Button
                                     type="button"
-                                    block
-                                    color="primary"
+                                    variant="primary"
                                     size="sm"
                                     onClick={() => fileDownloader.downloadAsTxt(keyText, fileName)}
                                     disabled={!isEncryptionKeyValid}
@@ -153,7 +158,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                             <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                                 <Button
                                     type="button"
-                                    block
+                                    variant="secondary"
                                     size="sm"
                                     onClick={() =>
                                         printEncryptionKey(keyText, fileName, qrContainerRef.current.innerHTML)
@@ -176,15 +181,12 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                 <Col className="text-center">
                     <div ref={qrContainerRef} className="qrcode" />
                     <div className="text-center mt-1">
-                        <small id="qrInfo" className="text-info">
-                            <Icon icon="info" margin="m-0" /> what&apos;s this?
-                        </small>
+                        <PopoverWithHoverWrapper message="This is the encryption key in QR Code format for easy copying to a mobile device.">
+                            <small className="text-info">
+                                <Icon icon="info" margin="m-0" /> what&apos;s this?
+                            </small>
+                        </PopoverWithHoverWrapper>
                     </div>
-                    <UncontrolledPopover target="qrInfo" placement="top" trigger="hover">
-                        <PopoverBody>
-                            This is the encryption key in QR Code format for easy copying to a mobile device.
-                        </PopoverBody>
-                    </UncontrolledPopover>
                 </Col>
             </Row>
             <div className="d-flex justify-content-center mt-3">

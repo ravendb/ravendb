@@ -321,7 +321,13 @@ public sealed unsafe class FastPForEncoder  : IDisposable
         return (_offset - oldOffset, sizeUsed);
     }
 
-    public long NextValueToEncode => _entries[Math.Min(_offset, _count-1)];
+    public long NextValueToEncode =>
+#if DEBUG
+        // Prevents AVE in debug mode, since debugger can tries to evaluate the property even it is not initialized
+        (_entries is null || Math.Min(_offset, _count - 1) >= _count) ? -1L : _entries[Math.Min(_offset, _count - 1)];
+#else
+        _entries[Math.Min(_offset, _count-1)];
+#endif
 
     private int WriteLastBatchAsVarIntDelta(int count, byte* output, int outputSize)
     {

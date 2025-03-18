@@ -63,4 +63,5 @@ public enum RavenTestCategory : long
     Intrinsics = 1L << 47,
     Sinks = 1L << 48,
     Monitoring = 1L << 50,
+    Vector = 1L << 51,
 }

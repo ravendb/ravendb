@@ -9,6 +9,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Global;
+using Voron.Logging;
 using Voron.Util.Settings;
 using static Sparrow.Server.Platform.Pal;
 using static Sparrow.Server.Platform.PalDefinitions;
@@ -23,16 +24,14 @@ namespace Voron.Impl.Paging
         public override string ToString() => FileName?.FullPath ?? "";
         protected override string GetSourceName() => $"mmf64: {FileName?.FullPath}";
         private long _totalAllocationSize;
-        private readonly Logger _logger;
         private readonly SafeMmapHandle _handle;
 
         public RvnMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null, bool canPrefetchAhead = true, bool usePageProtection = false, bool deleteOnClose = false)
-            : base(options, canPrefetchAhead, usePageProtection)
+            : base(options, RavenLogManager.Instance.GetLoggerForVoron<RvnMemoryMapPager>(options, file.FullPath), canPrefetchAhead, usePageProtection)
         {
             DeleteOnClose = deleteOnClose;
             FileName = file;
             var copyOnWriteMode = options.CopyOnWriteMode && FileName.FullPath.EndsWith(Constants.DatabaseFilename);
-            _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
 
             if (initialFileSize.HasValue == false || initialFileSize.Value == 0) 
                 initialFileSize = Math.Max(SysInfo.PageSize * 16, 64 * 1024);
@@ -164,9 +163,9 @@ namespace Voron.Impl.Paging
             if (_handle.FailCode == FailCodes.Success)
                 return;
 
-            if (_logger.IsInfoEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                _logger.Info($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={_handle.FailCode}. DeleteOnClose={DeleteOnClose}, "
+                Logger.Debug($"Unable to dispose handle for {FileName.FullPath} (ignoring). rc={_handle.FailCode}. DeleteOnClose={DeleteOnClose}, "
                              + $"errorCode={PalHelper.GetNativeErrorString(_handle.ErrorNo, "Unable to dispose handle for {FileName.FullPath} (ignoring).", out _)}",
                     new IOException($"Unable to dispose handle for {FileName.FullPath} (ignoring)."));
             }
@@ -233,8 +232,8 @@ namespace Voron.Impl.Paging
             if (rvn_protect_range(start, (long)size, ProtectRange.Protect, out var errorCode) == 0)
                 return;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Unable to protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Protect, errorCode={errorCode}");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Unable to protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Protect, errorCode={errorCode}");
         }
 
         internal override void UnprotectPageRange(byte* start, ulong size, bool force = false)
@@ -246,8 +245,8 @@ namespace Voron.Impl.Paging
             if (rvn_protect_range(start, (long)size, ProtectRange.Unprotect, out var errorCode) == 0)
                 return;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Unable to un-protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Unprotect, errorCode={errorCode}");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Unable to un-protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Unprotect, errorCode={errorCode}");
         }
     }
 }

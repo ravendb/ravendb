@@ -5,9 +5,11 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Raven.Server.Logging;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Utils
@@ -15,7 +17,7 @@ namespace Raven.Server.Utils
     public sealed class Pipes
     {
 #if !RVN
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Pipes>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<Pipes>();
 #endif
 
         public const string AdminConsolePipePrefix = "raven-control-pipe-";
@@ -112,9 +114,12 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
+                if (ravenServer.Disposed)
+                    return;
+
+                if (Logger.IsErrorEnabled)
                 {
-                    Logger.Info("Got an exception trying to connect to server admin channel pipe", e);
+                    Logger.Error("Got an exception trying to connect to server admin channel pipe", e);
                 }
             }
         }
@@ -176,10 +181,11 @@ namespace Raven.Server.Utils
 
                     try
                     {
-                        LoggingSource.Instance.AttachPipeSink(pipe);
-
-                        while (pipe.IsConnected && pipe.CanWrite)
-                            await Task.Delay(TimeSpan.FromSeconds(1));
+                        using (StreamTarget.Register(pipe))
+                        {
+                            while (pipe.IsConnected && pipe.CanWrite)
+                                await Task.Delay(TimeSpan.FromSeconds(1));
+                        }
                     }
                     catch (Exception e)
                     {
@@ -188,7 +194,6 @@ namespace Raven.Server.Utils
                     }
                     finally
                     {
-                        LoggingSource.Instance.DetachPipeSink();
                         pipe.Disconnect();
                     }
                 }

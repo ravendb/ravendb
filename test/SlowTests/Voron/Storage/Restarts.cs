@@ -14,7 +14,7 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void DataIsKeptAfterRestart_OnDisk()
         {
-            using (var pager = StorageEnvironmentOptions.ForPath(DataDir))
+            using (var pager = StorageEnvironmentOptions.ForPathForTests(DataDir))
             {
                 pager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pager))
@@ -49,7 +49,7 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void DataIsKeptAfterRestart()
         {
-            using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())
+            using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnlyForTests())
             {
                 pureMemoryPager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pureMemoryPager))
@@ -84,7 +84,7 @@ namespace SlowTests.Voron.Storage
         [Fact]
         public void DataIsKeptAfterRestartForSubTrees()
         {
-            using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())
+            using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnlyForTests())
             {
                 pureMemoryPager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pureMemoryPager))

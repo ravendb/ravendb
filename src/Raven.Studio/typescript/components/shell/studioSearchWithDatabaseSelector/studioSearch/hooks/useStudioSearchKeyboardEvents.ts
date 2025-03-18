@@ -116,32 +116,26 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
     // Handle keyboard navigation
     useEffect(() => {
         const handleKeyboardNavigation = (e: KeyboardEvent) => {
-            if (e.key === "ArrowDown") {
+            const isArrowKey = ["ArrowDown", "ArrowUp"].includes(e.key);
+            const isAltArrowKey = e.altKey && ["ArrowLeft", "ArrowRight"].includes(e.key);
+
+            if (isArrowKey || isAltArrowKey) {
                 e.preventDefault();
-                if (activeGroup === "left") {
-                    setActiveIndex((activeIndex + 1) % leftFlatItemsLength);
-                } else {
-                    setActiveIndex((activeIndex + 1) % rightFlatItemsLength);
-                }
-            }
-            if (e.key === "ArrowUp") {
-                e.preventDefault();
-                if (activeGroup === "left") {
-                    setActiveIndex((activeIndex - 1 + leftFlatItemsLength) % leftFlatItemsLength);
-                } else {
-                    setActiveIndex((activeIndex - 1 + rightFlatItemsLength) % rightFlatItemsLength);
-                }
-            }
-            if (e.altKey && e.key === "ArrowLeft") {
-                e.preventDefault();
-                if (leftFlatItemsLength > 0) {
+                e.stopPropagation();
+
+                if (e.key === "ArrowDown") {
+                    setActiveIndex(
+                        (activeIndex + 1) % (activeGroup === "left" ? leftFlatItemsLength : rightFlatItemsLength)
+                    );
+                } else if (e.key === "ArrowUp") {
+                    setActiveIndex(
+                        (activeIndex - 1 + (activeGroup === "left" ? leftFlatItemsLength : rightFlatItemsLength)) %
+                            (activeGroup === "left" ? leftFlatItemsLength : rightFlatItemsLength)
+                    );
+                } else if (e.key === "ArrowLeft" && e.altKey && leftFlatItemsLength > 0) {
                     setActiveIndex(Math.min(activeIndex, leftFlatItemsLength - 1));
                     setActiveGroup("left");
-                }
-            }
-            if (e.altKey && e.key === "ArrowRight") {
-                e.preventDefault();
-                if (rightFlatItemsLength > 0) {
+                } else if (e.key === "ArrowRight" && e.altKey && rightFlatItemsLength > 0) {
                     setActiveIndex(Math.min(activeIndex, rightFlatItemsLength - 1));
                     setActiveGroup("right");
                 }
@@ -184,7 +178,7 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
     const [cursorPosition, setCursorPosition] = useState([0, 0]);
 
     useEffect(() => {
-        dropdownRef.current.handleKeyDown = (e: KeyboardEvent) => {
+        const handleKeyDown = (e: KeyboardEvent) => {
             setCursorPosition([inputRef.current.selectionStart, inputRef.current.selectionEnd]);
 
             if (e.code === "Space") {
@@ -200,6 +194,13 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
                     setCursorPosition([inputRef.current.selectionStart + 1, inputRef.current.selectionEnd + 1]);
                 }
             }
+        };
+
+        const dropdown = dropdownRef.current;
+
+        dropdown?.addEventListener("keydown", handleKeyDown);
+        return () => {
+            dropdown?.removeEventListener("keydown", handleKeyDown);
         };
     }, [inputRef, dropdownRef, setSearchQuery, studioSearchInputId]);
 

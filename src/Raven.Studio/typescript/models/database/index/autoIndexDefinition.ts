@@ -7,22 +7,23 @@ class autoIndexField {
     hasSearch = ko.observable<boolean>();
     hasExact = ko.observable<boolean>();
     hasHighlighting = ko.observable<boolean>();
+    hasVector = ko.observable<boolean>();
     isSpatial = ko.observable<boolean>();
     operation = ko.observable<string>();
 
     // fieldStr has form: <Name:Count,Operation:Count>
     constructor(fieldStr: string, fields: dictionary<Raven.Client.Documents.Indexes.IndexFieldOptions>) {
-        
+
         const parsedString = this.parse(fieldStr);
         const fieldName = parsedString['Name'];
         this.fieldName(fieldName);
         this.isSpatial(autoIndexField.isSpatialField(fieldName));
         const fieldNames = Object.keys(fields);
-        
+
         const searchFieldName = autoIndexField.searchFieldName(fieldName);
         this.hasSearch(_.includes(fieldNames, searchFieldName));
         this.hasExact(_.includes(fieldNames, autoIndexField.exactFieldName(fieldName)));
-        
+        this.hasVector(_.includes(fieldNames, autoIndexField.vectorFieldName(fieldName)));
         let hasHighlighting = false;
         if (_.includes(fieldNames, searchFieldName)) {
             const fieldOptions = fields[searchFieldName];
@@ -43,6 +44,13 @@ class autoIndexField {
     
     static exactFieldName(fieldName: string) {
         return "exact(" + fieldName + ")";
+    }
+
+    static vectorFieldName(fieldName: string) {
+        if (fieldName.startsWith("vector.search")) {
+            return fieldName;
+        }
+        return "vector.search(" + fieldName + ")";
     }
 
     protected parse(str: string): dictionary<string> {

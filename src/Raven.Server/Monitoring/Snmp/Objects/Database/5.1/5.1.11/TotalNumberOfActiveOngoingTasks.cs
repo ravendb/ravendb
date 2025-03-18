@@ -21,6 +21,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             count += GetNumberOfActiveRavenEtls(rachisState, nodeTag, database);
             count += GetNumberOfActiveSinkPullReplications(rachisState, nodeTag, database);
             count += GetNumberOfActiveSqlEtls(rachisState, nodeTag, database);
+            count += GetNumberOfActiveSnowflakeEtls(rachisState, nodeTag, database);
             count += GetNumberOfActiveSubscriptions(context, rachisState, nodeTag, database);
 
             return count;

@@ -22,6 +22,8 @@ import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDe
 import getIndexesErrorCountCommand from "commands/database/index/getIndexesErrorCountCommand";
 import getIndexesErrorCommand from "commands/database/index/getIndexesErrorCommand";
 import clearIndexErrorsCommand from "commands/database/index/clearIndexErrorsCommand";
+import getIndexEntriesFieldsCommand from "commands/database/index/getIndexEntriesFieldsCommand";
+import getIndexTermsCommand from "commands/database/index/getIndexTermsCommand";
 
 export default class IndexesService {
     async getProgress(databaseName: string, location: databaseLocationSpecifier) {
@@ -110,5 +112,13 @@ export default class IndexesService {
 
     async clearIndexErrors(...args: ConstructorParameters<typeof clearIndexErrorsCommand>) {
         return new clearIndexErrorsCommand(...args).execute();
+    }
+
+    async getIndexEntriesFields(...args: ConstructorParameters<typeof getIndexEntriesFieldsCommand>) {
+        return new getIndexEntriesFieldsCommand(...args).execute();
+    }
+
+    async getIndexTerms(...args: ConstructorParameters<typeof getIndexTermsCommand>) {
+        return new getIndexTermsCommand(...args).execute();
     }
 }

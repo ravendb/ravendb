@@ -8,11 +8,21 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
+    /// <summary>
+    /// Operation to replay a recorded transaction.
+    /// This allows re-executing previously recorded transactions for debugging or recovery purposes.
+    /// </summary>
     public sealed class ReplayTransactionsRecordingOperation : IMaintenanceOperation<ReplayTxOperationResult>
     {
         private readonly Stream _replayStream;
         private readonly long _operationId;
 
+        /// <inheritdoc cref="ReplayTransactionsRecordingOperation"/>
+        /// <param name="replayStream">The stream containing the recorded transaction.</param>
+        /// <param name="operationId">A unique identifier for the replay operation.</param>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="replayStream"/> does not have its position set to zero.
+        /// </exception>
         public ReplayTransactionsRecordingOperation(Stream replayStream, long operationId)
         {
             _replayStream = replayStream;

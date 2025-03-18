@@ -4,6 +4,7 @@ using Raven.Server.Web;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents;
 
@@ -12,7 +13,7 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
 {
     public abstract string DatabaseName { get; }
 
-    public Logger Logger;
+    public RavenLogger Logger;
 
     public abstract char IdentityPartsSeparator { get; }
 

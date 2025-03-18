@@ -95,6 +95,7 @@ export class LicenseStubs {
             HasDelayedExternalReplication: true,
             HasRavenEtl: true,
             HasSqlEtl: true,
+            HasSnowflakeEtl: true,
             HasHighlyAvailableTasks: true,
             HasPullReplicationAsHub: true,
             HasPullReplicationAsSink: true,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,6 +36,8 @@ using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxSpatialResult = global::Corax.Utils.Spatial.SpatialResult;
+using Sparrow.Server.Logging;
+
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
@@ -92,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private TermsReader _documentIdReader;
 
 
-        public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
+        public CoraxIndexReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
         {
             _allocator = readTransaction.Allocator;
             _fieldMappings = fieldsMapping;
@@ -1348,14 +1350,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             int read;
             long i = Skip();
             Page page = default;
+            var alreadySeenDocuments = new HashSet<long>();
+            
             while (true)
             {
                 token.ThrowIfCancellationRequested();
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
+                    var coraxInternalEntryId = ids[i];
+                    if (alreadySeenDocuments.Add(coraxInternalEntryId) == false)
+                        continue;
+                    
                     token.ThrowIfCancellationRequested();
-                    var reader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
-                    var id = _documentIdReader.GetTermFor(ids[i]);
+                    var reader = IndexSearcher.GetEntryTermsReader(coraxInternalEntryId, ref page);
+                    var id = _documentIdReader.GetTermFor(coraxInternalEntryId);
                     yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
                 }
 

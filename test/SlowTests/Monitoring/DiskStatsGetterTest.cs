@@ -18,7 +18,7 @@ namespace SlowTests.Monitoring
         {
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Linux, RavenPlatform.Linux, NightlyBuildOnly = true)]
+        [RavenMultiplatformFact(RavenTestCategory.Linux, RavenPlatform.Linux, NightlyBuildRequired = true)]
         public async Task LinuxDiskStats_WhenGetInParallel_ShouldTakeTheSameAsSequential()
         {
 #pragma warning disable CA1416

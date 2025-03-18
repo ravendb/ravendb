@@ -14,7 +14,8 @@ import {
 import React from "react";
 import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
-import { Button, Collapse } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import Button from "react-bootstrap/Button";
 import {
     DistributionItem,
     DistributionLegend,
@@ -52,8 +53,8 @@ const Template = (args: { withCheckbox: boolean }) => {
                     <RichPanelName>This is header</RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
-                    <Button>Actions are placed here</Button>
-                    <Button color="shard" onClick={toggleOpen} outline={!open}>
+                    <Button variant="secondary">Actions are placed here</Button>
+                    <Button variant={!open ? "outline-shard" : "shard"} onClick={toggleOpen}>
                         <Icon icon="sharding" margin="m-0" />
                     </Button>
                 </RichPanelActions>
@@ -92,56 +93,58 @@ const Template = (args: { withCheckbox: boolean }) => {
                 </div>
             </RichPanelDetails>
 
-            <Collapse isOpen={open}>
-                <LocationDistribution>
-                    <DistributionLegend>
-                        <div className="top"></div>
-                        <div className="node">
-                            <Icon icon="node" /> Node
-                        </div>
-                        <div>
-                            <Icon icon="list" /> Entries
-                        </div>
-                        <div>
-                            <Icon icon="warning" /> Errors
-                        </div>
-                        <div>
-                            <Icon icon="changes" /> State
-                        </div>
-                    </DistributionLegend>
+            <Collapse in={open}>
+                <div>
+                    <LocationDistribution>
+                        <DistributionLegend>
+                            <div className="top"></div>
+                            <div className="node">
+                                <Icon icon="node" /> Node
+                            </div>
+                            <div>
+                                <Icon icon="list" /> Entries
+                            </div>
+                            <div>
+                                <Icon icon="warning" /> Errors
+                            </div>
+                            <div>
+                                <Icon icon="changes" /> State
+                            </div>
+                        </DistributionLegend>
 
-                    <DistributionSummary>
-                        <div className="top">Total</div>
-                        <div>A, B and C</div>
-                        <div>Some total</div>
-                        <div>16</div>
-                        <div>OK</div>
-                    </DistributionSummary>
+                        <DistributionSummary>
+                            <div className="top">Total</div>
+                            <div>A, B and C</div>
+                            <div>Some total</div>
+                            <div>16</div>
+                            <div>OK</div>
+                        </DistributionSummary>
 
-                    <DistributionItem loading></DistributionItem>
-                    <DistributionItem>
-                        <div className="top node">
-                            <Icon icon="node" /> A
-                        </div>
-                        <div>5</div>
-                        <div>2</div>
-                        <div>2</div>
-                        <ProgressCircle state="success" icon="check">
-                            up to date
-                        </ProgressCircle>
-                    </DistributionItem>
-                    <DistributionItem>
-                        <div className="top node">
-                            <Icon icon="node" /> B
-                        </div>
-                        <div>5</div>
-                        <div>2</div>
-                        <div>2</div>
-                        <ProgressCircle state="failed" icon="cancel">
-                            error
-                        </ProgressCircle>
-                    </DistributionItem>
-                </LocationDistribution>
+                        <DistributionItem loading></DistributionItem>
+                        <DistributionItem>
+                            <div className="top node">
+                                <Icon icon="node" /> A
+                            </div>
+                            <div>5</div>
+                            <div>2</div>
+                            <div>2</div>
+                            <ProgressCircle state="success" icon="check">
+                                up to date
+                            </ProgressCircle>
+                        </DistributionItem>
+                        <DistributionItem>
+                            <div className="top node">
+                                <Icon icon="node" /> B
+                            </div>
+                            <div>5</div>
+                            <div>2</div>
+                            <div>2</div>
+                            <ProgressCircle state="failed" icon="cancel">
+                                error
+                            </ProgressCircle>
+                        </DistributionItem>
+                    </LocationDistribution>
+                </div>
             </Collapse>
         </RichPanel>
     );

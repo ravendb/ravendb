@@ -22,6 +22,7 @@ namespace SlowTests.Server.Documents.Queries
 
         private DocumentDatabase _documentDatabase;
         protected DynamicQueryToIndexMatcher _sut;
+        private SearchEngineType DefaultAutoIndexingEngineType => _documentDatabase.Configuration.Indexing.AutoIndexingEngineType;
 
         public void Initialize([CallerMemberName] string caller = null)
         {
@@ -62,7 +63,7 @@ namespace SlowTests.Server.Documents.Queries
                 ReduceErrors = 900
             });
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT count() "));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT count() "), DefaultAutoIndexingEngineType);
 
             var result = _sut.Match(dynamicQuery,  null);
 

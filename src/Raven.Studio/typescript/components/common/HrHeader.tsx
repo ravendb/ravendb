@@ -1,6 +1,6 @@
 ﻿import React, { ReactNode } from "react";
 import classNames from "classnames";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 
 import "./HrHeader.scss";
 
@@ -23,7 +23,7 @@ export function HrHeader(props: HrHeaderProps) {
                 </h5>
             )}
             {count > 0 && (
-                <Badge pill className="me-3" color="secondary">
+                <Badge pill className="me-3" bg="secondary">
                     {count}
                 </Badge>
             )}

@@ -1,6 +1,7 @@
 import React from "react";
 import "./SelectIndexDropdownToggle.scss";
-import { Badge, DropdownMenu, DropdownToggle, Label, UncontrolledDropdown } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import { DropdownMenu, DropdownToggle, Label, UncontrolledDropdown } from "reactstrap";
 import { Checkbox } from "components/common/Checkbox";
 import { FlexGrow } from "components/common/FlexGrow";
 import { IndexErrorsDropdownType, NameAndCount } from "components/pages/database/indexes/errors/types";
@@ -73,7 +74,7 @@ export function SelectIndexErrorsDropdown({
                                 </Label>
                             </div>
                             <FlexGrow />
-                            <Badge color="faded-danger">{item.count}</Badge>
+                            <Badge bg="faded-danger">{item.count}</Badge>
                         </div>
                     ))}
                 </div>

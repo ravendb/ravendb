@@ -47,7 +47,7 @@ internal sealed class AdminIndexHandlerProcessorForJavaScriptPut : AbstractAdmin
             var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, jsonOperationContext, options);
             await smuggler.ExecuteAsync();
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 var optionsString = jsonOperationContext.ReadObject(options.ToAuditJson(), nameof(DatabaseSmugglerOptionsServerSide)).ToString();
                 RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "IMPORT", $"Index deployment from legacy replication with options: '{optionsString}'");

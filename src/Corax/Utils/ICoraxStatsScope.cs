@@ -16,6 +16,7 @@ public static class CommitOperation
     public const string Suggestions = nameof(Suggestions);
     public const string SpatialValues = nameof(SpatialValues);
     public const string StoredValues = nameof(StoredValues);
+    public const string VectorValues = nameof(VectorValues);
 }
 
 internal struct EmptyStatsScope : ICoraxStatsScope

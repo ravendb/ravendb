@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron.Impl.Journal;
+using Voron.Logging;
 
 namespace Voron
 {
@@ -45,7 +47,7 @@ namespace Voron
 
         private readonly ConcurrentDictionary<uint, MountPointInfo> _mountPoints = new ConcurrentDictionary<uint, MountPointInfo>();
 
-        private readonly Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
+        private static readonly RavenLogger _log = RavenLogManager.Instance.GetLoggerForGlobalVoron<GlobalFlushingBehavior>();
 
         private sealed class MountPointInfo
         {
@@ -73,9 +75,9 @@ namespace Voron
                         if (_envsToSync.Count == 0)
                             continue;
 
-                        if (_log.IsInfoEnabled)
+                        if (_log.IsDebugEnabled)
                         {
-                            _log.Info($"Starting force sync with {_envsToSync.Count:#,#} items to sync after a period of no activity");
+                            _log.Debug($"Starting force sync with {_envsToSync.Count:#,#} items to sync after a period of no activity");
                         }
 
                         // sync after 5 seconds if no flushing occurred
@@ -91,9 +93,9 @@ namespace Voron
             }
             catch (Exception e)
             {
-                if (_log.IsOperationsEnabled)
+                if (_log.IsFatalEnabled)
                 {
-                    _log.Operations("Catastrophic failure in Voron environment flushing", e);
+                    _log.Fatal("Catastrophic failure in Voron environment flushing", e);
                 }
 
                 // wait for the message to be flushed to the logs
@@ -171,8 +173,8 @@ namespace Voron
             }
             catch (Exception e)
             {
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Failed to sync data file for {storageEnvironment.Options.BasePath}", e);
+                if (_log.IsFatalEnabled)
+                    _log.Fatal($"Failed to sync data file for {storageEnvironment.Options.BasePath}", e);
                 storageEnvironment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
             }
         }
@@ -239,8 +241,8 @@ namespace Voron
                     }
                     catch (Exception e)
                     {
-                        if (_log.IsOperationsEnabled)
-                            _log.Operations($"Failed to flush {storageEnvironment.Options.BasePath}", e);
+                        if (_log.IsFatalEnabled)
+                            _log.Fatal($"Failed to flush {storageEnvironment.Options.BasePath}", e);
 
                         storageEnvironment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                     }

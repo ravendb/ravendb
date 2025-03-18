@@ -2,7 +2,7 @@
 import { Meta } from "@storybook/react";
 import { DropdownPanel, UncontrolledButtonWithDropdownPanel } from "./DropdownPanel";
 import React, { useCallback, useState } from "react";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 export default {
     title: "Bits/Dropdown Panel",
@@ -23,11 +23,15 @@ export function UncontrolledDropdown() {
 
             <UncontrolledButtonWithDropdownPanel buttonText="I'm dropdown">
                 <div>
-                    <Button onClick={enabledClick}>Enabled button</Button>
-                    <Button onClick={enabledClick} disabled>
+                    <Button variant="secondary" onClick={enabledClick}>
+                        Enabled button
+                    </Button>
+                    <Button variant="secondary" onClick={enabledClick} disabled>
                         Disabled button
                     </Button>
-                    <Button className={DropdownPanel.closerClass}>I can close this dropdown</Button>
+                    <Button variant="secondary" className={DropdownPanel.closerClass}>
+                        I can close this dropdown
+                    </Button>
                 </div>
             </UncontrolledButtonWithDropdownPanel>
 

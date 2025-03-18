@@ -1,89 +1,143 @@
 ﻿import router = require("plugins/router");
 
-require("google.analytics");
+type gtagFn = (key: string, value: any, params?: any) => void;
+
+(window as any).dataLayer = (window as any).dataLayer || [];
+function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    (window as any).dataLayer.push(arguments);
+}
+
 
 class eventsCollector {
-    static UACode = "UA-82335022-3";
+    static readonly TrackingCode = "G-V0B01LBCM5";
+    // controls GTag Debug mode
+    static readonly DebugMode = false;
 
     static default = new eventsCollector();
 
     // used for caching events fired before analytics initialization
     // if user don't agree on usage stats tracking we discard this data
-    preInitializationQueue: Array<(ga: any) => void> = [];
+    preInitializationQueue: Array<(gtag: gtagFn) => void> = [];
 
-    version: string;
-    build: number;
-    env: string;
-    fullVersion: string;
-    enabled = false;
-    initialized = false;
+    private version: string;
+    private build: number;
+    private environment: Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment;
+    private fullVersion: string;
+    private enabled = false;
+    private initialized = false;
+    private licenseStatusProvider: () => LicenseStatus;
+    private supportInfoProvider: () => Raven.Server.Commercial.LicenseSupportInfo;
 
 
     constructor() {
         _.bindAll(this, "reportEvent");
     }
 
-    initialize(version: string, build: number, env: string, fullVersion: string, enabled: boolean) {
+    initialize(version: string,
+               build: number,
+               environment: Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment,
+               fullVersion: string,
+               licenseStatusProvider: () => LicenseStatus,
+               supportInfoProvider: () => Raven.Server.Commercial.LicenseSupportInfo,
+               enabled: boolean) {
         this.version = version;
         this.build = build;
-        this.env = env;
+        this.environment = environment;
         this.fullVersion = fullVersion;
-        this.enabled = enabled && eventsCollector.gaDefined();
-        this.createTracker();
+        this.licenseStatusProvider = licenseStatusProvider;
+        this.supportInfoProvider = supportInfoProvider;
+        this.initializeTracker();
+        this.setEnabled(enabled);
 
         this.initialized = true;
-
-        this.processQueue();
     }
 
-    static gaDefined() {
-        return typeof (ga) !== 'undefined';
+    private initializeTracker() {
+        const gtagProxy = gtag as any;
+        gtagProxy("js", new Date());
+        gtagProxy("config", eventsCollector.TrackingCode, {
+            send_page_view: false,
+            debug_mode: eventsCollector.DebugMode,
+        });
+        gtagProxy("set", "user_properties", this.getUserProperties());
+        
+        this.preInitializationQueue.push(() => {
+            this.initGtag();
+        });
     }
 
-    createTracker() {
-        if (eventsCollector.gaDefined()) {
-            ga('create', eventsCollector.UACode, 'auto');
-            ga('set', 'dimension1', this.version);
-            ga('set', 'dimension2', this.build);
-            ga('set', 'dimension3', this.env);
-            ga('set', 'dimension4', this.fullVersion);
+    private initGtag() {
+        const url  = "https://www.googletagmanager.com/gtag/js?id=" + eventsCollector.TrackingCode;
+        const gtmScript = document.createElement("script");
+        gtmScript.setAttribute("src",url);
+        document.head.appendChild(gtmScript);
+    }
+
+    private getUserProperties() {
+        const licenseStatus = this.licenseStatusProvider();
+        const supportInfo = this.supportInfoProvider();
+        return {
+            version: this.version,
+            full_version: this.fullVersion,
+            environment: this.environment,
+            build: this.build,
+            license_type: licenseStatus?.Type ?? "N/A",
+            support_type: supportInfo?.Status ?? "N/A",
+            is_cloud: licenseStatus ? licenseStatus.IsCloud : "N/A",
+            is_isv: licenseStatus ? licenseStatus.IsIsv : "N/A",
         }
     }
 
-    processQueue() {
-        if (this.enabled) {
+    setEnabled(enabled: boolean) {
+        this.enabled = enabled;
+        
+        if (enabled) {
+            this.flushPreInitializationQueue();
+        }
+    }
+
+    private flushPreInitializationQueue() {
             this.preInitializationQueue.forEach(action => {
-                action(ga);
+            action(gtag);
             });
-        }
 
         this.preInitializationQueue = [];
     }
 
     reportViewModel() {
         const instr = router.activeInstruction();
-        const viewName = instr?.fragment || "n/a";
-        this.internalLog((ga) => {
-            ga('set', 'location', `http://raven.studio/${viewName}${document.location.search}`);
-            ga('send', 'pageview');
+        const viewName = instr?.fragment;
+        if (!viewName) {
+            // it might be initial page load or shell initialization 
+            return;
+        }
+        const location = `http://raven.studio/${viewName}${document.location.search}`;
+        this.report((gtagProxy: gtagFn) => {
+            gtagProxy('event', 'page_view', {
+                page_location: location
+        });
         });
     }
 
     reportEvent(category: string, action: string, label: string = null) {
-        this.internalLog((ga) => {
-            ga('send', 'event', category, action, label);
+        this.report((gtagProxy: gtagFn) => {
+            gtagProxy('event', 'page_action', {
+                event_category: category,
+                event_action: action,
+                event_label: label
+        });
         });
     }
 
-    private internalLog(action: (ga: UniversalAnalytics.ga) => void) {
+    private report(action: (gtagProxy: gtagFn) => void) {
         if (!this.initialized) {
             this.preInitializationQueue.push(action);
             return;
         }
-        if (!this.enabled) {
-            return;
+        if (this.enabled) {
+            action(gtag);
         }
-        action(ga);
     }
 
 }

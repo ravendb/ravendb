@@ -38,7 +38,7 @@
                 if (skip != null)
                     return skip;
 
-                return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, nightlyBuildOnly: true);
+                return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, nightlyBuildOnly: true, snowflakeRequired: false);
             }
         }
     }

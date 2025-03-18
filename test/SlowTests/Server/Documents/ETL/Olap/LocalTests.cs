@@ -218,7 +218,7 @@ loadTo(""Orders"", partitionBy(key),
 
                 var script = @"
 var o = {
-    RequireAt : new Date(this.RequireAt)
+    RequireAt : new Date(this.RequireAt),
     Total : 0
 };
 
@@ -327,7 +327,7 @@ loadToOrders(partitionBy(key), o);
 
                 var script = @"
 var o = {
-    RequireAt : new Date(this.RequireAt)
+    RequireAt : new Date(this.RequireAt),
     Total : 0
 };
 
@@ -412,7 +412,7 @@ loadToOrders(partitionBy(key), o);
 
                 var script = @"
 var o = {
-    RequireAt : new Date(this.RequireAt)
+    RequireAt : new Date(this.RequireAt),
     Total : 0
 };
 
@@ -690,7 +690,7 @@ loadToOrders(partitionBy(key), o);
 
                 var transformationScript = @"
 var o = {
-    RequireAt : new Date(this.RequireAt)
+    RequireAt : new Date(this.RequireAt),
     Total : 0
 };
 
@@ -791,7 +791,7 @@ loadToOrders(partitionBy(key), o);
 
                 var script = @"
 var o = {
-    RequireAt : new Date(this.RequireAt)
+    RequireAt : new Date(this.RequireAt),
 };
 
 var orderDate = new Date(this.OrderedAt);
@@ -904,7 +904,7 @@ loadToOrders(partitionBy(key), o);
 
                 var script = @"
 var o = {
-    RequireAt : new Date(this.RequireAt)
+    RequireAt : new Date(this.RequireAt),
     Total : 0
 };
 
@@ -1030,7 +1030,7 @@ loadToOrders(partitionBy(key), o);
                 var script = @"
 loadToOrders(noPartition(),
     {
-        OrderDate : this.OrderedAt
+        OrderDate : this.OrderedAt,
         Company : this.Company,
         ShipVia : this.ShipVia
     });

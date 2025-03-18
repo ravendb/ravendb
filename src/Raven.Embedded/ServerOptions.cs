@@ -21,14 +21,6 @@ namespace Raven.Embedded
 
         public string DotNetPath { get; set; } = "dotnet";
 
-        [Obsolete(
-            $"This property is no longer used and will be removed in the next version, please use '{nameof(Licensing)}.{nameof(LicensingOptions.EulaAccepted)}' instead.")]
-        public bool AcceptEula
-        {
-            get => Licensing.EulaAccepted;
-            set => Licensing.EulaAccepted = value;
-        }
-
         public string ServerUrl { get; set; }
 
         public TimeSpan GracefulShutdownTimeout { get; set; } = TimeSpan.FromSeconds(30);

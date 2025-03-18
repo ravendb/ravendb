@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Esprima.Ast;
+using Acornima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Json;
@@ -36,49 +36,49 @@ namespace Raven.Server.Documents.Indexes.Static
             switch (stmt?.Type)
             {
                 case null:
-                case Nodes.BreakStatement:
-                case Nodes.DebuggerStatement:
-                case Nodes.EmptyStatement:
-                case Nodes.ContinueStatement:
-                case Nodes.ThrowStatement:
+                case NodeType.BreakStatement:
+                case NodeType.DebuggerStatement:
+                case NodeType.EmptyStatement:
+                case NodeType.ContinueStatement:
+                case NodeType.ThrowStatement:
 
-                case Nodes.ExpressionStatement: // cannot contain return that we are interested in
+                case NodeType.ExpressionStatement: // cannot contain return that we are interested in
 
                     return Enumerable.Empty<ReturnStatement>();
 
-                case Nodes.BlockStatement:
+                case NodeType.BlockStatement:
                     return GetReturnStatements(((BlockStatement)stmt).Body);
-                case Nodes.DoWhileStatement:
+                case NodeType.DoWhileStatement:
                     return GetReturnStatements(((DoWhileStatement)stmt).Body);
-                case Nodes.ForStatement:
+                case NodeType.ForStatement:
                     return GetReturnStatements(((ForStatement)stmt).Body);
-                case Nodes.ForInStatement:
+                case NodeType.ForInStatement:
                     return GetReturnStatements(((ForInStatement)stmt).Body);
 
-                case Nodes.IfStatement:
+                case NodeType.IfStatement:
                     var ifStatement = ((IfStatement)stmt);
                     return GetReturnStatements(ifStatement.Consequent)
                         .Concat(GetReturnStatements(ifStatement.Alternate));
 
-                case Nodes.LabeledStatement:
+                case NodeType.LabeledStatement:
                     return GetReturnStatements(((LabeledStatement)stmt).Body);
 
-                case Nodes.SwitchStatement:
+                case NodeType.SwitchStatement:
                     return GetReturnStatements(((SwitchStatement)stmt).Cases.SelectMany(x => x.Consequent));
 
-                case Nodes.TryStatement:
+                case NodeType.TryStatement:
                     return GetReturnStatements(((TryStatement)stmt).Block);
 
-                case Nodes.WhileStatement:
+                case NodeType.WhileStatement:
                     return GetReturnStatements(((WhileStatement)stmt).Body);
 
-                case Nodes.WithStatement:
+                case NodeType.WithStatement:
                     return GetReturnStatements(((WithStatement)stmt).Body);
 
-                case Nodes.ForOfStatement:
+                case NodeType.ForOfStatement:
                     return GetReturnStatements(((ForOfStatement)stmt).Body);
 
-                case Nodes.ReturnStatement:
+                case NodeType.ReturnStatement:
                     return new[] { (ReturnStatement)stmt };
 
                 default:
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static IEnumerable<ReturnStatement> GetReturnStatements(IEnumerable<StatementListItem> items)
+        private static IEnumerable<ReturnStatement> GetReturnStatements(IEnumerable<StatementOrExpression> items)
         {
             foreach (var item in items)
             {

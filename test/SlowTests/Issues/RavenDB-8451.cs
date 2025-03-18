@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Recovery;
@@ -85,7 +86,7 @@ namespace SlowTests.Issues
 
             using (var recovery = new Recovery(new VoronRecoveryConfiguration()
             {
-                LoggingMode = Sparrow.Logging.LogMode.None,
+                LoggingLevel = LogLevel.Off,
                 DataFileDirectory = dbPath,
                 PathToDataFile = Path.Combine(dbPath, "Raven.voron"),
                 OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),

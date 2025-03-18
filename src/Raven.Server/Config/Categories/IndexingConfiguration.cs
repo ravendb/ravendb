@@ -91,6 +91,14 @@ namespace Raven.Server.Config.Categories
             
             EncryptedTransactionSizeLimit = defaultEncryptedTransactionSizeLimit;
             MaxAllocationsAtDictionaryTraining = defaultMaxAllocationsAtDictionaryTraining;
+
+            MaxNumberOfThreadsForLocalEmbeddingsGeneration = Environment.ProcessorCount switch
+            {
+                <= 2 => 1,
+                <= 8 => 2,
+                <= 16 => 4,
+                _ => 6
+            };
         }
         
         private static HashSet<string> GetValidIndexingConfigurationKeys()
@@ -410,15 +418,17 @@ namespace Raven.Server.Config.Categories
         public int? MaxNumberOfConcurrentlyRunningIndexes { get; set; }
 
         [Description("Location of NuGet packages cache")]
-        [DefaultValue("Packages/NuGet")]
+        [DefaultValue("Packages/NuGet/Indexing")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.NuGet.PackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }
 
         [Description("Default NuGet source URL")]
         [DefaultValue("https://api.nuget.org/v3/index.json")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.NuGet.PackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string NuGetPackageSourceUrl { get; set; }
 
         [Description("Allow installation of NuGet prerelease packages")]
@@ -426,7 +436,9 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetAllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Indexing.NuGetAllowPreleasePackages", ConfigurationEntryScope.ServerWideOnly)]
-        public bool NuGetAllowPreleasePackages { get; set; }
+        [ConfigurationEntry("Indexing.NuGet.AllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.NuGet.AllowPreleasePackages", ConfigurationEntryScope.ServerWideOnly)]
+        public bool NuGetAllowPreReleasePackages { get; set; }
         
         [Description("Number of index history revisions to keep per index")]
         [DefaultValue(10)]
@@ -580,12 +592,48 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         public IndexResetMode ResetMode { get; set; }
 
-        [Description("The default complex field indexing behavior for static Corax indexes")]
+        [Description("The default complex field indexing behavior for static Corax indexes.")]
         [DefaultValue(CoraxComplexFieldIndexingBehavior.Throw)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Corax.Static.ComplexFieldIndexingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public CoraxComplexFieldIndexingBehavior CoraxStaticIndexComplexFieldIndexingBehavior { get; protected set; }
 
+        [Description("The default minimum similarity for vector search (0.0f - 1.0f, default is 0.75f)")]
+        [DefaultValue(0.75f)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultMinimumSimilarity", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public float CoraxVectorSearchDefaultMinimumSimilarity { get; protected set; }
+        
+        [Description("The default number of edges created for a vector during vector indexing.")]
+        [DefaultValue(12)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfEdges", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int CoraxVectorDefaultNumberOfEdges { get; protected set; }
+        
+        [Description("The default number of candidates (potential neighboring vectors) that RavenDB evaluates during vector indexing.")]
+        [DefaultValue(16)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForIndexing", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int CoraxVectorDefaultNumberOfCandidatesForIndexing { get; protected set; }
+        
+        [Description("The default maximum number of vectors that we will return from a graph search.")]
+        [DefaultValue(16)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int CoraxVectorDefaultNumberOfCandidatesForQuerying { get; protected set; }
+        
+        [Description("Order by score automatically when vector.search is inside query.")]
+        [DefaultValue(true)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.OrderByScoreAutomatically", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool CoraxVectorSearchOrderByScoreAutomatically { get; set; }
+        
+        [Description("Maximum number of threads that will be used for generating embedding from text locally.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.MaxNumberOfThreadsForLocalEmbeddingsGeneration", ConfigurationEntryScope.ServerWideOnly)]
+        public int MaxNumberOfThreadsForLocalEmbeddingsGeneration { get; set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

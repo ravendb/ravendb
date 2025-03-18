@@ -4,21 +4,6 @@ namespace Sparrow.LowMemory
 {
     public struct MemoryInfoResult
     {
-        [Obsolete("Will be removed in next major version")]
-        public sealed class MemoryUsageIntervals
-        {
-            public Size LastOneMinute;
-            public Size LastFiveMinutes;
-            public Size SinceStartup;
-        }
-
-        [Obsolete("Will be removed in next major version")]
-        public sealed class MemoryUsageLowHigh
-        {
-            public MemoryUsageIntervals High;
-            public MemoryUsageIntervals Low;
-        }
-        
         public string Remarks;
         public Size TotalCommittableMemory;
         public Size CurrentCommitCharge;

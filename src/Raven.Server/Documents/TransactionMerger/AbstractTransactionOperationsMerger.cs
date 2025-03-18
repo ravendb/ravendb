@@ -17,6 +17,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Logging;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.TransactionMerger
         private readonly ConcurrentQueue<List<MergedTransactionCommand<TOperationContext, TTransaction>>> _opsBuffers = new();
         private readonly ManualResetEventSlim _waitHandle = new(false);
         private ExceptionDispatchInfo _edi;
-        private readonly Logger _log;
+        private readonly RavenLogger _log;
         private PoolOfThreads.LongRunningWork _txLongRunningOperation;
 
         private readonly double _maxTimeToWaitForPreviousTxInMs;
@@ -64,10 +65,11 @@ namespace Raven.Server.Documents.TransactionMerger
             [NotNull] string resourceName,
             [NotNull] RavenConfiguration configuration,
             [NotNull] SystemTime time,
+            [NotNull] RavenLogger logger,
             CancellationToken shutdown)
         {
             _resourceName = resourceName ?? throw new ArgumentNullException(nameof(resourceName));
-            _log = LoggingSource.Instance.GetLogger(_resourceName, GetType().FullName);
+            _log = logger ?? throw new ArgumentNullException(nameof(logger));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _time = time ?? throw new ArgumentNullException(nameof(time));
             _shutdown = shutdown;
@@ -197,11 +199,11 @@ namespace Raven.Server.Documents.TransactionMerger
                     // in particular, an OOM error is something that we want to recover
                     // we'll handle this by throwing out all the pending transactions,
                     // waiting for 3 seconds and then resuming normal operations
-                    if (_log.IsOperationsEnabled)
+                    if (_log.IsWarnEnabled)
                     {
                         try
                         {
-                            _log.Operations(
+                            _log.Warn(
                                 "OutOfMemoryException happened in the transaction merger, will abort all transactions for the next 3 seconds and then resume operations",
                                 e);
                         }
@@ -235,9 +237,9 @@ namespace Raven.Server.Documents.TransactionMerger
                 }
                 catch (Exception e)
                 {
-                    if (_log.IsOperationsEnabled)
+                    if (_log.IsFatalEnabled)
                     {
-                        _log.Operations(
+                        _log.Fatal(
                             "Serious failure in transaction merging thread, the database must be restarted!",
                             e);
                     }
@@ -488,8 +490,8 @@ namespace Raven.Server.Documents.TransactionMerger
             {
                 while (true)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"BeginAsyncCommit on {previous.Transaction.InnerTransaction.LowLevelTransaction.Id} with {_operations.Count} additional operations pending");
+                    if (_log.IsDebugEnabled)
+                        _log.Debug($"BeginAsyncCommit on {previous.Transaction.InnerTransaction.LowLevelTransaction.Id} with {_operations.Count} additional operations pending");
 
                     currentReturnContext = _contextPool.AllocateOperationContext(out current);
 
@@ -645,8 +647,8 @@ namespace Raven.Server.Documents.TransactionMerger
                 _recording.State?.TryRecord(context, TxInstruction.EndAsyncCommit);
                 previous.EndAsyncCommit();
 
-                if (_log.IsInfoEnabled)
-                    _log.Info($"EndAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id}");
+                if (_log.IsDebugEnabled)
+                    _log.Debug($"EndAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id}");
                 NotifyOnThreadPool(previousPendingOps);
             }
             catch (Exception e)
@@ -751,10 +753,10 @@ namespace Raven.Server.Documents.TransactionMerger
 
             var currentOperationsCount = _operations.Count;
             var status = GetPendingOperationsStatus(context, currentOperationsCount == 0);
-            if (_log.IsInfoEnabled)
+            if (_log.IsDebugEnabled)
             {
                 var opType = previousOperation == null ? string.Empty : "(async) ";
-                _log.Info($"Merged {executedOps.Count:#,#;;0} operations in {sp.Elapsed} {opType}with {currentOperationsCount:#,#;;0} operations remaining. Status: {status}");
+                _log.Debug($"Merged {executedOps.Count:#,#;;0} operations in {sp.Elapsed} {opType}with {currentOperationsCount:#,#;;0} operations remaining. Status: {status}");
             }
             return status;
         }

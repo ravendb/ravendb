@@ -19,16 +19,17 @@ public partial class IndexSearcher
         where TInner : IQueryMatch
     {
         var compactTree = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (compactTree == null)
-            return default;
+        if (compactTree is null)
+            return TermMatch.CreateEmpty(this, this.Allocator);
 
         Allocator.Allocate(terms.Length * sizeof(long), out var sequenceBuffer);
         Span<long> sequence = sequenceBuffer.ToSpan<long>();
         
         var termsVectorFieldName = field.GetPhraseQueryContainerName(Allocator);
-        var vectorRootPage = GetRootPageByFieldName(termsVectorFieldName);
-        var rootPage = GetRootPageByFieldName(field.FieldName);
 
+        if (TryGetRootPageByFieldName(termsVectorFieldName, out var vectorRootPage) == false || TryGetRootPageByFieldName(field.FieldName, out var rootPage) == false)
+            return TermMatch.CreateEmpty(this, Allocator);
+        
         for (var i = 0; i < terms.Length; ++i)
         {
             var term = terms[i];

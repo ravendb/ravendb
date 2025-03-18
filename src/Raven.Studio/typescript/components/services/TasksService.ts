@@ -29,6 +29,8 @@ import getBackupLocationCommand from "commands/database/tasks/getBackupLocationC
 import testAzureQueueStorageServerConnectionCommand from "commands/database/cluster/testAzureQueueStorageServerConnectionCommand";
 import replicationProgressCommand from "commands/database/tasks/replicationProgressCommand";
 import internalReplicationProgressCommand from "commands/database/tasks/internalReplicationProgressCommand";
+import testSnowflakeConnectionStringCommand from "commands/database/cluster/testSnowflakeConnectionStringCommand";
+import testAmazonSqsServerConnectionCommand from "commands/database/cluster/testAmazonSqsServerConnectionCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -124,6 +126,10 @@ export default class TasksService {
         return new testSqlConnectionStringCommand(databaseName, connectionString, factoryName).execute();
     }
 
+    async testSnowflakeConnectionString(databaseName: string, connectionString: string) {
+        return new testSnowflakeConnectionStringCommand(databaseName, connectionString).execute();
+    }
+
     async testRabbitMqServerConnection(databaseName: string, connectionString: string) {
         return new testRabbitMqServerConnectionCommand(databaseName, connectionString).execute();
     }
@@ -133,6 +139,13 @@ export default class TasksService {
         authentication: Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings
     ) {
         return new testAzureQueueStorageServerConnectionCommand(databaseName, authentication).execute();
+    }
+
+    async testAmazonSqsServerConnection(
+        databaseName: string,
+        authentication: Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings
+    ) {
+        return new testAmazonSqsServerConnectionCommand(databaseName, authentication).execute();
     }
 
     async testKafkaServerConnection(

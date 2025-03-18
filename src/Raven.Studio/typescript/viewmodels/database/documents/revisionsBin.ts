@@ -149,26 +149,30 @@ class revisionsBin extends shardViewModelBase {
 
         eventsCollector.default.reportEvent("revisionsBin", "delete-selected");
         
-        this.confirmationMessage("Are you sure?", "Do you want to delete selected items and its revisions?", {
-            buttons: ["Cancel", "Yes, delete"]
-        })
+        this.confirmationMessage("Delete Revisions?",
+            `The selected "Delete Revision" items will be removed,<br/> 
+            and all their associated revisions will be permanently deleted.<br/><br/> 
+            This action cannot be undone.`,
+            {
+                buttons: ["Cancel", "Yes, delete"],
+                html: true
+            })
             .done(result => {
                 if (result.can) {
-
                     this.spinners.delete(true);
 
                     const parameters: Raven.Client.Documents.Operations.Revisions.DeleteRevisionsOperation.Parameters = {
                         DocumentIds: selectedIds,
                         RevisionsChangeVectors: [],
                         RemoveForceCreatedRevisions: true,
-                    }
+                    };
 
                     new deleteRevisionsForDocumentsCommand(this.db?.name, parameters)
                         .execute()
                         .always(() => {
                             this.spinners.delete(false);
                             this.gridController().reset(false);
-                        });
+                    });
                 }
             });
     }

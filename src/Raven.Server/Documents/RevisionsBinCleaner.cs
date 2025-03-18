@@ -8,7 +8,6 @@ using Raven.Server.Background;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
@@ -18,7 +17,8 @@ namespace Raven.Server.Documents
         private readonly RevisionsBinConfiguration _configuration;
         private readonly long _batchSize;
 
-        public RevisionsBinCleaner(DocumentDatabase documentDatabase, RevisionsBinConfiguration configuration) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
+        public RevisionsBinCleaner(DocumentDatabase documentDatabase, RevisionsBinConfiguration configuration)
+            : base(documentDatabase.Name, documentDatabase.Loggers.GetLogger<RevisionsBinCleaner>(), documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
             _configuration = configuration;
@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
 
         protected override async Task DoWork()
         {
-            await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(_configuration.RefreshFrequencyInSec));
+            await WaitOrThrowOperationCanceled(TimeSpan.FromSeconds(_configuration.CleanerFrequencyInSec));
 
             await ExecuteCleanup(_configuration);
         }
@@ -65,9 +65,9 @@ namespace Raven.Server.Documents
                     $"Revisions-bin cleaner error in {database.Name}", msg,
                     AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
-                var logger = LoggingSource.Instance.GetLogger<RevisionsBinCleaner>(database.Name);
-                if (logger.IsOperationsEnabled)
-                    logger.Operations(msg, e);
+                var logger = database.Loggers.GetLogger<RevisionsBinCleaner>();
+                if (logger.IsErrorEnabled)
+                    logger.Error(msg, e);
 
                 return null;
             }
@@ -82,8 +82,7 @@ namespace Raven.Server.Documents
             config ??= _configuration;
 
             if (config == null ||
-                config.MinimumEntriesAgeToKeepInMin == null ||
-                config.MinimumEntriesAgeToKeepInMin.Value == int.MaxValue ||
+                config.MinimumEntriesAgeToKeepInMin == int.MaxValue ||
                 CancellationToken.IsCancellationRequested)
             {
                 if (Logger.IsInfoEnabled)
@@ -93,13 +92,13 @@ namespace Raven.Server.Documents
 
             try
             {
-                var before = _documentDatabase.Time.GetUtcNow() - TimeSpan.FromMinutes(config.MinimumEntriesAgeToKeepInMin.Value < 0 ? 0 : config.MinimumEntriesAgeToKeepInMin.Value);
+                var before = _documentDatabase.Time.GetUtcNow() - TimeSpan.FromMinutes(int.Max(0, config.MinimumEntriesAgeToKeepInMin));
 
                 while (CancellationToken.IsCancellationRequested == false)
                 {
                     List<(string Id, long Etag)> idsAndEtags;
                     long readLastEtag;
-                    
+
                     using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -122,7 +121,7 @@ namespace Raven.Server.Documents
 
                         if (Logger.IsInfoEnabled)
                             Logger.Info(GetLogMsg(res.DeletedEntries, idsAndEtags, res.NextStartIndex, isFirst));
-                        
+
 
                         if (res.NextStartIndex >= idsAndEtags.Count)
                             break;

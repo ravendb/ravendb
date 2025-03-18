@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
                     await ExecuteSmugglerAsync(context, stream, operateOnTypes);
                 }
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                     RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseImport)} from sample data");
 
                 await RequestHandler.NoContent();

@@ -6,15 +6,28 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Corax.Utils;
+using Jint;
+using Jint.Native;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Linq.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Logging;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Rachis.Commands;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -173,7 +186,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
     }
 
-    public abstract class AbstractStaticIndexBase
+    public abstract partial class AbstractStaticIndexBase
     {
         protected readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
@@ -183,14 +196,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly HashSet<string> CollectionsWithCompareExchangeReferences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected static Logger Log = LoggingSource.Instance.GetLogger<AbstractStaticIndexBase>("Server");
+        protected static RavenLogger Log = RavenLogManager.Instance.GetLoggerForServer<AbstractStaticIndexBase>();
 
-        
+
         public int StackSizeInSelectClause { get; set; }
         
         public bool HasDynamicFields { get; set; }
 
         public bool HasBoostedFields { get; set; }
+        
+        public bool HasVectorFields { get; set; }
 
         public string Source;
 
@@ -253,8 +268,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     NotificationSeverity.Info,
                     nameof(IndexCompiler)));
                 
-                if (Log.IsOperationsEnabled)
-                    Log.Operations($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {StackSizeInSelectClause}.");
+                if (Log.IsWarnEnabled)
+                    Log.Warn($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {StackSizeInSelectClause}.");
             }
         }
         
@@ -303,7 +318,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return l;
                 if (v is float f)
                     return f;
-                if (v is LazyStringValue lsv && double.TryParse(lsv, out var r))
+                if (v is LazyStringValue lsv && double.TryParse(lsv.AsReadOnlySpan(), out var r))
                     return r;
 
                 return null;
@@ -321,12 +336,14 @@ namespace Raven.Server.Documents.Indexes.Static
                     return l;
                 if (v is float f)
                     return (long)f;
-                if (v is LazyStringValue lsv && long.TryParse(lsv, out var r))
+                if (v is LazyStringValue lsv && long.TryParse(lsv.AsReadOnlySpan(), out var r))
                     return r;
 
                 return null;
             }
         }
+
+       
 
         public dynamic LoadDocument<TIgnored>(object keyOrEnumerable, string collectionName)
         {
@@ -437,7 +454,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
             }
-            
+
             var field = IndexField.Create(name, new IndexFieldOptions
             {
                 Storage = options?.Storage,

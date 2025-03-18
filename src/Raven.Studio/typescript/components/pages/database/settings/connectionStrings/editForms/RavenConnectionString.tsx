@@ -1,7 +1,9 @@
-﻿import { Badge, Button, Form, Label } from "reactstrap";
-import { FormInput } from "components/common/Form";
+﻿import Badge from "react-bootstrap/Badge";
+import Form from "react-bootstrap/Form";
+
+import { FormInput, FormLabel } from "components/common/Form";
 import React from "react";
-import { Control, SubmitHandler, UseFormTrigger, UseFormWatch, useFieldArray, useForm } from "react-hook-form";
+import { Control, SubmitHandler, useFieldArray, useForm, UseFormTrigger, UseFormWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, RavenConnection } from "../connectionStringsTypes";
 import { useServices } from "components/hooks/useServices";
@@ -14,6 +16,7 @@ import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ConnectionTestError from "../../../../../common/connectionTests/ConnectionTestError";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 type FormData = ConnectionFormData<RavenConnection>;
 
@@ -49,7 +52,7 @@ export default function RavenConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Label>Name</Label>
+                <FormLabel>Name</FormLabel>
                 <FormInput
                     control={control}
                     name="name"
@@ -60,7 +63,7 @@ export default function RavenConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Label>Database</Label>
+                <FormLabel>Database</FormLabel>
                 <FormInput
                     control={control}
                     name="database"
@@ -70,7 +73,7 @@ export default function RavenConnectionString({
                 />
             </div>
             <div className="mb-2">
-                <Label>Discovery URLs</Label>
+                <FormLabel>Discovery URLs</FormLabel>
                 <div className="vstack gap-3">
                     {formState.errors?.topologyDiscoveryUrls?.message && (
                         <div className="text-danger small">{formState.errors.topologyDiscoveryUrls.message}</div>
@@ -87,7 +90,7 @@ export default function RavenConnectionString({
                         />
                     ))}
                 </div>
-                <Button color="info" className="mt-3" onClick={() => urlFieldArray.append({ url: null })}>
+                <Button variant="info" className="mt-3" onClick={() => urlFieldArray.append({ url: null })}>
                     <Icon icon="plus" />
                     Add next discovery URL
                 </Button>
@@ -125,20 +128,20 @@ function DiscoveryUrl({ idx, control, isDeleteButtonVisible, trigger, watch, onD
 
     return (
         <div className="vstack mb-2 gap-1">
-            <Label className="mb-0 d-flex align-items-center gap-1">
+            <FormLabel className="mb-0 d-flex align-items-center gap-1">
                 <span className="small-label mb-0">URL #{idx + 1}</span>
                 {asyncTest.result?.Success ? (
-                    <Badge color="success" pill>
+                    <Badge bg="success" pill>
                         <Icon icon="check" />
                         Successfully connected
                     </Badge>
                 ) : asyncTest.result?.Error ? (
-                    <Badge color="danger" pill>
+                    <Badge bg="danger" pill>
                         <Icon icon="warning" />
                         Failed connection
                     </Badge>
                 ) : null}
-            </Label>
+            </FormLabel>
             <div className="input-group mb-2">
                 <FormInput
                     type="text"
@@ -148,12 +151,12 @@ function DiscoveryUrl({ idx, control, isDeleteButtonVisible, trigger, watch, onD
                     autoComplete="off"
                 />
                 {isDeleteButtonVisible && (
-                    <Button color="danger" title="Delete URL" onClick={onDelete} disabled={asyncTest.loading}>
+                    <Button variant="danger" title="Delete URL" onClick={onDelete} disabled={asyncTest.loading}>
                         <Icon icon="trash" margin="m-0" />
                     </Button>
                 )}
                 <ButtonWithSpinner
-                    color="secondary"
+                    variant="secondary"
                     onClick={asyncTest.execute}
                     isSpinning={asyncTest.loading}
                     title="Test connection"

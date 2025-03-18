@@ -1,7 +1,11 @@
-import React from "react";
-import { Card, CardBody, Col, Form, InputGroup, Label, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+
 import { SubmitHandler, useForm } from "react-hook-form";
-import { FormSelect, FormSwitch } from "components/common/Form";
+import { FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -25,8 +29,10 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 
 export default function StudioDatabaseConfiguration() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -95,10 +101,15 @@ export default function StudioDatabaseConfiguration() {
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                         <div className="d-flex align-items-center justify-content-between">
-                            <div id="saveStudioConfiguration" className="w-fit-content">
+                            <ConditionalPopover
+                                conditions={{
+                                    isActive: !hasStudioConfiguration,
+                                    message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                }}
+                            >
                                 <ButtonWithSpinner
                                     type="submit"
-                                    color="primary"
+                                    variant="primary"
                                     className="mb-3"
                                     icon="save"
                                     disabled={!formState.isDirty}
@@ -106,10 +117,7 @@ export default function StudioDatabaseConfiguration() {
                                 >
                                     Save
                                 </ButtonWithSpinner>
-                            </div>
-                            {!hasStudioConfiguration && (
-                                <FeatureNotAvailableInYourLicensePopover target="saveStudioConfiguration" />
-                            )}
+                            </ConditionalPopover>
                             <small title="Navigate to the server-wide Client Configuration View">
                                 <a target="_blank" href={appUrl.forGlobalStudioConfiguration()}>
                                     <Icon icon="link" />
@@ -118,18 +126,13 @@ export default function StudioDatabaseConfiguration() {
                             </small>
                         </div>
                         <div className={hasStudioConfiguration ? "" : "item-disabled pe-none"}>
-                            <Card id="popoverContainer">
-                                <CardBody className="d-flex flex-center flex-column flex-wrap gap-4">
+                            <Card>
+                                <Card.Body className="d-flex flex-center flex-column flex-wrap gap-4">
                                     <InputGroup className="gap-1 flex-wrap flex-column">
-                                        <Label className="mb-0 md-label">
-                                            Database Environment <Icon icon="info" color="info" id="environmentInfo" />
-                                            <UncontrolledPopover
-                                                target="environmentInfo"
-                                                placement="right"
-                                                trigger="hover"
-                                                container="popoverContainer"
-                                            >
-                                                <PopoverBody>
+                                        <FormLabel className="mb-0 md-label">
+                                            Database Environment{" "}
+                                            <PopoverWithHoverWrapper
+                                                message={
                                                     <ul>
                                                         <li className="margin-bottom-xs">
                                                             Apply a <strong>tag</strong> to the Studio indicating the
@@ -137,9 +140,12 @@ export default function StudioDatabaseConfiguration() {
                                                         </li>
                                                         <li>This does not affect any settings or features.</li>
                                                     </ul>
-                                                </PopoverBody>
-                                            </UncontrolledPopover>
-                                        </Label>
+                                                }
+                                                placement="right"
+                                            >
+                                                <Icon icon="info" color="info" id="environmentInfo" />
+                                            </PopoverWithHoverWrapper>
+                                        </FormLabel>
                                         <FormSelect
                                             control={control}
                                             name="Environment"
@@ -147,36 +153,33 @@ export default function StudioDatabaseConfiguration() {
                                             isSearchable={false}
                                         ></FormSelect>
                                     </InputGroup>
-                                </CardBody>
+                                </Card.Body>
                             </Card>
                             <Card className="mt-3" id="disableAutoIndexesContainer">
-                                <CardBody>
+                                <Card.Body>
                                     <div className="d-flex flex-column">
-                                        <UncontrolledPopover
-                                            target="disableAutoIndexesInfo"
-                                            placement="right"
-                                            trigger="hover"
-                                            container="disableAutoIndexesContainer"
-                                        >
-                                            <PopoverBody>
-                                                <ul className="mb-0">
-                                                    <li className="margin-bottom-xs">
-                                                        Toggle on to disable creating new Auto-Indexes when making a{" "}
-                                                        <strong>dynamic query</strong>.
-                                                    </li>
-                                                    <li>
-                                                        Query results will be returned only when a matching Auto-Index
-                                                        already exists.
-                                                    </li>
-                                                </ul>
-                                            </PopoverBody>
-                                        </UncontrolledPopover>
                                         <FormSwitch control={control} name="DisableAutoIndexCreation">
                                             Disable creating new Auto-Indexes{" "}
-                                            <Icon icon="info" color="info" id="disableAutoIndexesInfo" />
+                                            <PopoverWithHoverWrapper
+                                                message={
+                                                    <ul className="mb-0">
+                                                        <li className="margin-bottom-xs">
+                                                            Toggle on to disable creating new Auto-Indexes when making a{" "}
+                                                            <strong>dynamic query</strong>.
+                                                        </li>
+                                                        <li>
+                                                            Query results will be returned only when a matching
+                                                            Auto-Index already exists.
+                                                        </li>
+                                                    </ul>
+                                                }
+                                                placement="right"
+                                            >
+                                                <Icon icon="info" color="info" id="disableAutoIndexesInfo" />
+                                            </PopoverWithHoverWrapper>
                                         </FormSwitch>
                                     </div>
-                                </CardBody>
+                                </Card.Body>
                             </Card>
                         </div>
                     </Form>

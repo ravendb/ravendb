@@ -4,7 +4,7 @@ import classNames from "classnames";
 import { NodeInfo } from "components/models/databases";
 import app from "durandal/app";
 import showDataDialog from "viewmodels/common/showDataDialog";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
 import genUtils from "common/generalUtils";
 import assertUnreachable from "components/utils/assertUnreachable";
 
@@ -106,7 +106,7 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
                 <Icon icon={cssIcon(node)} /> {node.type}
             </div>
             <div>
-                <Badge color={nodeBadgeColor(node)}>
+                <Badge bg={nodeBadgeColor(node)}>
                     {nodeBadgeText(node)}
                     {node.responsibleNode && (
                         <span

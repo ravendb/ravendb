@@ -91,7 +91,7 @@ namespace SlowTests.Issues
             var config = new RevisionsBinConfiguration
             {
                 MinimumEntriesAgeToKeepInMin = 0, 
-                RefreshFrequencyInSec = 1
+                CleanerFrequencyInSec = 1
             };
             await ConfigRevisionsBinCleaner(store, config);
 
@@ -160,7 +160,7 @@ namespace SlowTests.Issues
             var config = new RevisionsBinConfiguration
             {
                 MinimumEntriesAgeToKeepInMin = 15 * 60 * 24, // 15 days
-                RefreshFrequencyInSec = 1
+                CleanerFrequencyInSec = 1
             };
 
             var cleaner = new RevisionsBinCleaner(db, config);
@@ -225,7 +225,7 @@ namespace SlowTests.Issues
             var config = new RevisionsBinConfiguration
             {
                 MinimumEntriesAgeToKeepInMin = 15 * 24 * 60, // 15 days
-                RefreshFrequencyInSec = 1
+                CleanerFrequencyInSec = 1
             };
 
             var cleaner = new RevisionsBinCleaner(db, config);
@@ -447,7 +447,7 @@ namespace SlowTests.Issues
             var config = new RevisionsBinConfiguration
             {
                 MinimumEntriesAgeToKeepInMin = 0, 
-                RefreshFrequencyInSec = 1
+                CleanerFrequencyInSec = 1
             };
             await ConfigRevisionsBinCleaner(store, config);
 
@@ -523,7 +523,7 @@ namespace SlowTests.Issues
             var config = new RevisionsBinConfiguration
             {
                 MinimumEntriesAgeToKeepInMin = 0, 
-                RefreshFrequencyInSec = 1
+                CleanerFrequencyInSec = 1
             };
 
             var firsts = 0;
@@ -661,7 +661,7 @@ namespace SlowTests.Issues
             var config = new RevisionsBinConfiguration
             {
                 MinimumEntriesAgeToKeepInMin = 0, 
-                RefreshFrequencyInSec = 1
+                CleanerFrequencyInSec = 1
             };
 
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);

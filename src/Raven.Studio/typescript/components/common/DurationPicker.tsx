@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Input, Label } from "reactstrap";
+import React, { ChangeEvent, useEffect, useState } from "react";
+import Form from "react-bootstrap/Form";
 
 interface Duration {
     days: number;
@@ -49,52 +49,64 @@ export default function DurationPicker(props: DurationPickerProps) {
     return (
         <div className="d-flex gap-1">
             {showDays && (
-                <Label>
-                    <span className="small-label">Days</span>
-                    <Input
+                <div>
+                    <Form.Label htmlFor="days" className="small-label">
+                        Days
+                    </Form.Label>
+                    <Form.Control
                         type="number"
+                        id="days"
                         min={0}
                         value={days}
                         placeholder={placeholder?.days}
-                        onChange={(e) => setDays(getInputValue(e))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
                         disabled={disabled}
                     />
-                </Label>
+                </div>
             )}
-            <Label>
-                <span className="small-label">Hours</span>
-                <Input
+            <div>
+                <Form.Label htmlFor="hours" className="small-label">
+                    Hours
+                </Form.Label>
+                <Form.Control
                     type="number"
                     min={0}
+                    id="hours"
                     value={hours}
                     placeholder={placeholder?.hours}
-                    onChange={(e) => setHours(getInputValue(e))}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                     disabled={disabled}
                 />
-            </Label>
-            <Label>
-                <span className="small-label">Minutes</span>
-                <Input
+            </div>
+            <div>
+                <Form.Label htmlFor="minutes" className="small-label">
+                    Minutes
+                </Form.Label>
+                <Form.Control
                     type="number"
+                    id="minutes"
                     min={0}
                     value={minutes}
                     placeholder={placeholder?.minutes}
-                    onChange={(e) => setMinutes(getInputValue(e))}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
                     disabled={disabled}
                 />
-            </Label>
+            </div>
             {showSeconds && (
-                <Label>
-                    <span className="small-label">Seconds</span>
-                    <Input
+                <div>
+                    <Form.Label htmlFor="seconds" className="small-label">
+                        Seconds
+                    </Form.Label>
+                    <Form.Control
                         type="number"
+                        id="seconds"
                         min={0}
                         value={seconds}
                         placeholder={placeholder?.seconds}
-                        onChange={(e) => setSeconds(getInputValue(e))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
                         disabled={disabled}
                     />
-                </Label>
+                </div>
             )}
         </div>
     );

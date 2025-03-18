@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
@@ -48,68 +49,31 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/revisions/size", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/revisions/size", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsSize()
         {
-            List<RevisionSizeDetails> sizes;
-            List<string> changeVectors;
+            RevisionSizeDetails size;
+            var changeVector = GetQueryStringValueAndAssertIfSingleAndNotEmpty("changeVector");
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "ChangeVectors");
-                var parameters = JsonDeserializationServer.Parameters.GetRevisionsSizeParameters(json);
-
-                using (context.OpenReadTransaction())
-                using (var token = CreateHttpRequestBoundOperationToken())
+                var metrics = Database.DocumentsStorage.RevisionsStorage.GetRevisionMetrics(context, changeVector);
+                if (metrics.HasValue == false)
                 {
-                    changeVectors = parameters.ChangeVectors;
-                    sizes = GetRevisionsSizeByChangeVector(context, changeVectors);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
                 }
+
+                size = new RevisionSizeDetails(changeVector, metrics.Value);
             }
+            
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-
-                writer.WriteArray("Sizes", sizes.Select(size => size.ToJson()), ctx);
-
-                writer.WriteEndObject();
+                ctx.Write(writer, size.ToJson());
             }
-        }
-
-        public class GetRevisionsSizeParameters
-        {
-            public List<string> ChangeVectors;
-        }
-
-        private List<RevisionSizeDetails> GetRevisionsSizeByChangeVector(DocumentsOperationContext context, List<string> changeVectors)
-        {
-            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
-
-            var sizes = new List<RevisionSizeDetails>(changeVectors.Count);
-
-            foreach (var cv in changeVectors)
-            {
-                var metrics = revisionsStorage.GetRevisionMetrics(context, cv);
-
-                var exist = metrics != null;
-                if (exist == false)
-                    metrics = (0, 0, false);
-
-                sizes.Add(new RevisionSizeDetails
-                {
-                    ChangeVector = cv,
-                    Exist = exist,
-                    ActualSize = metrics.Value.ActualSize,
-                    HumaneActualSize = Sizes.Humane(metrics.Value.ActualSize),
-                    AllocatedSize = metrics.Value.AllocatedSize,
-                    HumaneAllocatedSize = Sizes.Humane(metrics.Value.AllocatedSize),
-                    IsCompressed = metrics.Value.IsCompressed
-                });
-            }
-
-            return sizes;
         }
 
 
@@ -144,15 +108,24 @@ namespace Raven.Server.Documents.Handlers
 
     internal sealed class RevisionSizeDetails : SizeDetails
     {
-        public string ChangeVector { get; set; }
+        public RevisionSizeDetails(){ }
 
-        public bool Exist { get; set; }
+        public RevisionSizeDetails(string changeVector, (int ActualSize, int AllocatedSize, bool IsCompressed) metrics)
+        {
+            ChangeVector = changeVector;
+            ActualSize = metrics.ActualSize;
+            HumaneActualSize = Sizes.Humane(metrics.ActualSize);
+            AllocatedSize = metrics.AllocatedSize;
+            HumaneAllocatedSize = Sizes.Humane(metrics.AllocatedSize);
+            IsCompressed = metrics.IsCompressed;
+        }
+
+        public string ChangeVector { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(ChangeVector)] = ChangeVector;
-            json[nameof(Exist)] = Exist;
             return json;
         }
     }

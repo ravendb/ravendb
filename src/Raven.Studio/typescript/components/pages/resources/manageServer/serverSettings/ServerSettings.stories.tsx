@@ -34,7 +34,11 @@ export const ServerSettingsStory: StoryObj<DefaultServerSettingsProps> = {
     render: (args) => {
         setupMocks(args.securityClearance);
 
-        return <ServerSettings />;
+        return (
+            <div style={{ height: "800px" }}>
+                <ServerSettings />
+            </div>
+        );
     },
     argTypes: {
         securityClearance: securityClearanceArgType,

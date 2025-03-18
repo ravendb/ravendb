@@ -1,8 +1,11 @@
 import React from "react";
-import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
-import { Row, Col, Label, Button } from "reactstrap";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+import Button from "react-bootstrap/Button";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { Icon } from "components/common/Icon";
+import { FormLabel } from "components/common/Form";
 
 export interface RestorePointElementProps {
     index: number;
@@ -34,7 +37,7 @@ export default function RestorePointsFields(props: RestorePointsFieldsProps) {
         <>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label">Restore Point</Label>
+                    <FormLabel className="col-form-label">Restore Point</FormLabel>
                 </Col>
                 <Col lg={isSharded ? 12 : 9}>
                     {fields.map((field, idx) => (
@@ -43,7 +46,7 @@ export default function RestorePointsFields(props: RestorePointsFieldsProps) {
                     {isSharded && (
                         <Button
                             size="sm"
-                            color="shard"
+                            variant="shard"
                             className="rounded-pill"
                             onClick={() => append({ restorePoint: null, nodeTag: "" })}
                         >

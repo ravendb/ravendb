@@ -2,7 +2,9 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +30,7 @@ namespace SlowTests.Issues
                 },
                 Type = IndexType.Map
             }, database))
-            using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
+            using (var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), database.DocumentsStorage.Environment))
             {
                 new IndexStorage(index, contextPool, database);
             }

@@ -17,6 +17,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -49,6 +50,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -67,6 +69,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Voron;
@@ -76,6 +79,7 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
+using static Raven.Server.Utils.MetricCacher.Keys;
 using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
@@ -119,7 +123,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly Size MappedSizeLimitOn32Bits = new Size(8, SizeUnit.Megabytes);
 
-        protected Logger _logger;
+        protected RavenLogger _logger;
 
         internal IndexPersistenceBase IndexPersistence;
 
@@ -245,7 +249,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
         private Size _initialManagedAllocations;
 
-        private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, IndexField> _vectorFields = new(StringComparer.OrdinalIgnoreCase);
 
         internal readonly QueryBuilderFactories _queryBuilderFactories;
 
@@ -275,6 +280,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
 
         public bool IsTestRun => TestRun != null;
+        public bool IsOnBeforeExecuteIndexing { get; private set; }
 
         public TestIndexRun TestRun;
         
@@ -401,7 +407,7 @@ namespace Raven.Server.Documents.Indexes
 
         public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId, out SearchEngineType searchEngineType)
         {
-            var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
+            var logger = documentDatabase.Loggers.GetLogger<Index>();
             StorageEnvironment environment = null;
             searchEngineType = SearchEngineType.None;
 
@@ -412,7 +418,7 @@ namespace Raven.Server.Documents.Indexes
                 documentDatabase.Configuration.Indexing.TempPath?.Combine(name);
 
             var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, null,
-                documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
+                documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, LoggingResource.Database(documentDatabase.Name), LoggingComponent.Name(name));
             try
             {
                 InitializeOptions(options, documentDatabase, name);
@@ -636,6 +642,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public virtual bool HasBoostedFields => false;
+        public virtual bool HasVectorFields => false;
 
         public virtual bool IsMultiMap => false;
 
@@ -661,7 +668,7 @@ namespace Raven.Server.Documents.Indexes
         {
             InitializeMetrics(configuration);
 
-            _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
+            _logger = documentDatabase.Loggers.GetLogger(GetType());
             using (DrainRunningQueries())
             {
                 if (_initialized)
@@ -702,7 +709,7 @@ namespace Raven.Server.Documents.Indexes
 
         public CurrentIndexingScope CreateIndexingScope(TransactionOperationContext indexContext, QueryOperationContext queryContext)
         {
-            return new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, queryContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool);
+            return new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, queryContext, Definition, indexContext, GetOrAddSpatialField, GetOrAddVectorField, _unmanagedBuffersPool);
         }
 
         private StorageEnvironmentOptions CreateStorageEnvironmentOptions(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
@@ -715,9 +722,11 @@ namespace Raven.Server.Documents.Indexes
 
             var options = configuration.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath ?? Path.Combine(indexPath.FullPath, "Temp"),
-                    documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
+                    documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, LoggingResource.Database(documentDatabase.Name),
+                    LoggingComponent.Name(Name))
                 : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, null,
-                    documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
+                    documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, LoggingResource.Database(documentDatabase.Name),
+                    LoggingComponent.Name(Name));
 
             var searchEngineType = Type.IsAuto() ? configuration.AutoIndexingEngineType : configuration.StaticIndexingEngineType;
             InitializeOptions(options, documentDatabase, name, searchEngineType: searchEngineType);
@@ -842,10 +851,10 @@ namespace Raven.Server.Documents.Indexes
                 PerformanceHintsConfig = performanceHints;
 
                 _mre = new ThrottledManualResetEventSlim(Configuration.ThrottlingTimeInterval?.AsTimeSpan, timerManagement: ThrottledManualResetEventSlim.TimerManagement.Manual);
-                _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
+                _logger = RavenLogManager.Instance.GetLoggerForIndex(GetType(), this);
                 _environment = environment;
                 var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
-                _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
+                _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling(_logger, $"Indexes//{safeName}");
                 _regexCache = new(ConcurrentLruRegexCache.DefaultCapacity, documentDatabase.Configuration.Queries.RegexTimeout.AsTimeSpan);
                 InitializeComponentsUsingEnvironment(documentDatabase, _environment);
 
@@ -924,7 +933,7 @@ namespace Raven.Server.Documents.Indexes
         private void InitializeComponentsUsingEnvironment(DocumentDatabase documentDatabase, StorageEnvironment environment)
         {
             _contextPool?.Dispose();
-            _contextPool = new TransactionContextPool(environment, documentDatabase.Configuration.Memory.MaxContextSizeToKeep);
+            _contextPool = new TransactionContextPool(_logger, environment, documentDatabase.Configuration.Memory.MaxContextSizeToKeep);
 
             _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
             _indexStorage.Initialize(documentDatabase, environment);
@@ -1171,16 +1180,16 @@ namespace Raven.Server.Documents.Indexes
                         // we need to retry
                         ScheduleIndexingRun();
 
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
+                        if (_logger.IsErrorEnabled)
+                            _logger.Error($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
                     }
                 });
 
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
             }
         }
 
@@ -1188,8 +1197,8 @@ namespace Raven.Server.Documents.Indexes
         {
             try
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Unexpected error in '{Name}' index. This should never happen.", e);
 
                 DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
                     "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
@@ -1616,6 +1625,7 @@ namespace Raven.Server.Documents.Indexes
                         try
                         {
                             AddIndexingPerformance(onBeforeExecutionStats);
+                            IsOnBeforeExecuteIndexing = true;
                             IndexPersistence.OnBeforeExecuteIndexing(onBeforeExecutionStats, _indexingProcessCancellationTokenSource.Token);
                         }
                         catch (OperationCanceledException)
@@ -1624,6 +1634,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         finally
                         {
+                            IsOnBeforeExecuteIndexing = false;
                             onBeforeExecutionStats.Complete();
                             NotifyAboutCompletedBatch(false);
                         }
@@ -1657,8 +1668,8 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info($"Starting indexing for '{Name}'.");
+                            if (_logger.IsDebugEnabled)
+                                _logger.Debug($"Starting indexing for '{Name}'.");
 
                             LastIndexingTime = stats.StartTime;
 
@@ -1739,13 +1750,13 @@ namespace Raven.Server.Documents.Indexes
                                         MaybeFinishRollingDeployment();
                                     }
 
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Finished indexing for '{Name}'.'");
+                                    if (_logger.IsDebugEnabled)
+                                        _logger.Debug($"Finished indexing for '{Name}'.'");
                                 }
                                 catch (TimeoutException te)
                                 {
-                                    if (_logger.IsOperationsEnabled)
-                                        _logger.Operations($"Failed to open write transaction, indexing will be retried", te);
+                                    if (_logger.IsWarnEnabled)
+                                        _logger.Warn($"Failed to open write transaction, indexing will be retried", te);
                                 }
                                 catch (VoronUnrecoverableErrorException ide)
                                 {
@@ -2111,8 +2122,8 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Failed to persist definition of '{Name}' index", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Failed to persist definition of '{Name}' index", e);
             }
         }
 
@@ -2149,9 +2160,9 @@ namespace Raven.Server.Documents.Indexes
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
                 _allocatedAfterPreviousCleanup = indexingStats.TotalAllocated;
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
-                    _logger.Info($"Reduced the memory usage of index '{Name}' (mode:{mode}). " +
+                    _logger.Debug($"Reduced the memory usage of index '{Name}' (mode:{mode}). " +
                                  $"Before: {new Size(allocatedBeforeCleanup, SizeUnit.Bytes)}, " +
                                  $"after: {new Size(_allocatedAfterPreviousCleanup, SizeUnit.Bytes)}");
                 }
@@ -2172,8 +2183,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal void HandleAnalyzerErrors(IndexingStatsScope stats, IndexAnalyzerException iae)
         {
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Analyzer error occurred for '{Name}'.", iae);
+            if (_logger.IsWarnEnabled)
+                _logger.Warn($"Analyzer error occurred for '{Name}'.", iae);
 
             stats.AddAnalyzerError(iae);
 
@@ -2187,8 +2198,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal void HandleUnexpectedErrors(IndexingStatsScope stats, Exception e)
         {
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Unexpected exception occurred for '{Name}'.", e);
+            if (_logger.IsErrorEnabled)
+                _logger.Error($"Unexpected exception occurred for '{Name}'.", e);
 
             stats.AddUnexpectedError(e);
 
@@ -2202,8 +2213,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal void HandleCriticalErrors(IndexingStatsScope stats, CriticalIndexingException e)
         {
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Critical exception occurred for '{Name}'.", e);
+            if (_logger.IsErrorEnabled)
+                _logger.Error($"Critical exception occurred for '{Name}'.", e);
 
             if (State == IndexState.Error)
                 return;
@@ -2213,8 +2224,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
         {
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Write exception occurred for '{Name}'.", iwe);
+            if (_logger.IsErrorEnabled)
+                _logger.Error($"Write exception occurred for '{Name}'.", iwe);
 
             stats.AddWriteError(iwe);
 
@@ -2228,8 +2239,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal void HandleExcessiveNumberOfReduceErrors(IndexingStatsScope stats, ExcessiveNumberOfReduceErrorsException e)
         {
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Erroring index due to excessive number of reduce errors '{Name}'.", e);
+            if (_logger.IsErrorEnabled)
+                _logger.Error($"Erroring index due to excessive number of reduce errors '{Name}'.", e);
 
             stats.AddExcessiveNumberOfReduceErrors(e);
 
@@ -2248,8 +2259,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 var timeToWaitInMilliseconds = (int)Math.Min(Math.Pow(2, diskFullErrors), 30) * 1000;
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"After disk full error in index : '{Name}', " +
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"After disk full error in index : '{Name}', " +
                                        $"going to try flushing and syncing the environment to cleanup the storage. " +
                                        $"Will wait for flush for: {timeToWaitInMilliseconds}ms", dfe);
 
@@ -2257,8 +2268,8 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Disk full error occurred for '{Name}'. Setting index to errored state", dfe);
+            if (_logger.IsErrorEnabled)
+                _logger.Error($"Disk full error occurred for '{Name}'. Setting index to errored state", dfe);
 
             if (State == IndexState.Error)
                 return;
@@ -2323,8 +2334,8 @@ namespace Raven.Server.Documents.Indexes
                     // we'll try to clear the scratch buffers to free up some memory
                     var timeToWaitInMilliseconds = (int)Math.Min(Math.Pow(2, outOfMemoryErrors), 30) * 1000;
 
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"After out of memory error in index : '{Name}', " +
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"After out of memory error in index : '{Name}', " +
                                            $"going to try flushing and syncing the environment to cleanup the scratch buffers. " +
                                            $"Will wait for flush for: {timeToWaitInMilliseconds}ms", exception);
 
@@ -2351,8 +2362,8 @@ namespace Raven.Server.Documents.Indexes
         {
             stats.AddCorruptionError(e);
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Data corruption occurred for '{Name}'.", e);
+            if (_logger.IsErrorEnabled)
+                _logger.Error($"Data corruption occurred for '{Name}'.", e);
 
             if (DocumentDatabase.ServerStore.DatabasesLandlord.CatastrophicFailureHandler.TryGetStats(_environment.DbId, out var corruptionStats) &&
                 corruptionStats.WillUnloadDatabase)
@@ -2393,8 +2404,8 @@ namespace Raven.Server.Documents.Indexes
 
             var message = failureInformation.GetErrorMessage();
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations(message);
+            if (_logger.IsErrorEnabled)
+                _logger.Error(message);
 
             SetErrorState(message);
         }
@@ -2711,8 +2722,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations("Failed to get index error count", e);
+                    if (_logger.IsErrorEnabled)
+                        _logger.Error("Failed to get index error count", e);
 
                     return 1;
                 }
@@ -2797,8 +2808,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 else
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations(message + $" Error state reason: {_errorStateReason}");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(message + $" Error state reason: {_errorStateReason}");
                 }
 
                 var oldState = State;
@@ -2814,8 +2825,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to write {state} state of '{Name}' index to the storage", e);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to write {state} state of '{Name}' index to the storage", e);
 
                     if (ignoreWriteError == false)
                         throw;
@@ -3668,8 +3679,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
+                    if (_logger.IsErrorEnabled)
+                        _logger.Error($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
                             e);
                 }
             }
@@ -4958,7 +4969,8 @@ namespace Raven.Server.Documents.Indexes
 
                         var environmentOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
                         var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, environmentOptions.TempPath?.FullPath, null, DocumentDatabase.IoChanges,
-                            DocumentDatabase.CatastrophicFailureNotification);
+                            DocumentDatabase.CatastrophicFailureNotification, LoggingResource.Database(DocumentDatabase.Name),
+                            LoggingComponent.Name(Name));
 
                         InitializeOptions(srcOptions, DocumentDatabase, Name, schemaUpgrader: false);
 
@@ -4967,7 +4979,8 @@ namespace Raven.Server.Documents.Indexes
 
                         using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                             StorageEnvironmentOptions.ForPath(compactPath.FullPath, tempPath?.FullPath, null, DocumentDatabase.IoChanges,
-                                DocumentDatabase.CatastrophicFailureNotification))
+                                DocumentDatabase.CatastrophicFailureNotification, LoggingResource.Database(DocumentDatabase.Name),
+                                LoggingComponent.Name(Name)))
                         {
                             InitializeOptions(compactOptions, DocumentDatabase, Name, schemaUpgrader: false);
 
@@ -4997,8 +5010,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations("Unable to complete compaction, index is not usable and may require reset of the index to recover", e);
+                    if (_logger.IsFatalEnabled)
+                        _logger.Fatal("Unable to complete compaction, index is not usable and may require reset of the index to recover", e);
 
                     throw;
                 }
@@ -5053,8 +5066,8 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations("Unable to complete optimization, index is not usable and may require reset of the index to recover", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error("Unable to complete optimization, index is not usable and may require reset of the index to recover", e);
 
                 throw;
             }
@@ -5243,6 +5256,78 @@ namespace Raven.Server.Documents.Indexes
 
                 return new SpatialField(name, new SpatialOptions());
             });
+        }
+
+        private IndexField GetOrAddVectorField(string name, bool isText)
+        {
+            return _vectorFields.GetOrAdd(name, _ =>
+            {
+                if (Definition.MapFields.TryGetValue(name, out var field) == false || field is IndexField { Vector: null })
+                {
+                    var isTextual = IsFieldTextualAndPersistConfigurationOnDisk();
+                    return IndexField.Create(name, new IndexFieldOptions()
+                        {
+                            Vector = CreateVectorOptionsBasedOnConfiguration(isTextual)
+                        }, null, Corax.Constants.IndexWriter.DynamicField);
+                }
+                
+                return field switch
+                {
+                    AutoIndexField => throw new InvalidOperationException($"{nameof(AutoIndexField)} should be created via AutoIndex builder. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values."),
+                    IndexField staticField => staticField,
+                    _ => throw new InvalidOperationException($"Unknown configuration error. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values.")
+                };
+            });
+
+            bool IsFieldTextualAndPersistConfigurationOnDisk()
+            {
+                var isAlreadyPersisted = IndexFieldsPersistence.TryReadVectorSourceEmbeddingType(name, out var sourceEmbeddingType);
+                if (isAlreadyPersisted)
+                {
+                    return sourceEmbeddingType switch
+                    {
+                        VectorEmbeddingType.Single => false,
+                        VectorEmbeddingType.Text => true,
+                        _ => throw new InvalidOperationException(
+                            $"Unknown persist vector source embedding type '{sourceEmbeddingType}'. Implicit configuration only allows to store {VectorEmbeddingType.Single} or {VectorEmbeddingType.Text}.")
+                    };
+                }
+
+                IndexFieldsPersistence.SetVectorSourceEmbeddingType(name, 
+                    isText ? VectorEmbeddingType.Text : VectorEmbeddingType.Single);
+
+                return isText;
+            }
+            
+            VectorOptions CreateVectorOptionsBasedOnConfiguration(bool isTextualValue)
+            {
+                VectorOptions vectorOptions;
+                if (isTextualValue)
+                {
+                    vectorOptions =  new VectorOptions()
+                    {
+                        SourceEmbeddingType = VectorOptions.DefaultText.SourceEmbeddingType,
+                        DestinationEmbeddingType = VectorOptions.DefaultText.DestinationEmbeddingType,
+                        Dimensions = VectorOptions.DefaultText.Dimensions,
+                        NumberOfEdges = Configuration.CoraxVectorDefaultNumberOfEdges,
+                        NumberOfCandidatesForIndexing = Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                    };
+                }
+                else
+                {
+                    vectorOptions = new VectorOptions()
+                    {
+                        SourceEmbeddingType = VectorOptions.Default.SourceEmbeddingType,
+                        DestinationEmbeddingType = VectorOptions.Default.DestinationEmbeddingType,
+                        Dimensions = VectorOptions.Default.Dimensions,
+                        NumberOfEdges = Configuration.CoraxVectorDefaultNumberOfEdges,
+                        NumberOfCandidatesForIndexing = Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                    };
+                }
+                
+                IndexFieldsPersistence.SetVectorSourceEmbeddingType(name, vectorOptions.SourceEmbeddingType);
+                return vectorOptions;
+            }
         }
 
         private static bool TryFindIndexDefinition(string directoryName, RawDatabaseRecord record, out IndexDefinition staticDef, out AutoIndexDefinition autoDef)

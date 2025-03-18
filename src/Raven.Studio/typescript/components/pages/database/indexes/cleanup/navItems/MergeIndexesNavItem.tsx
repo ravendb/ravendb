@@ -3,7 +3,9 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { UseIndexCleanupResult } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { NavItem, Card, Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Card from "react-bootstrap/Card";
+import Nav from "react-bootstrap/Nav";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 
@@ -16,13 +18,13 @@ export default function MergeIndexesNavItem({ carousel, mergable }: MergeIndexes
     const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
 
     return (
-        <NavItem>
+        <Nav.Item>
             <Card
                 className={classNames("p-3", "card-tab", { active: carousel.activeTab === 0 })}
                 onClick={() => carousel.setActiveTab(0)}
             >
                 <img src={mergeIndexesImg} alt="Merge indexes" />
-                <Badge className="rounded-pill fs-5" color={mergable.data.length !== 0 ? "primary" : "secondary"}>
+                <Badge className="rounded-pill fs-5" bg={mergable.data.length !== 0 ? "primary" : "secondary"}>
                     {hasIndexCleanup ? mergable.data.length : "?"}
                 </Badge>
                 <h4 className="text-center">
@@ -31,6 +33,6 @@ export default function MergeIndexesNavItem({ carousel, mergable }: MergeIndexes
                     indexes
                 </h4>
             </Card>
-        </NavItem>
+        </Nav.Item>
     );
 }

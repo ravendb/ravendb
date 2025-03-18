@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
@@ -353,6 +354,14 @@ namespace Raven.Server.Dashboard
             long azureQueueStorageEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.AzureQueueStorage);
             
+            var snowflakeEtlCount = database.EtlLoader.SnowflakeDestinations.Count;
+            long snowflakeEtlCountOnNode = GetTaskCountOnNode<SnowflakeEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.SnowflakeDestinations,
+                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
+            
+            var amazonSqsEtlCount = database.EtlLoader.GetQueueDestinationCountByBroker(QueueBrokerType.AmazonSqs);
+            long amazonSqsEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
+                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.AmazonSqs);
+            
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
             long periodicBackupCountOnNode = BackupUtils.GetTasksCountOnNode(serverStore, database.Name, context);
 
@@ -369,8 +378,8 @@ namespace Raven.Server.Dashboard
 
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
                                 ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount +
-                                rabbitMqEtlCount + azureQueueStorageEtlCount + periodicBackupCount + subscriptionCount +
-                                kafkaSinkCount + rabbitMqSinkCount;
+                                rabbitMqEtlCount + azureQueueStorageEtlCount + amazonSqsEtlCount + periodicBackupCount +
+                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + snowflakeEtlCount;
 
             return new DatabaseOngoingTasksInfoItem
             {
@@ -385,10 +394,12 @@ namespace Raven.Server.Dashboard
                 KafkaEtlCount = kafkaEtlCountOnNode,
                 RabbitMqEtlCount = rabbitMqEtlCountOnNode,
                 AzureQueueStorageEtlCount = azureQueueStorageEtlCountOnNode,
+                AmazonSqsEtlCount = amazonSqsEtlCountOnNode,
                 PeriodicBackupCount = periodicBackupCountOnNode,
                 SubscriptionCount = subscriptionCountOnNode,
                 KafkaSinkCount = kafkaSinkCountOnNode,
                 RabbitMqSinkCount = rabbitMqSinkCountOnNode,
+                SnowflakeEtlCount = snowflakeEtlCountOnNode,
             };
         }
 

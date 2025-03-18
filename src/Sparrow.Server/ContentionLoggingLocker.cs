@@ -3,17 +3,18 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Sparrow.Server
 {
     public sealed class ContentionLoggingLocker
     {
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly string _name;
         private readonly object _locker = new object();
         private bool _lockTaken;
 
-        public ContentionLoggingLocker(Logger logger, string name)
+        public ContentionLoggingLocker(RavenLogger logger, string name)
         {
             _logger = logger;
             _name = name;

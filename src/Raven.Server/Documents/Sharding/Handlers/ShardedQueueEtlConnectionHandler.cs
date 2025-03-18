@@ -27,5 +27,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new QueueEtlHandlerProcessorForTestAzureQueueStorageConnection<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
                 await processor.ExecuteAsync();
         }
+        
+        [RavenShardedAction("/databases/*/admin/etl/queue/amazonsqs/test-connection", "POST")]
+        public async Task GetTestAmazonSqsConnectionResult()
+        {
+            using (var processor = new QueueEtlHandlerProcessorForTestAmazonSqsConnection<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

@@ -1,3 +1,4 @@
+import { AdminLogsMessage } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
@@ -60,6 +61,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: ["None", "Initial", "LetsEncrypt", "Secured", "Unsecured"],
+                        IsDictionary: false,
                     },
                     ServerValues: {
                         "Setup.Mode": {
@@ -86,6 +88,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: null,
+                        IsDictionary: false,
                     },
                     ServerValues: {},
                 },
@@ -106,6 +109,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: null,
+                        IsDictionary: false,
                     },
                     ServerValues: {},
                 },
@@ -125,6 +129,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: null,
+                        IsDictionary: false,
                     },
                     ServerValues: {},
                 },
@@ -144,6 +149,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: ["Stable", "Experimental"],
+                        IsDictionary: false,
                     },
                     ServerValues: {
                         "Features.Availability": {
@@ -171,6 +177,7 @@ export class ManageServerStubs {
                         IsNullable: true,
                         IsSecured: false,
                         AvailableValues: null,
+                        IsDictionary: false,
                     },
                     ServerValues: {},
                 },
@@ -191,6 +198,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: null,
+                        IsDictionary: false,
                     },
                     ServerValues: {},
                 },
@@ -210,6 +218,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: null,
+                        IsDictionary: false,
                     },
                     ServerValues: {},
                 },
@@ -230,6 +239,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: null,
+                        IsDictionary: false,
                     },
                     ServerValues: {},
                 },
@@ -250,6 +260,7 @@ export class ManageServerStubs {
                         IsNullable: false,
                         IsSecured: false,
                         AvailableValues: ["None", "Local", "PrivateNetwork", "PublicNetwork"],
+                        IsDictionary: false,
                     },
                     ServerValues: {
                         "Security.UnsecuredAccessAllowed": {
@@ -262,5 +273,161 @@ export class ManageServerStubs {
                 },
             ],
         };
+    }
+
+    static adminLogsConfiguration(): Raven.Client.ServerWide.Operations.Logs.GetLogsConfigurationResult {
+        return {
+            Logs: {
+                Path: "C:\\Workspace\\ravendb",
+                CurrentMinLevel: "Info",
+                MinLevel: "Info",
+                ArchiveAboveSizeInMb: 128,
+                MaxArchiveDays: 3,
+                MaxArchiveFiles: null,
+                EnableArchiveFileCompression: false,
+                CurrentFilters: [],
+                CurrentLogFilterDefaultAction: "Neutral",
+            },
+            AuditLogs: {
+                Path: null,
+                Level: "Info",
+                ArchiveAboveSizeInMb: 128,
+                MaxArchiveDays: 3,
+                MaxArchiveFiles: null,
+                EnableArchiveFileCompression: false,
+            },
+            MicrosoftLogs: {
+                CurrentMinLevel: "Error",
+                MinLevel: "Error",
+            },
+            AdminLogs: {
+                CurrentMinLevel: "Debug",
+                CurrentFilters: [],
+                CurrentLogFilterDefaultAction: "Neutral",
+            },
+        };
+    }
+
+    static eventListenerConfiguration(): Omit<
+        Raven.Server.EventListener.EventListenerToLog.EventListenerConfiguration,
+        "Persist"
+    > {
+        return {
+            EventListenerMode: "ToLogFile",
+            EventTypes: null,
+            MinimumDurationInMs: 0,
+            AllocationsLoggingIntervalInMs: 5000,
+            AllocationsLoggingCount: 5,
+        };
+    }
+
+    static trafficWatchConfiguration(): Omit<
+        Raven.Client.ServerWide.Operations.TrafficWatch.PutTrafficWatchConfigurationOperation.Parameters,
+        "Persist"
+    > {
+        return {
+            TrafficWatchMode: "ToLogFile",
+            Databases: [],
+            StatusCodes: [],
+            MinimumResponseSizeInBytes: 0,
+            MinimumRequestSizeInBytes: 0,
+            MinimumDurationInMs: 0,
+            HttpMethods: [],
+            ChangeTypes: [],
+            CertificateThumbprints: [],
+        };
+    }
+
+    static adminLogsMessages(): AdminLogsMessage[] {
+        return [
+            {
+                Date: "2024-11-05 10:48:58.9905",
+                Level: "INFO",
+                ThreadID: "3",
+                Resource: "LONG MESSAGE",
+                Logger: "Raven.Server.RavenServerStartup",
+                Message:
+                    'PUT /databases/sample/admin/indexes - 500 - 22 ms|IndexCompilationException: Failed to compile index Orders/ByCompany\r\n\r\nusing System;\r\nusing System.Collections;\r\nusing System.Collections.Generic;\r\nusing System.Globalization;\r\nusing System.Linq;\r\nusing System.Text;\r\nusing System.Text.RegularExpressions;\r\nusing Lucene.Net.Documents;\r\nusing Raven.Client.Documents.Indexes;\r\nusing Raven.Server.Documents.Indexes.Static;\r\nusing Raven.Server.Documents.Indexes.Static.Linq;\r\nusing Raven.Server.Documents.Indexes.Static.Extensions;\r\n\r\nnamespace Raven.Server.Documents.Indexes.Static.Generated\r\n{\r\n    public class Index_Orders_ByCompany : StaticIndexBase\r\n    {\r\n        IEnumerable Map_0(IEnumerable<dynamic> docs)\r\n        {\r\n            foreach (var order in docs)\r\n            {\r\n                yield return new\r\n                {\r\n                    order.Company,\r\n                    Count = 1,\r\n                    Total = order.Lines.Sum((Func<dynamic, decimal>)(l => (decimal)((sda.Quantity * l.PricePerUnit) * (1 - l.Discount))))\r\n                };\r\n            }\r\n        }\r\n\r\n        public Index_Orders_ByCompany()\r\n        {\r\n            this.AddMap("Orders", this.Map_0);\r\n            this.Reduce = results =>\r\n                from result in results\r\n                group result by result.Company into g\r\n                select new\r\n                {\r\n                    Company = g.Key,\r\n                    Count = g.Sum((Func<dynamic, decimal>)(x => (decimal)(x.Count))),\r\n                    Total = g.Sum((Func<dynamic, decimal>)(x => (decimal)(x.Total)))\r\n                };\r\n            this.GroupByFields = new Raven.Server.Documents.Indexes.CompiledIndexField[]\r\n            {\r\n                new Raven.Server.Documents.Indexes.SimpleField("Company")\r\n            };\r\n            this.OutputFields = new System.String[]\r\n            {\r\n                "Company",\r\n                "Count",\r\n                "Total"\r\n            };\r\n            this.StackSizeInSelectClause = 0;\r\n        }\r\n    }\r\n}\r\n\r\n(26,86): error CS0103: The name \'sda\' does not exist in the current context\r\n, IndexDefinitionProperty=\'\', ProblematicText=\'\'   at Raven.Server.Documents.Indexes.Static.IndexCompiler.CompileInternal(String originalName, String cSharpSafeName, MemberDeclarationSyntax class, IndexDefinition definition) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Indexes\\Static\\IndexCompiler.cs:line 247\r\n   at Raven.Server.Documents.Indexes.Static.IndexCompiler.Compile(IndexDefinition definition, Int64 indexVersion) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Indexes\\Static\\IndexCompiler.cs:line 175\r\n   at Raven.Server.Documents.Indexes.Static.IndexCompilationCache.GenerateIndex(IndexDefinition definition, RavenConfiguration configuration, IndexType type, Int64 indexVersion) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Indexes\\Static\\IndexCompilationCache.cs:line 134\r\n   at Raven.Server.Documents.Indexes.Static.IndexCompilationCache.<>c__DisplayClass2_0.<GetDocumentsIndexInstance>b__1() in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Indexes\\Static\\IndexCompilationCache.cs:line 47\r\n   at System.Lazy`1.ViaFactory(LazyThreadSafetyMode mode)\r\n   at System.Lazy`1.ExecutionAndPublication(LazyHelper executionAndPublication, Boolean useDefaultConstructor)\r\n   at System.Lazy`1.CreateValue()\r\n   at Raven.Server.Documents.Indexes.Static.IndexCompilationCache.GetDocumentsIndexInstance(IndexDefinition definition, RavenConfiguration configuration, IndexType type, Int64 indexVersion) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Indexes\\Static\\IndexCompilationCache.cs:line 51\r\n   at Raven.Server.Documents.Indexes.Static.IndexCompilationCache.GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration, Int64 indexVersion) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Indexes\\Static\\IndexCompilationCache.cs:line 30\r\n   at Raven.Server.Documents.Indexes.AbstractIndexCreateController.ValidateStaticIndexAsync(IndexDefinition definition) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Indexes\\AbstractIndexCreateController.cs:line 76\r\n   at Raven.Server.Documents.Indexes.AbstractIndexCreateController.CreateIndexAsync(IndexDefinition definition, String raftRequestId, String source) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Indexes\\AbstractIndexCreateController.cs:line 115\r\n   at Raven.Server.Documents.Handlers.Admin.Processors.Indexes.AbstractAdminIndexHandlerProcessorForPut`2.ExecuteAsync() in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Handlers\\Admin\\Processors\\Indexes\\AbstractAdminIndexHandlerProcessorForPut.cs:line 78\r\n   at Raven.Server.Documents.Handlers.Admin.AdminIndexHandler.Put() in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Documents\\Handlers\\Admin\\AdminIndexHandler.cs:line 25\r\n   at Raven.Server.Routing.RequestRouter.HandlePath(RequestHandlerContext reqCtx) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\Routing\\RequestRouter.cs:line 425\r\n   at Raven.Server.RavenServerStartup.RequestHandler(HttpContext context) in C:\\Workspace\\ravendb_7.0\\src\\Raven.Server\\RavenServerStartup.cs:line 191',
+                _meta: {
+                    id: "1",
+                    isExpanded: false,
+                },
+            },
+            {
+                Date: "2024-11-05 10:48:59.0080",
+                Level: "DEBUG",
+                ThreadID: "24",
+                Resource: "Server",
+                Logger: "Raven.Server.RavenServerStartup",
+                Message: "GET /admin/logs/configuration - 200 - 0 ms",
+                _meta: {
+                    id: "2",
+                    isExpanded: false,
+                },
+            },
+            {
+                Date: "2024-11-05 10:48:59.0575",
+                Level: "WARN",
+                ThreadID: "24",
+                Resource: "Server",
+                Logger: "Raven.Server.RavenServerStartup",
+                Message: "GET /admin/event-listener/configuration - 200 - 0 ms",
+                _meta: {
+                    id: "4",
+                    isExpanded: false,
+                },
+            },
+            {
+                Date: "2024-11-05 10:48:59.4414",
+                Level: "ERROR",
+                ThreadID: "11",
+                Resource: "Sparrow",
+                Logger: "Sparrow.LowMemory.LowMemoryNotification",
+                Message:
+                    "Running 12 low memory handlers with severity: None. Commit charge: 27.315 GBytes / 36.102 GBytes, Memory: 20.171 GBytes / 31.352 GBytes, Available memory for processing: 11.181 GBytes, Dirty memory: 0 Bytes, Managed memory: 521.44 MBytes, Unmanaged allocations: 6.41 MBytes, Lucene managed: 0 Bytes, Lucene unmanaged: 0 Bytes",
+                _meta: {
+                    id: "5",
+                    isExpanded: false,
+                },
+            },
+            {
+                Date: "2024-11-05 10:49:04.4572",
+                Level: "FATAL",
+                ThreadID: "11",
+                Resource: "Sparrow",
+                Logger: "Sparrow.LowMemory.LowMemoryNotification",
+                Message:
+                    "Running 12 low memory handlers with severity: None. Commit charge: 27.424 GBytes / 36.102 GBytes, Memory: 20.237 GBytes / 31.352 GBytes, Available memory for processing: 11.114 GBytes, Dirty memory: 0 Bytes, Managed memory: 522.9 MBytes, Unmanaged allocations: 6.46 MBytes, Lucene managed: 0 Bytes, Lucene unmanaged: 0 Bytes",
+                _meta: {
+                    id: "6",
+                    isExpanded: false,
+                },
+            },
+            {
+                Date: "2024-11-05 10:49:09.4670",
+                Level: "OFF",
+                ThreadID: "11",
+                Resource: "Sparrow",
+                Logger: "Sparrow.LowMemory.LowMemoryNotification",
+                Message:
+                    "Running 12 low memory handlers with severity: None. Commit charge: 27.298 GBytes / 36.102 GBytes, Memory: 20.224 GBytes / 31.352 GBytes, Available memory for processing: 11.128 GBytes, Dirty memory: 0 Bytes, Managed memory: 524.31 MBytes, Unmanaged allocations: 6.63 MBytes, Lucene managed: 0 Bytes, Lucene unmanaged: 0 Bytes",
+                _meta: {
+                    id: "7",
+                    isExpanded: false,
+                },
+            },
+            {
+                Date: "2024-11-05 10:49:11.4588",
+                Level: "TRACE",
+                ThreadID: "24",
+                Resource: "Server",
+                Logger: "Raven.Server.RavenServerStartup",
+                Message: "GET /studio/index.html - 304 - 0 ms",
+                _meta: {
+                    id: "8",
+                    isExpanded: false,
+                },
+            },
+        ];
     }
 }

@@ -1,5 +1,5 @@
 ﻿import React, { ReactNode, useState } from "react";
-import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { IndexSharedInfo } from "components/models/indexes";
 import {
     DatabaseActionContexts,
@@ -12,6 +12,7 @@ import classNames from "classnames";
 import ActionContextUtils from "components/utils/actionContextUtils";
 import IconName from "typings/server/icons";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import Modal from "components/common/Modal";
 
 type operationType = "pause" | "disable" | "start";
 
@@ -59,14 +60,9 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     };
 
     return (
-        <Modal
-            isOpen
-            toggle={toggle}
-            wrapClassName="bs5"
-            contentClassName={`modal-border bulge-${getColorForType(type)}`}
-            centered
-        >
-            <ModalBody className="vstack gap-4 position-relative">
+        <Modal show scrollable onHide={toggle} contentClassName={`modal-border bulge-${getColorForType(type)}`}>
+            <Modal.Header className="p-0" onCloseClick={toggle} />
+            <Modal.Body className="vstack gap-4">
                 <div className="text-center">
                     <Icon
                         icon="index"
@@ -75,9 +71,6 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                         className="fs-1"
                         margin="m-0"
                     />
-                </div>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
                 </div>
                 {indexGroups.map((indexGroup, idx) => (
                     <div key={"indexGroup" + idx}>
@@ -127,15 +120,15 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                         />
                     </div>
                 )}
-            </ModalBody>
-            <ModalFooter>
-                <Button color="link" onClick={toggle} className="link-muted">
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
-                <Button color={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
+                <Button variant={getColorForType(type)} onClick={onSubmit} className="rounded-pill">
                     <Icon icon={icon} /> {infinitive}
                 </Button>
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }
@@ -153,7 +146,7 @@ function getColorForType(type: operationType) {
         case "start":
             return "success";
         default:
-            "primary";
+            return "primary";
     }
 }
 
@@ -194,7 +187,6 @@ function getIcon(type: operationType) {
             assertUnreachable(type);
     }
 }
-
 function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexGroup[] {
     switch (type) {
         case "disable": {

@@ -18,8 +18,8 @@ namespace Raven.Client.Documents.Commands.Batches
         public bool? DisableAtomicDocumentWrites { get; }
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
-        public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) :
-            base(conventions, context: null, commands, options, TransactionMode.ClusterWide)
+        public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null)
+            : base(conventions, commands, options, TransactionMode.ClusterWide)
         {
             DisableAtomicDocumentWrites = disableAtomicDocumentsWrites;
         }
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class SingleNodeBatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
-        private BlittableJsonReaderObject[] _commandsAsJson;
+        private readonly BlittableJsonReaderObject[] _commandsAsJson;
         private bool? _supportsAtomicWrites;
         private readonly List<Stream> _attachmentStreams;
         private readonly HashSet<Stream> _uniqueAttachmentStreams;
@@ -45,7 +45,12 @@ namespace Raven.Client.Documents.Commands.Batches
         private readonly BatchOptions _options;
         private readonly TransactionMode _mode;
 
-        public SingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
+        public SingleNodeBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null)
+            : this(conventions, commands, options, TransactionMode.SingleNode)
+        {
+        }
+
+        protected SingleNodeBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options, TransactionMode mode)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));

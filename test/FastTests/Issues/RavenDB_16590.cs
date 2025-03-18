@@ -88,7 +88,11 @@ namespace FastTests.Issues
                 "Indexing.Corax.MaxMemoizationSizeInMb",
                 "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
                 "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
-
+                "Indexing.Corax.VectorSearch.DefaultMinimumSimilarity",
+                "Indexing.Corax.VectorSearch.DefaultNumberOfEdges",
+                "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForIndexing",
+                "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying",
+                "Indexing.Corax.VectorSearch.OrderByScoreAutomatically",
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",
                 "Indexing.Analyzers.NGram.MaxGram",

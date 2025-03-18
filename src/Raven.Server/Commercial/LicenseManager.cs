@@ -32,6 +32,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
@@ -45,6 +46,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
@@ -53,7 +55,7 @@ namespace Raven.Server.Commercial
 {
     public sealed class LicenseManager : IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<LicenseManager>();
         private static readonly RSAParameters _rsaParameters;
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private Timer _leaseLicenseTimer;
@@ -145,8 +147,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to initialize license manager", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error("Failed to initialize license manager", e);
             }
             finally
             {
@@ -183,8 +185,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled && _serverStore.IsPassive() == false)
-                    Logger.Operations("Failed to put my node info, will try again later", e);
+                if (Logger.IsWarnEnabled && _serverStore.IsPassive() == false)
+                    Logger.Warn("Failed to put my node info, will try again later", e);
 
                 return false;
             }
@@ -283,8 +285,8 @@ namespace Raven.Server.Commercial
             catch (Exception e)
             {
                 // nothing we do can here, we'll try to remove it on next restart or when reloading the license
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to remove the AGPL alert", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to remove the AGPL alert", e);
             }
         }
 
@@ -1074,6 +1076,7 @@ namespace Raven.Server.Commercial
             var olapEtlCount = 0;
             var elasticSearchEtlCount = 0;
             var queueEtlCount = 0;
+            var snowflakeEtlCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
@@ -1142,6 +1145,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.QueueEtls != null &&
                         databaseRecord.QueueEtls.Count > 0)
                         queueEtlCount++;
+                    
+                    if (databaseRecord.SnowflakeEtls != null &&
+                        databaseRecord.SnowflakeEtls.Count > 0)
+                        snowflakeEtlCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1225,6 +1232,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(queueEtlCount, "Queue ETL");
                 throw GenerateLicenseLimit(LimitType.QueueEtl, message);
+            }
+            
+            if (snowflakeEtlCount > 0 && newLicenseStatus.HasSnowflakeEtl == false)
+            {
+                var message = GenerateDetails(snowflakeEtlCount, "Snowflake ETL");
+                throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
@@ -1579,6 +1592,18 @@ namespace Raven.Server.Commercial
             const string message = "Your current license doesn't include the Queue ETL feature";
             throw GenerateLicenseLimit(LimitType.QueueEtl, message);
         }
+        
+        public void AssertCanAddSnowflakeEtl()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasSnowflakeEtl)
+                return;
+            
+            const string message = "Your current license doesn't include the Snowflake ETL feature";
+            throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
+        }
 
         public void AssertCanAddConcurrentDataSubscriptions()
         {
@@ -1641,15 +1666,12 @@ namespace Raven.Server.Commercial
             {
                 if (startUp)
                     return true;
-                else
-                {
-                    const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
-                    throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
-                }
+                const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
+                throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
             }
 
             {
-                const string details = "Your current license doesn't include the monitoring feature.";
+                const string details = "Your current license doesn't include the OpenTelemetry feature.";
                 var exception = GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
 
                 if (startUp)
@@ -2001,8 +2023,8 @@ namespace Raven.Server.Commercial
             {
                 if (e.IsOutOfMemory() == false)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to get number of utilized cores. Defaulting to {defaultNumberOfCores} cores", e);
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"Failed to get number of utilized cores. Defaulting to {defaultNumberOfCores} cores", e);
                 }
 
                 return defaultNumberOfCores;

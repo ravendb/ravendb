@@ -1,5 +1,7 @@
-﻿import { Badge, Form, Label } from "reactstrap";
-import { FormInput, FormSelect } from "components/common/Form";
+﻿import Badge from "react-bootstrap/Badge";
+import Form from "react-bootstrap/Form";
+
+import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { OptionWithWarning, SelectOptionWithWarning } from "components/common/select/Select";
@@ -62,7 +64,7 @@ export default function SqlConnectionString({
     return (
         <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
             <div className="mb-2">
-                <Label>Name</Label>
+                <FormLabel>Name</FormLabel>
                 <FormInput
                     control={control}
                     name="name"
@@ -74,7 +76,7 @@ export default function SqlConnectionString({
             </div>
             <div className="mb-2">
                 <div className="d-flex flex-grow align-items-baseline justify-content-between">
-                    <Label>Factory</Label>
+                    <FormLabel>Factory</FormLabel>
                     {formValues.factoryName && (
                         <>
                             <small ref={setSyntaxHelpElement} className="text-primary">
@@ -108,20 +110,20 @@ export default function SqlConnectionString({
                 )}
             </div>
             <div className="mb-2">
-                <Label className="d-flex align-items-center gap-1">
+                <FormLabel className="d-flex align-items-center gap-1">
                     Connection string{" "}
                     {asyncTest.result?.Success ? (
-                        <Badge color="success" pill>
+                        <Badge bg="success" pill>
                             <Icon icon="check" />
                             Successfully connected
                         </Badge>
                     ) : asyncTest.result?.Error ? (
-                        <Badge color="danger" pill>
+                        <Badge bg="danger" pill>
                             <Icon icon="warning" />
                             Failed connection
                         </Badge>
                     ) : null}
-                </Label>
+                </FormLabel>
                 <FormInput
                     control={control}
                     name="connectionString"
@@ -133,7 +135,7 @@ export default function SqlConnectionString({
                 <div className="d-flex mt-4">
                     <FlexGrow />
                     <ButtonWithSpinner
-                        color="secondary"
+                        variant="secondary"
                         icon="rocket"
                         onClick={asyncTest.execute}
                         isSpinning={asyncTest.loading}

@@ -1,8 +1,8 @@
 ﻿import React, { useState } from "react";
-import { Label } from "reactstrap";
 import { NodeSet, NodeSetItem, NodeSetLabel, NodeSetList } from "./NodeSet";
 import { Icon } from "./Icon";
 import { Radio } from "./Checkbox";
+import { FormLabel } from "components/common/Form";
 
 interface SingleDatabaseLocationSelectorProps {
     locations: databaseLocationSpecifier[];
@@ -28,7 +28,7 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                                 return (
                                     <>
                                         <NodeSetItem key={locationId}>
-                                            <Label htmlFor={locationId}>
+                                            <FormLabel htmlFor={locationId}>
                                                 <Icon icon="node" color="node" title={"Node " + location.nodeTag} />
                                                 {location.nodeTag}
                                                 <div className="d-flex justify-content-center">
@@ -38,7 +38,7 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                                                         toggleSelection={() => setSelectedLocation(location)}
                                                     />
                                                 </div>
-                                            </Label>
+                                            </FormLabel>
                                         </NodeSetItem>
                                     </>
                                 );
@@ -65,7 +65,7 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                                                 const shardId = nodeId + "-shard-" + location.shardNumber;
                                                 return (
                                                     <NodeSetItem color="shard">
-                                                        <Label
+                                                        <FormLabel
                                                             key={shardId}
                                                             htmlFor={shardId}
                                                             title={"Shard " + location.shardNumber}
@@ -81,7 +81,7 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                                                                     color="shard"
                                                                 />
                                                             </div>
-                                                        </Label>
+                                                        </FormLabel>
                                                     </NodeSetItem>
                                                 );
                                             })}

@@ -1,5 +1,8 @@
 ﻿import React, { useEffect } from "react";
-import { Button, Card, CardBody, Col, Row, UncontrolledTooltip } from "reactstrap";
+import Card from "react-bootstrap/Card";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -21,6 +24,7 @@ import { useServices } from "components/hooks/useServices";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import ConflictResolutionAboutView from "./ConflictResolutionAboutView";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function ConflictResolution() {
     const dispatch = useAppDispatch();
@@ -73,22 +77,24 @@ export default function ConflictResolution() {
                     <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"}>
                         {hasDatabaseAdminAccess && (
                             <>
-                                <div id="saveConflictResolutionScript" className="d-flex w-fit-content gap-3 mb-3">
-                                    <ButtonWithSpinner
-                                        color="primary"
-                                        icon="save"
-                                        isSpinning={asyncSave.loading}
-                                        onClick={asyncSave.execute}
-                                        disabled={!isDirty || isSomeInEditMode}
-                                    >
-                                        Save
-                                    </ButtonWithSpinner>
-                                </div>
-                                {isSomeInEditMode && (
-                                    <UncontrolledTooltip target="saveConflictResolutionScript">
-                                        Please finish editing all scripts before saving
-                                    </UncontrolledTooltip>
-                                )}
+                                <ConditionalPopover
+                                    conditions={{
+                                        isActive: isSomeInEditMode,
+                                        message: "Please finish editing all scripts before saving",
+                                    }}
+                                >
+                                    <div id="saveConflictResolutionScript" className="d-flex w-fit-content gap-3 mb-3">
+                                        <ButtonWithSpinner
+                                            variant="primary"
+                                            icon="save"
+                                            isSpinning={asyncSave.loading}
+                                            onClick={asyncSave.execute}
+                                            disabled={!isDirty || isSomeInEditMode}
+                                        >
+                                            Save
+                                        </ButtonWithSpinner>
+                                    </div>
+                                </ConditionalPopover>
                             </>
                         )}
                         <div className="mb-3">
@@ -97,7 +103,7 @@ export default function ConflictResolution() {
                                     hasDatabaseAdminAccess && (
                                         <div id="addNewScriptButton">
                                             <Button
-                                                color="info"
+                                                variant="info"
                                                 size="sm"
                                                 className="rounded-pill"
                                                 title="Add a new Conflicts Resolution script"
@@ -123,7 +129,7 @@ export default function ConflictResolution() {
                             )}
                         </div>
                         <Card>
-                            <CardBody>
+                            <Card.Body>
                                 <Switch
                                     color="primary"
                                     selected={isResolveToLatest}
@@ -135,7 +141,7 @@ export default function ConflictResolution() {
                                     If no script was defined for a collection, resolve the conflict using the latest
                                     version
                                 </Switch>
-                            </CardBody>
+                            </Card.Body>
                         </Card>
                     </LazyLoad>
                 </Col>

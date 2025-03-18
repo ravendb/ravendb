@@ -1,5 +1,5 @@
 ﻿import React, { useCallback } from "react";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -141,8 +141,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
                                 <DatabaseGroupActions>
                                     <Button
                                         size="xs"
-                                        color="success"
-                                        outline
+                                        variant="outline-success"
                                         className="rounded-pill stretched-link"
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}

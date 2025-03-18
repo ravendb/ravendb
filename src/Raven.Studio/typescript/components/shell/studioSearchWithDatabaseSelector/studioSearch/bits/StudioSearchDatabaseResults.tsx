@@ -36,11 +36,7 @@ export default function StudioSearchDatabaseResults(props: {
         );
     }
 
-    const matchedKeys = Object.keys(databaseResults).filter(
-        (groupType: StudioSearchResultDatabaseGroup) => databaseResults[groupType].length > 0
-    );
-
-    return matchedKeys.map((groupType: StudioSearchResultDatabaseGroup) => (
+    return getSortedKeys(databaseResults).map((groupType: StudioSearchResultDatabaseGroup) => (
         <div key={groupType} className="studio-search__database-col__group">
             <DropdownItem header className="studio-search__database-col__group__header">
                 <StudioSearchDatabaseGroupHeader groupType={groupType} />
@@ -50,4 +46,18 @@ export default function StudioSearchDatabaseResults(props: {
             ))}
         </div>
     ));
+}
+
+function getSortedKeys(databaseResults: StudioSearchResult["database"]): string[] {
+    let keys = Object.keys(databaseResults).filter(
+        (groupType: StudioSearchResultDatabaseGroup) => databaseResults[groupType].length > 0
+    );
+
+    // move revisions after documents
+    if (keys.includes("revisions") && keys.includes("documents")) {
+        keys = keys.filter((x) => x !== "revisions");
+        keys.splice(keys.indexOf("documents") + 1, 0, "revisions");
+    }
+
+    return keys;
 }

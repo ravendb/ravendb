@@ -32,6 +32,7 @@ namespace Voron.Util
 
         public readonly Span<T> ToSpan() => Inner.ToSpan();
 
+        public readonly Span<T> ToFullCapacitySpan() => Inner.ToFullCapacitySpan();
 
         public ref T this[int index]
         {

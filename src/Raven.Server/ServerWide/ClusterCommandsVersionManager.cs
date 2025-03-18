@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using Raven.Server.Integrations.PostgreSQL.Commands;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -16,6 +17,7 @@ using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.ServerWide
 {
@@ -36,7 +38,7 @@ namespace Raven.Server.ServerWide
         public event EventHandler<ClusterVersionChangeEventArgs> OnClusterVersionChange;
 
 
-        private static readonly Logger Log = LoggingSource.Instance.GetLogger(typeof(ClusterCommandsVersionManager).FullName, typeof(ClusterCommandsVersionManager).FullName);
+        private static readonly RavenLogger Log = RavenLogManager.Instance.GetLoggerForServer<ClusterCommandsVersionManager>();
 
         public static readonly IReadOnlyDictionary<string, int> ClusterCommandsVersions = new Dictionary<string, int>
         {
@@ -188,8 +190,12 @@ namespace Raven.Server.ServerWide
             [nameof(AddPrefixedShardingSettingCommand)] = 62_000,
             [nameof(DeletePrefixedShardingSettingCommand)] = 62_000,
             [nameof(UpdatePrefixedShardingSettingCommand)] = 62_000,
-            [nameof(RevisionsBinConfigurationCommand)] = 62_001
+            [nameof(RevisionsBinConfigurationCommand)] = 62_001,
 
+            [nameof(AddSnowflakeEtlCommand)] = 70_000,
+            [nameof(UpdateSnowflakeEtlCommand)] = 70_000,
+            [nameof(PutSnowflakeConnectionStringCommand)] = 70_000,
+            [nameof(RemoveSnowflakeConnectionStringCommand)] = 70_000,
         };
 
         public bool CanPutCommand(string command)

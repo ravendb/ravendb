@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             if (connectionString.Validate(ref errors) == false)
                 throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"Connection string '{connectionString.Name}'");
             }
@@ -57,6 +57,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     return JsonDeserializationCluster.ElasticSearchConnectionString(readerObject);
                 case ConnectionStringType.Queue:
                     return JsonDeserializationCluster.QueueConnectionString(readerObject);
+                case ConnectionStringType.Snowflake:
+                    return JsonDeserializationCluster.SnowflakeConnectionString(readerObject);
                 case ConnectionStringType.None:
                 default:
                     throw new ArgumentOutOfRangeException(nameof(connectionStringType), connectionStringType, "Unexpected connection string type.");

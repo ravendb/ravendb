@@ -15,33 +15,31 @@
 }
 
 .hub-btn {
-    border-radius: 0.625rem !important;
+    border-radius: sizes.$border-radius-md !important;
     padding: 0.4rem 1.75rem 0.4rem 0.9rem !important;
-    border: none !important;
+    //padding: sizes.$gutter-xxs sizes.$gutter-xs !important;
+    border: 1px solid colors.$border-color-light-var !important;
+    background-color: colors.$panel-bg-1-var !important;
     text-decoration: none;
     cursor: pointer;
     position: relative;
+    transition: bs5variables.$transition-base !important;
 
-    &:before {
-        content: "";
-        position: absolute;
-        inset: -0.15rem;
-        z-index: -1;
-        border-radius: 0.75rem;
-        background: linear-gradient(-45deg, colors.$color-2, rgba(colors.$color-2, 0));
-        background-size: 200% 200%;
-        animation: gradient 7.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    &:hover {
+        background-color: colors.$panel-bg-2-var !important;
     }
+
     &:after {
         content: "";
         display: block;
         background-image: url("../../../wwwroot/Content/img/info-hub.svg");
         position: absolute;
-        width: 35px;
-        height: 33px;
-        right: -#{sizes.$gutter-xs};
-        top: -#{sizes.$gutter-xs};
+        width: 28px;
+        height: 28px;
+        right: -#{sizes.$gutter-xxs};
+        top: -#{sizes.$gutter-xxs};
         background-repeat: no-repeat;
+        filter: none !important;
     }
 }
 
@@ -109,9 +107,9 @@
             margin-top: sizes.$gutter-xxs;
         }
         $shadow-classes: (
-            info: 0 0 100px 0 inset rgba(var(--bs-info-rgb), 0.2),
-            success: 0 0 100px 0 inset rgba(var(--bs-success-rgb), 0.2),
-            warning: 0 0 100px 0 inset rgba(var(--bs-warning-rgb), 0.2),
+            info: 0 0 100px 0 inset rgba(var(--bs-info-rgb), 0.1),
+            success: 0 0 100px 0 inset rgba(var(--bs-success-rgb), 0.1),
+            warning: 0 0 100px 0 inset rgba(var(--bs-warning-rgb), 0.1),
         );
         @each $class, $shadow in $shadow-classes {
             &.box-shadow-#{$class} {

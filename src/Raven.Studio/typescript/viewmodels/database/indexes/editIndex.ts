@@ -83,7 +83,7 @@ class editIndex extends shardViewModelBase {
     indexAutoCompleter: indexAceAutoCompleteProvider;
     nameChanged: KnockoutComputed<boolean>;
     canEditIndexName: KnockoutComputed<boolean>;
-    canUseCompoundFields: KnockoutComputed<boolean>;
+    canUseCoraxSearchEngine: KnockoutComputed<boolean>;
 
     cloneButtonTitle: KnockoutComputed<string>;
     clusterLimitStatus: KnockoutComputed<licenseLimitsUtils.LicenseLimitReachStatus>;
@@ -248,7 +248,7 @@ class editIndex extends shardViewModelBase {
             return !this.isEditingExistingIndex();
         });
         
-        this.canUseCompoundFields = ko.pureComputed(() => {
+        this.canUseCoraxSearchEngine = ko.pureComputed(() => {
             if (this.searchEngineConfiguration()) {
                 return this.searchEngineConfiguration() === "Corax";
             }
@@ -796,6 +796,7 @@ class editIndex extends shardViewModelBase {
             indexDef.reduce, 
             indexDef.numberOfFields,
             indexDef.numberOfCompoundFields,
+            indexDef.numberOfVectorFields,
             indexDef.numberOfConfigurationFields,
             indexDef.outputReduceToCollection,
             indexDef.createReferencesToResultsCollection,
@@ -1069,7 +1070,7 @@ class editIndex extends shardViewModelBase {
 
     save() {
         const editedIndex = this.editedIndex();
-        
+
         viewHelpers.asyncValidationCompleted(editedIndex.validationGroup, () => {
             if (!this.validate()) {
                 return;
@@ -1108,7 +1109,7 @@ class editIndex extends shardViewModelBase {
 
         const db = this.db;
         const indexName = this.editedIndex().name();
-        
+
         return new detectIndexTypeCommand(indexDto, db)
             .execute()
             .then((typeInfo) => {
@@ -1332,10 +1333,17 @@ class editIndex extends shardViewModelBase {
         this.setupDisableReasons();
         
         popoverUtils.longWithHover($(".js-add-compound-field-btn"), {
-            content: () => this.canUseCompoundFields() ? "" : `Compound fields are only available for Corax Search Engine. 
+            content: () => this.canUseCoraxSearchEngine() ? "" : `Compound fields are only available for Corax Search Engine. 
                     <a class="btn btn-primary js-change-to-corax" href="#">Change to Corax</a>`,
             html: true,
             placement: "right"
+        });
+
+        popoverUtils.longWithHover($(".js-add-vector-field-btn"), {
+            content: () => this.canUseCoraxSearchEngine() ? "" : `Vector search is only available for Corax Search Engine. 
+                    <a class="btn btn-primary js-change-to-corax" href="#">Change to Corax</a>`,
+            html: true,
+            placement: "bottom"
         });
 
         popoverUtils.longWithHover($(".js-store-field-info"), 

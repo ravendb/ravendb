@@ -274,6 +274,20 @@ BOOST
 SEARCH
    : S E A R C H
    ;
+   
+VECTOR_SEARCH
+   : V E C T O R DOT S E A R C H
+   ;
+   
+EMBEDDING
+   : E M B E D D I N G DOT I '1'
+   | E M B E D D I N G DOT I '8'
+   | E M B E D D I N G DOT F '32_' I '8'
+   | E M B E D D I N G DOT F '32_' I '1'
+   | E M B E D D I N G DOT T E X T '_' I '8'
+   | E M B E D D I N G DOT T E X T '_' I '1'
+   | E M B E D D I N G DOT T E X T
+   ; 
 
 LIMIT
    : L I M I T

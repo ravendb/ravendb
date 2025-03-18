@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using Raven.Server.Config;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.ServerWide;
 using Sparrow.Logging;
@@ -25,7 +26,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     }
 
     protected AbstractDatabaseNotificationCenter(NotificationsStorage notificationsStorage, string database, RavenConfiguration configuration, CancellationToken shutdown)
-        : base(notificationsStorage, configuration, LoggingSource.Instance.GetLogger<DatabaseNotificationCenter>(database))
+        : base(notificationsStorage, configuration, RavenLogManager.Instance.GetLoggerForDatabase<AbstractDatabaseNotificationCenter>(database))
     {
         Database = database;
         Paging = new Paging(this);
@@ -37,7 +38,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
         SlowWrites = new SlowWriteNotifications(this);
         QueueSinkNotifications = new QueueSinkNotifications(this);
 
-        PostponedNotificationSender = new PostponedNotificationsSender(database, Storage, Watchers, shutdown);
+        PostponedNotificationSender = new PostponedNotificationsSender(database, Storage, Watchers, RavenLogManager.Instance.GetLoggerForDatabase<PostponedNotificationsSender>(database), shutdown);
     }
 
     protected override PostponedNotificationsSender PostponedNotificationSender { get; }

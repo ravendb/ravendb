@@ -120,6 +120,18 @@ namespace Raven.Server.ServerWide.Commands.ETL
                     }
                 }
             }
+            
+            var snowflakeEtls = record.SnowflakeEtls;
+            if (snowflakeEtls != null)
+            {
+                for (var i = 0; i < snowflakeEtls.Count; i++)
+                {
+                    if (snowflakeEtls[i].Name == ConfigurationName)
+                    {
+                        return snowflakeEtls[i];
+                    }
+                }
+            }
 
             return null;
         }

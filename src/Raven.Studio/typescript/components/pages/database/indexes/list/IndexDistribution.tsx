@@ -12,7 +12,7 @@ import {
 } from "components/common/LocationDistribution";
 import assertUnreachable from "../../../../utils/assertUnreachable";
 import { ProgressCircle } from "components/common/ProgressCircle";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import IndexDistributionStatusChecker from "./IndexDistributionStatusChecker";
@@ -75,7 +75,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                 {nodeInfo.details?.faulty && (
                     <div className="text-center">
                         <Button
-                            color="danger"
+                            variant="danger"
                             className="px-1 py-0 my-1"
                             size="xs"
                             onClick={() => openFaulty(nodeInfo.location)}

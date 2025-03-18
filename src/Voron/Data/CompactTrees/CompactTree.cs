@@ -278,25 +278,15 @@ public sealed partial class CompactTree : IPrepareForCommit
         Add(scope.Key, value);
     }
 
-    public void Add(ReadOnlySpan<byte> key, long value)
+    public long Add(ReadOnlySpan<byte> key, long value)
     {
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
-        Add(scope.Key, value);
+        return Add(scope.Key, value);
     }
 
-    public long AddAfterTryGetNext(ref CompactKeyLookup lookup, long value)
+    public void GetTermByContainerId(long containerId)
     {
-        CompactTreeDumper.WriteAddition(this, ref lookup, value);
-
-        _inner.AddAfterTryGetNext(ref lookup, value);
-        return lookup.ContainerId;
     }
-    
-    public void SetAfterTryGetNext(ref CompactKeyLookup lookup, long value)
-    {
-        _inner.SetAfterTryGetNext(ref lookup, value);
-    }
-
 
     public long Add(CompactKey key, long value)
     {
@@ -406,7 +396,31 @@ public sealed partial class CompactTree : IPrepareForCommit
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
         return _inner.TryGetValue(new CompactKeyLookup(scope.Key), out value);
     }
+    
+    public bool TryGetValue(ReadOnlySpan<byte> key, out long termContainerId, out long value)
+    {
+        using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
+        var ckl = new CompactKeyLookup(scope.Key);
+        var found = _inner.TryGetValue(ref ckl, out value);
+        termContainerId = ckl.ContainerId;
+        return found;
+    }
 
+    /// <summary>
+    /// Retrieves the values associated with the specified CompactKey.
+    /// </summary>
+    /// <param name="termContainerId">The address of the CompactKey.</param>
+    /// <param name="value">The value stored under the CompactKey.</param>
+    /// <param name="key">The underlying value of the CompactKey.</param>
+    /// <returns>True if the value exists; otherwise, false.</returns>
+    public bool TryGetValue(long termContainerId, out long value, out ReadOnlySpan<byte> key)
+    {
+        var containerId = new CompactKeyLookup(termContainerId);
+        var found = _inner.TryGetValue(ref containerId, out value);
+        key = found ? containerId.Key.Decoded() : [];
+        return found;
+    }
+    
     public bool TryGetValue(CompactKey key, out long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);

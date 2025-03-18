@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -15,6 +16,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
 
@@ -23,12 +25,12 @@ namespace Raven.Server.Documents.Replication
     public sealed class ResolveConflictOnReplicationConfigurationChange
     {
         private readonly DocumentDatabase _database;
-        private readonly Logger _log;
+        private readonly RavenLogger _log;
         private readonly ReplicationLoader _replicationLoader;
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
 
-        public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
+        public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, RavenLogger log)
         {
             _replicationLoader = replicationLoader ??
                 throw new ArgumentNullException($"{nameof(ResolveConflictOnReplicationConfigurationChange)} must have replicationLoader instance");
@@ -549,7 +551,7 @@ namespace Raven.Server.Documents.Replication
         {
             var resolver = new ResolveConflictOnReplicationConfigurationChange(
                 database.ReplicationLoader,
-                LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name));
+                database.Loggers.GetLogger<PutResolvedConflictsCommandDto>());
 
             return new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(
                 database.DocumentsStorage.ConflictsStorage,

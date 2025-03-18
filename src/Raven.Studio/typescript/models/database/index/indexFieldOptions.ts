@@ -1,5 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import spatialOptions = require("models/database/index/spatialOptions");
+import vectorOptions = require("models/database/index/vectorOptions");
 import jsonUtil = require("common/jsonUtil");
 import models = require("models/database/settings/databaseSettingsModels");
 import typeUtils = require("common/typeUtils")
@@ -138,6 +139,9 @@ class indexFieldOptions {
     spatial = ko.observable<spatialOptions>();
     hasSpatialOptions = ko.observable<boolean>(false);
 
+    vector = ko.observable<vectorOptions>();
+    hasVectorOptions = ko.observable<boolean>(false);
+
     indexOrStore: KnockoutComputed<boolean>;
     indexDefinitionHasReduce: KnockoutObservable<boolean>;
     
@@ -227,7 +231,9 @@ class indexFieldOptions {
            this.theAnalyzerThatWasDefinedWithoutIndexing(this.analyzer());
            this.indexing("Search (implied)");
         }
-        
+
+        this.hasVectorOptions(dto.Vector != null);
+
         this.storage(dto.Storage);
         
         this.suggestions(dto.Suggestions);
@@ -240,11 +246,17 @@ class indexFieldOptions {
             this.spatial(spatialOptions.empty());
         }
 
+        if (this.hasVectorOptions()) {
+            this.vector(new vectorOptions(dto.Vector));
+        } else {
+            this.vector(vectorOptions.empty());
+        }
+
         this.computeAnalyzer();
         this.computeFullTextSearch();
         this.computeHighlighting();
-        
-        _.bindAll(this, "toggleAdvancedOptions");
+
+        _.bindAll(this, "toggleAdvancedOptions", "toggleVectorFields");
 
         this.initObservables();
         this.initValidation();
@@ -368,7 +380,8 @@ class indexFieldOptions {
             this.suggestions,
             this.termVector,
             this.hasSpatialOptions,
-            this.spatial().dirtyFlag().isDirty
+            this.spatial().dirtyFlag().isDirty,
+            this.vector().dirtyFlag().isDirty,
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.parent.subscribe(() => {
@@ -591,6 +604,7 @@ class indexFieldOptions {
             Analyzer: "RavenStandardAnalyzer",
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
+            Vector: null as Raven.Client.Documents.Indexes.Vector.VectorOptions,
             TermVector: "No"
         };
         
@@ -618,6 +632,7 @@ class indexFieldOptions {
             Analyzer: null,
             Suggestions: null,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
+            Vector: null as Raven.Client.Documents.Indexes.Vector.VectorOptions,
             TermVector: null
         }
         
@@ -634,6 +649,10 @@ class indexFieldOptions {
 
     toggleAdvancedOptions() {
         this.showAdvancedOptions(!this.showAdvancedOptions());
+    }
+
+    toggleVectorFields() {
+        this.hasVectorOptions(!this.hasVectorOptions());
     }
 
     isDefaultOptions(): boolean {
@@ -677,7 +696,8 @@ class indexFieldOptions {
             Storage: this.storage(),
             Suggestions: this.suggestions(),
             TermVector: this.termVector(),
-            Spatial: this.hasSpatialOptions() ? this.spatial().toDto() : undefined
+            Spatial: this.hasSpatialOptions() ? this.spatial().toDto() : undefined,
+            Vector: this.hasVectorOptions() ? this.vector().toDto() : undefined,
         }
     }
 }

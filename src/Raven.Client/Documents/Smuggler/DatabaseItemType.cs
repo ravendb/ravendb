@@ -61,6 +61,8 @@ namespace Raven.Client.Documents.Smuggler
         IndexesHistory = 1 << 26,
         Refresh = 1 << 27,
         QueueSinks = 1 << 28,
-        DataArchival = 1 << 29
+        DataArchival = 1 << 29,
+        SnowflakeConnectionStrings = 1 << 30,
+        SnowflakeEtls = 1 << 31,
     }
 }

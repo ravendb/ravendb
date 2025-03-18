@@ -2,9 +2,9 @@ import "./FileDropzone.scss";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import React, { useState, useRef, DragEvent, ChangeEvent } from "react";
-import { Button } from "reactstrap";
 import useBoolean from "components/hooks/useBoolean";
 import genUtils from "common/generalUtils";
+import Button from "react-bootstrap/Button";
 
 interface FileDropzoneProps {
     onChange: (files: File[]) => void;
@@ -100,7 +100,7 @@ function DropzoneBody({ files, error }: DropzoneBodyProps) {
                 <Icon icon="warning" color="danger" className="fs-2" margin="m-0" />
                 <div>
                     <p className="m-0 text-danger">{error}</p>
-                    <Button color="link">Try again</Button>
+                    <Button variant="link">Try again</Button>
                 </div>
             </div>
         );
@@ -136,7 +136,7 @@ function DropzoneBody({ files, error }: DropzoneBodyProps) {
                     )}
                 </div>
 
-                <Button color="link">Change file</Button>
+                <Button variant="link">Change file</Button>
             </div>
         </div>
     );

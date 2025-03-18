@@ -13,13 +13,13 @@ const schema = yup.object({
             is: true,
             then: (schema) => schema.required(),
         }),
-    isRefreshFrequencyEnabled: yup.boolean(),
-    refreshFrequencyInSec: yup
+    isCleanerFrequencyInSecEnabled: yup.boolean(),
+    cleanerFrequencyInSec: yup
         .number()
         .nullable()
         .positive()
         .integer()
-        .when("isRefreshFrequencyEnabled", {
+        .when("isCleanerFrequencyInSecEnabled", {
             is: true,
             then: (schema) => schema.required(),
         }),

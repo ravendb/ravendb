@@ -84,8 +84,6 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
         _intrinsics = intrinsics;
     }
 
-    public bool NightlyBuildOnly { get; set; }
-
     public override string Skip
     {
         get
@@ -94,18 +92,21 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
             if (skip != null)
                 return skip;
 
-            return ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, NightlyBuildOnly);
+            return ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, NightlyBuildRequired, SnowflakeRequired);
         }
         set => _skip = value;
     }
 
-    internal static string ShouldSkip(RavenPlatform platform, RavenArchitecture architecture, RavenIntrinsics intrinsics, bool licenseRequired, bool nightlyBuildOnly)
+    internal static string ShouldSkip(RavenPlatform platform, RavenArchitecture architecture, RavenIntrinsics intrinsics, bool licenseRequired, bool nightlyBuildOnly, bool snowflakeRequired)
     {
         if (licenseRequired && LicenseRequiredFactAttribute.ShouldSkip())
             return LicenseRequiredFactAttribute.SkipMessage;
 
         if (nightlyBuildOnly && NightlyBuildTheoryAttribute.IsNightlyBuild == false)
             return NightlyBuildTheoryAttribute.SkipMessage;
+        
+        if (snowflakeRequired && SnowflakeHelper.ShouldSkip(out string skip))
+            return skip;
 
         var matchesPlatform = Match(platform);
         var matchesArchitecture = Match(architecture);

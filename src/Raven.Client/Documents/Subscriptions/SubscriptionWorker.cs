@@ -8,6 +8,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Logging;
+using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Subscriptions
 {
@@ -20,7 +22,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// (this way we know we won't get those documents again)
         /// </summary>
 
-        internal SubscriptionWorker(SubscriptionWorkerOptions options, DocumentStore documentStore, string dbName) : base(options, documentStore.GetDatabase(dbName))
+        internal SubscriptionWorker(SubscriptionWorkerOptions options, DocumentStore documentStore, string dbName) : base(options, documentStore.GetDatabase(dbName), RavenLogManager.Instance.GetLoggerForClient<SubscriptionWorker<T>>())
         {
             _store = documentStore;
         }

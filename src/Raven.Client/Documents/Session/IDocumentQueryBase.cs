@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Session
@@ -440,6 +441,36 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc cref="MoreLikeThisBase"/>
         /// <param name="moreLikeThis">Specified MoreLikeThisQuery.</param>
         TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
+        
+        /// <summary>
+        /// Performs vector search on text data, by queried text.
+        /// </summary>
+        /// <param name="textFieldFactory">Factory creating textual vector field for indexing purposes.</param>
+        /// <param name="textValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried text and text stored in a document to be matched by the query.</param>
+        /// <param name="numberOfCandidates">Number of candidate nodes for HNSW algorithm. The bigger the value, the more accurate search will be performed for the cost of more computation.</param>
+        /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
+        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact);
+
+        /// <summary>
+        /// Performs vector search on embedding data, by queried embedding.
+        /// </summary>
+        /// <param name="embeddingFieldFactory">Factory creating embedding vector field for indexing purposes.</param>
+        /// <param name="embeddingValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried embedding and embedding stored in a document to be matched by the query.</param>
+        /// <param name="numberOfCandidates">Number of candidate nodes for HNSW algorithm. The bigger the value, the more accurate search will be performed for the cost of more computation.</param>
+        /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
+        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact);
+        
+        /// <summary>
+        /// Performs vector search on existing vector index field.
+        /// </summary>
+        /// <param name="vectorFieldFactory">Factory using existing, already indexed vector field.</param>
+        /// <param name="vectorValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried value and indexed value of a document to be matched by the query.</param>
+        /// <param name="numberOfCandidates">Number of candidate nodes for HNSW algorithm. The bigger the value, the more accurate search will be performed for the cost of more computation.</param>
+        /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
+        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> vectorValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact);
     }
 
     public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>

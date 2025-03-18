@@ -1,4 +1,6 @@
 @use "sass:math";
+@use "bs5variables";
+@use "colors";
 
 @mixin padding {
     padding: $gutter-sm;
@@ -226,6 +228,13 @@ $directions: ("top", "right", "bottom", "left");
     }
     &.bg-danger {
         --pulse-bg: var(--bs-danger-rgb);
+    }
+}
+
+.hover-filter {
+    transition: bs5variables.$transition-base;
+    &:hover {
+        filter: colors.$hover-filter-var;
     }
 }
 

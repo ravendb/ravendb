@@ -66,4 +66,37 @@ export default class MockManageServerService extends AutoMockService<ManageServe
     withServerSettings(dto?: MockedValue<Raven.Server.Config.SettingsResult>) {
         return this.mockResolvedValue(this.mocks.getServerSettings, dto, ManageServerStubs.serverSettings());
     }
+
+    withAdminLogsConfiguration(dto?: MockedValue<Raven.Client.ServerWide.Operations.Logs.GetLogsConfigurationResult>) {
+        return this.mockResolvedValue(
+            this.mocks.getAdminLogsConfiguration,
+            dto,
+            ManageServerStubs.adminLogsConfiguration()
+        );
+    }
+
+    withEventListenerConfiguration(
+        dto?: MockedValue<Omit<Raven.Server.EventListener.EventListenerToLog.EventListenerConfiguration, "Persist">>
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getEventListenerConfiguration,
+            dto,
+            ManageServerStubs.eventListenerConfiguration()
+        );
+    }
+
+    withTrafficWatchConfiguration(
+        dto?: MockedValue<
+            Omit<
+                Raven.Client.ServerWide.Operations.TrafficWatch.PutTrafficWatchConfigurationOperation.Parameters,
+                "Persist"
+            >
+        >
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getTrafficWatchConfiguration,
+            dto,
+            ManageServerStubs.trafficWatchConfiguration()
+        );
+    }
 }

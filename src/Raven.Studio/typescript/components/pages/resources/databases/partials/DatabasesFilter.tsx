@@ -1,12 +1,13 @@
 ﻿import React, { ChangeEvent } from "react";
 import { DatabaseFilterByStateOption, DatabaseFilterCriteria } from "components/models/databases";
-import { Button, Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import { useAppSelector } from "components/store";
 import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
 import { InputItem } from "components/models/common";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
 import { Icon } from "components/common/Icon";
+import Button from "react-bootstrap/Button";
 
 type FilterByStateOptions = InputItem<DatabaseFilterByStateOption>[];
 
@@ -40,7 +41,7 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
             <div className="d-flex flex-column flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <div className="clearable-input">
-                    <Input
+                    <Form.Control
                         type="text"
                         accessKey="/"
                         placeholder="e.g. database1"
@@ -52,7 +53,7 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
                     {searchCriteria.name && (
                         <div className="clear-button">
                             <Button
-                                color="secondary"
+                                variant="secondary"
                                 size="sm"
                                 onClick={() =>
                                     setFilterCriteria({

@@ -16,6 +16,7 @@ class icomoonHelpers {
         "ravendb-etl": 0xf109,
         "external-replication": 0xf10A,
         "sql-etl": 0xf10B,
+        "snowflake-etl": 0xf152,
         "olap-etl": 0xf10C,
         "elastic-search-etl": 0xf10D,
         "subscription": 0xf10E,
@@ -51,6 +52,7 @@ class icomoonHelpers {
         "rabbitmq-sink": 0xf132,
         "preview": 0xf133,
         "azure-queue-storage-etl": 0xf134,
+        "amazon-sqs-etl": 0xf135,
         "corax-include-null-match": 0xf140,
         "corax-fallback": 0xf141,
         "corax-all-entries-match": 0xf142,
@@ -69,6 +71,7 @@ class icomoonHelpers {
         "corax-backward": 0xf14F,
         "corax-sort-az": 0xf150,
         "corax-sort-za": 0xf151,
+        "vector-search": 0xf154,
         "close": 0xf162,
     } as const;
     

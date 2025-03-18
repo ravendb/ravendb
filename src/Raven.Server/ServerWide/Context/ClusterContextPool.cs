@@ -1,6 +1,8 @@
 ﻿using System;
+using Raven.Server.Logging;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Voron;
 
 namespace Raven.Server.ServerWide.Context
@@ -11,7 +13,7 @@ namespace Raven.Server.ServerWide.Context
         private StorageEnvironment _storageEnvironment;
 
         public ClusterContextPool(ClusterChanges changes, StorageEnvironment storageEnvironment, Size? maxContextSizeToKeepInMb = null)
-            : base(maxContextSizeToKeepInMb)
+            : base(maxContextSizeToKeepInMb, RavenLogManager.Instance.GetLoggerForServer<ClusterContextPool>())
         {
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
             _storageEnvironment = storageEnvironment ?? throw new ArgumentNullException(nameof(storageEnvironment));

@@ -15,7 +15,9 @@ using Voron.Impl.Paging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Server.Logging;
 using Sparrow.Server.LowMemory;
+using Voron.Logging;
 
 namespace Voron.Impl.Scratch
 {
@@ -53,13 +55,13 @@ namespace Voron.Impl.Scratch
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
 
         private readonly ScratchSpaceUsageMonitor _scratchSpaceMonitor; // it tracks total size of all scratches (active and recycled)
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public long NumberOfScratchBuffers => _scratchBuffers.Count;
 
         public ScratchBufferPool(StorageEnvironment env)
         {
-            _logger = LoggingSource.Instance.GetLogger<ScratchBufferPool>(Path.GetFileName(env.ToString()));
+            _logger = RavenLogManager.Instance.GetLoggerForVoron<ScratchBufferPool>(env.Options, env.ToString());
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
@@ -576,9 +578,9 @@ namespace Voron.Impl.Scratch
 
                             var removedInactiveRecycled = RemoveInactiveRecycledScratches();
 
-                            if (_logger.IsInfoEnabled)
+                            if (_logger.IsDebugEnabled)
                             {
-                                _logger.Info(
+                                _logger.Debug(
                                     $"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
                             }
 

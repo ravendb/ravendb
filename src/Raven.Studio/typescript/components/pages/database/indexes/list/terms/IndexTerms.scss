@@ -1,0 +1,43 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/variables";
+
+.index-terms {
+    .accordion {
+        .accordion-item {
+            border: colors.$border-color-light-var 1px solid !important;
+
+            .accordion-body {
+                padding-bottom: sizes.$gutter-sm;
+
+                div {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                    gap: sizes.$gutter-xxs;
+                }
+
+                .term-pill {
+                    display: flex;
+                    padding: sizes.$gutter-xxs sizes.$gutter-xs;
+                    align-items: stretch;
+                    background-color: colors.$panel-bg-3-var;
+                    border-radius: bs5variables.$accordion-border-radius;
+
+                    &:hover {
+                        transition: bs5variables.$transition-base;
+                        filter: bs5variables.$hover-filter-var;
+
+                        button {
+                            display: block;
+                        }
+                    }
+                }
+
+                button {
+                    display: none;
+                }
+            }
+        }
+    }
+}

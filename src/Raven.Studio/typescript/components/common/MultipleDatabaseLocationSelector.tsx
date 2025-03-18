@@ -1,11 +1,13 @@
 ﻿import React, { useCallback, useEffect } from "react";
-import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetList } from "./NodeSet";
+import { NodeSet, NodeSetItem, NodeSetLabel, NodeSetList } from "./NodeSet";
 import { Checkbox } from "./Checkbox";
-import { Label, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "./Icon";
 import classNames from "classnames";
 import { produce } from "immer";
 import ActionContextUtils from "components/utils/actionContextUtils";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
+import { FormLabel } from "components/common/Form";
 
 export type DatabaseActionContexts =
     | {
@@ -180,7 +182,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                             const uniqueKey = getUniqueKey(nodeTag);
                             return (
                                 <NodeSetItem key={nodeTag}>
-                                    <Label htmlFor={uniqueKey} title={"Node " + nodeTag}>
+                                    <FormLabel htmlFor={uniqueKey} title={"Node " + nodeTag}>
                                         <Icon icon="node" color="node" />
                                         {nodeTag}
                                         <div className="d-flex justify-content-center">
@@ -190,7 +192,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                 selected={isNodeSelected(nodeTag)}
                                             />
                                         </div>
-                                    </Label>
+                                    </FormLabel>
                                 </NodeSetItem>
                             );
                         })}
@@ -216,7 +218,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                             <div key={uniqueKey}>
                                 <NodeSet className={classNames(className, "mt-1")}>
                                     <NodeSetLabel>
-                                        <Label htmlFor={uniqueKey} className="text-node" title={"Node " + nodeTag}>
+                                        <FormLabel htmlFor={uniqueKey} className="text-node" title={"Node " + nodeTag}>
                                             <Icon icon="node" />
                                             {nodeTag}
                                             <div className="d-flex justify-content-center">
@@ -227,33 +229,42 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                     selected={isNodeSelected(nodeTag)}
                                                 />
                                             </div>
-                                        </Label>
+                                        </FormLabel>
                                     </NodeSetLabel>
                                     <div className="node-set-separator" />
                                     <NodeSetList>
                                         {includeOrchestrator && (
                                             <NodeSetItem>
-                                                <Label
-                                                    htmlFor={getUniqueKey(nodeTag, true)}
-                                                    id={getUniqueKey(nodeTag, true) + "Tooltip"}
-                                                    title="Orchestrator"
-                                                >
-                                                    <Icon icon="orchestrator" color="orchestrator" className="ms-1" />
-                                                    <div className="d-flex justify-content-center">
-                                                        <Checkbox
-                                                            id={getUniqueKey(nodeTag, true)}
-                                                            selected={isOrchestratorSelected(nodeTag)}
-                                                            toggleSelection={() => toggleOrchestrator(nodeTag)}
-                                                            color="orchestrator"
-                                                        />
-                                                    </div>
-                                                </Label>
-                                                <UncontrolledTooltip
+                                                <OverlayTrigger
                                                     placement="top"
-                                                    target={getUniqueKey(nodeTag, true) + "Tooltip"}
+                                                    overlay={
+                                                        <Tooltip id={getUniqueKey(nodeTag, true) + "Tooltip"}>
+                                                            Orchestrator
+                                                        </Tooltip>
+                                                    }
                                                 >
-                                                    Orchestrator
-                                                </UncontrolledTooltip>
+                                                    <div className="d-inline-block">
+                                                        <FormLabel
+                                                            htmlFor={getUniqueKey(nodeTag, true)}
+                                                            id={getUniqueKey(nodeTag, true) + "Tooltip"}
+                                                            title="Orchestrator"
+                                                        >
+                                                            <Icon
+                                                                icon="orchestrator"
+                                                                color="orchestrator"
+                                                                className="ms-1"
+                                                            />
+                                                            <div className="d-flex justify-content-center">
+                                                                <Checkbox
+                                                                    id={getUniqueKey(nodeTag, true)}
+                                                                    selected={isOrchestratorSelected(nodeTag)}
+                                                                    toggleSelection={() => toggleOrchestrator(nodeTag)}
+                                                                    color="orchestrator"
+                                                                />
+                                                            </div>
+                                                        </FormLabel>
+                                                    </div>
+                                                </OverlayTrigger>
                                             </NodeSetItem>
                                         )}
 
@@ -267,7 +278,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
 
                                                 return (
                                                     <NodeSetItem key={uniqueKey}>
-                                                        <Label htmlFor={uniqueKey} title={"Shard " + shardNumber}>
+                                                        <FormLabel htmlFor={uniqueKey} title={"Shard " + shardNumber}>
                                                             <Icon icon="shard" color="shard" />
                                                             {shardNumber}
                                                             <div className="d-flex justify-content-center">
@@ -280,7 +291,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                                     id={uniqueKey}
                                                                 />
                                                             </div>
-                                                        </Label>
+                                                        </FormLabel>
                                                     </NodeSetItem>
                                                 );
                                             })}

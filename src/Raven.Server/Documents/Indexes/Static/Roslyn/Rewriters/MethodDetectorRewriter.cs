@@ -46,6 +46,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "CreateField":
                     Methods.HasCreateField = true;
                     break;
+                case "this.CreateVector":
+                case "CreateVector":
+                    Methods.HasCreateVector = true;
+                    break;
             }
 
             var memberAccessExpression = node.Expression as MemberAccessExpressionSyntax;

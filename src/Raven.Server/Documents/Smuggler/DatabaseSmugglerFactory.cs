@@ -10,6 +10,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.Smuggler;
@@ -33,7 +34,7 @@ public sealed class DatabaseSmugglerFactory : AbstractDatabaseSmugglerFactory
         return new SnapshotDatabaseDestination(_database, subscriptions, token);
     }
 
-    public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger)
+    public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, RavenLogger logger)
     {
         return new DatabaseSource(_database, startDocumentEtag, startRaftIndex, logger);
     }

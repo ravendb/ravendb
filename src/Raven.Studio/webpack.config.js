@@ -152,6 +152,7 @@ module.exports = (env, args) => {
                                     "ravendb-etl": 0xf109,
                                     "external-replication": 0xf10A,
                                     "sql-etl": 0xf10B,
+                                    "snowflake-etl": 0xf152,
                                     "olap-etl": 0xf10C,
                                     "elastic-search-etl": 0xf10D,
                                     "subscription": 0xf10E,
@@ -187,6 +188,7 @@ module.exports = (env, args) => {
                                     "rabbitmq-sink": 0xf132,
                                     "preview": 0xf133,
                                     "azure-queue-storage-etl": 0xf134,
+                                    "amazon-sqs-etl": 0xf135,
                                     "corax-include-null-match": 0xf140,
                                     "corax-fallback": 0xf141,
                                     "corax-all-entries-match": 0xf142,
@@ -205,6 +207,7 @@ module.exports = (env, args) => {
                                     "corax-backward": 0xf14F,
                                     "corax-sort-az": 0xf150,
                                     "corax-sort-za": 0xf151,
+                                    "vector-search": 0xf154,
                                     "close": 0xf162,
                                 },
                                 cssTemplate: path.resolve(__dirname, "wwwroot/Content/css/fonts/icomoon.template.css.hbs")
@@ -260,6 +263,7 @@ module.exports = (env, args) => {
                                 sourceMap: true,
                                 sassOptions: {
                                     quietDeps: true,
+                                    silenceDeprecations: ['mixed-decls', 'color-functions', 'global-builtin', 'import'],
                                 },
                             }
                         }
@@ -341,8 +345,6 @@ module.exports = (env, args) => {
                 wwwroot: path.resolve(__dirname, 'wwwroot/'),
                 d3: path.resolve(__dirname, 'wwwroot/Content/custom_d3'),
                 qrcodejs: path.resolve(__dirname, 'wwwroot/Content/custom_qrcode'),
-                ["google.analytics"]: path.resolve(__dirname, 'wwwroot/Content/custom_ga'),
-                
                 Favico: path.resolve(__dirname, 'node_modules/favico.js/favico'),
                 durandal: path.resolve(__dirname, 'node_modules/durandal/js'),
                 jquery: path.resolve(__dirname, 'node_modules/jquery/dist/jquery'),

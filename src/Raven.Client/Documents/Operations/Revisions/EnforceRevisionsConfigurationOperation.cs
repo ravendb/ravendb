@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         {
             /// <summary>
             /// Gets or sets a value indicating whether to include force-created revisions.
-            /// For more information, visit <a href="https://ravendb.net/docs/article-page/6.2/csharp/document-extensions/revisions/overview#force-revision-creation">here</a>.
+            /// For more information, visit <a href="https://ravendb.net/docs/article-page/7.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</a>.
             /// </summary>
             public bool IncludeForceCreated { get; set; } = false;
 

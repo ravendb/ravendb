@@ -11,7 +11,9 @@ import {
 } from "components/pages/database/indexes/cleanup/useIndexCleanup";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { Card, Table, Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Table from "react-bootstrap/Table";
+import Card from "react-bootstrap/Card";
 
 interface RemoveSubindexesCardProps {
     surpassing: UseIndexCleanupResult["surpassing"];
@@ -43,7 +45,7 @@ function MainPanel({ surpassing }: RemoveSubindexesCardProps) {
     return (
         <div className="p-2">
             <ButtonWithSpinner
-                color="primary"
+                variant="primary"
                 className="mb-2 rounded-pill"
                 onClick={surpassing.deleteSelected}
                 isSpinning={surpassing.isDeleting}
@@ -51,7 +53,7 @@ function MainPanel({ surpassing }: RemoveSubindexesCardProps) {
             >
                 <Icon icon="trash" />
                 Delete selected sub-indexes{" "}
-                <Badge color="faded-primary" className="rounded-pill ms-1">
+                <Badge bg="faded-primary" className="rounded-pill ms-1">
                     {surpassing.selected.length}
                 </Badge>
             </ButtonWithSpinner>

@@ -12,6 +12,8 @@ import {
     mapAzureQueueStorageConnectionsFromDto,
     mapRavenConnectionsFromDto,
     mapSqlConnectionsFromDto,
+    mapSnowflakeConnectionsFromDto,
+    mapAmazonSqsConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
@@ -29,11 +31,13 @@ const initialState: ConnectionStringsState = {
     connections: {
         Raven: [],
         Sql: [],
+        Snowflake: [],
         Olap: [],
         ElasticSearch: [],
         Kafka: [],
         RabbitMQ: [],
         AzureQueueStorage: [],
+        AmazonSqs: [],
     },
     urlParameters: {
         name: null,
@@ -42,7 +46,16 @@ const initialState: ConnectionStringsState = {
     initialEditConnection: null,
 };
 
-type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage";
+type StudioEtlType =
+    | "Raven"
+    | "Sql"
+    | "Snowflake"
+    | "Olap"
+    | "ElasticSearch"
+    | "Kafka"
+    | "RabbitMQ"
+    | "AzureQueueStorage"
+    | "AmazonSqs";
 
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
@@ -92,6 +105,10 @@ export const connectionStringsSlice = createSlice({
                 const { connections, urlParameters } = state;
 
                 connections.Sql = mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings, ongoingTasks);
+                connections.Snowflake = mapSnowflakeConnectionsFromDto(
+                    connectionStringsDto.SnowflakeConnectionStrings,
+                    ongoingTasks
+                );
                 connections.Olap = mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings, ongoingTasks);
 
                 connections.Raven = mapRavenConnectionsFromDto(
@@ -110,12 +127,14 @@ export const connectionStringsSlice = createSlice({
                     connectionStringsDto.QueueConnectionStrings,
                     ongoingTasks
                 );
-
                 connections.AzureQueueStorage = mapAzureQueueStorageConnectionsFromDto(
                     connectionStringsDto.QueueConnectionStrings,
                     ongoingTasks
                 );
-
+                connections.AmazonSqs = mapAmazonSqsConnectionsFromDto(
+                    connectionStringsDto.QueueConnectionStrings,
+                    ongoingTasks
+                );
                 state.loadStatus = "success";
 
                 if (payload.hasDatabaseAdminAccess && urlParameters.name && urlParameters.type) {

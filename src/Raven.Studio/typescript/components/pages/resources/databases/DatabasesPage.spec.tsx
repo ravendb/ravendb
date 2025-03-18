@@ -28,13 +28,17 @@ const selectors = {
 
 describe("DatabasesPage", function () {
     it("can render single view", async () => {
-        const { screen } = rtlRender(<Single />);
+        const { screen, user } = rtlRender(<Single />);
 
         await screen.findByText(/Manage group/i);
         await screen.findByText("3 Indexing errors");
 
-        expect(await screen.findAllByText(selectors.disableButton)).toHaveLength(2); // disable + disable indexing
+        const disableButton = await screen.findByTestId("database-actions-dropdown-toggle");
+        await user.click(disableButton);
 
+        expect(
+            (await screen.findByTestId("database-actions-dropdown-menu")).querySelectorAll('[role="button"]')
+        ).toHaveLength(4); // disable
         expect(await screen.findByText(selectors.pauseIndexing)).toBeInTheDocument();
         expect(await screen.findByText(selectors.disableIndexing)).toBeInTheDocument();
         expect(await screen.findByText(selectors.compactDatabase)).toBeInTheDocument();
@@ -87,7 +91,7 @@ describe("DatabasesPage", function () {
     });
 
     it("can render different access modes", async () => {
-        const { screen } = rtlRender(<WithDifferentAccessLevel />);
+        const { screen, user } = rtlRender(<WithDifferentAccessLevel />);
 
         expect(await screen.findAllByText("9 Indexing errors")).toHaveLength(3);
 
@@ -97,6 +101,8 @@ describe("DatabasesPage", function () {
         expect(screen.queryByText(selectors.disableIndexing)).not.toBeInTheDocument();
         expect(screen.queryByText(selectors.compactDatabase)).not.toBeInTheDocument();
 
+        const disableButton = await screen.findByTestId("database-actions-dropdown-toggle");
+        await user.click(disableButton);
         // db admin can pause indexing
         expect(screen.queryByText(selectors.pauseIndexing)).toBeInTheDocument();
     });

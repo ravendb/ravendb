@@ -3,7 +3,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import React from "react";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
 
 interface IntegrationsAddNewButtonProps {
@@ -31,7 +31,7 @@ export default function IntegrationsAddNewButton(props: IntegrationsAddNewButton
             ]}
         >
             <Button
-                color="info"
+                variant="info"
                 size="sm"
                 className="rounded-pill"
                 title="Add new credentials"

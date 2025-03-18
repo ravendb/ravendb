@@ -15,6 +15,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -27,6 +28,7 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
@@ -49,7 +51,7 @@ namespace Raven.Server.Documents
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         public readonly ResourceCache<ShardedDatabaseContext> ShardedDatabasesCache = new ResourceCache<ShardedDatabaseContext>();
 
-        private readonly Logger _logger;
+        private static readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<DatabasesLandlord>();
         private readonly ServerStore _serverStore;
 
         // used in ServerWideBackupStress
@@ -62,11 +64,10 @@ namespace Raven.Server.Documents
         public DatabasesLandlord(ServerStore serverStore)
         {
             _disposing = new AsyncGuard();
-            
+
             _serverStore = serverStore;
             _databaseSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentLoads);
             _concurrentDatabaseLoadTimeout = _serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan;
-            _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Server");
             CatastrophicFailureHandler = new CatastrophicFailureHandler(this, _serverStore);
         }
 
@@ -541,9 +542,9 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
+                        if (_logger.IsWarnEnabled)
                         {
-                            _logger.Operations($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}'", e);
+                            _logger.Warn($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}'", e);
                         }
                     }
 
@@ -640,7 +641,7 @@ namespace Raven.Server.Documents
                 exceptionAggregator.Execute(dbTask.Result.Dispose);
             });
             exceptionAggregator.Execute(ShardedDatabasesCache.Clear);
-            
+
             exceptionAggregator.Execute(_disposing.Dispose);
 
             exceptionAggregator.ThrowIfNeeded();
@@ -997,7 +998,7 @@ namespace Raven.Server.Documents
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
 
-        public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogMode, string> addToInitLog)
+        public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogLevel, string> addToInitLog)
         {
             return ShardHelper.IsShardName(name) ?
                 new ShardedDocumentDatabase(name, configuration, serverStore, addToInitLog) :
@@ -1006,7 +1007,7 @@ namespace Raven.Server.Documents
 
         private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup, Action<string> addToInitLog)
         {
-            void AddToInitLog(LogMode logMode, string txt)
+            void AddToInitLog(LogLevel logMode, string txt)
             {
                 addToInitLog?.Invoke(txt);
                 string msg = txt;
@@ -1016,12 +1017,24 @@ namespace Raven.Server.Documents
 
                 switch (logMode)
                 {
-                    case LogMode.Operations when _logger.IsOperationsEnabled:
-                        _logger.Operations(msg);
-                        break;
 
-                    case LogMode.Information when _logger.IsInfoEnabled:
+                    case LogLevel.Trace when _logger.IsTraceEnabled:
+                        _logger.Trace(msg);
+                        break;
+                    case LogLevel.Debug when _logger.IsDebugEnabled:
+                        _logger.Debug(msg);
+                        break;
+                    case LogLevel.Info when _logger.IsInfoEnabled:
                         _logger.Info(msg);
+                        break;
+                    case LogLevel.Warn when _logger.IsWarnEnabled:
+                        _logger.Warn(msg);
+                        break;
+                    case LogLevel.Error when _logger.IsErrorEnabled:
+                        _logger.Error(msg);
+                        break;
+                    case LogLevel.Fatal when _logger.IsFatalEnabled:
+                        _logger.Fatal(msg);
                         break;
                 }
             }
@@ -1035,7 +1048,7 @@ namespace Raven.Server.Documents
                     s => new ConcurrentQueue<string>(),
                     (s, existing) => new ConcurrentQueue<string>());
 
-                AddToInitLog(LogMode.Operations, "Starting database initialization");
+                AddToInitLog(LogLevel.Info, "Starting database initialization");
 
                 var sp = Stopwatch.StartNew();
 
@@ -1050,7 +1063,7 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.AfterDatabaseInitialize?.Invoke();
 
-                AddToInitLog(LogMode.Operations, "Finish database initialization");
+                AddToInitLog(LogLevel.Info, "Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, throwOnError: false);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
@@ -1302,10 +1315,10 @@ namespace Raven.Server.Documents
                     AddOrUpdateWakeupTimer(databaseName.Value, idleDatabaseActivity);
                 }
 
-                if (_logger.IsOperationsEnabled)
+                if (_logger.IsDebugEnabled)
                 {
                     var msg = idleDatabaseActivity == null ? "without setting a wakeup timer." : $"wakeup timer set to: '{idleDatabaseActivity.DateTime.GetValueOrDefault()}', which will happen in '{idleDatabaseActivity.DueTime}' ms.";
-                    _logger.Operations($"Unloading directly database '{databaseName}', {msg}");
+                    _logger.Debug($"Unloading directly database '{databaseName}', {msg}");
                 }
 
                 return true;
@@ -1335,19 +1348,21 @@ namespace Raven.Server.Documents
         private void AddOrUpdateWakeupTimer(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
         {
             // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
+            var newTimer = new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite);
+
             _wakeupTimers.AddOrUpdate(databaseName,
-                _ => new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), state: null, dueTime: idleDatabaseActivity.DueTime, period: Timeout.Infinite),
+                _ => newTimer,
                 (_, timer) =>
                 {
-                    timer.Change(idleDatabaseActivity.DueTime, Timeout.Infinite);
-                    return timer;
+                    timer.Dispose();
+                    return newTimer;
                 });
         }
 
-        private void LogUnloadFailureReason(StringSegment databaseName, string reason)
+        private static void LogUnloadFailureReason(StringSegment databaseName, string reason)
         {
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Could not unload database '{databaseName}', reason: {reason}");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Could not unload database '{databaseName}', reason: {reason}");
         }
 
         public void RescheduleNextIdleDatabaseActivity(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
@@ -1405,7 +1420,7 @@ namespace Raven.Server.Documents
                             break;
 
                         case IdleDatabaseActivityType.WakeUpDatabase:
-                            if (_serverStore.ConcurrentBackupsCounter.CanRunBackup == false)
+                            if (_serverStore.ConcurrentBackupsCounter.CanRunBackup(ShardHelper.ToDatabaseName(databaseName)) == false)
                             {
                                 // reached max concurrent backups
                                 var delayInMs = RescheduleDatabaseWakeup();
@@ -1436,16 +1451,16 @@ namespace Raven.Server.Documents
                             }
                             else
                             {
-                                _ = TryGetOrCreateResourceStore(databaseName, nextIdleDatabaseActivity.DateTime).ContinueWith(t =>
-                                {
+                            _ = TryGetOrCreateResourceStore(databaseName, nextIdleDatabaseActivity.DateTime).ContinueWith(t =>
+                            {
                                     startDatabaseForBackup.Dispose();
 
-                                    var ex = t.Exception.ExtractSingleInnerException();
-                                    if (ex is DatabaseConcurrentLoadTimeoutException e)
-                                    {
+                                var ex = t.Exception.ExtractSingleInnerException();
+                                if (ex is DatabaseConcurrentLoadTimeoutException e)
+                                {
                                         // database failed to load
                                         var delayInMs = RescheduleDatabaseWakeup();
-                                        if (_logger.IsInfoEnabled)
+                                    if (_logger.IsInfoEnabled)
                                             _logger.Info($"Failed to start database '{databaseName}' for running a backup, will retry the wakeup in {delayInMs:#,#;;0}ms", e);
                                     }
                                 });
@@ -1454,13 +1469,13 @@ namespace Raven.Server.Documents
 
                             int RescheduleDatabaseWakeup()
                             {
-                                ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
+                                    ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
 
                                 var delayInMs = _dueTimeOnRetry + Random.Shared.Next(0, _dueTimeOnRetry);
                                 nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(delayInMs);
-                                RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
+                                    RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
                                 return delayInMs;
-                            }
+                                }
                     }
                 }
                 finally
@@ -1472,8 +1487,8 @@ namespace Raven.Server.Documents
             {
                 // we have to swallow any exception here.
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Failed to schedule the next activity for the idle database '{databaseName}'.", e);
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn($"Failed to schedule the next activity for the idle database '{databaseName}'.", e);
 
                 ForTestingPurposes?.OnFailedRescheduleNextScheduledActivity?.Invoke(e, databaseName);
             }
@@ -1594,7 +1609,7 @@ namespace Raven.Server.Documents
                         return;
 
                     state.Token.ThrowIfCancellationRequested();
-                    
+
                     if (taken == false)
                         continue;
 
@@ -1603,14 +1618,14 @@ namespace Raven.Server.Documents
                     Debug.Assert(string.Equals(state.Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{state.Name} != {record.DatabaseName}");
 
-                    if (state.Logger.IsInfoEnabled)
+                    if (state.Logger.IsDebugEnabled)
                     {
                         string msg = $"Starting to process record {index} (current {state.LastIndexChange}) for {record.DatabaseName}. Type: {type}. ";
 
                         if (changeType != null)
                             msg += $"Cluster database change type: {changeType}";
 
-                        state.Logger.Info(msg);
+                        state.Logger.Debug(msg);
                     }
 
                     try
@@ -1618,13 +1633,13 @@ namespace Raven.Server.Documents
                         await state.OnChange(record, index);
                         state.LastIndexChange = index;
 
-                        if (state.Logger.IsInfoEnabled)
-                            state.Logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
+                        if (state.Logger.IsDebugEnabled)
+                            state.Logger.Debug($"Finish to process record {index} for {record.DatabaseName}.");
                     }
                     catch (Exception e)
                     {
-                        if (state.Logger.IsInfoEnabled)
-                            state.Logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
+                        if (state.Logger.IsWarnEnabled)
+                            state.Logger.Warn($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
                         throw;
                     }
                 }
@@ -1636,7 +1651,7 @@ namespace Raven.Server.Documents
 
                         sp?.Stop();
 
-                        if (sp?.Elapsed > TimeSpan.FromSeconds(10) && state.Logger.IsOperationsEnabled)
+                        if (sp?.Elapsed > TimeSpan.FromSeconds(10) && state.Logger.IsWarnEnabled)
                         {
                             try
                             {
@@ -1646,7 +1661,7 @@ namespace Raven.Server.Documents
                                     var logs = state.ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
                                     var msg =
                                         $"Lock held for a very long time {sp.Elapsed} in database {state.Name} for index {index} ({string.Join(", ", logs)})";
-                                    state.Logger.Operations(msg);
+                                    state.Logger.Warn(msg);
 
 #if !RELEASE
                                     Console.WriteLine(msg);
@@ -1658,7 +1673,8 @@ namespace Raven.Server.Documents
                             }
                             catch (Exception e)
                             {
-                                state.Logger.Operations($"Failed to log long held cluster lock: {sp.Elapsed} in database {state.Name}", e);
+                                if (state.Logger.IsWarnEnabled)
+                                    state.Logger.Warn($"Failed to log long held cluster lock: {sp.Elapsed} in database {state.Name}", e);
                             }
                         }
                     }
@@ -1670,8 +1686,8 @@ namespace Raven.Server.Documents
                 if (state.LastIndexChange > index)
                 {
                     // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
-                    if (state.Logger.IsInfoEnabled)
-                        state.Logger.Info($"Skipping record {index} (current {state.LastIndexChange}) for {record.DatabaseName} because it was already precessed.");
+                    if (state.Logger.IsDebugEnabled)
+                        state.Logger.Debug($"Skipping record {index} (current {state.LastIndexChange}) for {record.DatabaseName} because it was already precessed.");
                     return true;
                 }
 
@@ -1685,12 +1701,12 @@ namespace Raven.Server.Documents
             public readonly ServerStore ServerStore;
             public readonly string Name;
             public readonly CancellationToken Token;
-            public readonly Logger Logger;
+            public readonly RavenLogger Logger;
             public readonly Func<DatabaseRecord, long, Task> OnChange;
 
             public long LastIndexChange;
 
-            public StateChange(ServerStore serverStore, string name, Logger logger, Func<DatabaseRecord, long, Task> onChange, long lastIndexChange, CancellationToken token)
+            public StateChange(ServerStore serverStore, string name, RavenLogger logger, Func<DatabaseRecord, long, Task> onChange, long lastIndexChange, CancellationToken token)
             {
                 ServerStore = serverStore;
                 Name = name;

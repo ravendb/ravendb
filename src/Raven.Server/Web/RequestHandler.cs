@@ -871,6 +871,9 @@ namespace Raven.Server.Web
 
                 case EtlType.Sql:
                     return JsonDeserializationClient.SqlEtlConfiguration(configuration).ToAuditJson();
+                
+                case EtlType.Snowflake:
+                    return JsonDeserializationClient.SnowflakeEtlConfiguration(configuration).ToAuditJson();
 
                 case EtlType.Olap:
                     return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToAuditJson();
@@ -898,6 +901,9 @@ namespace Raven.Server.Web
 
                 case ConnectionStringType.Olap:
                     return JsonDeserializationClient.OlapConnectionString(configuration).ToAuditJson();
+                
+                case ConnectionStringType.Snowflake:
+                    return JsonDeserializationClient.SnowflakeConnectionString(configuration).ToAuditJson();
             }
 
             return null;

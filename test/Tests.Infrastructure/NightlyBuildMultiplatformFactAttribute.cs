@@ -48,7 +48,7 @@ namespace Tests.Infrastructure
                 if (skip != null)
                     return skip;
 
-                return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, NightlyBuildOnly);
+                return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, NightlyBuildOnly, false);
             }
             set => _skip = value;
         }

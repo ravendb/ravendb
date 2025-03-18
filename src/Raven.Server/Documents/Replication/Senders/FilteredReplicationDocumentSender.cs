@@ -5,6 +5,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders
 {
@@ -13,7 +14,7 @@ namespace Raven.Server.Documents.Replication.Senders
         private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
         private readonly bool _shouldSkipSendingTombstones;
 
-        public FilteredReplicationDocumentSender(Stream stream, OutgoingPullReplicationHandler parent, Logger log, string[] pathsToSend, string[] destinationAcceptablePaths) : base(stream, parent, log)
+        public FilteredReplicationDocumentSender(Stream stream, OutgoingPullReplicationHandler parent, RavenLogger log, string[] pathsToSend, string[] destinationAcceptablePaths) : base(stream, parent, log)
         {
             if (pathsToSend != null && pathsToSend.Length > 0)
                 _pathsToSend = new AllowedPathsValidator(pathsToSend);

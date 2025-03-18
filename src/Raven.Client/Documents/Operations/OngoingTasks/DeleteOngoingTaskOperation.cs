@@ -7,11 +7,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
 {
+    /// <summary>
+    /// Operation to delete an ongoing task.
+    /// </summary>
     public sealed class DeleteOngoingTaskOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly long _taskId;
         private readonly OngoingTaskType _taskType;
 
+        /// <inheritdoc cref="DeleteOngoingTaskOperation"/>
+        /// <param name="taskId">The unique identifier of the ongoing task to be deleted.</param>
+        /// <param name="taskType">The type of the ongoing task.</param>
         public DeleteOngoingTaskOperation(long taskId, OngoingTaskType taskType)
         {
             _taskId = taskId;

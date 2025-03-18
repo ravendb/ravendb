@@ -7,6 +7,7 @@ import validateNameCommand = require("commands/resources/validateNameCommand");
 import generalUtils = require("common/generalUtils");
 import compoundField = require("models/database/index/compoundField");
 import indexingDatabaseSettingsTypes = require("models/database/index/types")
+import vectorOptions = require("models/database/index/vectorOptions");
 
 class mapItem {
     map = ko.observable<string>();
@@ -39,6 +40,7 @@ class indexDefinition {
     //isTestIndex = ko.observable<boolean>(false);
     
     fields = ko.observableArray<indexFieldOptions>();
+    vectorFields = ko.observableArray<vectorOptions>();
     compoundFields = ko.observableArray<compoundField>([]);
     hasDuplicateFieldsNames: KnockoutComputed<boolean>;
     
@@ -61,6 +63,7 @@ class indexDefinition {
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
     numberOfCompoundFields = ko.pureComputed(() => this.compoundFields().length);
+    numberOfVectorFields = ko.pureComputed(() => this.vectorFields().length);
 
     configuration = ko.observableArray<configurationItem>();
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
@@ -96,7 +99,7 @@ class indexDefinition {
 
         this.fields(Object.entries(dto.Fields ?? []).map(([indexName, fieldDto]) =>
             new indexFieldOptions(indexName, fieldDto, this.hasReduce, this.searchEngine, indexFieldOptions.defaultFieldOptions(this.hasReduce, this.searchEngine, dto.Configuration, indexingDatabaseSettings), dto.Configuration, indexingDatabaseSettings )));
-        
+
         if (dto.CompoundFields) {
             this.compoundFields(dto.CompoundFields.map(compoundField.fromDto));
         } else {

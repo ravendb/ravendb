@@ -21,24 +21,25 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </summary>
         /// <value>
         /// The minimum <see cref="int"/> that revisions-bin entries (deleted docs with revisions) must be kept before being eligible for deletion.
-        /// A null value means no age restriction is applied.
+        /// When set to 0, all revisions bin entries will be deleted.
+        /// The default value is 30 days.
         /// </value>
-        public int? MinimumEntriesAgeToKeepInMin { get; set; }
+        public int MinimumEntriesAgeToKeepInMin { get; set; } = 30 * 24 * 60;
 
         /// <summary>
         /// Gets or sets the frequency (in seconds) at which the revisions bin cleaner executes cleaning.
         /// </summary>
         /// <value>
-        /// The <see cref="long"/> defining how often the cleaner will check for and process old entries (deleted docs with revisions).
+        /// This parameter defines how often the cleaner will check for and process and delete old entries (deleted docs with revisions).
         /// The default value is 5 minutes.
         /// </value>
-        public long RefreshFrequencyInSec { get; set; } = 5 * 60;
+        public long CleanerFrequencyInSec { get; set; } = 5 * 60;
 
         private bool Equals(RevisionsBinConfiguration other)
         {
             return Disabled == other.Disabled &&
                    MinimumEntriesAgeToKeepInMin == other.MinimumEntriesAgeToKeepInMin &&
-                   RefreshFrequencyInSec == other.RefreshFrequencyInSec;
+                   CleanerFrequencyInSec == other.CleanerFrequencyInSec;
         }
 
         public override bool Equals(object obj)
@@ -57,8 +58,8 @@ namespace Raven.Client.Documents.Operations.Revisions
             unchecked
             {
                 var hashCode = Disabled.GetHashCode();
-                hashCode = (hashCode * 397) ^ (MinimumEntriesAgeToKeepInMin?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ RefreshFrequencyInSec.GetHashCode();
+                hashCode = (hashCode * 397) ^ MinimumEntriesAgeToKeepInMin.GetHashCode();
+                hashCode = (hashCode * 397) ^ CleanerFrequencyInSec.GetHashCode();
                 return hashCode;
             }
         }
@@ -69,7 +70,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             {
                 [nameof(Disabled)] = Disabled,
                 [nameof(MinimumEntriesAgeToKeepInMin)] = MinimumEntriesAgeToKeepInMin,
-                [nameof(RefreshFrequencyInSec)] = RefreshFrequencyInSec
+                [nameof(CleanerFrequencyInSec)] = CleanerFrequencyInSec
             };
         }
 

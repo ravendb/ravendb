@@ -1,9 +1,12 @@
 using System;
+using System.Threading;
 using DasMulli.Win32.ServiceUtils;
 using Raven.Server.Config;
+using Raven.Server.Logging;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils
 {
@@ -34,7 +37,7 @@ namespace Raven.Server.Utils
 
     internal sealed class RavenWin32Service : IWin32Service
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenWin32Service>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<RavenWin32Service>();
 
         private RavenServer _ravenServer;
 
@@ -103,8 +106,12 @@ namespace Raven.Server.Utils
 
         public void Stop()
         {
-            if (Logger.IsOperationsEnabled)
-                Logger.OperationsWithWait($"Stopping RavenDB Windows Service: {ServiceName}.").Wait(TimeSpan.FromSeconds(15));
+            if (Logger.IsInfoEnabled)
+            {
+                Logger.Info($"Stopping RavenDB Windows Service: {ServiceName}.");
+
+                Thread.Sleep(3000);
+            }
 
             _ravenServer.Dispose();
             _serviceStoppedCallback();

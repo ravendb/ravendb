@@ -23,7 +23,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void MultipleTxPagesCanPointToOnePageNumberWhichShouldNotBeCausingIssuesDuringFlushing()
         {
-            var options = StorageEnvironmentOptions.CreateMemoryOnly();
+            var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests();
             options.ManualFlushing = true;
             using (var env = new StorageEnvironment(options))
             {

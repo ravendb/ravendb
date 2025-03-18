@@ -7,6 +7,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to retrieve a list of unique terms from a specific index field.
+    /// </summary>
     public sealed class GetTermsOperation : IMaintenanceOperation<string[]>
     {
         private readonly string _indexName;
@@ -14,6 +17,12 @@ namespace Raven.Client.Documents.Operations.Indexes
         private readonly string _fromValue;
         private readonly int? _pageSize;
 
+        /// <inheritdoc cref="GetTermsOperation"/>
+        /// <param name="indexName">The name of the index from which to retrieve terms.</param>
+        /// <param name="field">The field within the index to retrieve terms from.</param>
+        /// <param name="fromValue">The starting term value from which to begin retrieval.</param>
+        /// <param name="pageSize">The maximum number of terms to return (optional).</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="indexName"/> or <paramref name="field"/> is null.</exception>
         public GetTermsOperation(string indexName, string field, string fromValue, int? pageSize = null)
         {
             _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));

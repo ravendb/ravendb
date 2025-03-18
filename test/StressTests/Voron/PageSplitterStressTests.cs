@@ -54,7 +54,7 @@ namespace StressTests.Voron
         {
             var ids = ReadIds("data2.txt");
 
-            StorageEnvironmentOptions storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+            StorageEnvironmentOptions storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnlyForTests();
             storageEnvironmentOptions.MaxScratchBufferSize *=2;
             using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {

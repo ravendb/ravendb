@@ -21,7 +21,8 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { SubscriptionTaskDistribution } from "../partials/SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Button, Collapse, Input } from "reactstrap";
+import Collapse from "react-bootstrap/Collapse";
+import Form from "react-bootstrap/Form";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
@@ -29,6 +30,7 @@ import { SubscriptionConnectionsDetailsWithId } from "../partials/OngoingTasksRe
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -138,7 +140,7 @@ function Details(props: SubscriptionPanelProps) {
             </RichPanelDetailItem>
             <FlexGrow />
             <div>
-                <Button onClick={refreshSubscriptionInfo}>
+                <Button variant="secondary" onClick={refreshSubscriptionInfo}>
                     <Icon icon="refresh" />
                     Refresh
                 </Button>
@@ -198,12 +200,11 @@ function ConnectedClients(props: ConnectedClientsProps) {
                         </div>
                         <div>
                             <Button
-                                color="danger"
+                                variant="outline-danger"
                                 title="Disconnect client from this subscription (unsubscribe client)"
                                 onClick={() => disconnectSubscription(connection.WorkerId)}
                                 size="xs"
                                 className="rounded-pill mt-2"
-                                outline
                             >
                                 <Icon icon="disconnected" />
                                 Disconnect
@@ -243,7 +244,7 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                 <RichPanelInfo>
                     {canEdit && (
                         <RichPanelSelect>
-                            <Input
+                            <Form.Check
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
                                 checked={isSelected(data.shared.taskId)}
@@ -270,14 +271,16 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse isOpen={detailsVisible}>
-                <Details {...props} />
-                <SubscriptionTaskDistribution task={data} />
-                <ConnectedClients
-                    dropSubscription={dropSubscription}
-                    refreshSubscriptionInfo={refreshSubscriptionInfo}
-                    connections={connections}
-                />
+            <Collapse in={detailsVisible}>
+                <div>
+                    <Details {...props} />
+                    <SubscriptionTaskDistribution task={data} />
+                    <ConnectedClients
+                        dropSubscription={dropSubscription}
+                        refreshSubscriptionInfo={refreshSubscriptionInfo}
+                        connections={connections}
+                    />
+                </div>
             </Collapse>
         </RichPanel>
     );

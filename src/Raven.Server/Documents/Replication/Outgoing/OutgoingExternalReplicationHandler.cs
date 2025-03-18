@@ -9,6 +9,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return json;
         }
 
-        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger)
+        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger)
         {
             return new ExternalReplicationDocumentSender(stream, this, logger);
         }

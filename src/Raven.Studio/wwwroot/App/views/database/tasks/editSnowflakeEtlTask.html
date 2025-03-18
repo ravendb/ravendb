@@ -1,0 +1,475 @@
+<div class="content-margin edit-raven-snowflake-task edit-ongoing-task" data-bind="css: { 'test-mode': enableTestArea }">
+    <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+        <div class="flex-horizontal gap-2">
+            <i class="icon-snowflake-etl"></i>
+            <h2 data-bind="text: $root.isAddingNewSnowflakeEtlTask() ? 'New Snowflake ETL' : 'Edit Snowflake ETL'" class="mb-0"></h2>
+            <span class="badge license-restricted-badge enterprise" data-bind="if: !hasSnowflakeEtl">Enterprise</span>
+        </div>
+        <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
+    </div>
+    <div class="row flex-row">
+        <div class="col-xs-12 col-lg-6 flex-vertical">
+            <form class="flex-form" data-bind="submit: saveSnowflakeEtl" autocomplete="off">
+                <div class="flex-header">
+                    <span data-placement="right" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasSnowflakeEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                            <i class="icon-save"></i><span>Save</span>
+                        </button>
+                    </span>
+                    <button data-bind="click: cancelOperation" class="btn btn-default">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                </div>
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasSnowflakeEtl }">
+                    <div data-bind="with: editedSnowflakeEtl">
+                        <div class="panel-body">
+                            <div class="form-group margin-top" data-bind="validationElement: taskName">
+                                <label for="taskName" class="control-label">Task Name</label>
+                                <div class="flex-grow">
+                                    <input type="text" class="form-control" id="taskName"
+                                           placeholder="Enter a descriptive name for the Snowflake ETL task (optional)" data-bind="textInput: taskName">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Task State</label>
+                                <div class="flex-grow">
+                                    <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+                                        <span data-bind="text: stateText()"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#" data-bind="click: _.partial($root.setState, 'Enabled')"><span>Enabled</span></a></li>
+                                        <li><a href="#" data-bind="click: _.partial($root.setState, 'Disabled')"><span>Disabled</span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div data-bind="if: $root.db && $root.db.isEncrypted">
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="bg-info inline-block padding padding-xs small">
+                                        <i class="icon-info"></i>
+                                        Note: Database <strong data-bind="text: $root.db.name"></strong> is encrypted
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="toggle">
+                                        <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
+                                        <label for="toggle-non-encrypted-channel">Allow ETL on a non-encrypted communication channel</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle" data-placement="right" data-toggle="tooltip" data-bind="attr: { title: $root.db.isSharded() ? 'Not supported in sharded databases' : 'Toggle on to set a responsible node for the task'  }"
+                                     data-animation="true">
+                                    <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.possibleMentors().length === 0 || $root.db.isSharded()">
+                                    <label for="responsibleNode">Set responsible node</label>
+                                </div>
+                            </div>
+                            <div data-bind="compose: $root.taskResponsibleNodeSectionView"></div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle">
+                                    <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
+                                    <label for="createNewString">Create a new Snowflake connection string</label>
+                                </div>
+                            </div>
+                            <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
+                                <div class="form-group">
+                                    <div class="flex-grow" data-bind="compose: $root.connectionStringView"></div>
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
+                                <label class="control-label">Connection String</label>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                            data-bind="textInput: connectionStringName, disable: $root.snowflakeEtlConnectionStringsNames().length === 0">
+                                        <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    </button>
+                                    <ul class="dropdown-menu"
+                                        data-bind="foreach: $root.snowflakeEtlConnectionStringsNames">
+                                        <li data-bind="click: _.partial($root.useConnectionString, $data)">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>
+                                    </ul>
+                                    <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
+                                </div>
+                            </div>
+                            <div class="flex-horizontal">
+                                <div class="flex-grow margin-top">
+                                    <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
+                                        <i class="icon-settings"></i>
+                                        <span data-bind="text: $root.showAdvancedOptions() ? 'Close Advanced' : 'Advanced'"></span>
+                                    </button>
+                                </div>
+                                <div>
+                                    <button class="btn btn-default btn-info" title="Test the New connection string connection"
+                                            data-bind="click: $root.onTestConnectionSnowflake, disable: !$root.connectionStringDefined() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                        <i class="icon-rocket"></i>
+                                        <span>Test Connection</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: $root.showAdvancedOptions">
+                            <div class="panel-body">
+                                <div class="form-group" data-bind="validationElement: commandTimeout">
+                                    <label for="commandTimeout" class="control-label">Command Timeout</label>
+                                    <div class="flex-grow">
+                                        <div class="input-group">
+                                            <input type="number" min="0" class="form-control" placeholder="Use default value" id="commandTimeout" data-bind="numericInput: commandTimeout" autocomplete="off">
+                                            <div class="input-group-addon">
+                                                seconds
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-addon" data-bind="with: testConnectionResult">
+                        <div class="padding bg-success small" data-bind="visible: Success">
+                            <div>Successfully connected to the server</div>
+                        </div>
+                        <div class="padding bg-danger small"
+                             data-bind="visible: !Success">
+                            Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                            <div>
+                                <a href="#" 
+                                   data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'">
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-addon" data-bind="visible: $root.snowflakeEtlConnectionStringsNames().length === 0 && !$root.createNewConnectionString()">
+                        <div class="padding bg-warning small">
+                            <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <div class="flex-horizontal flex-header margin-top" data-bind="css: { 'pe-none item-disabled': !$root.hasSnowflakeEtl }">
+                <div class="flex-grow"><h3>Snowflake Tables</h3></div>
+                <div><button type="button" class="btn btn-info" data-bind="click: addNewSnowflakeTable, disable: showEditSnowflakeTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>
+            </div>
+            <div class="snowflake-tables-list margin-bottom" data-bind="css: { 'pe-none item-disabled': !$root.hasSnowflakeEtl }">
+                <!-- Snowflake table edit area -->
+                <div class="panel" data-bind="visible: showEditSnowflakeTableArea()">
+                    <div class="padding padding-sm flex-horizontal item" data-bind="with: editedSnowflakeTableSandbox()">
+                        <div class="flex-grow" data-bind="validationElement: tableName"> 
+                            <!-- todo 1: why not red on the FIRST Time ? only after saving at least once.. -->
+                            <!-- todo 2: where to place the message - if placed it has an offset, so for now msg is removed... -->
+                            <input type="text" class="form-control input-sm" placeholder="Table name"
+                                   data-bind="textInput: tableName">
+                        </div>
+                        <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: documentIdColumn">
+                            <input type="text" class="form-control input-sm" placeholder="Document Id Column Name" data-bind="textInput: documentIdColumn">
+                        </div>
+                        <div class="flex-shrink-0 toggle input-sm">
+                            <input id="toggle1" class="styled" type="checkbox" data-bind="checked: insertOnlyMode">
+                            <label for="toggle1">Insert only</label>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <button type="button" class="btn btn-success btn-sm" title="Add this snowflake table" data-bind="click: $root.saveEditedSnowflakeTable"><i class="icon-tick"></i></button>
+                            <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedSnowflakeTable"><i class="icon-cancel"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center text-muted" data-bind="if: editedSnowflakeEtl().snowflakeTables().length === 0 && !showEditSnowflakeTableArea()">
+                    <i class="icon-lg icon-empty-set"></i>
+                    <div data-bind="with: editedSnowflakeEtl()">
+                        <h3 class="margin-top margin-top-sm" 
+                            data-bind="css: { 'text-danger': !snowflakeTables.isValid() && snowflakeTables.isModified() }">No Snowflake Tables have been defined
+                        </h3>
+                    </div>
+                </div>
+                <div data-bind="foreach: editedSnowflakeEtl().snowflakeTables">
+                    <div class="panel panel-hover">
+                        <div class="padding padding-sm flex-horizontal item">
+                            <div class="row flex-grow">
+                                <div class="col-sm-4">
+                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">&nbsp;*</span></div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="widthlabel"><label class="superscript">Document Id Column</label><strong data-bind="text: documentIdColumn"></strong></div>
+                                </div>
+                                <div class="col-sm-4" data-bind="if: insertOnlyMode">Insert only</div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <button type="button" class="btn btn-default btn-sm" title="Edit this Snowflake table" data-bind="click: $root.editSnowflakeTable.bind($data)"><i class="icon-edit"></i></button>
+                                <button type="button" class="btn btn-danger btn-sm" title="Remove this Snowflake table" data-bind="click: $root.deleteSnowflakeTable.bind($data)"><i class="icon-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasSnowflakeEtl }">
+                <div class="flex-grow"><h3>Transform Scripts</h3></div>
+                <div>
+                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea">
+                        <i class="icon-plus"></i><span>Add Transformation Script</span>
+                    </button>
+                </div> 
+            </div>
+            <!-- The transformation scripts -->
+            <div class="etl-list" data-bind="with: editedSnowflakeEtl, css: { 'pe-none item-disabled': !$root.hasSnowflakeEtl }">
+                <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
+                    <i class="icon-lg icon-empty-set"></i>
+                    <h3 class="margin-top margin-top-sm"
+                        data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No Transformation Scripts have been defined
+                    </h3>
+                </div>
+                <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
+                    <div class="panel panel-hover item" data-bind="css: { active: $data === $root.transformationScriptSelectedForEdit() }">
+                        <div class="padding padding-sm">
+                            <div class="flex-horizontal">
+                                <div class="flex-grow info">
+                                    <div class="transformer-name" title="Transformation script name">
+                                        <span data-bind="text: name"></span>
+                                        <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
+                                    </div>
+                                    <div class="collections">
+                                        Collections:
+                                        <span class="etl-collections" title="The Collections transformed"
+                                              data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length">
+                                            <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
+                                        </span>
+                                        <span class="etl-collections" data-bind="visible: applyScriptForAllCollections" title="The Collections transformed">
+                                            <span>All collections</span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="actions">
+                                    <button type="button" data-bind="click: $root.editTransformationScript.bind($root, $data)"
+                                            class="btn btn-default"><i class="icon-edit" title="Edit script"></i>
+                                    </button>
+                                    <button type="button" data-bind="click: $root.removeTransformationScript"
+                                            class="btn btn-danger"><i class="icon-trash" title="Delete script"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox(), css: { 'pe-none item-disabled': !$root.hasSnowflakeEtl }">
+            <div class="flex-grow">
+                <div class="panel padding" data-bind="if: $root.showEditTransformationArea">
+                    <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
+                        <label class="control-label"><strong>Name:</strong></label>
+                        <div class="flex-grow margin-left">
+                            <input type="text" class="form-control" placeholder="Enter script name" autocomplete="off"
+                                   data-bind="textInput: name, disable: $root.enableTestArea() || !isNew()" />
+                        </div>
+                    </div>
+                    <label><strong>Script:</strong></label>
+                    <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
+                    <div data-bind="validationElement: script">
+                            <pre class="form-control editor"
+                                 data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                            <div class="help-block" data-bind="validationMessage: script"></div>
+                        </div>
+                    </div>
+                    <div class="margin-bottom-sm margin-top-sm">
+                        <div class="flex-horizontal margin-bottom-sm">
+                            <div class="flex-grow">
+                                <div class="dropdown btn-block flex-grow">
+                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
+                                           data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                                        data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
+                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                            <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
+                                        </li>
+                                    </ul>
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
+                                        <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()">
+                                    <i class="icon-plus"></i><span>Add Collection</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div data-bind="visible: transformScriptCollections().length" class="margin-top-sm">
+                            <label><strong>Collections Selected:</strong></label>
+                            <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
+                                <li>
+                                    <div class="name" data-bind="text: $data"></div>
+                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="toggle margin-top margin-bottom" data-bind="visible: !isNew() && !$root.enableTestArea()">
+                        <input id="reset" type="checkbox" data-bind="checked: resetScript">
+                        <label for="reset">Apply script to documents from beginning of time (Reset)</label>
+                    </div>
+                    <div class="flex-horizontal margin-top">
+                        <div data-bind="visible: !$root.enableTestArea()">
+                            <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
+                                <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                            </button>
+                            <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                        </div>
+                        <div class="flex-separator"></div>
+                        <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test area">
+                            <i class="icon-rocket"></i> <span>Test script</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
+                    <div class="panel">
+                        <div class="panel-body flex-form" data-bind="with: $root.test">
+                            <div class="form-group flex-horizontal margin-top">
+                                <label class="control-label">Document ID</label>
+                                <div class="flex-grow" data-bind="validationElement: documentId">
+                                    <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID" autocomplete="off"
+                                           title="This field is required." data-orig-title=""/><span class="help-block" style="display: none;"></span>
+                                    <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu"
+                                        data-bind="autoComplete: '#documentId', foreach: docsIdsAutocompleteResults">
+                                        <li role="presentation" data-bind="click: _.partial($parent.onAutocompleteOptionSelected, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-default" type="button"
+                                        data-bind="click: previewDocument, css: { 'btn-spinner': spinners.preview }, disable: spinners.preview() || !documentId()" title="Show document preview">
+                                    <i class="icon-import"></i> <span>Load document</span>
+                                </button>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Mode:</label>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                        <span data-bind="text: testDelete() ? 'Document delete' : 'Document put / update'"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#" data-bind="click: _.partial(testDelete, false)">Document put / update</a></li>
+                                        <li><a href="#" data-bind="click: _.partial(testDelete, true)">Document delete</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle margin-bottom">
+                                    <input id="performRolledBackTransaction" class="styled" type="checkbox" data-bind="checked: performRolledBackTransaction">
+                                    <label for="performRolledBackTransaction" data-placement="top" data-toggle="tooltip" 
+                                           title="Option checked:<br />All generated SQL statements will be executed against the target Snowflake database. This transaction will be rolled back when done. <br />
+Option unchecked: <Br />No execution will take place, only generate the SQL statements. " data-html="true" data-animation="true">
+                                        Execute and rollback the test transaction
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="flex-horizontal">
+                                <div class="flex-separator"></div>
+                                <button type="button" class="btn btn-primary margin-right margin-right-sm" data-bind="click: runTest, css: { 'btn-spinner': spinners.test }, disable: spinners.test()">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test</span>
+                                </button>
+                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea">
+                                    <i class="icon-cancel"></i> <span>Close Test Area</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.hasSnowflakeEtl }">
+        <div class="absolute-center text-center z-1" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
+            <i class="icon-info icon-xl"></i>
+            Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.
+        </div>
+        <div class="tabs">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" data-bind="visible: loadedDocument">
+                    <a href="#documentPreview" role="tab" data-toggle="tab">
+                        <i class="icon-preview"></i><span>Document Preview</span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResults" role="tab" data-toggle="tab">
+                        <i class="icon-admin-logs"></i><span>Test Results</span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: warningsCount">
+                    <a href="#warnings" role="tab" data-toggle="tab">
+                        <i class="icon-exclamation"></i><span>Warnings</span><span class="label label-warning margin-left margin-left-sm" data-bind="text: warningsCount || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: debugOutput().length">
+                    <a href="#debugOutput" role="tab" data-toggle="tab">
+                        <i class="icon-administrator-js-console"></i><span>Debug output</span><span class="label label-info margin-left margin-left-sm" data-bind="text: debugOutput().length || ''"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="tab-content flex-grow">
+            <div role="tabpanel" class="tab-pane fade" id="documentPreview">
+                <div class="margin-bottom margin-bottom-sm">Document ID: <strong data-bind="text: loadedDocumentId"></strong></div>
+                <pre data-bind="html: loadedDocument"></pre>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="warnings">
+                <div class="transformation-errors" data-bind="visible: transformationErrors().length">
+                    <h3>Transformation Script Errors:</h3>
+                    <div data-bind="foreach: transformationErrors">
+                        <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
+                    </div>
+                </div>
+                <div class="load-errors" data-bind="visible: loadErrors().length">
+                    <h3>Load Errors:</h3>
+                    <div data-bind="foreach: loadErrors">
+                        <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
+                    </div>
+                </div>
+                <div class="slow-sqls" data-bind="visible: slowSqlWarnings().length">
+                    <h3>Slow SQL:</h3>
+                    <div data-bind="foreach: slowSqlWarnings">
+                        <div class="sql-warning">
+                            <div class="duration text-info" data-bind="text: 'Statement took: ' + Duration.toLocaleString() + ' ms'"></div>
+                            <pre data-bind="text: Statement"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="testResults">
+                <h3>Generated SQL statements:</h3>
+                <div data-bind="foreach: testResults">
+                    <div class="test-output panel">
+                        <pre data-bind="text: CommandText"></pre>
+                        
+                        <h4 class="margin-left" data-bind="visible: Params && Params.length"><strong>Parameters:</strong></h4>
+                        <dl class="dl-horizontal" data-bind="foreach: Params">
+                            <dt data-bind="text: Key, attr: { title: Key }"></dt>
+                            <dd data-bind="text: Value"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div data-bind="visible: !testResults().length">
+                    <i class="icon-info"></i> <span>Simulation returned empty result.</span>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="debugOutput">
+                <pre class="absolute-fill" data-bind="text: debugOutput().join('\r\n')"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="backdrop" data-bind="click: $root.toggleTestArea"></div>

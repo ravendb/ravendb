@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Numerics;
 using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Json;
@@ -211,6 +212,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     return true;
                 case BlittableJsonToken.Null:
                     SetToken(JsonToken.Null);
+                    return true;
+                case BlittableJsonToken.Vector:
+                    SetToken(JsonToken.None, value);
                     return true;
                 default:
                     throw new ArgumentOutOfRangeException();

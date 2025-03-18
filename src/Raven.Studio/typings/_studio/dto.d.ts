@@ -458,8 +458,7 @@ interface pagedResultWithToken<T> extends pagedResult<T> {
     continuationToken?: string;
 }
 
-interface pagedResultWithTokenAndSkippedResults<T> extends pagedResult<T> {
-    continuationToken?: string;
+interface pagedResultWithTokenAndSkippedResults<T> extends pagedResultWithToken<T> {
     scannedResults?: number;
 }
 
@@ -656,8 +655,8 @@ interface testEtlScriptResult {
     TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
 }
 
-declare module Raven.Server.Documents.ETL.Providers.SQL.Test {
-    interface SqlEtlTestScriptResult extends testEtlScriptResult {
+declare module Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test {
+    interface RelationalDatabaseEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 
@@ -774,11 +773,12 @@ interface scrollColorConfig {
 
 type etlScriptDefinitionCacheItem = {
     etlType: EtlType;
-    task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
-                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
-                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
-                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
-                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>;
+    task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>;
 }
 
 type sinkScriptDefinitionCacheItem = {
@@ -877,9 +877,11 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 }
 
 type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
-    "RavenEtl" | "SqlEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "KafkaQueueSink" | "RabbitQueueSink";
-    
-type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage";
+    "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" | 
+    "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "AmazonSqsQueueEtl" |
+    "KafkaQueueSink" | "RabbitQueueSink";
+
+type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage" | "AmazonSqs";
 
 type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink";
 
@@ -1002,10 +1004,16 @@ interface ReactDirtyFlag {
     setIsDirty: (isDirty: boolean, customDialog?: () => JQueryPromise<confirmDialogResult>) => void;
 }
 
-interface ReactProps<PathParams = any, QueryParams = Record<string, unknown>> {
-    pathParams?: PathParams;
-    queryParams?: QueryParams;
-    location?: databaseLocationSpecifier
+interface ReactQueryParamsProps<T extends Record<string, any>> {
+    queryParams?: T
+}
+
+interface ReactPathParamsProps {
+    pathParams?: string[]
+}
+
+interface ReactLocationProps {
+    location: databaseLocationSpecifier;
 }
 
 interface ReactInKnockoutOptions<T> {
@@ -1059,5 +1067,5 @@ type GetConnectionStringsResult = Omit<Raven.Client.Documents.Operations.Connect
     SqlConnectionStrings: {[key: string]: SqlConnectionString;};
 }
 
-
 type AzureQueueStorageAuthenticationType = "connectionString" | "entraId" | "passwordless";
+type AmazonSqsAuthenticationType = "basic" | "passwordless";

@@ -42,8 +42,6 @@ public class RavenMultiplatformTheoryAttribute : RavenTheoryAttribute
         _intrinsics = intrinsics;
     }
 
-    public bool NightlyBuildOnly { get; set; }
-
     public override string Skip
     {
         get
@@ -52,7 +50,7 @@ public class RavenMultiplatformTheoryAttribute : RavenTheoryAttribute
             if (skip != null)
                 return skip;
 
-            return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, NightlyBuildOnly);
+            return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, NightlyBuildRequired, SnowflakeRequired);
         }
         set => _skip = value;
     }

@@ -1,4 +1,6 @@
-import { Button, FormGroup, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import InputGroup from "react-bootstrap/InputGroup";
+import { CloseButton, FormGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { FormInput } from "components/common/Form";
@@ -71,7 +73,7 @@ export default function DocumentIdentitiesModal({
             <form onSubmit={handleSubmit(onSubmit)}>
                 <ModalBody className="pb-0 vstack gap-3">
                     <div className="position-absolute m-2 end-0 top-0">
-                        <Button close onClick={toggleModal} />
+                        <CloseButton onClick={toggleModal} />
                     </div>
                     <div className="text-center">
                         <Icon icon="identities" color="primary" margin="me-0" className="fs-1" />
@@ -81,12 +83,12 @@ export default function DocumentIdentitiesModal({
                     <InformationBadge isEditing={isEditing} {...formValues} />
                 </ModalBody>
                 <ModalFooter className="mt-4">
-                    <Button className="link-muted" color="link" onClick={toggleModal} type="button">
+                    <Button className="link-muted" variant="link" onClick={toggleModal} type="button">
                         Close
                     </Button>
                     <ButtonWithSpinner
                         className="rounded-pill"
-                        color="success"
+                        variant="success"
                         icon="save"
                         isSpinning={isSubmitting}
                         type="submit"

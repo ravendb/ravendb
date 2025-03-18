@@ -1,4 +1,7 @@
-﻿import { Button, Card, CardBody, Col, Row } from "reactstrap";
+﻿import Card from "react-bootstrap/Card";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+import Button from "react-bootstrap/Button";
 import { aboutPageUrls, ConnectivityStatus, OverallInfoItem } from "components/pages/resources/about/partials/common";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
@@ -30,7 +33,7 @@ export function SupportSummary(props: SupportSummaryProps) {
 
     return (
         <Card>
-            <CardBody>
+            <Card.Body>
                 <h4>Support</h4>
                 <Row>
                     <OverallInfoItem icon="support" label="Support type">
@@ -59,17 +62,22 @@ export function SupportSummary(props: SupportSummaryProps) {
                                 href={isCloud ? aboutPageUrls.cloudPortal : aboutPageUrls.supportRequest(licenseId)}
                                 target="_blank"
                                 className="rounded-pill"
-                                color={isCloud ? "cloud" : "primary"}
+                                variant={isCloud ? "cloud" : "primary"}
                             >
                                 <Icon icon="notifications" /> Request support
                             </Button>
                         )}
-                        <Button outline className="rounded-pill" href={aboutPageUrls.askCommunity} target="_blank">
+                        <Button
+                            variant="outline-secondary"
+                            className="rounded-pill"
+                            href={aboutPageUrls.askCommunity}
+                            target="_blank"
+                        >
                             <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-1" />
                         </Button>
                     </Col>
                 </Row>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

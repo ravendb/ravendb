@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Raven.Client.Util;
-using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -12,6 +11,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
@@ -19,17 +19,27 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.NotificationCenter
 {
-    public abstract unsafe class NotificationsStorage(ServerStore serverStore, string resourceName = null)
+    public abstract unsafe class NotificationsStorage
     {
-        protected readonly ServerStore ServerStore = serverStore;
+        protected readonly ServerStore ServerStore;
 
-        protected readonly string TableName = GetTableName(resourceName);
+        protected readonly string TableName;
 
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
+        private readonly RavenLogger _logger;
 
         protected StorageEnvironment Environment;
 
         protected TransactionContextPool ContextPool;
+
+        protected NotificationsStorage(ServerStore serverStore, string resourceName = null)
+        {
+            ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
+            TableName = GetTableName(resourceName);
+
+            _logger = resourceName == null
+                ? RavenLogManager.Instance.GetLoggerForServer(GetType())
+                : RavenLogManager.Instance.GetLoggerForDatabase(GetType(), resourceName);
+        }
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
@@ -77,8 +87,8 @@ namespace Raven.Server.NotificationCenter
                     }
                 }
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Saving notification '{notification.Id}'.");
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Saving notification '{notification.Id}'.");
 
                 using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -345,7 +355,7 @@ namespace Raven.Server.NotificationCenter
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                using(var item = Get(id, context, tx))
+                using (var item = Get(id, context, tx))
                 {
                     if (item == null)
                         return;
@@ -360,9 +370,8 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private void Cleanup()
+        protected virtual void Cleanup()
         {
-            RemoveNewVersionAvailableAlertIfNecessary();
         }
 
         private static string GetTableName(string resourceName)
@@ -370,40 +379,6 @@ namespace Raven.Server.NotificationCenter
             return string.IsNullOrEmpty(resourceName)
                 ? Documents.Schemas.Notifications.NotificationsTree
                 : $"{Documents.Schemas.Notifications.NotificationsTree}.{resourceName.ToLowerInvariant()}";
-        }
-
-        private void RemoveNewVersionAvailableAlertIfNecessary()
-        {
-            var buildNumber = ServerVersion.Build;
-
-            var id = AlertRaised.GetKey(AlertType.Server_NewVersionAvailable, null);
-            using (Read(id, out var ntv))
-            {
-                using (ntv)
-                {
-                    if (ntv == null)
-                        return;
-
-                    var delete = true;
-
-                    if (buildNumber != ServerVersion.DevBuildNumber)
-                    {
-                        if (ntv.Json.TryGetMember(nameof(AlertRaised.Details), out var o)
-                            && o is BlittableJsonReaderObject detailsJson)
-                        {
-                            if (detailsJson.TryGetMember(nameof(NewVersionAvailableDetails.VersionInfo), out o)
-                                && o is BlittableJsonReaderObject newVersionDetailsJson)
-                            {
-                                var value = JsonDeserializationServer.LatestVersionCheckVersionInfo(newVersionDetailsJson);
-                                delete = value.BuildNumber <= buildNumber;
-                            }
-                        }
-                    }
-
-                    if (delete)
-                        Delete(id);
-                }
-            }
         }
 
         [DoesNotReturn]

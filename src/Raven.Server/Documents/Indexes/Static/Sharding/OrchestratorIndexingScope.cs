@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Indexes.Static.Sharding;
 public sealed class OrchestratorIndexingScope : CurrentIndexingScope
 {
     public OrchestratorIndexingScope(TransactionOperationContext context, UnmanagedBuffersPoolWithLowMemoryHandling unmanagedBuffersPool) 
-        : base(null, null, null, null, context, null, unmanagedBuffersPool)
+        : base(null, null, null, null, context, null, null, unmanagedBuffersPool)
     {
     }
 

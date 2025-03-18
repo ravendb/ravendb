@@ -10,26 +10,56 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.QueueSink;
 
+/// <summary>
+/// The configuration for a queue sink task, which allows integrating with external queueing systems.
+/// </summary>
 public class QueueSinkConfiguration : IDynamicJsonValueConvertible, IDatabaseTask
 {
     private bool _initialized;
 
+    /// <summary>
+    /// Specifies the type of queue broker being used.
+    /// </summary>
     public QueueBrokerType BrokerType { get; set; }
 
+    /// <summary>
+    /// The unique identifier for the task.
+    /// </summary>
     public long TaskId { get; set; }
 
+    /// <summary>
+    /// Indicates whether the queue sink task is disabled.
+    /// </summary>
     public bool Disabled { get; set; }
 
+    /// <summary>
+    /// The name of the queue sink task.
+    /// </summary>
     public string Name { get; set; }
 
+    /// <summary>
+    /// The mentor node assigned to this task, if specified.
+    /// </summary>
     public string MentorNode { get; set; }
 
+    /// <summary>
+    /// Determines whether the task should be pinned to the mentor node.
+    /// </summary>
     public bool PinToMentorNode { get; set; }
 
+    /// <summary>
+    /// The name of the connection string used to connect to the queue broker.
+    /// </summary>
     public string ConnectionStringName { get; set; }
 
+    /// <summary>
+    /// Indicates whether the configuration is running in test mode.
+    /// </summary>
     internal bool TestMode { get; set; }
 
+    /// <summary>
+    /// A list of user-defined scripts that process incoming queue messages and define how they should be stored in RavenDB.
+    /// </summary>
     public List<QueueSinkScript> Scripts { get; set; } = new();
 
     [JsonDeserializationIgnore]

@@ -4,13 +4,14 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 
 namespace Raven.Server.ServerWide;
 
 public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<RecentLogIndexNotification>
 {
-    public Logger Log;
+    public RavenLogger Log;
 
     private readonly ConcurrentDictionary<long, TaskCompletionSource<object>> _tasksDictionary =
         new ConcurrentDictionary<long, TaskCompletionSource<object>>();

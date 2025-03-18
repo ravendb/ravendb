@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils
 {
@@ -21,7 +22,7 @@ namespace Raven.Server.Utils
             _writeLockFile = null;
         }
 
-        public void TryAcquireWriteLock(Logger logger, int numberOfRetries = 3)
+        public void TryAcquireWriteLock(RavenLogger logger, int numberOfRetries = 3)
         {
             var dir = Path.GetDirectoryName(_lockFile);
             try

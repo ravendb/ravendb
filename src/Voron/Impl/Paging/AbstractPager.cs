@@ -11,6 +11,7 @@ using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -22,7 +23,7 @@ namespace Voron.Impl.Paging
 {
     public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
     {
-        public readonly Logger Log = LoggingSource.Instance.GetLogger<AbstractPager>("AbstractPager");
+        public readonly RavenLogger Logger;
         private readonly StorageEnvironmentOptions _options;
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
@@ -49,8 +50,9 @@ namespace Voron.Impl.Paging
             return AllocatedInBytesFunc?.Invoke() ?? NumberOfAllocatedPages * Constants.Storage.PageSize;
         }
 
-        protected AbstractPager()
+        protected AbstractPager(RavenLogger logger)
         {
+            Logger = logger;
             CanPrefetch = new Lazy<bool>(CanPrefetchQuery);
         }
         
@@ -233,7 +235,7 @@ namespace Voron.Impl.Paging
 
         public VoronPathSetting FileName { get; protected set; }
 
-        protected AbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false) : this()
+        protected AbstractPager(StorageEnvironmentOptions options, RavenLogger logger, bool canPrefetchAhead, bool usePageProtection = false) : this(logger)
         {
             DisposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
@@ -436,8 +438,8 @@ namespace Voron.Impl.Paging
             {
                 try
                 {
-                    if (Log.IsInfoEnabled)
-                        Log.Info("AbstractPager finalizer was called (leak?), and 'DisposeOnceRunner.Dispose' threw exception", e);
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug("AbstractPager finalizer was called (leak?), and 'DisposeOnceRunner.Dispose' threw exception", e);
                 }
                 catch
                 {
@@ -448,8 +450,8 @@ namespace Voron.Impl.Paging
             {
                 try
                 {
-                    if (Log.IsInfoEnabled)
-                        Log.Info("AbstractPager finalizer was called although GC.SuppressFinalize should have been called", new InvalidOperationException("Leak in "));
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug("AbstractPager finalizer was called although GC.SuppressFinalize should have been called", new InvalidOperationException("Leak in "));
                 }
                 catch
                 {

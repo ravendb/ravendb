@@ -472,7 +472,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: true, asWatcher: watcher ?? false);
 
-                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                    if (RavenLogManager.Instance.IsAuditEnabled)
                         LogAuditFor("Server", "ADD", $"Node {nodeTag} to cluster. Term: {ServerStore.Engine.CurrentTerm}.");
 
 
@@ -577,7 +577,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                     LogAuditFor("Server", "DELETE", $"Node {nodeTag} from cluster. Term: {ServerStore.Engine.CurrentTerm}.");
 
                 NoContentStatus();

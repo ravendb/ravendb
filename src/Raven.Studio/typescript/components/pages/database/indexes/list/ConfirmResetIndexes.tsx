@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import {
     DatabaseActionContexts,
@@ -9,6 +9,7 @@ import ActionContextUtils from "components/utils/actionContextUtils";
 import { IndexSharedInfo } from "components/models/indexes";
 import IndexUtils from "components/utils/IndexUtils";
 import RichAlert from "components/common/RichAlert";
+import Modal from "components/common/Modal";
 
 interface ConfirmResetIndexesProps {
     indexes: IndexSharedInfo[];
@@ -71,18 +72,15 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
     };
 
     return (
-        <Modal isOpen toggle={closeConfirm} wrapClassName="bs5" centered contentClassName="modal-border bulge-warning">
-            <ModalBody className="vstack gap-4 position-relative">
-                <div className="text-center">
-                    <Icon icon="index" color="warning" addon="reset-index" className="fs-1" margin="m-0" />
-                </div>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={closeConfirm} />
-                </div>
-                <div className="text-center lead">
+        <Modal show onHide={closeConfirm} contentClassName="modal-border bulge-warning">
+            <Modal.Header className="vstack gap-4" onCloseClick={closeConfirm}>
+                <Icon icon="index" color="warning" addon="reset-index" className="fs-1" margin="m-0" />
+                <div className="lead">
                     You&apos;re about to <span className="text-warning">reset</span> following{" "}
                     {indexNamesToReset.length === 1 ? "index" : `indexes`}
                 </div>
+            </Modal.Header>
+            <Modal.Body className="vstack gap-4">
                 <ul className="overflow-auto" style={{ maxHeight: "200px" }}>
                     {indexNamesToReset.map((indexName) => (
                         <li key={indexName}>{indexName}</li>
@@ -116,13 +114,13 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
                         />
                     </div>
                 )}
-            </ModalBody>
-            <ModalFooter>
-                <Button color="link" onClick={closeConfirm} className="link-muted">
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="link" onClick={closeConfirm} className="link-muted">
                     Cancel
                 </Button>
                 <Button
-                    color="warning"
+                    variant="warning"
                     onClick={onSubmit}
                     className="rounded-pill"
                     disabled={selectedActionContexts.length === 0}
@@ -130,7 +128,7 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
                     <Icon icon="reset-index" />
                     Reset
                 </Button>
-            </ModalFooter>
+            </Modal.Footer>
         </Modal>
     );
 }

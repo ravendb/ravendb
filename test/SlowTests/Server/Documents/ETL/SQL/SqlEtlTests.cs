@@ -22,9 +22,9 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
-using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.ETL.Providers.SQL.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Tests.Core.Utils.Entities;
@@ -37,15 +37,11 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
-    public class SqlEtlTests : RavenTestBase
+    public class SqlEtlTests(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public SqlEtlTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         private readonly List<string> _dbNames = new List<string>();
 
-        protected const string defaultScript = @"
+        private const string DefaultScript = @"
 var orderData = {
     Id: id(this),
     OrderLinesCount: this.OrderLines.length,
@@ -93,7 +89,7 @@ loadToOrders(orderData);
 
                     var etlDone = Etl.WaitForEtlToComplete(store, (n, s) => GetOrdersCount(connectionString) == testCount);
 
-                    SetupSqlEtl(store, connectionString, defaultScript);
+                    SetupSqlEtl(store, connectionString, DefaultScript);
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -182,7 +178,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
 
                     var etlDone = Etl.WaitForEtlToComplete(store);
 
-                    SetupSqlEtl(store, connectionString, defaultScript);
+                    SetupSqlEtl(store, connectionString, DefaultScript);
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -445,7 +441,7 @@ loadToOrders(orderData);");
 
                     var etlDone = Etl.WaitForEtlToComplete(store);
 
-                    SetupSqlEtl(store, connectionString, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
+                    SetupSqlEtl(store, connectionString, "if(this.OrderLines.length > 0) { \r\n" + DefaultScript + " \r\n}");
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -505,7 +501,7 @@ loadToOrders(orderData);");
 
                     var etlDone = Etl.WaitForEtlToComplete(store);
 
-                    SetupSqlEtl(store, connectionString, defaultScript);
+                    SetupSqlEtl(store, connectionString, DefaultScript);
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -551,7 +547,7 @@ loadToOrders(orderData);");
 
                     var etlDone = Etl.WaitForEtlToComplete(store);
 
-                    SetupSqlEtl(store, connectionString, defaultScript);
+                    SetupSqlEtl(store, connectionString, DefaultScript);
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -594,7 +590,7 @@ loadToOrders(orderData);");
 
                     var etlDone = Etl.WaitForEtlToComplete(store);
 
-                    SetupSqlEtl(store, connectionString, defaultScript, insertOnly: true);
+                    SetupSqlEtl(store, connectionString, DefaultScript, insertOnly: true);
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -727,7 +723,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var testResult = SqlEtl.TestScript(
-                            new TestSqlEtlScript
+                            new TestRelationalDatabaseEtlScript<SqlConnectionString,SqlEtlConfiguration>
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
                                 DocumentId = docId,
@@ -745,13 +741,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                     {
                                         new Transformation()
                                         {
-                                            Collections = { "Orders" }, Name = "OrdersAndLines", Script = defaultScript + "output('test output')"
+                                            Collections = { "Orders" }, Name = "OrdersAndLines", Script = DefaultScript + "output('test output')"
                                         }
                                     }
                                 }
                             }, database, database.ServerStore, context);
                         
-                        var result = (SqlEtlTestScriptResult)testResult;
+                        var result = (RelationalDatabaseEtlTestScriptResult)testResult;
                         Assert.Equal(0, result.TransformationErrors.Count);
                         Assert.Equal(0, result.LoadErrors.Count);
                         Assert.Equal(0, result.SlowSqlWarnings.Count);
@@ -811,7 +807,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var testResult = SqlEtl.TestScript(
-                            new TestSqlEtlScript
+                            new TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
                                 DocumentId = docId,
@@ -826,11 +822,11 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                         new SqlEtlTable { TableName = "OrderLines", DocumentIdColumn = "OrderId" },
                                         new SqlEtlTable { TableName = "NotUsedInScript", DocumentIdColumn = "OrderId" },
                                     },
-                                    Transforms = { new Transformation() { Collections = { "Orders" }, Name = "OrdersAndLines", Script = defaultScript } }
+                                    Transforms = { new Transformation() { Collections = { "Orders" }, Name = "OrdersAndLines", Script = DefaultScript } }
                                 }
                             }, database, database.ServerStore, context);
                         
-                        var result = (SqlEtlTestScriptResult)testResult;
+                        var result = (RelationalDatabaseEtlTestScriptResult)testResult;
 
                         Assert.Equal(0, result.TransformationErrors.Count);
                         Assert.Equal(0, result.LoadErrors.Count);
@@ -1162,7 +1158,7 @@ loadToOrders(orderData);
 
                     var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
 
-                    SetupSqlEtl(store, connectionString, defaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
+                    SetupSqlEtl(store, connectionString, DefaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 

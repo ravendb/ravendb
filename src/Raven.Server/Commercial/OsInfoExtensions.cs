@@ -7,14 +7,16 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using Microsoft.Win32;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Logging;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Commercial
 {
     public static class OsInfoExtensions
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("OsInfo");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer(typeof(OsInfoExtensions));
 
         public static OsInfo GetOsInfo()
         {
@@ -39,8 +41,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to get OS info", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Failed to get OS info", e);
 
                 return null;
             }
@@ -92,8 +94,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to get Windows OS info from registry", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Failed to get Windows OS info from registry", e);
 
                 return osInfo;
             }
@@ -148,8 +150,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to get default Windows OS info", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Failed to get default Windows OS info", e);
             }
 
             return osInfo;
@@ -254,8 +256,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to get macOS info", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Failed to get macOS info", e);
             }
 
             return osInfo;
@@ -327,8 +329,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to get Linux OS info", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Failed to get Linux OS info", e);
             }
 
             return osInfo;

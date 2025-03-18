@@ -166,17 +166,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Generates the document ID.
-        /// </summary>
-        /// <param name="entity">The entity.</param>
-        /// <returns></returns>
-        [Obsolete("InMemoryDocumentSessionOperations.GenerateId is not supported anymore. Will be removed in next major version of the product.")]
-        protected override string GenerateId(object entity)
-        {
-            return Conventions.GenerateDocumentId(DatabaseName, entity);
-        }
-
-        /// <summary>
         /// Not supported on sync session.
         /// </summary>
         /// <param name="entity">The entity.</param>

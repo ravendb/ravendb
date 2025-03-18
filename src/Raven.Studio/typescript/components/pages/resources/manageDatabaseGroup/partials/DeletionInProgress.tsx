@@ -1,6 +1,6 @@
 ﻿import { DatabaseGroupActions, DatabaseGroupItem, DatabaseGroupNode } from "components/common/DatabaseGroup";
 import React from "react";
-import { Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
 
 export function DeletionInProgress(props: { nodeTag: string }) {
     const { nodeTag } = props;

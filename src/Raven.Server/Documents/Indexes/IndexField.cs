@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
@@ -36,6 +38,8 @@ namespace Raven.Server.Documents.Indexes
         public FieldTermVector TermVector { get; set; }
 
         public SpatialOptions Spatial { get; set; }
+        
+        public VectorOptions Vector { get; set; }
 
         public IndexField()
         {
@@ -77,6 +81,9 @@ namespace Raven.Server.Documents.Indexes
             if (options.Spatial != null)
                 field.Spatial = new SpatialOptions(options.Spatial);
 
+            if (options.Vector != null)
+                field.Vector = new(options.Vector);
+
             return field;
         }
 
@@ -87,7 +94,10 @@ namespace Raven.Server.Documents.Indexes
                 && string.Equals(Analyzer, other.Analyzer, StringComparison.Ordinal)
                 && Storage == other.Storage
                 && Indexing == other.Indexing
-                && TermVector == other.TermVector;
+                && SpatialOptions.Equals(Spatial, other.Spatial)
+                && VectorOptions.Equals(Vector, other.Vector)
+                && TermVector == other.TermVector
+                ;
         }
 
         public override bool Equals(object obj)
@@ -118,6 +128,8 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;
                 hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
+                hashCode = (hashCode * 397) ^ (Spatial?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Vector?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }
@@ -136,7 +148,8 @@ namespace Raven.Server.Documents.Indexes
                 Storage = Storage,
                 TermVector = TermVector,
                 Suggestions = HasSuggestions,
-                Spatial = Spatial
+                Spatial = Spatial,
+                Vector = Vector
             };
         }
     }
@@ -161,6 +174,8 @@ namespace Raven.Server.Documents.Indexes
         public int Id { get; set; }
 
         public AutoSpatialOptions Spatial { get; set; }
+        
+        public AutoVectorOptions Vector { get; set; }
 
         public bool SamePathToArrayAsGroupByField { get; set; }
 
@@ -180,6 +195,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Spatial != null)
                 field.Spatial = new AutoSpatialOptions(options.Spatial);
+
+            if (options.Vector != null)
+                field.Vector = new AutoVectorOptions(options.Vector);
 
             if (options.Suggestions.HasValue)
                 field.HasSuggestions = options.Suggestions.Value;
@@ -204,6 +222,24 @@ namespace Raven.Server.Documents.Indexes
                     Storage = Storage,
                     HasSuggestions = HasSuggestions,
                     Spatial = new AutoSpatialOptions(Spatial),
+                    Vector = null,
+                    Id = Id
+                });
+
+                return fields;
+            }
+
+            if (Vector != null)
+            {
+                var vector = new AutoVectorOptions(Vector);
+                fields.Add(new IndexField
+                {
+                    Indexing = FieldIndexing.Default,
+                    Name =  Name,
+                    Storage = Storage,
+                    HasSuggestions = HasSuggestions,
+                    Spatial = null,
+                    Vector = vector,
                     Id = Id
                 });
 
@@ -303,6 +339,13 @@ namespace Raven.Server.Documents.Indexes
             return $"search({name})";
         }
 
+        public static string GetVectorAutoIndexFieldName(string name, VectorOptions vectorOptions)
+        {
+            var methodName = Constants.VectorSearch.ConfigurationToMethodName(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType);
+            var inner = methodName == string.Empty ? name : $"{methodName}({name})";
+            return $"vector.search({inner})";
+        }
+        
         public static string GetExactAutoIndexFieldName(string name)
         {
             return $"exact({name})";

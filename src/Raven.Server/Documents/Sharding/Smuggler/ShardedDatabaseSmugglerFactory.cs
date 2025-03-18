@@ -12,6 +12,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Sharding.Smuggler;
 
@@ -34,7 +35,7 @@ public sealed class ShardedDatabaseSmugglerFactory : AbstractDatabaseSmugglerFac
         throw new NotSupportedInShardingException();
     }
 
-    public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger)
+    public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, RavenLogger logger)
     {
         return new ShardedDatabaseSource(_database, startDocumentEtag, startRaftIndex, logger);
     }

@@ -21,20 +21,25 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     public bool ElasticSearchRequired { get; set; }
 
     public bool AzureQueueStorageRequired { get; set; }
+    
+    public bool AmazonSqsRequired { get; set; }
 
+    public bool SnowflakeRequired { get; set; }
+    
     public bool NightlyBuildRequired { get; set; }
 
     public override string Skip
     {
         get
         {
-            return ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, msSqlRequired: MsSqlRequired, elasticSearchRequired: ElasticSearchRequired, azureQueueStorageRequired: AzureQueueStorageRequired);
+            return ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, msSqlRequired: MsSqlRequired, elasticSearchRequired: ElasticSearchRequired, azureQueueStorageRequired: AzureQueueStorageRequired, snowflakeRequired: SnowflakeRequired, amazonSqsRequired: AmazonSqsRequired);
         }
 
         set => _skip = value;
     }
 
-    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired, bool azureQueueStorageRequired)
+
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired, bool azureQueueStorageRequired, bool snowflakeRequired, bool amazonSqsRequired)
     {
         var s = ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
@@ -48,7 +53,13 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
 
         if (azureQueueStorageRequired && AzureQueueStorageHelper.ShouldSkip(out skip))
             return skip;
+        
+        if (amazonSqsRequired && AmazonSqsHelper.ShouldSkip(out skip))
+            return skip;
 
+        if (snowflakeRequired && SnowflakeHelper.ShouldSkip(out skip))
+            return skip;
+        
         return null;
     }
 

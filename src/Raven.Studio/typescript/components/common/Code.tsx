@@ -4,7 +4,7 @@ import "./Code.scss";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -25,8 +25,6 @@ type Language =
     | "clike"
     | "javascript"
     | "csharp"
-    | "json"
-    | "csharp"
     | "json";
 
 interface CodeProps {
@@ -34,15 +32,17 @@ interface CodeProps {
     language: Language;
     className?: string;
     elementToCopy?: string;
+    codeClassName?: string;
 }
 
-export default function Code({ code, language, className, elementToCopy }: CodeProps) {
+export default function Code({ code, language, className, elementToCopy, codeClassName }: CodeProps) {
     const html = useMemo(() => Prism.highlight(code, Prism.languages[language], language), [code, language]);
 
     return (
         <div className={classNames("code d-flex flex-grow-1 position-relative", className)}>
             {elementToCopy && (
                 <Button
+                    variant="secondary"
                     className="rounded-pill position-absolute end-gutter-xs top-gutter-xs"
                     size="xs"
                     title="Copy to clipboard"
@@ -52,7 +52,7 @@ export default function Code({ code, language, className, elementToCopy }: CodeP
                 </Button>
             )}
             <pre className="code-classes d-flex flex-grow-1 m-0">
-                <code className={`language-${language}`}>
+                <code className={classNames(`language-${language}`, codeClassName)}>
                     <div dangerouslySetInnerHTML={{ __html: html }} />
                 </code>
             </pre>

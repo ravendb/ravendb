@@ -33,7 +33,8 @@ RVN_RUNTIME_DIRS=(
     /etc/ravendb
     /etc/ravendb/security
     /var/lib/ravendb
-    /var/lib/ravendb/{data,nuget}
+    /var/lib/ravendb/data
+    /var/lib/ravendb/packages/nuget/{indexing,logging}
     /var/log/ravendb/{logs,audit}
 )
 

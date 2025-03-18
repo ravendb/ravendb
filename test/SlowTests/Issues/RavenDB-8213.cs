@@ -31,7 +31,7 @@ namespace SlowTests.Issues
 from Orders as o select f(o)");
 
                     var ex = Assert.Throws<InvalidQueryException>(() => projection.ToList());
-                    Assert.Contains("At Line : 2, Column : 28", ex.Message);
+                    Assert.Contains("At Line : 2, Column : 27", ex.Message);
                 }
             }
         }
@@ -50,7 +50,7 @@ from Orders as o select f(o)");
 }");
 
                     var ex = Assert.Throws<InvalidQueryException>(() => projection.ToList());
-                    Assert.Contains("At Line : 3, Column : 15", ex.Message);
+                    Assert.Contains("At Line : 3, Column : 14", ex.Message);
                 }
             }
         }
@@ -73,7 +73,7 @@ update
 "));
 
                     var ex = await Assert.ThrowsAsync<InvalidQueryException>(async () => await op);
-                    Assert.Contains("At Line : 5, Column : 21", ex.Message);
+                    Assert.Contains("At Line : 5, Column : 20", ex.Message);
                 }
             }
         }

@@ -105,7 +105,7 @@ namespace Voron.Data.BTrees
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public TreeNodeHeader* Search(LowLevelTransaction tx, Slice key)
+        public TreeNodeHeader* Search(LowLevelTransaction tx, Slice key, bool backward = false)
         {
             int numberOfEntries = NumberOfEntries;
             if (numberOfEntries == 0)
@@ -134,7 +134,11 @@ namespace Voron.Data.BTrees
                         lastMatch = Memory.Compare(keyPtr, pageKey, Math.Min(keySize, pageKeyLength));
                         LastMatch = lastMatch != 0 ? lastMatch : keySize - pageKeyLength;
 
-                        LastSearchPosition = LastMatch > 0 ? 1 : 0;
+                        if (backward)
+                            LastSearchPosition = LastMatch < 0 ? -1 : 0;
+                        else
+                            LastSearchPosition = LastMatch > 0 ? 1 : 0;
+                        
                         return LastSearchPosition == 0 ? node : null;
                     }
 
@@ -164,12 +168,19 @@ namespace Voron.Data.BTrees
                             high = position - 1;
                     }
 
-                    if (lastMatch > 0) // found entry less than key
+                    if (backward)
                     {
-                        position++; // move to the smallest entry larger than the key
+                        if (lastMatch < 0)  // found entry greater than key
+                            position--; // move to the largest entry smaller than the key
+                    }
+                    else
+                    {
+                        if (lastMatch > 0) // found entry less than key
+                            position++; // move to the smallest entry larger than the key
+
+                        Debug.Assert(position < ushort.MaxValue);
                     }
 
-                    Debug.Assert(position < ushort.MaxValue);
                     lastSearchPosition = position;
                     break;
                 }
@@ -193,7 +204,15 @@ namespace Voron.Data.BTrees
             LastMatch = lastMatch;
             LastSearchPosition = lastSearchPosition;
 
-            return lastSearchPosition >= numberOfEntries ? null : GetNode(lastSearchPosition);
+            if (backward)
+            {
+                if (lastSearchPosition <= -1)
+                    return null;
+            }
+            else if (lastSearchPosition >= numberOfEntries)
+                return null;
+
+            return GetNode(lastSearchPosition);
         }
 
         [DoesNotReturn]

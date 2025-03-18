@@ -231,6 +231,7 @@ class connectionStringAzureQueueStorageModel extends connectionStringModel {
                 EntraId: null,
                 Passwordless: null,
             },
+            AmazonSqsConnectionSettings: null,
         }, true, []);
     }
     
@@ -255,7 +256,8 @@ class connectionStringAzureQueueStorageModel extends connectionStringModel {
             Name: this.connectionStringName(),
             RabbitMqConnectionSettings: null,
             KafkaConnectionSettings: null,
-            AzureQueueStorageConnectionSettings: this.authenticationToDto()
+            AzureQueueStorageConnectionSettings: this.authenticationToDto(),
+            AmazonSqsConnectionSettings: null,
         };
     }
 

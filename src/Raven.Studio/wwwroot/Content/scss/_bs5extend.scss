@@ -431,12 +431,6 @@ select {
             .react-select__indicator {
                 padding: 0;
             }
-            [class$="-indicatorContainer"] {
-                color: var(--border-color-light);
-                &:hover {
-                    color: var(--border-color);
-                }
-            }
         }
         .react-select__menu {
             text-align: left;
@@ -454,6 +448,13 @@ select {
             border-top-right-radius: 0;
             border-bottom-right-radius: 0;
         }
+    }
+}
+
+[class$="-indicatorContainer"] {
+    color: var(--border-color-light) !important;
+    &:hover {
+        color: var(--border-color) !important;
     }
 }
 
@@ -621,11 +622,6 @@ $filtering-input-bg: $toggle-bg !default;
     padding-right: $gutter-sm;
 }
 
-.hover-filter {
-    filter: $hover-filter-var;
-    transition: $global-easing-in-out;
-}
-
 .list-group-item {
     &.disabled {
         cursor: unset;
@@ -659,4 +655,9 @@ $filtering-input-bg: $toggle-bg !default;
             opacity: 0.5;
         }
     }
+}
+
+.content-padding {
+    width: 100%;
+    height: 100%;
 }

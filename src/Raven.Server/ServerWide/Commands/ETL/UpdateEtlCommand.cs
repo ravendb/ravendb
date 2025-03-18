@@ -3,6 +3,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
@@ -133,6 +134,26 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.QueueEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddQueueEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+        }
+    }
+    
+    
+    public sealed class UpdateSnowflakeEtlCommand : UpdateEtlCommand<SnowflakeEtlConfiguration, SnowflakeConnectionString>
+    {
+        public UpdateSnowflakeEtlCommand()
+        {
+            // for deserialization
+        }
+
+        public UpdateSnowflakeEtlCommand(long taskId, SnowflakeEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Snowflake, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SnowflakeEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddSnowflakeEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
     }
 }

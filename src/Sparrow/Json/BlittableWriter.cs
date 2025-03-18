@@ -16,20 +16,40 @@ namespace Sparrow.Json
     {
         private readonly JsonOperationContext _context;
         private TWriter _unmanagedWriteBuffer;
+        
+        // A buffer allocated specifically for handling data compression tasks.
+        // This buffer temporarily stores compressed data during serialization processes where string or data compression
+        // is necessary to optimize memory usage and reduce data size.
         private AllocatedMemoryData _compressionBuffer;
+        
+        // A buffer used internally to store temporary data or intermediate results during write operations.
+        // This buffer supports tasks such as variable-size encoding and other short-term data manipulations
+        // that require efficient, reusable memory storage.
         private AllocatedMemoryData _innerBuffer;
+
+        // Tracks the current writing position within the unmanaged buffer.
+        // This field is important for maintaining proper offsets and managing data placement as data is written sequentially.
         private int _position;
+        
+        // Stores the size of the last data chunk written to the buffer.
+        // This value assists in determining buffer requirements and optimizing memory allocation during context resets
+        // or when reallocating buffers
         private int _lastSize;
+
+        // Tracks a unique identifier for the current document being written within the context.
+        // It ensures that the cached properties remain consistent and detects potential changes
+        // or resets in context-related properties during the write process.
+        // Initialized to -1 to indicate that it has not been set for the current session.
         private int _documentNumber = -1;
+        
         public int Position => _position;
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
 
         public unsafe BlittableJsonReaderObject CreateReader()
         {
-            byte* ptr;
-            int size;
-            _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
+            _unmanagedWriteBuffer.EnsureSingleChunk(out byte* ptr, out int size);
+            
             _lastSize = size;
             var reader = new BlittableJsonReaderObject(
                 ptr,
@@ -48,8 +68,16 @@ namespace Sparrow.Json
         {
             get
             {
-                ThrowIfCachedPropertiesWereReset();
-                return _context.CachedProperties;
+                if (_documentNumber == -1)
+                {
+                    _documentNumber = _context.CachedProperties.DocumentNumber;
+                    return _context.CachedProperties;
+                }
+
+                if (_documentNumber == _context.CachedProperties.DocumentNumber) 
+                    return _context.CachedProperties;
+
+                throw new InvalidOperationException($"The {_context.CachedProperties} were reset while building the document");
             }
         }
 
@@ -99,15 +127,13 @@ namespace Sparrow.Json
         public int WriteValue(double value)
         {
             var s = EnsureDecimalPlace(value, value.ToString("R", CultureInfo.InvariantCulture));
-            BlittableJsonToken token;
-            return WriteValue(s, out token);
+            return WriteValue(s, out BlittableJsonToken _);
         }
 
         public int WriteValue(decimal value)
         {
             var s = EnsureDecimalPlace(value, value.ToString("G", CultureInfo.InvariantCulture));
-            BlittableJsonToken token;
-            return WriteValue(s, out token);
+            return WriteValue(s, out BlittableJsonToken _);
         }
 
         public int WriteValue(float value)
@@ -168,8 +194,7 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Dispose();
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream(_lastSize);
             _position = 0;
-            if (_innerBuffer == null)
-                _innerBuffer = _context.GetMemory(32);
+            _innerBuffer ??= _context.GetMemory(32);
         }
 
         public WriteToken WriteObjectMetadata(FastList<AbstractBlittableJsonDocumentBuilder.PropertyTag> properties, long firstWrite, int maxPropId)
@@ -187,21 +212,15 @@ namespace Sparrow.Json
             _position += WriteVariableSizeInt(properties.Count);
 
             // Write object metadata
-            for (int i = 0; i < properties.Count; i++)
+            foreach (var sortedProperty in properties)
             {
-                var sortedProperty = properties[i];
-
                 WriteNumber(objectMetadataStart - sortedProperty.Position, positionSize);
                 WriteNumber(sortedProperty.Property.PropertyId, propertyIdSize);
                 _unmanagedWriteBuffer.WriteByte(sortedProperty.Type);
                 _position += positionSize + propertyIdSize + sizeof(byte);
             }
 
-            return new WriteToken
-            {
-                ValuePos = objectMetadataStart,
-                WrittenToken = objectToken
-            };
+            return new WriteToken(objectMetadataStart, objectToken);
         }
 
         public int WriteArrayMetadata(FastList<int> positions, FastList<BlittableJsonToken> types, ref BlittableJsonToken listToken)
@@ -432,9 +451,7 @@ namespace Sparrow.Json
             {
                 for (int i = count - 1; i >= count / 2; i--)
                 {
-                    var tmp = buffer[i];
-                    buffer[i] = buffer[count - 1 - i];
-                    buffer[count - 1 - i] = tmp;
+                    (buffer[i], buffer[count - 1 - i]) = (buffer[count - 1 - i], buffer[i]);
                 }
                 _unmanagedWriteBuffer.Write(buffer, count);
             }
@@ -690,6 +707,57 @@ namespace Sparrow.Json
             return startPos;
         }
 
+        public int WriteVector<T>(ReadOnlySpan<T> vector)
+            where T : unmanaged
+        {
+            BlittableVectorType GetVectorType()
+            {
+                var type = typeof(T);
+                if (type == typeof(sbyte))
+                    return BlittableVectorType.SByte;
+                if (type == typeof(short))
+                    return BlittableVectorType.Int16;
+                if (type == typeof(int))
+                    return BlittableVectorType.Int32;
+                if (type == typeof(long))
+                    return BlittableVectorType.Int64;
+                if (type == typeof(byte))
+                    return BlittableVectorType.Byte;
+                if (type == typeof(ushort))
+                    return BlittableVectorType.UInt16;
+                if (type == typeof(uint))
+                    return BlittableVectorType.UInt32;
+                if (type == typeof(ulong))
+                    return BlittableVectorType.UInt64;
+                if (type == typeof(float))
+                    return BlittableVectorType.Float;
+                if (type == typeof(double))
+                    return BlittableVectorType.Double;
+#if NET6_0_OR_GREATER
+                if (type == typeof(Half))
+                    return BlittableVectorType.Half;
+#endif
+                
+                throw new NotSupportedException($"Type {type.Name} is not supported in vectors.");
+            }
+            
+            var startPos = _position;
+            BlittableVectorType vectorType = GetVectorType();
+
+            // Prepare the header
+            BlittableVectorHeader header = new(vectorType, vector.Length);
+
+            // Write the header
+            _unmanagedWriteBuffer.Write(in header);
+            _position += Unsafe.SizeOf<BlittableVectorHeader>();
+
+            // Write the vector data
+            _unmanagedWriteBuffer.Write(vector);
+            _position += Unsafe.SizeOf<T>() * vector.Length;
+            
+            return startPos;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe int TryCompressValue(ref byte* buffer, ref int position, int size, ref BlittableJsonToken token, UsageMode mode, int? initialCompressedSize, int maxGoodCompressionSize)
         {
@@ -762,18 +830,6 @@ namespace Sparrow.Json
             }
 
             return _compressionBuffer.Address;
-        }
-
-        internal void ThrowIfCachedPropertiesWereReset()
-        {
-            if (_documentNumber == -1)
-            {
-                _documentNumber = _context.CachedProperties.DocumentNumber;
-            }
-            else if (_documentNumber != _context.CachedProperties.DocumentNumber)
-            {
-                throw new InvalidOperationException($"The {_context.CachedProperties} were reset while building the document");
-            }
         }
 
         public void Dispose()

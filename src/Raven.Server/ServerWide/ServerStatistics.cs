@@ -11,6 +11,7 @@ using Sparrow.Json;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.ServerWide
 {
@@ -117,7 +118,7 @@ namespace Raven.Server.ServerWide
             writer.WriteEndObject();
         }
 
-        internal void Load(TransactionContextPool contextPool, Logger logger)
+        internal void Load(TransactionContextPool contextPool, RavenLogger logger)
         {
             try
             {
@@ -148,7 +149,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        internal void Persist(TransactionContextPool contextPool, Logger logger)
+        internal void Persist(TransactionContextPool contextPool, RavenLogger logger)
         {
             if (contextPool == null)
                 return;
@@ -183,7 +184,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        internal void MaybePersist(TransactionContextPool contextPool, Logger logger)
+        internal void MaybePersist(TransactionContextPool contextPool, RavenLogger logger)
         {
             var now = SystemTime.UtcNow;
             if (now - _lastPersist <= PersistFrequency)

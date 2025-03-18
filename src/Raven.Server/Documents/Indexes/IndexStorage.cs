@@ -3,20 +3,26 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using Elastic.Clients.Elasticsearch.Mapping;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -46,7 +52,7 @@ namespace Raven.Server.Documents.Indexes
             public const string CompareExchangeReferenceCollectionPrefix = "@";
         }
 
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private readonly Index _index;
 
@@ -57,7 +63,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly TableSchema _errorsSchema = new TableSchema();
 
         private readonly Dictionary<string, CollectionName> _referencedCollections;
-
+        
         private StorageEnvironment _environment;
 
         private long _lastDatabaseEtagOnIndexCreation;
@@ -79,7 +85,7 @@ namespace Raven.Server.Documents.Indexes
             _index = index;
             _contextPool = contextPool;
             DocumentDatabase = database;
-            _logger = LoggingSource.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForIndex<IndexStorage>(index);
 
             var referencedCollections = index.GetReferencedCollections();
             if (referencedCollections != null)
@@ -188,8 +194,7 @@ namespace Raven.Server.Documents.Indexes
                     string configurationKey = nameof(SearchEngineType);
                     string configurationName = _index.Type.IsAuto() ? RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType) : RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType);
 
-                    SearchEngineType defaultEngineType =
-                        _index.Type.IsAuto() ? _index.Configuration.AutoIndexingEngineType : _index.Configuration.StaticIndexingEngineType;
+                    SearchEngineType defaultEngineType = IndexSearchEngineHelper.GetSearchEngineType(_index);
 
                     if (defaultEngineType == SearchEngineType.None)
                         throw new InvalidDataException($"Default search engine is {SearchEngineType.None}. Please set {configurationName}.");
@@ -912,8 +917,8 @@ namespace Raven.Server.Documents.Indexes
             if (SimulateIndexWriteException != null)
                 SimulateIndexWriteError(SimulateIndexWriteException);
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Writing last etag for '{_index.Name}'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Writing last etag for '{_index.Name}'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
             var statsTree = tx.InnerTransaction.CreateTree(tree);
             using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
@@ -958,8 +963,8 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe IndexFailureInformation UpdateStats(DateTime indexingTime, IndexingRunStats stats)
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Updating statistics for '{_index.Name}'. Stats: {stats}.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Updating statistics for '{_index.Name}'. Stats: {stats}.");
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -1205,6 +1210,79 @@ namespace Raven.Server.Documents.Indexes
                     fieldsTree.MultiAdd(IndexSchema.TimeSlice, fieldName);
             }
         }
+        
+        internal Dictionary<string, int> ReadVectorDimensions()
+        {
+            // (string FieldName, int VectorSizeInBytes)
+            Dictionary<string, int> container = new();
+
+            using (var tx = _environment.ReadTransaction())
+            {
+                var vectorDimensionsTree = tx.ReadTree(IndexSchema.VectorDimensionsTree);
+                
+                if (vectorDimensionsTree != null)
+                {
+                    using (var it = vectorDimensionsTree.Iterate(prefetch: false))
+                    {
+                        if (it.Seek(Slices.BeforeAllKeys))
+                        {
+                            do
+                            {
+                                container.Add(it.CurrentKey.ToString(), Convert.ToInt32(it.CreateReaderForCurrent().ToStringValue()));
+                            } while (it.MoveNext());
+                        }
+                    }
+                }
+            }
+
+            return container;
+        }
+
+        internal static void WriteVectorDimensions(RavenTransaction tx, Dictionary<string, int> vectorDimensionsToAdd)
+        {
+            var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.VectorDimensionsTree);
+            
+            foreach (var kvp in vectorDimensionsToAdd)
+                fieldsTree.Add(kvp.Key, kvp.Value.ToString());
+        }
+        
+        internal Dictionary<string, VectorEmbeddingType> ReadIndexEmbeddingType()
+        {
+            var embeddingTypeStorage = new Dictionary<string, VectorEmbeddingType>();
+            using (var tx = _environment.ReadTransaction())
+            {
+                var vectorEmbeddingTypeTree = tx.ReadTree(IndexSchema.VectorSourceEmbeddingType);
+                if (vectorEmbeddingTypeTree is null)
+                    return embeddingTypeStorage;
+
+                using (var it = vectorEmbeddingTypeTree.Iterate(prefetch: false))
+                {
+                    if (it.Seek(Slices.BeforeAllKeys))
+                    {
+                        do
+                        {
+                            var key = it.CurrentKey.ToString();
+                            var valueAsString = it.CreateReaderForCurrent().ToStringValue();
+                            var parsingResult = Enum.TryParse(valueAsString.AsSpan(), out VectorEmbeddingType currentEmbedding);
+                            PortableExceptions.ThrowIfNot<InvalidDataException>(parsingResult, $"Unknown embedding type: {valueAsString}.");
+                            
+                            embeddingTypeStorage.Add(key, currentEmbedding);
+                        } while (it.MoveNext());
+                    }
+                }
+
+            }
+
+            return embeddingTypeStorage;
+        }
+        
+        internal static void WriteIndexEmbeddingType(RavenTransaction tx, Dictionary<string, VectorEmbeddingType> vectorEmbeddingTypeToAdd)
+        {
+            var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.VectorSourceEmbeddingType);
+            
+            foreach (var kvp in vectorEmbeddingTypeToAdd)
+                fieldsTree.Add(kvp.Key, kvp.Value.ToString());
+        }
 
         internal sealed class IndexSchema
         {
@@ -1225,6 +1303,9 @@ namespace Raven.Server.Documents.Indexes
             public const string ReferencesForCompareExchange = "ReferencesForCompareExchange";
 
             public const string LastDocumentEtagOnIndexCreationTree = "LastDocumentEtagOnIndexCreation";
+
+            public const string VectorDimensionsTree = "VectorDimensions";
+            public const string VectorSourceEmbeddingType = "VectorSourceEmbeddingType";
 
             public static readonly Slice TypeSlice;
 

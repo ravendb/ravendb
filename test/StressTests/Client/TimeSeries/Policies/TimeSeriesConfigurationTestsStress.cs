@@ -238,7 +238,7 @@ namespace StressTests.Client.TimeSeries.Policies
                             break;
                     }
 
-                    await databaseA.TimeSeriesPolicyRunner.DoRetention();
+                    await databaseB.TimeSeriesPolicyRunner.DoRetention();
                 }
 
                 // run some rollups and retentions from the other database.

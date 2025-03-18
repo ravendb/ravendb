@@ -3,6 +3,7 @@ using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Config;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -10,6 +11,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents
 {
@@ -19,7 +21,7 @@ namespace Raven.Server.Documents
         internal static readonly string HugeDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.HugeDocuments}/{PerformanceHintSource}";
         private readonly object _addHintSyncObj = new object();
         private readonly SizeLimitedConcurrentDictionary<Tuple<string, DateTime>, long> _hugeDocs;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly long _maxWarnSize;
         private readonly DatabaseNotificationCenter _notificationCenter;
 
@@ -34,7 +36,7 @@ namespace Raven.Server.Documents
             _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
             _maxWarnSize = maxWarnSize;
             _hugeDocs = new SizeLimitedConcurrentDictionary<Tuple<string, DateTime>, long>(maxCollectionSize);
-            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<HugeDocuments>(notificationCenter.Database);
         }
 
         public void AddIfDocIsHuge(Document doc)

@@ -1,11 +1,11 @@
 import React, { ComponentProps, forwardRef } from "react";
 import ReactDatePicker from "react-datepicker";
-import { Input } from "reactstrap";
+import Form from "react-bootstrap/Form";
 import "./ReactDatepicker.scss";
 
-const DatePickerInput = forwardRef<HTMLInputElement, ComponentProps<typeof Input>>(
+const DatePickerInput = forwardRef<HTMLInputElement, ComponentProps<typeof Form.Control>>(
     function DatePickerInput(props, ref) {
-        return <Input innerRef={ref} {...props} />;
+        return <Form.Control ref={ref} {...props} />;
     }
 );
 

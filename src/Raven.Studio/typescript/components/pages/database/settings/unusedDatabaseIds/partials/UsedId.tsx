@@ -1,8 +1,8 @@
 ﻿import React from "react";
 import { Icon } from "components/common/Icon";
 import copyToClipboard from "common/copyToClipboard";
-import { Button } from "reactstrap";
 import { UsedIdData } from "components/pages/database/settings/unusedDatabaseIds/useUnusedDatabaseIds";
+import Button from "react-bootstrap/Button";
 
 interface UsedIdProps {
     usedIdData: UsedIdData;
@@ -16,7 +16,7 @@ export default function UsedId({ usedIdData }: UsedIdProps) {
             <Button
                 className="text-truncate rounded-pill"
                 title="Copy ID"
-                color="dark"
+                variant="dark"
                 onClick={() => copyToClipboard.copy(databaseId, `Copied ${databaseId} vector to clipboard`)}
             >
                 {databaseId}

@@ -18,7 +18,6 @@ using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Voron.Impl;
 
@@ -40,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             QueryBuilderFactories queryBuilderFactories,
             Transaction readTransaction,
             DocumentDatabase documentDatabase)
-            : base(index, queryBuilderFactories, LoggingSource.Instance.GetLogger<LuceneIndexFacetedReadOperation>(documentDatabase.Name))
+            : base(index, queryBuilderFactories, documentDatabase.Loggers.GetLogger<LuceneIndexFacetedReadOperation>())
         {
             try
             {
@@ -234,7 +233,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
         }
-        
+
         private static void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
             foreach (var kvp in aggregations)

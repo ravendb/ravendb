@@ -5,11 +5,13 @@ using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -34,7 +36,7 @@ namespace Raven.Server.NotificationCenter
         private bool _isCpuExhaustionWarningAdded = false;
 
         private Timer _indexingTimer;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly object _locker = new();
 
         internal TimeSpan MinUpdateInterval = TimeSpan.FromSeconds(15);
@@ -43,7 +45,7 @@ namespace Raven.Server.NotificationCenter
         {
             _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
 
-            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<Indexing>(_notificationCenter.Database);
         }
 
         public void AddWarning(string indexName, WarnIndexOutputsPerDocument.WarningDetails indexOutputsWarning)
@@ -255,7 +257,7 @@ namespace Raven.Server.NotificationCenter
         {
             return AlertRaised.Create(_notificationCenter.Database, $"Complex field in Corax auto index", $"We have detected a complex field in an auto index. " +
                     $"To avoid higher resources usage when processing JSON objects, the values of these fields will be replaced with 'JSON_VALUE'. " +
-                    $"Please consider querying on individual fields of that object or using a static index. Read more at: https://ravendb.net/l/OB9XW4/6.2", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
+                    $"Please consider querying on individual fields of that object or using a static index. Read more at: https://ravendb.net/l/OB9XW4/7.0", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
         }
 
         private AlertRaised GetCpuCreditsExhaustionAlert(CpuCreditsExhaustionWarning cpuCreditsExhaustionWarning)

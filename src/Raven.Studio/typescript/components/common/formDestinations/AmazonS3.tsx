@@ -1,9 +1,10 @@
-﻿import React from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+﻿import { useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { FormDestinations } from "./utils/formDestinationsTypes";
-import { Card, CardBody, Collapse, UncontrolledPopover, PopoverBody, Label, Badge } from "reactstrap";
-import { FormSwitch, FormInput, FormSelectCreatable } from "../Form";
+import Badge from "react-bootstrap/Badge";
+import Collapse from "react-bootstrap/Collapse";
+import Card from "react-bootstrap/Card";
+import { FormInput, FormSelectCreatable, FormSwitch } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
@@ -12,6 +13,8 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
 import { availableS3Regions } from "components/utils/common";
+import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
+import { FormLabel } from "components/common/Form";
 
 export default function AmazonS3() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -32,34 +35,34 @@ export default function AmazonS3() {
 
     return (
         <Card className="well">
-            <CardBody>
+            <Card.Body>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Amazon S3
                 </FormSwitch>
-                <Collapse isOpen={formValues.isEnabled} className="vstack gap-2 mt-2">
-                    <FormSwitch
-                        control={control}
-                        name={`${fieldBase}.config.isOverrideConfig`}
-                        className="ms-3 w-100"
-                        color="secondary"
-                    >
-                        Override configuration via external script
-                    </FormSwitch>
-                    {formValues.config.isOverrideConfig ? (
-                        <OverrideConfiguration fieldBase={fieldBase} />
-                    ) : (
-                        <>
-                            <div className="vstack gap-2">
-                                <FormSwitch
-                                    control={control}
-                                    name={getName("isUseCustomHost")}
-                                    className="w-100"
-                                    color="secondary"
-                                >
-                                    Use a custom S3 host
-                                </FormSwitch>
-                                {formValues.isUseCustomHost && (
-                                    <>
+                <Collapse in={formValues.isEnabled} className="vstack gap-2 mt-2">
+                    <div>
+                        <FormSwitch
+                            control={control}
+                            name={`${fieldBase}.config.isOverrideConfig`}
+                            className="ms-3 w-100"
+                            color="secondary"
+                        >
+                            Override configuration via external script
+                        </FormSwitch>
+                        {formValues.config.isOverrideConfig ? (
+                            <OverrideConfiguration fieldBase={fieldBase} />
+                        ) : (
+                            <>
+                                <div className="vstack gap-2">
+                                    <FormSwitch
+                                        control={control}
+                                        name={getName("isUseCustomHost")}
+                                        className="w-100"
+                                        color="secondary"
+                                    >
+                                        Use a custom S3 host
+                                    </FormSwitch>
+                                    {formValues.isUseCustomHost && (
                                         <FormSwitch
                                             control={control}
                                             name={getName("forcePathStyle")}
@@ -68,160 +71,157 @@ export default function AmazonS3() {
                                         >
                                             <span className="d-flex gap-1 align-items-center">
                                                 Force path style
-                                                <Icon icon="info" color="info" id="forcePathStyleTooltip" />
+                                                <PopoverWithHoverWrapper
+                                                    message={
+                                                        <>
+                                                            Whether to force path style URLs for S3 objects (e.g.,{" "}
+                                                            <code>
+                                                                https://{`{Server-URL}`}/{`{Bucket-Name}`}
+                                                            </code>{" "}
+                                                            instead of{" "}
+                                                            <code>
+                                                                {`{https://`}
+                                                                {`{Bucket-Name}`}.{`{Server-URL}`}
+                                                                {`}`}
+                                                            </code>
+                                                            )
+                                                        </>
+                                                    }
+                                                >
+                                                    <Icon icon="info" color="info" />
+                                                </PopoverWithHoverWrapper>
                                             </span>
                                         </FormSwitch>
-                                        <UncontrolledPopover
-                                            target="forcePathStyleTooltip"
-                                            trigger="hover"
-                                            placement="top"
-                                            className="bs5"
-                                        >
-                                            <PopoverBody>
-                                                Whether to force path style URLs for S3 objects (e.g.,{" "}
-                                                <code>
-                                                    https://{`{Server-URL}`}/{`{Bucket-Name}`}
-                                                </code>{" "}
-                                                instead of{" "}
-                                                <code>
-                                                    {`{https://`}
-                                                    {`{Bucket-Name}`}.{`{Server-URL}`}
-                                                    {`}`}
-                                                </code>
-                                                )
-                                            </PopoverBody>
-                                        </UncontrolledPopover>
-                                    </>
-                                )}
-                            </div>
-                            <div className="vstack gap-3 mt-2">
-                                {formValues.isUseCustomHost && (
+                                    )}
+                                </div>
+                                <div className="vstack gap-3 mt-2">
+                                    {formValues.isUseCustomHost && (
+                                        <div className="mb-2">
+                                            <FormLabel>Custom server URL</FormLabel>
+                                            <FormInput
+                                                control={control}
+                                                name={getName("customServerUrl")}
+                                                placeholder="Enter a custom server URL"
+                                                type="text"
+                                                autoComplete="off"
+                                            />
+                                        </div>
+                                    )}
                                     <div className="mb-2">
-                                        <Label>Custom server URL</Label>
+                                        <FormLabel className="d-flex align-items-center gap-1">
+                                            Bucket name
+                                            <PopoverWithHoverWrapper
+                                                message={
+                                                    <>
+                                                        Bucket should be created manually in order for this OLAP to
+                                                        work. You can use the{" "}
+                                                        <span className="text-info">Test credentials</span> button to
+                                                        verify its existence.
+                                                    </>
+                                                }
+                                            >
+                                                <Icon icon="info" color="info" margin="m-0" />
+                                            </PopoverWithHoverWrapper>
+                                            {asyncTest.result?.Success ? (
+                                                <Badge bg="success" pill>
+                                                    <Icon icon="check" />
+                                                    Successfully connected
+                                                </Badge>
+                                            ) : asyncTest.result?.Error ? (
+                                                <Badge bg="danger" pill>
+                                                    <Icon icon="warning" />
+                                                    Failed connection
+                                                </Badge>
+                                            ) : null}
+                                        </FormLabel>
                                         <FormInput
                                             control={control}
-                                            name={getName("customServerUrl")}
-                                            placeholder="Enter a custom server URL"
+                                            name={getName("bucketName")}
+                                            placeholder="Enter a bucket name"
                                             type="text"
                                             autoComplete="off"
                                         />
                                     </div>
-                                )}
-                                <div className="mb-2">
-                                    <Label className="d-flex align-items-center gap-1">
-                                        Bucket name
-                                        <Icon icon="info" color="info" id="bucketNameTooltip" margin="m-0" />
-                                        {asyncTest.result?.Success ? (
-                                            <Badge color="success" pill>
-                                                <Icon icon="check" />
-                                                Successfully connected
-                                            </Badge>
-                                        ) : asyncTest.result?.Error ? (
-                                            <Badge color="danger" pill>
-                                                <Icon icon="warning" />
-                                                Failed connection
-                                            </Badge>
-                                        ) : null}
-                                    </Label>
-                                    <UncontrolledPopover
-                                        target="bucketNameTooltip"
-                                        trigger="hover"
-                                        placement="top"
-                                        className="bs5"
-                                    >
-                                        <PopoverBody>
-                                            Bucket should be created manually in order for this OLAP to work. You can
-                                            use the <span className="text-info">Test credentials</span> button to verify
-                                            its existence.
-                                        </PopoverBody>
-                                    </UncontrolledPopover>
-                                    <FormInput
-                                        control={control}
-                                        name={getName("bucketName")}
-                                        placeholder="Enter a bucket name"
-                                        type="text"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div className="mb-2">
-                                    <Label>
-                                        Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                    </Label>
-                                    <FormInput
-                                        control={control}
-                                        name={getName("remoteFolderName")}
-                                        placeholder="Enter a remote folder name"
-                                        type="text"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div className="mb-2">
-                                    <Label>
-                                        Region{" "}
-                                        {formValues.isUseCustomHost && (
-                                            <small className="text-muted fw-light">(optional)</small>
-                                        )}
-                                    </Label>
-                                    {formValues.isUseCustomHost ? (
+                                    <div className="mb-2">
+                                        <FormLabel>
+                                            Remote folder name <small className="text-muted fw-light">(optional)</small>
+                                        </FormLabel>
                                         <FormInput
-                                            type="text"
                                             control={control}
-                                            name={getName("awsRegionName")}
-                                            placeholder="Enter an AWS region"
+                                            name={getName("remoteFolderName")}
+                                            placeholder="Enter a remote folder name"
+                                            type="text"
                                             autoComplete="off"
                                         />
-                                    ) : (
-                                        <FormSelectCreatable
-                                            name={getName("awsRegionName")}
+                                    </div>
+                                    <div className="mb-2">
+                                        <FormLabel>
+                                            Region{" "}
+                                            {formValues.isUseCustomHost && (
+                                                <small className="text-muted fw-light">(optional)</small>
+                                            )}
+                                        </FormLabel>
+                                        {formValues.isUseCustomHost ? (
+                                            <FormInput
+                                                type="text"
+                                                control={control}
+                                                name={getName("awsRegionName")}
+                                                placeholder="Enter an AWS region"
+                                                autoComplete="off"
+                                            />
+                                        ) : (
+                                            <FormSelectCreatable
+                                                name={getName("awsRegionName")}
+                                                control={control}
+                                                placeholder="Select an AWS region (or enter new one)"
+                                                options={availableS3Regions}
+                                            />
+                                        )}
+                                    </div>
+                                    <div className="mb-2">
+                                        <FormLabel>Access key</FormLabel>
+                                        <FormInput
+                                            name={getName("awsAccessKey")}
                                             control={control}
-                                            placeholder="Select an AWS region (or enter new one)"
-                                            options={availableS3Regions}
+                                            placeholder="Enter an access key"
+                                            type="text"
+                                            autoComplete="off"
                                         />
-                                    )}
+                                    </div>
+                                    <div className="mb-2">
+                                        <FormLabel>Secret key</FormLabel>
+                                        <FormInput
+                                            name={getName("awsSecretKey")}
+                                            control={control}
+                                            placeholder="Enter a secret key"
+                                            type="password"
+                                            passwordPreview
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                    <div className="d-flex justify-content-end">
+                                        <FlexGrow />
+                                        <ButtonWithSpinner
+                                            type="button"
+                                            variant="secondary"
+                                            onClick={asyncTest.execute}
+                                            isSpinning={asyncTest.loading}
+                                            icon="rocket"
+                                        >
+                                            Test credentials
+                                        </ButtonWithSpinner>
+                                    </div>
                                 </div>
-                                <div className="mb-2">
-                                    <Label>Access key</Label>
-                                    <FormInput
-                                        name={getName("awsAccessKey")}
-                                        control={control}
-                                        placeholder="Enter an access key"
-                                        type="text"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div className="mb-2">
-                                    <Label>Secret key</Label>
-                                    <FormInput
-                                        name={getName("awsSecretKey")}
-                                        control={control}
-                                        placeholder="Enter a secret key"
-                                        type="password"
-                                        passwordPreview
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div className="d-flex justify-content-end">
-                                    <FlexGrow />
-                                    <ButtonWithSpinner
-                                        type="button"
-                                        color="secondary"
-                                        onClick={asyncTest.execute}
-                                        isSpinning={asyncTest.loading}
-                                        icon="rocket"
-                                    >
-                                        Test credentials
-                                    </ButtonWithSpinner>
-                                </div>
-                            </div>
-                            {asyncTest.result?.Error && (
-                                <div className="mt-3">
-                                    <ConnectionTestResult testResult={asyncTest.result} />
-                                </div>
-                            )}
-                        </>
-                    )}
+                                {asyncTest.result?.Error && (
+                                    <div className="mt-3">
+                                        <ConnectionTestResult testResult={asyncTest.result} />
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </Collapse>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

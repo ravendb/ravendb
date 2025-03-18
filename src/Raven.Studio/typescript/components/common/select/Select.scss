@@ -1,4 +1,5 @@
 @use "Content/scss/bs5variables";
+@use "Content/scss/sizes";
 
 .input-group {
     .input-group-text ~ div > .react-select-container {
@@ -26,10 +27,10 @@
                 color: bs5variables.$text-color-var;
             }
             .react-select__multi-value {
-                background-color: bs5variables.$panel-bg-2-var;
+                background-color: bs5variables.$panel-header-bg-var;
 
                 .react-select__multi-value__remove {
-                    background-color: bs5variables.$panel-bg-2-var;
+                    background-color: bs5variables.$panel-header-bg-var;
 
                     &:hover {
                         background-color: bs5variables.$panel-bg-3-var;
@@ -56,25 +57,30 @@
 
     .react-select__menu {
         border: 1px solid bs5variables.$border-color-light-var;
-        border-radius: bs5variables.$border-radius;
-        background-color: bs5variables.$panel-bg-2-var;
+        border-radius: bs5variables.$border-radius-md;
+        background-color: bs5variables.$panel-bg-1-var;
         z-index: bs5variables.$zindex-dropdown;
+        width: fit-content;
 
         .react-select__menu-list {
+            min-width: 160px;
+            padding: sizes.$gutter-xxs;
+
             .react-select__option {
-                padding: bs5variables.$gutter-xxs bs5variables.$gutter-xs;
+                padding: bs5variables.$gutter-xxs;
                 background-color: transparent;
+                border-radius: sizes.$border-radius;
                 color: bs5variables.$text-color-var;
                 cursor: pointer;
 
                 &:hover {
-                    background-color: bs5variables.$panel-bg-3-var;
+                    background-color: bs5variables.$panel-bg-2-var;
                     color: bs5variables.$text-emphasis-var;
                 }
             }
 
             .react-select__option--is-focused {
-                background-color: bs5variables.$panel-bg-3-var;
+                background-color: bs5variables.$panel-bg-2-var;
                 color: bs5variables.$text-emphasis-var;
             }
 
@@ -85,7 +91,7 @@
             }
 
             hr {
-                margin: 0 bs5variables.$gutter-xxs;
+                margin: bs5variables.$gutter-xxs;
             }
         }
     }

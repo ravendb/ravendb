@@ -242,7 +242,7 @@
                         <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
                             <i class="icon-admin-logs"></i><span>Fields</span>
                             <span class="label label-primary margin-left margin-left-sm"
-                                  data-bind="text: editedIndex().numberOfFields() + editedIndex().numberOfCompoundFields() + !!editedIndex().defaultFieldOptions() || undefined"></span>
+                                  data-bind="text: editedIndex().numberOfFields() + editedIndex().numberOfCompoundFields() + editedIndex().numberOfVectorFields() + !!editedIndex().defaultFieldOptions() || undefined"></span>
                         </a>
                     </li>
                     <li role="presentation" id="configurationTab">
@@ -277,23 +277,25 @@
                 </ul>
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane fade in active" id="fields">
-                        <div class="margin-bottom flex-horizontal">
-                            <button class="btn btn-default" data-bind="click: addField, requiredAccess: 'DatabaseReadWrite'">
-                                <i class="icon-plus"></i><span>Add field</span>
+                        <div class="margin-bottom-sm flex-horizontal gap-1">
+                            <button class="btn btn-default" title="Add field" data-bind="click: addField, requiredAccess: 'DatabaseReadWrite'">
+                                <i class="icon-plus"></i>
+                                <span>Add field</span>
                             </button>
                             <div class="js-add-compound-field-btn">
-                                <button class="btn btn-default margin-left-xs" data-bind="click: addCompoundField, enable: canUseCompoundFields, requiredAccess: 'DatabaseReadWrite'">
-                                    <i class="icon-plus"></i><span>Add compound field</span>
+                                <button class="btn btn-default" title="Add compound field" data-bind="click: addCompoundField, enable: canUseCoraxSearchEngine, requiredAccess: 'DatabaseReadWrite'">
+                                    <i class="icon-plus"></i>
+                                    <span>Add compound field</span>
                                 </button>
                             </div>
-                            <button class="btn btn-info margin-left-xs" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions(), requiredAccess: 'DatabaseReadWrite'">
+                            <div class="flex-grow"></div>
+                            <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions(), requiredAccess: 'DatabaseReadWrite'">
                                 <i class="icon-plus"></i><span>Add default field options</span>
                             </button>
-                            
-                            <span class="has-error margin-left margin-left-sm" data-bind="visible: editedIndex().hasDuplicateFieldsNames()">
+                        </div>
+                        <span class="has-error" data-bind="visible: editedIndex().hasDuplicateFieldsNames()">
                                 <span class="help-block"><i class="icon-warning"></i> Fields contain duplicate names</span>
                             </span>
-                        </div>
                         <div class="panel panel-info" data-bind="with: editedIndex().defaultFieldOptions">
                             <div data-bind="template: { name: 'field-template'}"></div>
                         </div>
@@ -318,15 +320,14 @@
                                 <div data-bind="template: { name: 'compound-field-template'}"></div>
                             </div>
                         </div>
-                        
-                        <div class="text-center text-muted" data-bind="visible: !editedIndex().numberOfFields() && !editedIndex().numberOfCompoundFields() && !editedIndex().defaultFieldOptions()">
+                        <div class="text-center text-muted" data-bind="visible: !editedIndex().numberOfFields() && !editedIndex().numberOfCompoundFields() && !editedIndex().numberOfVectorFields() && !editedIndex().defaultFieldOptions()">
                             <i class="icon-lg icon-empty-set"></i>
                             <h2 class="margin-top margin-top-sm">No fields added</h2>
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="configure">
                         <div class="margin-bottom">
-                            <button type="button" data-bind="click: addConfigurationOption, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info">
+                            <button type="button" data-bind="click: addConfigurationOption, requiredAccess: 'DatabaseReadWrite'" class="btn btn-default">
                                 <i class="icon-plus"></i>
                                 <span>Add customized indexing configuration</span>
                             </button>
@@ -471,8 +472,8 @@
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
-                        <div class="margin-bottom">
-                            <button type="button" data-bind="click: addAssembly, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info">
+                        <div class="margin-bottom-sm">
+                            <button type="button" data-bind="click: addAssembly, requiredAccess: 'DatabaseReadWrite'" class="btn btn-default">
                                 <i class="icon-plus"></i> <span>Add Assembly</span>
                             </button>
                             <a href="#" data-bind="click: additionalAssemblySyntaxHelp" class="margin-left margin-left-sm"><small>Syntax <i class="icon-help"></i></small></a>
@@ -825,6 +826,7 @@
         <span class="item" data-bind="css: { active : hasSearch}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Search</span></span>
         <span class="item" data-bind="css: { active : hasHighlighting}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Highlighting</span></span>
         <span class="item" data-bind="css: { active : hasExact}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Exact</span></span>
+        <span class="item" data-bind="css: { active : hasVector}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Vector Search</span></span>
     </div>
     <div class="indexing-options" data-bind="visible: isSpatial">
         <span class="item active"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Spatial</span></span>
@@ -886,14 +888,28 @@
                 </div>
             </div>
             <div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right margin-bottom">
-                <button class="btn btn-default" data-bind="css: { 'active': showAdvancedOptions() }, click: toggleAdvancedOptions">
+                <div class="js-add-vector-field-btn" style="display: inline-block;">
+                    <button class="btn btn-default"
+                            data-bind="css: { 'active': hasVectorOptions() },
+                                       visible: !isDefaultOptions(),
+                                       click: toggleVectorFields,
+                                       enable: $parent.canUseCoraxSearchEngine() && !isDefaultOptions(),
+                                       attr: { title: hasVectorOptions() ? 'Click to switch back to regular field configuration' : 'Click to set properties for a vector field' }">
+                        Configure Vector Field
+                    </button>
+
+                </div>
+                <button class="btn btn-default" data-bind="css: { 'active': showAdvancedOptions() }, visible: !hasVectorOptions(), click: toggleAdvancedOptions">
                     <i class="icon-settings"></i><span>Advanced</span>
                 </button>
                 <button class="btn btn-danger" title="Remove this field from the index" data-bind="click: _.partial($root.removeField, $data)">
                     <i class="icon-trash"></i>
                 </button>
             </div>
-            <div class="col-xs-12 col-sm-12 col-xl-7">
+
+            <div data-bind="template: { name: 'vector-field-template', data: vector()}, visible: hasVectorOptions()"></div>
+
+            <div class="col-xs-12 col-sm-12 col-xl-7" data-bind="visible: !hasVectorOptions()">
                 <div class="properties-container">
                     <div class="properties-item">
                         <span class="properties-label">Store
@@ -1113,6 +1129,65 @@
     </div>
 </script>
 
+<script type="text/html" id="vector-field-template">
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-xs-12 col-sm-12 col-xl-7">
+                <div class="properties-container">
+                    <div class="properties-item" data-bind="validationElement: dimensions">
+                        <span class="properties-label">Dimensions</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" placeholder="Number of dimensions" data-bind="textInput: dimensions" type="number" />
+                        </div>
+                    </div>
+                    <div class="properties-item" data-bind="validationElement: numberOfCandidatesForIndexing">
+                        <span class="properties-label">Candidates for indexing</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" placeholder="Number of candidates" data-bind="textInput: numberOfCandidatesForIndexing" type="number" />
+                        </div>
+                    </div>
+                    <div class="properties-item" data-bind="validationElement: numberOfEdges">
+                        <span class="properties-label">Edges</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" placeholder="Number of edges" data-bind="textInput: numberOfEdges" type="number" />
+                        </div>
+                    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Destination embedding type</span>
+                        <div class="btn-group properties-value" data-bind="validationElement: destinationEmbeddingType">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
+                                    aria-expanded="false">
+                                <span data-bind="text: destinationEmbeddingType"></span> <i
+                                class="caret"></i>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: destinationEmbeddingTypes">
+                                <li><a href="#"
+                                       data-bind="text: $data, click: $parent.destinationEmbeddingType.bind($parent, $data)"></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Source embedding type</span>
+                        <div class="btn-group properties-value" data-bind="validationElement: sourceEmbeddingType">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
+                                    aria-expanded="false">
+                                <span data-bind="text: sourceEmbeddingType"></span> <i
+                                class="caret"></i>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: sourceEmbeddingTypes">
+                                <li><a href="#"
+                                       data-bind="text: $data, click: $parent.sourceEmbeddingType.bind($parent, $data)"></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
 <script type="text/html" id="index-history-dialog">
     <button class="btn btn-default dropdown-toggle" type="button" id="dropdownIndexHistory" data-toggle="dropdown"
             data-bind="click: indexHistoryButtonHandler, attr: { title: isEditingExistingIndex() ? 'View this index history' : 'View the history of the index you cloned from' }, visible: !indexesToDeleteAfterMerge().length">
@@ -1126,7 +1201,7 @@
                 <div class="history-list-container margin-left margin-left-sm">
                     <ul class="history-list" data-bind="foreach: indexHistory">
                         <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewIndex },
-                                       attr: { 'data-original-title': $parent.getTimeTooltip($data.CreatedAt, true) }"
+                                       attr: { 'data-original-title': $parent.getTimeTooltip(CreatedAt, true) }"
                             data-placement="bottom" data-toggle="tooltip" data-animation="true">
                             <a href="#" class="history-link close-panel" data-bind="click: $parent.useIndexRevisionItem.bind($parent, $data)">
                                 <span class="created-at" data-bind="text: $parent.getLocalTime($data.CreatedAt)"></span>

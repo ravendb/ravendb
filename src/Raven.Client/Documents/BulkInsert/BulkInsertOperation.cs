@@ -144,7 +144,7 @@ namespace Raven.Client.Documents.BulkInsert
             if (string.IsNullOrWhiteSpace(database))
                 ThrowNoDatabase();
 
-            CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
+            CompressionLevel = options?.CompressionLevel ?? BulkInsertOptions.DefaultCompressionLevel;
             _options = options ?? new BulkInsertOptions();
             _database = database;
             _token = token;

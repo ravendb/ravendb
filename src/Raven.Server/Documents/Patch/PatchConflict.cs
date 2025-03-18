@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -14,11 +16,11 @@ namespace Raven.Server.Documents.Patch
         private readonly DocumentConflict _fstDocumentConflict;
         private readonly bool _hasTombstone;
         private static readonly string TombstoneResolverValue = Guid.NewGuid().ToString();
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public PatchConflict(DocumentDatabase database, IReadOnlyList<DocumentConflict> docs)
         {
-            _logger = LoggingSource.Instance.GetLogger<PatchConflict>(database.Name);
+            _logger = database.Loggers.GetLogger<PatchConflict>();
             _database = database;
 
             foreach (var doc in docs)

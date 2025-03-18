@@ -17,6 +17,7 @@ using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Web.System
 {
@@ -50,7 +51,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database,
+        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, RavenLogger log, string database,
             NodeConnectionTestResult result, CancellationToken token = default)
         {
             List<string> negLogs = new();

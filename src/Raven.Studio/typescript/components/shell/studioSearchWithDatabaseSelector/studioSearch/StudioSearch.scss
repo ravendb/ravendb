@@ -45,6 +45,10 @@
             left: sizes.$gutter-xs;
             pointer-events: none;
         }
+
+        &:after {
+            display: none !important;
+        }
     }
 
     &__dropdown-item {
@@ -127,6 +131,7 @@
                 font-weight: bs5variables.$font-weight-bold !important;
                 @include make-icon-color(document, colors.$color-4, colors.$color-4);
                 @include make-icon-color(documents, colors.$color-4, colors.$color-4);
+                @include make-icon-color(revisions, colors.$color-3-1, colors.$color-3-1);
                 @include make-icon-color(index, colors.$color-4-3, colors.$color-4-3);
                 @include make-icon-color(tasks, colors.$color-5-3, colors.$color-5-3);
                 @include make-icon-color(settings, colors.$color-2-1, colors.$color-2-1);

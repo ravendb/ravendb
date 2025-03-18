@@ -1,4 +1,7 @@
-﻿import { Button, Col, Input, Row, Table } from "reactstrap";
+﻿import Table from "react-bootstrap/Table";
+import Form from "react-bootstrap/Form";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/toggles/RadioToggle";
@@ -7,6 +10,7 @@ import { aboutPageUrls } from "components/pages/resources/about/partials/common"
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "hooks/useRavenLink";
+import Button from "react-bootstrap/Button";
 
 export function LicenseDetails() {
     const licenseId = useAppSelector(licenseSelectors.statusValue("Id"));
@@ -34,7 +38,7 @@ export function LicenseDetails() {
                             Applied
                         </h3>
                         <Button
-                            color="success"
+                            variant="success"
                             className="px-4 rounded-pill"
                             size="lg"
                             href={aboutPageUrls.getLicense}
@@ -119,7 +123,7 @@ function LicenseTable(props: LicenseTableProps) {
         <>
             <div className="px-4 pb-4">
                 <div className="clearable-input">
-                    <Input
+                    <Form.Control
                         type="text"
                         accessKey="/"
                         placeholder="Filter: e.g. ETL"
@@ -130,7 +134,7 @@ function LicenseTable(props: LicenseTableProps) {
                     />
                     {searchText && (
                         <div className="clear-button">
-                            <Button color="secondary" size="sm" onClick={() => onSearchTextChange("")}>
+                            <Button variant="secondary" size="sm" onClick={() => onSearchTextChange("")}>
                                 <Icon icon="clear" margin="m-0" />
                             </Button>
                         </div>
@@ -162,7 +166,7 @@ function LicenseTable(props: LicenseTableProps) {
                                         <th></th>
                                         <th colSpan={columns.length - 2} className="px-3">
                                             <Button
-                                                color="primary"
+                                                variant="primary"
                                                 className="w-100 rounded-pill"
                                                 onClick={upgradeLicenseBtnHandler}
                                             >
@@ -178,7 +182,7 @@ function LicenseTable(props: LicenseTableProps) {
                                         <th className={classNames({ "bg-current": columns.length !== 4 })}></th>
                                         <th colSpan={columns.length < 4 ? columns.length - 1 : 2} className="px-3">
                                             <Button
-                                                color="primary"
+                                                variant="primary"
                                                 className="w-100 rounded-pill"
                                                 onClick={upgradeLicenseBtnHandler}
                                             >
@@ -786,6 +790,15 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "HasSqlEtl",
             },
             {
+                name: "Snowflake ETL",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                fieldInLicense: "HasSnowflakeEtl",
+            },
+            {
                 name: "OLAP ETL",
                 agpl: { value: false },
                 community: { value: false },
@@ -841,6 +854,15 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "ETL to Azure Queue Storage",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                fieldInLicense: "HasQueueEtl",
+            },
+            {
+                name: "ETL to Amazon SQS",
                 agpl: { value: false },
                 community: { value: false },
                 professional: { value: false },

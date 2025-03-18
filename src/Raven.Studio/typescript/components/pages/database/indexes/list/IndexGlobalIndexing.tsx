@@ -1,11 +1,12 @@
 ﻿import { Icon } from "components/common/Icon";
 import React from "react";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 export default function IndexGlobalIndexing() {
     return (
         <div className="pull-right" id="toggleIndexing" data-bind="requiredAccess: 'DatabaseReadWrite'">
             <Button
+                variant="secondary"
                 className="disable-indexing"
                 title="Pause indexing process for ALL indexes until restart - Local node"
                 data-bind="click: stopIndexing, visible: $root.globalIndexingStatus() !== 'Paused', 
@@ -16,7 +17,7 @@ export default function IndexGlobalIndexing() {
                 Pause indexing until restart - Local node
             </Button>
             <Button
-                color="success"
+                variant="success"
                 className="enable-indexing"
                 title="Resume indexing process"
                 data-bind="click: startIndexing, visible: $root.globalIndexingStatus() === 'Paused', enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }"

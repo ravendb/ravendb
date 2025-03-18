@@ -26,6 +26,7 @@ interface DefaultConnectionStringsProps {
     databaseAccess: databaseAccessLevel;
     hasRavenEtl: boolean;
     hasSqlEtl: boolean;
+    hasSnowflakeEtl: boolean;
     hasOlapEtl: boolean;
     hasElasticSearchEtl: boolean;
     hasQueueEtl: boolean;
@@ -66,6 +67,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
             Type: props.licenseType,
             HasRavenEtl: props.hasRavenEtl,
             HasSqlEtl: props.hasSqlEtl,
+            HasSnowflakeEtl: props.hasSnowflakeEtl,
             HasOlapEtl: props.hasOlapEtl,
             HasElasticSearchEtl: props.hasElasticSearchEtl,
             HasQueueEtl: props.hasQueueEtl,
@@ -81,6 +83,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
         databaseAccess: "DatabaseAdmin",
         hasRavenEtl: true,
         hasSqlEtl: true,
+        hasSnowflakeEtl: true,
         hasOlapEtl: true,
         hasElasticSearchEtl: true,
         hasQueueEtl: true,
@@ -97,17 +100,21 @@ function mockTestResults(isSuccess: boolean) {
     if (isSuccess) {
         tasksService.withTestClusterNodeConnection();
         tasksService.withTestSqlConnectionString();
+        tasksService.withTestSnowflakeConnectionString();
         tasksService.withTestKafkaServerConnection();
         tasksService.withTestRabbitMqServerConnection();
         tasksService.withTestAzureQueueStorageServerConnection();
+        tasksService.withTestAmazonSqsServerConnection();
         tasksService.withTestElasticSearchNodeConnection();
         manageServerService.withTestPeriodicBackupCredentials();
     } else {
         tasksService.withTestClusterNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
         tasksService.withTestSqlConnectionString(SharedStubs.nodeConnectionTestErrorResult());
+        tasksService.withTestSnowflakeConnectionString(SharedStubs.nodeConnectionTestErrorResult());
         tasksService.withTestKafkaServerConnection(SharedStubs.nodeConnectionTestErrorResult());
         tasksService.withTestRabbitMqServerConnection(SharedStubs.nodeConnectionTestErrorResult());
         tasksService.withTestAzureQueueStorageServerConnection(SharedStubs.nodeConnectionTestErrorResult());
+        tasksService.withTestAmazonSqsServerConnection(SharedStubs.nodeConnectionTestErrorResult());
         tasksService.withTestElasticSearchNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
         manageServerService.withTestPeriodicBackupCredentials(SharedStubs.nodeConnectionTestErrorResult());
     }

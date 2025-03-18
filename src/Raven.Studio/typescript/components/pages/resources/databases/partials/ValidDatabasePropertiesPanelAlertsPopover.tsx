@@ -1,6 +1,6 @@
 import React from "react";
 import { ValidDatabasePropertiesPanelPopoverProps } from "./ValidDatabasePropertiesPanel";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 
 export default function ValidDatabasePropertiesPanelAlertsPopover({
@@ -28,7 +28,7 @@ export default function ValidDatabasePropertiesPanelAlertsPopover({
                             <Button
                                 type="button"
                                 size="xs"
-                                color="warning"
+                                variant="warning"
                                 className="rounded-pill"
                                 onClick={openNotificationCenter}
                             >
@@ -59,7 +59,7 @@ export default function ValidDatabasePropertiesPanelAlertsPopover({
                                     <strong>{x.alerts}</strong> {x.alerts === 1 ? "alert" : "alerts"}
                                 </span>
                                 <a href={getServerNodeUrl(x.nodeTag)} className="no-decor" target="_blank">
-                                    <Button type="button" size="xs" color="node" className="rounded-pill">
+                                    <Button type="button" size="xs" variant="node" className="rounded-pill">
                                         <Icon icon="newtab" />
                                         Open node
                                     </Button>

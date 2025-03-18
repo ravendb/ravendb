@@ -703,7 +703,7 @@ namespace Voron.Data.PostingLists
             // blog post explaining this
             // https://ayende.com/blog/200065-B/optimizing-a-three-way-merge?key=67d6f65d63ba4fb79d31dfc49ae5aa1d
 
-            // The idea here is that we can do all of the process with no branches at all and make this 
+            // The idea here is that we can do all the process with no branches at all and make this 
             // easily predictable to the CPU
 
             // Here we rely on the fact that the removals has been set with 1 at the bottom bit
@@ -728,6 +728,49 @@ namespace Voron.Data.PostingLists
             }
 
             list.Count = (int)(outputBufferPtr - list.RawItems + 1);
+        }
+
+        private static ReadOnlySpan<int> _modificationsAndRemoveTable => [+1, 0, +1, -1];
+
+        //The method is used to prepare final list that should be stored in the posting list.
+        //It should:
+        // - Filter updates (sequence: [X, X, X | 1] ) => [X] )
+        // - Filter removals (sequence: [X, X | 1] => [] )
+        // - Addition (sequence: [X] => [X] )
+        public static void SortModificationsAndRemoveDuplicates(ref ContextBoundNativeList<long> list)
+        {
+            if (list.Count <= 1)
+                return;
+
+            // Sort so that additions (LSB=0) come before any corresponding removals (LSB=1).
+            list.Sort();
+
+            long* ptr = list.RawItems;
+            long* outPtr = ptr;
+            long* endPtr = ptr + list.Count;
+
+            // Process each element starting from the second one.
+            while (++ptr < endPtr)
+            {
+                // Preemptively copy the current element to outPtr + 1. 
+                // The redundant write is acceptable in this loop.
+                *(outPtr + 1) = *ptr;
+
+                // Build a small 2-bit key
+                // 1x if this element is a removal, else 0x
+                // x1 if ignoring the LSB, the previous (output) item is the same, else x0
+                int key = ((int)(*ptr & 1) << 1) | ((*outPtr | 1) == *ptr).ToInt32();
+
+                // We embed the rules on how to update the index in a small table:
+                //   index : (isRem<<1 | isSame)
+                //     0 => +1 (place)   [add, different]
+                //     1 =>  0 (skip)    [add, duplicate]
+                //     2 => +1 (place)   [rem, different => "orphan removal"?]
+                //     3 => -1 (pop old) [rem, same => remove old, skip new]
+                outPtr += _modificationsAndRemoveTable[key];
+            }
+
+            list.Shrink((int)(outPtr - list.RawItems + 1));
         }
     }
 }

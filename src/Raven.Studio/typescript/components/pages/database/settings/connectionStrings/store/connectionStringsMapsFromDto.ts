@@ -8,7 +8,10 @@ import {
     AzureQueueStorageConnection,
     RavenConnection,
     SqlConnection,
+    SnowflakeConnection,
+    AmazonSqsConnection,
 } from "../connectionStringsTypes";
+
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
 import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
@@ -17,6 +20,7 @@ import { mapDestinationsFromDto } from "components/common/formDestinations/utils
 import assertUnreachable from "components/utils/assertUnreachable";
 
 type SqlConnectionStringDto = SqlConnectionString;
+type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 
 type OngoingTaskForConnection = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {
     ConnectionStringName?: string;
@@ -39,6 +43,9 @@ function getConnectionStringUsedTasks(
         case "Sql":
             filteredTasks = tasks.filter((task) => task.TaskType === "SqlEtl");
             break;
+        case "Snowflake":
+            filteredTasks = tasks.filter((task) => task.TaskType === "SnowflakeEtl");
+            break;
         case "Olap":
             filteredTasks = tasks.filter((task) => task.TaskType === "OlapEtl");
             break;
@@ -53,6 +60,9 @@ function getConnectionStringUsedTasks(
             break;
         case "AzureQueueStorage":
             filteredTasks = tasks.filter((task) => task.BrokerType === "AzureQueueStorage");
+            break;
+        case "AmazonSqs":
+            filteredTasks = tasks.filter((task) => task.BrokerType === "AmazonSqs");
             break;
         default:
             assertUnreachable(connectionType);
@@ -102,6 +112,23 @@ export function mapSqlConnectionsFromDto(
                 factoryName: connection.FactoryName,
                 usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
             }) satisfies SqlConnection
+    );
+}
+
+export function mapSnowflakeConnectionsFromDto(
+    connections: Record<string, SnowflakeConnectionStringDto>,
+    ongoingTasks: OngoingTaskForConnection[]
+): SnowflakeConnection[] {
+    const type: SnowflakeConnection["type"] = "Snowflake";
+
+    return Object.values(connections).map(
+        (connection) =>
+            ({
+                type,
+                name: connection.Name,
+                connectionString: connection.ConnectionString,
+                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
+            }) satisfies SnowflakeConnection
     );
 }
 
@@ -259,4 +286,41 @@ export function mapAzureQueueStorageConnectionsFromDto(
                     usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
                 }) satisfies AzureQueueStorageConnection
         );
+}
+
+export function mapAmazonSqsConnectionsFromDto(
+    connections: Record<string, QueueConnectionStringDto>,
+    ongoingTasks: OngoingTaskForConnection[]
+): AmazonSqsConnection[] {
+    const type: AmazonSqsConnection["type"] = "AmazonSqs";
+
+    return Object.values(connections)
+        .filter((x) => x.BrokerType === "AmazonSqs")
+        .map(
+            (connection) =>
+                ({
+                    type,
+                    name: connection.Name,
+                    authType: getAmazonSqsAuthType(connection),
+                    settings: {
+                        passwordless: connection.AmazonSqsConnectionSettings.Passwordless,
+                        basic: {
+                            accessKey: connection.AmazonSqsConnectionSettings.Basic?.AccessKey,
+                            secretKey: connection.AmazonSqsConnectionSettings.Basic?.SecretKey,
+                            regionName: connection.AmazonSqsConnectionSettings.Basic?.RegionName,
+                        },
+                    },
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
+                }) satisfies AmazonSqsConnection
+        );
+}
+
+function getAmazonSqsAuthType(dto: QueueConnectionStringDto): AmazonSqsAuthenticationType {
+    if (dto.AmazonSqsConnectionSettings.Passwordless) {
+        return "passwordless";
+    }
+    if (dto.AmazonSqsConnectionSettings.Basic) {
+        return "basic";
+    }
+    return null;
 }

@@ -68,7 +68,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                 var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                 indexDefinition.Name = indexDefinition.Name?.Trim();
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"Index '{indexDefinition.Name}' with definition: {indexToAdd}");
                 }

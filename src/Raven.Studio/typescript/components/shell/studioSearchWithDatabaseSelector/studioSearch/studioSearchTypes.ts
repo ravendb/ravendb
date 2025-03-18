@@ -9,7 +9,14 @@ export type StudioSearchMenuItemType =
     | "settingsMenuItem"
     | "statsMenuItem";
 
-export type StudioSearchItemType = StudioSearchMenuItemType | "collection" | "document" | "task" | "index" | "database";
+export type StudioSearchItemType =
+    | StudioSearchMenuItemType
+    | "collection"
+    | "document"
+    | "revision"
+    | "task"
+    | "index"
+    | "database";
 
 export type StudioSearchItemEvent = React.MouseEvent<HTMLElement, MouseEvent> | KeyboardEvent;
 
@@ -18,6 +25,7 @@ export interface StudioSearchResult {
     database: {
         collections?: StudioSearchResultItem[];
         documents?: StudioSearchResultItem[];
+        revisions?: StudioSearchResultItem[];
         indexes?: StudioSearchResultItem[];
         tasks?: StudioSearchResultItem[];
         settings?: StudioSearchResultItem[];

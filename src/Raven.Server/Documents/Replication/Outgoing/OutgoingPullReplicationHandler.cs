@@ -6,6 +6,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
         }
 
-        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger)
+        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger)
         {
             return new FilteredReplicationDocumentSender(stream, this, logger, PathsToSend, _destinationAcceptablePaths);
         }

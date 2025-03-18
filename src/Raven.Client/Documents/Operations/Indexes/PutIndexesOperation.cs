@@ -10,10 +10,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Operation to create or update multiple indexes.
+    /// </summary>
     public sealed class PutIndexesOperation : IMaintenanceOperation<PutIndexResult[]>
     {
         private readonly IndexDefinition[] _indexToAdd;
 
+        /// <inheritdoc cref="PutIndexesOperation"/>
+        /// <param name="indexToAdd">An array of index definitions to be added or updated.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="indexToAdd"/> is null or empty.</exception>
         public PutIndexesOperation(params IndexDefinition[] indexToAdd)
         {
             if (indexToAdd == null || indexToAdd.Length == 0)

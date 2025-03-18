@@ -7,6 +7,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Handlers.Processors
     {
         protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
 
-        protected readonly Logger Logger;
+        protected readonly RavenLogger Logger;
 
         protected AbstractDatabaseHandlerProcessor([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {

@@ -13,6 +13,7 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Impl;
 using Encoding = System.Text.Encoding;
 using IndexSearcher = Corax.Querying.IndexSearcher;
@@ -25,7 +26,7 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
     private readonly IndexSearcher _indexSearcher;
     private readonly IndexFieldBinding _binding;
 
-    public CoraxSuggestionReader(Index index, Logger logger, IndexFieldBinding binding, Transaction readTransaction, IndexFieldsMapping fieldsMapping) : base(index, logger)
+    public CoraxSuggestionReader(Index index, RavenLogger logger, IndexFieldBinding binding, Transaction readTransaction, IndexFieldsMapping fieldsMapping) : base(index, logger)
     {
         _fieldMappings = fieldsMapping;
         _binding = binding;

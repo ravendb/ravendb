@@ -40,6 +40,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 DynamicLambdaExpressionsRewriter.Instance,
                 RecurseRewriter.Instance,
                 SpatialFieldRewriter.Instance,
+                VectorFieldRewriter.Instance,
                 ConditionalAccessExpressionRewriter.Instance,
                 CoalesceRewriter.Instance,
                 InitializerExpressionRewriter.Instance,

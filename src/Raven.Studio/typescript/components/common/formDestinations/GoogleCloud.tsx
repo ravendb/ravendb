@@ -1,6 +1,8 @@
-﻿import React from "react";
-import { Badge, Button, Card, CardBody, Collapse, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
-import { FormInput, FormSwitch } from "components/common/Form";
+﻿import Badge from "react-bootstrap/Badge";
+import Collapse from "react-bootstrap/Collapse";
+import Card from "react-bootstrap/Card";
+import Button from "react-bootstrap/Button";
+import { FormInput, FormLabel, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -13,6 +15,7 @@ import { mapGoogleCloudToDto } from "./utils/formDestinationsMapsToDto";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import useBoolean from "components/hooks/useBoolean";
 import classNames from "classnames";
+import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 
 interface GoogleCloudProps {
     isForNewConnection: boolean;
@@ -40,127 +43,132 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
 
     return (
         <Card className="well">
-            <CardBody>
+            <Card.Body>
                 <FormSwitch name={getName("isEnabled")} control={control}>
                     Google Cloud
                 </FormSwitch>
-                <Collapse isOpen={formValues.isEnabled} className="vstack gap-2 mt-2">
-                    <FormSwitch
-                        name={`${fieldBase}.config.isOverrideConfig`}
-                        control={control}
-                        className="ms-3 w-100"
-                        color="secondary"
-                    >
-                        Override configuration via external script
-                    </FormSwitch>
-                    {formValues.config.isOverrideConfig ? (
-                        <OverrideConfiguration fieldBase={fieldBase} />
-                    ) : (
-                        <div className="vstack gap-3 mt-2">
-                            <div className="mb-2">
-                                <Label className="d-flex align-items-center gap-1">
-                                    Bucket <Icon icon="info" color="info" id="bucketTooltip" margin="m-0" />
-                                    {asyncTest.result?.Success ? (
-                                        <Badge color="success" pill>
-                                            <Icon icon="check" />
-                                            Successfully connected
-                                        </Badge>
-                                    ) : asyncTest.result?.Error ? (
-                                        <Badge color="danger" pill>
-                                            <Icon icon="warning" />
-                                            Failed connection
-                                        </Badge>
-                                    ) : null}
-                                </Label>
-                                <UncontrolledPopover
-                                    target="bucketTooltip"
-                                    trigger="hover"
-                                    placement="top"
-                                    className="bs5"
-                                >
-                                    <PopoverBody>
-                                        Bucket should be created manually in order for this OLAP to work. You can use
-                                        the <span className="text-info">Test credentials</span> button to verify its
-                                        existence.
-                                        <hr className="my-2" />
-                                        <a href="https://cloud.google.com/storage/docs/bucket-naming" target="_blank">
-                                            <Icon icon="newtab" />
-                                            Bucket naming guidelines
-                                        </a>
-                                    </PopoverBody>
-                                </UncontrolledPopover>
-                                <FormInput
-                                    name={getName("bucketName")}
-                                    control={control}
-                                    placeholder="Enter a bucket"
-                                    type="text"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <Label>
-                                    Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                </Label>
-                                <FormInput
-                                    name={getName("remoteFolderName")}
-                                    control={control}
-                                    placeholder="Enter a remote folder name"
-                                    type="text"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <Label>Google Credentials Json</Label>
-                                <FormInput
-                                    name={getName("googleCredentialsJson")}
-                                    control={control}
-                                    placeholder={googleCredentialsJsonPlaceholder}
-                                    type="textarea"
-                                    autoComplete="off"
-                                    rows={15}
-                                    className={classNames({ "d-none": !isCredentialsJsonVisible })}
-                                />
-                            </div>
-                            <Button
-                                type="button"
-                                color="secondary"
-                                className="w-fit-content mb-2"
-                                onClick={toggleCredentialsJsonVisible}
-                            >
-                                {isCredentialsJsonVisible ? (
-                                    <>
-                                        <Icon icon="preview-off" />
-                                        Hide
-                                    </>
-                                ) : (
-                                    <>
-                                        <Icon icon="preview" />
-                                        Show
-                                    </>
-                                )}{" "}
-                                credentials
-                            </Button>
-                            <div className="d-flex justify-content-end">
-                                <FlexGrow />
-                                <ButtonWithSpinner
-                                    type="button"
-                                    color="secondary"
-                                    onClick={asyncTest.execute}
-                                    isSpinning={asyncTest.loading}
-                                    icon="rocket"
-                                >
-                                    Test credentials
-                                </ButtonWithSpinner>
-                            </div>
-                            {asyncTest.result?.Error && (
-                                <div className="mt-3">
-                                    <ConnectionTestResult testResult={asyncTest.result} />
+                <Collapse in={formValues.isEnabled} className="vstack gap-2 mt-2">
+                    <div>
+                        <FormSwitch
+                            name={`${fieldBase}.config.isOverrideConfig`}
+                            control={control}
+                            className="ms-3 w-100"
+                            color="secondary"
+                        >
+                            Override configuration via external script
+                        </FormSwitch>
+                        {formValues.config.isOverrideConfig ? (
+                            <OverrideConfiguration fieldBase={fieldBase} />
+                        ) : (
+                            <div className="vstack gap-3 mt-2">
+                                <div className="mb-2">
+                                    <FormLabel className="d-flex align-items-center gap-1">
+                                        Bucket{" "}
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                <>
+                                                    Bucket should be created manually in order for this OLAP to work.
+                                                    You can use the <span className="text-info">Test credentials</span>{" "}
+                                                    button to verify its existence.
+                                                    <hr className="my-2" />
+                                                    <a
+                                                        href="https://cloud.google.com/storage/docs/bucket-naming"
+                                                        target="_blank"
+                                                    >
+                                                        <Icon icon="newtab" />
+                                                        Bucket naming guidelines
+                                                    </a>
+                                                </>
+                                            }
+                                        >
+                                            <Icon icon="info" color="info" margin="m-0" />
+                                        </PopoverWithHoverWrapper>
+                                        {asyncTest.result?.Success ? (
+                                            <Badge bg="success" pill>
+                                                <Icon icon="check" />
+                                                Successfully connected
+                                            </Badge>
+                                        ) : asyncTest.result?.Error ? (
+                                            <Badge bg="danger" pill>
+                                                <Icon icon="warning" />
+                                                Failed connection
+                                            </Badge>
+                                        ) : null}
+                                    </FormLabel>
+
+                                    <FormInput
+                                        name={getName("bucketName")}
+                                        control={control}
+                                        placeholder="Enter a bucket"
+                                        type="text"
+                                        autoComplete="off"
+                                    />
                                 </div>
-                            )}
-                        </div>
-                    )}
+                                <div className="mb-2">
+                                    <FormLabel>
+                                        Remote folder name <small className="text-muted fw-light">(optional)</small>
+                                    </FormLabel>
+                                    <FormInput
+                                        name={getName("remoteFolderName")}
+                                        control={control}
+                                        placeholder="Enter a remote folder name"
+                                        type="text"
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                <div className="mb-2">
+                                    <FormLabel>Google Credentials Json</FormLabel>
+                                    <FormInput
+                                        name={getName("googleCredentialsJson")}
+                                        control={control}
+                                        placeholder={googleCredentialsJsonPlaceholder}
+                                        type="textarea"
+                                        autoComplete="off"
+                                        rows={15}
+                                        className={classNames({ "d-none": !isCredentialsJsonVisible })}
+                                    />
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    className="w-fit-content mb-2"
+                                    onClick={toggleCredentialsJsonVisible}
+                                >
+                                    {isCredentialsJsonVisible ? (
+                                        <>
+                                            <Icon icon="preview-off" />
+                                            Hide
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icon icon="preview" />
+                                            Show
+                                        </>
+                                    )}{" "}
+                                    credentials
+                                </Button>
+                                <div className="d-flex justify-content-end">
+                                    <FlexGrow />
+                                    <ButtonWithSpinner
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={asyncTest.execute}
+                                        isSpinning={asyncTest.loading}
+                                        icon="rocket"
+                                    >
+                                        Test credentials
+                                    </ButtonWithSpinner>
+                                </div>
+                                {asyncTest.result?.Error && (
+                                    <div className="mt-3">
+                                        <ConnectionTestResult testResult={asyncTest.result} />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </Collapse>
-            </CardBody>
+            </Card.Body>
         </Card>
     );
 }

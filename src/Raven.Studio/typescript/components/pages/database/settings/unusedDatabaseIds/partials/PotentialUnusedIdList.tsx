@@ -2,7 +2,7 @@ import { CounterBadge } from "components/common/CounterBadge";
 import PotentialUnusedId from "components/pages/database/settings/unusedDatabaseIds/partials/PotentialUnusedId";
 import { UnusedIdsActions } from "components/pages/database/settings/unusedDatabaseIds/useUnusedDatabaseIds";
 import React from "react";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 
 interface PotentialUnusedIdListProps {
     potentialUnusedId: string[];
@@ -25,7 +25,7 @@ export default function PotentialUnusedIdList(props: PotentialUnusedIdListProps)
                     <CounterBadge count={potentialUnusedId.length} />
                 </div>
                 <Button
-                    color="link"
+                    variant="link"
                     size="xs"
                     onClick={unusedIdsActions.addAllPotentialUnusedIds}
                     className="p-0"

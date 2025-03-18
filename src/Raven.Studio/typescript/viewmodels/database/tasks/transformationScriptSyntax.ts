@@ -34,6 +34,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
             case "Sql":
                 sampleText = transformationScriptSyntax.sqlEtlSampleText;
                 break;
+            case "Snowflake":
+                sampleText = transformationScriptSyntax.snowflakeEtlSampleText;
+                break;
             case "ElasticSearch":
                 sampleText = transformationScriptSyntax.elasticSearchEtlSampleText;
                 break;
@@ -61,6 +64,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
                 break;
             case "AzureQueueStorage":
                 sampleText = transformationScriptSyntax.azureQueueStorageEtlSampleText;
+                break;
+            case "AmazonSqs":
+                sampleText = transformationScriptSyntax.amazonSqsEtlSampleText;
                 break;
             default:
                 genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
@@ -149,6 +155,32 @@ loadToOrders(orderData);`;
 
     sqlEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.sqlEtlSampleText);
 
+    static readonly snowflakeEtlSampleText =
+`var orderData = {
+    Id: id(this),
+    OrderLinesCount: this.Lines.length,
+    TotalCost: 0
+};
+
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    orderData.TotalCost += line.PricePerUnit;
+    
+    // Load to Snowflake table 'OrderLines'
+    loadToOrderLines({
+        OrderId: id(this),
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.PricePerUnit
+    });
+}
+orderData.TotalCost = Math.round(orderData.TotalCost * 100) / 100;
+
+// Load to Snowflake table 'Orders'
+loadToOrders(orderData);`;
+
+    snowflakeEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.snowflakeEtlSampleText);
+
     static readonly elasticSearchEtlSampleText =
 `var orderData = {
     Id: id(this), // property with RavenDB document ID
@@ -213,10 +245,31 @@ loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
     Source: '/registrations/direct-signup'
 });`;
     
+    static readonly amazonSqsEtlSampleText =
+        `${transformationScriptSyntax.queueEtlBaseSampleText}
+
+loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
+    Id: id(this),
+    Type: 'com.github.users',
+    Source: '/registrations/direct-signup'
+});
+
+//  This is alternative syntax for FIFO queues:
+//
+//loadTo('orders.fifo', orderData, {
+//    Id: id(this),
+//    Type: 'com.github.users',
+//    Source: '/registrations/direct-signup'
+//});
+`;
+    
+    
+    
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);
     
     rabbitMqEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.rabbitMqEtlSampleText);
     azureQueueStorageEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.azureQueueStorageEtlSampleText);
+    amazonSqsEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.amazonSqsEtlSampleText);
     
     static readonly olapEtlSamplePartitionText =
 `var orderDate = new Date(this.OrderedAt);

@@ -26,14 +26,15 @@ abstract class shardedReactViewModelBase extends shardViewModelBase {
 
     activate(args: any, parameters?: any) {
         super.activate(args, parameters);
-        const { params: pathParams, queryParams } = router.activeInstruction()
+        const { params, queryParams } = router.activeInstruction()
 
         const reactDirtyFlag = reactViewModelUtils.getReactDirtyFlag(this.dirtyFlag, this.customDiscardStayResult);
-        const reactProps: ReactProps = {
-          pathParams,
+        const reactProps: ReactQueryParamsProps<typeof queryParams> & ReactPathParamsProps & ReactLocationProps = {
+          pathParams: params.filter(x => typeof x === "string"),
           queryParams: queryParams || {},
           location: this.location,
         };
+
         this.reactOptions = this.createReactOptions(this.reactView, reactProps, reactDirtyFlag);
     }
 

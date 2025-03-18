@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Esprima.Ast;
+using Acornima.Ast;
 using Jint;
 using Jint.Constraints;
 using Jint.Native;
@@ -67,7 +67,7 @@ namespace Raven.Server.Extensions
             switch (function)
             {
                 case ArrowFunctionExpression afe:
-                    return afe.ChildNodes.LastOrDefault() as StaticMemberExpression;
+                    return afe.ChildNodes.LastOrDefault() as MemberExpression;
                 default:
                     if (!(function.Body.ChildNodes.FirstOrDefault() is ReturnStatement rs))
                         return null;

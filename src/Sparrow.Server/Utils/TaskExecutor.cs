@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Sparrow.Server.Utils
@@ -12,6 +14,8 @@ namespace Sparrow.Server.Utils
     /// </summary>
     public static class TaskExecutor
     {
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(TaskExecutor));
+
         private static readonly Runner Instance = new Runner();
 
         private sealed class Runner
@@ -125,9 +129,8 @@ namespace Sparrow.Server.Utils
                 }
                 catch (Exception e)
                 {
-                    var logger = Logging.LoggingSource.Instance.GetLogger<RunOnce>("TaskExecutor");
-                    if (logger.IsOperationsEnabled)
-                        logger.Operations("Failed to execute task", e);
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error("Failed to execute task", e);
                 }
             }
         }

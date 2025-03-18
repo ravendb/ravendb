@@ -28,7 +28,9 @@ import notificationCenter from "common/notifications/notificationCenter";
 import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
-import { Badge, Collapse, Input, UncontrolledTooltip } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Collapse from "react-bootstrap/Collapse";
+import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -36,6 +38,7 @@ import useUniqueId from "components/hooks/useUniqueId";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
@@ -202,7 +205,7 @@ function Details(props: PeriodicBackupPanelProps) {
                 {nextBackupHumanized}
                 {backupNowVisible && (
                     <Badge
-                        type="button"
+                        as="button"
                         onClick={onBackupNow}
                         className={classNames("ms-1 rounded-pill backup-now", {
                             "bg-secondary": !neverBackedUp,
@@ -212,6 +215,7 @@ function Details(props: PeriodicBackupPanelProps) {
                         })}
                         disabled={!!backupNowBlockReason}
                         title={backupNowBlockReason ?? "Click to trigger the backup task now"}
+                        bg="secondary"
                     >
                         <Icon icon="backup" />
                         <span>{isResponsible && backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
@@ -259,7 +263,7 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                 <RichPanelInfo>
                     {allowSelect && canEdit && (
                         <RichPanelSelect>
-                            <Input
+                            <Form.Check
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
                                 checked={isSelected(data.shared.taskId)}
@@ -271,18 +275,20 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                 <RichPanelActions>
                     <OngoingTaskResponsibleNode task={data} />
                     <BackupEncryption encrypted={data.shared.encrypted} />
-                    {isServerWide && (
-                        <UncontrolledTooltip target={statusDropdownId}>
-                            Status can be managed on the Server-Wide Tasks page
-                        </UncontrolledTooltip>
-                    )}
-                    <OngoingTaskStatus
-                        task={data}
-                        canEdit={canEdit}
-                        onTaskOperation={onTaskOperation}
-                        isTogglingState={isTogglingState(data.shared.taskId)}
-                        id={statusDropdownId}
-                    />
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: isServerWide,
+                            message: "Status can be managed on the Server-Wide Tasks page",
+                        }}
+                    >
+                        <OngoingTaskStatus
+                            task={data}
+                            canEdit={canEdit}
+                            onTaskOperation={onTaskOperation}
+                            isTogglingState={isTogglingState(data.shared.taskId)}
+                            id={statusDropdownId}
+                        />
+                    </ConditionalPopover>
 
                     <OngoingTaskActions
                         task={data}
@@ -294,8 +300,10 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse isOpen={detailsVisible}>
-                <Details {...props} />
+            <Collapse in={detailsVisible}>
+                <div>
+                    <Details {...props} />
+                </div>
             </Collapse>
         </RichPanel>
     );

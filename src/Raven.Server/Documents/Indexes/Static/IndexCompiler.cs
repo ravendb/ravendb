@@ -26,14 +26,16 @@ using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.Counters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries;
+using Raven.Server.Logging;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexCompiler
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(IndexCompiler).FullName);
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer(typeof(IndexCompiler));
 
         internal static readonly bool EnableDebugging = false; // for debugging purposes (mind https://issues.hibernatingrhinos.com/issue/RavenDB-6960)
 
@@ -90,8 +92,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var path in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Attempting to load additional assembly from '{path}'.");
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Attempting to load additional assembly from '{path}'.");
 
                 try
                 {
@@ -103,13 +105,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     results.TryAdd(name.FullName, result);
                     results.TryAdd(name.Name, result);
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Loaded additional assembly from '{path}' and registered it under '{name.Name}'.");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Loaded additional assembly from '{path}' and registered it under '{name.Name}'.");
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not load additional assembly from '{path}'.", e);
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Could not load additional assembly from '{path}'.", e);
                 }
             }
 
@@ -451,9 +453,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (string.IsNullOrWhiteSpace(packageVersion))
                         throw new ArgumentException($"'{nameof(packageVersion)}' cannot be null or whitespace", nameof(packageVersion));
 
-                    var package = AsyncHelpers.RunSync(() => MultiSourceNuGetFetcher.Instance.DownloadAsync(packageName, packageVersion, packageSourceUrl));
+                    var package = AsyncHelpers.RunSync(() => MultiSourceNuGetFetcher.ForIndexes.DownloadAsync(packageName, packageVersion, packageSourceUrl));
                     if (package == null)
-                        throw new InvalidOperationException($"NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.Instance.DefaultPackageSourceUrl}' does not exist.");
+                        throw new InvalidOperationException($"NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.ForIndexes.DefaultPackageSourceUrl}' does not exist.");
 
                     var references = new HashSet<MetadataReference>();
 
@@ -465,7 +467,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.Instance.DefaultPackageSourceUrl}'.", e);
+                    throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.ForIndexes.DefaultPackageSourceUrl}'.", e);
                 }
             }
 
@@ -580,6 +582,9 @@ namespace Raven.Server.Documents.Indexes.Static
             if (methods.HasBoost)
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
+            if (methods.HasCreateVector)
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasVectorFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+            
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
 
@@ -998,6 +1003,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             public bool HasCreateField { get; set; }
 
+            public bool HasCreateVector { get; set; }
+            
             public bool HasBoost { get; set; }
         }
 

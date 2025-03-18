@@ -1,4 +1,4 @@
-﻿import { configureStore, createListenerMiddleware } from "@reduxjs/toolkit";
+﻿import { configureStore, createListenerMiddleware, ListenerEffectAPI } from "@reduxjs/toolkit";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
 import { statisticsViewSlice } from "components/pages/database/status/statistics/store/statisticsViewSlice";
 import { GetThunkAPI } from "@reduxjs/toolkit";
@@ -13,6 +13,8 @@ import { collectionsTrackerSlice } from "./common/shell/collectionsTrackerSlice"
 import { conflictResolutionSlice } from "./pages/database/settings/conflictResolution/store/conflictResolutionSlice";
 import { connectionStringsSlice } from "./pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { connectionStringsUpdateUrlMiddleware } from "./pages/database/settings/connectionStrings/store/connectionStringsMiddleware";
+import { adminLogsMiddleware } from "components/pages/resources/manageServer/adminLogs/store/adminLogsMiddleware";
+import { adminLogsSlice } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -31,6 +33,7 @@ export function createStoreConfiguration() {
             collectionsTracker: collectionsTrackerSlice.reducer,
             conflictResolution: conflictResolutionSlice.reducer,
             connectionStrings: connectionStringsSlice.reducer,
+            adminLogs: adminLogsSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({
@@ -39,7 +42,8 @@ export function createStoreConfiguration() {
                 },
             })
                 .prepend(listenerMiddleware.middleware)
-                .prepend(connectionStringsUpdateUrlMiddleware.middleware),
+                .prepend(connectionStringsUpdateUrlMiddleware.middleware)
+                .prepend(adminLogsMiddleware.middleware),
     });
 }
 
@@ -69,4 +73,6 @@ export type AppThunkApi = GetThunkAPI<{
     extra: () => typeof services;
     rejectValue: unknown;
 }>;
+export type AppListenerEffectApi = ListenerEffectAPI<RootState, AppDispatch, any>;
+
 export default store;

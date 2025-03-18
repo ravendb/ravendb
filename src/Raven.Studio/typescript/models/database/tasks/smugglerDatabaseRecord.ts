@@ -24,11 +24,13 @@ class smugglerDatabaseRecord {
     includeExternalReplications = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeRavenConnectionStrings = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeSqlConnectionStrings = ko.observable<boolean>(this.isAdminAccessOrAbove());
+    includeSnowflakeConnectionStrings = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeOlapConnectionStrings = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeElasticSearchConnectionStrings = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeQueueConnectionStrings = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeRavenEtls = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeSqlEtls = ko.observable<boolean>(this.isAdminAccessOrAbove());
+    includeSnowflakeEtls = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeOlapEtls = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeElasticSearchEtls = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeQueueEtls = ko.observable<boolean>(this.isAdminAccessOrAbove());
@@ -67,6 +69,12 @@ class smugglerDatabaseRecord {
         popoverUtils.longWithHover($(".js-warning-sql-etl"),
             {
                 content: `SQL Connection strings were not selected.`,
+                placement: 'right'
+            });
+
+        popoverUtils.longWithHover($(".js-warning-snowflake-etl"),
+            {
+                content: `Snowflake Connection strings were not selected.`,
                 placement: 'right'
             });
 
@@ -123,6 +131,9 @@ class smugglerDatabaseRecord {
         if (this.includeSqlConnectionStrings()) {
             result.push("SqlConnectionStrings");
         }
+        if (this.includeSnowflakeConnectionStrings()) {
+            result.push("SnowflakeConnectionStrings");
+        }
         if (this.includeOlapConnectionStrings()) {
             result.push("OlapConnectionStrings");
         }
@@ -137,6 +148,9 @@ class smugglerDatabaseRecord {
         }
         if (this.includeSqlEtls()) {
             result.push("SqlEtls");
+        }
+        if (this.includeSnowflakeEtls()) {
+            result.push("SnowflakeEtls");
         }
         if (this.includeOlapEtls()) {
             result.push("OlapEtls");

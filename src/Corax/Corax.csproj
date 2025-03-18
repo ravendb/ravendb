@@ -25,6 +25,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Spatial4n" />
+    <PackageReference Include="System.Numerics.Tensors" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />

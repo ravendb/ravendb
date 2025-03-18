@@ -168,16 +168,16 @@ public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection
 
         public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber)
         {
-            return new ShardedCollectionPreviewCommand(_collection, _token.Pages[shardNumber].Start, _token.PageSize);
+            return new CollectionPreviewCommand(_collection, _token.Pages[shardNumber].Start, _token.PageSize);
         }
 
-        private sealed class ShardedCollectionPreviewCommand : RavenCommand<StreamResult>
+        private sealed class CollectionPreviewCommand : RavenCommand<StreamResult>
         {
             private readonly string _collection;
             private readonly int _start;
             private readonly int _pageSize;
 
-            public ShardedCollectionPreviewCommand(string collection, int start, int pageSize)
+            public CollectionPreviewCommand(string collection, int start, int pageSize)
             {
                 _collection = collection;
                 _start = start;

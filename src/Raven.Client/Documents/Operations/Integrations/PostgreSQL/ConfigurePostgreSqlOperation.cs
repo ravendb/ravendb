@@ -10,10 +10,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Integrations.PostgreSQL
 {
+    /// <summary>
+    /// Operation to configure PostgreSQL integration.
+    /// This allows RavenDB to expose its data using a PostgreSQL-compatible interface.
+    /// </summary>
     public sealed class ConfigurePostgreSqlOperation : IMaintenanceOperation<ConfigurePostgreSqlOperationResult>
     {
         private readonly PostgreSqlConfiguration _configuration;
 
+        /// <inheritdoc cref="ConfigurePostgreSqlOperation"/>
+        /// <param name="configuration">The PostgreSQL integration configuration settings.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is null.</exception>
         public ConfigurePostgreSqlOperation(PostgreSqlConfiguration configuration)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
