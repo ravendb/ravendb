@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -38,6 +39,27 @@ public class RavenDB_23752 : RavenTestBase
                     .ToList();
                 
                 Assert.Single(queryResults);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void ProximitySearchWithOnlyStopwords(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto = new Dto() { Name = "of and" };
+                session.Store(dto);
+                session.SaveChanges();
+                
+                Assert.Throws<InvalidQueryException>(() => session.Advanced
+                    .DocumentQuery<Dto>()
+                    .Search(x => x.Name,"of and")
+                    .Proximity(0)
+                    .ToList());
             }
         }
     }
