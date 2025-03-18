@@ -26,6 +26,7 @@ public unsafe struct FastPForDecoder : IDisposable
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _exceptionsScope;
     private Vector256<long> _prev;
     private ByteString _buffer;
+    private NativeList<long> _bigDeltaOffsets;
     private int NumberOfIntegersInBuffer => _buffer.Length / sizeof(uint);
 
     public FastPForDecoder(ByteStringContext allocator)
@@ -34,6 +35,7 @@ public unsafe struct FastPForDecoder : IDisposable
         const int initialExceptionsSize = 1024;
         _exceptionsScope = allocator.Allocate(initialExceptionsSize * sizeof(uint), out _buffer);
         _exceptions = (uint*)_buffer.Ptr;
+        _bigDeltaOffsets.Initialize(allocator);
     }
 
     public void MarkInvalid()
@@ -105,8 +107,8 @@ public unsafe struct FastPForDecoder : IDisposable
         var sharedPrefixMask = Vector256.Create<long>(_sharedPrefix);
 
         var bigDeltaStart = 0;
-        var bigDeltaOffsets = new NativeList<long>();
-        bigDeltaOffsets.Initialize(_allocator);
+        ref var bigDeltaOffsets = ref _bigDeltaOffsets;
+        bigDeltaOffsets.ResetAndEnsureCapacity(_allocator, outputCount);
         var buffer = stackalloc uint[256];
         int read = 0;
         Span<long> outputSpan = new Span<long>(output, outputCount);
@@ -119,7 +121,7 @@ public unsafe struct FastPForDecoder : IDisposable
             switch (numOfBits)
             {
                 case FastPForEncoder.BiggerThanMaxMarker:
-                    bigDeltaOffsets.Add(_allocator, (long)_metadata);
+                    bigDeltaOffsets.AddByRefUnsafe() = (long)_metadata;
                     // we don't need to worry about block fit, because we are ensured that we have at least
                     // 256 items to read into the output here, and these marker are for the next blcok
                     
@@ -186,12 +188,12 @@ public unsafe struct FastPForDecoder : IDisposable
                 var (a, b) = Vector256.Widen(Vector256.Load(buffer + i));
                 if (expectedBufferIndex == i)
                 {
-                    a |= GetDeltaHighBits(ref bigDeltaStart);
+                    a |= GetDeltaHighBits(ref bigDeltaOffsets, ref bigDeltaStart);
                 }
                 PrefixSumAndStoreToOutput(a, ref _prev);
                 if (expectedBufferIndex == i + 4)
                 {
-                    b |= GetDeltaHighBits(ref bigDeltaStart);
+                    b |= GetDeltaHighBits(ref bigDeltaOffsets, ref bigDeltaStart);
                 }
                 PrefixSumAndStoreToOutput(b, ref _prev);
             }
@@ -199,7 +201,7 @@ public unsafe struct FastPForDecoder : IDisposable
             bigDeltaStart = 0;
             bigDeltaOffsets.Clear();
 
-            Vector256<ulong> GetDeltaHighBits(ref int index)
+            Vector256<ulong> GetDeltaHighBits(ref NativeList<long> bigDeltaOffsets, ref int index)
             {
                 var ptr = (byte*)bigDeltaOffsets.RawItems[index] + 1;
                 index++;
@@ -243,6 +245,7 @@ public unsafe struct FastPForDecoder : IDisposable
     public void Dispose()
     {
         _exceptionsScope.Dispose();
+        _bigDeltaOffsets.Dispose(_allocator);
     }
 
     public static long ReadStart(byte* p)

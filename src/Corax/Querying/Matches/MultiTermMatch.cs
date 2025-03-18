@@ -251,14 +251,15 @@ namespace Corax.Querying.Matches
                     var termType = (TermIdMask)_itBuffer[i] & TermIdMask.EnsureIsSingleMask;
                     if (termType == TermIdMask.SmallPostingList)
                     {
-                        var smallSetId = EntryIdEncodings.GetContainerId(_itBuffer[i]);
-                        _smallPostListIds.Add(smallSetId);
+                        // Always has sufficient capacity due to the BufferSize constraint
+                        _smallPostListIds.AddByRefUnsafe() = EntryIdEncodings.GetContainerId(_itBuffer[i]);
                     }
                 }
-
+                
                 _smallPostingListIndex = 0;
                 if (_smallPostListIds.Count == 0)
                     return;
+                
                 Container.GetAll(_searcher._transaction.LowLevelTransaction, _smallPostListIds.ToSpan(), _containerItems, long.MinValue, _pageLocator);
             }
 

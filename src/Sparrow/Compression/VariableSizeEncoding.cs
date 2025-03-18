@@ -14,11 +14,12 @@ namespace Sparrow.Compression
 
 
             ref var bufferRef = ref MemoryMarshal.GetReference(buffer);
-
+            ref var outputBufferRef = ref MemoryMarshal.GetReference(output);
+            
             int pos = 0;
             for (int i = 0; i < count; i++)
             {
-                ref var outputRef = ref Unsafe.Add(ref MemoryMarshal.GetReference(output), i);
+                ref var outputRef = ref Unsafe.Add(ref outputBufferRef, i);
                 if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
                 {
                     
