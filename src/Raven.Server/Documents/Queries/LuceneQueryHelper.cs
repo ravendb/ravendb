@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static ThreadLocal<LowerCaseKeywordAnalyzer> WildcardAnalyzer = new ThreadLocal<LowerCaseKeywordAnalyzer>(() => new());
-        public static Query AnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer, float? boost = null, float? similarity = null)
+        public static bool TryGetAnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer, out Query query, float? boost = null, float? similarity = null)
         {
             if (type != LuceneTermType.String && type != LuceneTermType.Prefix && type != LuceneTermType.WildCard)
                 throw new InvalidOperationException("Analyzed terms can be only created from string values.");
@@ -213,24 +213,33 @@ namespace Raven.Server.Documents.Queries
             {
                 case LuceneTermType.Prefix:
                 {
-                    return new PrefixQuery(new Term(fieldName, terms[0].TrimEnd(AsteriskChar)))
+                    query = new PrefixQuery(new Term(fieldName, terms[0].TrimEnd(AsteriskChar)))
                     {
                         Boost = boost.Value
                     };
+                    return true;
                 }
                 case LuceneTermType.WildCard:
-                    return new WildcardQuery(new Term(fieldName, terms[0]))
+                    query = new WildcardQuery(new Term(fieldName, terms[0]))
                     {
                         Boost = boost.Value
                     };
+                    return true;
+            }
+
+            if (terms.Count == 0)
+            {
+                query = null;
+                return false;
             }
 
             if (terms.Count == 1)
             {
-                return new TermQuery(new Term(fieldName, terms[0]))
+                query = new TermQuery(new Term(fieldName, terms[0]))
                 {
                     Boost = boost.Value
                 };
+                return true;
             }
 
             var pq = new PhraseQuery
@@ -241,7 +250,8 @@ namespace Raven.Server.Documents.Queries
             foreach (var t in terms)
                 pq.Add(new Term(fieldName, t));
 
-            return pq;
+            query = pq;
+            return true;
         }
 
         public static unsafe string GetTermValue(string value, LuceneTermType type, bool exact)
