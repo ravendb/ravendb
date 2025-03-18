@@ -1,4 +1,3 @@
-/* eslint-disable local-rules/no-reactstrap-alert */
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../typings/server/icons";
