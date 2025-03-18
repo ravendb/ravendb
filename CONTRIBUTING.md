@@ -17,7 +17,7 @@ In order to submit an issue please visit our [YouTrack](https://issues.hibernati
 Recommended dev environment is
 
 - VS 2022 updated to the latest version
-- .NET 6 SDKs
+- .NET SDK version as specified in `global.json`
 - latest NodeJS LTS  
 
 1. Clone this repo, open it in VS 2022.  
@@ -34,7 +34,7 @@ Recommended dev environment is
 
 Preconditions
 
-- .NET 6 SDKs
+- .NET SDK version as specified in `global.json`
 - latest NodeJS LTS 
 - PowerShell (if you are working on Linux, you can find installation instructions [here](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux)) 
 
