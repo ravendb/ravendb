@@ -21,6 +21,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -35,7 +36,15 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 {
     private readonly ConcurrentDictionary<EmbeddingsGenerationTaskIdentifier, AiWorker> _workers = [];
     private readonly ConcurrentQueue<List<Work>> _toCache = new();
+    private readonly ConcurrentQueue<Work> _refreshExpiration = new();
     private readonly AsyncManualResetEvent _hasWork = new();
+
+    private enum Mode
+    {
+        Query,
+        Etl,
+        RefreshCache
+    }
     private class Work
     {
         public TaskCompletionSource<ReadOnlyMemory<byte>> TaskCompletionSource;
@@ -45,8 +54,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         public string EmbeddingHash;
         public string ValueHash;
         public int TokenCount;
-        public bool CompleteTaskAfterStorage;
+        public Mode Mode;
         public ReadOnlyMemory<byte> EmbeddingValue;
+        public AiWorker Owner;
     }
 
     private class AiWorker
@@ -63,7 +73,8 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         private readonly EmbeddingsGenerator _parent;
         private readonly CancellationTokenSource _shutdown;
         private int _taskIsRunning;
-        private AiConnectionStringIdentifier _connectionStringIdentifier;
+        private readonly AiConnectionStringIdentifier _connectionStringIdentifier;
+        private TaskCompletionSource<ReadOnlyMemory<byte>> _singleUnusedInstance = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public AiWorker(EmbeddingsGenerator parent,DocumentsStorage documentsStorage, EmbeddingsGenerationConfiguration configuration,
             AiConnectionString connectionString, int maxConcurrentBatches, CancellationToken cancellationToken) 
@@ -92,10 +103,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             var valueHash = EmbeddingsHelper.CalculateInputValueHash(chunkedValue);
             var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(_connectionStringIdentifier, valueHash, _configuration.Quantization);
             var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(documentsContext, docId, valueHash, AttachmentType.Document, null);
+            TimeSpan cacheDuration = _configuration.EmbeddingsCacheForQueryingExpiration;
             if (attachment != null)
             {
-                //TODO: increment expiration
-                
+                RefreshCacheExpirationIfNeeded(documentsContext, docId, cacheDuration);
+
                 var stream = attachment.Stream;
                 //TODO: Need to find a way to avoid this allocation in favor of pooling, etc.
                 byte[] buffer = new byte[attachment.Size];
@@ -105,12 +117,14 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
             var work = new Work
             {
+                Owner = this,
                 TaskCompletionSource = new (TaskCreationOptions.RunContinuationsAsynchronously),
                 Value = chunkedValue,
                 ValueHash = valueHash,
                 CacheDocumentId = docId,
                 TokenCount = tokenCount,
-                CacheDuration = _configuration.EmbeddingsCacheForQueryingExpiration
+                CacheDuration = cacheDuration,
+                Mode = Mode.Query
             };
             var localTask = work.TaskCompletionSource.Task;
             var inCacheTask = _inMemoryCache.GetOrAdd(chunkedValue, localTask);
@@ -123,17 +137,43 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             return new(inCacheTask);
         }
 
+        private void RefreshCacheExpirationIfNeeded(DocumentsOperationContext documentsContext, string docId, TimeSpan cacheDuration)
+        {
+            var document = _documentsStorage.Get(documentsContext, docId);
+            if (document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+            {
+                if (metadata.TryGet(Constants.Documents.Metadata.Expires, out DateTime expires))
+                {
+                    var timeToExpireSeconds = (expires - DateTime.UtcNow).TotalSeconds;
+                    var halfTime = cacheDuration.TotalSeconds / 2;
+                    if (timeToExpireSeconds > halfTime)
+                        return;
+                }
+            }
+
+            _parent._refreshExpiration.Enqueue(new Work
+            {
+                CacheDuration = cacheDuration,
+                CacheDocumentId = docId,
+                Mode = Mode.RefreshCache,
+                // avoid allocation a new instance each time
+                TaskCompletionSource = _singleUnusedInstance 
+            });
+            _parent._hasWork.Set();
+        }
+
         private Task GenerateEmbeddingsFor(string chunkedValue, string cacheDocId, string valueHash, int tokenCount)
         {
             var work = new Work
             {
+                Owner = this,
                 TaskCompletionSource = new (TaskCreationOptions.RunContinuationsAsynchronously),
                 Value = chunkedValue,
                 ValueHash = valueHash,
                 CacheDocumentId = cacheDocId,
                 TokenCount = tokenCount,
                 CacheDuration = _configuration.EmbeddingsCacheExpiration,
-                CompleteTaskAfterStorage = true
+                Mode = Mode.Query
             };
             var localTask = work.TaskCompletionSource.Task;
             var inCacheTask = _inMemoryCache.GetOrAdd(chunkedValue, localTask);
@@ -152,7 +192,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             var valueHash = EmbeddingsHelper.CalculateInputValueHash(chunkedValue);
             var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(_connectionStringIdentifier, valueHash, _configuration.Quantization);
             if (_documentsStorage.AttachmentsStorage.AttachmentExists(documentsContext, docId, valueHash))
+            {
+                RefreshCacheExpirationIfNeeded(documentsContext, docId, _configuration.EmbeddingsCacheExpiration);
                 return true;
+            }
             tasks ??= [];
             tasks.Add(GenerateEmbeddingsFor(chunkedValue, docId, valueHash, tokensCount));
             return false;
@@ -280,7 +323,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     var embeddingValue = EmbeddingsHelper.CreateEmbeddingValue(allEmbeddings[i], _configuration.Quantization);
                     works[i].EmbeddingValue = embeddingValue;
                     
-                    if (works[i].CompleteTaskAfterStorage)
+                    if (works[i].Mode is not Mode.Query)
                         continue;
                     // means it is from queries, and we want to release the thread ASAP and send it the embeddings
                     works[i].TaskCompletionSource.TrySetResult(embeddingValue);
@@ -307,6 +350,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         {
             return _configuration.Compare(updated) != EtlConfigurationCompareDifferences.None || 
                    _connectionString.Compare(updateConnectionString) != AiSettingsCompareDifferences.None;
+        }
+
+        public void RemoveFromCache(string v)
+        {
+            _inMemoryCache.TryRemove(v, out _);
         }
     }
 
@@ -411,11 +459,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     {
         try
         {
-            List<Task> tasks = [];
             List<Work> pending = [];
             while (CancellationToken.IsCancellationRequested == false)
             {
-                tasks.Clear();
                 pending.Clear();
                 await _hasWork.WaitAsync(CancellationToken);
                 _hasWork.Reset();
@@ -424,9 +470,14 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     while (_toCache.TryDequeue(out List<Work> works))
                     {
                         pending.AddRange(works);
-                        tasks.Add(database.TxMerger.Enqueue(new PutEmbeddingsIntoCacheCommand(works)));
                     }
-                    await Task.WhenAll(tasks);
+                    while (_refreshExpiration.TryDequeue(out Work work))
+                    {
+                        pending.Add(work);
+                    }
+
+                    await database.TxMerger.Enqueue(new PutEmbeddingsIntoCacheCommand(pending));
+
                     foreach (var work in pending)
                     {
                         work.TaskCompletionSource.TrySetResult(default);
@@ -439,14 +490,31 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                         work.TaskCompletionSource.TrySetException(e);
                     }
                 }
+                finally
+                {
+                    foreach (var work in pending)
+                    {
+                        work.Owner.RemoveFromCache(work.Value);
+                    }   
+                }
             }
         }
         finally
         {
-            //TODO: wait and then fail
+            List<Task> tasks = [];
             foreach (var (_, state)  in _workers)
             {
-                _ = state.ShutdownAsync();
+                tasks.Add(state.ShutdownAsync());
+            }
+
+            try
+            {
+                // we wait for a bit for all the tasks to complete before
+                // we are done
+                Task.WaitAll(tasks.ToArray(), 15_000);
+            }
+            catch
+            {
             }
             while (_toCache.TryDequeue(out List<Work> works))
             {
@@ -455,7 +523,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     work.TaskCompletionSource.TrySetCanceled();
                 }
             }
-
+            
         }
     }
     
@@ -475,8 +543,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     documentsStorage.Put(context, item.CacheDocumentId, null, json);
                 }
 
-                attachmentsStorage.PutAttachment(context, item.CacheDocumentId, item.ValueHash, EmbeddingAttachmentContentType, 
-                    item.EmbeddingHash, null, new ReadOnlyMemoryStream<byte>(item.EmbeddingValue));
+                if (item.Mode is not Mode.RefreshCache) 
+                {
+                    attachmentsStorage.PutAttachment(context, item.CacheDocumentId, item.ValueHash, EmbeddingAttachmentContentType,
+                        item.EmbeddingHash, null, new ReadOnlyMemoryStream<byte>(item.EmbeddingValue));
+                }
             }
 
             return work.Count;
@@ -496,10 +567,18 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            throw new NotSupportedException();
+            return new Replay(work);
+        }
+
+        public class Replay(List<Work> work) : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
+        {
+            public MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction> ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                return new PutEmbeddingsIntoCacheCommand(work);
+            }
         }
     }
-
+    
     public void HandleDatabaseRecordChange(DatabaseRecord record)
     {
         if (record is null)
