@@ -885,8 +885,8 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException("Proximity search works only on simple string terms, not wildcard or prefix ones", metadata.QueryText, parameters);
 
                 // this will return PQ, unless there is a single term
-                // note that TryGetAnalyzedTerm skips tokens filtered by analyzer (e.g. stopwords)
-                if (LuceneQueryHelper.TryGetAnalyzedTerm(fieldName, valueAsString, type, analyzer, out var t) == false || t is not PhraseQuery pq)
+                LuceneQueryHelper.TryGetAnalyzedTerm(fieldName, valueAsString, type, analyzer, out var t);
+                if (t is not PhraseQuery pq)
                     throw new InvalidQueryException("Proximity search works only on multiple search terms", metadata.QueryText, parameters);
 
                 pq.Slop = proximity.Value;

@@ -3,7 +3,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,8 +23,10 @@ public class RavenDB_23752 : RavenTestBase
         {
             using (var session = store.OpenSession())
             {
-                var dto = new Dto() { Name = "test a car" };
-                session.Store(dto);
+                var dto1 = new Dto() { Name = "test a car" };
+                var dto2 = new Dto() { Name = "test car" };
+                session.Store(dto1);
+                session.Store(dto2);
                 session.SaveChanges();
 
                 var index = new DummyIndex();
@@ -38,28 +39,32 @@ public class RavenDB_23752 : RavenTestBase
                     .ProjectInto<Dto>()
                     .ToList();
                 
-                Assert.Single(queryResults);
+                Assert.Equal(2, queryResults.Count);
             }
         }
     }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void ProximitySearchWithOnlyStopwords(Options options)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void ProximitySearchWithOnlyStopwordsReturnsEmptySet(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
-                var dto = new Dto() { Name = "of and" };
-                session.Store(dto);
+                var dto1 = new Dto() { Name = "of and" };
+                var dto2 = new Dto() { Name = "of thisisnotastopword and" };
+                session.Store(dto1);
+                session.Store(dto2);
                 session.SaveChanges();
-                
-                Assert.Throws<InvalidQueryException>(() => session.Advanced
+
+                var result = session.Advanced
                     .DocumentQuery<Dto>()
-                    .Search(x => x.Name,"of and")
-                    .Proximity(0)
-                    .ToList());
+                    .Search(x => x.Name, "of and")
+                    .Proximity(3)
+                    .ToList();
+                
+                Assert.Empty(result);
             }
         }
     }

@@ -229,7 +229,11 @@ namespace Raven.Server.Documents.Queries
 
             if (terms.Count == 0)
             {
-                query = null;
+                // Backward compatibility for proximity search
+                query = new PhraseQuery
+                {
+                    Boost = boost.Value
+                };;
                 return false;
             }
 
