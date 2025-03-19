@@ -560,7 +560,7 @@ namespace Raven.Server.Documents.ETL
             
             else if (currentItem is EmbeddingsGenerationItem)
             {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.EmbeddingsGenerationTaskMaxBatchSize)
+                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.EmbeddingsGenerationMaxBatchSize)
                 {
                     var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
 

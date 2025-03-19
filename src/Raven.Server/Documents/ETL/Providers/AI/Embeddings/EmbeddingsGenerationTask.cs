@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Lucene.Net.Documents;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Counters;
@@ -88,23 +89,26 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
-        _fallbackCounter++;
-        var taskRetryDelay = Database.Configuration.Ai.EmbeddingsGenerationTaskRetryDelay.AsTimeSpan;
-        if (lastErrorTime == null)
+        // rate limits in embeddings are usually expressed as requests per minute or tokens per minute
+        // and they are reset on each full minute ticks, so we'll wait until the next full minute to retry
+        // at a minimum
+        int secondsToWaitToNextMinute = 60 - DateTime.UtcNow.Second;
+
+        var secondsToWait = ++_fallbackCounter switch
         {
-            FallbackTime = taskRetryDelay;
-        }
-        else
-        {
-            var secondsToWait = (Database.Configuration.Ai.EmbeddingsGenerationTaskRetryStrategy) switch
-            {
-                EmbeddingsGenerationRetryStrategy.Linear => _fallbackCounter * taskRetryDelay.TotalSeconds,
-                EmbeddingsGenerationRetryStrategy.Exponential => taskRetryDelay.TotalSeconds * Math.Pow(2, _fallbackCounter),
-                _ => throw new NotImplementedException($"Strategy: '{Database.Configuration.Ai.EmbeddingsGenerationTaskRetryStrategy}' is not implemented.")
-                
-            };
-            FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Ai.EmbeddingsGenerationTaskMaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(taskRetryDelay.Seconds, secondsToWait)));
-        }
+            // first - we'll wait for the next minute each time - 5 minutes total 
+            < 5 => secondsToWaitToNextMinute,
+            // then - we'll wait for ~two minutes - 10 minutes total
+            < 10 => secondsToWaitToNextMinute + 60,
+            // then - we'll wait for three minutes - 30 minutes
+            < 20 => secondsToWaitToNextMinute + 120,
+            // finally - we'll use log2 minutes - so at 20+ failures, wait 5 minutes - 1 hour total
+            // then after 32 failures, wait 6 minutes each time - 3.2 hours, etc...
+            _ => secondsToWaitToNextMinute + ((int)Math.Log2(_fallbackCounter) * 60)
+        };
+
+        double max = Database.Configuration.Ai.EmbeddingsGenerationMaxFallbackTime.AsTimeSpan.TotalSeconds;
+        FallbackTime = TimeSpan.FromSeconds(Math.Min(secondsToWait, max));
     }
 
     protected override int LoadInternal(IEnumerable<EmbeddingGenerationScriptResult> items, DocumentsOperationContext context, EmbeddingsGenerationStatsScope scope)
@@ -152,7 +156,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
             storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
         }
 
-
+        _fallbackCounter = 0;
         return processed;
     }
 

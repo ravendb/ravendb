@@ -134,7 +134,7 @@ public sealed class AiConnectionString : ConnectionString
     public int GetQueryEmbeddingsMaxConcurrentBatches(int globalQueryEmbeddingsMaxConcurrentBatches)
     {
         var provider = GetActiveProviderInstance(); 
-        return provider?.QueryEmbeddingsMaxConcurrentBatches ?? globalQueryEmbeddingsMaxConcurrentBatches;
+        return provider?.EmbeddingsMaxConcurrentBatches ?? globalQueryEmbeddingsMaxConcurrentBatches;
     }
 
     private AbstractAiSettings GetActiveProviderInstance()

@@ -7,8 +7,8 @@ public class TestDocumentDatabaseStub(AiConfiguration aiConfig = null)
     public string Name { get; set; } = "test-db";
     public AiConfiguration Configuration { get; } = aiConfig ?? new AiConfiguration
     {
-        EmbeddingsGenerationTaskMaxBatchSize = 128,
+        EmbeddingsGenerationMaxBatchSize = 128,
         QueryEmbeddingsMaxBatchSize = 100,
-        QueryEmbeddingsMaxConcurrentBatches = 4
+        EmbeddingsMaxConcurrentBatches = 4
     };
 }

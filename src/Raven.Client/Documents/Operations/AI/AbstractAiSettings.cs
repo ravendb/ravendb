@@ -14,7 +14,7 @@ public abstract class AbstractAiSettings : IDynamicJsonValueConvertible
     {
         return new DynamicJsonValue
         {
-            [nameof(QueryEmbeddingsMaxConcurrentBatches)] = QueryEmbeddingsMaxConcurrentBatches,
+            [nameof(EmbeddingsMaxConcurrentBatches)] = EmbeddingsMaxConcurrentBatches,
         };
     }
 
@@ -22,5 +22,5 @@ public abstract class AbstractAiSettings : IDynamicJsonValueConvertible
     /// Maximum number of query embedding batches that can be processed concurrently.
     /// Allow users to override the database global value 
     /// </summary>
-    public int? QueryEmbeddingsMaxConcurrentBatches { get; set; }
+    public int? EmbeddingsMaxConcurrentBatches { get; set; }
 }

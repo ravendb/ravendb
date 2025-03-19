@@ -409,7 +409,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         var options = new Options()
         {
             ModifyDatabaseRecord =
-                record => record.Settings[RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationTaskMaxBatchSize)] = batchSize.ToString()
+                record => record.Settings[RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationMaxBatchSize)] = batchSize.ToString()
         };
 
         using (var store = GetDocumentStore(options))

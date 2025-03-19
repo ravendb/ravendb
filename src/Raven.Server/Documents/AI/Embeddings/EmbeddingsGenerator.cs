@@ -424,7 +424,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             if (string.Equals(id.Value, task.Identifier, StringComparison.OrdinalIgnoreCase))
             {
                 var connectionString = GetConnectionString(record, task);
-                int maxConcurrentBatches = connectionString.GetQueryEmbeddingsMaxConcurrentBatches(database.Configuration.Ai.QueryEmbeddingsMaxConcurrentBatches);
+                int maxConcurrentBatches = connectionString.GetQueryEmbeddingsMaxConcurrentBatches(database.Configuration.Ai.EmbeddingsMaxConcurrentBatches);
                 return new AiWorker(this, database.DocumentsStorage, task, connectionString, maxConcurrentBatches, CancellationToken);
             }
         }
