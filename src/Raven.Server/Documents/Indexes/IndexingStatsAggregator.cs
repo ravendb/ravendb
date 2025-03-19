@@ -44,7 +44,8 @@ namespace Raven.Server.Documents.Indexes
                 OutputCount = Stats.IndexingOutputs,
                 AllocatedManagedBytes = Stats.AllocatedManagedBytes,
                 AllocatedUnmanagedBytes = Stats.AllocatedUnmanagedBytes,
-                DocumentsSize = new Size(Stats.DocumentsSize)
+                DocumentsSize = new Size(Stats.DocumentsSize),
+                TombstoneDeleteSuccesses = Stats.TombstoneDeleteSuccesses,
             };
         }
 
@@ -90,7 +91,8 @@ namespace Raven.Server.Documents.Indexes
                 OutputCount = Stats.IndexingOutputs,
                 DocumentsSize = new Size(Stats.DocumentsSize),
                 AllocatedManagedBytes = Stats.AllocatedManagedBytes,
-                AllocatedUnmanagedBytes = Stats.AllocatedUnmanagedBytes
+                AllocatedUnmanagedBytes = Stats.AllocatedUnmanagedBytes,
+                TombstoneDeleteSuccesses = Stats.TombstoneDeleteSuccesses
             };
         }
     }

@@ -1239,6 +1239,10 @@ class indexPerformance extends shardViewModelBase {
                 countsDetails += `<div class="tooltip-li">Success Count: <div class="value">${parentStats.SuccessCount.toLocaleString()}</div></div>`;
                 countsDetails += `<div class="tooltip-li">Documents Size: <div class="value">${parentStats.DocumentsSize.HumaneSize}</div></div>`;
 
+                if (parentStats.TombstoneDeleteSuccesses > 0) {
+                    countsDetails += `<div class="tooltip-li">Tombstone Delete Successes: <div class="value">${parentStats.TombstoneDeleteSuccesses.toLocaleString()}</div></div>`;
+                }
+                
                 if (parentStats.InputCount > 0) {
                     countsDetails += `<div class="tooltip-li">Average Document Size: <div class="value">${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / parentStats.InputCount)}</div></div>`;
                 }

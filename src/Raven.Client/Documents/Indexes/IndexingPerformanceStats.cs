@@ -53,5 +53,7 @@ namespace Raven.Client.Documents.Indexes
         public Size AllocatedUnmanagedBytes { get; set; }
         
         public Size DocumentsSize { get; set; }
+        
+        public long TombstoneDeleteSuccesses { get; set; }  
     }
 }
