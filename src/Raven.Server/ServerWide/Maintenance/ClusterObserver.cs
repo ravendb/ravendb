@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -613,17 +614,31 @@ namespace Raven.Server.ServerWide.Maintenance
             Debug.Assert(ShardHelper.IsShardName(databaseName) == false, $"Compare exchanges are put in cluster under sharded database name, so can't delete them from under shard name {databaseName}");
             const int amountToDelete = 8192;
 
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Starting {nameof(GetCompareExchangeTombstonesToCleanup)}:");
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Database: `{databaseName}`");
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"RawDatabaseRecord: `{mergedState.RawDatabase?.DatabaseName}`, IsSharded: `{mergedState.RawDatabase?.IsSharded}`");
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"PeriodicBackupTaskIds: {(mergedState.RawDatabase?.PeriodicBackupsTaskIds is { Count: > 0 } ? string.Join(", ", mergedState.RawDatabase.PeriodicBackupsTaskIds) : "none")}");
+
             if (_server.Cluster.HasCompareExchangeTombstones(context, databaseName) == false)
             {
+                ForTestingPurposes?.OnDiagnosticLog?.Invoke("No tombstones found in cluster.");
                 cleanupState = CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                 return null;
             }
 
             cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, mergedState, out long maxEtag);
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Computed maxEtag: `{maxEtag}`");
 
-            return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones
-                ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId())
-                : null;
+            if (cleanupState != CompareExchangeTombstonesCleanupState.HasMoreTombstones)
+            {
+                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Exiting early, cleanupState: `{cleanupState}`");
+                return null;
+            }
+
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke("Sending cleanup command with details:");
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"databaseName: `{databaseName}`, maxEtag: `{maxEtag}`, amountToDelete: `{amountToDelete}`");
+
+            return new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId());
         }
 
         public enum CompareExchangeTombstonesCleanupState
@@ -638,6 +653,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             maxEtag = -1;
 
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Starting {nameof(GetMaxCompareExchangeTombstonesEtagToDelete)}...");
             var periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
             var isSharded = mergedState.RawDatabase.IsSharded;
 
@@ -645,14 +661,19 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 //if sharded, we have to get backup status by shard name
                 var shardName = isSharded ? ShardHelper.ToShardName(databaseName, shardNumber) : databaseName;
+                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Processing shard `{shardNumber}`, shardName: `{shardName}`");
 
                 if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
                 {
                     foreach (var taskId in periodicBackupTaskIds)
                     {
+                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Reading backup status for taskId: `{taskId}`");
                         var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(shardName, taskId));
                         if (singleBackupStatus == null)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke("Backup status is null, continuing...");
                             continue;
+                        }
 
                         if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastFullBackupInternal), out DateTime? lastFullBackupInternal) == false ||
                             lastFullBackupInternal == null)
@@ -660,7 +681,10 @@ namespace Raven.Server.ServerWide.Maintenance
                             // never backed up yet
                             if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackupInternal), out DateTime? lastIncrementalBackupInternal) ==
                                 false || lastIncrementalBackupInternal == null)
+                            {
+                                ForTestingPurposes?.OnDiagnosticLog?.Invoke("No full or incremental backup found, continuing...");
                                 continue;
+                            }
                         }
 
                         if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false ||
@@ -669,22 +693,31 @@ namespace Raven.Server.ServerWide.Maintenance
                             if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.Error), out BlittableJsonReaderObject error) == false || error != null)
                             {
                                 // backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones
+                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones, error: `{error}`");
                                 return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
                             }
-
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke("No LastRaftIndex found, continuing...");
                             continue;
                         }
 
                         if (lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false || lastRaftIndex == null)
                         {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Could not retrieve {nameof(PeriodicBackupStatus.LastEtag)}, continuing...");
                             continue;
                         }
 
+                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Task `{taskId}`: LastEtag = `{lastRaftIndex}`");
                         if (maxEtag == -1 || lastRaftIndex < maxEtag)
+                        {
                             maxEtag = lastRaftIndex.Value;
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Updated {nameof(maxEtag)}: {maxEtag}");
+                        }
 
                         if (maxEtag == 0)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"{nameof(maxEtag)} reached 0, returning `{nameof(CompareExchangeTombstonesCleanupState.NoMoreTombstones)}`.");
                             return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                        }
                     }
                 }
 
@@ -692,7 +725,12 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var nodeTag in state.DatabaseTopology.AllNodes)
                 {
                     if (state.Current.ContainsKey(nodeTag) == false) // we have a state change, do not remove anything
+                    {
+                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"[ERROR] Invalid state: Missing report for node '{nodeTag}'");
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                    }
+
+                    ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' report found.");
                 }
 
                 foreach (var nodeTag in state.DatabaseTopology.AllNodes)
@@ -701,36 +739,60 @@ namespace Raven.Server.ServerWide.Maintenance
                     Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     if (hasState == false)
+                    {
+                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Missing state for node '{nodeTag}'");
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                    }
 
                     var hasReport = nodeReport.Report.TryGetValue(state.Name, out var report);
                     Debug.Assert(hasReport || nodeReport.Error != null, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     if (hasReport == false)
+                    {
+                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Missing report for node '{nodeTag}' for database '{state.Name}'");
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                    }
 
+                    ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}': LastClusterWideTransactionRaftIndex = {report.LastClusterWideTransactionRaftIndex}");
                     var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
                     if (maxEtag == -1 || clusterWideTransactionIndex < maxEtag)
+                    {
                         maxEtag = clusterWideTransactionIndex;
+                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Updated maxEtag to {maxEtag} based on node '{nodeTag}' LastClusterWideTransactionRaftIndex");
+                    }
 
                     foreach (var kvp in report.LastIndexStats)
                     {
                         var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
+                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}', index '{kvp.Key}': LastIndexedCompareExchangeReferenceTombstoneEtag = {lastIndexedCompareExchangeReferenceTombstoneEtag}");
                         if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"{nameof(lastIndexedCompareExchangeReferenceTombstoneEtag)} is null, continuing...");
                             continue;
+                        }
 
                         if (maxEtag == -1 || lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
+                        {
                             maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Updated maxEtag to {maxEtag} based on node '{nodeTag}', index '{kvp.Key}'");
+                        }
 
                         if (maxEtag == 0)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"maxEtag reached 0 for node '{nodeTag}', index '{kvp.Key}', returning {CompareExchangeTombstonesCleanupState.NoMoreTombstones}.");
                             return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                        }
                     }
                 }
             }
 
             if (maxEtag == 0)
+            {
+                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Final {nameof(maxEtag)} is 0, returning {CompareExchangeTombstonesCleanupState.NoMoreTombstones}.");
                 return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+            }
 
+            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Finished {nameof(GetMaxCompareExchangeTombstonesEtagToDelete)}. Returning {CompareExchangeTombstonesCleanupState.HasMoreTombstones}.");
             return CompareExchangeTombstonesCleanupState.HasMoreTombstones;
         }
 
@@ -968,6 +1030,21 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 return new MergedDatabaseObservationState(state.RawDatabase, state);
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal sealed class TestingStuff
+        {
+            internal Action<string> OnDiagnosticLog;
         }
     }
 }
