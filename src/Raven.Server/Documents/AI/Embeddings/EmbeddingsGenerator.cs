@@ -11,8 +11,10 @@ using Microsoft.SemanticKernel.Embeddings;
 using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.Config;
@@ -20,6 +22,7 @@ using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -32,58 +35,72 @@ namespace Raven.Server.Documents.AI.Embeddings;
 
 [SuppressMessage("CancellationToken", "RDB0010:Async method should have a CancellationToken in its argument list")]
 [SuppressMessage("ConfigureAwait", "RDB0002:Awaited operations must have ConfigureAwait(false)")]
-public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, CancellationToken shutdown) : BackgroundWorkBase(database.Name, logger, shutdown)
+public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, CancellationToken shutdown, EmbeddingsGenerator.Mode mode) : BackgroundWorkBase(database.Name, logger, shutdown)
 {
+    private const string EmbeddingAttachmentContentType = "application/octet-stream";
+    private readonly Mode _mode = mode;
     private readonly ConcurrentDictionary<EmbeddingsGenerationTaskIdentifier, AiWorker> _workers = [];
-    private readonly ConcurrentQueue<List<Work>> _toCache = new();
-    private readonly ConcurrentQueue<Work> _refreshExpiration = new();
+    private readonly ConcurrentQueue<object> _toCache = new();
     private readonly AsyncManualResetEvent _hasWork = new();
+    private readonly RavenLogger _logger = database.Loggers.GetLogger<EmbeddingsGenerator>();
+    private readonly DocumentDatabase _database = database;
 
-    private enum Mode
+    public enum Mode
     {
         Query,
         Etl,
-        RefreshCache
     }
-    private class Work
+
+    private record RefreshCache(List<string> DocumentIds, TimeSpan CacheDuration);
+    
+    private record StoreEmbeddings(List<GenerateEmbeddings> GeneratedEmbeddings, VectorEmbeddingType Quantization);
+
+    private record PutDocumentEmbeddings(
+        string TaskId,
+        Dictionary<string, HashSet<GenerateEmbeddings>> Data,
+        string DocumentId,
+        string Collection,
+        VectorEmbeddingType Quantization
+    );
+
+    private record GenerateEmbeddings(
+        AiConnectionStringIdentifier ConnectionStringId,
+        TimeSpan CacheDuration, 
+        List<string> Values,
+        List<ReadOnlyMemory<byte>> Embeddings,
+        string CacheKey,
+        AiWorker Owner
+        )
     {
-        public TaskCompletionSource<ReadOnlyMemory<byte>> TaskCompletionSource;
-        public string Value;
-        public TimeSpan CacheDuration;
-        public string CacheDocumentId;
-        public string EmbeddingHash;
-        public string ValueHash;
-        public int TokenCount;
-        public Mode Mode;
-        public ReadOnlyMemory<byte> EmbeddingValue;
-        public AiWorker Owner;
+        public readonly TaskCompletionSource TaskCompletionSource = new();
     }
 
     private class AiWorker
     {
         private readonly DocumentsStorage _documentsStorage;
-        private readonly EmbeddingsGenerationConfiguration _configuration;
+        public readonly EmbeddingsGenerationConfiguration Configuration;
         private readonly AiConnectionString _connectionString;
         private readonly ITextEmbeddingGenerationService _embeddingGenerationService;
         private readonly CancellationToken _cancellationToken;
-        private readonly ConcurrentDictionary<string, Task<ReadOnlyMemory<byte>>> _inMemoryCache = new(StringComparer.OrdinalIgnoreCase);
-        private readonly ConcurrentQueue<Work> _work = new();
         private readonly AsyncManualResetEvent _hasWork = new();
+        private readonly ConcurrentQueue<GenerateEmbeddings> _work = new();
+        private readonly ConcurrentDictionary<string, GenerateEmbeddings> _inFlightCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly Task[] _tasks;
         private readonly EmbeddingsGenerator _parent;
         private readonly CancellationTokenSource _shutdown;
         private int _taskIsRunning;
         private readonly AiConnectionStringIdentifier _connectionStringIdentifier;
-        private TaskCompletionSource<ReadOnlyMemory<byte>> _singleUnusedInstance = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly int? _maxBatchSize;
 
-        public AiWorker(EmbeddingsGenerator parent,DocumentsStorage documentsStorage, EmbeddingsGenerationConfiguration configuration,
-            AiConnectionString connectionString, int maxConcurrentBatches, CancellationToken cancellationToken) 
+        public AiWorker(EmbeddingsGenerator parent, DocumentsStorage documentsStorage, EmbeddingsGenerationConfiguration configuration,
+            AiConnectionString connectionString, int maxConcurrentBatches, CancellationToken cancellationToken)
         {
-            if(maxConcurrentBatches < 1)
+            if (maxConcurrentBatches < 1)
                 throw new InvalidDataException($"QueryEmbeddingsMaxConcurrentBatches for {configuration.Name} must be at least 1");
             _documentsStorage = documentsStorage;
+            _maxBatchSize = documentsStorage.DocumentDatabase.Configuration.Ai.EmbeddingsGenerationMaxBatchSize;
             _parent = parent;
-            _configuration = configuration;
+            Configuration = configuration;
             _connectionString = connectionString;
             _connectionStringIdentifier = new AiConnectionStringIdentifier(_connectionString.Identifier);
             _embeddingGenerationService = AiHelper.CreateService(connectionString);
@@ -91,114 +108,161 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             _cancellationToken = _shutdown.Token;
             var shutdownTask = new TaskCompletionSource();
             _cancellationToken.Register(_ => shutdownTask.TrySetCanceled(), null);
-            _tasks = new Task[maxConcurrentBatches+1];
+            _tasks = new Task[maxConcurrentBatches + 1];
             Array.Fill(_tasks, Task.CompletedTask);
             _tasks[^1] = shutdownTask.Task;
         }
+        
+         public PutDocumentEmbeddings GenerateEmbeddingAsync(DocumentsOperationContext documentsContext,
+             string sourceDocumentId, string sourceCollectionName,
+             HashSet<Task> tasks,
+             Reference<int> cachedEmbeddings,
+             Dictionary<string, List<(string,ChunkingOptions)>> props)
+         {
+             Dictionary<string, HashSet<GenerateEmbeddings>> embeddingsByName = new();
+             var cacheDuration = Configuration.EmbeddingsCacheExpiration;
+             List<string> expirationRefresh = null;
+             foreach (var (name, field) in props)
+             {
+                 HashSet<GenerateEmbeddings> hashes = [];
+                 foreach (var  (value,chunking) in field)
+                 {
+                     List<string> pending = [];
+                     List<ReadOnlyMemory<byte>> cachedEmbeddingsBuffers = [];
+                     foreach (var chunkedValue in TextChunker.Chunk(value, chunking))
+                     {
+                         if (TryGetFromCache(documentsContext, chunkedValue, cacheDuration, ref expirationRefresh, out var cachedEntry))
+                         {
+                             cachedEmbeddingsBuffers.Add(cachedEntry);
+                             cachedEmbeddings.Value++;
+                         }
+                         else
+                         {
+                             pending.Add(chunkedValue);
+                         }
+                     }
+                     var generateEmbeddings = RegisterPendingEmbeddings(pending, cachedEmbeddingsBuffers, value, cacheDuration);
+                     tasks.Add(generateEmbeddings.TaskCompletionSource.Task);
+                     hashes.Add(generateEmbeddings);
+                 }
+                 embeddingsByName[name] = hashes;
+             }
+             
+             if (expirationRefresh is not null)
+             {
+                 _parent.ProcessInBackground(new RefreshCache(expirationRefresh, cacheDuration));
+             }
 
-        public int MaxTokensPerChunkForQueries => _configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk;
+             return new PutDocumentEmbeddings(
+                 Configuration.Identifier,
+                 embeddingsByName,
+                 sourceDocumentId,
+                 sourceCollectionName,
+                  Configuration.Quantization
+             );
+         }
 
-        public ValueTask<ReadOnlyMemory<byte>> GetEmbeddingsForQuery(DocumentsOperationContext documentsContext, string chunkedValue, int tokenCount)
+
+        public ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsForQueryAsync(
+            DocumentsOperationContext documentsContext, 
+            string value)
         {
-            var valueHash = EmbeddingsHelper.CalculateInputValueHash(chunkedValue);
-            var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(_connectionStringIdentifier, valueHash, _configuration.Quantization);
-            var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(documentsContext, docId, valueHash, AttachmentType.Document, null);
-            TimeSpan cacheDuration = _configuration.EmbeddingsCacheForQueryingExpiration;
-            if (attachment != null)
+            List<ReadOnlyMemory<byte>> results = [];
+            List<string> expirationRefresh = null;
+            List<string> pending = null;
+            // we explicitly do *not* care about the order of vectors compared to the text, including with chunking or 
+            // with multiple values. Logically, we send text, and get a set of vectors back, in some arbitrary order
+            foreach (var text in TextChunker.Chunk(value, Configuration.ChunkingOptionsForQuerying))
             {
-                RefreshCacheExpirationIfNeeded(documentsContext, docId, cacheDuration);
-
-                var stream = attachment.Stream;
-                //TODO: Need to find a way to avoid this allocation in favor of pooling, etc.
-                byte[] buffer = new byte[attachment.Size];
-                stream.ReadExactly(buffer);
-                return new ValueTask<ReadOnlyMemory<byte>>(buffer);
+                if (TryGetFromCache(documentsContext, text, Configuration.EmbeddingsCacheForQueryingExpiration, ref expirationRefresh,
+                        out ReadOnlyMemory<byte> cached))
+                {
+                    results.Add(cached);
+                }
+                else
+                {
+                    pending ??= [];
+                    pending.Add(text);
+                }
             }
 
-            var work = new Work
+            var cacheDuration = Configuration.EmbeddingsCacheForQueryingExpiration;
+            if (expirationRefresh is not null)
             {
-                Owner = this,
-                TaskCompletionSource = new (TaskCreationOptions.RunContinuationsAsynchronously),
-                Value = chunkedValue,
-                ValueHash = valueHash,
-                CacheDocumentId = docId,
-                TokenCount = tokenCount,
-                CacheDuration = cacheDuration,
-                Mode = Mode.Query
-            };
-            var localTask = work.TaskCompletionSource.Task;
-            var inCacheTask = _inMemoryCache.GetOrAdd(chunkedValue, localTask);
-            if (inCacheTask == localTask)
-            {
-                _work.Enqueue(work);
-                _hasWork.Set();
+                _parent.ProcessInBackground(new RefreshCache(expirationRefresh, cacheDuration));
             }
 
-            return new(inCacheTask);
+            if (pending is null)
+                return ValueTask.FromResult(new ReadOnlyMemory<ReadOnlyMemory<byte>>(results.ToArray()));
+
+            var generateEmbeddings = RegisterPendingEmbeddings(pending, results, value, cacheDuration);
+            return new (ReturnAsync());
+
+            async Task<ReadOnlyMemory<ReadOnlyMemory<byte>>> ReturnAsync()
+            {
+                Wake();
+                await generateEmbeddings.TaskCompletionSource.Task;
+                return new ReadOnlyMemory<ReadOnlyMemory<byte>>(generateEmbeddings.Embeddings.ToArray());
+            }
+        }
+        
+        GenerateEmbeddings RegisterPendingEmbeddings(List<string> pending, List<ReadOnlyMemory<byte>> cachedEmbeddings, string value, TimeSpan cacheDuration)
+        {
+            var newGen = new GenerateEmbeddings(_connectionStringIdentifier, cacheDuration, pending,  cachedEmbeddings,value, this);
+            if (pending.Count == 0) // all from the cache
+            {
+                newGen.TaskCompletionSource.TrySetResult();
+                return newGen;
+            }
+
+            var inCacheGen = _inFlightCache.GetOrAdd(value, newGen);
+            if (newGen == inCacheGen)
+            {
+                _work.Enqueue(newGen);
+            }
+            return inCacheGen;
         }
 
-        private void RefreshCacheExpirationIfNeeded(DocumentsOperationContext documentsContext, string docId, TimeSpan cacheDuration)
+        public void RemoveFromCache(string value)
         {
+            _inFlightCache.TryRemove(value, out _);   
+        }
+        
+        private bool TryGetFromCache(DocumentsOperationContext documentsContext, string text,
+            TimeSpan cacheDuration, ref List<string> expirationRefresh, out ReadOnlyMemory<byte> result)
+        {
+            var valueHash = EmbeddingsHelper.CalculateInputValueHash(text);
+            var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(_connectionStringIdentifier, valueHash, Configuration.Quantization);
+            
+            Attachment attachment = _documentsStorage.AttachmentsStorage.GetAttachment(documentsContext, docId, valueHash, AttachmentType.Document, null);
+            if (attachment == null)
+            {
+                result = default;
+                return false;
+            }
+
             var document = _documentsStorage.Get(documentsContext, docId);
             if (document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
                 if (metadata.TryGet(Constants.Documents.Metadata.Expires, out DateTime expires))
                 {
-                    var timeToExpireSeconds = (expires - DateTime.UtcNow).TotalSeconds;
+                    var timeToExpireSeconds = (expires - _parent._database.Time.GetUtcNow()).TotalSeconds;
                     var halfTime = cacheDuration.TotalSeconds / 2;
-                    if (timeToExpireSeconds > halfTime)
-                        return;
+                    if (halfTime > timeToExpireSeconds)
+                    {
+                        expirationRefresh ??= [];
+                        expirationRefresh.Add(docId);
+                    }
                 }
             }
 
-            _parent._refreshExpiration.Enqueue(new Work
-            {
-                CacheDuration = cacheDuration,
-                CacheDocumentId = docId,
-                Mode = Mode.RefreshCache,
-                // avoid allocation a new instance each time
-                TaskCompletionSource = _singleUnusedInstance 
-            });
-            _parent._hasWork.Set();
-        }
+            var stream = attachment.Stream;
+            //TODO: Need to find a way to avoid this allocation in favor of pooling, etc.
+            byte[] buffer = new byte[attachment.Size];
+            stream.ReadExactly(buffer);
+            result = buffer;
 
-        private Task GenerateEmbeddingsFor(string chunkedValue, string cacheDocId, string valueHash, int tokenCount)
-        {
-            var work = new Work
-            {
-                Owner = this,
-                TaskCompletionSource = new (TaskCreationOptions.RunContinuationsAsynchronously),
-                Value = chunkedValue,
-                ValueHash = valueHash,
-                CacheDocumentId = cacheDocId,
-                TokenCount = tokenCount,
-                CacheDuration = _configuration.EmbeddingsCacheExpiration,
-                Mode = Mode.Query
-            };
-            var localTask = work.TaskCompletionSource.Task;
-            var inCacheTask = _inMemoryCache.GetOrAdd(chunkedValue, localTask);
-            if (inCacheTask == localTask)
-            {
-                _work.Enqueue(work);
-                _hasWork.Set();
-            }
-
-            return inCacheTask;
-        }
-        
-        public bool GenerateEmbeddingsToCache(DocumentsOperationContext documentsContext, string chunkedValue, int tokensCount,
-            ref List<Task> tasks)
-        {
-            var valueHash = EmbeddingsHelper.CalculateInputValueHash(chunkedValue);
-            var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(_connectionStringIdentifier, valueHash, _configuration.Quantization);
-            if (_documentsStorage.AttachmentsStorage.AttachmentExists(documentsContext, docId, valueHash))
-            {
-                RefreshCacheExpirationIfNeeded(documentsContext, docId, _configuration.EmbeddingsCacheExpiration);
-                return true;
-            }
-            tasks ??= [];
-            tasks.Add(GenerateEmbeddingsFor(chunkedValue, docId, valueHash, tokensCount));
-            return false;
+            return true;
         }
 
         private ValueTask<int> GetAvailableTaskIndexAsync()
@@ -209,13 +273,13 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     return ValueTask.FromResult(i);
             }
 
-            return new (WithAsyncWait());
+            return new(WithAsyncWait());
 
             async Task<int> WithAsyncWait()
             {
                 var task = await Task.WhenAny(_tasks);
                 return Array.IndexOf(_tasks, task);
-            } 
+            }
         }
 
         public async Task ShutdownAsync()
@@ -223,6 +287,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             _shutdown.Cancel(false);
             try
             {
+                while (_work.TryDequeue(out var work))
+                {
+                    work.TaskCompletionSource.SetCanceled(_shutdown.Token);
+                }
+
                 await Task.WhenAll(_tasks);
             }
             catch (OperationCanceledException)
@@ -232,73 +301,56 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             }
             finally
             {
-                    _taskIsRunning = 0; // only needed for debugging                
+                _taskIsRunning = 0; // only needed for debugging                
             }
         }
-        
+
         public async Task RunAsync()
         {
             if (Interlocked.Increment(ref _taskIsRunning) != 1)
                 return; // we may race to start it, so we skip the next one
-            
-            int maxTokens = _configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk;
-            // This gives us 7/8 of the max (448/512, 1792/2048, 3584/4096, 7168/8192)
-            // The idea is that we don't want to _rely_ on the estimated token count to 
-            // be accurate, so we leave ourselves a little cushion. 
-            maxTokens -= maxTokens / 8; 
-            List<string> batch = [];
-            List<Work> works = [];
-            int currentBatchTokens = 0;
+
             while (_cancellationToken.IsCancellationRequested == false)
             {
                 await _hasWork.WaitAsync(_cancellationToken);
                 _hasWork.Reset();
 
+                List<string> batch = [];
+                List<List<ReadOnlyMemory<byte>>> embeddings = [];
+                List<GenerateEmbeddings> works = [];
+
                 while (_work.TryDequeue(out var work))
                 {
-                    if (currentBatchTokens + work.TokenCount > maxTokens)
+                    for (int i = 0; i < work.Values.Count; i++)
                     {
-                        RegisterBatch(await GetAvailableTaskIndexAsync());
+                        batch.Add(work.Values[i]);
+                        // we add the embedding list multiple times, to make it
+                        // easier to track which results list each value belongs to
+                        embeddings.Add(work.Embeddings);
                     }
-                    batch.Add(work.Value);
+
                     works.Add(work);
-                    currentBatchTokens += work.TokenCount;
-                }
-
-                if (batch.Count > 0)
-                {
-                    // GetAvailableTaskIndexAsync is ensuring that we aren't running
-                    // too many concurrent tasks, while the actual batch itself
-                    // is running in the background
-                    RegisterBatch(await GetAvailableTaskIndexAsync());
-                }
-            }
-
-            void RegisterBatch(int index)
-            {
-                if (_cancellationToken.IsCancellationRequested)
-                {
-                    foreach (Work work in works)
+                    if (batch.Count >= _maxBatchSize)
                     {
-                        work.TaskCompletionSource.TrySetCanceled();
+                        Wake();
+                        break;
                     }
-
-                    return;
                 }
 
-                _tasks[index] = FlushBatchAsync(batch, works);
-                batch = [];
-                works = [];
-                currentBatchTokens = 0;
-            }
-        }
+                if (works.Count is 0)
+                    continue;
 
-        private async Task FlushBatchAsync(List<string> batch, List<Work> works)
+                // GetAvailableTaskIndexAsync is ensuring that we aren't running
+                // too many concurrent tasks, while the actual batch itself
+                // is running in the background
+                int index = await GetAvailableTaskIndexAsync();
+                _tasks[index] = FlushBatchAsync(batch, embeddings, works);
+            }
+        } 
+        private async Task FlushBatchAsync(List<string> batch, List<List<ReadOnlyMemory<byte>>> embeddings, List<GenerateEmbeddings> works)
         {
             try
             {
-                PortableExceptions.ThrowIf<IOException>(works.Count != batch.Count, "Unexpected number of batches, works & batches must have the same count!");
-
                 IList<ReadOnlyMemory<float>> allEmbeddings;
 
                 try
@@ -309,113 +361,61 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 {
                     throw new EmbeddingGenerationException(
                         $"Failed to generate embeddings due to rate limits. Consider decreasing the number of elements processed in a single batch " +
-                        $"('{RavenConfiguration.GetKey(x => x.Ai.QueryEmbeddingsMaxBatchSize)}') or increasing the " +
+                        $"('{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationMaxBatchSize)}') or increasing the " +
                         $"limits on your model deployment.", httpOperationException);
                 }
 
 
                 PortableExceptions.ThrowIf<IOException>(allEmbeddings.Count != batch.Count, "Model returned a different count of embeddings than expected");
 
-                // we iterate twice - we want to free the waiting threads for this ASAP
                 for (int i = 0; i < allEmbeddings.Count; i++)
                 {
-                  
-                    var embeddingValue = EmbeddingsHelper.CreateEmbeddingValue(allEmbeddings[i], _configuration.Quantization);
-                    works[i].EmbeddingValue = embeddingValue;
-                    
-                    if (works[i].Mode is not Mode.Query)
-                        continue;
-                    // means it is from queries, and we want to release the thread ASAP and send it the embeddings
-                    works[i].TaskCompletionSource.TrySetResult(embeddingValue);
+                    embeddings[i].Add(EmbeddingsHelper.CreateEmbeddingValue(allEmbeddings[i], Configuration.Quantization));
                 }
 
-                for (int i = 0; i < allEmbeddings.Count; i++)
+                if (_parent._mode is Mode.Query)
                 {
-                    works[i].EmbeddingHash = AttachmentsStorageHelper.CalculateHash(works[i].EmbeddingValue.Span);
+                    // for queries we want to release the thread ASAP and send it the embeddings
+                    foreach (var work in works)
+                    {
+                        work.TaskCompletionSource.TrySetResult();
+                        // explicitly *not* calling this here, we have a value
+                        // but we haven't persisted that yet
+                        // work.Owner.RemoveFromCache(ge.CacheKey);
+                    }
                 }
-
-                _parent.WriteToCache(works);
+                _parent.ProcessInBackground(new StoreEmbeddings(works, Configuration.Quantization));
             }
             catch (Exception e)
             {
-                foreach (Work work in works)
+                foreach (var work in works)
                 {
                     work.TaskCompletionSource.TrySetException(e);
-                    _inMemoryCache.TryRemove(work.Value, out _);
+                    work.Owner.RemoveFromCache(work.CacheKey);
                 }
             }
         }
 
         public bool ModifiedFrom(EmbeddingsGenerationConfiguration updated, AiConnectionString updateConnectionString)
         {
-            return _configuration.Compare(updated) != EtlConfigurationCompareDifferences.None || 
+            return Configuration.Compare(updated) != EtlConfigurationCompareDifferences.None ||
                    _connectionString.Compare(updateConnectionString) != AiSettingsCompareDifferences.None;
         }
 
-        public void RemoveFromCache(string v)
+        public void Wake()
         {
-            _inMemoryCache.TryRemove(v, out _);
+            _hasWork.Set();
         }
     }
-
-    private void WriteToCache(List<Work> works)
+    
+    private void ProcessInBackground(object works)
     {
         _toCache.Enqueue(works);
         _hasWork.Set();
     }
-
-    public bool GenerateEmbeddingsToCache(DocumentsOperationContext documentsContext,
-        EmbeddingsGenerationTaskIdentifier embeddingTaskId, string value,
-        ref List<Task> tasks)
-    {
-        var worker = _workers[embeddingTaskId];
-        bool allInCache = true;
-        foreach (var (text, tokenCount) in TextChunker.ChunkPlainText(value, worker.MaxTokensPerChunkForQueries))
-        {
-            allInCache &= worker.GenerateEmbeddingsToCache(documentsContext, text, tokenCount, ref tasks);
-        }
-
-        return allInCache;
-    }
-
-    public ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsForQueryAsync(DocumentsOperationContext documentsContext,
-        EmbeddingsGenerationTaskIdentifier embeddingTaskId, params ReadOnlySpan<string> values)
-    {
-        var worker = _workers[embeddingTaskId];
-        var results = new List<ReadOnlyMemory<byte>>();
-        List<Task<ReadOnlyMemory<byte>>> tasks = null;
-        // we explicitly do *not* care about the order of vectors compared to the text, including with chunking or 
-        // with multiple values. Logically, we send text, and get a set of vectors back, in some arbitrary order
-        foreach (string value in values)
-        {
-            foreach (var (text, tokenCount) in TextChunker.ChunkPlainText(value, worker.MaxTokensPerChunkForQueries))
-            {
-                var task = worker.GetEmbeddingsForQuery(documentsContext, text, tokenCount);
-                if (task.IsCompleted)
-                {
-                    results.Add(task.Result);
-                    continue;
-                }
-
-                tasks ??= [];
-                tasks.Add(task.AsTask());
-            }
-        }
-        if(tasks == null)
-            return ValueTask.FromResult(new ReadOnlyMemory<ReadOnlyMemory<byte>>(results.ToArray()));
-
-        return new(CompleteAsync());
-        
-        async Task<ReadOnlyMemory<ReadOnlyMemory<byte>>> CompleteAsync()
-        {
-            results.AddRange(await Task.WhenAll(tasks));
-            return new ReadOnlyMemory<ReadOnlyMemory<byte>>(results.ToArray());
-        } 
-    }
-    
     private AiWorker CreateAiWorker(EmbeddingsGenerationTaskIdentifier id)
     {
-        var record = database.ReadDatabaseRecord();
+        var record = _database.ReadDatabaseRecord();
         foreach (var task in record.EmbeddingsGenerations)
         {
             if (task.Disabled)
@@ -424,8 +424,8 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             if (string.Equals(id.Value, task.Identifier, StringComparison.OrdinalIgnoreCase))
             {
                 var connectionString = GetConnectionString(record, task);
-                int maxConcurrentBatches = connectionString.GetQueryEmbeddingsMaxConcurrentBatches(database.Configuration.Ai.EmbeddingsMaxConcurrentBatches);
-                return new AiWorker(this, database.DocumentsStorage, task, connectionString, maxConcurrentBatches, CancellationToken);
+                int maxConcurrentBatches = connectionString.GetQueryEmbeddingsMaxConcurrentBatches(_database.Configuration.Ai.EmbeddingsMaxConcurrentBatches);
+                return new AiWorker(this, _database.DocumentsStorage, task, connectionString, maxConcurrentBatches, CancellationToken);
             }
         }
         
@@ -447,7 +447,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     protected override void InitializeWork()
     {
-        var record = database.ReadDatabaseRecord();
+        var record = _database.ReadDatabaseRecord();
         HandleDatabaseRecordChange(record);
         foreach (var (name, state) in _workers)
         {
@@ -459,44 +459,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     {
         try
         {
-            List<Work> pending = [];
             while (CancellationToken.IsCancellationRequested == false)
             {
-                pending.Clear();
                 await _hasWork.WaitAsync(CancellationToken);
                 _hasWork.Reset();
-                try
-                {
-                    while (_toCache.TryDequeue(out List<Work> works))
-                    {
-                        pending.AddRange(works);
-                    }
-                    while (_refreshExpiration.TryDequeue(out Work work))
-                    {
-                        pending.Add(work);
-                    }
-
-                    await database.TxMerger.Enqueue(new PutEmbeddingsIntoCacheCommand(pending));
-
-                    foreach (var work in pending)
-                    {
-                        work.TaskCompletionSource.TrySetResult(default);
-                    }
-                }
-                catch (Exception e)
-                {
-                    foreach (var work in pending)
-                    {
-                        work.TaskCompletionSource.TrySetException(e);
-                    }
-                }
-                finally
-                {
-                    foreach (var work in pending)
-                    {
-                        work.Owner.RemoveFromCache(work.Value);
-                    }   
-                }
+                await SubmitAndWaitForWork(GetBatch());
             }
         }
         finally
@@ -515,42 +482,155 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             }
             catch
             {
-            }
-            while (_toCache.TryDequeue(out List<Work> works))
-            {
-                foreach (var work in works)
-                {
-                    work.TaskCompletionSource.TrySetCanceled();
-                }
+                // we don't care about an error here
             }
             
-        }
-    }
-    
-    private sealed class PutEmbeddingsIntoCacheCommand(List<Work> work)
-        : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
-    {
-        private const string EmbeddingAttachmentContentType = "application/octet-stream";
-        protected override long ExecuteCmd(DocumentsOperationContext context)
-        {
-            var documentsStorage = context.DocumentDatabase.DocumentsStorage;
-            var attachmentsStorage = documentsStorage.AttachmentsStorage;
-            foreach (var item in work)
+            while (_toCache.TryDequeue(out var o))
             {
-                var docJson = CreateEmbeddingCacheDocumentJson(DateTime.UtcNow.Add(item.CacheDuration));
-                using (var json = context.ReadObject(docJson, item.CacheDocumentId))
+                if (o is GenerateEmbeddings generateEmbeddings)
                 {
-                    documentsStorage.Put(context, item.CacheDocumentId, null, json);
-                }
-
-                if (item.Mode is not Mode.RefreshCache) 
-                {
-                    attachmentsStorage.PutAttachment(context, item.CacheDocumentId, item.ValueHash, EmbeddingAttachmentContentType,
-                        item.EmbeddingHash, null, new ReadOnlyMemoryStream<byte>(item.EmbeddingValue));
+                    generateEmbeddings.TaskCompletionSource.TrySetCanceled();
                 }
             }
+        }
+    }
 
-            return work.Count;
+    private async Task SubmitAndWaitForWork(List<object> batch)
+    {
+        try
+        {
+            await _database.TxMerger.Enqueue(new PutEmbeddingsIntoCacheCommand(batch));
+
+            foreach (var work in batch)
+            {
+                switch (work)
+                {
+                    case BatchGenerator pde:
+                    {
+                        pde.TaskCompletionSource.TrySetResult();
+                        break;
+                    }
+                    case StoreEmbeddings se:
+                    {
+                        foreach (var ge in se.GeneratedEmbeddings)
+                        {
+                            ge.TaskCompletionSource.TrySetResult();
+                            ge.Owner.RemoveFromCache(ge.CacheKey);
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            if (_logger.IsWarnEnabled)
+            {
+                _logger.Warn($"Failed to submit embeddings to cache", e);
+            }
+            foreach (var work in batch)
+            {
+                switch (work)
+                {
+                    case BatchGenerator pde:
+                    {
+                        pde.TaskCompletionSource.TrySetException(e);
+                        break;
+                    }
+                    case StoreEmbeddings se:
+                    {
+                        foreach (var ge in se.GeneratedEmbeddings)
+                        {
+                            ge.TaskCompletionSource.TrySetException(e);
+                            ge.Owner.RemoveFromCache(ge.CacheKey);
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private  List<object>  GetBatch()
+    {
+        List<object> results = [];
+        while (_toCache.TryDequeue(out object o))
+        {
+            results.Add(o);
+            if (results.Count > 128)
+            {
+                _hasWork.Set();
+                break;
+            }
+        }
+
+        return results;
+    }
+
+    private sealed class PutEmbeddingsIntoCacheCommand(List<object> batch)
+        : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    {
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            int operations = 0;
+            var documentsStorage = context.DocumentDatabase.DocumentsStorage;
+            var attachmentsStorage = documentsStorage.AttachmentsStorage;
+            foreach (var cur in batch)
+            {
+                switch (cur)
+                {
+                    case RefreshCache rc:
+                    {
+                        DateTime expireAt = DateTime.UtcNow.Add(rc.CacheDuration);
+                        foreach (string docIdToRefresh in rc.DocumentIds)
+                        {
+                            var docJson = CreateEmbeddingCacheDocumentJson(expireAt);
+                            using (var json = context.ReadObject(docJson, docIdToRefresh))
+                            {
+                                operations++;
+                                documentsStorage.Put(context, docIdToRefresh, null, json);
+                            }
+                        }
+
+                        break;
+                    }
+                    case BatchGenerator bg:
+                    {
+                        operations += bg.ApplyInTransaction(context);
+                        break;
+                    }
+                    case StoreEmbeddings se:
+                    {
+                        foreach (var ge in se.GeneratedEmbeddings)
+                        {
+                            DateTime expireAt = DateTime.UtcNow.Add(ge.CacheDuration); 
+                            for (int i = 0; i < ge.Values.Count; i++)
+                            {
+                                var val = ge.Values[i];
+                                var embedding = ge.Embeddings[i];
+                            
+                                var docJson = CreateEmbeddingCacheDocumentJson(expireAt);
+                                var valueHash = EmbeddingsHelper.CalculateInputValueHash(val);
+                                var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(ge.ConnectionStringId, valueHash, se.Quantization);
+
+                                using (var json = context.ReadObject(docJson, docId))
+                                {
+                                    documentsStorage.Put(context, docId, null, json);
+                                }
+
+                                string embeddingHash = AttachmentsStorageHelper.CalculateHash(embedding.Span);
+                                attachmentsStorage.PutAttachment(context, docId, valueHash, EmbeddingAttachmentContentType,
+                                    embeddingHash, null, new ReadOnlyMemoryStream<byte>(embedding));
+                                operations++;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            return operations; 
         }
         
         private DynamicJsonValue CreateEmbeddingCacheDocumentJson(DateTime expireAt)
@@ -564,13 +644,14 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 }
             };
         }
+        
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new Replay(work);
+            return new Replay(batch);
         }
 
-        public class Replay(List<Work> work) : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
+        public class Replay(List<object> work) : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
         {
             public MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction> ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
@@ -620,4 +701,208 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     {
         return _workers.ContainsKey(id);
     }
+
+    public ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsForQueryAsync(
+        DocumentsOperationContext documentsContext,
+        EmbeddingsGenerationTaskIdentifier taskId,
+        params ReadOnlySpan<string> values)
+    {
+        if(_workers.TryGetValue(taskId, out var worker) is false)
+        {
+            throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{taskId.Value}' identifier");
+        }
+
+        if (values.Length == 1)
+        {
+            return worker.GetEmbeddingsForQueryAsync(documentsContext, values[0]);
+        }
+
+        return GetEmbeddingsArrayAsync(values);
+
+        ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsArrayAsync(ReadOnlySpan<string> multi)
+        {
+            List<ReadOnlyMemory<byte>> results = [];
+            List<Task<ReadOnlyMemory<ReadOnlyMemory<byte>>>> tasks = null;
+            for (int i = 0; i < multi.Length; i++)
+            {
+                var valueTask = worker.GetEmbeddingsForQueryAsync(documentsContext, multi[i]);
+                if (valueTask.IsCompleted is false)
+                {
+                    results.AddRange(valueTask.Result.Span);
+                }
+                else
+                {
+                    tasks ??= [];
+                    tasks.Add(valueTask.AsTask());
+                }
+            }
+
+            if (tasks is null)
+                return new(results.ToArray());
+
+            return new(CompleteAsync());
+
+            async Task<ReadOnlyMemory<ReadOnlyMemory<byte>>> CompleteAsync()
+            {
+                var asyncResults = await Task.WhenAll(tasks);
+                foreach (var result in asyncResults)
+                {
+                    results.AddRange(result.Span);
+                }
+
+                return results.ToArray();
+            }
+        }
+    }
+
+    public class BatchGenerator(EmbeddingsGenerator parent, EmbeddingsGenerationTaskIdentifier taskId)
+    {
+        private readonly AiWorker _worker = parent._workers[taskId];
+        private readonly HashSet<Task> _tasks = [];
+        public readonly TaskCompletionSource TaskCompletionSource = new();
+        private readonly List<PutDocumentEmbeddings> _results = [];
+        private readonly Reference<int> _cachedEmbeddings = new();
+        private readonly List<string> _toDelete = [];
+        public int CachedEmbeddings => _cachedEmbeddings.Value;
+
+        public void StartGenerateEmbeddingFor(
+            DocumentsOperationContext documentsContext,
+            string sourceDocumentId, string sourceCollectionName,
+            Dictionary<string, List<(string,ChunkingOptions)>> props)
+        {
+            var putDocumentEmbeddings =
+                _worker.GenerateEmbeddingAsync(documentsContext, sourceDocumentId, sourceCollectionName, _tasks, _cachedEmbeddings, props);
+            _results.Add(putDocumentEmbeddings);
+        }
+
+        public async Task WaitForGenerationAsync()
+        {
+            _worker.Wake();
+            await Task.WhenAll(_tasks);
+        }
+
+        public Task StoreResults()
+        {
+            parent.ProcessInBackground(this);
+            return TaskCompletionSource.Task;
+        }
+
+        public int ApplyInTransaction(DocumentsOperationContext context)
+        {
+            int operations = _toDelete.Count;
+            var documentsStorage = context.DocumentDatabase.DocumentsStorage;
+            var attachmentsStorage = context.DocumentDatabase.DocumentsStorage.AttachmentsStorage;
+            foreach (var del in _toDelete)
+            {
+                operations++;
+                var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(del);
+                documentsStorage.Delete(context, embeddingDocId, null);
+            }
+
+            foreach (var pde in _results)
+            {
+                var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(pde.DocumentId);
+                Dictionary<string, HashSet<string>> hashesByName = [];
+                Dictionary<string, ReadOnlyMemory<byte>> attachments = [];
+                foreach (var (name, embeddings) in pde.Data)
+                {
+                    HashSet<string> hashes = [];
+                    foreach (var generatedEmbeddings in embeddings)
+                    {
+                        foreach (var embedding in generatedEmbeddings.Embeddings)
+                        {
+                            string embeddingHash = AttachmentsStorageHelper.CalculateHash(embedding.Span);
+                            hashes.Add(embeddingHash);
+                            attachments[embeddingHash] = embedding;
+                        }
+                    }
+
+                    hashesByName[name] = hashes;
+                }
+
+                using var updatedDoc = CreateOrUpdateDocumentEmbeddingDoc(embeddingDocId, pde, hashesByName, out var attachmentsToRemove);
+                documentsStorage.Put(context, embeddingDocId, null, updatedDoc);
+                foreach (var (embeddingHash, embedding) in attachments)
+                {
+                    operations++;
+                    attachmentsStorage.PutAttachment(context, embeddingDocId, embeddingHash, EmbeddingAttachmentContentType,
+                        embeddingHash, null, new ReadOnlyMemoryStream<byte>(embedding));
+                }
+
+                foreach (var toRemove in attachmentsToRemove)
+                {
+                    operations++;
+                    attachmentsStorage.DeleteAttachment(context, embeddingDocId, toRemove,null, out _);
+                }
+            }
+            
+            return operations;
+
+            BlittableJsonReaderObject CreateOrUpdateDocumentEmbeddingDoc(string embeddingDocId, PutDocumentEmbeddings pde, Dictionary<string, HashSet<string>> hashesByName, out HashSet<string> attachmentsToRemove)
+            {
+                Document document = documentsStorage.Get(context, embeddingDocId);
+                DynamicJsonValue modifications;
+                attachmentsToRemove = [];
+                if (document != null)
+                {
+                    ExtractAllAttachmentsForCurrentTask(document, pde, attachmentsToRemove);
+                    modifications = new DynamicJsonValue(document.Data);
+                }
+                else
+                {
+                    modifications = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue()
+                        {
+                            [Constants.Documents.Metadata.Collection] = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(pde.Collection),
+                        }
+                    };
+                }
+
+                var djv = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Quantization] = pde.Quantization
+                };
+                foreach (var (name, hashes) in hashesByName)
+                {
+                    attachmentsToRemove.ExceptWith(hashes);
+                    djv[name] = new DynamicJsonArray(hashes);
+                }
+                modifications[pde.TaskId] = djv;
+                return document == null ?  
+                    context.ReadObject(modifications, embeddingDocId) :
+                    context.ReadObject(document.Data, embeddingDocId) ;
+            }
+
+            void ExtractAllAttachmentsForCurrentTask(Document document, PutDocumentEmbeddings pde, HashSet<string> attachmentsToRemove)
+            {
+                if (!document.Data.TryGet(pde.TaskId, out BlittableJsonReaderObject taskDetails)) 
+                    return;
+                
+                BlittableJsonReaderObject.PropertyDetails prop = default;
+                for (int i = 0; i < taskDetails.Count; i++)
+                {
+                    taskDetails.GetPropertyByIndex(i, ref prop);
+                    if (prop.Value is not BlittableJsonReaderArray arr)
+                        continue;
+
+                    for(int j =0; j<arr.Length; j++)
+                    {
+                        var hash = arr.GetStringByIndex(j);
+                        if (hash is null)
+                            continue;
+
+                        attachmentsToRemove.Add(hash);
+                    }
+                }
+            }
+        }
+
+        public void Delete(string documentId)
+        {
+            _toDelete.Add(documentId);
+        }
+    }
+
+    public BatchGenerator BatchFor(EmbeddingsGenerationTaskIdentifier taskId) => new (this, taskId);
 }

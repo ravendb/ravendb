@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using HtmlAgilityPack;
+using JetBrains.Annotations;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -108,9 +109,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         if (item.IsDelete)
         {
-            var deletedItem = new EmbeddingGenerationScriptResult { DocumentId = Current.DocumentId, DocumentCollectionName = Current.Collection, IsDelete = true };
-
-            _currentRun.Removals.Add(deletedItem);
+            _currentRun.Removals.Add(new EmbeddingGenerationScriptResult(Current.DocumentId, Current.Collection));
 
             return;
         }
@@ -119,34 +118,23 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         {
             Debug.Assert(_configuration.EmbeddingsTransformation.Script != null, "_configuration.EmbeddingsTransformation.Script != null");
 
-            DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document });
+            DocumentScript.Run(Context, Context, "execute", [Current.Document]);
 
             return;
         }
 
         if (_configuration.EmbeddingsPathConfigurations is { Count: > 0 })
         {
-            var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult
-            {
-                DocumentId = Current.DocumentId,
-                DocumentCollectionName = Current.Collection,
-                Values = new Dictionary<string, List<EmbeddingGenerationItem>>()
-            };
+            var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult(Current.DocumentId, Current.Collection);
 
             foreach (var pathConfiguration in _configuration.EmbeddingsPathConfigurations)
             {
                 if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, pathConfiguration.Path, out var value) == false)
                     continue;
 
-                ref var embeddingValues = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Values, pathConfiguration.Path, out _);
-                embeddingValues ??= new();
-
-                var textualValues = new List<string>();
-                CollectEmbeddingValues(textualValues, value);
-                
-                var chunks = Documents.AI.TextChunker.ChunkValues(textualValues, pathConfiguration.ChunkingOptions);
-
-                embeddingValues = chunks.Select(chunk => new EmbeddingGenerationItem(chunk)).ToList();
+                ref var filedValues = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Fields, pathConfiguration.Path, out _);
+                filedValues ??= [];
+                CollectEmbeddingValues(filedValues, pathConfiguration.ChunkingOptions, value);
             }
 
             _currentRun.Additions.Add(aiEtlEmbeddingItem);
@@ -158,7 +146,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
             $"Cannot create embeddings because neither {nameof(_configuration.EmbeddingsTransformation)} nor {nameof(_configuration.EmbeddingsPathConfigurations)} were specified in the configuration of Embeddings Generation task");
     }
     
-     private void CollectEmbeddingValues(List<string> values, object value)
+     private void CollectEmbeddingValues(List<(string,ChunkingOptions)> values, ChunkingOptions chunkingOptions, object value)
     {
         var valueType = ConverterBase.GetValueType(value, properlyParseDictionaryToStoredField: true);
         switch (valueType)
@@ -168,12 +156,12 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
             case ConverterBase.ValueType.Enum:
             case ConverterBase.ValueType.Boolean:
             case ConverterBase.ValueType.String:
-                values.Add(value.ToString());
+                values.Add((value.ToString(),chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.Char:
                 if (value is char c)
-                    values.Add( char.ToString(c));
+                    values.Add( (char.ToString(c), chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.LazyCompressedString:
@@ -182,19 +170,19 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
                     ? ((LazyCompressedStringValue)value).ToLazyStringValue()
                     : (LazyStringValue)value;
 
-                values.Add(lazyStringValue);
+                values.Add((lazyStringValue, chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.DateTime:
                 var dateTime = (DateTime)value;
                 var dateAsBytes = dateTime.GetDefaultRavenFormat();
-                values.Add(dateAsBytes);
+                values.Add((dateAsBytes,chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.DateTimeOffset:
                 var dateTimeOffset = (DateTimeOffset)value;
                 var dateTimeOffsetBytes = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
-                values.Add(dateTimeOffsetBytes);
+                values.Add((dateTimeOffsetBytes,chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.TimeSpan:
@@ -204,36 +192,36 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
                     if (Utf8Formatter.TryFormat(timeSpan, buffer, out var bytesWritten, new('c')) == false)
                         throw new Exception($"Cannot convert {timeSpan} to a string");
 
-                    values.Add(Encodings.Utf8.GetString(buffer[..bytesWritten]));
+                    values.Add((Encodings.Utf8.GetString(buffer[..bytesWritten]), chunkingOptions));
                     break;
                 }
             case ConverterBase.ValueType.DateOnly:
                 var dateOnly = (DateOnly)value;
                 var dateOnlyTextual = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                values.Add(dateOnlyTextual);
+                values.Add((dateOnlyTextual, chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.TimeOnly:
                 var timeOnly = (TimeOnly)value;
                 var timeOnlyTextual = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                values.Add(timeOnlyTextual);
+                values.Add((timeOnlyTextual, chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.Convertible:
                 var iConvertible = (IConvertible)value;
-                values.Add(iConvertible.ToString(CultureInfo.InvariantCulture));
+                values.Add((iConvertible.ToString(CultureInfo.InvariantCulture), chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.Enumerable:
                 RuntimeHelpers.EnsureSufficientExecutionStack();
                 var iterator = (IEnumerable)value;
                 foreach (var item in iterator)
-                    CollectEmbeddingValues(values, item);
+                    CollectEmbeddingValues(values, chunkingOptions, item);
                 break;
 
             case ConverterBase.ValueType.DynamicJsonObject:
                 var valueAsJson = (DynamicBlittableJson)value;
-                values.Add(valueAsJson.ToString());
+                values.Add((valueAsJson.ToString(), chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.Dictionary:
@@ -242,27 +230,27 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
                     var val = TypeConverter.ToBlittableSupportedType(value);
                     if (val is not DynamicJsonValue json)
                     {
-                        CollectEmbeddingValues(values, val);
+                        CollectEmbeddingValues(values, chunkingOptions, val);
                         return;
                     }
 
                     using (var result = Context.ReadObject(json, "index field as json"))
-                        CollectEmbeddingValues(values, result);
+                        CollectEmbeddingValues(values, chunkingOptions, result);
                     break;
                 }
 
             case ConverterBase.ValueType.BlittableJsonObject:
                 var bjo = (BlittableJsonReaderObject)value;
-                values.Add(bjo.ToString());
+                values.Add((bjo.ToString(), chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.DynamicNull:
             case ConverterBase.ValueType.Null:
-                values.Add("null");
+                values.Add(("null",chunkingOptions));
                 break;
 
             case ConverterBase.ValueType.EmptyString:
-                values.Add(string.Empty);
+                values.Add((string.Empty,chunkingOptions));
                 break;
 
             default:
@@ -273,174 +261,88 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 #pragma warning disable SKEXP0050
     private JsValue SplitMarkDownLines(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "markdown.splitLines(text, maxTokensPerLine)";
-
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-
-        if (args[0].IsString() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
-
-        if (args[1].IsNumber() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
-
-        var chunks = TextChunker.SplitMarkDownLines(args[0].AsString(), (int)args[1].AsNumber());
-
-        var jsChunks = new JsValue[chunks.Count];
-        for (var i = 0; i < chunks.Count; i++)
-        {
-            jsChunks[i] = new JsString(chunks[i]);
-        }
-
-        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
-
-        return jsArray;
+        const string methodSignature = "markdown.splitLines(text | [text], maxTokensPerLine)";
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitLines);
     }
     
     private JsValue SplitMarkDownParagraphs(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "markdown.splitParagraphs(lines, maxTokensPerLine)";
-
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-
-        if (args[0].IsArray() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be of type {typeof(IEnumerable<string>)}");
-
-        if (args[1].IsNumber() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
-
-        var lines = new List<string>();
-
-        foreach (var line in args[0].AsArray())
-        {
-            lines.Add(line.AsString());
-        }
-
-        var chunks = TextChunker.SplitMarkdownParagraphs(lines, (int)args[1].AsNumber());
-
-        var jsChunks = new JsValue[chunks.Count];
-        for (var i = 0; i < chunks.Count; i++)
-        {
-            jsChunks[i] = new JsString(chunks[i]);
-        }
-
-        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
-
-        return jsArray;
+        const string methodSignature = "markdown.splitParagraphs(line | [line], maxTokensPerLine)";
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitParagraphs);
     }
     
     private JsValue SplitPlainText(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "text.split(text, maxTokensPerLine)";
-
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-
-        if (args[0].IsString() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
-
-        if (args[1].IsNumber() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
-
-        var chunks = Documents.AI.TextChunker.SplitPlainText(args[0].AsString(), (int)args[1].AsNumber());
-
-        var jsChunks = new JsValue[chunks.Count];
-        for (var i = 0; i < chunks.Count; i++)
-        {
-            jsChunks[i] = new JsString(chunks[i]);
-        }
-
-        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
-
-        return jsArray;
+        const string methodSignature = "text.split(text | [text], maxTokensPerLine)";
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplit);
     }
     
     private JsValue SplitPlainTextLines(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "text.splitLines(text, maxTokensPerLine)";
+        const string methodSignature = "text.splitLines(text | [text], maxTokensPerLine)";
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitLines);
 
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-
-        if (args[0].IsString() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
-
-        if (args[1].IsNumber() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
-
-        var chunks = TextChunker.SplitPlainTextLines(args[0].AsString(), (int)args[1].AsNumber());
-
-        var jsChunks = new JsValue[chunks.Count];
-        for (var i = 0; i < chunks.Count; i++)
-        {
-            jsChunks[i] = new JsString(chunks[i]);
-        }
-
-        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
-
-        return jsArray;
     }
     
     private JsValue SplitPlainTextParagraphs(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "text.splitParagraphs(lines, maxTokensPerLine)";
-
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-
-        if (args[0].IsArray() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be of type {typeof(IEnumerable<string>)}");
-
-        if (args[1].IsNumber() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
-
-        var lines = new List<string>();
-
-        foreach (var line in args[0].AsArray())
-        {
-            lines.Add(line.AsString());
-        }
-
-        var chunks = TextChunker.SplitPlainTextParagraphs(lines, (int)args[1].AsNumber());
-
-        var jsChunks = new JsValue[chunks.Count];
-        for (var i = 0; i < chunks.Count; i++)
-        {
-            jsChunks[i] = new JsString(chunks[i]);
-        }
-
-        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
-
-        return jsArray;
+        const string methodSignature = "text.splitParagraphs(line | [line], maxTokensPerLine)";
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitParagraphs);
     }
     
+    public class ObjectForChunking([NotNull] Engine engine) : ObjectInstance(engine)
+    {
+        public readonly List<(string,ChunkingOptions)> Value = [];
+    }
+
     private JsValue StripHtml(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "html.strip(htmlText, maxTokensPerChunk)";
+        const string methodSignature = "html.strip(htmlText | [htmlText], maxTokensPerChunk)";
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.HtmlStrip);
+    }
 
+    private static JsValue ChunkFunc(JsValue self, JsValue[] args, string methodSignature, ChunkingMethod chunkingMethod)
+    {
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
 
+        if(args[0].IsNull() || args[0].IsUndefined())
+            return JsValue.Undefined;
+        
         if (args[0].IsString() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string or a string array");
         
         if (args[1].IsNumber() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+
+        ChunkingOptions chunkingOptions = new() { 
+            MaxTokensPerChunk = (int)args[1].AsNumber(), 
+            ChunkingMethod = chunkingMethod 
+        };
         
-        var text = Documents.AI.TextChunker.StripHtml(args[0].AsString());
-        
-        var chunks = Documents.AI.TextChunker.SplitPlainText(text, (int)args[1].AsNumber());
-        
-        var jsChunks = new JsValue[chunks.Count];
-        for (var i = 0; i < chunks.Count; i++)
+        var result = new ObjectForChunking(((JsObject)self).Engine);
+
+        if (args[0].IsString())
         {
-            jsChunks[i] = new JsString(chunks[i]);
+            result.Value.Add((args[0].AsString(),chunkingOptions));
+            return result;
         }
 
-        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
+        if (args[0].IsArray())
+        {
+            foreach (var line in args[0].AsArray())
+            {
+                if(line.IsNull() || line.IsUndefined())
+                    continue;
+                
+                if (line.IsString() is false)
+                    throw new NotSupportedException("Only string arrays are supported, but got an array value of '" + line + "' in " + methodSignature);
+                result.Value.Add((line.AsString(), chunkingOptions));
+            }
+            return result;
+        }
 
-        return jsArray;
+        throw new NotSupportedException("Only string or string arrays are supported in " + methodSignature + " but got " + args[0]);
     }
 
     private JsValue EmbeddingsGenerate(JsValue self, JsValue[] args)
@@ -455,33 +357,52 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         var mainObj = args[0].AsObject();
 
-        var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult()
-        {
-            DocumentId = Current.DocumentId,
-            DocumentCollectionName = Current.Collection,
-            Values = new Dictionary<string, List<EmbeddingGenerationItem>>()
-        };
+        var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult(Current.DocumentId, Current.Collection);
 
         foreach (var propertyKey in mainObj.GetOwnPropertyKeys())
         {
             var propertyName = propertyKey.AsString();
+            ref var field = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Fields, propertyName, out _);
 
-            if (aiEtlEmbeddingItem.Values.TryGetValue(propertyName, out var values) == false)
-                aiEtlEmbeddingItem.Values[propertyName] = values = new List<EmbeddingGenerationItem>();
-
-            mainObj.TryGetValue(propertyKey, out JsValue value);
-
-            if (value.IsString())
+            if (mainObj.TryGetValue(propertyKey, out JsValue value) is false ||
+                value.IsNull() ||
+                value.IsUndefined())
+                continue;
+            
+            if (value is ObjectForChunking ofc)
             {
-                values.Add(new EmbeddingGenerationItem(value.AsString()));
+                field = ofc.Value;
+                continue;
             }
 
+            field ??= [];
+            if (value.IsString())
+            {
+                field.Add((value.AsString(), _configuration.EmbeddingsTransformation.ChunkingOptions));
+            }
             else if (value.IsArray())
             {
                 var jsArray = value.AsArray();
 
                 foreach (var jsValue in jsArray)
-                    values.Add(new EmbeddingGenerationItem(jsValue.AsString()));
+                {
+                    if (jsValue is ObjectForChunking i)
+                    {
+                        // to handle
+                        //{ Text: [html.strip(this.Body), markdown.splitLines(this.Title)] }
+                        field.AddRange(i.Value);
+                        continue;
+                    }
+                    if (jsValue.IsString() is false)
+                    {
+                        throw new NotSupportedException($"Only string arrays are supported, but got '{jsValue}' for '{propertyName}'");
+                    }
+                    field.Add((jsValue.AsString(), _configuration.EmbeddingsTransformation.ChunkingOptions));
+                }
+            }
+            else
+            {
+                throw new NotSupportedException($"Only strings, string arrays and html.strip(), markdown.splitLines(), etc are supported, but got '{value}' for '{propertyName}'");
             }
         }
 

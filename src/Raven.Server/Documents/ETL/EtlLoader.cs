@@ -855,7 +855,7 @@ namespace Raven.Server.Documents.ETL
 
                             using (process)
                             {
-                                string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, mySnowflakeEtl, responsibleNodes, explanations);
+                                string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, mySnowflakeEtl, myEmbeddingsGenerationEtl, responsibleNodes, explanations);
                                 process.Stop(reason);
                             }
                         }
@@ -909,6 +909,7 @@ namespace Raven.Server.Documents.ETL
             List<ElasticSearchEtlConfiguration> myElasticSearchEtl,
             List<QueueEtlConfiguration> myQueueEtl,
             List<SnowflakeEtlConfiguration> mySnowflakeEtl,
+            List<EmbeddingsGenerationConfiguration> myEmbeddingsGenerationEtl,
             Dictionary<string, string> responsibleNodes,
             List<string> explanations)
         {
@@ -979,6 +980,13 @@ namespace Raven.Server.Documents.ETL
 
                 if (existing != null)
                     differences = amazonSqsEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+            else if (process is EmbeddingsGenerationTask embeddingsGenerationTask)
+            {
+                var existing = myEmbeddingsGenerationEtl.FirstOrDefault(x => x.Name.Equals(embeddingsGenerationTask.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    differences = embeddingsGenerationTask.Configuration.Compare(existing, transformationDiffs);
             }
             else
             {

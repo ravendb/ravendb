@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.Loader;
+using Microsoft.IdentityModel.Protocols.Configuration;
 using RabbitMQ.Client;
 
 namespace Tests.Infrastructure.ConnectionString;
@@ -31,7 +32,7 @@ public class RabbitMqConnectionString : IDisposable
 
         var envConnectionString = Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty;
         if (envConnectionString.Length == 0)
-            throw new InvalidOperationException($"Environment variable {EnvironmentVariable} is empty");
+            throw new InvalidConfigurationException($"Environment variable {EnvironmentVariable} is empty");
 
         _connection = CreateConnection(envConnectionString, out var ex);
         if (_connection != null)

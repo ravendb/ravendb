@@ -1,5 +1,6 @@
 ﻿using System;
 using Elastic.Clients.Elasticsearch;
+using Microsoft.IdentityModel.Protocols.Configuration;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
@@ -59,7 +60,7 @@ namespace Tests.Infrastructure.ConnectionString
                 return singleLocalNode;
 
             if (Nodes.Value.Length == 0)
-                throw new InvalidOperationException($"Environment variable {EnvironmentVariable} is empty");
+                throw new InvalidConfigurationException($"Environment variable {EnvironmentVariable} is empty");
 
             if (TryConnect(Nodes.Value, out pingResponse))
                 return Nodes.Value;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Corax.Querying.Matches.SortingMatches;
 using Microsoft.SemanticKernel.Text;
 using Newtonsoft.Json.Linq;
 using Orders;
@@ -34,20 +35,27 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         string id;
         using (var session = store.OpenSession())
         {
-            var dto = new Dto { Name = "Name1", SubDto = new SubDto { Name = "Name1" } };
+            var dto = new Dto { Name = "Name1", Names = ["Name2", "Name3"], SubDto = new SubDto { Name = "Name1" } };
             session.Store(dto);
             session.SaveChanges();
             id = dto.Id;
         }
 
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
-        var (config, connection) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }, new EmbeddingPathConfiguration() { Path = "SubDto.Name", ChunkingOptions = DefaultChunkingOptions }]);
+        var (config, connection) = AddEmbeddingsGenerationTask(store, embeddingsPaths:
+        [
+            new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions },
+            new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions },
+            new EmbeddingPathConfiguration() { Path = "SubDto.Name", ChunkingOptions = DefaultChunkingOptions }
+        ]);
         Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        WaitForUserToContinueTheTest(store);
 
         var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], id);
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Name2", "Name3"], id);
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "SubDto.Name", ["Name1"], id);
 
         aiTaskDone.Reset();
@@ -55,6 +63,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         {
             var dto = session.Load<Dto>(id);
             dto.Name = "Updated";
+            dto.Names = ["Name2", "Name4"];
             session.Store(dto);
             session.SaveChanges();
         }
@@ -64,7 +73,10 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         WaitForUserToContinueTheTest(store);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Updated"], id);
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Name2", "Name4"], id);
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "SubDto.Name", ["Name1"], id);
+        
+        AssertMissingEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Name3"], id);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -324,20 +336,23 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         using (var store = GetDocumentStore())
         {
             var dto = new Dto { Name = "SomeName", Age = 21 };
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            AddEmbeddingsGenerationTask(store);
 
             using (var session = store.OpenSession())
             {
+                aiTaskDone.Reset();
                 session.Store(dto);
                 session.SaveChanges();
-                var aiTaskDone = Etl.WaitForEtlToComplete(store);
-                AddEmbeddingsGenerationTask(store);
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
                 var db = await GetDatabase(store.Database);
 
                 var etlProcess = (EmbeddingsGenerationTask)db.EtlLoader.Processes.First();
 
-                var stats = etlProcess.GetPerformanceStats();
+                var stats = etlProcess.GetPerformanceStats()
+                    .Where(x=>x.NumberOfLoadedItems > 0)
+                    .ToArray();
 
                 Assert.Equal(1, stats[0].NumberOfLoadedItems);
 
@@ -356,7 +371,9 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
-                var stats2 = etlProcess.GetPerformanceStats();
+                var stats2 = etlProcess.GetPerformanceStats()
+                    .Where(x => x.NumberOfLoadedItems > 0)
+                    .ToArray();
                 
                 // there was new task run
                 
@@ -367,9 +384,9 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
                 Assert.Equal("Load", loadDetails2.Name);
 
-                var embeddingsGenerationStats2 = (EmbeddingsGenerationPerformanceOperation)loadDetails2.Operations.FirstOrDefault(x => x.Name == EmbeddingsGenerationOperations.GenerateInAiService);
-
-                Assert.Null(embeddingsGenerationStats2); // but there was no need to generate embeddings
+                var embeddingsGenerationStats2 = (EmbeddingsGenerationPerformanceOperation)loadDetails2.Operations.First(x => x.Name == EmbeddingsGenerationOperations.GenerateInAiService);
+                // but there was no need to generate embeddings
+                Assert.Equal(embeddingsGenerationStats2.NumberOfGeneratedEmbeddings, embeddingsGenerationStats2.NumberOfEmbeddingsInCache);
             }
         }
     }
@@ -458,7 +475,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
                 session.Delete(dto1);
                 session.SaveChanges();
-
+                
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
             }
 
@@ -597,6 +614,35 @@ embeddings.generate(
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Bar", ["ConstValue"], dto.Id);
         }
     }
+    
+    [RavenFact(RavenTestCategory.Ai)]
+    public void NestedJsTransformation()
+    {
+        const string aiIntegrationName = "local-Onnx-AI";
+        var dto = new Dto { Name = "<h1>Name1</a1>" };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: aiIntegrationName, script: @"
+embeddings.generate(
+{
+    Foo: [html.strip(this.Name, 15), 'hello'], 
+});");
+
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+
+            // testing case insensitive hashing of strings as well here
+            AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Foo", ["Name1", "HELLO"], dto.Id);
+        }
+    }
 
     private record Test(string Id, DateTime? Expires);
 
@@ -700,7 +746,11 @@ Console.WriteLine(""Hello, World!"");";
     <!-- This is a comment -->
 </body>
 </html>";
-        string[] expectedChunks = ["Sample HTML", "Hello, World!", "This is a test", "paragraph with", "a link . First", "item Second", "item Third item"];
+        var expectedChunks = Raven.Server.Documents.AI.TextChunker.Chunk(htmlTextToChunk, new ChunkingOptions
+        {
+            ChunkingMethod = ChunkingMethod.HtmlStrip,
+            MaxTokensPerChunk = 5
+        }).ToArray();
 
         var dto = new Dto { Name = htmlTextToChunk };
 
@@ -716,7 +766,7 @@ Console.WriteLine(""Hello, World!"");";
 
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ChunkedName: html.strip(this.Name, 5) });");
-
+WaitForUserToContinueTheTest(store);
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
@@ -742,7 +792,11 @@ Console.WriteLine(""Hello, World!"");";
     <!-- This is a comment -->
 </body>
 </html>";
-        string[] expectedChunks = ["Sample HTML", "Hello, World!", "This is a test", "paragraph with", "a link . First", "item Second", "item Third item"];
+        var expectedChunks = Raven.Server.Documents.AI.TextChunker.Chunk(htmlTextToChunk, new ChunkingOptions
+        {
+            ChunkingMethod = ChunkingMethod.HtmlStrip,
+            MaxTokensPerChunk = 5
+        }).ToArray();
 
         var dto = new Dto { Name = htmlTextToChunk };
 
@@ -855,35 +909,25 @@ Console.WriteLine(""Hello, World!"");";
                 var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
                 Assert.NotNull(embeddingCacheDocument);
 
-                var expectedAttachmentNameInEmbeddingsDocument =
-                    EmbeddingsHelper.GenerateDestinationAttachmentName(EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, "Name"),
-                        hashOfInput, targetQuantization);
-
                 var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);
-                var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;
+                var documentEmbeddings = session.Load<dynamic>(documentEmbeddingsId);
                 Assert.NotNull(documentEmbeddings);
+                string attachmentName = documentEmbeddings.localaitask.Name[0];
 
-                using (var embeddingAttachment = session.Advanced.Attachments.Get(documentEmbeddingsId, expectedAttachmentNameInEmbeddingsDocument))
+                using (var embeddingAttachment = session.Advanced.Attachments.Get(documentEmbeddingsId, attachmentName))
                 {
                     Assert.NotNull(embeddingAttachment);
-
-                    var buffer = new byte[48];
-
-                    using (var attachmentStream = new MemoryStream(buffer))
-                    {
-                        embeddingAttachment.Stream.CopyTo(attachmentStream);
-
-                        var embeddingValue = attachmentStream.ToArray();
-
-                        Assert.NotEmpty(embeddingValue);
-                    }
+                    Assert.Equal(48, embeddingAttachment.Details.Size);
                 }
             }
         }
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public void ChunkingInEmbeddingsGenerationTaskConfiguration()
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(VectorEmbeddingType.Int8)]
+    [InlineData(VectorEmbeddingType.Binary)]
+    [InlineData(VectorEmbeddingType.Single)]
+    public void ChunkingInEmbeddingsGenerationTaskConfiguration(VectorEmbeddingType quantization)
     {
         var subDto = new SubDto() { Name = "pretty long text that will generate multiple chunks" };
         var dto = new Dto { Name = "different text that won't be chunked because of the configuration", SubDto = subDto};
@@ -899,6 +943,7 @@ Console.WriteLine(""Hello, World!"");";
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
                 var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
+                    targetQuantization: quantization,
                     embeddingsPaths: [
                         new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions()
                         {
@@ -915,7 +960,8 @@ Console.WriteLine(""Hello, World!"");";
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
                 var result = session.Query<Dto>().VectorSearch(x =>
-                    x.WithText("SubDto.Name").UsingTask(configuration.Identifier), factory => factory.ByText("text")).ToList();
+                        x.WithText("SubDto.Name").UsingTask(configuration.Identifier).TargetQuantization(quantization),
+                    factory => factory.ByText("text")).ToList();
 
                 Assert.Single(result);
             }

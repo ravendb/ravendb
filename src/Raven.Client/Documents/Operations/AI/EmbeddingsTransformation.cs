@@ -10,6 +10,8 @@ public class EmbeddingsTransformation
 
     public string Script { get; set; }
 
+    public ChunkingOptions ChunkingOptions { get; set; } = new() { ChunkingMethod = ChunkingMethod.PlainTextSplit, MaxTokensPerChunk = 256 };
+
     public bool ValidateScript()
     {
         var match = EmbeddingsGenerateRegex.Match(Script);

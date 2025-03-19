@@ -262,6 +262,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             session.SaveChanges();
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            WaitForUserToContinueTheTest(store);
             
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
                 .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"])).ToList();

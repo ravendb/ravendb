@@ -25,27 +25,30 @@ public static class EmbeddingsHelper
     /// </remarks>
     internal static readonly List<string> ValuesListToVerifyConnection = ["TestValue", "TestValue2"];
 
+    [SkipLocalsInit]
     public static string CalculateInputValueHash(string value)
     {
+        // Here we take a string, and we:
+        // * convert to upper case
+        // * trim all white space
+        // * generate a hash
+        //
+        // The idea is that we want to try (as much as possible) to be able
+        // to get better hash values, so "keyboard" and "Keyboard " would end up
+        // being the same. Note that we are being pretty simplistic here on purpose,
+        // to avoid having a complex rule set for "tokenization" these, in addition to
+        // the actual tokens
+        Span<char> buffer = stackalloc char[256];
+        if(value.Length > buffer.Length)
+            buffer = new char[value.Length];
+        var len = value.AsSpan().Trim().ToUpperInvariant(buffer);
+        buffer = buffer[..len];
         Span<byte> hashBuffer = stackalloc byte[Sodium.GenericHashSize];
-        var valueSpan = MemoryMarshal.Cast<char, byte>(value);
+        var valueSpan = MemoryMarshal.Cast<char, byte>(buffer);
 
         Sodium.GenericHash(valueSpan, hashBuffer);
 
         return Convert.ToHexString(hashBuffer);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string GenerateDestinationAttachmentName(string prefix, in string originalAttachmentName, in VectorEmbeddingType quantization)
-    {
-        var suffix = quantization switch
-        {
-            VectorEmbeddingType.Int8 => "_int8",
-            VectorEmbeddingType.Binary => "_binary",
-            _ => string.Empty
-        };
-        
-        return $"{prefix}{originalAttachmentName}{suffix}";
     }
     
     public static string GetEmbeddingDocumentId(string documentId)
@@ -58,12 +61,7 @@ public static class EmbeddingsHelper
         return $"{sourceCollectionName}/embeddings";
     }
 
-    public static string GetPrefixForAttachmentInEmbeddingsDocument(EmbeddingsGenerationTaskIdentifier id, string path)
-    {
-        return $"{id.Value}_{path}_";
-    }
-
-    public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier id, string valueHash, in VectorEmbeddingType targetQuantization)
+    public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier id, string valueHash, VectorEmbeddingType targetQuantization)
     {
         var suffix = targetQuantization switch
         {

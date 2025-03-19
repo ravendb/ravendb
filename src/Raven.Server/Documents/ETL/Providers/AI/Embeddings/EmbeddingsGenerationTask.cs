@@ -19,6 +19,8 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
 
 #pragma warning disable SKEXP0001
 
@@ -85,7 +87,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
         return new EmbeddingsGenerationScriptTransformer(Database, context, Transformation, null, Configuration);
     }
 
-    protected override string LoadFailureMessage => $"Failed to generate embeddings in '{Configuration.Name}' task. Going to do the retry using '{Database.Configuration.Ai.EmbeddingsGenerationTaskRetryStrategy}' backoff strategy.";
+    protected override string LoadFailureMessage => $"Failed to generate embeddings in '{Configuration.Name}' task. Going to do the retry in {FallbackTime} (failure #{_fallbackCounter}).";
 
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
@@ -122,42 +124,33 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
         var taskId = new EmbeddingsGenerationTaskIdentifier(Configuration.Identifier);
 
-        int processed = 0;
-
+        var batch = Database.EmbeddingsGeneratorEtl.BatchFor(taskId);
         using (var storageScope = scope.For(EmbeddingsGenerationOperations.GenerateInAiService))
         {
-            var embeddingsInCache = 0;
-            List<Task> tasks = null;
             foreach (var embeddingItem in embeddingsScriptRun.Additions)
             {
-                foreach (var kvp in embeddingItem.Values)
-                {
-                    var embeddingsGenerationItems = kvp.Value;
-
-                    foreach (var embeddingToGenerate in embeddingsGenerationItems)
-                    {
-                        if (Database.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(context, taskId, embeddingToGenerate.TextualValue, ref tasks))
-                        {
-                            embeddingsInCache++;
-                        }
-                    }
-                }
-
-                processed++;
+                batch.StartGenerateEmbeddingFor(context,embeddingItem.DocumentId, embeddingItem.DocumentCollectionName,
+                    embeddingItem.Fields);
             }
+            batch.WaitForGenerationAsync().GetAwaiter().GetResult();
+            storageScope.NumberOfEmbeddingsInCache = batch.CachedEmbeddings;
+            storageScope.NumberOfGeneratedEmbeddings = embeddingsScriptRun.Additions.Count;
+        }
 
-            if (tasks is not null)
-            {
-                Task.WaitAll(tasks.ToArray());
-            }
+        foreach (var embeddingItem in embeddingsScriptRun.Removals)
+        {
+            batch.Delete(embeddingItem.DocumentId);
+        }
+        using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
+        {
+            batch.StoreResults().GetAwaiter().GetResult();
             
-            storageScope.NumberOfEmbeddingsInCache = embeddingsInCache;
             storageScope.NumberOfPutEmbeddingDocuments = embeddingsScriptRun.Additions.Count;
             storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
         }
-
+        
         _fallbackCounter = 0;
-        return processed;
+        return embeddingsScriptRun.Additions.Count + embeddingsScriptRun.Removals.Count;
     }
 
     protected override EmbeddingsGenerationStatsScope CreateScope(EtlRunStats stats)
@@ -181,15 +174,16 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
         foreach (var record in records)
         {
-            foreach (var embeddingItemValue in record.Values.SelectMany(x => x.Value))
+             foreach (var embeddingItemValue in record.Values.SelectMany(x => x.Value))
             {
-                var embedding = AiHelper.GenerateEmbedding(embeddingService, embeddingItemValue.TextualValue);
+                var embedding = AiHelper.GenerateEmbedding(embeddingService, embeddingItemValue);
 
                 var embeddingValue = EmbeddingsHelper.CreateEmbeddingValue(embedding, Configuration.Quantization);
 
-                embeddingItemValue.SetEmbedding(embeddingValue, Configuration.Quantization, new AiConnectionStringIdentifier("TODO")); //TODO
-
-                result.EmbeddingItemValues.Add(embeddingItemValue);
+                //TODO:
+                // embeddingItemValue.SetEmbedding(embeddingValue, Configuration.Quantization, new AiConnectionStringIdentifier("TODO")); //TODO
+                //
+                // result.EmbeddingItemValues.Add(embeddingItemValue);
             }
         }
 

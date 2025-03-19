@@ -591,14 +591,17 @@ public partial class AbstractStaticIndexBase
         
         if (embeddingContainerObject is BlittableJsonReaderArray bjra)
         {
-            var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(embeddingGenerationTaskIdentifier, path);
-            var attachmentNames = new string[bjra.Length];
-            for (var i = 0; i < bjra.Length; i++)
-                attachmentNames[i] = EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, GetStringFromObject(bjra[i]), indexField.Vector.SourceEmbeddingType);
-
+            List<string> attachmentNames = [];
+            for (int i = 0; i < bjra.Length; i++)
+            {
+                var name = bjra.GetStringByIndex(i);
+                if (name is null)
+                    continue;
+                attachmentNames.Add(name);
+            }
             var attachments = currentIndexingScope.LoadAttachments(embeddingDocumentId, attachmentNames);
-            return attachments is null 
-                ? NullVectorValue 
+            return attachments is null
+                ? NullVectorValue
                 : VectorFromEmbedding(indexField, attachments.Select(x => x.GetContentAsStream()), isAutoIndex: false);
         }
 

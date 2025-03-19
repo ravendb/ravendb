@@ -8,8 +8,11 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Extensions.Streams;
+using Raven.Server.Documents;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
@@ -98,6 +101,29 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         string docId,
         VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
     {
+        AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: false);
+    }
+    protected void AssertMissingEmbeddingsForPath(
+        IDocumentStore store,
+        EmbeddingsGenerationTaskIdentifier integrationIdentifier,
+        AiConnectionStringIdentifier connectionStringIdentifier,
+        string path,
+        string[] inputValues,
+        string docId,
+        VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
+    {
+        AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: true);
+    }
+    protected void AssertEmbeddingsForPath(
+        IDocumentStore store,
+        EmbeddingsGenerationTaskIdentifier integrationIdentifier,
+        AiConnectionStringIdentifier connectionStringIdentifier,
+        string path,
+        string[] inputValues,
+        string docId,
+        VectorEmbeddingType targetQuantization,
+        bool assertMissing)
+    {
         using var session = store.OpenSession();
         session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
 
@@ -112,8 +138,9 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
             Assert.NotNull(embeddingCacheDocument);
 
-            var attachmentsExistsInEmbeddingCache = session.Advanced.Attachments.Exists(embeddingsDocumentId, hashOfInput);
-            Assert.True(attachmentsExistsInEmbeddingCache);
+            var attachmentsInEmbeddingCache = session.Advanced.Attachments.Get(embeddingsDocumentId, hashOfInput);
+            Assert.NotNull(attachmentsInEmbeddingCache);
+            var hashContentHash = AttachmentsStorageHelper.CalculateHash(attachmentsInEmbeddingCache.Stream.ReadData());
 
             //Assert if embeddings document exists
             var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(docId);
@@ -128,16 +155,18 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             var currentPathObject = currentEtlObject[path] as JArray;
             Assert.NotNull(currentPathObject);
 
-            // Assert if current path contain embedding of current input value
-            var prefix = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, path);
-            var expectedAttachmentNameInEmbeddingsDocument = EmbeddingsHelper.GenerateDestinationAttachmentName(prefix,hashOfInput, targetQuantization);
-            var attachmentsByEtlPath = currentPathObject.Select(att => EmbeddingsHelper.GenerateDestinationAttachmentName(prefix, att.ToString(), targetQuantization)).ToList();
-            Assert.Equal(inputValues.Length, attachmentsByEtlPath.Count); // <- this checks if we've all embeddings
-            Assert.Contains(expectedAttachmentNameInEmbeddingsDocument, attachmentsByEtlPath);
-
-            // Assert if the referenced document exists
-            var attachmentExistsInEmbeddingsDocument = session.Advanced.Attachments.Exists(documentEmbeddingsId, expectedAttachmentNameInEmbeddingsDocument);
-            Assert.True(attachmentExistsInEmbeddingsDocument);
+            var attachmentExistsInEmbeddingsDocument = session.Advanced.Attachments.Exists(documentEmbeddingsId, hashContentHash);
+            if (assertMissing is false)
+            {
+                // Assert if current path contain embedding of current input value
+                Assert.Contains(hashContentHash, currentPathObject.Select(x=>x.ToString()));
+                Assert.True(attachmentExistsInEmbeddingsDocument);
+            }
+            else
+            {
+                Assert.DoesNotContain(hashContentHash, currentPathObject.Select(x=>x.ToString()));
+                Assert.False(attachmentExistsInEmbeddingsDocument);
+            }
         }
     }
 

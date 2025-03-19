@@ -183,8 +183,8 @@ namespace Raven.Server.Documents
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
-                EmbeddingsGeneratorQueries = new EmbeddingsGenerator(this,_logger, DatabaseShutdown);
-                EmbeddingsGeneratorEtl = new EmbeddingsGenerator(this,_logger, DatabaseShutdown);
+                EmbeddingsGeneratorQueries = new EmbeddingsGenerator(this,_logger, DatabaseShutdown, EmbeddingsGenerator.Mode.Query);
+                EmbeddingsGeneratorEtl = new EmbeddingsGenerator(this,_logger, DatabaseShutdown, EmbeddingsGenerator.Mode.Etl);
                 
                 IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);

@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
@@ -51,33 +52,24 @@ public class QueryEmbeddingsCacherTests(ITestOutputHelper output) : RavenTestBas
         }));
 
         var db = await GetDatabase(store.Database);
-        
+
+        EmbeddingsGenerationTaskIdentifier taskId = new("local-gen");
         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext operationContext))
         {
             operationContext.OpenReadTransaction();
-            List<Task> tasks = [];
-            var cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test1", ref tasks);
-            Assert.False(cached);
-            cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
-            Assert.False(cached);
-            cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
-            if (cached is false) // race condition - we may have computed the test2 embedding+store
-            {
-                // but if we didn't, we should get the same task, since we'll only compute "test2" once
-                Assert.Same(tasks[^1], tasks[^2]);
-            }
-
-            Task.WaitAll(tasks.ToArray());
+            var valueTask1 = db.EmbeddingsGeneratorEtl.GetEmbeddingsForQueryAsync(operationContext, taskId, "test1");
+            var valueTask2 = db.EmbeddingsGeneratorEtl.GetEmbeddingsForQueryAsync(operationContext, taskId, "test2");
+            var valueTask3= db.EmbeddingsGeneratorEtl.GetEmbeddingsForQueryAsync(operationContext, taskId, "test2");
+            await Task.WhenAll(valueTask1.AsTask(), valueTask2.AsTask());
         }
         
         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext operationContext))
         {
             operationContext.OpenReadTransaction();
-            List<Task> tasks = [];
-            var cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test1", ref tasks);
-            Assert.True(cached);
-            cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
-            Assert.True(cached);
+            var valueTask1 = db.EmbeddingsGeneratorEtl.GetEmbeddingsForQueryAsync(operationContext, taskId,  "test1");
+            Assert.True(valueTask1.IsCompleted);
+            var valueTask2 = db.EmbeddingsGeneratorEtl.GetEmbeddingsForQueryAsync(operationContext, taskId,  "test2");
+            Assert.True(valueTask2.IsCompleted);
         }
     }
 }
