@@ -56,11 +56,11 @@ public class QueryEmbeddingsCacherTests(ITestOutputHelper output) : RavenTestBas
         {
             operationContext.OpenReadTransaction();
             List<Task> tasks = [];
-            var cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test1", ref tasks);
+            var cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test1", ref tasks);
             Assert.False(cached);
-            cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
+            cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
             Assert.False(cached);
-            cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
+            cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
             if (cached is false) // race condition - we may have computed the test2 embedding+store
             {
                 // but if we didn't, we should get the same task, since we'll only compute "test2" once
@@ -74,9 +74,9 @@ public class QueryEmbeddingsCacherTests(ITestOutputHelper output) : RavenTestBas
         {
             operationContext.OpenReadTransaction();
             List<Task> tasks = [];
-            var cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test1", ref tasks);
+            var cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test1", ref tasks);
             Assert.True(cached);
-            cached = db.EmbeddingsGenerator.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
+            cached = db.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(operationContext, new("local-gen"), "test2", ref tasks);
             Assert.True(cached);
         }
     }

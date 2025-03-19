@@ -183,7 +183,8 @@ namespace Raven.Server.Documents
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
-                EmbeddingsGenerator = new EmbeddingsGenerator(this,_logger, DatabaseShutdown);
+                EmbeddingsGeneratorQueries = new EmbeddingsGenerator(this,_logger, DatabaseShutdown);
+                EmbeddingsGeneratorEtl = new EmbeddingsGenerator(this,_logger, DatabaseShutdown);
                 
                 IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);
@@ -363,7 +364,8 @@ namespace Raven.Server.Documents
 
         public CompareExchangeStorage CompareExchangeStorage { get; private set; }
 
-        public EmbeddingsGenerator EmbeddingsGenerator { get; private set; }
+        public EmbeddingsGenerator EmbeddingsGeneratorQueries { get; private set; }
+        public EmbeddingsGenerator EmbeddingsGeneratorEtl { get; private set; }
         public OngoingTasks.OngoingTasks OngoingTasks { get; private set; }
 
         public bool Is32Bits { get; }
@@ -482,7 +484,8 @@ namespace Raven.Server.Documents
                 TombstoneCleaner.Start();
                 
                 _addToInitLog(LogLevel.Debug, "Initializing Embeddings Generation");
-                EmbeddingsGenerator.Start();
+                EmbeddingsGeneratorQueries.Start();
+                EmbeddingsGeneratorEtl.Start();
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
@@ -1106,7 +1109,11 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing AI Integrations");
             exceptionAggregator.Execute(() =>
             {
-                EmbeddingsGenerator?.Dispose();
+                EmbeddingsGeneratorQueries?.Dispose();
+            });
+            exceptionAggregator.Execute(() =>
+            {
+               EmbeddingsGeneratorEtl?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed AI Integrations");
 
@@ -1728,7 +1735,8 @@ namespace Raven.Server.Documents
             try
             {
                 PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
-                EmbeddingsGenerator?.HandleDatabaseRecordChange(record);
+                EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
+                EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseRecordChange(record);
                 SubscriptionStorage?.HandleDatabaseRecordChange();
             }

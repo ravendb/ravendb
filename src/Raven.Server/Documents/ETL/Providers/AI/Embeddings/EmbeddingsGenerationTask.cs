@@ -132,7 +132,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
                     foreach (var embeddingToGenerate in embeddingsGenerationItems)
                     {
-                        if (Database.EmbeddingsGenerator.GenerateEmbeddingsToCache(context, taskId, embeddingToGenerate.TextualValue, ref tasks))
+                        if (Database.EmbeddingsGeneratorEtl.GenerateEmbeddingsToCache(context, taskId, embeddingToGenerate.TextualValue, ref tasks))
                         {
                             embeddingsInCache++;
                         }
