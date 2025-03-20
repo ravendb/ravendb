@@ -504,53 +504,59 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe int WriteValueFromStack(ReadOnlySpan<byte> str, out BlittableJsonToken token)
         {
-            byte* buffer = stackalloc byte[str.Length * 6]; // Max size: 6 bytes per char
             int* escapePositions = stackalloc int[str.Length]; // Max escapes: one per char
+            byte* buffer = stackalloc byte[str.Length * 6]; // Max size: 6 bytes per char
 
-            int pos = 0; // Current position in output buffer
+            byte* current = buffer; // Pointer to current position in output buffer
             int escapeCount = 0; // Number of simple escapes
             int lastEscape = 0; // Position after last escape for distance calculation
 
-            ref var srcStart = ref MemoryMarshal.GetReference(str);
-            ref var srcPtr = ref srcStart;
+            // Get references for input string
+            ref byte startRef = ref MemoryMarshal.GetReference(str);
+            ref byte endRef = ref Unsafe.Add(ref startRef, str.Length); // Reference just past the end
+            ref byte currentRef = ref startRef;
 
-            // Process string forwards
-            for (int i = 0; i < str.Length; i++, srcPtr = ref Unsafe.AddByteOffset(ref srcPtr, 1))
+            // Process string using reference arithmetic
+            while (Unsafe.IsAddressGreaterThan(ref endRef, ref currentRef))
             {
-                byte value = srcPtr;
-
+                byte value = currentRef; // Read current byte
                 byte action = ByteActionTable[value];
+
                 if (action == 0) // No escape
                 {
-                    buffer[pos] = value;
-                    pos++;
+                    *current = value;
+                    current++;
                 }
                 else if (action == 1) // Simple escape
                 {
-                    buffer[pos] = value;
-                    escapePositions[escapeCount] = pos - lastEscape;
-                    lastEscape = pos + 1;
+                    *current = value;
+                    int escapePos = (int)(current - buffer); // Current offset in output
+                    escapePositions[escapeCount] = escapePos - lastEscape;
+                    lastEscape = escapePos + 1;
                     escapeCount++;
-                    pos++;
+                    current++;
                 }
                 else // action == 2, Control character
                 {
-                    *(ushort*)(buffer + pos) = '\\' | ('u' << 8);
-                    *(int*)(buffer + pos + 2) = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value];
-                    pos += 6;
+                    *(ushort*)current = '\\' | ('u' << 8); // Write "\u"
+                    *(int*)(current + 2) = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value]; // 4 hex digits
+                    current += 6; // Advance past 6 bytes
                 }
+
+                currentRef = ref Unsafe.Add(ref currentRef, 1); // Move to next byte in input
             }
 
-            Debug.Assert(pos <= str.Length * 6, "We check that even a full escape characters string would respect this property.");
+            Debug.Assert((current - buffer) <= str.Length * 6, "We check that even a full escape characters string would respect this property.");
 
             token = BlittableJsonToken.String;
             int startPos = _position;
 
-            int posCount = 0;
-            posCount += WriteVariableSizeInt(pos); // Write length prefix
+            int length = (int)(current - buffer);
 
-            _unmanagedWriteBuffer.Write(buffer, pos); // Write the string data
-            posCount += pos;
+            int posCount = 0;
+            posCount += WriteVariableSizeInt(length); // Write length prefix
+            _unmanagedWriteBuffer.Write(buffer, length); // Write the string data
+            posCount += length;
 
             Debug.Assert(str.Length >= escapeCount, "We check that even a full escape characters string would respect this property.");
 
