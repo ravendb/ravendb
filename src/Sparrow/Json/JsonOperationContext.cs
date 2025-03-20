@@ -485,7 +485,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(field.Length);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(field, out _);
+            int escapePositionsSize = JsonParserState.FindMaxEscapedPositionAndControlCharSize(field, out _);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -497,7 +497,7 @@ namespace Sparrow.Json
 
                 state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
 
-                state.WriteEscapePositionsTo(address + actualSize);
+                state.WriteEscapedPositionsTo(address + actualSize);
                 LazyStringValue result = longLived == false ? AllocateStringValue(field.Value, address, actualSize) : new LazyStringValue(field.Value, address, actualSize, this);
                 result.AllocatedMemoryData = memory;
 
@@ -514,7 +514,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(ptr, size, out _);
+            int escapePositionsSize = JsonParserState.FindMaxEscapedPositionAndControlCharSize(ptr, size, out _);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -525,7 +525,7 @@ namespace Sparrow.Json
 
             state.FindEscapedPositionsAndEscapeControls(address, ref size, escapePositionsSize);
 
-            state.WriteEscapePositionsTo(address + size);
+            state.WriteEscapedPositionsTo(address + size);
             LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
             result.AllocatedMemoryData = memory;
 

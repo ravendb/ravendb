@@ -141,6 +141,9 @@ namespace Micro.Benchmark.Benchmarks.LZ4
             _allocator.Allocate(Sparrow.Compression.LZ4.MaximumOutputLength(DataMaximumLength), out _lz4Buffer);
             _allocator.Allocate(ZstdLib.GetMaxCompression(DataMaximumLength), out _zstdBuffer);
 
+            var lz4CompressedSize = 0;
+            var zstdCompressedSize = 0;
+
             var buffer = new byte[DataMaximumLength];
             for (int i = 0; i < NumberOfOperations; i++)
             {
@@ -198,16 +201,21 @@ namespace Micro.Benchmark.Benchmarks.LZ4
                 // Calculate compression size and store the generated data
                 fixed (byte* bufferPtr = buffer)
                 {
-                    int compressedSize = Sparrow.Compression.LZ4.Encode64(bufferPtr, _lz4Buffer.Ptr, generatedDataLength, _lz4Buffer.Length);
+                    var compressedSize = Sparrow.Compression.LZ4.Encode64(bufferPtr, _lz4Buffer.Ptr, generatedDataLength, _lz4Buffer.Length);
 
                     _allocator.From(_lz4Buffer.Ptr, compressedSize, ByteStringType.Immutable, out ByteString unmanagedBuffer);
                     _lz4Buffers.Add(new Tuple<ByteString, int>(unmanagedBuffer, generatedDataLength));
+                    lz4CompressedSize += compressedSize;
 
                     compressedSize = ZstdLib.Compress(bufferPtr, generatedDataLength, _zstdBuffer.Ptr, _zstdBuffer.Length, _zstdDictionary);
                     _allocator.From(_zstdBuffer.Ptr, compressedSize, ByteStringType.Immutable, out unmanagedBuffer);
                     _zstdBuffers.Add(new Tuple<ByteString, int>(unmanagedBuffer, generatedDataLength));
+                    zstdCompressedSize += compressedSize;
                 }
             }
+
+            Console.WriteLine($"LZ4 Compressed Size: {lz4CompressedSize}");
+            Console.WriteLine($"Zstd Compressed Size: {zstdCompressedSize}");
         }
 
         [GlobalCleanup]

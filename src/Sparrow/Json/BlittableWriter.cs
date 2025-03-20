@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Compression;
@@ -459,12 +461,203 @@ namespace Sparrow.Json
             return count;
         }
 
-        public unsafe int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
-        {
-            if (_intBuffer == null)
-                _intBuffer = new FastList<int>();
+#if NET7_0_OR_GREATER
 
-            var escapePositionsMaxSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(str, out _);
+        public static byte[] ByteActionTable =>
+        [
+            // 0-31: Control characters (action = 2)
+            2, 2, 2, 2, 2, 2, 2, 2, // 0-7
+            1, 1, 1, 2, 1, 1, 2, 2, // 8-15 (\b, \t, \n, _, \f, \r)
+            2, 2, 2, 2, 2, 2, 2, 2, // 16-23
+            2, 2, 2, 2, 2, 2, 2, 2, // 24-31
+
+            // 32-63: Mostly normal characters (action = 0), except " at 34
+            0, 0, 1, 0, 0, 0, 0, 0, // 32-39 (space, !, ", #, $, %, &, ')
+            0, 0, 0, 0, 0, 0, 0, 0, // 40-47 ((, ), *, +, ,, -, ., /)
+            0, 0, 0, 0, 0, 0, 0, 0, // 48-55 (0-7)
+            0, 0, 0, 0, 0, 0, 0, 0, // 56-63 (8-9, :, ;, <, =, >, ?)
+
+            // 64-95: Normal characters (action = 0), except \ at 92
+            0, 0, 0, 0, 0, 0, 0, 0, // 64-71 (@, A-G)
+            0, 0, 0, 0, 0, 0, 0, 0, // 72-79 (H-O)
+            0, 0, 0, 0, 0, 0, 0, 0, // 80-87 (P-W)
+            0, 0, 0, 0, 1, 0, 0, 0, // 88-95 (X, Y, Z, [, \, ], ^, _)
+
+            // 96-127: Normal characters (action = 0)
+            0, 0, 0, 0, 0, 0, 0, 0, // 96-103 (`, a-h)
+            0, 0, 0, 0, 0, 0, 0, 0, // 104-111 (i-p)
+            0, 0, 0, 0, 0, 0, 0, 0, // 112-119 (q-x)
+            0, 0, 0, 0, 0, 0, 0, 0, // 120-127 (y-z, {, |, }, ~, DEL)
+
+            // 128-255: UTF-8 continuation bytes or high ASCII (action = 0)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ];
+
+        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private unsafe int WriteValueFromStack(ReadOnlySpan<byte> str, out BlittableJsonToken token)
+        {
+            byte* buffer = stackalloc byte[str.Length * 6]; // Max size: 6 bytes per char
+            int* escapePositions = stackalloc int[str.Length]; // Max escapes: one per char
+
+            int pos = 0; // Current position in output buffer
+            int escapeCount = 0; // Number of simple escapes
+            int lastEscape = 0; // Position after last escape for distance calculation
+
+            ref var srcStart = ref MemoryMarshal.GetReference(str);
+            ref var srcPtr = ref srcStart;
+
+            // Process string forwards
+            for (int i = 0; i < str.Length; i++, srcPtr = ref Unsafe.AddByteOffset(ref srcPtr, 1))
+            {
+                byte value = srcPtr;
+
+                byte action = ByteActionTable[value];
+                if (action == 0) // No escape
+                {
+                    buffer[pos] = value;
+                    pos++;
+                }
+                else if (action == 1) // Simple escape
+                {
+                    buffer[pos] = value;
+                    escapePositions[escapeCount] = pos - lastEscape;
+                    lastEscape = pos + 1;
+                    escapeCount++;
+                    pos++;
+                }
+                else // action == 2, Control character
+                {
+                    *(ushort*)(buffer + pos) = '\\' | ('u' << 8);
+                    *(int*)(buffer + pos + 2) = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value];
+                    pos += 6;
+                }
+            }
+
+            Debug.Assert(pos <= str.Length * 6, "We check that even a full escape characters string would respect this property.");
+
+            token = BlittableJsonToken.String;
+            int startPos = _position;
+
+            int posCount = 0;
+            posCount += WriteVariableSizeInt(pos); // Write length prefix
+
+            _unmanagedWriteBuffer.Write(buffer, pos); // Write the string data
+            posCount += pos;
+
+            Debug.Assert(str.Length >= escapeCount, "We check that even a full escape characters string would respect this property.");
+
+            posCount += WriteVariableSizeInt(escapeCount); // Write escape positions count
+            for (int i = 0; i < escapeCount; i++)
+                posCount += WriteVariableSizeInt(escapePositions[i]); // Write escape position sequence
+
+            _position += posCount;
+
+            return startPos;
+        }
+
+        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int WriteValueFromStack(ReadOnlySpan<char> str, out BlittableJsonToken token)
+        {
+            Span<byte> strBuffer = stackalloc byte[Encodings.Utf8.GetMaxByteCount(str.Length)];
+            var stringSize = Encodings.Utf8.GetBytes(str, strBuffer);
+            return WriteValueFromStack(strBuffer.Slice(0, stringSize), out token);
+        }
+#endif
+
+        private unsafe int WriteValueFromHeap(ReadOnlySpan<byte> str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
+        {
+            _intBuffer ??= new FastList<int>();
+
+            var escapePositionsMaxSize = JsonParserState.FindEscapedPositionsMaxSize(str, out var _);
+            int size = str.Length + escapePositionsMaxSize;
+
+            AllocatedMemoryData buffer = null;
+            try
+            {
+                buffer = _context.GetMemory(size);
+                var bufferSpan = buffer.AsSpan();
+
+                ref var bufferStart = ref MemoryMarshal.GetReference(bufferSpan);
+                ref var srcStart = ref MemoryMarshal.GetReference(str);
+                Unsafe.CopyBlock(ref bufferStart, ref srcStart, (uint)str.Length);
+
+                int stringSize = str.Length;
+                JsonParserState.FindEscapedPositionsAndEscapeControls(_intBuffer, buffer.Address, ref stringSize, escapePositionsMaxSize);
+                return WriteValue(buffer.Address, stringSize, _intBuffer.AsUnsafeReadOnlySpan(), out token, mode, null);
+            }
+            finally
+            {
+                if (buffer != null)
+                    _context.ReturnMemory(buffer);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int WriteValue(ReadOnlySpan<byte> str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
+        {
+            if (str.Length == 0)
+            {
+
+            }
+
+#if NET7_0_OR_GREATER
+                if (str.Length <= 256 && mode is not (UsageMode.CompressSmallStrings or UsageMode.CompressStrings))
+            {
+                // PERF: Since we know the size, we can actually do this much more efficiently. 
+                // even more if the caller is an actual string constant, which will cause the call to be inlined
+                // as a constant value.
+                return WriteValueFromStack(str, out token);
+            }
+#endif
+
+            // PERF: This is the unoptimized version.
+            return WriteValueFromHeap(str, out token, mode);
+        }
+
+#if NET7_0_OR_GREATER
+        public int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
+        {
+            return WriteValue(str.AsSpan(), out token, mode);
+        }
+
+         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int WriteValue(ReadOnlySpan<char> str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
+#else
+        public int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
+#endif
+        {
+#if NET7_0_OR_GREATER
+            if (str.Length <= 256 && mode is (UsageMode.None or UsageMode.ValidateDouble))
+            {
+                // PERF: Since we know the size, we can actually do this much more efficiently. 
+                // even more if the caller is an actual string constant, which will cause the call to be inlined
+                // as a constant value.
+                return WriteValueFromStack(str, out token);
+            }
+#endif
+
+            // PERF: This is the unoptimized version.
+            return WriteValueFromHeap(str, out token, mode);
+        }
+
+#if NET7_0_OR_GREATER
+        private unsafe int WriteValueFromHeap(ReadOnlySpan<char> str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
+#else
+        private unsafe int WriteValueFromHeap(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
+#endif
+        {
+            _intBuffer ??= new FastList<int>();
+
+            var escapePositionsMaxSize = JsonParserState.FindMaxEscapedPositionAndControlCharSize(str, out _);
             int size = Encodings.Utf8.GetMaxByteCount(str.Length) + escapePositionsMaxSize;
             if (size > 8 * 1024 * 1024)
             {
@@ -476,9 +669,14 @@ namespace Sparrow.Json
             {
                 buffer = _context.GetMemory(size);
 
-                var stringSize = Encodings.Utf8.GetBytes(str.AsSpan(), buffer.AsSpan());
+#if NET7_0_OR_GREATER
+                var stringSize = Encodings.Utf8.GetBytes(str, buffer.AsSpan());
+#else
+                var stringSize = Encodings.Utf8.GetBytes(str.AsSpan(), new Span<byte>(buffer.Address, size));
+#endif
                 JsonParserState.FindEscapedPositionsAndEscapeControls(_intBuffer, buffer.Address, ref stringSize, escapePositionsMaxSize);
-                return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);                
+                return WriteValue(buffer.Address, stringSize, _intBuffer.AsUnsafeReadOnlySpan(), out token, mode, null);                
+
             }
             finally
             {
@@ -538,30 +736,7 @@ namespace Sparrow.Json
             _position += escapeSequencePos;
             return startPos;
         }
-
-        public unsafe int WriteValue(byte* buffer, int size, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
-        {
-            int startPos = _position;
-            token = BlittableJsonToken.String;
-
-            _position += WriteVariableSizeInt(size);
-
-            // if we are more than this size, we want to abort the compression early and just use
-            // the verbatim string
-            int maxGoodCompressionSize = size - sizeof(int) * 2;
-            if (maxGoodCompressionSize > 0)
-            {
-                size = TryCompressValue(ref buffer, ref _position, size, ref token, mode, initialCompressedSize, maxGoodCompressionSize);
-            }
-
-            _unmanagedWriteBuffer.Write(buffer, size);
-            _position += size;
-
-            _position += WriteVariableSizeInt(0);
-            return startPos;
-        }
-
-        public unsafe int WriteValue(byte* buffer, int size, FastList<int> escapePositions, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
+        public unsafe int WriteValue(byte* buffer, int size, ReadOnlySpan<int> escapePositions, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
         {
             int position = _position;
 
@@ -589,12 +764,11 @@ namespace Sparrow.Json
 
             // we write the number of the escape sequences required
             // and then we write the distance to the _next_ escape sequence
-            position += WriteVariableSizeInt(escapePositions.Count);
+            position += WriteVariableSizeInt(escapePositions.Length);
 
             // PERF: Use indexer to avoid the allocation and overhead of the foreach.
-            int count = escapePositions.Count;
-            for (int i = 0; i < count; i++)
-                position += WriteVariableSizeInt(escapePositions[i]);
+            foreach (var pos in escapePositions)
+                position += WriteVariableSizeInt(pos);
 
             Finish:
             _position = position;

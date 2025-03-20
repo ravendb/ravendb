@@ -80,7 +80,7 @@ namespace Raven.Server.Documents
             var strLength = id.Length;
 
             var maxStrSize = Encoding.GetMaxByteCount(strLength);
-            var escapeAndControlSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(id, out _);
+            var escapeAndControlSize = JsonParserState.FindMaxEscapedPositionAndControlCharSize(id, out _);
 
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(id.ToString());
@@ -270,7 +270,7 @@ namespace Raven.Server.Documents
             // [var int - string len, string bytes, number of escape positions, escape positions]
             //
             // The total length of the string is stored in the actual table (and include the var int size 
-            // prefix.
+            // prefix).
 
             _jsonParserState ??= new JsonParserState();
             _jsonParserState.Reset();
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(str);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(str, out var controlCount);
+            int escapePositionsSize = JsonParserState.FindMaxEscapedPositionAndControlCharSize(str, out var controlCount);
 
             /*
              *  add the size of all control characters
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents
             maxIdLenSize -= sizeDifference;
 
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
-            escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
+            escapePositionsSize = _jsonParserState.WriteEscapedPositionsTo(writePos + strLength);
             maxIdLenSize = escapePositionsSize + strLength + maxIdLenSize;
 
             Slice.External(allocator, ptr + maxIdSize + sizeDifference, maxIdLenSize, out idSlice);
@@ -401,7 +401,7 @@ namespace Raven.Server.Documents
                 byte* writePos = id;
                 _jsonParserState.FindEscapedPositionsAndEscapeControls(id + maxIdLenSize, ref idSize, escapePositionsSize);
                 JsonParserState.WriteVariableSizeInt(ref writePos, idSize);
-                escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + idSize);
+                escapePositionsSize = _jsonParserState.WriteEscapedPositionsTo(writePos + idSize);
                 idSize += escapePositionsSize + actualIdLenSize;
 
                 Slice.External(allocator, id, idSize, out idSlice);

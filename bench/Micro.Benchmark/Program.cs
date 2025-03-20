@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.Intrinsics.X86;
 using BenchmarkDotNet.Running;
 using Micro.Benchmark.Benchmarks.LZ4;

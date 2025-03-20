@@ -216,33 +216,30 @@ namespace Raven.Server.Utils
                 return;
             }
 
-            var conflicted = propertyValue as Conflicted;
-            if (conflicted != null)
+            if (propertyValue is Conflicted conflicted)
             {
                 writer.StartWriteArray();
-                writer.WriteValue(">>>> conflict start");
+                writer.WriteValue(">>>> conflict start"u8);
                 foreach (BlittableJsonReaderObject.PropertyDetails item in conflicted.Values)
                 {
                     writer.WriteValue(item.Token & BlittableJsonReaderBase.TypesMask, item.Value);
                 }
-                writer.WriteValue("<<<< conflict end");
+                writer.WriteValue("<<<< conflict end"u8);
                 writer.WriteArrayEnd();
                 return;
             }
 
-            var arrayWithWarning = propertyValue as ArrayWithWarning;
-            if (arrayWithWarning != null)
+            if (propertyValue is ArrayWithWarning arrayWithWarning)
             {
                 writer.StartWriteArray();
-                writer.WriteValue(">>>> auto merged array start");
+                writer.WriteValue(">>>> auto merged array start"u8);
                 arrayWithWarning.MergedArray.AddItemsToStream(writer);
-                writer.WriteValue("<<<< auto merged array end");
+                writer.WriteValue("<<<< auto merged array end"u8);
                 writer.WriteArrayEnd();
                 return;
             }
 
-            var array = propertyValue as BlittableJsonReaderArray;
-            if (array != null)
+            if (propertyValue is BlittableJsonReaderArray array)
             {
                 writer.StartWriteArray();
                 array.AddItemsToStream(writer);

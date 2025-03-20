@@ -492,6 +492,23 @@ namespace Sparrow.Json
             _continuationState.PushByRef() = currentState;
         }
 
+        public void WriteValue(ReadOnlySpan<byte> value)
+        {
+            var currentState = _continuationState.Pop();
+            var valuePos = _writer.WriteValue(value, out BlittableJsonToken stringToken, _mode);
+            _writeToken = new WriteToken
+            {
+                ValuePos = valuePos,
+                WrittenToken = stringToken
+            };
+
+            if (currentState.FirstWrite == -1)
+                currentState.FirstWrite = valuePos;
+
+            FinishWritingScalarValue(ref currentState);
+            _continuationState.PushByRef() = currentState;
+        }
+
         public void WriteValue(string value)
         {
             var currentState = _continuationState.Pop();
@@ -531,8 +548,6 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
 
-            //public unsafe int WriteValue(byte* buffer, int size, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
-            //var valuePos = _writer.WriteValue(value, out stringToken, UsageMode.None, null);
             var valuePos = _writer.WriteValue(value, out BlittableJsonToken stringToken, UsageMode.None);
             _writeToken = new WriteToken
             {
@@ -555,7 +570,7 @@ namespace Sparrow.Json
         public unsafe void WriteRawBlob(byte* ptr, int size)
         {
             var currentState = _continuationState.Pop();
-            var valuePos = _writer.WriteValue(ptr, size, out _, UsageMode.None, null);
+            var valuePos = _writer.WriteValue(ptr, size);
             _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
@@ -572,7 +587,8 @@ namespace Sparrow.Json
         public unsafe void WriteEmbeddedBlittableDocument(byte* ptr, int size)
         {
             var currentState = _continuationState.Pop();
-            var valuePos = _writer.WriteValue(ptr, size, out _, UsageMode.None, null);
+            // var valuePos = _writer.WriteValue(ptr, size, out _, UsageMode.None, null);
+            var valuePos = _writer.WriteValue(ptr, size);
             _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
@@ -666,6 +682,5 @@ namespace Sparrow.Json
             _writer.Dispose();
             base.Dispose();
         }
-
     }
 }

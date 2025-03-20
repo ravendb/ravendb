@@ -127,7 +127,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
 
             Span<byte> dictionarySpan = _zstdDictionaryStorage.ToSpan();
             ZstdLib.Train(trainBuffer, sized, ref dictionarySpan);
-            _zstdDictionary = new ZstdLib.CompressionDictionary(1, _zstdDictionaryStorage.Ptr, dictionarySpan.Length, 3);
+            _zstdDictionary = new ZstdLib.CompressionDictionary(1, _zstdDictionaryStorage.Ptr, dictionarySpan.Length, 5);
 
             // Compute the length of the maximum output data. This is an upper bound
             // to be able to always use the same buffer for decompression.
@@ -218,7 +218,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
         }
 
         [Benchmark(Baseline=true, OperationsPerInvoke = NumberOfOperations)]
-        public void Lz4()
+        public void Lz4_Decompress()
         {
             foreach (var tuple in _lz4Buffers)
             {
@@ -227,7 +227,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
         }
 
         [Benchmark(OperationsPerInvoke = NumberOfOperations)]
-        public void Zstd()
+        public void Zstd_Decompress()
         {
             foreach (var tuple in _zstdBuffers)
             {

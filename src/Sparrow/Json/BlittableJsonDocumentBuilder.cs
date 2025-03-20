@@ -616,7 +616,7 @@ namespace Sparrow.Json
                 BlittableJsonToken stringToken;
                 if (typeof(TWriteStrategy) == typeof(WriteNone))
                 {
-                    start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions, out stringToken, _mode, _state.CompressedSize);
+                    start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions.AsUnsafeReadOnlySpan(), out stringToken, _mode, _state.CompressedSize);
                 }
                 else // WriteFull
                 {
@@ -627,7 +627,7 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions, out stringToken, _mode, _state.CompressedSize);
+                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions.AsUnsafeReadOnlySpan(), out stringToken, _mode, _state.CompressedSize);
                     }
                 }
                 _state.CompressedSize = null;

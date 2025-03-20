@@ -350,6 +350,10 @@ namespace Sparrow.Collections
         {
             return _items.AsSpan().Slice(0, Count);
         }
+        public ReadOnlySpan<T> AsUnsafeReadOnlySpan()
+        {
+            return _items.AsSpan().Slice(0, Count);
+        }
 
         public Enumerator GetEnumerator()
         {
