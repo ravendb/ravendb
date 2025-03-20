@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(StringSegmentComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, DatabaseWakeupTimer> _wakeupTimers = new ConcurrentDictionary<string, DatabaseWakeupTimer>();
+        private readonly ConcurrentDictionary<string, Lazy<DatabaseWakeupTimer>> _wakeupTimers = new();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         private readonly Logger _logger;
@@ -500,7 +500,7 @@ namespace Raven.Server.Documents
                 foreach (var timer in _wakeupTimers.Values)
                 {
                     var handle = new ManualResetEvent(false);
-                    timer.Dispose(handle);
+                    timer.Value.Dispose(handle);
                     handles.Add(handle);
                 }
 
@@ -582,7 +582,7 @@ namespace Raven.Server.Documents
             try
             {
                 if (_wakeupTimers.TryRemove(databaseName.Value, out var timer))
-                    timer.Dispose();
+                    timer.Value.Dispose();
 
                 release = EnterReadLockImmediately(databaseName);
 
@@ -1095,10 +1095,10 @@ namespace Raven.Server.Documents
             // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
             
             _wakeupTimers.AddOrUpdate(databaseName,
-                _ => new DatabaseWakeupTimer(databaseName, idleDatabaseActivity, NextScheduledActivityCallback),
+                _ => new Lazy<DatabaseWakeupTimer>(() => new DatabaseWakeupTimer(databaseName, idleDatabaseActivity, NextScheduledActivityCallback)),
                 (_, timer) =>
                 {
-                    timer.Update(idleDatabaseActivity);
+                    timer.Value.Update(idleDatabaseActivity);
                     return timer;
                 });
         }
@@ -1114,7 +1114,7 @@ namespace Raven.Server.Documents
             if (idleDatabaseActivity == null)
             {
                 if (_wakeupTimers.TryRemove(databaseName, out var oldTimer))
-                    oldTimer.Dispose();
+                    oldTimer.Value.Dispose();
 
                 return;
             }
@@ -1238,7 +1238,7 @@ namespace Raven.Server.Documents
                 return true;
 
             if (_wakeupTimers.TryRemove(name, out var timer))
-                timer.Dispose();
+                timer.Value.Dispose();
 
             if (idleDatabaseActivity == null)
                 return true;
