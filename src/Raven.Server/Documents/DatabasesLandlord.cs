@@ -499,6 +499,9 @@ namespace Raven.Server.Documents
                 var handles = new List<WaitHandle>();
                 foreach (var timer in _wakeupTimers.Values)
                 {
+                    if (timer.IsValueCreated == false)
+                        continue;
+
                     var handle = new ManualResetEvent(false);
                     timer.Value.Dispose(handle);
                     handles.Add(handle);
@@ -581,7 +584,7 @@ namespace Raven.Server.Documents
             IDisposable release = null;
             try
             {
-                if (_wakeupTimers.TryRemove(databaseName.Value, out var timer))
+                if (_wakeupTimers.TryRemove(databaseName.Value, out var timer) && timer.IsValueCreated)
                     timer.Value.Dispose();
 
                 release = EnterReadLockImmediately(databaseName);
@@ -1094,13 +1097,13 @@ namespace Raven.Server.Documents
         {
             // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
             
-            _wakeupTimers.AddOrUpdate(databaseName,
+            _ = _wakeupTimers.AddOrUpdate(databaseName,
                 _ => new Lazy<DatabaseWakeupTimer>(() => new DatabaseWakeupTimer(databaseName, idleDatabaseActivity, NextScheduledActivityCallback)),
                 (_, timer) =>
                 {
                     timer.Value.Update(idleDatabaseActivity);
                     return timer;
-                });
+                }).Value;
         }
 
         private void LogUnloadFailureReason(StringSegment databaseName, string reason)
@@ -1113,7 +1116,7 @@ namespace Raven.Server.Documents
         {
             if (idleDatabaseActivity == null)
             {
-                if (_wakeupTimers.TryRemove(databaseName, out var oldTimer))
+                if (_wakeupTimers.TryRemove(databaseName, out var oldTimer) && oldTimer.IsValueCreated)
                     oldTimer.Value.Dispose();
 
                 return;
@@ -1237,7 +1240,7 @@ namespace Raven.Server.Documents
             if (name == null)
                 return true;
 
-            if (_wakeupTimers.TryRemove(name, out var timer))
+            if (_wakeupTimers.TryRemove(name, out var timer) && timer.IsValueCreated)
                 timer.Value.Dispose();
 
             if (idleDatabaseActivity == null)
