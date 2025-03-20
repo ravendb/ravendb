@@ -11,6 +11,7 @@ import { useIndexErrorsDropdown } from "components/pages/database/indexes/errors
 import { ColumnFiltersState, Updater } from "@tanstack/react-table";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface SelectIndexErrorsDropdownProps {
     indexesList: NameAndCount[];
@@ -45,15 +46,22 @@ export function SelectIndexErrorsDropdown({
 
     return (
         <Dropdown className="select-index-errors-dropdown">
-            <Dropdown.Toggle
-                as={CustomDropdownToggle}
-                variant="secondary"
-                disabled={isLoading}
-                className="select-index-errors-toggle d-flex align-items-center"
-                isCaretHidden
+            <ConditionalPopover
+                conditions={{
+                    isActive: indexesList.length === 0,
+                    message: `No ${dropdownTypeLabelText} with indexing errors available`,
+                }}
             >
-                <div className="flex-grow d-flex align-items-center">{labelText}</div>
-            </Dropdown.Toggle>
+                <Dropdown.Toggle
+                    as={CustomDropdownToggle}
+                    variant="secondary"
+                    disabled={isLoading || indexesList.length === 0}
+                    className="select-index-errors-toggle d-flex align-items-center"
+                    isCaretHidden
+                >
+                    <div className="flex-grow d-flex align-items-center">{labelText}</div>
+                </Dropdown.Toggle>
+            </ConditionalPopover>
             <Dropdown.Menu className="p-3 custom-dropdown-menu">
                 <div className="vstack gap-2">
                     <div className="hstack lh-1 gap-3">
