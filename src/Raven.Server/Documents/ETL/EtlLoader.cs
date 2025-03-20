@@ -985,8 +985,18 @@ namespace Raven.Server.Documents.ETL
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
                 var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
 
-                AddOrUpdate(lastProcessedTombstones, Constants.TimeSeries.All, etag);
-                AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, Constants.TimeSeries.All, etag, type);
+                if (transform.ApplyToAllDocuments)
+                {
+                    AddOrUpdate(lastProcessedTombstones, Constants.TimeSeries.All, etag);
+                    AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, Constants.TimeSeries.All, etag, type);
+                    continue;
+                }
+
+                foreach (var collection in transform.Collections)
+                {
+                    AddOrUpdate(lastProcessedTombstones, collection, etag);
+                    AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, collection, etag, type);
+                }
             }
         }
 
@@ -998,8 +1008,18 @@ namespace Raven.Server.Documents.ETL
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
                 var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
 
-                AddOrUpdate(lastProcessedTombstones, Constants.Counters.All, etag);
-                AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, Constants.Counters.All, etag, type);
+                if (transform.ApplyToAllDocuments)
+                {
+                    AddOrUpdate(lastProcessedTombstones, Constants.Counters.All, etag);
+                    AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, Constants.Counters.All, etag, type);
+                    continue;
+                }
+
+                foreach (var collection in transform.Collections)
+                {
+                    AddOrUpdate(lastProcessedTombstones, collection, etag);
+                    AddOrUpdateInfo(lastProcessedTombstonesInfo, config.Name, collection, etag, type);
+                }
             }
         }
 
