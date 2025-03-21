@@ -196,7 +196,7 @@ public abstract class AbstractIndexCreateController
         return new IndexBatchScope(this, ServerStore, ServerStore.LicenseManager.GetNumberOfUtilizedCores(), onBatchSaved);
     }
 
-    private void ValidateAnalyzers(IndexDefinition definition)
+    internal static void ValidateAnalyzers(IndexDefinition definition, string databaseName)
     {
         if (definition.Fields == null)
             return;
@@ -208,7 +208,7 @@ public abstract class AbstractIndexCreateController
 
             try
             {
-                LuceneIndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, GetDatabaseName());
+                LuceneIndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, databaseName);
             }
             catch (Exception e)
             {
@@ -216,8 +216,10 @@ public abstract class AbstractIndexCreateController
             }
         }
     }
+
+    private void ValidateAnalyzers(IndexDefinition definition) => ValidateAnalyzers(definition, GetDatabaseName());
     
-    private static void ValidateConfiguration(IndexDefinition definition)
+    internal static void ValidateConfiguration(IndexDefinition definition)
     {
         if (definition.Configuration == null)
             return;
