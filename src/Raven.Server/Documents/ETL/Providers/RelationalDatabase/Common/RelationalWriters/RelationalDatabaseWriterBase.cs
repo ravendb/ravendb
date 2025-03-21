@@ -8,6 +8,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Microsoft.Data.SqlClient;
+using MySqlConnector;
+using Npgsql;
+using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Extensions.Streams;
@@ -110,6 +114,11 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
 
     public static void TestConnection(string factoryName, string connectionString)
     {
+        DbProviderFactories.RegisterFactory("Microsoft.Data.SqlClient", SqlClientFactory.Instance);
+        DbProviderFactories.RegisterFactory("MySqlConnector.MySqlConnectorFactory", MySqlConnectorFactory.Instance);
+        DbProviderFactories.RegisterFactory("Npgsql", NpgsqlFactory.Instance);
+        DbProviderFactories.RegisterFactory("Oracle.ManagedDataAccess.Client", OracleClientFactory.Instance);
+        
         var providerFactory = DbProviderFactories.GetFactory(factoryName);
         var connection = providerFactory.CreateConnection();
         connection.ConnectionString = connectionString;
