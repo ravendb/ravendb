@@ -313,7 +313,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 MaxTokensPerChunk: this.maxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(),
             },
             Quantization: this.quantizationType(),
-            EmbeddingsTransformation: this.embeddingsSource() === "script" ? { Script: this.script() } : null,
+            EmbeddingsTransformation: this.embeddingsSource() === "script" ? { Script: this.script(), ChunkingOptions: {MaxTokensPerChunk: 256, ChunkingMethod: "PlainTextSplit"} } : null,
             EmbeddingsPathConfigurations: this.embeddingsSource() === "paths" ? this.embeddingPathConfigurations() : [],
             EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000),
             EmbeddingsCacheForQueryingExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheForQueryingExpiration() * 1000)

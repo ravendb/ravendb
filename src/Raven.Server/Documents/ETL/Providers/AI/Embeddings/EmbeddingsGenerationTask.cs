@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Google.Apis.Util;
 using Lucene.Net.Documents;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
@@ -21,6 +23,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Utils;
 
 #pragma warning disable SKEXP0001
 
@@ -171,20 +174,30 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
             new EmbeddingsGenerationConfiguration { Connection = new AiConnectionString { EmbeddedSettings = new EmbeddedSettings() } });
 
         var result = new EmbeddingsGenerationTestScriptResult();
-
+        List<string> chunks = [];
+        List<EmbeddingsGenerationTestScriptResult.Item> allItems = [];
         foreach (var record in records)
         {
-             foreach (var embeddingItemValue in record.Values.SelectMany(x => x.Value))
+            foreach (var (name, values) in record.Fields)
             {
-                var embedding = AiHelper.GenerateEmbedding(embeddingService, embeddingItemValue);
-
-                var embeddingValue = EmbeddingsHelper.CreateEmbeddingValue(embedding, Configuration.Quantization);
-
-                //TODO:
-                // embeddingItemValue.SetEmbedding(embeddingValue, Configuration.Quantization, new AiConnectionStringIdentifier("TODO")); //TODO
-                //
-                // result.EmbeddingItemValues.Add(embeddingItemValue);
+                List<EmbeddingsGenerationTestScriptResult.Item> items = [];
+                result.Results[name] = items;
+                foreach (var (value, chunking) in values)
+                {
+                    foreach(var chunked in TextChunker.Chunk(value, chunking))
+                    {
+                        var item = new EmbeddingsGenerationTestScriptResult.Item(chunked);
+                        chunks.Add(name);
+                        allItems.Add(item);
+                        items.Add(item);
+                    }
+                }
             }
+        }
+        var results = AiHelper.GenerateEmbeddingsAsync(embeddingService, chunks, CancellationToken).GetAwaiter().GetResult();
+        for (int i = 0; i < results.Count; i++)
+        {
+            allItems[i].Embeddings = MemoryMarshalEx.Cast<float, byte>(results[i]);
         }
 
         result.TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList();

@@ -66,8 +66,4 @@ public static class AiHelper
 
         return embeddings;
     }
-
-    [Experimental("SKEXP0001")]
-    public static ReadOnlyMemory<float> GenerateEmbedding(ITextEmbeddingGenerationService embeddingGenerationService, string value) =>
-        embeddingGenerationService.GenerateEmbeddingsAsync([value]).GetAwaiter().GetResult()[0];
 }
