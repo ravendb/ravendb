@@ -46,7 +46,10 @@
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.607501" />
-    <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.19" />
+
+    <!--Need to use last version of Microsoft.Diagnostics.Tracing.TraceEvent that is supported by dotnet/diagnostics
+    https://github.com/dotnet/diagnostics/blob/df3d259d329745473509693e3862e41078e18d06/eng/Versions.props#L42-->
+    <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
     <PackageVersion Include="Microsoft.DotNet.xunit.performance" Version="1.0.0-alpha-build0041" />
     <PackageVersion Include="Microsoft.DotNet.xunit.performance.runner.cli" Version="1.0.0-alpha-build0041" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />

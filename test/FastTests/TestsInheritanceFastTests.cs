@@ -17,7 +17,7 @@ namespace FastTests
         {
         }
 
-        [NonLinuxFact(Skip = "Egor")]
+        [NonLinuxFact]
         public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
         {
             var assemblies = new HashSet<Assembly>();
@@ -60,7 +60,7 @@ namespace FastTests
                         select method;
 
             var array = types.ToArray();
-            const int numberToTolerate = 4489;
+            const int numberToTolerate = 4479;
             if (array.Length == numberToTolerate)
                 return;
 
