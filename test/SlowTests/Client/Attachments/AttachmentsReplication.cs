@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -26,6 +27,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -2573,149 +2575,141 @@ namespace SlowTests.Client.Attachments
                 modifyDatabaseRecord?.Invoke(record);
                 record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString();
             };
-            using (var store1 = GetDocumentStore(options))
-            using (var store2 = GetDocumentStore(options))
-            using (var store3 = GetDocumentStore(options))
+            using var store1 = GetDocumentStore(options);
+            using var store2 = GetDocumentStore(options);
+            using var store3 = GetDocumentStore(options);
+
+            var user = new User { Name = "Karmel", Id = "users/1" };
+            using (var session = store1.OpenSession())
             {
-                var user = new User { Name = "Karmel", Id = "users/1" };
-                using (var session = store1.OpenSession())
+                session.Store(user, user.Id);
+                session.SaveChanges();
+            }
+
+            using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+            {
+                var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
+                Assert.Equal("foo/bar", result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("image/png", result.ContentType);
+                Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+            }
+            await SetupReplicationAsync(store1, store2);
+            await SetupReplicationAsync(store1, store3);
+
+            await EnsureReplicatingAsync(store1, store2);
+            await EnsureReplicatingAsync(store1, store3);
+
+            using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+            {
+                var result = store2.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
+                Assert.Equal("foo/bar", result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("image/png", result.ContentType);
+                Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
+            }
+
+            using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50, 60 }))
+            {
+                var result = store3.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
+                Assert.Equal("foo/bar", result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("image/png", result.ContentType);
+                Assert.Equal("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=", result.Hash);
+            }
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                var u = await session.LoadAsync<User>("users/1");
+                u.Age = 30;
+                await session.SaveChangesAsync();
+            }
+
+            await EnsureReplicatingAsync(store1, store2);
+            await EnsureReplicatingAsync(store1, store3);
+
+            await SetupReplicationAsync(store2, store1);
+            await SetupReplicationAsync(store2, store3);
+
+            await EnsureReplicatingAsync(store2, store1);
+            await EnsureReplicatingAsync(store2, store3);
+
+            await SetupReplicationAsync(store3, store2);
+            await EnsureReplicatingAsync(store3, store2);
+
+            var db1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
+            var db2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "users/1");
+            var db3 = await GetDocumentDatabaseInstanceForAsync(store3, options.DatabaseMode, "users/1");
+
+            using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var res = await WaitForValueAsync(async () =>
                 {
-                    session.Store(user, user.Id);
-                    session.SaveChanges();
-                }
-
-                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
-                {
-                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
-                    Assert.Equal("foo/bar", result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
-                }
-                await SetupReplicationAsync(store1, store2);
-                await SetupReplicationAsync(store1, store3);
-
-                await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store3);
-
-                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
-                {
-                    var result = store2.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
-                    Assert.Equal("foo/bar", result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
-                }
-
-                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50, 60 }))
-                {
-                    var result = store3.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
-                    Assert.Equal("foo/bar", result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=", result.Hash);
-                }
-
-                var stores = new DocumentStore[] { store1, store2, store3 };
-                await WriteStatus(stores, "Stage 1");
-
-                using (var session = store1.OpenAsyncSession())
-                {
-                    var u = await session.LoadAsync<User>("users/1");
-                    u.Age = 30;
-                    await session.SaveChangesAsync();
-                }
-
-                await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store3);
-
-                await WriteStatus(stores, "Stage 2");
-
-                await SetupReplicationAsync(store2, store1);
-                await SetupReplicationAsync(store2, store3);
-                await EnsureReplicatingAsync(store2, store1);
-                await EnsureReplicatingAsync(store2, store3);
-
-                await WriteStatus(stores, "Stage 3");
-
-                await SetupReplicationAsync(store3, store2);
-                await EnsureReplicatingAsync(store3, store2);
-
-                await WriteStatus(stores, "Stage 4");
-
-                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1");
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
-
-                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                {
-                    var res = await WaitForValueAsync(async () =>
-                    {
-                        using (var session = store1.OpenAsyncSession())
-                        using (var session2 = store2.OpenAsyncSession())
-                        using (var session3 = store3.OpenAsyncSession())
-                        {
-                            var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                            var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                            var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-
-                            if (attachment != null && attachment2 != null && attachment3 != null &&
-                                attachment.Details.Name == "foo/bar" &&
-                                AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context, excludeChangeVector: true) &&
-                                AreAttachmentDetailsEqual(attachment.Details, attachment3.Details, context, excludeChangeVector: true))
-                            {
-                                return true;
-                            }
-
-                            return false;
-                        }
-                    }, true, 30_000, interval: 333);
-
-                    await WriteStatus(stores, "Stage 5");
-
                     using (var session = store1.OpenAsyncSession())
                     using (var session2 = store2.OpenAsyncSession())
                     using (var session3 = store3.OpenAsyncSession())
                     {
-                        var u1 = await session.LoadAsync<User>("users/1");
-                        var u2 = await session2.LoadAsync<User>("users/1");
-                        var u3 = await session3.LoadAsync<User>("users/1");
-
-                        var cv1 = context.GetChangeVector(session.Advanced.GetChangeVectorFor(u1)).Version.AsString();
-                        var cv2 = context.GetChangeVector(session2.Advanced.GetChangeVectorFor(u2)).Version.AsString();
-                        var cv3 = context.GetChangeVector(session3.Advanced.GetChangeVectorFor(u3)).Version.AsString();
-
-                        Console.WriteLine($"\ncv1: {cv1}");
-                        Console.WriteLine($"cv2: {cv2}");
-                        Console.WriteLine($"cv3: {cv3}\n");
-
-                        Assert.True(cv1.Equals(cv2));
-                        Assert.True(cv1.Equals(cv3));
-
                         var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
-                        Assert.NotNull(attachment);
-                        Assert.NotNull(attachment2);
-                        Assert.NotNull(attachment3);
+                        if (attachment != null && attachment2 != null && attachment3 != null &&
+                            attachment.Details.Name == "foo/bar" &&
+                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context, excludeChangeVector: true) &&
+                            AreAttachmentDetailsEqual(attachment.Details, attachment3.Details, context, excludeChangeVector: true))
+                        {
+                            return true;
+                        }
 
-                        var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
-                        var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
-                        var attachmentChangeVector3 = context.GetChangeVector(attachment3.Details.ChangeVector).Version.AsString();
-
-                        user = await session.LoadAsync<User>("users/1");
-                        Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
-                                    ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0));
-                        Assert.Equal("foo/bar", attachment.Details.Name);
-                        Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                        Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
-                        Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
-                        Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
-
-                        // RavenDB-21650
-                        //Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
-                        //Assert.Equal(attachmentChangeVector3, attachmentChangeVector2);
+                        return false;
                     }
+                }, true, 30_000, interval: 333);
+            }
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                user = await session.LoadAsync<User>("users/1");
+            }
+
+            using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context1))
+            using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context2))
+            using (db3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context3))
+            using (context1.OpenReadTransaction())
+            using (context2.OpenReadTransaction())
+            using (context3.OpenReadTransaction())
+            {
+                using (DocumentIdWorker.GetSliceFromId(context1, "users/1", out Slice docIdSlice))
+                {
+                    var attachments1 = db1.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context1, docIdSlice).ToList();
+                    var attachments2 = db2.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context2, docIdSlice).ToList();
+                    var attachments3 = db3.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context3, docIdSlice).ToList();
+
+                    Assert.NotNull(attachments1);
+                    Assert.True(attachments1.Count == 1, GetErrorDetails(attachments1)); // we should have only one attachment here 
+
+                    Assert.NotNull(attachments2);
+                    Assert.True(attachments2.Count == 1, GetErrorDetails(attachments2));
+
+                    Assert.NotNull(attachments3);
+                    Assert.True(attachments3.Count == 1, GetErrorDetails(attachments3));
+
+                    var attachment1 = attachments1.First();
+                    var attachment2 = attachments2.First();
+                    var attachment3 = attachments3.First();
+
+                    Assert.Equal("foo/bar", attachment1.Name);
+                    Assert.Equal("foo/bar", attachment2.Name);
+                    Assert.Equal("foo/bar", attachment3.Name);
+
+                    Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment1.Hash && user.Age == 30) ||
+                                ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment1.Hash && user.Age == 0));
+
+                    Assert.Equal(attachment1.Hash, attachment2.Hash);
+                    Assert.Equal(attachment2.Hash, attachment3.Hash);
+
+                    // RavenDB-21650
+                    //Assert.Equal(attachment1.ChangeVector, attachment2.ChangeVector);
+                    //Assert.Equal(attachment2.ChangeVector, attachment3.ChangeVector);
                 }
             }
         }
@@ -2969,157 +2963,166 @@ namespace SlowTests.Client.Attachments
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ConflictOfAttachmentAndDocument3Stores(Options options)
         {
-            using (var store1 = GetDocumentStore(options))
-            using (var store2 = GetDocumentStore(options))
-            using (var store3 = GetDocumentStore(options))
+            using var store1 = GetDocumentStore(options);
+            using var store2 = GetDocumentStore(options);
+            using var store3 = GetDocumentStore(options);
+
+            using (var session = store1.OpenSession())
             {
-                using (var session = store1.OpenSession())
+                session.Store(new User { Name = "Karmel" }, "users/1");
+                session.SaveChanges();
+            }
+
+            using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+            {
+                var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
+                Assert.Equal("foo/bar", result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("image/png", result.ContentType);
+                Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+            }
+
+            await SetupReplicationAsync(store1, store2);
+            await SetupReplicationAsync(store1, store3);
+
+            await SetupReplicationAsync(store2, store1);
+            await SetupReplicationAsync(store2, store3);
+
+            await SetupReplicationAsync(store3, store1);
+            await SetupReplicationAsync(store3, store2);
+
+            await EnsureReplicatingAsync(store1, store2);
+            await EnsureReplicatingAsync(store1, store3);
+
+            await EnsureReplicatingAsync(store2, store1);
+            await EnsureReplicatingAsync(store2, store3);
+
+            await EnsureReplicatingAsync(store3, store1);
+            await EnsureReplicatingAsync(store3, store2);
+
+            var replication1 = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
+            var replication2 = await GetReplicationManagerAsync(store2, store2.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
+            var replication3 = await GetReplicationManagerAsync(store3, store3.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
+
+            replication1.Break();
+            replication2.Break();
+            replication3.Break();
+
+            using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+            {
+                var result = store2.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
+                Assert.Equal("foo/bar", result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("image/png", result.ContentType);
+                Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
+            }
+
+            using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50, 60 }))
+            {
+                var result = store3.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
+                Assert.Equal("foo/bar", result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("image/png", result.ContentType);
+                Assert.Equal("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=", result.Hash);
+            }
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                var u = await session.LoadAsync<User>("users/1");
+                u.Age = 30;
+                await session.SaveChangesAsync();
+            }
+
+            replication1.Mend();
+            replication2.Mend();
+            replication3.Mend();
+
+            await EnsureReplicatingAsync(store1, store2);
+            await EnsureReplicatingAsync(store1, store3);
+
+            await EnsureReplicatingAsync(store2, store1);
+            await EnsureReplicatingAsync(store2, store3);
+
+            await EnsureReplicatingAsync(store3, store1);
+            await EnsureReplicatingAsync(store3, store2);
+
+            var db1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
+            var db2 = await GetDocumentDatabaseInstanceForAsync(store2, options.DatabaseMode, "users/1");
+            var db3 = await GetDocumentDatabaseInstanceForAsync(store3, options.DatabaseMode, "users/1");
+
+            using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                await WaitForValueAsync(async () =>
                 {
-                    session.Store(new User { Name = "Karmel" }, "users/1");
-                    session.SaveChanges();
-                }
-
-                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
-                {
-                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
-                    Assert.Equal("foo/bar", result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
-                }
-
-                await SetupReplicationAsync(store1, store2);
-                await SetupReplicationAsync(store1, store3);
-
-                await SetupReplicationAsync(store2, store1);
-                await SetupReplicationAsync(store2, store3);
-
-                await SetupReplicationAsync(store3, store1);
-                await SetupReplicationAsync(store3, store2);
-
-                await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store3);
-
-                await EnsureReplicatingAsync(store2, store1);
-                await EnsureReplicatingAsync(store2, store3);
-
-                await EnsureReplicatingAsync(store3, store1);
-                await EnsureReplicatingAsync(store3, store2);
-
-                var replication1 = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
-                var replication2 = await GetReplicationManagerAsync(store2, store2.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
-                var replication3 = await GetReplicationManagerAsync(store3, store3.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
-
-                replication1.Break();
-                replication2.Break();
-                replication3.Break();
-
-                var stores = new DocumentStore[] { store1, store2, store3 };
-
-                await WriteAttachmentDetails(stores);
-                await WriteStatus(stores, "Stage 1");
-
-                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
-                {
-                    var result = store2.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
-                    Assert.Equal("foo/bar", result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
-                }
-
-                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50, 60 }))
-                {
-                    var result = store3.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
-                    Assert.Equal("foo/bar", result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=", result.Hash);
-                }
-
-                using (var session = store1.OpenAsyncSession())
-                {
-                    var u = await session.LoadAsync<User>("users/1");
-                    u.Age = 30;
-                    await session.SaveChangesAsync();
-                }
-
-                await WriteStatus(stores, "Stage 2");
-
-                replication1.Mend();
-                replication2.Mend();
-                replication3.Mend();
-
-                await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store3);
-
-                await EnsureReplicatingAsync(store2, store1);
-                await EnsureReplicatingAsync(store2, store3);
-
-                await EnsureReplicatingAsync(store3, store1);
-                await EnsureReplicatingAsync(store3, store2);
-
-                await WriteStatus(stores, "Stage 3");
-
-                var dbName1 = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1");
-                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName1);
-
-                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                {
-                    await WaitForValueAsync(async () =>
-                    {
-                        using (var session = store1.OpenAsyncSession())
-                        using (var session2 = store2.OpenAsyncSession())
-                        using (var session3 = store3.OpenAsyncSession())
-                        {
-                            var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                            var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                            var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-
-                            if (attachment != null && attachment2 != null && attachment3 != null &&
-                                attachment.Details.Name == "foo/bar" &&
-                                AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context) &&
-                                AreAttachmentDetailsEqual(attachment.Details, attachment3.Details, context))
-                            {
-                                return true;
-                            }
-
-                            return false;
-                        }
-                    }, true, 30_000, 500);
-
-                    await WriteAttachmentDetails(stores);
-
                     using (var session = store1.OpenAsyncSession())
                     using (var session2 = store2.OpenAsyncSession())
                     using (var session3 = store3.OpenAsyncSession())
                     {
-                        var user = await session.LoadAsync<User>("users/1");
-
                         var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
-                        Assert.NotNull(attachment);
-                        Assert.NotNull(attachment2);
-                        Assert.NotNull(attachment3);
+                        if (attachment != null && attachment2 != null && attachment3 != null &&
+                            attachment.Details.Name == "foo/bar" &&
+                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details, context) &&
+                            AreAttachmentDetailsEqual(attachment.Details, attachment3.Details, context))
+                        {
+                            return true;
+                        }
 
-                        var attachmentChangeVector = context.GetChangeVector(attachment.Details.ChangeVector).Version.AsString();
-                        var attachmentChangeVector2 = context.GetChangeVector(attachment2.Details.ChangeVector).Version.AsString();
-                        var attachmentChangeVector3 = context.GetChangeVector(attachment3.Details.ChangeVector).Version.AsString();
-
-                        Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
-                                    ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0));
-                        Assert.Equal("foo/bar", attachment.Details.Name);
-
-                        Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                        Assert.Equal(attachmentChangeVector, attachmentChangeVector2);
-                        Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
-
-                        Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
-                        Assert.Equal(attachmentChangeVector3, attachmentChangeVector2);
-                        Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
+                        return false;
                     }
+                }, true, 30_000, 500);
+            }
+
+            User user;
+            using (var session = store1.OpenAsyncSession())
+            {
+                user = await session.LoadAsync<User>("users/1");
+            }
+
+            using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context1))
+            using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context2))
+            using (db3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context3))
+            using (context1.OpenReadTransaction())
+            using (context2.OpenReadTransaction())
+            using (context3.OpenReadTransaction())
+            {
+                using (DocumentIdWorker.GetSliceFromId(context1, "users/1", out Slice docIdSlice))
+                {
+                    var attachments1 = db1.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context1, docIdSlice).ToList();
+                    var attachments2 = db2.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context2, docIdSlice).ToList();
+                    var attachments3 = db3.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context3, docIdSlice).ToList();
+
+                    Assert.NotNull(attachments1);
+                    Assert.True(attachments1.Count == 1, GetErrorDetails(attachments1)); // we should have only one attachment here 
+
+                    Assert.NotNull(attachments2);
+                    Assert.True(attachments2.Count == 1, GetErrorDetails(attachments2)); // we should have only one attachment here 
+
+                    Assert.NotNull(attachments3);
+                    Assert.True(attachments3.Count == 1, GetErrorDetails(attachments3)); // we should have only one attachment here 
+
+                    var attachment1 = attachments1.First();
+                    var attachment2 = attachments2.First();
+                    var attachment3 = attachments3.First();
+
+                    Assert.Equal("foo/bar", attachment1.Name);
+                    Assert.Equal("foo/bar", attachment2.Name);
+                    Assert.Equal("foo/bar", attachment3.Name);
+
+                    Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment1.Hash && user.Age == 30) ||
+                                ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment1.Hash && user.Age == 0));
+
+                    Assert.Equal(attachment1.Hash, attachment2.Hash);
+                    Assert.Equal(attachment2.Hash, attachment3.Hash);
+
+                    var cv1 = context1.GetChangeVector(attachment1.ChangeVector).Version.ToString();
+                    var cv2 = context2.GetChangeVector(attachment2.ChangeVector).Version.ToString();
+                    var cv3 = context3.GetChangeVector(attachment3.ChangeVector).Version.ToString();
+
+                    Assert.Equal(cv1, cv2);
+                    Assert.Equal(cv2, cv3);
                 }
             }
         }
@@ -3522,6 +3525,17 @@ namespace SlowTests.Client.Attachments
 
                 return string.CompareOrdinal(cvx, cvy);
             }
+        }
+
+        private string GetErrorDetails(List<AttachmentDetails> attachments)
+        {
+            var sb = new StringBuilder($"Expected 1 attachment, but found {attachments.Count}.\nExisting attachments:\n");
+            foreach (var attachment in attachments)
+            {
+                sb.AppendLine($"- Name: '{attachment.Name}', Hash: '{attachment.Hash}', Change Vector: '{attachment.ChangeVector}'");
+            }
+
+            return sb.ToString();
         }
     }
 }
