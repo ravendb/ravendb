@@ -60,7 +60,7 @@ export default function ClusterDebug() {
                 </div>
                 <h3 className="mt-3">Summary</h3>
                 <ClusterDebugSummary nodes={result} />
-                <h3 className="hstack align-items-center mt-4">Entries</h3>
+                <h3 className="hstack align-items-center mt-4">Log Entries</h3>
                 <SizeGetter render={(size) => <ClusterDebugEntries availableWidth={size.width} />} />
             </div>
         </div>

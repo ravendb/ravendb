@@ -50,12 +50,21 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
     const deleteEntry = useCallback(
         async (logIndex: number) => {
             const isConfirmed = await confirm({
-                title: "You're about to delete log item",
+                title: "Delete log entry?",
                 icon: "trash",
                 confirmText: "I understand the risk, delete",
                 message: (
                     <div>
-                        Do you want to delete log item with index <code>{logIndex}</code> from cluster log?
+                        <p>
+                            You are about to delete log entry with index <code>{logIndex}</code>.
+                        </p>
+                        <p>
+                            Warning:
+                            <br />
+                            Deleting a log entry from the Raft command log can lead to data inconsistencies and cluster
+                            instability. If all nodes are connected and there are no network errors, this Raft command
+                            will be deleted from ALL nodes in the cluster. Proceed with caution.
+                        </p>
                     </div>
                 ),
             });

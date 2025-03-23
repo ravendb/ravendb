@@ -116,7 +116,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                         <a
                                             target="_blank"
                                             href={jsonUrl(nodeInfo?.serverUrl)}
-                                            title="See json"
+                                            title="See the raw Raft log info and entries (JSON)"
                                             className="no-decor"
                                         >
                                             <Icon icon="json" margin="m-0" />
@@ -129,7 +129,64 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                 </thead>
                 <tbody>
                     <tr>
-                        <th>Progress</th>
+                        <th>
+                            Role / Phase
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        <ul>
+                                            <li>
+                                                The node&apos;s role:
+                                                <br />(<i>Leader, Follower, Candidate, or Passive</i>).
+                                            </li>
+                                            <li>
+                                                Followers also indicate their current phase:
+                                                <br />(<i>Initial, Negotiation, Snapshot, or Steady</i>).
+                                            </li>
+                                        </ul>
+                                    </>
+                                }
+                            >
+                                <Icon id="ReplicationInfo" icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
+                        </th>
+                        {nodes.map((node) => {
+                            return (
+                                <ConditionalRender node={node} key={node.nodeTag}>
+                                    {() => {
+                                        if (node.data.installingSnapshot) {
+                                            return (
+                                                <div className="d-flex">
+                                                    {node.data.role} / Installing Snapshot{" "}
+                                                    <small className="ms-1">
+                                                        <span className="global-spinner spinner-sm"></span>
+                                                    </small>
+                                                    <FlexGrow />
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="xs"
+                                                        onClick={() => openInstallationDetails(node.nodeTag)}
+                                                    >
+                                                        <Icon icon="preview" />
+                                                        View details
+                                                    </Button>
+                                                </div>
+                                            );
+                                        } else {
+                                            return <>{node.data.role}</>;
+                                        }
+                                    }}
+                                </ConditionalRender>
+                            );
+                        })}
+                    </tr>
+                    <tr>
+                        <th>
+                            Progress
+                            <PopoverWithHoverWrapper message="Percentage of Raft commands committed on the node out of the total in the log.">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
+                        </th>
                         {nodes.map((node) => {
                             if (node.status === "failure") {
                                 return (
@@ -160,7 +217,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                     First entry index:{" "}
                                                     <strong>{node.data.firstEntryIndex.toLocaleString()}</strong>
                                                     <br />
-                                                    Commit index:{" "}
+                                                    Last commit index:{" "}
                                                     <strong>{node.data.commitIndex.toLocaleString()}</strong>
                                                     <br />
                                                     Last log entry index:{" "}
@@ -181,7 +238,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     <tr>
                         <th>
                             Queue size
-                            <PopoverWithHoverWrapper message="This is text for Queue size tooltip">
+                            <PopoverWithHoverWrapper message="Number of Raft commands left to be committed on the node.">
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </th>
@@ -195,8 +252,8 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     </tr>
                     <tr>
                         <th>
-                            Commit index
-                            <PopoverWithHoverWrapper message="This is text for Commit index tooltip">
+                            Last commit index
+                            <PopoverWithHoverWrapper message="The index of the last Raft command that was committed on the node.">
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </th>
@@ -233,45 +290,8 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     </tr>
                     <tr>
                         <th>
-                            Role / Phase
-                            <PopoverWithHoverWrapper message="This is text for phase tooltip">
-                                <Icon icon="info" color="info" margin="ms-1" />
-                            </PopoverWithHoverWrapper>
-                        </th>
-                        {nodes.map((node) => {
-                            return (
-                                <ConditionalRender node={node} key={node.nodeTag}>
-                                    {() => {
-                                        if (node.data.installingSnapshot) {
-                                            return (
-                                                <div className="d-flex">
-                                                    {node.data.role} / Installing Snapshot{" "}
-                                                    <small className="ms-1">
-                                                        <span className="global-spinner spinner-sm"></span>
-                                                    </small>
-                                                    <FlexGrow />
-                                                    <Button
-                                                        variant="secondary"
-                                                        size="xs"
-                                                        onClick={() => openInstallationDetails(node.nodeTag)}
-                                                    >
-                                                        <Icon icon="preview" />
-                                                        View details
-                                                    </Button>
-                                                </div>
-                                            );
-                                        } else {
-                                            return <>{node.data.role}</>;
-                                        }
-                                    }}
-                                </ConditionalRender>
-                            );
-                        })}
-                    </tr>
-                    <tr>
-                        <th>
                             Last committed date{" "}
-                            <PopoverWithHoverWrapper message=" This is text for Last committed date tooltip">
+                            <PopoverWithHoverWrapper message="The time the last Raft command was committed on the node.">
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </th>
@@ -295,7 +315,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     <tr>
                         <th>
                             Last append date
-                            <PopoverWithHoverWrapper message="This is text for Last append date tooltip">
+                            <PopoverWithHoverWrapper message="The time the last command was appended to the Raft log.">
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </th>
@@ -319,7 +339,23 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                     <tr>
                         <th>
                             Local version
-                            <PopoverWithHoverWrapper message="This is text for Local version tooltip">
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        <ul>
+                                            <li>
+                                                Each Raft command has an ID number associated with it (not the log
+                                                index). Newer RavenDB versions may introduce commands with higher
+                                                version numbers that are unknown to nodes running older versions.
+                                            </li>
+                                            <li>
+                                                This value shows the highest Raft command version number known to the
+                                                node.
+                                            </li>
+                                        </ul>
+                                    </>
+                                }
+                            >
                                 <Icon icon="info" color="info" margin="ms-1" id="localVersionTooltip" />
                             </PopoverWithHoverWrapper>
                         </th>
@@ -330,7 +366,12 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                         ))}
                     </tr>
                     <tr>
-                        <th>Connection</th>
+                        <th>
+                            Connection
+                            <PopoverWithHoverWrapper message="The node's connection state to other nodes in the cluster.">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
+                        </th>
                         {nodes.map((node) => {
                             return (
                                 <ConditionalRender node={node} key={node.nodeTag}>
