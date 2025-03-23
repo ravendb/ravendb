@@ -537,11 +537,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (filesToRestore.Count > 0)
                 return;
 
-            foreach (var (name, state) in subscription)
+            foreach (var (_, state) in subscription)
             {
                 var command = new PutSubscriptionCommand(databaseName, state.Query, state.MentorNode, RaftIdGenerator.DontCareId)
                 {
                     Disabled = state.Disabled,
+                    SubscriptionName = state.SubscriptionName,
                     InitialChangeVector = state.ChangeVectorForNextBatchStartingPoint,
                 };
                 //There's no need to wait for the execution of this command at this point since we will wait for subsequent commands later.
