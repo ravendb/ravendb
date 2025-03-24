@@ -73,6 +73,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
                 var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash, VectorEmbeddingType.Single);
 
+                // we have to wait, since the savings of the embedding values for queries happens in async manner
+                WaitForDocument<object>(store, valueEmbeddingsDocumentId, arg => true);
+                
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
                 Assert.NotNull(valueEmbeddingsDocument);

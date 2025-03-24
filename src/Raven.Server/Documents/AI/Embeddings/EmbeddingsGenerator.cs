@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -33,8 +34,6 @@ namespace Raven.Server.Documents.AI.Embeddings;
 
 #pragma warning disable SKEXP0001
 
-[SuppressMessage("CancellationToken", "RDB0010:Async method should have a CancellationToken in its argument list")]
-[SuppressMessage("ConfigureAwait", "RDB0002:Awaited operations must have ConfigureAwait(false)")]
 public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, CancellationToken shutdown, EmbeddingsGenerator.Mode mode) : BackgroundWorkBase(database.Name, logger, shutdown)
 {
     private const string EmbeddingAttachmentContentType = "application/octet-stream";
@@ -42,7 +41,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     private readonly ConcurrentDictionary<EmbeddingsGenerationTaskIdentifier, AiWorker> _workers = [];
     private readonly ConcurrentQueue<object> _toCache = new();
     private readonly AsyncManualResetEvent _hasWork = new();
-    private readonly RavenLogger _logger = database.Loggers.GetLogger<EmbeddingsGenerator>();
+    private readonly RavenLogger _logger = logger;
     private readonly DocumentDatabase _database = database;
 
     public enum Mode
@@ -72,7 +71,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         AiWorker Owner
         )
     {
-        public readonly TaskCompletionSource TaskCompletionSource = new();
+        public readonly TaskCompletionSource TaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     private class AiWorker
@@ -463,7 +462,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             {
                 await _hasWork.WaitAsync(CancellationToken);
                 _hasWork.Reset();
-                await SubmitAndWaitForWork(GetBatch());
+                await SubmitAndWaitForWorkAsync(GetBatch());
             }
         }
         finally
@@ -495,7 +494,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         }
     }
 
-    private async Task SubmitAndWaitForWork(List<object> batch)
+    private async Task SubmitAndWaitForWorkAsync(List<object> batch)
     {
         try
         {
@@ -553,7 +552,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         }
     }
 
-    private  List<object>  GetBatch()
+    private List<object> GetBatch()
     {
         List<object> results = [];
         while (_toCache.TryDequeue(out object o))
@@ -577,13 +576,14 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             int operations = 0;
             var documentsStorage = context.DocumentDatabase.DocumentsStorage;
             var attachmentsStorage = documentsStorage.AttachmentsStorage;
+            SystemTime systemTime = context.DocumentDatabase.Time;
             foreach (var cur in batch)
             {
                 switch (cur)
                 {
                     case RefreshCache rc:
                     {
-                        DateTime expireAt = DateTime.UtcNow.Add(rc.CacheDuration);
+                        DateTime expireAt = systemTime.GetUtcNow().Add(rc.CacheDuration);
                         foreach (string docIdToRefresh in rc.DocumentIds)
                         {
                             var docJson = CreateEmbeddingCacheDocumentJson(expireAt);
@@ -605,7 +605,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     {
                         foreach (var ge in se.GeneratedEmbeddings)
                         {
-                            DateTime expireAt = DateTime.UtcNow.Add(ge.CacheDuration); 
+                            DateTime expireAt = systemTime.GetUtcNow().Add(ge.CacheDuration);
                             for (int i = 0; i < ge.Values.Count; i++)
                             {
                                 var val = ge.Values[i];
@@ -700,6 +700,13 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     public bool EmbeddingTaskExists(EmbeddingsGenerationTaskIdentifier id)
     {
         return _workers.ContainsKey(id);
+    }
+
+    public VectorEmbeddingType GetQuantizationOf(EmbeddingsGenerationTaskIdentifier taskId)
+    {
+        if(_workers.TryGetValue(taskId, out var worker)is false)
+            return VectorEmbeddingType.Single;
+        return worker.Configuration.Quantization;
     }
 
     public ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsForQueryAsync(
@@ -840,7 +847,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
             BlittableJsonReaderObject CreateOrUpdateDocumentEmbeddingDoc(string embeddingDocId, PutDocumentEmbeddings pde, Dictionary<string, HashSet<string>> hashesByName, out HashSet<string> attachmentsToRemove)
             {
-                Document document = documentsStorage.Get(context, embeddingDocId);
+                using Document document = documentsStorage.Get(context, embeddingDocId);
                 DynamicJsonValue modifications;
                 attachmentsToRemove = [];
                 if (document != null)

@@ -79,8 +79,6 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents
 {
-    [SuppressMessage("ConfigureAwait", "RDB0002:Awaited operations must have ConfigureAwait(false)")]
-    [SuppressMessage("CancellationToken", "RDB0010:Async method should have a CancellationToken in its argument list")]
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
@@ -183,8 +181,8 @@ namespace Raven.Server.Documents
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
-                EmbeddingsGeneratorQueries = new EmbeddingsGenerator(this,_logger, DatabaseShutdown, EmbeddingsGenerator.Mode.Query);
-                EmbeddingsGeneratorEtl = new EmbeddingsGenerator(this,_logger, DatabaseShutdown, EmbeddingsGenerator.Mode.Etl);
+                EmbeddingsGeneratorQueries = new EmbeddingsGenerator(this, Loggers.GetLogger<EmbeddingsGenerator>(), DatabaseShutdown, EmbeddingsGenerator.Mode.Query);
+                EmbeddingsGeneratorEtl = new EmbeddingsGenerator(this, Loggers.GetLogger<EmbeddingsGenerator>(), DatabaseShutdown, EmbeddingsGenerator.Mode.Etl);
                 
                 IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);

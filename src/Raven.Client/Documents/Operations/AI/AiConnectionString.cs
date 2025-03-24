@@ -131,7 +131,7 @@ public sealed class AiConnectionString : ConnectionString
         return json;
     }
 
-    public int GetQueryEmbeddingsMaxConcurrentBatches(int globalQueryEmbeddingsMaxConcurrentBatches)
+    internal int GetQueryEmbeddingsMaxConcurrentBatches(int globalQueryEmbeddingsMaxConcurrentBatches)
     {
         var provider = GetActiveProviderInstance(); 
         return provider?.EmbeddingsMaxConcurrentBatches ?? globalQueryEmbeddingsMaxConcurrentBatches;

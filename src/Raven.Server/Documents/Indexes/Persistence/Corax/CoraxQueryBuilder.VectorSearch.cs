@@ -294,7 +294,9 @@ public static partial class CoraxQueryBuilder
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
 
-            var sourceEmbeddingType = VectorEmbeddingType.Single;
+            var embeddingsGenerator = database.EmbeddingsGeneratorQueries;
+            
+            var sourceEmbeddingType = embeddingsGenerator.GetQuantizationOf(embeddingsTaskId);
 
             var destinationEmbeddingType = vectorOptions?.DestinationEmbeddingType ?? sourceEmbeddingType;
             
@@ -303,7 +305,7 @@ public static partial class CoraxQueryBuilder
             switch (valueType)
             {
                 case ValueTokenType.String:
-                    embeddingValues = database.EmbeddingsGeneratorQueries
+                    embeddingValues = embeddingsGenerator
                         .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, embeddingsTaskId, value.ToString())
                         .GetAwaiter().GetResult();
                     break;
@@ -317,7 +319,7 @@ public static partial class CoraxQueryBuilder
                     for (var i = 0; i < values.Length; i++)
                         values[i] = bjra[i].ToString();
                 
-                    embeddingValues = database.EmbeddingsGeneratorQueries
+                    embeddingValues = embeddingsGenerator
                         .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, embeddingsTaskId, values)
                         .GetAwaiter().GetResult();
                     break;
