@@ -144,7 +144,12 @@ public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConne
         json[nameof(EmbeddingsPathConfigurations)] = new DynamicJsonArray(EmbeddingsPathConfigurations);
         json[nameof(EmbeddingsTransformation)] = EmbeddingsTransformation != null ? new DynamicJsonValue
         {
-            [nameof(EmbeddingsTransformation.Script)] = EmbeddingsTransformation.Script
+            [nameof(EmbeddingsTransformation.Script)] = EmbeddingsTransformation.Script,
+            [nameof(EmbeddingsTransformation.ChunkingOptions)] = new DynamicJsonValue()
+            {
+                [nameof(ChunkingOptionsForQuerying.ChunkingMethod)] = EmbeddingsTransformation.ChunkingOptions.ChunkingMethod,
+                [nameof(ChunkingOptionsForQuerying.MaxTokensPerChunk)] = EmbeddingsTransformation.ChunkingOptions.MaxTokensPerChunk,
+            }
         } : null;
         json[nameof(AiConnectorType)] = AiConnectorType;
         json[nameof(Quantization)] = Quantization;
