@@ -89,7 +89,7 @@ public static class EmbeddingsHelper
                     var result = VectorQuantizer.TryToInt8(embedding.Span, span, out usedBytes);
                     Debug.Assert(result, "TryToInt8 should always return true");
         
-                    return MemoryMarshalEx.Cast<float, byte>(embedding)[..usedBytes];
+                    return MemoryMarshalEx.Cast<float, byte>(newMemory)[..usedBytes];
                 }
                 
                 return MemoryMarshalEx.Cast<float, byte>(embedding)[..usedBytes];

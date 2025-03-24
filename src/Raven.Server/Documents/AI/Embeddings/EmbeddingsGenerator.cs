@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Threading;
@@ -240,7 +239,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 return false;
             }
 
-            var document = _documentsStorage.Get(documentsContext, docId);
+            using var document = _documentsStorage.Get(documentsContext, docId);
             if (document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
                 if (metadata.TryGet(Constants.Documents.Metadata.Expires, out DateTime expires))
@@ -801,7 +800,6 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             var attachmentsStorage = context.DocumentDatabase.DocumentsStorage.AttachmentsStorage;
             foreach (var del in _toDelete)
             {
-                operations++;
                 var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(del);
                 documentsStorage.Delete(context, embeddingDocId, null);
             }

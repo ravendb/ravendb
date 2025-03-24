@@ -1016,6 +1016,82 @@ WaitForUserToContinueTheTest(store);
             }
         }
     }
+    
+    [RavenFact(RavenTestCategory.Ai)]
+    public void CollisionOfTwoEmbeddingsInSingleTask()
+    {
+        using var store = GetDocumentStore();
+        string id;
+        using (var session = store.OpenSession())
+        {
+            var dto = new Dto { Name = "Name1", Names = ["Name1"]};
+            session.Store(dto);
+            session.SaveChanges();
+            id = dto.Id;
+        }        
+        
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        var (config, connection) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "v1", embeddingsPaths:
+        [
+            new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions },
+            new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions },
+        ]);
+        
+        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+       
+        AssertEmbeddingsForPath(store, config, connection, "Name", ["Name1"], id);
+        AssertEmbeddingsForPath(store, config, connection, "Names", ["Name1"], id);
+
+        aiTaskDone.Reset();
+        using (var session = store.OpenSession())
+        {
+            session.Load<Dto>(id).Name = "Updated";
+            session.SaveChanges();
+        }        
+        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        AssertEmbeddingsForPath(store, config, connection, "Name", ["Updated"], id);
+        AssertEmbeddingsForPath(store, config, connection, "Names", ["Name1"], id);
+    }
+    
+    [RavenFact(RavenTestCategory.Ai)]
+    public void CollisionOfTwoEmbeddingsInTwoTasks()
+    {
+        using var store = GetDocumentStore();
+        string id;
+        using (var session = store.OpenSession())
+        {
+            var dto = new Dto { Name = "Name1", Names = ["Name1"]};
+            session.Store(dto);
+            session.SaveChanges();
+            id = dto.Id;
+        }        
+        
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        var (config, connection) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "v1", embeddingsPaths:
+        [
+            new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions },
+        ]);
+        
+        var (config2, connection2) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "v2", embeddingsPaths:
+        [
+            new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions },
+        ]);
+        
+        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+       
+        AssertEmbeddingsForPath(store, config, connection, "Name", ["Name1"], id);
+        AssertEmbeddingsForPath(store, config2, connection2, "Names", ["Name1"], id);
+
+        aiTaskDone.Reset();
+        using (var session = store.OpenSession())
+        {
+            session.Load<Dto>(id).Name = "Updated";
+            session.SaveChanges();
+        }        
+        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        AssertEmbeddingsForPath(store, config, connection, "Name", ["Updated"], id);
+        AssertEmbeddingsForPath(store, config2, connection2, "Names", ["Name1"], id);
+    }
 
     internal class Dto
     {
