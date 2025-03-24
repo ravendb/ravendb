@@ -80,7 +80,6 @@ export function useVirtualTableWithToken<T extends pagedResultWithToken<unknown>
         return () => {
             current.removeEventListener("scroll", handleScroll);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return {

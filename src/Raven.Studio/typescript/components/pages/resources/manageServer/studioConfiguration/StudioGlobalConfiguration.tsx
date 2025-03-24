@@ -28,13 +28,10 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { useRef } from "react";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import studioSettings = require("common/settings/studioSettings");
 
 export default function StudioGlobalConfiguration() {
-    const popoverContainerRef = useRef<HTMLDivElement>(null);
-
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
         const settings = await studioSettings.default.globalSettings(true);
 
@@ -123,7 +120,7 @@ export default function StudioGlobalConfiguration() {
                             </ButtonWithSpinner>
                         </ConditionalPopover>
                         <div className={hasStudioConfiguration ? null : "item-disabled pe-none"}>
-                            <Card ref={popoverContainerRef}>
+                            <Card>
                                 <Card.Body className="vstack gap-3">
                                     <div className="gap-1">
                                         <FormLabel className="mb-0 md-label">
@@ -138,7 +135,6 @@ export default function StudioGlobalConfiguration() {
                                                     </ul>
                                                 }
                                                 placement="right"
-                                                overlayProps={{ container: popoverContainerRef.current }}
                                             >
                                                 Server Environment{" "}
                                                 <Icon icon="info" color="info" id="EnvironmentInfo" />
@@ -173,7 +169,6 @@ export default function StudioGlobalConfiguration() {
                                                     </ul>
                                                 }
                                                 placement="right"
-                                                overlayProps={{ container: popoverContainerRef.current }}
                                             >
                                                 <Icon icon="info" color="info" id="ReplicationFactorInfo" />
                                             </PopoverWithHoverWrapper>

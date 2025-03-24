@@ -15,7 +15,7 @@ import ImportIndexesList from "components/pages/database/indexes/list/migration/
 import { useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import IndexUtils from "components/utils/IndexUtils";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -61,7 +61,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
     const [disabledReason, setDisabledReason] = useState<string>();
 
     const [indexDefinitions, setIndexDefinitions] = useState<IndexDefinition[]>([]);
-    const filteredIndexes = useMemo(() => {
+    const filteredIndexes = (() => {
         const sortedIndexes = [...indexDefinitions].sort((a, b) => a.Name.localeCompare(b.Name));
 
         const isAnyAutoIndex = sortedIndexes.some((x) => IndexUtils.isAutoIndex(x));
@@ -86,7 +86,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
             unavailableIndexes,
             isAnyAutoIndex,
         };
-    }, [hasDatabaseAdminAccess, indexDefinitions, setValue]);
+    })();
 
     const clearIndexes = useCallback(() => {
         setIndexDefinitions([]);

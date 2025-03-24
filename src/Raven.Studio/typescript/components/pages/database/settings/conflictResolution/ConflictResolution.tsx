@@ -47,7 +47,6 @@ export default function ConflictResolution() {
             dispatch(conflictResolutionActions.reset());
         };
         // Changing the database causes re-mount
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const asyncSave = useAsyncCallback(async () => {

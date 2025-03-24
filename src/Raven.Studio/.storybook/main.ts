@@ -78,7 +78,8 @@ const config: StorybookConfig = {
                 (x.type && x.type === "asset/source") ||
                 (x.test && x.test.toString().includes(".less")) ||
                 (x.test && x.test.toString().includes(".font\\.js")) ||
-                (x.test && x.test.toString().includes(".scss"))
+                (x.test && x.test.toString().includes(".scss")) ||
+                (x.test && x.test.toString().includes(".tsx") && x.include && x.include[0].includes("components"))
         );
 
         const scssRule = incomingRules.find((x) => x.test && x.test.toString().includes(".scss"));

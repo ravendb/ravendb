@@ -23,8 +23,7 @@ export function useResizeObserver<T extends HTMLElement = HTMLElement>(options: 
     const [{ width, height }, setSize] = useState<Size>(initialSize);
     const isMounted = useIsMounted();
     const previousSize = useRef<Size>({ ...initialSize });
-    const onResize = useRef<((size: Size) => void) | undefined>(undefined);
-    onResize.current = options.onResize;
+    const onResize = useRef<((size: Size) => void) | undefined>(options.onResize);
 
     useEffect(() => {
         if (!ref.current) {
@@ -68,7 +67,6 @@ export function useResizeObserver<T extends HTMLElement = HTMLElement>(options: 
         return () => {
             observer.disconnect();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [box, ref?.current, isMounted]);
 
     return { width, height };

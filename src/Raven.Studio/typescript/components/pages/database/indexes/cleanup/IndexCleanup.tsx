@@ -1,5 +1,4 @@
-﻿import React from "react";
-import Nav from "react-bootstrap/Nav";
+﻿import Nav from "react-bootstrap/Nav";
 import useIndexCleanup from "./useIndexCleanup";
 import { LoadError } from "components/common/LoadError";
 import { AboutViewHeading } from "components/common/AboutView";
@@ -64,30 +63,20 @@ export function IndexCleanup() {
                         indicators={false}
                     >
                         <Carousel.Item key="carousel-0">
-                            <div ref={(el) => (carousel.carouselRefs.current[0] = el) as TODO}>
-                                <MergeIndexesCard mergable={mergable} />
-                            </div>
+                            <MergeIndexesCard mergable={mergable} />
                         </Carousel.Item>
                         <Carousel.Item key="carousel-1">
-                            <div ref={(el) => (carousel.carouselRefs.current[1] = el) as TODO}>
-                                <RemoveSubindexesCard surpassing={surpassing} />
-                            </div>
+                            <RemoveSubindexesCard surpassing={surpassing} />
                         </Carousel.Item>
                         <Carousel.Item key="carousel-2">
-                            <div ref={(el) => (carousel.carouselRefs.current[2] = el) as TODO}>
-                                <RemoveUnusedIndexesCard unused={unused} />
-                            </div>
+                            <RemoveUnusedIndexesCard unused={unused} />
                         </Carousel.Item>
                         <Carousel.Item key="carousel-3">
-                            <div ref={(el) => (carousel.carouselRefs.current[3] = el) as TODO}>
-                                <UnmergableIndexesCard unmergable={unmergable} />
-                            </div>
+                            <UnmergableIndexesCard unmergable={unmergable} />
                         </Carousel.Item>
                         {errors.data.length > 0 && (
                             <Carousel.Item key="carousel-4">
-                                <div ref={(el) => (carousel.carouselRefs.current[4] = el) as TODO}>
-                                    <MergeSuggestionsErrorsCarouselCard errors={errors.data} />
-                                </div>
+                                <MergeSuggestionsErrorsCarouselCard errors={errors.data} />
                             </Carousel.Item>
                         )}
                     </Carousel>

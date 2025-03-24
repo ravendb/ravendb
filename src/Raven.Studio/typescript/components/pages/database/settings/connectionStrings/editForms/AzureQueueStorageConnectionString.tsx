@@ -69,7 +69,6 @@ export default function AzureQueueStorageConnectionString({
     // Clear test result after changing auth type
     useEffect(() => {
         asyncTest.set(null);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formValues.authType]);
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

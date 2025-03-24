@@ -9,6 +9,7 @@ const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ZipPlugin = require("zip-webpack-plugin");
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const { defineReactCompilerLoaderOption, reactCompilerLoader } = require('react-compiler-webpack');
 
 // const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
@@ -287,6 +288,17 @@ module.exports = (env, args) => {
                     use: {
                         loader: 'swc-loader',
                     },
+                },
+                {
+                    test: /\.tsx?$/,
+                    exclude: /node_modules/,
+                    include: [
+                        path.resolve(__dirname, 'typescript/components/')
+                    ],
+                    use: {
+                        loader: reactCompilerLoader,
+                        options: defineReactCompilerLoaderOption()
+                    }
                 },
                 {
                     test: /\.html$/,

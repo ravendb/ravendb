@@ -11,8 +11,18 @@ export function useStudioSearchMouseEvents(props: UseStudioSearchMouseEventsProp
 
     // Handle opening the dropdown by input focus
     useEffect(() => {
-        inputRef.current.onfocus = () => {
-            setIsDropdownOpen(true);
+        const current = inputRef.current;
+
+        if (!current) {
+            return;
+        }
+
+        const handleFocus = () => setIsDropdownOpen(true);
+
+        current.addEventListener("focus", handleFocus);
+
+        return () => {
+            current.removeEventListener("focus", handleFocus);
         };
     }, [inputRef, setIsDropdownOpen]);
 

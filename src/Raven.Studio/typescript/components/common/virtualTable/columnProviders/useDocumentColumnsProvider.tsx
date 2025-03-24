@@ -37,6 +37,7 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
         if (hasCheckbox) {
             columnsDefs.push(columnCheckbox as ColumnDef<document>);
             initialColumnVisibility[columnCheckbox.header.toString()] = true;
+            // eslint-disable-next-line react-compiler/react-compiler
             availableWidth -= columnCheckbox.size;
         }
 

@@ -45,20 +45,21 @@ function useLicenseAvailability(
     featureAvailabilityData: FeatureAvailabilityData[],
     isFeatureInLicense: boolean
 ): FeatureAvailabilityData[] {
+    const data = structuredClone(featureAvailabilityData);
     const licenseType = useAppSelector(licenseSelectors.licenseType);
 
     const type = getLicenseAvailabilityType(licenseType);
     if (!type) {
-        return featureAvailabilityData;
+        return data;
     }
 
-    const data = featureAvailabilityData[0][type];
+    const valueData = data[0][type];
 
-    if (data.value !== isFeatureInLicense) {
-        data.overwrittenValue = isFeatureInLicense;
+    if (valueData.value !== isFeatureInLicense) {
+        valueData.overwrittenValue = isFeatureInLicense;
     }
 
-    return featureAvailabilityData;
+    return data;
 }
 
 export function useProfessionalOrAboveLicenseAvailability(isFeatureInLicense: boolean): FeatureAvailabilityData[] {

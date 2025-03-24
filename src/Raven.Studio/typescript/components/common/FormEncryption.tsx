@@ -61,7 +61,6 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
     useEffect(() => {
         asyncGenerateSecret.execute(false);
         // only on mount
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {

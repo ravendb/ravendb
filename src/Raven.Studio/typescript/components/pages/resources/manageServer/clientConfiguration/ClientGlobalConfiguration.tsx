@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -34,8 +34,6 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function ClientGlobalConfiguration() {
-    const popoverContainerRef = useRef<HTMLDivElement>(null);
-
     const { manageServerService } = useServices();
     const asyncGetGlobalClientConfiguration = useAsyncCallback(manageServerService.getGlobalClientConfiguration);
 
@@ -132,7 +130,6 @@ export default function ClientGlobalConfiguration() {
                                                     </>
                                                 }
                                                 placement="right"
-                                                overlayProps={{ container: popoverContainerRef.current }}
                                             >
                                                 <Icon icon="info" color="info" />
                                             </PopoverWithHoverWrapper>
@@ -172,7 +169,6 @@ export default function ClientGlobalConfiguration() {
                                                     </>
                                                 }
                                                 placement="right"
-                                                overlayProps={{ container: popoverContainerRef.current }}
                                             >
                                                 <Icon icon="info" color="info" />
                                             </PopoverWithHoverWrapper>
@@ -242,7 +238,6 @@ export default function ClientGlobalConfiguration() {
                                                 </>
                                             }
                                             placement="right"
-                                            overlayProps={{ container: popoverContainerRef.current }}
                                         >
                                             <Icon icon="info" color="info" />
                                         </PopoverWithHoverWrapper>
@@ -278,7 +273,6 @@ export default function ClientGlobalConfiguration() {
                                                     </>
                                                 }
                                                 placement="right"
-                                                overlayProps={{ container: popoverContainerRef.current }}
                                             >
                                                 <Icon icon="info" color="info" />
                                             </PopoverWithHoverWrapper>
@@ -317,7 +311,6 @@ export default function ClientGlobalConfiguration() {
                                                 </>
                                             }
                                             placement="right"
-                                            overlayProps={{ container: popoverContainerRef.current }}
                                         >
                                             <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
                                         </PopoverWithHoverWrapper>
@@ -395,7 +388,6 @@ export default function ClientGlobalConfiguration() {
                     </Col>
                 </Row>
             </div>
-            <div ref={popoverContainerRef}></div>
         </Form>
     );
 }

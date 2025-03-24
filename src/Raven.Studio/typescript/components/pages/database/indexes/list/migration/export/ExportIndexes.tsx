@@ -16,7 +16,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { tryHandleSubmit } from "components/utils/common";
 import IndexUtils from "components/utils/IndexUtils";
 import moment from "moment";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
@@ -61,7 +61,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
 
     const [disabledReason, setDisabledReason] = useState<string>();
 
-    const filteredIndexes = useMemo(() => {
+    const filteredIndexes = (() => {
         const selectedIndexes = indexes.filter((x) => selectedNames.includes(x.name));
         const isAnyAutoIndexSelected = selectedIndexes.some((x) => IndexUtils.isAutoIndex(x));
         const selectedStaticIndexes = selectedIndexes.filter((x) => IndexUtils.isStaticIndex(x));
@@ -80,7 +80,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
             unavailableIndexes,
             isAnyAutoIndexSelected,
         };
-    }, [databaseName, exportMode, hasDatabaseAdminAccess, indexes, selectedNames]);
+    })();
 
     // Clear database name on mode change
     useEffect(() => {

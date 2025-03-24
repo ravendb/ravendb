@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo } from "react";
 import { UseAsyncOptionsNormalized, UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 
@@ -8,6 +7,7 @@ export function useAsyncDebounce<T>(
     waitTimeMs = 500,
     options: Partial<UseAsyncOptionsNormalized<T>> = null
 ): UseAsyncReturn<T, []> {
+    // eslint-disable-next-line react-compiler/react-compiler
     const memorizedCallback = useCallback(callback, params);
 
     const asyncCallback = useAsyncCallback(memorizedCallback, options);

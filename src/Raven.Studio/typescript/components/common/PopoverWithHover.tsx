@@ -44,6 +44,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
             if (!overElement.current) {
                 setOpen(false);
                 if (tooltipContext.currentTarget === div) {
+                    // eslint-disable-next-line react-compiler/react-compiler
                     tooltipContext.currentTarget = null;
                     tooltipContext.closeAction = null;
                 }
