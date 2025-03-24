@@ -15,6 +15,7 @@ import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Label } from "reactstrap";
+import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -136,6 +137,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     disabled={isUsedByAnyTask}
                 />
             </div>
+            <EmbeddingsMaxConcurrentBatches baseName="openAiSettings" />
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

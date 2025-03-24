@@ -15,6 +15,7 @@ import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 
 export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
@@ -111,6 +112,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     disabled={isUsedByAnyTask}
                 />
             </div>
+            <EmbeddingsMaxConcurrentBatches baseName="azureOpenAiSettings" />
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

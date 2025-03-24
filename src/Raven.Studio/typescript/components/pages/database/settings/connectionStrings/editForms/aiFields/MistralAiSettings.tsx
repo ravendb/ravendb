@@ -14,6 +14,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAsyncCallback } from "react-async-hook";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -66,6 +67,7 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
                 </Label>
                 <FormInput control={control} name="mistralAiSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
+            <EmbeddingsMaxConcurrentBatches baseName="mistralAiSettings" />
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

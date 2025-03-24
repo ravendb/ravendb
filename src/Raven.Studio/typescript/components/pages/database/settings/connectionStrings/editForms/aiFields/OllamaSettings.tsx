@@ -14,6 +14,7 @@ import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -56,6 +57,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 </Label>
                 <FormInput control={control} name="ollamaSettings.uri" type="text" />
             </div>
+            <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

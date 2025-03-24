@@ -16,6 +16,7 @@ import GoogleSettings from "components/pages/database/settings/connectionStrings
 import HuggingFaceSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/HuggingFaceSettings";
 import OllamaSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OllamaSettings";
 import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
+import EmbeddedSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/EmbeddedSettings";
 import MistralAiSettings from "./aiFields/MistralAiSettings";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import TaskUtils from "components/utils/TaskUtils";
@@ -145,6 +146,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 {connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "huggingFaceSettings" && <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "embeddedSettings" && <EmbeddedSettings />}
                 {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "mistralAiSettings" && <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
 
@@ -208,6 +210,7 @@ const schema = yupObjectSchema<FormData>({
                 then: (schema) => schema.trim().required(),
             }),
         dimensions: yup.number().nullable().integer().positive(),
+        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
     googleSettings: yup.object({
         aiVersion: yup.string<Raven.Client.Documents.Operations.AI.GoogleAIVersion>().nullable(),
@@ -226,6 +229,7 @@ const schema = yupObjectSchema<FormData>({
                 then: (schema) => schema.trim().required(),
             }),
         dimensions: yup.number().nullable().integer().positive(),
+        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
     huggingFaceSettings: yup.object({
         apiKey: yup
@@ -243,6 +247,7 @@ const schema = yupObjectSchema<FormData>({
                 is: "huggingFaceSettings",
                 then: (schema) => schema.trim().required(),
             }),
+        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
     ollamaSettings: yup.object({
         model: yup
@@ -259,8 +264,11 @@ const schema = yupObjectSchema<FormData>({
                 is: "ollamaSettings",
                 then: (schema) => schema.trim().required(),
             }),
+        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
-    onnxSettings: yup.object({}),
+    embeddedSettings: yup.object({
+        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
+    }),
     openAiSettings: yup.object({
         apiKey: yup
             .string()
@@ -286,6 +294,7 @@ const schema = yupObjectSchema<FormData>({
         organizationId: yup.string().nullable(),
         projectId: yup.string().nullable(),
         dimensions: yup.number().nullable().integer().positive(),
+        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
     mistralAiSettings: yup.object({
         apiKey: yup
@@ -309,6 +318,7 @@ const schema = yupObjectSchema<FormData>({
                 is: "mistralaiAiSettings",
                 then: (schema) => schema.trim().required(),
             }),
+        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
 });
 
@@ -324,28 +334,43 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 model: null,
                 deploymentName: null,
                 dimensions: null,
+                embeddingsMaxConcurrentBatches: null,
             },
             googleSettings: {
                 aiVersion: null,
                 apiKey: null,
                 model: null,
+                dimensions: null,
+                embeddingsMaxConcurrentBatches: null,
             },
             huggingFaceSettings: {
                 apiKey: null,
                 endpoint: null,
                 model: null,
+                embeddingsMaxConcurrentBatches: null,
             },
             ollamaSettings: {
                 model: null,
                 uri: null,
+                embeddingsMaxConcurrentBatches: null,
             },
-            onnxSettings: {},
+            embeddedSettings: {
+                embeddingsMaxConcurrentBatches: null,
+            },
             openAiSettings: {
                 apiKey: null,
                 endpoint: null,
                 model: null,
                 organizationId: null,
                 projectId: null,
+                dimensions: null,
+                embeddingsMaxConcurrentBatches: null,
+            },
+            mistralAiSettings: {
+                apiKey: null,
+                endpoint: null,
+                model: null,
+                embeddingsMaxConcurrentBatches: null,
             },
         };
     }

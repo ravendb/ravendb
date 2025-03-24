@@ -376,23 +376,29 @@ export function mapAiConnectionsFromDto(
                     model: connection.AzureOpenAiSettings?.Model,
                     deploymentName: connection.AzureOpenAiSettings?.DeploymentName,
                     dimensions: connection.AzureOpenAiSettings?.Dimensions,
+                    embeddingsMaxConcurrentBatches: connection.AzureOpenAiSettings?.EmbeddingsMaxConcurrentBatches,
                 },
                 googleSettings: {
                     aiVersion: connection.GoogleSettings?.AiVersion,
                     apiKey: connection.GoogleSettings?.ApiKey,
                     model: connection.GoogleSettings?.Model,
                     dimensions: connection.GoogleSettings?.Dimensions,
+                    embeddingsMaxConcurrentBatches: connection.GoogleSettings?.EmbeddingsMaxConcurrentBatches,
                 },
                 huggingFaceSettings: {
                     apiKey: connection.HuggingFaceSettings?.ApiKey,
                     endpoint: connection.HuggingFaceSettings?.Endpoint,
                     model: connection.HuggingFaceSettings?.Model,
+                    embeddingsMaxConcurrentBatches: connection.HuggingFaceSettings?.EmbeddingsMaxConcurrentBatches,
                 },
                 ollamaSettings: {
                     model: connection.OllamaSettings?.Model,
                     uri: connection.OllamaSettings?.Uri,
+                    embeddingsMaxConcurrentBatches: connection.OllamaSettings?.EmbeddingsMaxConcurrentBatches,
                 },
-                onnxSettings: {},
+                embeddedSettings: {
+                    embeddingsMaxConcurrentBatches: connection.EmbeddedSettings?.EmbeddingsMaxConcurrentBatches,
+                },
                 openAiSettings: {
                     apiKey: connection.OpenAiSettings?.ApiKey,
                     endpoint: connection.OpenAiSettings?.Endpoint,
@@ -400,11 +406,13 @@ export function mapAiConnectionsFromDto(
                     organizationId: connection.OpenAiSettings?.OrganizationId,
                     projectId: connection.OpenAiSettings?.ProjectId,
                     dimensions: connection.OpenAiSettings?.Dimensions,
+                    embeddingsMaxConcurrentBatches: connection.OpenAiSettings?.EmbeddingsMaxConcurrentBatches,
                 },
                 mistralAiSettings: {
                     apiKey: connection.MistralAiSettings?.ApiKey,
                     endpoint: connection.MistralAiSettings?.Endpoint,
                     model: connection.MistralAiSettings?.Model,
+                    embeddingsMaxConcurrentBatches: connection.MistralAiSettings?.EmbeddingsMaxConcurrentBatches,
                 },
             }) satisfies AiConnection
     );

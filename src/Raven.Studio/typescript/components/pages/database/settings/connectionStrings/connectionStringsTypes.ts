@@ -137,23 +137,29 @@ export interface AiConnection extends ConnectionBase {
         model?: string;
         deploymentName?: string;
         dimensions?: number;
+        embeddingsMaxConcurrentBatches?: number;
     };
     googleSettings?: {
         aiVersion?: Raven.Client.Documents.Operations.AI.GoogleAIVersion;
         apiKey?: string;
         model?: string;
         dimensions?: number;
+        embeddingsMaxConcurrentBatches?: number;
     };
     huggingFaceSettings?: {
         apiKey?: string;
         endpoint?: string;
         model?: string;
+        embeddingsMaxConcurrentBatches?: number;
     };
     ollamaSettings?: {
         model?: string;
         uri?: string;
+        embeddingsMaxConcurrentBatches?: number;
     };
-    onnxSettings?: Record<string, never>;
+    embeddedSettings?: {
+        embeddingsMaxConcurrentBatches?: number;
+    };
     openAiSettings?: {
         apiKey?: string;
         endpoint?: string;
@@ -161,11 +167,13 @@ export interface AiConnection extends ConnectionBase {
         organizationId?: string;
         projectId?: string;
         dimensions?: number;
+        embeddingsMaxConcurrentBatches?: number;
     };
     mistralAiSettings?: {
         apiKey?: string;
         endpoint?: string;
         model?: string;
+        embeddingsMaxConcurrentBatches?: number;
     };
 }
 

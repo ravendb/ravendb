@@ -16,6 +16,7 @@ import { useAsyncCallback } from "react-async-hook";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
 import OptionalLabel from "components/common/OptionalLabel";
+import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -72,6 +73,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                 </Label>
                 <FormInput control={control} name="huggingFaceSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
+            <EmbeddingsMaxConcurrentBatches baseName="huggingFaceSettings" />
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

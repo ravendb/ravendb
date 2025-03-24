@@ -216,6 +216,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Model: connection.azureOpenAiSettings.model,
                       DeploymentName: connection.azureOpenAiSettings.deploymentName,
                       Dimensions: connection.azureOpenAiSettings.dimensions,
+                      EmbeddingsMaxConcurrentBatches: connection.azureOpenAiSettings.embeddingsMaxConcurrentBatches,
                   }
                 : null,
         GoogleSettings:
@@ -225,6 +226,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Model: connection.googleSettings.model,
                       AiVersion: connection.googleSettings.aiVersion,
                       Dimensions: connection.googleSettings.dimensions,
+                      EmbeddingsMaxConcurrentBatches: connection.googleSettings.embeddingsMaxConcurrentBatches,
                   }
                 : null,
         HuggingFaceSettings:
@@ -233,6 +235,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       ApiKey: connection.huggingFaceSettings.apiKey,
                       Endpoint: connection.huggingFaceSettings.endpoint,
                       Model: connection.huggingFaceSettings.model,
+                      EmbeddingsMaxConcurrentBatches: connection.huggingFaceSettings.embeddingsMaxConcurrentBatches,
                   }
                 : null,
         OllamaSettings:
@@ -240,9 +243,15 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                 ? {
                       Model: connection.ollamaSettings.model,
                       Uri: connection.ollamaSettings.uri,
+                      EmbeddingsMaxConcurrentBatches: connection.ollamaSettings.embeddingsMaxConcurrentBatches,
                   }
                 : null,
-        EmbeddedSettings: connection.connectorType === "embeddedSettings" ? {} : null,
+        EmbeddedSettings:
+            connection.connectorType === "embeddedSettings"
+                ? {
+                      EmbeddingsMaxConcurrentBatches: connection.embeddedSettings.embeddingsMaxConcurrentBatches,
+                  }
+                : null,
         OpenAiSettings:
             connection.connectorType === "openAiSettings"
                 ? {
@@ -252,6 +261,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       OrganizationId: connection.openAiSettings.organizationId,
                       ProjectId: connection.openAiSettings.projectId,
                       Dimensions: connection.openAiSettings.dimensions,
+                      EmbeddingsMaxConcurrentBatches: connection.openAiSettings.embeddingsMaxConcurrentBatches,
                   }
                 : null,
         MistralAiSettings:
@@ -260,6 +270,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       ApiKey: connection.mistralAiSettings.apiKey,
                       Endpoint: connection.mistralAiSettings.endpoint,
                       Model: connection.mistralAiSettings.model,
+                      EmbeddingsMaxConcurrentBatches: connection.mistralAiSettings.embeddingsMaxConcurrentBatches,
                   }
                 : null,
     };

@@ -17,7 +17,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { Label } from "reactstrap";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
-
+import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 type FormData = ConnectionFormData<AiConnection>;
 
 export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
@@ -98,6 +98,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     disabled={isUsedByAnyTask}
                 />
             </div>
+            <EmbeddingsMaxConcurrentBatches baseName="googleSettings" />
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner
