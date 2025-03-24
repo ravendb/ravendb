@@ -49,7 +49,6 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             new EmbeddingPathConfiguration() { Path = "SubDto.Name", ChunkingOptions = DefaultChunkingOptions }
         ]);
         Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-        WaitForUserToContinueTheTest(store);
 
         var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);
@@ -69,8 +68,6 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
         }
 
         Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-
-        WaitForUserToContinueTheTest(store);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Name2", "Name4"], id);
@@ -639,8 +636,31 @@ embeddings.generate(
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
-            // testing case insensitive hashing of strings as well here
+            // testing case-insensitive hashing of strings as well here
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Foo", ["Name1", "HELLO"], dto.Id);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void HashingOfTextShouldBeCaseInsensitiveAndTrimWhitespaces()
+    {
+        var dto = new Dto() { Name = "\n UPPERCASEVALUE\n\r " };
+        
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store);
+
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            
+            AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["uppercasevalue"], dto.Id);
         }
     }
 
@@ -672,6 +692,28 @@ embeddings.generate(
 
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
         }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void ChunkPlainTextShouldWork()
+    {
+        const string plainTextToChunk = "this is a relatively long text that should produce multiple chunks because of the chunking configuration (max tokens per chunk)";
+        var expectedChunks = new List <string>() { "this is a relatively long text that should", " produce multiple chunks because of the chunking", " configuration (max tokens per chunk)" };
+        
+        var chunks = Raven.Server.Documents.AI.TextChunker.ChunkPlainText(plainTextToChunk, 8);
+        
+        Assert.Equal(expectedChunks, chunks);
+    }
+    
+    [RavenFact(RavenTestCategory.Ai)]
+    public void PlainTextSplitLinesShouldWork()
+    {
+        const string plainTextToChunk = "This is a relatively - long text\n that should produce multiple chunks\n\r because of the chunking configuration; (max tokens per chunk). It also contains, separators in random places.";
+        var expectedChunks = new List <string>() { "This is a relatively - long text", "that should produce multiple chunks", "because of the", "chunking configuration;", "(max tokens per chunk).", "It also contains,", "separators in random places." };
+        
+        var chunks = Raven.Server.Documents.AI.TextChunker.Chunk(plainTextToChunk, new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 8 });
+
+        Assert.Equal(expectedChunks, chunks);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -766,7 +808,7 @@ Console.WriteLine(""Hello, World!"");";
 
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ChunkedName: html.strip(this.Name, 5) });");
-WaitForUserToContinueTheTest(store);
+            
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);

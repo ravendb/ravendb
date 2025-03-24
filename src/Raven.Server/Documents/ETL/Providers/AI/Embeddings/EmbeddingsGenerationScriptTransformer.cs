@@ -309,7 +309,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         if(args[0].IsNull() || args[0].IsUndefined())
             return JsValue.Undefined;
         
-        if (args[0].IsString() == false)
+        if (args[0].IsString() == false && args[0].IsArray() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string or a string array");
         
         if (args[1].IsNumber() == false)
@@ -324,7 +324,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         if (args[0].IsString())
         {
-            result.Value.Add((args[0].AsString(),chunkingOptions));
+            result.Value.Add((args[0].AsString(), chunkingOptions));
             return result;
         }
 
@@ -332,7 +332,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         {
             foreach (var line in args[0].AsArray())
             {
-                if(line.IsNull() || line.IsUndefined())
+                if (line.IsNull() || line.IsUndefined())
                     continue;
                 
                 if (line.IsString() is false)
