@@ -111,11 +111,13 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
                 .done((result) => {
                     this.editedEmbeddingsGeneration(new ongoingTaskEmbeddingsGenerationEditModel(result, this.aiConnectionStrings));
 
-                    this.editedEmbeddingsGeneration().collectionInput.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
-                    this.editedEmbeddingsGeneration().embeddingsSource.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
-                    this.editedEmbeddingsGeneration().script.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
-                    this.editedEmbeddingsGeneration().embeddingPathConfigurations.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
-                    this.editedEmbeddingsGeneration().quantizationType.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());;
+                    this.editedEmbeddingsGeneration().collectionInput.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());
+                    this.editedEmbeddingsGeneration().embeddingsSource.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());
+                    this.editedEmbeddingsGeneration().script.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());
+                    this.editedEmbeddingsGeneration().embeddingPathConfigurations.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());
+                    this.editedEmbeddingsGeneration().quantizationType.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());
+                    this.editedEmbeddingsGeneration().transformationChunkingMethod.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());
+                    this.editedEmbeddingsGeneration().transformationMaxTokensPerChunk.subscribe(() => this.editedEmbeddingsGeneration().setResetScriptIfEdit());
 
                     deferred.resolve();
                 })

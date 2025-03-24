@@ -230,13 +230,36 @@
                     </div>
 
                     <div data-bind="if: embeddingsSource() === 'script'">
-                        <label>Script</label>
-                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
-                        <div data-bind="validationElement: script">
-                            <pre class="form-control editor"
-                            data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
-                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
-                                <div class="help-block" data-bind="validationMessage: script"></div>
+                        <div class="form-group">
+                            <label>Script</label>
+                            <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
+                            <div data-bind="validationElement: script">
+                                <pre class="form-control editor"
+                                data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                                    <div class="help-block" data-bind="validationMessage: script"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">
+                                Chunking Method
+                                <i class="icon-info text-info" title="This chunking method will be used as the default when no specific method is used in the script"></i>
+                            </label>
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: transformationChunkingMethodLabel">
+                                    <span data-bind="text: transformationChunkingMethodLabel"></span>
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: chunkingMethodOptions">
+                                    <li><a href="#" data-bind="click: _.partial($parent.transformationChunkingMethod, value)"><span data-bind="text: label"></span></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="validationElement: transformationMaxTokensPerChunk">
+                            <label class="control-label">Max Tokens Per Chunk</label>
+                            <div class="flex-grow">
+                                <input type="number" class="form-control" data-bind="value: transformationMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
                             </div>
                         </div>
                     </div>

@@ -39,6 +39,10 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     ];
     chunkingMethodLabel: KnockoutComputed<string>;
 
+    transformationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
+    transformationChunkingMethodLabel: KnockoutComputed<string>;
+    transformationMaxTokensPerChunk = ko.observable<number>();
+
     quantizationType = ko.observable<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>("Single");
     quantizationTypeOptions: valueAndLabelItem<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType, string>[] = [
         { value: "Single", label: "Single (no quantization)" },
@@ -105,6 +109,10 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
         this.chunkingMethodLabel = ko.pureComputed(() => {
             return this.chunkingMethodOptions.find(x => x.value === this.chunkingMethod())?.label || "Select chunking method";
+        });
+
+        this.transformationChunkingMethodLabel = ko.pureComputed(() => {
+            return this.chunkingMethodOptions.find(x => x.value === this.transformationChunkingMethod())?.label || "Select chunking method";
         });
 
         this.pathConfigurationChunkingMethodLabel = ko.pureComputed(() => {
@@ -189,6 +197,11 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             min: 1,
         });
 
+        this.transformationMaxTokensPerChunk.extend({
+            onlyIf: () => this.embeddingsSource() === "script",
+            min: 1,
+        });
+
         this.validationGroup = ko.validatedObservable({
             taskName: this.taskName,
             identifier: this.identifier,
@@ -198,6 +211,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             embeddingPathConfigurations: this.embeddingPathConfigurations,
             collectionInput: this.collectionInput,
             maxTokensPerChunk: this.maxTokensPerChunk,
+            transformationMaxTokensPerChunk: this.transformationMaxTokensPerChunk,
         });
     }
 
@@ -282,6 +296,11 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 this.embeddingsSource("paths");
             }
 
+            if (configuration.EmbeddingsTransformation?.ChunkingOptions) {
+                this.transformationChunkingMethod(configuration.EmbeddingsTransformation.ChunkingOptions.ChunkingMethod);
+                this.transformationMaxTokensPerChunk(configuration.EmbeddingsTransformation.ChunkingOptions.MaxTokensPerChunk);
+            }
+
             // Open the querying section if some value is different from the default
             if (
                 configuration.EmbeddingsCacheForQueryingExpiration !== genUtils.formatAsTimeSpan(defaultEmbeddingsCacheForQueryingExpiration * 1000) ||
@@ -313,7 +332,9 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 MaxTokensPerChunk: this.maxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(),
             },
             Quantization: this.quantizationType(),
-            EmbeddingsTransformation: this.embeddingsSource() === "script" ? { Script: this.script(), ChunkingOptions: {MaxTokensPerChunk: 256, ChunkingMethod: "PlainTextSplit"} } : null,
+            EmbeddingsTransformation: this.embeddingsSource() === "script" ? {
+                Script: this.script(), ChunkingOptions: { MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod() }
+            } : null,
             EmbeddingsPathConfigurations: this.embeddingsSource() === "paths" ? this.embeddingPathConfigurations() : [],
             EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000),
             EmbeddingsCacheForQueryingExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheForQueryingExpiration() * 1000)
