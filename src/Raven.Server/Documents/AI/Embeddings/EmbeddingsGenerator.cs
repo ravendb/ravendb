@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IdentityModel.Protocols.Configuration;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 using Nito.AsyncEx;
@@ -38,7 +39,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     private const string EmbeddingAttachmentContentType = "application/octet-stream";
     private readonly Mode _mode = mode;
     private readonly ConcurrentDictionary<EmbeddingsGenerationTaskIdentifier, AiWorker> _workers = [];
-    private readonly ConcurrentQueue<object> _toCache = new();
+    private readonly ConcurrentQueue<IEmbeddingsCommand> _work = new();
     private readonly AsyncManualResetEvent _hasWork = new();
     private readonly RavenLogger _logger = logger;
     private readonly DocumentDatabase _database = database;
@@ -49,9 +50,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         Etl,
     }
 
-    private record RefreshCache(List<string> DocumentIds, TimeSpan CacheDuration);
+    private interface IEmbeddingsCommand;
+
+    private record RefreshCache(List<string> DocumentIds, TimeSpan CacheDuration) : IEmbeddingsCommand;
     
-    private record StoreEmbeddings(List<GenerateEmbeddings> GeneratedEmbeddings, VectorEmbeddingType Quantization);
+    private record StoreEmbeddings(List<GenerateEmbeddings> GeneratedEmbeddings, VectorEmbeddingType Quantization): IEmbeddingsCommand;
 
     private record PutDocumentEmbeddings(
         string TaskId,
@@ -93,8 +96,6 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         public AiWorker(EmbeddingsGenerator parent, DocumentsStorage documentsStorage, EmbeddingsGenerationConfiguration configuration,
             AiConnectionString connectionString, int maxConcurrentBatches, CancellationToken cancellationToken)
         {
-            if (maxConcurrentBatches < 1)
-                throw new InvalidDataException($"QueryEmbeddingsMaxConcurrentBatches for {configuration.Name} must be at least 1");
             _documentsStorage = documentsStorage;
             _maxBatchSize = documentsStorage.DocumentDatabase.Configuration.Ai.EmbeddingsGenerationMaxBatchSize;
             _parent = parent;
@@ -406,9 +407,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         }
     }
     
-    private void ProcessInBackground(object works)
+    private void ProcessInBackground(IEmbeddingsCommand works)
     {
-        _toCache.Enqueue(works);
+        _work.Enqueue(works);
         _hasWork.Set();
     }
     private AiWorker CreateAiWorker(EmbeddingsGenerationTaskIdentifier id)
@@ -423,7 +424,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             {
                 var connectionString = GetConnectionString(record, task);
                 int maxConcurrentBatches = connectionString.GetQueryEmbeddingsMaxConcurrentBatches(_database.Configuration.Ai.EmbeddingsMaxConcurrentBatches);
-                return new AiWorker(this, _database.DocumentsStorage, task, connectionString, maxConcurrentBatches, CancellationToken);
+                if (maxConcurrentBatches > 0) 
+                    return new AiWorker(this, _database.DocumentsStorage, task, connectionString, maxConcurrentBatches, CancellationToken);
+                
+                string message = $"{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsMaxConcurrentBatches)} must be a positive value: {connectionString.Identifier}";
+                throw new InvalidConfigurationException(message);
             }
         }
         
@@ -479,17 +484,20 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 // we don't care about an error here
             }
             
-            while (_toCache.TryDequeue(out var o))
+            while (_work.TryDequeue(out IEmbeddingsCommand o))
             {
-                if (o is GenerateEmbeddings generateEmbeddings)
+                if (o is not StoreEmbeddings se) 
+                    continue;
+                
+                foreach (GenerateEmbeddings ge in se.GeneratedEmbeddings)
                 {
-                    generateEmbeddings.TaskCompletionSource.TrySetCanceled();
+                    ge.TaskCompletionSource.TrySetCanceled();
                 }
             }
         }
     }
 
-    private async Task SubmitAndWaitForWorkAsync(List<object> batch)
+    private async Task SubmitAndWaitForWorkAsync(List<IEmbeddingsCommand> batch)
     {
         try
         {
@@ -514,6 +522,15 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
                         break;
                     }
+                    case RefreshCache:
+                        // nothing to do here
+                        break;
+                    
+                    // here we have invalid states, we are throwing here 
+                    case null:
+                        throw new ArgumentNullException();
+                    default:
+                        throw new ArgumentOutOfRangeException(work.GetType().FullName);
                 }
             }
         }
@@ -547,10 +564,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         }
     }
 
-    private List<object> GetBatch()
+    private List<IEmbeddingsCommand> GetBatch()
     {
-        List<object> results = [];
-        while (_toCache.TryDequeue(out object o))
+        List<IEmbeddingsCommand> results = [];
+        while (_work.TryDequeue(out IEmbeddingsCommand o))
         {
             results.Add(o);
             if (results.Count > 128)
@@ -563,7 +580,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         return results;
     }
 
-    private sealed class PutEmbeddingsIntoCacheCommand(List<object> batch)
+    private sealed class PutEmbeddingsIntoCacheCommand(List<IEmbeddingsCommand> batch)
         : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -571,14 +588,14 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             int operations = 0;
             var documentsStorage = context.DocumentDatabase.DocumentsStorage;
             var attachmentsStorage = documentsStorage.AttachmentsStorage;
-            SystemTime systemTime = context.DocumentDatabase.Time;
+            DateTime now = context.DocumentDatabase.Time.GetUtcNow();
             foreach (var cur in batch)
             {
                 switch (cur)
                 {
                     case RefreshCache rc:
                     {
-                        DateTime expireAt = systemTime.GetUtcNow().Add(rc.CacheDuration);
+                        DateTime expireAt = now.Add(rc.CacheDuration);
                         foreach (string docIdToRefresh in rc.DocumentIds)
                         {
                             var docJson = CreateEmbeddingCacheDocumentJson(expireAt);
@@ -600,7 +617,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     {
                         foreach (var ge in se.GeneratedEmbeddings)
                         {
-                            DateTime expireAt = systemTime.GetUtcNow().Add(ge.CacheDuration);
+                            DateTime expireAt = now.Add(ge.CacheDuration);
                             for (int i = 0; i < ge.Values.Count; i++)
                             {
                                 var val = ge.Values[i];
@@ -623,6 +640,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                         }
                         break;
                     }
+                    case null:
+                        throw new ArgumentNullException();
+                    default:
+                        throw new ArgumentOutOfRangeException(cur.GetType().FullName);
                 }
             }
             return operations; 
@@ -646,7 +667,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             return new Replay(batch);
         }
 
-        public class Replay(List<object> work) : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
+        public class Replay(List<IEmbeddingsCommand> work) : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
         {
             public MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction> ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
@@ -713,7 +734,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         if(valueTask.IsCompletedSuccessfully)
             return valueTask.Result;
         
-        return (valueTask.AsTask()).GetAwaiter().GetResult();
+        return valueTask.AsTask().GetAwaiter().GetResult();
     }
 
     public ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsForQueryAsync(
@@ -740,7 +761,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             for (int i = 0; i < multi.Length; i++)
             {
                 var valueTask = worker.GetEmbeddingsForQueryAsync(documentsContext, multi[i]);
-                if (valueTask.IsCompleted is false)
+                if (valueTask.IsCompleted)
                 {
                     results.AddRange(valueTask.Result.Span);
                 }
@@ -769,7 +790,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         }
     }
 
-    public class BatchGenerator(EmbeddingsGenerator parent, EmbeddingsGenerationTaskIdentifier taskId)
+    public class BatchGenerator(EmbeddingsGenerator parent, EmbeddingsGenerationTaskIdentifier taskId) : IEmbeddingsCommand
     {
         private readonly AiWorker _worker = parent._workers[taskId];
         private readonly HashSet<Task> _tasks = [];
