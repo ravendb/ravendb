@@ -447,10 +447,6 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     {
         var record = _database.ReadDatabaseRecord();
         HandleDatabaseRecordChange(record);
-        foreach (var (name, state) in _workers)
-        {
-            _ = state.RunAsync();
-        }
     }
 
     protected override async Task DoWork()
@@ -707,6 +703,18 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             return VectorEmbeddingType.Single;
         return worker.Configuration.Quantization;
     }
+    
+    public ReadOnlyMemory<ReadOnlyMemory<byte>> GetEmbeddingsForQuery(
+        DocumentsOperationContext documentsContext,
+        EmbeddingsGenerationTaskIdentifier taskId,
+        params ReadOnlySpan<string> values)
+    {
+        var valueTask = GetEmbeddingsForQueryAsync(documentsContext, taskId, values);
+        if(valueTask.IsCompletedSuccessfully)
+            return valueTask.Result;
+        
+        return (valueTask.AsTask()).GetAwaiter().GetResult();
+    }
 
     public ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsForQueryAsync(
         DocumentsOperationContext documentsContext,
@@ -800,6 +808,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             var attachmentsStorage = context.DocumentDatabase.DocumentsStorage.AttachmentsStorage;
             foreach (var del in _toDelete)
             {
+                operations++;
                 var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(del);
                 documentsStorage.Delete(context, embeddingDocId, null);
             }

@@ -306,8 +306,7 @@ public static partial class CoraxQueryBuilder
             {
                 case ValueTokenType.String:
                     embeddingValues = embeddingsGenerator
-                        .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, embeddingsTaskId, value.ToString())
-                        .GetAwaiter().GetResult();
+                        .GetEmbeddingsForQuery(builderParameters.DocumentsContext, embeddingsTaskId, value.ToString());
                     break;
                 case ValueTokenType.Parameter:
                 {
@@ -320,8 +319,7 @@ public static partial class CoraxQueryBuilder
                         values[i] = bjra[i].ToString();
                 
                     embeddingValues = embeddingsGenerator
-                        .GetEmbeddingsForQueryAsync(builderParameters.DocumentsContext, embeddingsTaskId, values)
-                        .GetAwaiter().GetResult();
+                        .GetEmbeddingsForQuery(builderParameters.DocumentsContext, embeddingsTaskId, values);
                     break;
                 }
                 default:
