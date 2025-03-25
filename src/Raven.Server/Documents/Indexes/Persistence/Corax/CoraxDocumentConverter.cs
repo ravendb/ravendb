@@ -37,15 +37,18 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
             {
                 var autoVectorOptions = (AutoVectorOptions)indexField.Vector;
                 
-                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, autoVectorOptions.SourceFieldName, out value) == false)
-                    continue;
-
                 object vector;
 
                 if (autoVectorOptions.EmbeddingsGenerationTaskIdentifier != null)
                     vector = AbstractStaticIndexBase.LoadVectorBase(indexField.Name, autoVectorOptions.SourceFieldName, autoVectorOptions.EmbeddingsGenerationTaskIdentifier);
                 else
+                {
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, autoVectorOptions.SourceFieldName, out value) == false)
+                        continue;
+                    
                     vector = AbstractStaticIndexBase.CreateVector(indexField, value, isAutoIndex: true);
+                }
+                
                 InsertRegularField(indexField, vector, indexContext, builder, sourceDocument, out innerShouldSkip);
             }
             else if (indexField.Spatial is AutoSpatialOptions spatialOptions)

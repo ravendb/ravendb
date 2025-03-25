@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Corax.Querying.Matches.SortingMatches;
 using Microsoft.SemanticKernel.Text;
 using Newtonsoft.Json.Linq;
 using Orders;
@@ -18,7 +16,6 @@ using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
-using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -1133,6 +1130,38 @@ Console.WriteLine(""Hello, World!"");";
         Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
         AssertEmbeddingsForPath(store, config, connection, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, config2, connection2, "Names", ["Name1"], id);
+    }
+    
+    [RavenFact(RavenTestCategory.Ai)]
+    public void CanUseProjectedFieldNameForQuery()
+    {
+        const string plainTextToChunk = "some text that should produce a single chunk";
+        string[] expectedChunks = ["some text that should produce a single chunk"];
+
+        var dto = new Dto { Name = plainTextToChunk };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+
+                var aiTaskDone = Etl.WaitForEtlToComplete(store);
+
+                var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
+                    script: "embeddings.generate({ ChunkedName: text.split(this.Name, 2048) });");
+
+                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+
+                AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier),
+                    new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
+
+                var result = session.Query<Dto>().Customize(x => x.WaitForNonStaleResults()).VectorSearch(x => x.WithText("ChunkedName").UsingTask(configuration.Identifier), factory => factory.ByText("something")).ToList();
+                
+                Assert.Single(result);
+            }
+        }
     }
 
     internal class Dto
