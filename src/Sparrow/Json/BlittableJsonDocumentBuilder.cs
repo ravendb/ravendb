@@ -638,90 +638,86 @@ namespace Sparrow.Json
         private struct WriteNone : IWriteStrategy { }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ReadJsonValue<TWriteStrategy, TJsonParser>() 
+        private void ReadJsonValue<TWriteStrategy, TJsonParser>()
             where TWriteStrategy : IWriteStrategy
             where TJsonParser : IJsonParser
         {
             int start;
             JsonParserToken current = _state.CurrentTokenType;
-            if (current == JsonParserToken.String)
-            {
-                BlittableJsonToken stringToken;
-                if (typeof(TWriteStrategy) == typeof(WriteNone))
-                {
-                    stringToken = BlittableJsonToken.String;
-                    start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions);
-                }
-                else // WriteFull
-                {
-                    if (_state.EscapePositions.Count == 0 && _state.CompressedSize == null && (_mode & UsageMode.CompressSmallStrings) == 0 && _state.StringSize < 128)
-                    {
-                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize);
-                        stringToken = BlittableJsonToken.String;
-                    }
-                    else
-                    {
-                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions.AsUnsafeReadOnlySpan(), out stringToken, _mode, _state.CompressedSize);
-                    }
-                }
-                _state.CompressedSize = null;
-                _writeToken = new WriteToken(start, stringToken);
-            }
-            else if (current == JsonParserToken.Integer)
-            {
-                start = _writer.WriteValue(_state.Long);
-                _writeToken = new WriteToken(start, BlittableJsonToken.Integer);
-            }
-            else if (current == JsonParserToken.StartObject)
-            {
-                _modifier?.StartObject();
-                _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObject);
-            }
-            else if (current != JsonParserToken.EndObject)
-            {
-                ReadJsonValueUnlikely<TJsonParser>(current);
-            }
-        }
 
-        private void ReadJsonValueUnlikely<TJsonParser>(JsonParserToken current) 
-            where TJsonParser : IJsonParser
-        {
-            int start;
             switch (current)
             {
+                case JsonParserToken.String:
+                    BlittableJsonToken stringToken;
+                    if (typeof(TWriteStrategy) == typeof(WriteNone))
+                    {
+                        stringToken = BlittableJsonToken.String;
+                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions);
+                    }
+                    else // WriteFull
+                    {
+                        if (_state.EscapePositions.Count == 0 &&
+                            _state.CompressedSize == null &&
+                            (_mode & UsageMode.CompressSmallStrings) == 0 &&
+                            _state.StringSize < 128)
+                        {
+                            start = _writer.WriteValue(_state.StringBuffer, _state.StringSize);
+                            stringToken = BlittableJsonToken.String;
+                        }
+                        else
+                        {
+                            start = _writer.WriteValue(_state.StringBuffer, _state.StringSize,
+                                _state.EscapePositions.AsUnsafeReadOnlySpan(), out stringToken,
+                                _mode, _state.CompressedSize);
+                        }
+                    }
+                    _state.CompressedSize = null;
+                    _writeToken = new WriteToken(start, stringToken);
+                    break;
+
+                case JsonParserToken.Integer:
+                    start = _writer.WriteValue(_state.Long);
+                    _writeToken = new WriteToken(start, BlittableJsonToken.Integer);
+                    break;
+
+                case JsonParserToken.StartObject:
+                    _modifier?.StartObject();
+                    _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadObject);
+                    break;
+
                 case JsonParserToken.StartArray:
                     _continuationState.PushByRef() = new BuildingState(ContinuationState.ReadArray);
-                    return;
+                    break;
 
                 case JsonParserToken.Float:
                     if ((_mode & UsageMode.ValidateDouble) == UsageMode.ValidateDouble)
                         ((TJsonParser)_reader).ValidateFloat();
-
                     start = _writer.WriteValue(_state.StringBuffer, _state.StringSize);
-
                     _state.CompressedSize = null;
                     _writeToken = new WriteToken(start, BlittableJsonToken.LazyNumber);
-                    return;
+                    break;
 
                 case JsonParserToken.True:
                 case JsonParserToken.False:
-                    start = _writer.WriteValue(current == JsonParserToken.True ? (byte)1 : (byte)0);
+                    byte value = current == JsonParserToken.True ? (byte)1 : (byte)0;
+                    start = _writer.WriteValue(value);
                     _writeToken = new WriteToken(start, BlittableJsonToken.Boolean);
-                    return;
+                    break;
 
                 case JsonParserToken.Blob:
                     start = _writer.WriteValue(_state.StringBuffer, _state.StringSize);
                     _writeToken = new WriteToken(start, BlittableJsonToken.RawBlob);
-                    return;
+                    break;
 
                 case JsonParserToken.Null:
-                    // nothing to do here, we handle that with the token
                     start = _writer.WriteValue((byte)0);
                     _writeToken = new WriteToken(start, BlittableJsonToken.Null);
-                    return;
-            }
+                    break;
 
-            ThrowExpectedValue(current);
+                default:
+                    ThrowExpectedValue(current);
+                    break;
+            }
         }
 
 #if NET6_0_OR_GREATER
