@@ -761,7 +761,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             for (int i = 0; i < multi.Length; i++)
             {
                 var valueTask = worker.GetEmbeddingsForQueryAsync(documentsContext, multi[i]);
-                if (valueTask.IsCompleted)
+                if (valueTask.IsCompleted == false)
                 {
                     results.AddRange(valueTask.Result.Span);
                 }
