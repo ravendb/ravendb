@@ -114,19 +114,19 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
     {
         if (table.Inserts.Count > 0)
         {
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                Logger.Info($"[{Name}] Inserted {stats.InsertedRecordsCount} (out of {table.Inserts.Count}) records to '{table.TableName}' table " +
+                Logger.Debug($"[{Name}] Inserted {stats.InsertedRecordsCount} (out of {table.Inserts.Count}) records to '{table.TableName}' table " +
                             $"from the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentId))}");
             }
         }
 
         if (table.Deletes.Count > 0)
         {
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                Logger.Info($"[{Name}] Deleted {stats.DeletedRecordsCount} (out of {table.Deletes.Count}) records from '{table.TableName}' table " +
-                            $"for the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentId))}");
+                Logger.Debug($"[{Name}] Deleted {stats.DeletedRecordsCount} (out of {table.Deletes.Count}) records from '{table.TableName}' table " +
+                             $"for the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentId))}");
             }
         }
     }
