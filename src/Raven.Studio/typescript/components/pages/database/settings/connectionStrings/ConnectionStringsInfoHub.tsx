@@ -4,7 +4,6 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
-import { allAiExternalProviders } from "components/utils/common";
 
 export function ConnectionStringsInfoHub() {
     const { hasAll, features } = useConnectionStringsLicense();
@@ -49,10 +48,6 @@ export function ConnectionStringsInfoHub() {
                 featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "amazon-sqs-etl").featureName,
                 value: features.hasQueueEtl,
             },
-            {
-                featureName: "External Models",
-                value: features.hasEmbeddingsGeneration,
-            },
         ],
     });
 
@@ -93,26 +88,11 @@ export function ConnectionStringsInfoHub() {
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "Embedded Model",
+        featureName: "Embeddings Generation",
         featureIcon: "ai-etl",
         community: { value: true },
         professional: { value: true },
         enterprise: { value: true },
-        helperInfo: "bge-micro-v2",
-    },
-    {
-        featureName: "External Models",
-        featureIcon: "ai-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-        helperInfo: (
-            <ul>
-                {allAiExternalProviders.map((provider) => (
-                    <li key={provider}>{provider}</li>
-                ))}
-            </ul>
-        ),
     },
     {
         featureName: "RavenDB ETL",

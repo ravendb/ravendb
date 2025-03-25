@@ -6,26 +6,13 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
 import { allAiExternalProviders } from "components/utils/common";
-import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 export function AiConnectionStringsInfoHub() {
     const { appUrl } = useAppUrls();
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
-
-    const featureAvailability = useLimitedFeatureAvailability({
-        defaultFeatureAvailability,
-        overwrites: [
-            {
-                featureName: defaultFeatureAvailability[1].featureName,
-                value: hasEmbeddingsGeneration,
-            },
-        ],
-    });
 
     return (
-        <AboutViewAnchored defaultOpen={hasEmbeddingsGeneration ? null : "licensing"}>
+        <AboutViewAnchored>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -62,32 +49,17 @@ export function AiConnectionStringsInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper isUnlimited={hasEmbeddingsGeneration} data={featureAvailability} />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={true} data={defaultFeatureAvailability} />
         </AboutViewAnchored>
     );
 }
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "Embedded Model",
+        featureName: "Embeddings Generation",
         featureIcon: "ai-etl",
         community: { value: true },
         professional: { value: true },
         enterprise: { value: true },
-        helperInfo: "bge-micro-v2",
-    },
-    {
-        featureName: "External Models",
-        featureIcon: "ai-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-        helperInfo: (
-            <ul>
-                {allAiExternalProviders.map((provider) => (
-                    <li key={provider}>{provider}</li>
-                ))}
-            </ul>
-        ),
     },
 ];

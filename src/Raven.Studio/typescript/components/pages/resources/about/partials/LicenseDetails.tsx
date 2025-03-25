@@ -787,8 +787,8 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         ],
     },
     {
-        name: "Integration",
-        link: "https://ravendb.net/features#integration",
+        name: "Embeddings Generation",
+        link: null,
         items: [
             {
                 name: "Embedded Model",
@@ -812,6 +812,12 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                     </ul>
                 ),
             },
+        ],
+    },
+    {
+        name: "Integration",
+        link: "https://ravendb.net/features#integration",
+        items: [
             {
                 name: "RavenDB ETL",
                 agpl: { value: false },
