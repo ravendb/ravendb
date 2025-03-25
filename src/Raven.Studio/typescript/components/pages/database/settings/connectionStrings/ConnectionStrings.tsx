@@ -13,10 +13,8 @@ import { connectionStringSelectors, connectionStringsActions } from "./store/con
 import { EmptySet } from "components/common/EmptySet";
 import ConnectionStringsPanels from "./ConnectionStringsPanels";
 import { exhaustiveStringTuple } from "components/utils/common";
-import useConnectionStringsLicense from "./useConnectionStringsLicense";
 import { LoadError } from "components/common/LoadError";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { StudioConnectionType } from "./connectionStringsTypes";
 
 export interface ConnectionStringsUrlParameters {
@@ -25,7 +23,6 @@ export interface ConnectionStringsUrlParameters {
 }
 
 export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps<ConnectionStringsUrlParameters>) {
-    const { hasNone: hasNoneInLicense } = useConnectionStringsLicense();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
@@ -69,24 +66,14 @@ export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps
                 <Col>
                     <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
                     {hasDatabaseAdminAccess && (
-                        <ConditionalPopover
-                            conditions={{
-                                isActive: hasNoneInLicense,
-                                message: "Your license does not allow you to add any connection string.",
-                            }}
+                        <Button
+                            variant="primary"
+                            onClick={() => dispatch(connectionStringsActions.newConnectionModalOpened())}
+                            title="Add new connection string"
                         >
-                            <div id={addNewButtonId} style={{ width: "fit-content" }}>
-                                <Button
-                                    variant="primary"
-                                    onClick={() => dispatch(connectionStringsActions.newConnectionModalOpened())}
-                                    title="Add new connection string"
-                                    disabled={hasNoneInLicense}
-                                >
-                                    <Icon icon="plus" />
-                                    Add new
-                                </Button>
-                            </div>
-                        </ConditionalPopover>
+                            <Icon icon="plus" />
+                            Add new
+                        </Button>
                     )}
                     <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
                         {isEmpty ? (
@@ -122,5 +109,3 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "AzureQueueStorage",
     "AmazonSqs"
 );
-
-const addNewButtonId = "add-new-connection-string";
