@@ -12,7 +12,7 @@ import { useAppSelector } from "components/store";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { useTombstonesStateColumns } from "components/pages/database/settings/tombstones/useTombstonesStateColumns";
 import { LazyLoad } from "components/common/LazyLoad";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useMemo } from "react";
 import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import SizeGetter from "components/common/SizeGetter";
 
@@ -45,9 +45,17 @@ function TombstonesStateWithSize({ location, width }: TombstonesStateWithSizePro
 
     const { collectionsColumns, subscriptionsColumns, formatEtag } = useTombstonesStateColumns(width);
 
+    const tombstoneStateResults = useMemo(() => {
+        return asyncGetTombstonesState.result?.Results ?? [];
+    }, [asyncGetTombstonesState.result]);
+
+    const tombstoneStatePerSubscriptionInfo = useMemo(() => {
+        return asyncGetTombstonesState.result?.PerSubscriptionInfoExtended ?? [];
+    }, [asyncGetTombstonesState.result]);
+
     const collectionsTable = useReactTable({
         columns: collectionsColumns,
-        data: asyncGetTombstonesState.result?.Results || [],
+        data: tombstoneStateResults,
         columnResizeMode: "onChange",
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -56,7 +64,7 @@ function TombstonesStateWithSize({ location, width }: TombstonesStateWithSizePro
 
     const subscriptionsTable = useReactTable({
         columns: subscriptionsColumns,
-        data: asyncGetTombstonesState.result?.PerSubscriptionInfoExtended || [],
+        data: tombstoneStatePerSubscriptionInfo,
         columnResizeMode: "onChange",
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -89,7 +97,7 @@ function TombstonesStateWithSize({ location, width }: TombstonesStateWithSizePro
             <AboutViewHeading title="Tombstones" icon="tombstones" />
             <div className="d-flex align-items-start gap-3 flex-wrap">
                 <ButtonWithSpinner
-                    onClick={() => requestAnimationFrame(async () => asyncGetTombstonesState.execute())}
+                    onClick={asyncGetTombstonesState.execute}
                     variant="primary"
                     isSpinning={asyncGetTombstonesState.loading}
                     icon="refresh"
