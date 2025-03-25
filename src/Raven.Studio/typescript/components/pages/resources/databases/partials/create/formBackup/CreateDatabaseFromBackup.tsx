@@ -74,7 +74,7 @@ export default function CreateDatabaseFromBackup({
     });
 
     const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(
-        formValues.basicInfoStep.databaseName,
+        formValues.basicInfoStep.databaseName.trim(),
         setError
     );
 

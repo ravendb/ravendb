@@ -75,7 +75,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     });
 
     const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(
-        formValues.basicInfoStep.databaseName,
+        formValues.basicInfoStep.databaseName.trim(),
         setError
     );
 
