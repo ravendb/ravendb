@@ -165,3 +165,5 @@ export const logFilterActionOptions: SelectOption<Sparrow.Logging.LogFilterActio
         value: action,
     })
 );
+
+export const allAiExternalProviders = ["Azure OpenAI", "Google AI", "Ollama", "OpenAI", "Mistral AI"];

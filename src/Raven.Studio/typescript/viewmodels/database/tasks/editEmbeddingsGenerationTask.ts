@@ -10,7 +10,6 @@ import transformationScriptSyntax = require("viewmodels/database/tasks/transform
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
-import licenseModel = require("models/auth/licenseModel");
 import EditEmbeddingsGenerationInfoHub = require("viewmodels/database/tasks/EditEmbeddingsGenerationInfoHub");
 import typeUtils = require("common/typeUtils");
 import ongoingTaskEmbeddingsGenerationEditModel = require("models/database/tasks/ongoingTaskEmbeddingsGenerationEditModel");
@@ -48,7 +47,6 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
 
     showEditTransformationArea: KnockoutComputed<boolean>;
    
-    hasEmbeddingsGeneration = licenseModel.getStatusValue("HasEmbeddingsGeneration");
     infoHubView: ReactInKnockout<typeof EditEmbeddingsGenerationInfoHub.EditEmbeddingsGenerationInfoHub>;
 
     isNewConnectionStringOpen = ko.observable<boolean>(false);

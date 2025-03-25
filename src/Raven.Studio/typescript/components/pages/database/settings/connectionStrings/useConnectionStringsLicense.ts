@@ -26,15 +26,8 @@ export default function useConnectionStringsLicense(): ConnectionStringsLicense 
     const hasQueueEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
 
-    const allFeatures = [
-        hasRavenEtl,
-        hasSqlEtl,
-        hasSnowflakeEtl,
-        hasOlapEtl,
-        hasElasticSearchEtl,
-        hasQueueEtl,
-        hasEmbeddingsGeneration,
-    ];
+    // Don't include HasEmbeddingsGeneration because user can create connection strings for embedded model
+    const allFeatures = [hasRavenEtl, hasSqlEtl, hasSnowflakeEtl, hasOlapEtl, hasElasticSearchEtl, hasQueueEtl];
     const hasNone = allFeatures.every((x) => !x);
     const hasAll = allFeatures.every((x) => x);
 

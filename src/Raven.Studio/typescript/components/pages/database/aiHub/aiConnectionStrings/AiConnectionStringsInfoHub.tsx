@@ -2,30 +2,30 @@ import { AboutViewAnchored, AccordionItemWrapper } from "components/common/About
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
+import { allAiExternalProviders } from "components/utils/common";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 export function AiConnectionStringsInfoHub() {
-    const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
-
     const { appUrl } = useAppUrls();
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
             {
-                featureName: defaultFeatureAvailability[0].featureName,
+                featureName: defaultFeatureAvailability[1].featureName,
                 value: hasEmbeddingsGeneration,
             },
         ],
     });
 
     return (
-        <AboutViewAnchored defaultOpen={hasEmbeddingsGeneration ? null : "licensing"}>
+        <AboutViewAnchored>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -62,17 +62,32 @@ export function AiConnectionStringsInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper isUnlimited={hasEmbeddingsGeneration} data={featureAvailability} />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={true} data={featureAvailability} />
         </AboutViewAnchored>
     );
 }
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "AI",
+        featureName: "Embedded Model",
+        featureIcon: "ai-etl",
+        community: { value: true },
+        professional: { value: true },
+        enterprise: { value: true },
+        helperInfo: "bge-micro-v2",
+    },
+    {
+        featureName: "External Models",
         featureIcon: "ai-etl",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        helperInfo: (
+            <ul>
+                {allAiExternalProviders.map((provider) => (
+                    <li key={provider}>{provider}</li>
+                ))}
+            </ul>
+        ),
     },
 ];

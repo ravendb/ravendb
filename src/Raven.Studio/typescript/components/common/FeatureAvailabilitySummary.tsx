@@ -27,6 +27,7 @@ export interface FeatureAvailabilityValueData {
 export interface FeatureAvailabilityData {
     featureName?: string;
     featureIcon?: IconName;
+    helperInfo?: ReactNode;
     community: FeatureAvailabilityValueData;
     professional?: FeatureAvailabilityValueData;
     enterprise: FeatureAvailabilityValueData;
@@ -136,6 +137,16 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                         <div className="p-2">
                                             {data.featureIcon && <Icon icon={data.featureIcon} />}
                                             {data.featureName}
+                                            {data.helperInfo && (
+                                                <OverlayTrigger
+                                                    placement="top"
+                                                    overlay={<Tooltip id={data.featureName}>{data.helperInfo}</Tooltip>}
+                                                >
+                                                    <div className="d-inline-block">
+                                                        <Icon icon="info" color="info" className="ms-1" />
+                                                    </div>
+                                                </OverlayTrigger>
+                                            )}
                                         </div>
                                     )}
                                 </th>

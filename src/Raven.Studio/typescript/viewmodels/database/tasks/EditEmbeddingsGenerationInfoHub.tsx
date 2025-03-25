@@ -5,6 +5,7 @@ import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "comp
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { allAiExternalProviders } from "components/utils/common";
 
 export function EditEmbeddingsGenerationInfoHub() {
     const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
@@ -16,14 +17,14 @@ export function EditEmbeddingsGenerationInfoHub() {
         defaultFeatureAvailability,
         overwrites: [
             {
-                featureName: defaultFeatureAvailability[0].featureName,
+                featureName: defaultFeatureAvailability[1].featureName,
                 value: hasEmbeddingsGeneration,
             },
         ],
     });
 
     return (
-        <AboutViewFloating defaultOpen={hasEmbeddingsGeneration ? null : "licensing"}>
+        <AboutViewFloating>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -92,10 +93,25 @@ export function EditEmbeddingsGenerationInfoHub() {
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "Embeddings Generation",
+        featureName: "Embedded Model",
+        featureIcon: "ai-etl",
+        community: { value: true },
+        professional: { value: true },
+        enterprise: { value: true },
+        helperInfo: "bge-micro-v2",
+    },
+    {
+        featureName: "External Models",
         featureIcon: "ai-etl",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        helperInfo: (
+            <ul>
+                {allAiExternalProviders.map((provider) => (
+                    <li key={provider}>{provider}</li>
+                ))}
+            </ul>
+        ),
     },
 ];

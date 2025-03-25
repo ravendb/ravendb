@@ -8,7 +8,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { yupObjectSchema } from "components/utils/yupUtils";
-import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
+import { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import RichAlert from "components/common/RichAlert";
 import OptionalLabel from "components/common/OptionalLabel";
 import AzureOpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/AzureOpenAiSettings";
@@ -24,6 +24,10 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { useAppSelector } from "components/store";
 import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
+import { components, OptionProps } from "react-select";
+import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import classNames from "classnames";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -136,7 +140,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         }
                         isDisabled={isUsedByAnyTask}
                         components={{
-                            Option: OptionWithIcon,
+                            Option: SettingsOptionComponent,
                             SingleValue: SingleValueWithIcon,
                         }}
                     />
@@ -164,6 +168,24 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 />
             </Form>
         </FormProvider>
+    );
+}
+
+export function SettingsOptionComponent(props: OptionProps<SelectOptionWithIcon>) {
+    const { data } = props;
+
+    const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
+
+    const isDisabled = !hasEmbeddingsGeneration && data.value !== "embeddedSettings";
+
+    return (
+        <div className={classNames("cursor-pointer", { "pe-none": isDisabled })}>
+            <components.Option {...props} isDisabled={isDisabled}>
+                {data.icon && <Icon icon={data.icon} color={data.iconColor} />}
+                {data.label}
+                {isDisabled && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+            </components.Option>
+        </div>
     );
 }
 

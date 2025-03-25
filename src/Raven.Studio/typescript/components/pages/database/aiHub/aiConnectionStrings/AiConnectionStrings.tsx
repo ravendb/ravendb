@@ -15,12 +15,9 @@ import {
     connectionStringSelectors,
 } from "../../settings/connectionStrings/store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { AiConnectionStringsInfoHub } from "./AiConnectionStringsInfoHub";
 
 export default function AiConnectionStrings() {
-    const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
@@ -58,22 +55,14 @@ export default function AiConnectionStrings() {
                 <Col>
                     <AboutViewHeading title="AI Connection Strings" icon="manage-connection-strings" />
                     {hasDatabaseAdminAccess && (
-                        <ConditionalPopover
-                            conditions={{
-                                isActive: !hasEmbeddingsGeneration,
-                                message: "Your license does not allow you to add AI connection string.",
-                            }}
+                        <Button
+                            variant="primary"
+                            onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened("Ai"))}
+                            title="Add new connection string"
                         >
-                            <Button
-                                variant="primary"
-                                onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened("Ai"))}
-                                title="Add new connection string"
-                                disabled={!hasEmbeddingsGeneration}
-                            >
-                                <Icon icon="plus" />
-                                Add new
-                            </Button>
-                        </ConditionalPopover>
+                            <Icon icon="plus" />
+                            Add new
+                        </Button>
                     )}
                     <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
                         {isEmpty ? (
