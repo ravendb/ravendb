@@ -24,7 +24,7 @@ export function EditEmbeddingsGenerationInfoHub() {
     });
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating defaultOpen={hasEmbeddingsGeneration ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"

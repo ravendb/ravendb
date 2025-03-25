@@ -57,7 +57,7 @@ export function ConnectionStringsInfoHub() {
     });
 
     return (
-        <AboutViewAnchored>
+        <AboutViewAnchored defaultOpen={hasAll ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"

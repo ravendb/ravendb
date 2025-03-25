@@ -25,7 +25,7 @@ export function AiConnectionStringsInfoHub() {
     });
 
     return (
-        <AboutViewAnchored>
+        <AboutViewAnchored defaultOpen={hasEmbeddingsGeneration ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -62,7 +62,7 @@ export function AiConnectionStringsInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper isUnlimited={true} data={featureAvailability} />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasEmbeddingsGeneration} data={featureAvailability} />
         </AboutViewAnchored>
     );
 }
