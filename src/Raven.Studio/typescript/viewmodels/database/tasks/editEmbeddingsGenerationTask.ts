@@ -23,6 +23,8 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import licenseModel = require("models/auth/licenseModel");
 import TimeInSeconds = require("common/constants/timeInSeconds");
 
+const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.TimeInSeconds.Day * 36;
+
 class editEmbeddingsGenerationTask extends shardViewModelBase {
     
     view = require("views/database/tasks/editEmbeddingsGenerationTask.html");
@@ -232,7 +234,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             if (this.enableDocumentExpiration()) {
                 await new saveExpirationConfigurationCommand(this.db, {
                     Disabled: false,
-                    DeleteFrequencyInSec: this.isCommunityLicense ? TimeInSeconds.TimeInSeconds.Day * 36 : null,
+                    DeleteFrequencyInSec: this.isCommunityLicense ? minimumCommunityDeleteFrequencyInSec : null,
                     MaxItemsToProcess: DocumentExpiration.defaultItemsToProcess
                 }).execute();
 
