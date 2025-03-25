@@ -9,5 +9,11 @@ namespace Sparrow
         {
             return *(byte*)&value;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe uint ToUInt32(this bool value)
+        {
+            return *(byte*)&value;
+        }
     }
 }

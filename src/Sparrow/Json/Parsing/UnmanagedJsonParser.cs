@@ -48,7 +48,16 @@ namespace Sparrow.Json.Parsing
             ParseUnlikely
         }
 
+        private enum ParseWhitespaceAction
+        {
+            NonWhitespace = 0,
+            Char,
+            Line
+        }
+
         private static readonly ParseNumberAction[] ParseNumberTable;
+
+        private static readonly ParseWhitespaceAction[] ParseWhitespaceTable;
 
         static UnmanagedJsonParser()
         {
@@ -65,6 +74,14 @@ namespace Sparrow.Json.Parsing
             ParseStringTable['\r'] = Unlikely;
             ParseStringTable['u'] = Unlikely;
 
+            ParseWhitespaceTable = new ParseWhitespaceAction[255];
+            ParseWhitespaceTable[' '] = ParseWhitespaceAction.Char;
+            ParseWhitespaceTable['\t'] = ParseWhitespaceAction.Char;
+            ParseWhitespaceTable['\v'] = ParseWhitespaceAction.Char;
+            ParseWhitespaceTable['\f'] = ParseWhitespaceAction.Char;
+            ParseWhitespaceTable['\r'] = ParseWhitespaceAction.Line;
+            ParseWhitespaceTable['\n'] = ParseWhitespaceAction.Line;
+
             ParseNumberTable = new ParseNumberAction[255];
 
             ParseNumberTable['-'] = ParseNumberAction.ParseNumber;
@@ -78,6 +95,8 @@ namespace Sparrow.Json.Parsing
             ParseNumberTable['-'] = ParseNumberTable['+'] = ParseNumberAction.ParseUnlikely;
             ParseNumberTable['\r'] = ParseNumberTable['\n'] = ParseNumberAction.ParseUnlikely;
         }
+
+
 
         public UnmanagedJsonParser(JsonOperationContext ctx, JsonParserState state, string debugTag)
         {
@@ -168,6 +187,27 @@ namespace Sparrow.Json.Parsing
             uint pos = _pos;
             while (true)
             {
+                // Skip whitespace characters
+                var whitespaceTable = ParseWhitespaceTable;
+                while (pos < bufferSize)
+                {
+                    b = currentBuffer[pos];
+
+                    ParseWhitespaceAction action = whitespaceTable[b];
+                    if (action == ParseWhitespaceAction.NonWhitespace)
+                        break;
+
+                    pos++;
+                    _charPos += (action == ParseWhitespaceAction.Char).ToUInt32();
+                    _line += (action == ParseWhitespaceAction.Line).ToInt32();
+
+                    if (b != (byte)'\r' || pos >= bufferSize)
+                        continue;
+
+                    pos += (currentBuffer[pos] == (byte)'\n').ToUInt32();
+                }
+
+                // Check if we've reached the end of the buffer
                 if (pos >= bufferSize)
                     goto ReturnFalse;
 
@@ -212,8 +252,7 @@ namespace Sparrow.Json.Parsing
                     goto ReturnTrue;
                 }
 
-                bool couldRead;
-                if (!ReadUnlikely(b, ref pos, out couldRead))
+                if (!ReadUnlikely(b, ref pos, out bool couldRead))
                     continue; // We can only continue here, if there is a failure to parse, we will throw inside ReadUnlikely.
 
                 if (couldRead)
@@ -221,7 +260,7 @@ namespace Sparrow.Json.Parsing
                 goto ReturnFalse;
             }
 
-        ParseString:
+            ParseString:
             {
                 state.EscapePositions.Clear();
                 _unmanagedWriteBuffer.Clear();
@@ -237,7 +276,7 @@ namespace Sparrow.Json.Parsing
                 goto ReturnTrue;
             }
 
-        ParseNumber:
+            ParseNumber:
             {
                 _unmanagedWriteBuffer.Clear();
                 state.EscapePositions.Clear();
@@ -263,18 +302,18 @@ namespace Sparrow.Json.Parsing
                 goto ReturnTrue;
             }
 
-        Error:
+            Error:
             ThrowCannotHaveCharInThisPosition(b);
 
-        ReturnTrue:
+            ReturnTrue:
             _pos = pos;
             return true;
 
-        ReturnFalse:
+            ReturnFalse:
             _pos = pos;
             return false;
 
-        ReadContinuation: // PERF: This is a "manual procedure"
+            ReadContinuation: // PERF: This is a "manual procedure"
             if (state.Continuation != JsonParserTokenContinuation.None) // parse normally
             {
                 return ContinueParsingValue();
@@ -749,7 +788,7 @@ namespace Sparrow.Json.Parsing
                         // this can happen when buffer runs out and we started unicode parsing
 
                         if (ParseUnicodeValue(ref currentPos) == false)
-                            goto ReturnFalse;
+                            return false;
 
                         continue;
                     }
@@ -767,7 +806,7 @@ namespace Sparrow.Json.Parsing
                         _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, (int)currentPos - _currentStrStart - 1 /* don't include the escape or the last quote */);
 
                         if (b == _currentQuote)
-                            goto ReturnTrue;
+                            return true;
 
                         // Then it is '\\'
                         _escapeMode = true;
@@ -798,12 +837,12 @@ namespace Sparrow.Json.Parsing
                         else if (b == (byte)'\r')
                         {
                             if (currentPos >= bufferSize)
-                                goto ReturnFalse;
+                                return false;
 
                             _line++;
                             _charPos = 1;
                             if (currentPos >= bufferSize)
-                                goto ReturnFalse;
+                                return false;
 
                             if (currentBuffer[currentPos] == (byte)'\n')
                                 currentPos++; // consume the \,\r,\n
@@ -811,7 +850,7 @@ namespace Sparrow.Json.Parsing
                         else if (b == (byte)'u')
                         {
                             if (ParseUnicodeValue(ref currentPos) == false)
-                                goto ReturnFalse;
+                                return false;
                         }
                         else
                         {
@@ -824,14 +863,8 @@ namespace Sparrow.Json.Parsing
                 _unmanagedWriteBuffer.Write(currentBuffer + _currentStrStart, (int)currentPos - _currentStrStart);
 
                 if (currentPos >= bufferSize)
-                    goto ReturnFalse;
+                    return false;
             }
-
-        ReturnTrue:
-            return true;
-
-        ReturnFalse:
-            return false;
         }
 
         private static void ThrowInvalidEscapeChar(byte b)
