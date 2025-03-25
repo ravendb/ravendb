@@ -142,7 +142,7 @@ namespace TypingsGenerator
 {
     public class Program
     {
-        public static readonly string TargetDirectory =  "src/Raven.Studio/";
+        public static readonly string TargetDirectory = "src/Raven.Studio/";
         public const string TypingsDirectory = "typings/server";
 
         public static void Main(string[] args)
@@ -417,7 +417,7 @@ namespace TypingsGenerator
 
             // data archival
             scripter.AddType(typeof(DataArchivalConfiguration));
-            
+
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));
 
@@ -527,7 +527,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(GetReplicationOngoingTasksProgressCommand.ReplicationTaskProgressResponse));
             scripter.AddType(typeof(GetOutgoingInternalReplicationProgressCommand.InternalReplicationTaskProgressResponse));
             scripter.AddType(typeof(InternalReplicationTaskProgress));
-            
+
             // ongoing tasks - ravenDB ETL
             scripter.AddType(typeof(EtlTaskProgress));
             scripter.AddType(typeof(OngoingTaskRavenEtl));
@@ -575,7 +575,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(KafkaConnectionSettings));
             scripter.AddType(typeof(TestQueueSinkScript));
             scripter.AddType(typeof(TestQueueSinkScriptResult));
-            
+
             // ongoing tasks - Snowflake ETL
             scripter.AddType(typeof(OngoingTaskSnowflakeEtl));
             scripter.AddType(typeof(SnowflakeEtlConfiguration));
@@ -688,7 +688,7 @@ namespace TypingsGenerator
 
             // version info
             scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
-            
+
             // two-factor
             scripter.AddType(typeof(TwoFactorAuthenticationHandler.TotpServerConfiguration));
 
