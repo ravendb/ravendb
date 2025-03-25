@@ -87,8 +87,8 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.aiConnectionStrings = aiConnectionStrings;
 
         this.initializeObservables();
-        this.initializeValidation();
         this.update(dto);
+        this.initializeValidation();
     }
     
     protected initializeObservables() {

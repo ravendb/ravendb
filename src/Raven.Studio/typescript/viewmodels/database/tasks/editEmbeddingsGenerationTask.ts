@@ -148,6 +148,8 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        document.getElementById('taskName').focus();
+
         $('.edit-ai-task [data-toggle="tooltip"]').tooltip();
     }
 
