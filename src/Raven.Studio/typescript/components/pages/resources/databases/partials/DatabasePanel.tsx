@@ -150,11 +150,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const canRestartDatabase = hasDatabaseAdminAccess && !db.isDisabled;
 
     const hasAnyDropdownActions =
-        canPauseAnyIndexing ||
-        canResumeAnyPausedIndexing ||
-        canDisableIndexing ||
-        canEnableIndexing ||
-        isOperatorOrAbove;
+        canPauseAnyIndexing || canResumeAnyPausedIndexing || canDisableIndexing || canEnableIndexing;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -418,9 +414,11 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                         </Dropdown.Item>
                                                     </>
                                                 )}
-                                                <Dropdown.Item onClick={onCompactDatabase}>
-                                                    <Icon icon="compact" /> Compact database
-                                                </Dropdown.Item>
+                                                {!db.isDisabled && (
+                                                    <Dropdown.Item onClick={onCompactDatabase}>
+                                                        <Icon icon="compact" /> Compact database
+                                                    </Dropdown.Item>
+                                                )}
                                             </>
                                         )}
                                     </Dropdown.Menu>
