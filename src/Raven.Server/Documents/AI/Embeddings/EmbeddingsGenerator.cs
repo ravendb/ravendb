@@ -867,10 +867,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 foreach (var toRemove in attachmentsToRemove)
                 {
                     operations++;
-                    attachmentsStorage.DeleteAttachment(context, embeddingDocId, toRemove,null, out _);
+                    attachmentsStorage.DeleteAttachment(context, embeddingDocId, toRemove, null, out _);
                 }
             }
-            
+
             return operations;
 
             BlittableJsonReaderObject CreateOrUpdateDocumentEmbeddingDoc(string embeddingDocId, PutDocumentEmbeddings pde, Dictionary<string, HashSet<string>> hashesByName, out HashSet<string> attachmentsToRemove)
@@ -903,17 +903,21 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     attachmentsToRemove.ExceptWith(hashes);
                     djv[name] = new DynamicJsonArray(hashes);
                 }
+                if (document != null)
+                {
+                    RetainAttachmentsFromOtherTasks(document.Data, pde, attachmentsToRemove);
+                }
                 modifications[pde.TaskId] = djv;
-                return document == null ?  
+                return document == null ?
                     context.ReadObject(modifications, embeddingDocId) :
-                    context.ReadObject(document.Data, embeddingDocId) ;
+                    context.ReadObject(document.Data, embeddingDocId);
             }
 
             void ExtractAllAttachmentsForCurrentTask(Document document, PutDocumentEmbeddings pde, HashSet<string> attachmentsToRemove)
             {
-                if (!document.Data.TryGet(pde.TaskId, out BlittableJsonReaderObject taskDetails)) 
+                if (!document.Data.TryGet(pde.TaskId, out BlittableJsonReaderObject taskDetails))
                     return;
-                
+
                 BlittableJsonReaderObject.PropertyDetails prop = default;
                 for (int i = 0; i < taskDetails.Count; i++)
                 {
@@ -921,7 +925,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     if (prop.Value is not BlittableJsonReaderArray arr)
                         continue;
 
-                    for(int j =0; j<arr.Length; j++)
+                    for (int j = 0; j < arr.Length; j++)
                     {
                         var hash = arr.GetStringByIndex(j);
                         if (hash is null)
@@ -931,9 +935,42 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     }
                 }
             }
+
+            void RetainAttachmentsFromOtherTasks(BlittableJsonReaderObject doc, PutDocumentEmbeddings pde, HashSet<string> attachmentsToRemove)
+            {
+                BlittableJsonReaderObject.PropertyDetails prop = default;
+                for (int i = 0; i < doc.Count; i++)
+                {
+                    doc.GetPropertyByIndex(i, ref prop);
+                    // we skip the _current_ task, since we update all its attachemnts
+                    if (string.Equals(prop.Name, pde.TaskId, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    // handles the case of not an object here, can just skip it
+                    if (prop.Token.HasFlag(BlittableJsonToken.StartObject) is false)
+                        continue;
+
+                    var taskDetails = (BlittableJsonReaderObject)prop.Value;
+                    for (int j = 0; j < taskDetails.Count; j++)
+                    {
+                        taskDetails.GetPropertyByIndex(j, ref prop);
+                        if (prop.Value is not BlittableJsonReaderArray arr)
+                            continue;
+
+                        for (int k = 0; k < arr.Length; k++)
+                        {
+                            var (val, type) = arr.GetValueTokenTupleByIndex(k);
+                            if (type != BlittableJsonToken.String)
+                                continue;
+
+                            attachmentsToRemove.Remove(val.ToString());
+                        }
+                    }
+
+                }
+            }
         }
 
-        public void Delete(string documentId)
+    public void Delete(string documentId)
         {
             _toDelete.Add(documentId);
         }
