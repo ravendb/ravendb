@@ -138,7 +138,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const canNavigateToDatabase = !db.isDisabled;
 
     const indexingDisabled = dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Disabled");
-    const canPauseAnyIndexing = dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Running");
+    const canPauseAnyIndexing =
+        dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Running") && !db.isDisabled;
     const canResumeAnyPausedIndexing = dbState.some(
         (x) => x.status === "success" && x.data?.indexingStatus === "Paused"
     );
@@ -147,6 +148,13 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const canEnableIndexing = isOperatorOrAbove && indexingDisabled;
 
     const canRestartDatabase = hasDatabaseAdminAccess && !db.isDisabled;
+
+    const hasAnyDropdownActions =
+        canPauseAnyIndexing ||
+        canResumeAnyPausedIndexing ||
+        canDisableIndexing ||
+        canEnableIndexing ||
+        isOperatorOrAbove;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -363,6 +371,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         <Dropdown.Toggle
                                             data-testid="database-actions-dropdown-toggle"
                                             variant="secondary"
+                                            disabled={!hasAnyDropdownActions}
                                         />
                                     </ButtonGroup>
 
