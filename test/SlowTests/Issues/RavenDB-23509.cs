@@ -34,7 +34,7 @@ public class RavenDB_23509 : RavenTestBase
         using var session = store.OpenSession();
         var results = session.Query<Result, TIndex>()
             .VectorSearch(f => f.WithField(s => s.Vector),
-                v => v.ByText("dog"))
+                v => v.ByText("dog"), minimumSimilarity: 0.75f)
             .ToList();
         
         Assert.Equal(1, results.Count);
@@ -59,7 +59,7 @@ public class RavenDB_23509 : RavenTestBase
         using var session = store.OpenSession();
         var results = session.Query<Result, TIndex>()
             .VectorSearch(f => f.WithField(s => s.Vector),
-                v => v.ByEmbedding([-0.1f, -0.2f]))
+                v => v.ByEmbedding([-0.1f, -0.2f]), minimumSimilarity: 0.75f)
             .ToList();
         
         Assert.Equal(1, results.Count);

@@ -32,7 +32,7 @@ public class RavenDB_23658(ITestOutputHelper output) : RavenTestBase(output)
                 field => field
                     .WithField(x => x.VectorFromSingle),
                 searchTerm => searchTerm
-                    .ByEmbedding(new RavenVector<float>([6.599999904632568f, 7.699999809265137f])))
+                    .ByEmbedding(new RavenVector<float>([6.599999904632568f, 7.699999809265137f])), minimumSimilarity: 0.75f)
             .ProjectInto<Item>()
             .ToList();
 
