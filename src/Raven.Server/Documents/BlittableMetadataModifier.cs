@@ -108,7 +108,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                lazyStringValueFromParserState.EscapePositions = Array.Empty<int>();
+                lazyStringValueFromParserState.EscapePositions = [];
             }
 
             return lazyStringValueFromParserState;
@@ -157,20 +157,11 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state)
+        public unsafe bool AboutToReadPropertyName<TJsonParser>(TJsonParser reader, JsonParserState state)
+            where TJsonParser : IJsonParser
         {
             AssertNotDisposed();
 
-            if (reader is UnmanagedJsonParser unmanagedParser)
-                return AboutToReadPropertyNameInternal(unmanagedParser, state);
-            if (reader is ObjectJsonParser objectParser)
-                return AboutToReadPropertyNameInternal(objectParser, state);
-
-            return AboutToReadPropertyNameInternal(reader, state);
-        }
-
-        private unsafe bool AboutToReadPropertyNameInternal(UnmanagedJsonParser reader, JsonParserState state)
-        {
             if (_state != State.None)
             {
                 if (!AboutToReadWithStateUnlikely(reader, state))
@@ -198,40 +189,11 @@ namespace Raven.Server.Documents
                 if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out bool aboutToReadPropertyName))
                     return aboutToReadPropertyName;
             }
+
         }
 
-        private unsafe bool AboutToReadPropertyNameInternal(ObjectJsonParser reader, JsonParserState state)
-        {
-            if (_state != State.None)
-            {
-                if (!AboutToReadWithStateUnlikely(reader, state))
-                    return false;
-            }
-
-            _state = State.None;
-
-            while (true)
-            {
-                if (reader.Read() == false)
-                    return false;
-
-                if (state.CurrentTokenType != JsonParserToken.String)
-                    return true; // let the caller handle that
-
-                if (_readingMetadataObject == false)
-                {
-                    if ("@metadata"u8.IsEqualConstant(state.StringBuffer, state.StringSize) == true)
-                        _readingMetadataObject = true;
-
-                    return true;
-                }
-
-                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out bool aboutToReadPropertyName))
-                    return aboutToReadPropertyName;
-            }
-        }
-
-        private unsafe bool AboutToReadPropertyNameInternal(IJsonParser reader, JsonParserState state)
+        private unsafe bool AboutToReadPropertyNameInternal<TJsonParser>(TJsonParser reader, JsonParserState state)
+            where TJsonParser : IJsonParser
         {
             if (_state != State.None)
             {

@@ -214,7 +214,9 @@ namespace Sparrow.Json
                         continue;
 
                     case ContinuationState.ReadPropertyName:
-                        if (ReadMaybeModifiedPropertyName(reader))
+
+                        bool readMaybeModified = _modifier?.AboutToReadPropertyName(reader, _state) ?? reader.Read();
+                        if (readMaybeModified)
                         {
                             if (state.CurrentTokenType != JsonParserToken.EndObject)
                             {
@@ -598,15 +600,6 @@ namespace Sparrow.Json
             return _readInternalFunc();
         }
 
-        private bool ReadMaybeModifiedPropertyName<TJsonParser>(TJsonParser reader)
-            where TJsonParser : IJsonParser
-        {
-            if (_modifier == null) 
-                return reader.Read();
-
-            return _modifier.AboutToReadPropertyName(reader, _state);
-        }
-
 #if NET6_0_OR_GREATER
         [DoesNotReturn]
 #endif
@@ -798,7 +791,8 @@ namespace Sparrow.Json
 
         void EndObject();
 
-        bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state);
+        bool AboutToReadPropertyName<TJsonParser>(TJsonParser reader, JsonParserState state) 
+            where TJsonParser : IJsonParser;
 
         void Reset(JsonOperationContext context);
     }
