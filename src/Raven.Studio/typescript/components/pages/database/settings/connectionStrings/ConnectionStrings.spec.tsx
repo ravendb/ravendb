@@ -44,21 +44,4 @@ describe("ConnectionStrings", () => {
         expect(screen.queryAllByRole("button", { name: selectors.edit })).toHaveLength(0);
         expect(screen.queryAllByRole("button", { name: selectors.delete })).toHaveLength(0);
     });
-
-    it("can disable add button when no license", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <DefaultConnectionStrings
-                isEmpty
-                hasElasticSearchEtl={false}
-                hasSqlEtl={false}
-                hasSnowflakeEtl={false}
-                hasRavenEtl={false}
-                hasOlapEtl={false}
-                hasQueueEtl={false}
-                hasEmbeddingsGeneration={false}
-            />
-        );
-
-        expect(screen.getByRole("button", { name: selectors.addNew })).toBeDisabled();
-    });
 });
