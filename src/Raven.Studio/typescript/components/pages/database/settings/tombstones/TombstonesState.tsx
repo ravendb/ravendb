@@ -89,7 +89,7 @@ function TombstonesStateWithSize({ location, width }: TombstonesStateWithSizePro
             <AboutViewHeading title="Tombstones" icon="tombstones" />
             <div className="d-flex align-items-start gap-3 flex-wrap">
                 <ButtonWithSpinner
-                    onClick={asyncGetTombstonesState.execute}
+                    onClick={() => requestAnimationFrame(async () => asyncGetTombstonesState.execute())}
                     variant="primary"
                     isSpinning={asyncGetTombstonesState.loading}
                     icon="refresh"
