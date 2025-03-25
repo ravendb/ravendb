@@ -20,6 +20,8 @@ import getExpirationConfigurationCommand = require("commands/database/documents/
 import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
 import DocumentExpiration = require("components/pages/database/settings/documentExpiration/DocumentExpiration");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import licenseModel = require("models/auth/licenseModel");
+import TimeInSeconds = require("common/constants/timeInSeconds");
 
 class editEmbeddingsGenerationTask extends shardViewModelBase {
     
@@ -56,6 +58,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
 
     isDocumentExpirationEnabled = ko.observable<boolean>(false);
     enableDocumentExpiration = ko.observable<boolean>(false);
+    isCommunityLicense = licenseModel.getStatusValue("Type") === "Community";
 
     constructor(db: database) {
         super(db);
@@ -229,7 +232,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             if (this.enableDocumentExpiration()) {
                 await new saveExpirationConfigurationCommand(this.db, {
                     Disabled: false,
-                    DeleteFrequencyInSec: null,
+                    DeleteFrequencyInSec: this.isCommunityLicense ? TimeInSeconds.TimeInSeconds.Day * 36 : null,
                     MaxItemsToProcess: DocumentExpiration.defaultItemsToProcess
                 }).execute();
 
