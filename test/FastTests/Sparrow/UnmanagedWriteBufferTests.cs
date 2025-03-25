@@ -6,12 +6,8 @@ using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
-    public unsafe class UnmanagedWriteBufferTests : NoDisposalNeeded
+    public unsafe class UnmanagedWriteBufferTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public UnmanagedWriteBufferTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         private const int DefaultBufferSize = 16;
 
         private static readonly byte[] NoAllocationsBatch;
@@ -38,7 +34,7 @@ namespace FastTests.Sparrow
                 using (var buffer = new UnmanagedWriteBuffer(context, allocation))
                 {
                     Assert.Equal(buffer.SizeInBytes, 0);
-                    buffer.WriteByte(10);
+                    buffer.Write<byte>(10);
                     Assert.Equal(buffer.SizeInBytes, 1);
                     Assert.Equal(allocation.Address[0], 10);
                 }
@@ -55,10 +51,10 @@ namespace FastTests.Sparrow
                 using (var buffer = new UnmanagedWriteBuffer(context, allocation))
                 {
                     Assert.Equal(buffer.SizeInBytes, 0);
-                    buffer.WriteByte(10);
+                    buffer.Write<byte>(10);
                     Assert.Equal(buffer.SizeInBytes, 1);
                     Assert.Equal(allocation.Address[0], 10);
-                    buffer.WriteByte(20);
+                    buffer.Write<byte>(20);
                     Assert.Equal(buffer.SizeInBytes, 2);
                 }
             }
@@ -76,7 +72,7 @@ namespace FastTests.Sparrow
                     for (int i = 0; i < DefaultBufferSize - 1; i++)
                     {
                         Assert.Equal(buffer.SizeInBytes, i);
-                        buffer.WriteByte((byte)i);
+                        buffer.Write((byte)i);
                         Assert.Equal(allocation.Address[i], (byte)i);
                         Assert.Equal(buffer.SizeInBytes, i + 1);
                     }
@@ -96,7 +92,7 @@ namespace FastTests.Sparrow
                     for (int i = 0; i < 2*DefaultBufferSize; i++)
                     {
                         Assert.Equal(buffer.SizeInBytes, i);
-                        buffer.WriteByte((byte)i);
+                        buffer.Write<byte>((byte)i);
                         Assert.Equal(buffer.SizeInBytes, i + 1);
 
                         // We can't verify that anything after the allocation was actually put into the correct place
@@ -298,9 +294,9 @@ namespace FastTests.Sparrow
                 var buffer = new UnmanagedWriteBuffer(context, context.GetMemory(DefaultBufferSize));
                 buffer.Dispose();
 #if DEBUG
-                Assert.Throws(typeof(ObjectDisposedException), () => buffer.WriteByte(10));
+                Assert.Throws(typeof(ObjectDisposedException), () => buffer.Write<byte>(10));
 #else
-                Assert.Throws(typeof(NullReferenceException), () => buffer.WriteByte(10));
+                Assert.Throws(typeof(NullReferenceException), () => buffer.Write<byte>(10));
 #endif
 
             }
@@ -421,20 +417,17 @@ namespace FastTests.Sparrow
             {
                 using (var buffer = new UnmanagedWriteBuffer(context, context.GetMemory(8)))
                 {
-                    buffer.WriteByte(1);
+                    buffer.Write<byte>(1);
                     var bufferCopy = buffer;
                     Assert.Equal(bufferCopy.SizeInBytes, buffer.SizeInBytes);
 
-                    bufferCopy.WriteByte(2);
+                    bufferCopy.Write<byte>(2);
                     Assert.Equal(bufferCopy.SizeInBytes, buffer.SizeInBytes);
 
-                    buffer.WriteByte(3);
+                    buffer.Write<byte>(3);
                     Assert.Equal(bufferCopy.SizeInBytes, buffer.SizeInBytes);
                 }
-
             }
         }
-
-
     }
 }

@@ -476,7 +476,7 @@ namespace Sparrow.Json.Parsing
                         _state.Long = 0;
                         _state.EscapePositions.Clear();
                         _unmanagedWriteBuffer.Clear();
-                        _unmanagedWriteBuffer.WriteByte((byte)'-');
+                        _unmanagedWriteBuffer.Write((byte)'-');
                         _state.Continuation = JsonParserTokenContinuation.PartialNumber;
                         goto case JsonParserTokenContinuation.PartialNumber;
                     }
@@ -589,7 +589,7 @@ namespace Sparrow.Json.Parsing
 
                     value = next;
 
-                    _unmanagedWriteBuffer.WriteByte(b);
+                    _unmanagedWriteBuffer.Write(b);
 
                     continue;
                 }
@@ -618,7 +618,7 @@ namespace Sparrow.Json.Parsing
                     if (ParseNumberUnlikely(b, ref pos, ref value, state))
                         goto IsANumber;
 
-                    _unmanagedWriteBuffer.WriteByte(b);
+                    _unmanagedWriteBuffer.Write(b);
                     continue;
                 }
 
@@ -788,7 +788,7 @@ namespace Sparrow.Json.Parsing
                         if (op > Unlikely)
                         {
                             // We have a known substitution to apply
-                            _unmanagedWriteBuffer.WriteByte(op);
+                            _unmanagedWriteBuffer.Write(op);
                         }
                         else if (b == (byte)'\n')
                         {

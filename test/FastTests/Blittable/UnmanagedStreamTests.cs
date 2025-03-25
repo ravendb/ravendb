@@ -147,7 +147,7 @@ namespace FastTests.Blittable
                         allocatedMemoryList.Add(allocatedMemory);
                         for (var j = 0; j < allocatedMemory.SizeInBytes; j++)
                         {
-                            newStream.WriteByte(*((byte*)allocatedMemory.Address + j));
+                            newStream.Write(*((byte*)allocatedMemory.Address + j));
                         }
                     }
 

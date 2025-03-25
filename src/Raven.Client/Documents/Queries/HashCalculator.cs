@@ -92,13 +92,13 @@ namespace Raven.Client.Documents.Queries
 
         public void Write(bool b)
         {
-            _buffer.WriteByte(b ? (byte)1 : (byte)2);
+            _buffer.Write(b ? (byte)1 : (byte)2);
         }
 
         public void Write(bool? b)
         {
             if (b != null)
-                _buffer.WriteByte(b.Value ? (byte)1 : (byte)2);
+                _buffer.Write(b.Value ? (byte)1 : (byte)2);
             else
                 Write("null-bool");
         }
@@ -227,7 +227,7 @@ namespace Raven.Client.Documents.Queries
                     break;
 
                 case null:
-                    _buffer.WriteByte(0);
+                    _buffer.Write<byte>(0);
                     break;
 
                 case DateTime dt:
@@ -247,7 +247,7 @@ namespace Raven.Client.Documents.Queries
                     break;
 
                 case byte bt:
-                    _buffer.WriteByte(bt);
+                    _buffer.Write(bt);
                     break;
 
                 case sbyte sbt:

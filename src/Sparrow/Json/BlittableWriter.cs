@@ -122,7 +122,7 @@ namespace Sparrow.Json
         public int WriteNull()
         {
             var startPos = _position++;
-            _unmanagedWriteBuffer.WriteByte(0);
+            _unmanagedWriteBuffer.Write<byte>(0);
             return startPos;
         }
 
@@ -153,7 +153,7 @@ namespace Sparrow.Json
         public int WriteValue(byte value)
         {
             var startPos = _position;
-            _unmanagedWriteBuffer.WriteByte(value);
+            _unmanagedWriteBuffer.Write(value);
             _position++;
             return startPos;
         }
@@ -218,7 +218,7 @@ namespace Sparrow.Json
             {
                 WriteNumber(objectMetadataStart - sortedProperty.Position, positionSize);
                 WriteNumber(sortedProperty.Property.PropertyId, propertyIdSize);
-                _unmanagedWriteBuffer.WriteByte(sortedProperty.Type);
+                _unmanagedWriteBuffer.Write(sortedProperty.Type);
                 _position += positionSize + propertyIdSize + sizeof(byte);
             }
 
@@ -244,7 +244,7 @@ namespace Sparrow.Json
                     WriteNumber(arrayInfoStart - positions[i], distanceTypeSize);
                     _position += distanceTypeSize;
 
-                    _unmanagedWriteBuffer.WriteByte((byte)types[i]);
+                    _unmanagedWriteBuffer.Write((byte)types[i]);
                     _position++;
                 }
             }
@@ -371,16 +371,16 @@ namespace Sparrow.Json
             Debug.Assert(sizeOfValue == sizeof(byte) || sizeOfValue == sizeof(short) || sizeOfValue == sizeof(int), $"Unsupported size {sizeOfValue}");
 
             // PERF: With the current JIT at 12 of January of 2017 the switch statement dont get inlined.
-            _unmanagedWriteBuffer.WriteByte((byte)value);
+            _unmanagedWriteBuffer.Write((byte)value);
             if (sizeOfValue == sizeof(byte))
                 return;
 
-            _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
+            _unmanagedWriteBuffer.Write((byte)(value >> 8));
             if (sizeOfValue == sizeof(ushort))
                 return;
 
-            _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
-            _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
+            _unmanagedWriteBuffer.Write((byte)(value >> 16));
+            _unmanagedWriteBuffer.Write((byte)(value >> 24));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -401,7 +401,7 @@ namespace Sparrow.Json
             buffer[count++] = (byte)(v);
 
             if (count == 1)
-                _unmanagedWriteBuffer.WriteByte(*buffer);
+                _unmanagedWriteBuffer.Write(*buffer);
             else
                 _unmanagedWriteBuffer.Write(buffer, count);
 
@@ -424,7 +424,7 @@ namespace Sparrow.Json
             buffer[count++] = (byte)(v);
 
             if (count == 1)
-                _unmanagedWriteBuffer.WriteByte(*buffer);
+                _unmanagedWriteBuffer.Write(*buffer);
             else
                 _unmanagedWriteBuffer.Write(buffer, count);
 
@@ -447,7 +447,7 @@ namespace Sparrow.Json
 
             if (count == 1)
             {
-                _unmanagedWriteBuffer.WriteByte(*buffer);
+                _unmanagedWriteBuffer.Write(*buffer);
             }
             else
             {
@@ -696,8 +696,7 @@ namespace Sparrow.Json
             return WriteValue(str, out _, UsageMode.None, null);
         }
 
-        public unsafe int WriteValue(LazyStringValue str, out BlittableJsonToken token,
-            UsageMode mode, int? initialCompressedSize)
+        public unsafe int WriteValue(LazyStringValue str, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
         {
             if (str.EscapePositions != null)
             {
@@ -789,13 +788,15 @@ namespace Sparrow.Json
             int writtenBytes = WriteVariableSizeInt(size);
             _unmanagedWriteBuffer.Write(buffer, size);
             writtenBytes += size;
-            writtenBytes += WriteVariableSizeInt(0);
+            _unmanagedWriteBuffer.Write<byte>(0);
+            writtenBytes += 1;
 
             _position += writtenBytes;
 
             return startPos;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteValue(byte* buffer, int size, int[] escapePositions)
         {
             var startPos = _position;
@@ -821,6 +822,7 @@ namespace Sparrow.Json
             return startPos;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteValue(byte* buffer, int size, FastList<int> escapePositions)
         {
             int position = _position;
@@ -832,8 +834,9 @@ namespace Sparrow.Json
 
             if (escapePositions == null || escapePositions.Count == 0)
             {
-                position += WriteVariableSizeInt(0);
-                goto Finish;
+                _unmanagedWriteBuffer.Write<byte>(0);
+                _position = position + 1;
+                return startPos;
             }
 
             int escapePositionCount = escapePositions.Count;
@@ -846,7 +849,6 @@ namespace Sparrow.Json
             for (int i = 0; i < escapePositionCount; i++)
                 position += WriteVariableSizeInt(escapePositions[i]);
 
-            Finish:
             _position = position;
             return startPos;
         }
@@ -945,27 +947,28 @@ namespace Sparrow.Json
                                   (((mode & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128)) ||
                                   ((mode & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings) && (size <= 128);
 
-            if (shouldCompress)
+            if (shouldCompress == false) 
+                return size;
+
+            int compressedSize;
+            byte* compressionBuffer;
+            if (initialCompressedSize.HasValue)
             {
-                int compressedSize;
-                byte* compressionBuffer;
-                if (initialCompressedSize.HasValue)
-                {
-                    // we already have compressed data here
-                    compressedSize = initialCompressedSize.Value;
-                    compressionBuffer = buffer;
-                }
-                else
-                {
-                    compressionBuffer = CompressBuffer(buffer, size, maxGoodCompressionSize, out compressedSize);
-                }
-                if (compressedSize > 0) // only if we actually save more than space
-                {
-                    token = BlittableJsonToken.CompressedString;
-                    buffer = compressionBuffer;
-                    size = compressedSize;
-                    position += WriteVariableSizeInt(compressedSize);
-                }
+                // we already have compressed data here
+                compressedSize = initialCompressedSize.Value;
+                compressionBuffer = buffer;
+            }
+            else
+            {
+                compressionBuffer = CompressBuffer(buffer, size, maxGoodCompressionSize, out compressedSize);
+            }
+
+            if (compressedSize > 0) // only if we actually save more than space
+            {
+                token = BlittableJsonToken.CompressedString;
+                buffer = compressionBuffer;
+                size = compressedSize;
+                position += WriteVariableSizeInt(compressedSize);
             }
             return size;
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -15,7 +15,6 @@ namespace Sparrow.Json
         void Write(byte* buffer, int length);
         void Write<T>(in T value) where T : unmanaged;
         void Write<T>(in ReadOnlySpan<T> buffer) where T : unmanaged;
-        void WriteByte(byte data);
         void EnsureSingleChunk(JsonParserState state);
         void EnsureSingleChunk(out byte* ptr, out int size);
     }
@@ -65,6 +64,59 @@ namespace Sparrow.Json
                 UnlikelyWrite(buffer, count);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write<T>(in ReadOnlySpan<T> buffer) where T : unmanaged
+        {
+            int count = buffer.Length * sizeof(T);
+            if (count == 0)
+                return;
+
+            if (_buffer.Size - Used > count)
+            {
+                ref byte destStart = ref Unsafe.AsRef<byte>(_buffer.Address + Used);
+                ref byte srcStart = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, byte>(buffer));
+                Unsafe.CopyBlockUnaligned(ref destStart, ref srcStart, (uint)count);
+                _sizeInBytes += count;
+                Used += count;
+            }
+            else
+            {
+                UnlikelyWrite(buffer);
+            }
+        }
+
+        private void UnlikelyWrite<T>(ReadOnlySpan<T> src) where T : unmanaged
+        {
+            int count = src.Length * sizeof(T);
+            if (count == 0)
+                return;
+
+            var buffer = src;
+            var bufferPosition = 0;
+            var lengthLeft = count;
+            do
+            {
+                if (Used == _buffer.Size)
+                {
+                    _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
+                    Used = 0;
+                }
+
+                var bytesToWrite = Math.Min(lengthLeft, _buffer.Size - Used);
+
+                ref byte destStart = ref Unsafe.AsRef<byte>(_buffer.Address + Used);
+                ref byte srcStart = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, byte>(buffer));
+                Unsafe.CopyBlockUnaligned(ref destStart, ref srcStart, (uint)bytesToWrite);
+
+                _sizeInBytes += bytesToWrite;
+                lengthLeft -= bytesToWrite;
+                bufferPosition += bytesToWrite;
+                buffer = buffer.Slice(bytesToWrite);
+                Used += bytesToWrite;
+
+            } while (bufferPosition < count);
+        }
+
         private void UnlikelyWrite(byte* buffer, int count)
         {
             if (count == 0)
@@ -94,28 +146,18 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Write<T>(in T value) where T : unmanaged
+        public void Write<T>(in T data) where T : unmanaged
         {
-            throw new NotImplementedException();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Write<T>(in ReadOnlySpan<T> vector) where T : unmanaged
-        {
-            throw new NotImplementedException();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteByte(byte data)
-        {
-            if (Used == _buffer.Size)
+            if (Used + sizeof(T) >= _buffer.Size)
             {
                 _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
                 Used = 0;
             }
-            _sizeInBytes++;
-            *(_buffer.Address + Used) = data;
-            Used++;
+
+            *(T*)(_buffer.Address + Used) = data;
+            
+            _sizeInBytes += sizeof(T);
+            Used += sizeof(T);
         }
 
         public int CopyTo(IntPtr pointer)
@@ -178,7 +220,7 @@ namespace Sparrow.Json
             public AllocatedMemoryData Allocation;
 
             /// <summary>
-            /// Always set to Allocation.Adddress
+            /// Always set to Allocation.Address
             /// </summary>
             public byte* Address;
 
@@ -332,23 +374,20 @@ namespace Sparrow.Json
             }
             else
             {
-                WriteUnlikely(value);
+                WriteUnlikely(in value);
             }
         }
 
-        private void WriteUnlikely<T>(in T value) where T: unmanaged
+        private void WriteUnlikely<T>(in T data) where T : unmanaged
         {
-            int count = Unsafe.SizeOf<T>();
-            AllocateNextSegment(count, true);
-            
-            var head = _head;
+            AllocateNextSegment(sizeof(T), true);
 
             // Update Segment invariants
-            *(T*)(head.Address + head.Used) = value;
-            head.AccumulatedSizeInBytes += count;
-            head.Used += count;
+            var head = _head;
+            *(T*)(head.Address + head.Used) = data;
+            head.AccumulatedSizeInBytes += sizeof(T);
+            head.Used += sizeof(T);
         }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write<T>(in ReadOnlySpan<T> vector) where T : unmanaged
@@ -455,33 +494,6 @@ namespace Sparrow.Json
         {
             throw new InvalidOperationException($"Allocated {new Size(allocationSizeInBytes, SizeUnit.Bytes)}" +
                                                 $" but we requested at least {new Size(required, SizeUnit.Bytes)}");
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteByte(byte data)
-        {
-            ThrowOnDisposed();
-
-            var head = _head;
-            if (head.Used == head.Allocation.SizeInBytes)
-                goto Grow; // PERF: Diminish the size of the most common path.
-
-            head.AccumulatedSizeInBytes++;
-            *(head.Address + head.Used) = data;
-            head.Used++;
-            return;
-
-        Grow:
-            WriteByteUnlikely(data);
-        }
-
-        private void WriteByteUnlikely(byte data)
-        {
-            AllocateNextSegment(1, true);
-            var head = _head;
-            head.AccumulatedSizeInBytes++;
-            *(head.Address + head.Used) = data;
-            head.Used++;
         }
 
         public int CopyTo(byte* pointer)

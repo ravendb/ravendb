@@ -616,7 +616,8 @@ namespace Sparrow.Json
                 BlittableJsonToken stringToken;
                 if (typeof(TWriteStrategy) == typeof(WriteNone))
                 {
-                    start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions.AsUnsafeReadOnlySpan(), out stringToken, _mode, _state.CompressedSize);
+                    stringToken = BlittableJsonToken.String;
+                    start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions);
                 }
                 else // WriteFull
                 {

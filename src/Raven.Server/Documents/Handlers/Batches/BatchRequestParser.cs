@@ -639,7 +639,7 @@ namespace Raven.Server.Documents.Handlers.Batches
         }
 
         private async Task<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, string id, UnmanagedJsonParser parser,
-            JsonParserState state, JsonOperationContext.MemoryBuffer buffer, IBlittableDocumentModifier modifier, CancellationToken token)
+            JsonParserState state, JsonOperationContext.MemoryBuffer buffer, BlittableMetadataModifier modifier, CancellationToken token)
         {
             if (state.CurrentTokenType == JsonParserToken.Null)
                 return null;
