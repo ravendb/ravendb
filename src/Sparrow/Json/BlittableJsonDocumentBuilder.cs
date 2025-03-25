@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Sparrow.Collections;
 using Sparrow.Exceptions;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
@@ -177,7 +178,7 @@ namespace Sparrow.Json
             base.Dispose();
         }
 
-        private unsafe bool ReadInternal<TWriteStrategy, TJsonParser>() 
+        private bool ReadInternal<TWriteStrategy, TJsonParser>() 
             where TWriteStrategy : IWriteStrategy
             where TJsonParser : IJsonParser
         {
@@ -316,12 +317,37 @@ namespace Sparrow.Json
                         return true;
 
                     case ContinuationState.ReadArray:
+                    case ContinuationState.ReadArrayValue:
+                    case ContinuationState.CompleteArrayValue:
+                    case ContinuationState.CompleteArray:
+                    case ContinuationState.ReadBufferedArrayValue:
+                    case ContinuationState.CompleteBufferedArray:
+                        var result = InternalReadArray<TWriteStrategy, TJsonParser>(ref continuationState, ref currentState);
+                        if (result == null)
+                            break;
+                        return result.Value;
+                }
+            }
+        }
+
+
+        private bool? InternalReadArray<TWriteStrategy, TJsonParser>(ref FastStack<BuildingState> continuationState, ref BuildingState currentState)
+            where TWriteStrategy : IWriteStrategy
+            where TJsonParser : IJsonParser
+        {
+            var reader = (TJsonParser)_reader;
+            var state = _state;
+            while (true)
+            {
+                switch (currentState.State)
+                {
+                    case ContinuationState.ReadArray:
                         if (state.CurrentTokenType != JsonParserToken.StartArray)
                             ThrowExpectedStartOfArray();
 
                         currentState.Types = _tokensCache.Allocate();
                         currentState.Positions = _positionsCache.Allocate();
-                        
+
                         if (_isVectorProperty == false)
                         {
                             currentState.State = ContinuationState.ReadArrayValue;
@@ -362,8 +388,8 @@ namespace Sparrow.Json
                         _positionsCache.Return(ref currentState.Positions);
                         _tokensCache.Return(ref currentState.Types);
                         currentState = continuationState.Pop();
-                        continue;
-                    
+                        return null;
+
                     case ContinuationState.ReadBufferedArrayValue:
 
                         // The same approach of buffered vectors is used, but we streamlined the
@@ -409,7 +435,7 @@ namespace Sparrow.Json
                                     {
                                         break;
                                     }
-                                    
+
                                     _state.AddBuffered(dValue);
                                     processed = true;
                                     break;
@@ -479,7 +505,6 @@ namespace Sparrow.Json
                         currentState.State = ContinuationState.CompleteArrayValue;
                         continuationState.PushByRef() = currentState;
 
-                        // Allow the loop to continue to the next iteration
                         goto case ContinuationState.ReadValue;
 
                     case ContinuationState.CompleteBufferedArray:
@@ -488,7 +513,15 @@ namespace Sparrow.Json
 
                         state.ClearBuffered();
                         currentState = _continuationState.Pop();
+                        return null;
+
+                    case ContinuationState.ReadValue:
+                        ReadJsonValue<TWriteStrategy, TJsonParser>();
+                        currentState = _continuationState.Pop();
                         continue;
+
+                    default:
+                        return null;
                 }
             }
         }
