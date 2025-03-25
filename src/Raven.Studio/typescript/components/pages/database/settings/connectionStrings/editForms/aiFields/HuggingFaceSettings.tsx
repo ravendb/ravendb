@@ -1,4 +1,4 @@
-import { FormInput } from "components/common/Form";
+import { FormInput, FormSelectCreatable } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import {
     ConnectionFormData,
@@ -62,7 +62,12 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="huggingFaceSettings.endpoint" type="text" />
+                <FormSelectCreatable
+                    control={control}
+                    name="huggingFaceSettings.endpoint"
+                    placeholder="Select an endpoint (or enter new one)"
+                    options={["https://api-inference.huggingface.com/"].map((x) => ({ label: x, value: x }))}
+                />
             </div>
             <div className="mb-2">
                 <Label>

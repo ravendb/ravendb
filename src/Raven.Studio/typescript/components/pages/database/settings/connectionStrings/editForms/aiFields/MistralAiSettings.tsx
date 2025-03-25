@@ -1,4 +1,4 @@
-import { FormInput } from "components/common/Form";
+import { FormInput, FormSelectCreatable } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import {
     ConnectionFormData,
@@ -15,6 +15,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAsyncCallback } from "react-async-hook";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
+import { SelectOption } from "components/common/select/Select";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -56,7 +57,12 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="mistralAiSettings.endpoint" type="text" />
+                <FormSelectCreatable
+                    control={control}
+                    name="mistralAiSettings.endpoint"
+                    placeholder="Select an endpoint (or enter new one)"
+                    options={endpointOptions}
+                />
             </div>
             <div className="mb-2">
                 <Label>
@@ -65,7 +71,13 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="mistralAiSettings.model" type="text" disabled={isUsedByAnyTask} />
+                <FormSelectCreatable
+                    control={control}
+                    name="mistralAiSettings.model"
+                    isDisabled={isUsedByAnyTask}
+                    placeholder="Select a model (or enter new one)"
+                    options={modelOptions}
+                />
             </div>
             <EmbeddingsMaxConcurrentBatches baseName="mistralAiSettings" />
             <div className="d-flex mb-2">
@@ -83,3 +95,10 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
         </>
     );
 }
+
+const endpointOptions: SelectOption[] = ["https://api.mistral.ai/v1/"].map((x) => ({ label: x, value: x }));
+
+const modelOptions: SelectOption[] = ["mistral-embed"].map((x) => ({
+    label: x,
+    value: x,
+}));

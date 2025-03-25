@@ -1,7 +1,7 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormSelectCreatable } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
@@ -16,6 +16,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Label } from "reactstrap";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
+import { SelectOption } from "components/common/select/Select";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -59,7 +60,12 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="openAiSettings.endpoint" type="text" />
+                <FormSelectCreatable
+                    control={control}
+                    name="openAiSettings.endpoint"
+                    placeholder="Select an endpoint (or enter new one)"
+                    options={endpointOptions}
+                />
             </div>
             <div className="mb-2">
                 <Label>
@@ -68,7 +74,13 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="openAiSettings.model" type="text" disabled={isUsedByAnyTask} />
+                <FormSelectCreatable
+                    control={control}
+                    name="openAiSettings.model"
+                    isDisabled={isUsedByAnyTask}
+                    placeholder="Select a model (or enter new one)"
+                    options={modelOptions}
+                />
             </div>
             <div className="mb-2">
                 <Label>
@@ -153,3 +165,12 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         </>
     );
 }
+
+const endpointOptions: SelectOption[] = ["https://api.openai.com/v1/"].map((x) => ({ label: x, value: x }));
+
+const modelOptions: SelectOption[] = ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"].map(
+    (x) => ({
+        label: x,
+        value: x,
+    })
+);

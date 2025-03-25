@@ -1,7 +1,7 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormSelect, FormInput } from "components/common/Form";
+import { FormSelect, FormInput, FormSelectCreatable } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
 import { SelectOption } from "components/common/select/Select";
@@ -82,7 +82,13 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-                <FormInput control={control} name="googleSettings.model" type="text" disabled={isUsedByAnyTask} />
+                <FormSelectCreatable
+                    control={control}
+                    name="googleSettings.model"
+                    isDisabled={isUsedByAnyTask}
+                    placeholder="Select a model (or enter new one)"
+                    options={modelOptions}
+                />
             </div>
             <div className="mb-2">
                 <Label>
@@ -114,3 +120,16 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         </>
     );
 }
+
+const modelOptions: SelectOption[] = [
+    ...[
+        "text-embedding-004",
+        "text-embedding-005",
+        "textembedding-gecko@001",
+        "textembedding-gecko@002",
+        "textembedding-gecko@003",
+        "textembedding-gecko-multilingual@001",
+        "text-multilingual-embedding-002",
+    ].map((x) => ({ label: x, value: x })),
+    { value: "text-embedding-large-exp-03-07", label: "text-embedding-large-exp-03-07 (experimental)" },
+];
