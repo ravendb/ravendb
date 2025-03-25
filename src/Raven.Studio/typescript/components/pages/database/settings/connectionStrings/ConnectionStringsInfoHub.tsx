@@ -88,7 +88,7 @@ export function ConnectionStringsInfoHub() {
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
-        featureName: "Embeddings Generation",
+        featureName: "AI",
         featureIcon: "ai-etl",
         community: { value: true },
         professional: { value: true },
