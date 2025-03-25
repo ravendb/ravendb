@@ -5,7 +5,6 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
-import { allAiExternalProviders } from "components/utils/common";
 
 export function AiConnectionStringsInfoHub() {
     const { appUrl } = useAppUrls();
