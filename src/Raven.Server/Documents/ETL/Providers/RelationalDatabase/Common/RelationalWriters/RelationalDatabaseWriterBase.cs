@@ -186,8 +186,8 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
 
                     var elapsedMilliseconds = sp.ElapsedMilliseconds;
 
-                    if (Logger.IsInfoEnabled && token.IsCancellationRequested == false)
-                        Logger.Info($"Insert took: {elapsedMilliseconds:#,#;;0}ms, statement: {cmd.CommandText}");
+                    if (Logger.IsDebugEnabled && token.IsCancellationRequested == false)
+                        Logger.Debug($"Insert took: {elapsedMilliseconds:#,#;;0}ms, statement: {cmd.CommandText}");
 
                     var tableMetrics = _sqlMetrics.GetTableMetrics(tableName);
                     tableMetrics.InsertActionsMeter.MarkSingleThreaded(1);
@@ -271,8 +271,8 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
 
                     var elapsedMilliseconds = sp.ElapsedMilliseconds;
 
-                    if (Logger.IsInfoEnabled && token.IsCancellationRequested == false)
-                        Logger.Info($"Delete took: {elapsedMilliseconds:#,#;;0}ms, statement: {cmd.CommandText}");
+                    if (Logger.IsDebugEnabled && token.IsCancellationRequested == false)
+                        Logger.Debug($"Delete took: {elapsedMilliseconds:#,#;;0}ms, statement: {cmd.CommandText}");
 
                     var tableMetrics = _sqlMetrics.GetTableMetrics(tableName);
                     tableMetrics.DeleteActionsMeter.MarkSingleThreaded(1);
