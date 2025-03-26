@@ -17,6 +17,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { Label } from "reactstrap";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { SelectOption } from "components/common/select/Select";
+import { openAiModelOptions } from "../aiConnectionStringUtils";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -79,7 +80,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     name="openAiSettings.model"
                     isDisabled={isUsedByAnyTask}
                     placeholder="Select a model (or enter new one)"
-                    options={modelOptions}
+                    options={openAiModelOptions}
                 />
             </div>
             <div className="mb-2">
@@ -167,10 +168,3 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
 }
 
 const endpointOptions: SelectOption[] = ["https://api.openai.com/v1/"].map((x) => ({ label: x, value: x }));
-
-const modelOptions: SelectOption[] = ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"].map(
-    (x) => ({
-        label: x,
-        value: x,
-    })
-);

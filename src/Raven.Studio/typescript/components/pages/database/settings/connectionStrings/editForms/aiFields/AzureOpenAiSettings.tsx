@@ -1,4 +1,4 @@
-import { FormInput } from "components/common/Form";
+import { FormInput, FormSelectCreatable } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
 import {
@@ -16,6 +16,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
+import { openAiModelOptions } from "../aiConnectionStringUtils";
 
 export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
@@ -68,8 +69,13 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </Label>
-
-                <FormInput control={control} name="azureOpenAiSettings.model" type="text" disabled={isUsedByAnyTask} />
+                <FormSelectCreatable
+                    control={control}
+                    name="azureOpenAiSettings.model"
+                    isDisabled={isUsedByAnyTask}
+                    placeholder="Select a model (or enter new one)"
+                    options={openAiModelOptions}
+                />
             </div>
             <div className="mb-2">
                 <Label>
