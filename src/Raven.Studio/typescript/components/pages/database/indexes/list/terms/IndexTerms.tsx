@@ -21,6 +21,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { LoadError } from "components/common/LoadError";
 import { HStack } from "components/common/HStack";
 import Accordion from "react-bootstrap/Accordion";
+import AccordionCollapse from "react-bootstrap/AccordionCollapse";
 
 export default function IndexTerms({ pathParams }: ReactPathParamsProps) {
     const indexName = pathParams[0];
@@ -90,36 +91,38 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                         </HStack>
                     </div>
                 </Accordion.Header>
-                <Accordion.Body>
-                    {field.terms.length === 0 && <EmptySet iconSize="lg">No entries were found.</EmptySet>}
-                    <div>
-                        {field.terms.map((term, index) => (
-                            <IndexTermItem
-                                key={index}
-                                term={term}
-                                index={index}
-                                fieldTerms={field.terms}
-                                indexName={indexName}
-                                field={field}
-                            />
-                        ))}
-                    </div>
-                    {field.hasMoreTerms && (
-                        <span className="d-flex justify-content-center mt-4 mb-2">
-                            <ButtonWithSpinner
-                                data-testid="term-load-more-btn"
-                                variant="primary"
-                                icon="refresh"
-                                isSpinning={loadMore.loading}
-                                disabled={loadMore.loading}
-                                onClick={() => loadMore.execute(field.name)}
-                                className="rounded-pill"
-                            >
-                                Load more
-                            </ButtonWithSpinner>
-                        </span>
-                    )}
-                </Accordion.Body>
+                <AccordionCollapse unmountOnExit mountOnEnter eventKey={field.name}>
+                    <Accordion.Body>
+                        {field.terms.length === 0 && <EmptySet iconSize="lg">No entries were found.</EmptySet>}
+                        <div>
+                            {field.terms.map((term, index) => (
+                                <IndexTermItem
+                                    key={index}
+                                    term={term}
+                                    index={index}
+                                    fieldTerms={field.terms}
+                                    indexName={indexName}
+                                    field={field}
+                                />
+                            ))}
+                        </div>
+                        {field.hasMoreTerms && (
+                            <span className="d-flex justify-content-center mt-4 mb-2">
+                                <ButtonWithSpinner
+                                    data-testid="term-load-more-btn"
+                                    variant="primary"
+                                    icon="refresh"
+                                    isSpinning={loadMore.loading}
+                                    disabled={loadMore.loading}
+                                    onClick={() => loadMore.execute(field.name)}
+                                    className="rounded-pill"
+                                >
+                                    Load more
+                                </ButtonWithSpinner>
+                            </span>
+                        )}
+                    </Accordion.Body>
+                </AccordionCollapse>
             </Accordion.Item>
         </Accordion>
     );

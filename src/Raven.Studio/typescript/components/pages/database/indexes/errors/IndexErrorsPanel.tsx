@@ -82,7 +82,7 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                             </Button>
                         </RichPanelDetailItem>
                     </RichPanelDetails>
-                    <Collapse in={!panelCollapsed}>
+                    <Collapse unmountOnExit mountOnEnter in={!panelCollapsed}>
                         <RichPanelDetails>
                             <div className="w-100">
                                 {(asyncFetchErrorDetails.error as unknown as JQueryXHR).responseJSON.Message}
@@ -243,7 +243,7 @@ function IndexErrorsPanelDetailsStatus({
                         </PopoverWithHoverWrapper>
                     </LazyLoad>
                 </RichPanelDetails>
-                <Collapse in={!panelCollapsed}>
+                <Collapse unmountOnExit mountOnEnter in={!panelCollapsed}>
                     <RichPanelDetails>
                         <div ref={ref} className="w-100">
                             <IndexErrorsPanelTable
