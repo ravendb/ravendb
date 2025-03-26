@@ -50,7 +50,7 @@ internal sealed class AdminIndexHandlerProcessorForJavaScriptPut : AbstractAdmin
             if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 var optionsString = jsonOperationContext.ReadObject(options.ToAuditJson(), nameof(DatabaseSmugglerOptionsServerSide)).ToString();
-                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "IMPORT", $"Index deployment from legacy replication with options: '{optionsString}'");
+                RequestHandler.LogAuditForDatabase("IMPORT", $"Index deployment from legacy replication with options: '{optionsString}'");
             }
         }
     }

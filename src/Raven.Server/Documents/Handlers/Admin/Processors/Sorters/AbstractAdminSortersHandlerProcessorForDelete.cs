@@ -8,7 +8,7 @@ using Sparrow.Logging;
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Sorters;
 
 internal abstract class AbstractAdminSortersHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-    where TOperationContext : JsonOperationContext 
+    where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     protected AbstractAdminSortersHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler)
@@ -24,7 +24,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForDelete<TRequestHa
 
         if (RavenLogManager.Instance.IsAuditEnabled)
         {
-           RequestHandler.LogAuditFor(databaseName, "DELETE", $"Sorter '{name}'");
+            RequestHandler.LogAuditForDatabase("DELETE", $"Sorter '{name}'");
         }
 
         var command = new DeleteSorterCommand(name, databaseName, RequestHandler.GetRaftRequestIdFromQuery());

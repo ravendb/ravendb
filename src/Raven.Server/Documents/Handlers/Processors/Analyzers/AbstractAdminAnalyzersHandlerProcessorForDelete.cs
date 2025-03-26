@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
 
             if (RavenLogManager.Instance.IsAuditEnabled)
             {
-                RequestHandler.LogAuditFor(databaseName, "DELETE", $"Analyzer '{name}'");
+                RequestHandler.LogAuditForDatabase("DELETE", $"Analyzer '{name}'");
             }
 
             var command = new DeleteAnalyzerCommand(name, databaseName, RequestHandler.GetRaftRequestIdFromQuery());

@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
 
                 if (RavenLogManager.Instance.IsAuditEnabled && query.Metadata.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
-                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "QUERY", $"Streaming all documents (query: {query}, format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
+                    RequestHandler.LogAuditForDatabase("QUERY", $"Streaming all documents (query: {query}, format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
 
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";

@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     var optionsString = context.ReadObject(options.ToAuditJson(), nameof(DatabaseSmugglerOptionsServerSide)).ToString();
-                    LogAuditFor(Database.Name, "IMPORT", $"Executed legacy documents replication from '{fromServer}' with options: '{optionsString}'");
+                    LogAuditForDatabase("IMPORT", $"Executed legacy documents replication from '{fromServer}' with options: '{optionsString}'");
                 }
 
                 var replicationSource = GetSourceReplicationInformation(context, GetRemoteServerInstanceId(), out var documentId);

@@ -92,7 +92,7 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForAddUser<
 
         if (RavenLogManager.Instance.IsAuditEnabled)
         {
-            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"User '{newUser.Username}' in Postgres integration");
+            RequestHandler.LogAuditForDatabase("PUT", $"User '{newUser.Username}' in Postgres integration");
         }
 
         return config;

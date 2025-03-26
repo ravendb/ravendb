@@ -24,7 +24,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
     public override async ValueTask ExecuteAsync()
     {
         await RequestHandler.ServerStore.EnsureNotPassiveAsync();
-        
+
         using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
         {
             var databaseSettingsJson = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), Constants.DatabaseSettings.StudioId);
@@ -37,7 +37,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
                 databaseSettingsJson.GetPropertyByIndex(i, ref prop);
                 settingsToUpdate.Add(prop.Name, prop.Value?.ToString());
             }
-            
+
             if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 using (context.OpenReadTransaction())
@@ -47,7 +47,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
 
                     var updatedSettingsKeys = GetUpdatedSettingsKeys(currentSettings, settingsToUpdate);
 
-                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Database configuration. Changed settings: {string.Join(" ", updatedSettingsKeys)}");
+                    RequestHandler.LogAuditForDatabase("CHANGE", $"Database configuration. Changed settings: {string.Join(" ", updatedSettingsKeys)}");
                 }
             }
 
@@ -60,7 +60,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
 
         RequestHandler.NoContentStatus(HttpStatusCode.Created);
     }
-    
+
     private static List<string> GetUpdatedSettingsKeys(Dictionary<string, string> currentSettings, Dictionary<string, string> settingsToUpdate)
     {
         var updatedSettings = new List<string>();

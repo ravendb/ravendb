@@ -34,7 +34,7 @@ internal sealed class IndexHandlerProcessorForReset : AbstractIndexHandlerProces
 
         if (RavenLogManager.Instance.IsAuditEnabled)
         {
-            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "RESET", $"Index '{name}'");
+            RequestHandler.LogAuditForDatabase("RESET", $"Index '{name}'");
         }
 
         return ValueTask.CompletedTask;

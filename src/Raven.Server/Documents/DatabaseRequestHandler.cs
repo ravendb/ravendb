@@ -6,14 +6,12 @@ using Raven.Client;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Configuration;
 using Raven.Server.Web;
 using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
@@ -125,7 +123,7 @@ namespace Raven.Server.Documents
         {
             return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
         }
-        
+
         public override OperationCancelToken CreateBackgroundOperationToken()
         {
             return new OperationCancelToken(Database.DatabaseShutdown);

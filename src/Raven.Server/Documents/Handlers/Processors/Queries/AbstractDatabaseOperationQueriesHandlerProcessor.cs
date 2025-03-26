@@ -53,7 +53,7 @@ internal abstract class AbstractDatabaseOperationQueriesHandlerProcessor : Abstr
         var op = GetOperation(query);
 
         if (RavenLogManager.Instance.IsAuditEnabled)
-            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Documents matching the query: {query}");
+            RequestHandler.LogAuditForDatabase("DELETE", $"Documents matching the query: {query}");
 
         ExecuteQueryOperation(query, operationId, options, op.Action,  QueryOperationContext, op.Type);
     }

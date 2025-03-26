@@ -63,7 +63,7 @@ namespace Raven.Server.Web.System
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    LogAuditFor("DbMgmt", "CHANGE", $"Database '{dbName}' topology. " +
+                    LogAuditForServer("CHANGE", $"Database '{dbName}' topology. " +
                                                     $"Old topology: {databaseRecord.Topology} " +
                                                     $"New topology: {databaseTopology}.");
                 }
@@ -224,7 +224,7 @@ namespace Raven.Server.Web.System
                 [nameof(ServerNode.Database)] = name
             };
 
-            if(details != null)
+            if (details != null)
             {
                 json[nameof(ServerNode.ServerVersion)] =
                     details.BuildInfo.AssemblyVersion ?? details.BuildInfo.ProductVersion;
@@ -350,7 +350,7 @@ namespace Raven.Server.Web.System
                 if (url != null)
                     return url;
             }
-            
+
             if (Server.ServerStore.NodeTag == tag)
                 url = ServerStore.GetNodeHttpServerUrl(HttpContext.Request.GetClientRequestedNodeUrl());
 

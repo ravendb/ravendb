@@ -208,7 +208,7 @@ namespace Raven.Server.Web.System
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    LogAuditFor("DbMgmt", "PUT", $"Database '{databaseRecord.DatabaseName}'");
+                    LogAuditForServer("PUT", $"Database '{databaseRecord.DatabaseName}'");
                 }
 
                 if (ServerStore.LicenseManager.LicenseStatus.HasDocumentsCompression && databaseRecord.DocumentsCompression == null)
@@ -584,7 +584,7 @@ namespace Raven.Server.Web.System
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     var configurationString = context.ReadObject(configurationJsonForAudit, nameof(configurationJsonForAudit)).ToString();
-                    LogAuditFor(restoreConfiguration.DatabaseName, "IMPORT",
+                    LogAuditForDatabase(restoreConfiguration.DatabaseName, "IMPORT",
                         $"{EnumHelper.GetDescription(OperationType.DatabaseRestore)} with restore type: '{restoreType}' " +
                         $"using configuration: '{configurationString}'");
                 }
@@ -618,7 +618,7 @@ namespace Raven.Server.Web.System
 
             if (RavenLogManager.Instance.IsAuditEnabled)
             {
-                LogAuditFor(databaseName, "DELAY", $"Backup task with task id '{id}' until '{delayUntil}' UTC");
+                LogAuditForDatabase(databaseName, "DELAY", $"Backup task with task id '{id}' until '{delayUntil}' UTC");
             }
 
             NoContentStatus();
@@ -642,7 +642,7 @@ namespace Raven.Server.Web.System
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    LogAuditFor("DbMgmt", "DELETE", $"Attempt to delete database(s) [{string.Join(", ", parameters.DatabaseNames)}] from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
+                    LogAuditForServer("DELETE", $"Attempt to delete database(s) [{string.Join(", ", parameters.DatabaseNames)}] from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
                 }
 
                 using (context.OpenReadTransaction())
@@ -722,7 +722,7 @@ namespace Raven.Server.Web.System
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    LogAuditFor("DbMgmt", "DELETE", $"Database(s) [{string.Join(", ", databasesToDelete)}] from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
+                    LogAuditForServer("DELETE", $"Database(s) [{string.Join(", ", databasesToDelete)}] from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
                 }
 
                 long index = -1;
@@ -1020,7 +1020,7 @@ namespace Raven.Server.Web.System
                         console.Log.Warn($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
                     if (RavenLogManager.Instance.IsAuditEnabled)
-                        LogAuditFor("Server", "Execute", $"AdminJSConsole Script: \"{adminJsScript.Script}\"");
+                        LogAuditForServer("Execute", $"AdminJSConsole Script: \"{adminJsScript.Script}\"");
 
                     result = console.ApplyScript(adminJsScript);
                 }
@@ -1039,7 +1039,7 @@ namespace Raven.Server.Web.System
                         console.Log.Warn($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
                     if (RavenLogManager.Instance.IsAuditEnabled)
-                        LogAuditFor("Database", "Execute", $"AdminJSConsole Script: \"{adminJsScript.Script}\"");
+                        LogAuditForServer("EXECUTE", $"AdminJSConsole Script: \"{adminJsScript.Script}\"");
 
                     result = console.ApplyScript(adminJsScript);
                 }
@@ -1324,7 +1324,7 @@ namespace Raven.Server.Web.System
                     foreach (var databaseMigrationSettings in migrationConfigurationJson.Databases)
                     {
                         var databaseMigrationSettingsString = context.ReadObject(databaseMigrationSettings.ToAuditJson(), nameof(databaseMigrationSettings)).ToString();
-                        LogAuditFor(databaseMigrationSettings.DatabaseName, "IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseMigration)} from RavenDB " +
+                        LogAuditForDatabase(databaseMigrationSettings.DatabaseName, "IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseMigration)} from RavenDB " +
                                                                                       $"using configuration: '{databaseMigrationSettingsString}'");
                     }
 
@@ -1487,7 +1487,7 @@ namespace Raven.Server.Web.System
                                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                     {
                                         var configurationString = context.ReadObject(configuration.ToAuditJson(), nameof(configuration)).ToString();
-                                        LogAuditFor(databaseName, "IMPORT",
+                                        LogAuditForDatabase(databaseName, "IMPORT",
                                             $"{EnumHelper.GetDescription(OperationType.MigrationFromLegacyData)} " +
                                             $"using configuration: '{configurationString}'");
                                     }

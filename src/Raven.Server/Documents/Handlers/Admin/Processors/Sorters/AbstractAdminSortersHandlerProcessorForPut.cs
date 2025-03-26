@@ -35,7 +35,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForPut<TRequestHandl
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    RequestHandler.LogAuditFor(databaseName, "PUT", $"Sorter '{sorterDefinition.Name}' with definition: {sorterToAdd}");
+                    RequestHandler.LogAuditForDatabase("PUT", $"Sorter '{sorterDefinition.Name}' with definition: {sorterToAdd}");
                 }
 
                 sorterDefinition.Validate();

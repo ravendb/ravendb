@@ -23,7 +23,7 @@ internal abstract class AbstractIndexHandlerProcessorForDelete<TRequestHandler, 
 
         if (RavenLogManager.Instance.IsAuditEnabled)
         {
-           RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Index '{name}'");
+           RequestHandler.LogAuditForDatabase("DELETE", $"Index '{name}'");
         }
 
         var processor = GetIndexDeleteProcessor();

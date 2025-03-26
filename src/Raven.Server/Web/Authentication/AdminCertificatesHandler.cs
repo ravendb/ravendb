@@ -43,7 +43,7 @@ namespace Raven.Server.Web.Authentication
 
         public const string HasTwoFactorFieldName = "HasTwoFactor";
         public const string TwoFactorExpirationDate = "TwoFactorExpirationDate";
-        
+
         [RavenAction("/admin/certificates/2fa/generate", "GET", AuthorizationStatus.Operator)]
         public async Task GenerateSecret()
         {
@@ -61,7 +61,7 @@ namespace Raven.Server.Web.Authentication
                 writer.WriteEndObject();
             }
         }
-        
+
         [RavenAction("/admin/certificates", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task Generate()
         {
@@ -76,11 +76,11 @@ namespace Raven.Server.Web.Authentication
                     operationId = ServerStore.Operations.GetNextOperationId();
 
                 var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
-                
+
                 var certificateJson = await ctx.ReadForDiskAsync(stream, "certificate-generation");
 
                 certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string twoFactorAuthenticationKey);
-                
+
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
                 if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
@@ -94,10 +94,10 @@ namespace Raven.Server.Web.Authentication
                 {
                     var permissions = FormatPermissions(certificate);
 
-                    LogAuditFor("Certificates", "GENERATE", 
+                    LogAuditForServer("GENERATE",
                         $"Certificate {certificate?.Name}. Security Clearance: {certificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}");
                 }
-                
+
                 byte[] certs = null;
                 await ServerStore.Operations.AddLocalOperation(
                         operationId.Value,
@@ -231,8 +231,7 @@ namespace Raven.Server.Web.Authentication
                 if (AuditLogger.IsAuditEnabled)
                 {
                     var permissions = FormatPermissions(certificate);
-                    LogAuditFor("Certificates",
-                        "ADD",
+                    LogAuditForServer("ADD",
                         $"New certificate {certificate?.Name} ['{certificate?.Thumbprint}']. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}");
                 }
 
@@ -378,7 +377,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     foreach (string keyToDelete in keysToDelete)
                     {
-                        LogAuditFor("Certificates", "DELETE", $"Certificate '{keyToDelete}'.");
+                        LogAuditForServer("DELETE", $"Certificate '{keyToDelete}'.");
                     }
                 }
 
@@ -428,7 +427,7 @@ namespace Raven.Server.Web.Authentication
 
                 if (AuditLogger.IsAuditEnabled)
                 {
-                    LogAuditFor("Certificates", "DELETE", $"Certificate '{thumbprint}'.");
+                    LogAuditForServer("DELETE", $"Certificate '{thumbprint}'.");
                 }
 
                 await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
@@ -527,7 +526,7 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteComma();
                         writer.WriteArray("WellKnownAdminCerts", wellKnown);
                         writer.WriteComma();
-                        writer.WriteArray("WellKnownIssuers", Server.WellKnownIssuers?.Select(x=>x.Thumbprint) ?? Array.Empty<string>());
+                        writer.WriteArray("WellKnownIssuers", Server.WellKnownIssuers?.Select(x => x.Thumbprint) ?? Array.Empty<string>());
                         writer.WriteEndObject();
                     }
                 }
@@ -608,16 +607,16 @@ namespace Raven.Server.Web.Authentication
                 if (metadataOnly)
                 {
                     var defJson = def.ToJson(true);
-                    
+
                     if (HttpContext.Request.IsFromStudio())
                     {
                         var hasTwoFactor = certificate.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
-                    
+
                         defJson[HasTwoFactorFieldName] = hasTwoFactor;
                     }
-                    
+
                     certificateRef = context.ReadObject(defJson, "Client/Certificate/Definition");
-                    
+
                     certificate.Dispose();
                 }
                 else
@@ -625,7 +624,7 @@ namespace Raven.Server.Web.Authentication
                     // make sure we don't leak fields like TwoFactorAuthenticationKey
                     certificateRef = context.ReadObject(def.ToJson(false), "Client/Certificate/Definition");
                 }
-                
+
                 certificates.TryAdd(thumbprint, certificateRef);
             }
         }
@@ -685,7 +684,7 @@ namespace Raven.Server.Web.Authentication
                         };
                         certificate = ctx.ReadObject(wellKnownCertDef.ToJson(), "WellKnown/Certificate/Definition");
                     }
-                    else if(Server.CertificateHasWellKnownIssuer(clientCert, out var issuer))
+                    else if (Server.CertificateHasWellKnownIssuer(clientCert, out var issuer))
                     {
                         var wellKnownCertDef = new CertificateDefinition
                         {
@@ -708,13 +707,13 @@ namespace Raven.Server.Web.Authentication
                 {
                     var certificateDefinition = JsonDeserializationServer.CertificateDefinition(certificate);
                     var certificateDJV = certificateDefinition.ToJson(false);
-                    
+
                     var hasTwoFactor = certificate.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
                     certificateDJV[HasTwoFactorFieldName] = hasTwoFactor;
-                    
+
                     var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
                     certificateDJV[TwoFactorExpirationDate] = feature?.TwoFactorAuthRegistration?.Expiry;
-                    
+
                     ctx.Write(writer, certificateDJV);
                 }
             }
@@ -726,7 +725,7 @@ namespace Raven.Server.Web.Authentication
             await ServerStore.EnsureNotPassiveAsync();
 
             var deleteTwoFactorConfiguration = GetBoolValueQueryString("deleteTwoFactorConfiguration", required: false) ?? false;
-            
+
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var clientCert = feature?.Certificate;
 
@@ -734,7 +733,7 @@ namespace Raven.Server.Web.Authentication
             using (var certificateJson = await ctx.ReadForDiskAsync(RequestBodyStream(), "edit-certificate"))
             {
                 var newCertificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
-                
+
                 certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string newTwoFactorAuthenticationKey);
 
                 ValidateCertificateDefinition(newCertificate, ServerStore);
@@ -746,9 +745,9 @@ namespace Raven.Server.Web.Authentication
                     var existingCertificateJson = ServerStore.Cluster.GetCertificateByThumbprint(ctx, newCertificate.Thumbprint);
                     if (existingCertificateJson == null)
                         throw new InvalidOperationException($"Cannot edit permissions for certificate with thumbprint '{newCertificate.Thumbprint}'. It doesn't exist in the cluster.");
-                    
+
                     existingCertificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out twoFactorAuthenticationKey);
-                    
+
                     if (deleteTwoFactorConfiguration)
                     {
                         twoFactorAuthenticationKey = null;
@@ -757,7 +756,7 @@ namespace Raven.Server.Web.Authentication
                     {
                         twoFactorAuthenticationKey = newTwoFactorAuthenticationKey;
                     }
-                    
+
                     existingCertificate = JsonDeserializationServer.CertificateDefinition(existingCertificateJson);
 
                     if ((existingCertificate.SecurityClearance == SecurityClearance.ClusterAdmin || existingCertificate.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
@@ -779,7 +778,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     var permissions = FormatPermissions(newCertificate);
 
-                    LogAuditFor("Certificates", "CHANGE", 
+                    LogAuditForServer("CHANGE",
                         $"Certificate {newCertificate?.Name}. Security Clearance: {newCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}");
                 }
 
@@ -1008,9 +1007,9 @@ namespace Raven.Server.Web.Authentication
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    LogAuditFor("Certificates", "RENEW", "Server certificate");
+                    LogAuditForServer("RENEW", "Server certificate");
                 }
-                
+
                 try
                 {
                     var success = Server.RefreshClusterCertificate(true, GetRaftRequestIdFromQuery());
@@ -1292,6 +1291,6 @@ namespace Raven.Server.Web.Authentication
                 }
             }
         }
-        
+
     }
 }

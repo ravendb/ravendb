@@ -70,7 +70,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"Index '{indexDefinition.Name}' with definition: {indexToAdd}");
+                    RequestHandler.LogAuditForDatabase("PUT", $"Index '{indexDefinition.Name}' with definition: {indexToAdd}");
                 }
 
                 if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)

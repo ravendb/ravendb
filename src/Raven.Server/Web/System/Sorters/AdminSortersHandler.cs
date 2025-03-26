@@ -31,7 +31,7 @@ namespace Raven.Server.Web.System.Sorters
 
                     if (RavenLogManager.Instance.IsAuditEnabled)
                     {
-                        LogAuditFor("Server", "PUT", $"Sorter '{sorterDefinition.Name}' with definition: {sorterToAdd}");
+                        LogAuditForServer("PUT", $"Sorter '{sorterDefinition.Name}' with definition: {sorterToAdd}");
                     }
 
                     sorterDefinition.Validate();
@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System.Sorters
 
             if (RavenLogManager.Instance.IsAuditEnabled)
             {
-                LogAuditFor("Server", "DELETE", $"Sorter '{name}'");
+                LogAuditForServer("DELETE", $"Sorter '{name}'");
             }
 
             var command = new DeleteServerWideSorterCommand(name, GetRaftRequestIdFromQuery());

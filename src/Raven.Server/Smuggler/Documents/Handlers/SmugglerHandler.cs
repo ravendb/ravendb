@@ -94,7 +94,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             await BulkImport(files, Path.GetTempPath());
 
             if (RavenLogManager.Instance.IsAuditEnabled)
-                LogAuditFor(Database.Name, "IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseImport)} from S3 directory " +
+                LogAuditForDatabase("IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseImport)} from S3 directory " +
                                                      $"using url: '{url}', files count: '{files.Count}'");
         }
 
@@ -196,7 +196,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     var migrationConfigurationString = context.ReadObject(migrationConfigurationJson.MigrationSettings.ToAuditJson(), nameof(DatabaseMigrationSettings)).ToString();
-                    LogAuditFor(Database.Name, "IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseMigration)} from RavenDB " +
+                    LogAuditForDatabase("IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseMigration)} from RavenDB " +
                                                       $"using configuration: '{migrationConfigurationString}'");
                 }
 
@@ -379,7 +379,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     if (RavenLogManager.Instance.IsAuditEnabled)
                                     {
                                         var optionsString = migrateContext.ReadObject(options.ToAuditJson(), nameof(DatabaseSmugglerOptionsServerSide)).ToString();
-                                        LogAuditFor(Database.Name, "IMPORT", $"{description} using options: '{optionsString}'");
+                                        LogAuditForDatabase("IMPORT", $"{description} using options: '{optionsString}'");
                                     }
                                 }
                             }
@@ -548,7 +548,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         if (RavenLogManager.Instance.IsAuditEnabled)
                                         {
                                             var optionsString = context.ReadObject(options.ToAuditJson(), nameof(DatabaseSmugglerOptionsServerSide)).ToString();
-                                            LogAuditFor(Database.Name, "IMPORT", $"{operationDescription} using options: '{optionsString}'");
+                                            LogAuditForDatabase("IMPORT", $"{operationDescription} using options: '{optionsString}'");
                                         }
                                     }
                                 }

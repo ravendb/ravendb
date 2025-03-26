@@ -5,6 +5,8 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using System;
+using Raven.Server.Logging;
 
 namespace Raven.Server.Documents;
 
@@ -34,4 +36,15 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
     public abstract bool ShouldAddPagingPerformanceHint(long numberOfResults);
 
     public abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, long pageSize, long duration, long totalDocumentsSizeInBytes);
+
+    public void LogAuditForDatabase(string action, string target, Exception e = null)
+    {
+        LogAuditForDatabase(DatabaseName, action, target, e);
+    }
+
+    public void LogAuditForIndex(string indexName, string action, string target, Exception e = null)
+    {
+        var auditLogger = RavenLogManager.Instance.GetAuditLoggerForIndex(DatabaseName, indexName);
+        LogAuditForInternal(auditLogger, action, target, e);
+    }
 }

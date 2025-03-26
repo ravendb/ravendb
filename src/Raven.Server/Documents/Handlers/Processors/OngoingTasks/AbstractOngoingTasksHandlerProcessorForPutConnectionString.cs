@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (RavenLogManager.Instance.IsAuditEnabled)
             {
-                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"Connection string '{connectionString.Name}'");
+                RequestHandler.LogAuditForDatabase("PUT", $"Connection string '{connectionString.Name}'");
             }
 
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;

@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
                 }
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
-                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseImport)} from sample data");
+                    RequestHandler.LogAuditForDatabase("IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseImport)} from sample data");
 
                 await RequestHandler.NoContent();
             }

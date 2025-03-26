@@ -40,7 +40,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
         var authRegistration = feature.TwoFactorAuthRegistration;
         if (authRegistration != null)
             Server.TwoFactor.ForgotTwoFactorAuthSuccess(authRegistration);
-        
+
         NoContentStatus();
         return Task.CompletedTask;
     }
@@ -52,7 +52,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
         ctx.OpenReadTransaction();
 
         bool hasLimits = GetBoolValueQueryString("hasLimits", false) ?? true;
-        var sessionDuration = GetIntValueQueryString("sessionDurationInMin", false) 
+        var sessionDuration = GetIntValueQueryString("sessionDurationInMin", false)
                               ?? Server.Configuration.Security.DefaultTwoFactorSessionDuration.GetValue(TimeUnit.Minutes);
 
         var maxSessionDuration = Server.Configuration.Security.MaxTwoFactorSessionDuration.GetValue(TimeUnit.Minutes);
@@ -61,7 +61,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
             await ReplyWith(ctx, $"Requested two factor authentication duration is higher than maximum session length ({maxSessionDuration})", HttpStatusCode.BadRequest);
             return;
         }
-        
+
 
         var clientCert = GetCurrentCertificate();
 
@@ -72,7 +72,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
         }
 
         using var input = await ctx.ReadForMemoryAsync(RequestBodyStream(), "2fa-auth");
-        
+
         var certificate = ServerStore.Cluster.GetCertificateByThumbprint(ctx, clientCert.Thumbprint);
         if (certificate == null)
         {
@@ -91,18 +91,18 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
         if (TwoFactorAuthentication.ValidateCode(key, token))
         {
             var period = TimeSpan.FromMinutes(sessionDuration);
-            
+
             if (RavenLogManager.Instance.IsAuditEnabled)
             {
-                LogAuditFor(nameof(TwoFactorAuthenticationHandler), "AUTH", $"2FA session open for {period} (until: {DateTime.UtcNow.Add(period)}). Has limits: {hasLimits}");
+                LogAuditForServer("AUTH", $"2FA session open for {period} (until: {DateTime.UtcNow.Add(period)}). Has limits: {hasLimits}");
             }
 
             string expectedCookieValue = null;
-            
+
             if (hasLimits)
             {
                 expectedCookieValue = Guid.NewGuid().ToString();
-            
+
                 HttpContext.Response.Cookies.Append(TwoFactorAuthentication.CookieName, expectedCookieValue, new CookieOptions
                 {
                     HttpOnly = true,
@@ -122,10 +122,10 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
             };
 
             Server.TwoFactor.RegisterTwoFactorAuthSuccess(twoFactorAuthRegistration);
-            
+
             var feature = (RavenServer.AuthenticateConnection)HttpContext.Features.Get<IHttpAuthenticationFeature>();
             feature.SuccessfulTwoFactorAuthentication(); // enable access for the current connection
-            
+
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Accepted;
             HttpContext.Response.Headers.Remove("Content-Type");
         }
@@ -139,7 +139,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
     {
         if (RavenLogManager.Instance.IsAuditEnabled)
         {
-            LogAuditFor(nameof(TwoFactorAuthenticationHandler), "AUTH", $"2FA failure: {err}");
+            LogAuditForServer("AUTH", $"2FA failure: {err}");
         }
 
         HttpContext.Response.StatusCode = (int)httpStatusCode;

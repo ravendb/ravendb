@@ -217,6 +217,23 @@ internal static class RavenLogManagerServerExtensions
             return new RavenAuditLogger(logger);
         });
     }
+
+    public static RavenAuditLogger GetAuditLoggerForIndex(this RavenLogManager logManager, [NotNull] string databaseName, [NotNull] string indexName)
+    {
+        if (databaseName == null)
+            throw new ArgumentNullException(nameof(databaseName));
+        if (indexName == null) 
+            throw new ArgumentNullException(nameof(indexName));
+
+        return AuditLoggers.GetOrAdd($"{databaseName}/{indexName}", r =>
+        {
+            var logger = LogManager.GetLogger("Audit")
+                .WithProperty(Constants.Logging.Properties.Resource, databaseName)
+                .WithProperty(Constants.Logging.Properties.Component, indexName);
+
+            return new RavenAuditLogger(logger);
+        });
+    }
 #endif
 
     private static RavenLogger GetLoggerForResourceInternal(RavenLogManager logManager, string name, LoggingResource resource, LoggingComponent component)

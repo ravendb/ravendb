@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (RavenLogManager.Instance.IsAuditEnabled)
             {
-                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Connection string '{connectionStringName}'");
+                RequestHandler.LogAuditForDatabase("DELETE", $"Connection string '{connectionStringName}'");
             }
 
             return await RequestHandler.ServerStore.RemoveConnectionString(RequestHandler.DatabaseName, connectionStringName, type, raftRequestId);

@@ -29,7 +29,10 @@ namespace Raven.Server.Web
                     line += ($" Configuration: {confString}");
                 }
 
-                LogAuditFor(_context.DatabaseName ?? "Server", "TASK", line);
+                if (_context.DatabaseName != null)
+                    LogAuditForDatabase(_context.DatabaseName, "TASK", line);
+                else
+                    LogAuditForServer("TASK", line);
             }
         }
 
@@ -52,18 +55,28 @@ namespace Raven.Server.Web
 
         public string RequestIp => IsLocalRequest() ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
 
-        public void LogAuditFor(string logger, string action, string target, Exception e = null)
+        public void LogAuditForServer(string action, string target, Exception e = null)
         {
             var auditLogger = RavenLogManager.Instance.GetAuditLoggerForServer();
+            LogAuditForInternal(auditLogger, action, target, e);
+        }
 
-            Debug.Assert(auditLogger.IsAuditEnabled, $"auditlog info is disabled");
+        public void LogAuditForDatabase(string databaseName, string action, string target, Exception e = null)
+        {
+            var auditLogger = RavenLogManager.Instance.GetAuditLoggerForDatabase(databaseName);
+            LogAuditForInternal(auditLogger, action, target, e);
+        }
+
+        internal void LogAuditForInternal(RavenAuditLogger auditLogger, string action, string target, Exception e = null)
+        {
+            Debug.Assert(auditLogger.IsAuditEnabled, "auditlog info is disabled");
 
             var clientCert = GetCurrentCertificate();
 
             var sb = new StringBuilder();
             sb.Append(RequestIp);
             sb.Append(", ");
-            if (clientCert != null) 
+            if (clientCert != null)
                 sb.Append($"CN={clientCert.Subject} [{clientCert.Thumbprint}], ");
             else
                 sb.Append("no certificate, ");

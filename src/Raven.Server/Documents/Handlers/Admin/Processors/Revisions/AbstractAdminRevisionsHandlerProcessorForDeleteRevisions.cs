@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Delete Revisions ,parameters: {json}");
+                    RequestHandler.LogAuditForDatabase("DELETE", $"Delete Revisions, parameters: {json}");
                 }
             }
 
