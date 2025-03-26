@@ -15,13 +15,24 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
     }  
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
+
+        const taskLabel = this.getTaskLabel();
+
         return this.updateEtl()
             .fail((response: JQueryXHR) => {
-                this.reportError(`Failed to save ${this.payload.EtlType.toUpperCase()} ETL task`, response.responseText, response.statusText);
+                this.reportError(`Failed to save ${taskLabel} task`, response.responseText, response.statusText);
             })
             .done(() => {
-                this.reportSuccess(`Saved ${this.payload.EtlType.toUpperCase()} ETL task`); 
+                this.reportSuccess(`Saved ${taskLabel} task`); 
             });
+    }
+
+    private getTaskLabel(): string {
+        if (this.payload.EtlType === "EmbeddingsGeneration") {
+            return "Embeddings Generation";
+        }
+
+        return `${this.payload.EtlType.toUpperCase()} ETL`;
     }
 
     private updateEtl(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
