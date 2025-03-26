@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Queries
                 query = new PhraseQuery
                 {
                     Boost = boost.Value
-                };;
+                };
                 return false;
             }
 
