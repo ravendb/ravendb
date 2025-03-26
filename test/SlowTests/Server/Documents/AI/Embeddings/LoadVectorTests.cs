@@ -64,7 +64,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
 
             var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByText("joe"))
+                    v => v.ByText("joe"), minimumSimilarity: 0.75f)
                 .ToList();
 
             Assert.Single(byVector);
@@ -92,7 +92,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
 
             var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByText("Joe"))
+                    v => v.ByText("Joe"), minimumSimilarity: 0.75f)
                 .ToList();
 
             Assert.Empty(byVector);
@@ -144,7 +144,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             Assert.Equal(0, nullElements);
 
             var byVector = session.Query<Dto, TIndex>().VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByText("Joe"))
+                    v => v.ByText("Joe"), minimumSimilarity: 0.75f)
                 .ToList();
 
             Assert.Single(byVector);
@@ -172,7 +172,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
 
             var byVector = session.Query<Dto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector),
-                    v => v.ByText("Joe"))
+                    v => v.ByText("Joe"), minimumSimilarity: 0.75f)
                 .ToList();
 
             Assert.Empty(byVector);
