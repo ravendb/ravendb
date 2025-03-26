@@ -48,7 +48,7 @@ public static class EmbeddingsHelper
 
         Sodium.GenericHash(valueSpan, hashBuffer);
 
-        return Convert.ToHexString(hashBuffer);
+        return Convert.ToBase64String(hashBuffer);
     }
     
     public static string GetEmbeddingDocumentId(string documentId)
