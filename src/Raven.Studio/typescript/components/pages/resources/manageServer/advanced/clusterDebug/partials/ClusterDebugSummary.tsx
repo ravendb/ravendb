@@ -226,7 +226,11 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                 </>
                                             }
                                         >
-                                            <Progress color="progress" value={node.data.progress} animated>
+                                            <Progress
+                                                color="progress"
+                                                value={node.data.progress}
+                                                animated={node.data.progress < 100}
+                                            >
                                                 {node.data.progress}%
                                             </Progress>
                                         </PopoverWithHoverWrapper>

@@ -1,18 +1,15 @@
 import React from "react";
 import { ColumnDef, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
-import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
+import DateFormatterCell from "components/common/virtualTable/cells/CellDateFormatter";
+import genUtils from "common/generalUtils";
 
 interface ClusterSnapshotInstallationProps {
     messages: Raven.Server.Rachis.RachisDebugMessage[];
     availableWidth: number;
 }
-/* TODO
-- fix size getter issue (get rid of scroll)
-- format At with generalUtils.formatDurationByDate(moment.utc(x.At)) + add column preview
- */
 
 export default function ClusterSnapshotInstallation(props: ClusterSnapshotInstallationProps) {
     const { messages, availableWidth } = props;
@@ -24,7 +21,7 @@ export default function ClusterSnapshotInstallation(props: ClusterSnapshotInstal
         {
             header: "Time",
             accessorKey: "At",
-            cell: CellValueWrapper,
+            cell: (props) => <DateFormatterCell {...props} displayFormat={genUtils.dateFormat} />,
             size: getSize(25),
         },
         {

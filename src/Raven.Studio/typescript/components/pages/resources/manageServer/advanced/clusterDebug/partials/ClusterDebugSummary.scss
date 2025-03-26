@@ -3,11 +3,12 @@
 
 table.cluster-debug-summary {
     thead {
-            th {
-                background-color: colors.$panel-header-bg-var !important;
-            }
+        th {
+            background-color: colors.$panel-header-bg-var !important;
+        }
     }
-    td, th {
+    td,
+    th {
         min-width: 250px;
     }
 }

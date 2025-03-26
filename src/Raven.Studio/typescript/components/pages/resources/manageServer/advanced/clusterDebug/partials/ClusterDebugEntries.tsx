@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import NavItem from "react-bootstrap/NavItem";
 import NavLink from "react-bootstrap/NavLink";
@@ -15,17 +15,21 @@ import Code from "components/common/Code";
 import useDialog from "components/common/Dialog";
 import useConfirm from "components/common/ConfirmDialog";
 import { useVirtualTableWithoutTotalCount } from "components/common/virtualTable/hooks/useVirtualTableWithoutTotalCount";
+import { Icon } from "components/common/Icon";
+import { ClusterDebugNodeInfo } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/common";
+import { nodeAwareLoadableData } from "hooks/useClusterWideAsync";
+import RichAlert from "components/common/RichAlert";
 
 interface ClusterDebugEntriesProps {
     availableWidth: number;
+    nodes: nodeAwareLoadableData<ClusterDebugNodeInfo>[];
 }
 
 //TODO: add pagining
 
 export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
-    const { availableWidth } = props;
+    const { availableWidth, nodes } = props;
     const localNode = useAppSelector(clusterSelectors.localNode);
-    const allNodes = useAppSelector(clusterSelectors.allNodes);
 
     const dialog = useDialog();
     const confirm = useConfirm();
@@ -58,13 +62,11 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
                         <p>
                             You are about to delete log entry with index <code>{logIndex}</code>.
                         </p>
-                        <p>
-                            Warning:
-                            <br />
+                        <RichAlert variant="warning" icon="warning">
                             Deleting a log entry from the Raft command log can lead to data inconsistencies and cluster
                             instability. If all nodes are connected and there are no network errors, this Raft command
                             will be deleted from ALL nodes in the cluster. Proceed with caution.
-                        </p>
+                        </RichAlert>
                     </div>
                 ),
             });
@@ -105,7 +107,7 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
     return (
         <div className="cluster-debug-entries">
             <Nav variant="tabs">
-                {allNodes.map((node) => (
+                {nodes.map((node) => (
                     <NavItem key={node.nodeTag}>
                         <NavLink
                             className={classNames({ active: activeTab === node.nodeTag }, "no-decor")}
@@ -113,6 +115,10 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
                         >
                             <div className="d-flex gap-1 align-items-center">
                                 <span>
+                                    <Icon
+                                        icon={node.data?.role === "Leader" ? "node-leader" : "cluster-member"}
+                                        color="node"
+                                    />
                                     <span className="text-nowrap">Node {node.nodeTag}</span>
                                 </span>
                                 {node.nodeTag === localNode.nodeTag && (
