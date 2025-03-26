@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -17,6 +18,8 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
+using static Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -524,9 +527,25 @@ namespace Raven.Server.Documents.Replication
                     if (resolvedToLatest)
                     {
                         // delete duplicates
-                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
-                            updateDocument: false,
-                            attachment.Hash, attachment.ContentType, usePartialKey: false, storageOnly: true);
+
+                        if (attachment.Flags == AttachmentFlags.Retired)
+                        {
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
+                                updateDocument: false,
+                                attachment.Hash, attachment.ContentType, usePartialKey: false);
+                        }
+                        else
+                        {
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
+                                updateDocument: false,
+                                attachment.Hash, attachment.ContentType, usePartialKey: false);
+                        }
+
+
+
+
+                   //     Database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentWhenStateUnknown(config, context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+
                     }
                     else
                     {

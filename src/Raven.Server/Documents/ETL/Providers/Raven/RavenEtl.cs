@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new TombstonesToRavenEtlItems(context, tombstones, collection, trackAttachments);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        protected override IEnumerator<RavenEtlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones, List<string> collections)
         {
             return new AttachmentTombstonesToRavenEtlItems(context, tombstones, collections);
         }

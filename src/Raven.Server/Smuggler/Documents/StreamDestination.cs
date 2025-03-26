@@ -1590,7 +1590,7 @@ namespace Raven.Server.Smuggler.Documents
                             }
                         }
                     }
-                    else if(flags.Contain(AttachmentFlags.Retired))
+                    else if(flags == AttachmentFlags.Retired)
                     {
                         
                     }

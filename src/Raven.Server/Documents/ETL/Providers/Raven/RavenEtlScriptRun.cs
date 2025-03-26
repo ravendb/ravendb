@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Jint.Native;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
 
@@ -152,9 +154,21 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _stats.IncrementBatchSize(attachment.Stream.Length);
         }
 
-        public void DeleteAttachment(string documentId, string name)
+        public void DeleteAttachment(RavenEtlItem item)
         {
-            _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null));
+            var (documentId, name) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(item.AttachmentTombstone.Key);
+
+            if (item.AttachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
+            {
+                _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, storageOnly: true, fromEtl: true, AttachmentFlags.Retired));
+            }
+            else
+            {
+
+                //TODO: egor continue from here :) need to make session.advance and etl DeleteAttachmentCommandData
+                _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, storageOnly: false, fromEtl: true, AttachmentFlags.None));
+            }
+            
         }
 
         public void AddCounter(JsValue instance, JsValue counterReference)

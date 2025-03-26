@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using FastTests.Client;
 using Orders;
 using Raven.Client;
@@ -13,6 +14,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -21,6 +24,7 @@ using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static Lucene.Net.Documents.Field;
 
 namespace SlowTests.Server.Documents.Attachments
 {
@@ -111,7 +115,7 @@ namespace SlowTests.Server.Documents.Attachments
         [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(true)]
         [InlineData(false)]
-        public async Task CanCrudAttachmentWhenHaveRetiredAttachment(bool purgeOnDelete)
+        public async Task CanCrudAttachmentWhenHaveRetiredAttachment(bool storageOnly)
         {
             var attachmentsCount = 1;
             var size = 3;
@@ -122,12 +126,6 @@ namespace SlowTests.Server.Documents.Attachments
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
 
-                    RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
-                    {
-                        config.PurgeOnDelete = purgeOnDelete;
-                    };
-
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
 
                     var data = Attachments.FirstOrDefault();
@@ -172,12 +170,12 @@ namespace SlowTests.Server.Documents.Attachments
                         }
 
                         // this would put a Delete retired attachment task in the queue, that should happen immediately
-                        session.Advanced.Attachments.Delete(doc, data.Name);
+                        session.Advanced.RetiredAttachments.Delete(doc, data.Name, storageOnly);
                         session.SaveChanges();
                     }
-                    if (purgeOnDelete)
+                    if (storageOnly == false)
                     {
-              database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                        var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                         var key = string.Empty;
                         S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
                         {
@@ -197,7 +195,7 @@ namespace SlowTests.Server.Documents.Attachments
                     }
                     else
                     {
- database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                        var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                         var key = string.Empty;
                         S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
                         {
@@ -965,5 +963,183 @@ namespace SlowTests.Server.Documents.Attachments
             await CanEtlRetiredAttachmentsToDestinationInternal(attachmentsCount, size);
         }
 
+        [AmazonS3RetryTheory]
+        [InlineData(1, 3, true)]
+        [InlineData(64, 3, true)]
+        [InlineData(1, 3, false)]
+        [InlineData(64, 3, false)]
+        public async Task CanEtlDeletedRetiredAttachmentsToDestination(int attachmentsCount, int size, bool storageOnly)
+        {
+            await using (var holder = CreateCloudSettings())
+            {
+                int docsCount = RetiredAttachmentsHolderBase.GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                var ids = new List<(string Id, string Collection)>();
+                using (var store = GetDocumentStore(new Options
+                       {
+                           ModifyDatabaseName = s => $"{s}_source"
+                       }))
+                using (var replica = GetDocumentStore(new Options
+                       {
+                           ModifyDatabaseName = s => $"{s}_destination"
+                       }))
+                {
+                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var taskName = "etl-test";
+                    var csName = "cs-test";
+
+                    var configuration = new RavenEtlConfiguration
+                    {
+                        ConnectionStringName = csName,
+                        Name = taskName,
+                        Transforms = { new Transformation { Name = "S1", Collections = { "Orders" } } }
+                    };
+
+                    var connectionString = new RavenConnectionString { Name = csName, TopologyDiscoveryUrls = replica.Urls, Database = replica.Database, };
+
+                    var etlDone = Etl.WaitForEtlToComplete(store);
+
+                    var res = Etl.AddEtl(store, configuration, connectionString);
+
+                    etlDone.Wait(TimeSpan.FromSeconds(15));
+
+                    await PutRetireAttachmentsConfiguration(replica, Settings);
+
+                    await AssertGetRetiredAttachmentsInBulk(replica);
+
+                    //TODO: egor if storageOnly==false, we still look on config, and purgeOnDelete is false, so we will not delete the attachment from cloud, is this right ?
+
+                    foreach (var attachment in Attachments)
+                    {
+                        await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name, storageOnly: storageOnly));
+                    }
+
+                    //etlDone = Etl.WaitForEtlToComplete(store);
+                    //etlDone.Wait(TimeSpan.FromSeconds(15));
+
+
+                 //   WaitForUserToContinueTheTest(store);
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                    if (storageOnly == false)
+                    {
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+                    }
+                    else
+                    {
+                        await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
+                    }
+
+                    etlDone = Etl.WaitForEtlToComplete(store);
+                    etlDone.Wait(TimeSpan.FromSeconds(15));
+
+                    //TODO: egor this test somewhy show 0 attachment on destination, but I dont see AttachmentDelete !! :))))
+
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var c = database.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).Count();
+                        Assert.Equal(0, c);
+                    }
+
+                    var replicaDb = await Databases.GetDocumentDatabaseInstanceFor(replica);
+                    using (replicaDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var c = replicaDb.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).Count();
+                        Assert.Equal(0, c);
+                    }
+                }
+
+            }
+        }
+
+        [AmazonS3RetryTheory]
+        [InlineData(1, 3, true)]
+        [InlineData(64, 3, true)]
+        [InlineData(1, 3, false)]
+        [InlineData(64, 3, false)]
+        public async Task CanExternalReplicateDeletedRetiredAttachmentsToDestination(int attachmentsCount, int size, bool storageOnly)
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await using (var holder = CreateCloudSettings())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+                    await PutRetireAttachmentsConfiguration(store1, Settings);
+                    await CreateDocs(store1, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store1, size, ids, attachmentsPerDoc);
+
+                    await SetupReplicationAsync(store1, store2);
+                    await EnsureReplicatingAsync(store1, store2);
+
+                    var database2 = (await GetDocumentDatabaseInstanceForAsync(store2.Database));
+
+                    // I create new settings for destination database, so each db upload to different folder
+                    var settings = Etl.GetS3Settings(nameof(RetiredAttachments), $"{store2.Database}-{Guid.NewGuid()}");
+                    GetStorageAttachmentsMetadataFromAllAttachments(database2, settings);
+
+                    Assert.Equal(attachmentsCount, Attachments.Count);
+
+                    // I don't have retire attachments config. but as in other background task features, I populate the retire attachment tree after replicating it
+                    GetToRetireAttachmentsCount(database2, 1);
+
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor( store1);
+                    GetStorageAttachmentsMetadataFromAllAttachments(database);
+                    Assert.Equal(attachmentsCount, Attachments.Count);
+
+                    // move in time & start retire
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    //  var sp = Stopwatch.StartNew();
+                    //Console.WriteLine("Start Retire Attachments");
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    //Console.WriteLine($"Elapsed: {sp.ElapsedMilliseconds}ms");
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
+
+                    await AssertAllRetiredAttachments(store1, cloudObjects, size);
+
+                    var stats = store1.Maintenance.Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(attachmentsCount, stats.CountOfRetiredAttachments);
+                    await PutRetireAttachmentsConfiguration(store2, Settings);
+           
+
+                    foreach (var attachment in Attachments)
+                    {
+                        await store1.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name, storageOnly: storageOnly));
+                    }
+
+                    if (storageOnly == false)
+                    {
+                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                        //  var sp = Stopwatch.StartNew();
+                        //Console.WriteLine("Start Retire Attachments");
+                        await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+
+
+                    }
+                    else
+                    {
+                        await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
+           
+                    }
+
+                    await EnsureReplicatingAsync(store1, store2);
+
+
+                    var stats11 = store1.Maintenance.Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(0, stats11.CountOfRetiredAttachments);
+                    Assert.Equal(0, stats11.CountOfAttachments);
+
+                    var stats22 = store1.Maintenance.Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(0, stats22.CountOfRetiredAttachments);
+                    Assert.Equal(0, stats22.CountOfAttachments);
+                }
+            }
+        }
     }
 }

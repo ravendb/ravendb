@@ -2,8 +2,12 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using static Raven.Server.Documents.AttachmentsStorage;
+using static Raven.Server.Documents.Handlers.AttachmentHandler;
+using static Raven.Server.Documents.Handlers.Processors.Attachments.Retired.RetiredAttachmentHandlerProcessorForBulkDelete.MergedDeleteRetiredAttachmentsCommand;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
@@ -37,14 +41,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
             using (context.OpenReadTransaction())
             {
-                CheckAttachmentFlagAndThrowIfNeededInternal(context, RequestHandler, docId, name);
+                CheckAttachmentFlagAndThrowIfNeededInternal(context, RequestHandler.Database, docId, name);
             }
         }
 
-        public static void CheckAttachmentFlagAndThrowIfNeededInternal(DocumentsOperationContext context, DatabaseRequestHandler requestHandler, string docId, string name)
+        public static void CheckAttachmentFlagAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, string docId, string name)
         {
             //TODO: egor sharding handler?
-            var attachment = requestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
+            var attachment = database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
             if (attachment == null)
                 return;
             using var _ = attachment.Stream;

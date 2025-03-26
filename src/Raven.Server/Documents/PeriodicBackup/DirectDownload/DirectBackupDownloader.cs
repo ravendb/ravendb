@@ -42,7 +42,7 @@ public sealed class DirectBackupDownloader : BackupUploaderBase, IDisposable
 
     public void Dispose()
     {
-        _restoreSource.Dispose();
+        _restoreSource?.Dispose();
         _restoreSource = null;
     }
 }

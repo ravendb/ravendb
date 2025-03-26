@@ -1685,8 +1685,10 @@ namespace Raven.Server.Smuggler.Documents
                             };
                         }
                     }
-                    //TODO: egor do this only if the dump is old (pre v6.2)
-                    // hashBySize == null means there was no attachment streams in the dump
+
+                    // hashBySize == null means there were no attachment streams in the dump
+
+                    //TODO: egor do this only if the dump is old (pre v6.2) (LessThenCurrent)
                     if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
                     {
                         var didWork = false;
@@ -1696,7 +1698,7 @@ namespace Raven.Server.Smuggler.Documents
                             var attachmentInMetadata = (BlittableJsonReaderObject)att[i];
                             if (attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out string hash) == false)
                             {
-                                // TODO: egor this should skip this item from the results array
+                                // this should skip this attachment from the results array
                                 didWork = true;
                                 if (_log.IsOperationsEnabled)
                                     _log.Operations($"Ignoring an attachment because couldn't parse its hash: {attachmentInMetadata}");

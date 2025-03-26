@@ -15,23 +15,38 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             switch (doc.Type)
             {
                 case Tombstone.TombstoneType.Attachment:
-                    AttachmentTombstoneReplicationItem item = AttachmentTombstoneReplicationItemInternal(context, doc);
-
-                    var enumVal = DocumentsStorage.TableValueToInt((int)TombstoneTable.Flags, ref tvr);
-                    if (enumVal == (int)AttachmentTombstoneFlags.FromStorageOnly)
-                    {
-                        item.TombstoneFlags = AttachmentTombstoneFlags.FromStorageOnly;
-                    }
-                    else
-                    {
-                        item.Flags = DocumentsStorage.TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
-                        item.TombstoneFlags = AttachmentTombstoneFlags.None;
-                    }
+                    AttachmentTombstoneReplicationItem item = AttachmentTombstoneReplicationItem(context, ref tvr, doc);
 
                     return item;
                 default:
                     return From(context, doc);
             }
+        }
+
+        public static AttachmentTombstoneReplicationItem AttachmentTombstoneReplicationItem(DocumentsOperationContext context, ref TableValueReader tvr, Tombstone doc)
+        {
+            AttachmentTombstoneReplicationItem item = AttachmentTombstoneReplicationItemInternal(context, doc);
+            //TODO: egor check if I can use this??
+            //if (DocumentsStorage.ExtractAttachmentTombstoneFlag(ref tvr, doc))
+            //{
+            //    item.TombstoneFlags = AttachmentTombstoneFlags.FromStorageOnly;
+            //}
+            //else
+            //{
+            //    item.TombstoneFlags = AttachmentTombstoneFlags.None;
+            //}
+            var enumVal = DocumentsStorage.TableValueToInt((int)TombstoneTable.Flags, ref tvr);
+            if (enumVal == (int)AttachmentTombstoneFlags.FromStorageOnly)
+            {
+                item.TombstoneFlags = AttachmentTombstoneFlags.FromStorageOnly;
+            }
+            else
+            {
+                item.Flags = DocumentsStorage.TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+                item.TombstoneFlags = AttachmentTombstoneFlags.None;
+            }
+
+            return item;
         }
 
         public static unsafe ReplicationBatchItem From(DocumentsOperationContext context, Tombstone doc)

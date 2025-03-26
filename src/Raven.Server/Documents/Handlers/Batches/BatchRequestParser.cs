@@ -70,6 +70,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             public long Size;
             public DateTime? RetiredAt;
             public string Hash;
+            public bool StorageOnly;
             public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only
 
             #endregion Attachment
@@ -534,6 +535,18 @@ namespace Raven.Server.Documents.Handlers.Batches
                         commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
                         break;
 
+                    case CommandPropertyName.StorageOnly:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.StorageOnly = state.CurrentTokenType == JsonParserToken.True;
+                        break;
+                        
                     case CommandPropertyName.AttachmentType:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
@@ -763,6 +776,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             Size,
             RetiredAt,
             Hash,
+            StorageOnly,
             #endregion Attachment
 
             #region Counter
@@ -858,6 +872,8 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case 11:
                     if ("ContentType"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ContentType;
+                    if ("StorageOnly"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.StorageOnly;
 
                     return CommandPropertyName.NoSuchProperty;
 
@@ -866,7 +882,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.ChangeVector;
 
                     return CommandPropertyName.NoSuchProperty;
-
+                    
                 case 7:
                     if ("FromEtl"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.FromEtl;

@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new TombstonesToSqlItems(tombstones, collection);
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        protected override IEnumerator<ToSqlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones, List<string> collections)
         {
             throw new NotSupportedException("Attachment tombstones aren't supported by SQL ETL");
         }

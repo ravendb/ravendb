@@ -114,17 +114,16 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal sealed class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
             public string Name;
             public LazyStringValue ExpectedChangeVector;
             public DocumentDatabase Database;
-            public bool StorageOnly;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector, collectionName: out _, storageOnly: StorageOnly);
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
                 return 1;
             }
 
@@ -164,13 +163,13 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    internal sealed class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
+    internal class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
     {
         public string DocumentId;
         public string Name;
         public LazyStringValue ExpectedChangeVector;
 
-        public AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public virtual AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new AttachmentHandler.MergedDeleteAttachmentCommand
             {

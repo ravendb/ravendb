@@ -1295,7 +1295,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Tombstone> GetAttachmentTombstonesFrom(
+        public IEnumerable<AttachmentTombstoneReplicationItem> GetAttachmentTombstonesFrom(
             DocumentsOperationContext context,
             long etag,
             long start,
@@ -1309,10 +1309,17 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
             {
+
                 if (take-- <= 0)
                     yield break;
+                var t = TableValueToTombstone(context, ref result.Reader);
+                var attachmentTombstone = TombstoneReplicationItem.AttachmentTombstoneReplicationItem(context, ref result.Reader, t);
+                unsafe
+                {
+                    Slice.From(context.Allocator, t.LowerId.Buffer, t.LowerId.Size, ByteStringType.Immutable, out attachmentTombstone.Key);
+                }
+                yield return attachmentTombstone;
 
-                yield return TableValueToTombstone(context, ref result.Reader);
             }
         }
 
@@ -1629,7 +1636,7 @@ namespace Raven.Server.Documents
                     result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                     break;
                 case Tombstone.TombstoneType.Attachment:
-                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+                    ExtractAttachmentTombstoneFlag(ref tvr, result);
                     break;
                 case Tombstone.TombstoneType.Counter:
                     result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
@@ -1637,6 +1644,21 @@ namespace Raven.Server.Documents
             }
 
             return result;
+        }
+
+        public static bool ExtractAttachmentTombstoneFlag(ref TableValueReader tvr, Tombstone result)
+        {
+            var enumVal = DocumentsStorage.TableValueToInt((int)TombstoneTable.Flags, ref tvr);
+            if (enumVal == (int)AttachmentTombstoneFlags.FromStorageOnly)
+            {
+                result.Flags = DocumentFlags.None;
+                return true;
+            }
+            else
+            {
+                result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+                return false;
+            }
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, DocumentFlags flags)

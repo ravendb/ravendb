@@ -1,8 +1,15 @@
 ﻿using System;
+using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
+using Microsoft.CodeAnalysis;
 using Raven.Client.Documents.Attachments;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using static Raven.Server.Documents.AttachmentsStorage;
+using static Raven.Server.Documents.Handlers.AttachmentHandler;
+using static Raven.Server.Documents.Handlers.Processors.Attachments.Retired.RetiredAttachmentHandlerProcessorForBulkDelete;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 {
@@ -12,12 +19,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
         {
         }
 
-        protected override AttachmentHandler.MergedDeleteAttachmentCommand CreateMergedDeleteAttachmentCommand(string docId, string name, LazyStringValue changeVector)
+        protected override MergedDeleteRetiredAttachmentCommand CreateMergedDeleteAttachmentCommand(string docId, string name, LazyStringValue changeVector)
         {
             var storageOnly = RequestHandler.GetBoolValueQueryString("storageOnly", required: false) ?? false;
-            var cmd = base.CreateMergedDeleteAttachmentCommand(docId, name, changeVector);
-            cmd.StorageOnly = storageOnly;
 
+            var cmd = new MergedDeleteRetiredAttachmentCommand
+            {
+                Database = RequestHandler.Database,
+                ExpectedChangeVector = changeVector,
+                DocumentId = docId,
+                Name = name,
+                DeleteState = storageOnly ? DeleteAttachmentState.DocumentRetiredAttachmentStorage : DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage
+
+            };
             return cmd;
         }
 
@@ -57,6 +71,45 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
             if (dbRecord.RetiredAttachments.HasUploader() == false)
             {
                 throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because {nameof(RetiredAttachmentsConfiguration)} does not have any uploader configured.");
+            }
+        }
+
+
+        internal sealed class MergedDeleteRetiredAttachmentCommand : MergedDeleteAttachmentCommand
+        {
+            public DeleteAttachmentState DeleteState;
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(DeleteState, context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
+                return 1;
+            }
+
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+            {
+                return new MergedDeleteRetiredAttachmentCommandDto
+                {
+                    DocumentId = DocumentId,
+                    Name = Name,
+                    ExpectedChangeVector = ExpectedChangeVector,
+                    DeleteState = DeleteState
+                };
+            }
+
+            internal sealed class MergedDeleteRetiredAttachmentCommandDto : MergedDeleteAttachmentCommandDto
+            {
+                public DeleteAttachmentState DeleteState;
+                public override MergedDeleteRetiredAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return new MergedDeleteRetiredAttachmentCommand
+                    {
+                        DocumentId = DocumentId,
+                        Name = Name,
+                        ExpectedChangeVector = ExpectedChangeVector,
+                        DeleteState = DeleteState,
+                        Database = database
+                    };
+                }
             }
         }
     }

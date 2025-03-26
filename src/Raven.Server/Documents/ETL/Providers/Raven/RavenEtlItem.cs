@@ -1,7 +1,11 @@
-﻿using Raven.Client.Documents.Operations.Counters;
+﻿using System.Diagnostics;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -16,8 +20,25 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             if (tombstone.Type == Tombstone.TombstoneType.Attachment)
             {
-                AttachmentTombstoneId = tombstone.LowerId;
+                Debug.Assert(false, "tombstone.Type == Tombstone.TombstoneType.Attachment");
             }
+        }
+        //AttachmentTombstoneReplicationItem
+
+        public RavenEtlItem(DocumentsOperationContext context, AttachmentTombstoneReplicationItem attachment)
+        {
+            DocumentId = context.GetLazyString(attachment.Key.ToString());
+
+            //AttachmentTombstoneId = attachment.Key;
+            //IsAttachmentTombstone = true;
+            Collection = "__undefined";
+            Type = EtlItemType.Document;
+            IsDelete = true;
+
+            Etag = attachment.Etag;
+            ChangeVector = attachment.ChangeVector;
+
+            AttachmentTombstone = attachment;
         }
 
         public RavenEtlItem(CounterGroupDetail counter, string collection)
@@ -52,8 +73,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         }
 
-        public LazyStringValue AttachmentTombstoneId { get; }
+        ////TODO: egor move this to separate class
+        //public Slice AttachmentTombstoneId { get; }
 
-        public bool IsAttachmentTombstone => AttachmentTombstoneId != null;
+        //public bool IsAttachmentTombstone;
     }
 }

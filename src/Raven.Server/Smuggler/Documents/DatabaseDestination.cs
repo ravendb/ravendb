@@ -650,7 +650,7 @@ namespace Raven.Server.Smuggler.Documents
                                         throw new InvalidOperationException("Cannot find a document ID inside the attachment key");
                                     var attachmentId = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
-                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
+                              //      _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks, storageOnly: true);
                                     break;
 
                                 case Tombstone.TombstoneType.Revision:
@@ -1028,20 +1028,21 @@ namespace Raven.Server.Smuggler.Documents
                             metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                             continue;
 
-                        var attachmentsToRemoveNames = new HashSet<LazyStringValue>();
+                        var attachmentsToRemoveNames = new HashSet<(LazyStringValue Name, AttachmentFlags Flags)>();
                         var attachmentsToRemoveHashes = new HashSet<LazyStringValue>();
 
                         foreach (BlittableJsonReaderObject attachment in attachments)
                         {
                             if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                                 attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue _) == false ||
-                                attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                                attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                                attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
                                 throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
                             var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
                             if (attachmentsStorage.AttachmentExists(context, hash) == false)
                             {
-                                attachmentsToRemoveNames.Add(name);
+                                attachmentsToRemoveNames.Add((name, flags));
                                 attachmentsToRemoveHashes.Add(hash);
                             }
                         }
@@ -1064,7 +1065,16 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove, null, collectionName: out _, updateDocument: false, extractCollectionName: false, storageOnly: true);
+
+                            if (toRemove.Flags == AttachmentFlags.Retired)
+                            {
+                                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage,context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                            }
+                            else
+                            {
+                                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                            }
+
                         }
 
                         metadata.Modifications = new DynamicJsonValue(metadata);

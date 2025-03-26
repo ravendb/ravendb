@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Commands.Batches
             Size = size;
             Flags = flags;
             Hash = hash;
-            if (Flags.Contain(AttachmentFlags.Retired))
+            if (Flags == AttachmentFlags.Retired)
             {
                 Debug.Assert(Stream == null, "Stream == null");
             }
@@ -49,10 +49,10 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ChangeVector { get; }
         public string ContentType { get; }
         public CommandType Type { get; } = CommandType.AttachmentPUT;
-        public bool FromEtl { get; }
+        internal bool FromEtl { get; }
         public DateTime? RetiredAt { get; }
         public long Size { get; }
-        public AttachmentFlags Flags { get; }
+        internal AttachmentFlags Flags { get; }
         public string Hash { get; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)

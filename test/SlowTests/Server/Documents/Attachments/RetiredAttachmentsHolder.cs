@@ -259,6 +259,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         }
         var attachmentsEnumerator = await store.Operations.SendAsync(new GetRetiredAttachmentsOperation(attachmentRequests));
 
+        var attachmentsCount = 0;
         while (attachmentsEnumerator.MoveNext())
         {
             var current = attachmentsEnumerator.Current;
@@ -270,7 +271,12 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
             Assert.True(AttachmentsStreamTests.CompareStreams(current.Stream, tuple.Stream));
             current.Stream?.Dispose();
+
+            attachmentsCount++;
         }
+
+
+        Assert.Equal(attachmentRequests.Count, attachmentsCount);
     }
 
     protected async Task CanUploadRetiredAttachmentsToCloudAndDeleteInBulkInternal(int attachmentsCount, int size, int attachmentsPerDoc, List<string> collections = null)

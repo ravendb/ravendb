@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Commands.Batches
             {
                 if (command is PutAttachmentCommandData putAttachmentCommandData)
                 {
-                    if(putAttachmentCommandData.Flags.Contain(AttachmentFlags.Retired))
+                    if (putAttachmentCommandData.Flags == AttachmentFlags.Retired)
                         continue;
 
                     if (_attachmentStreams == null)

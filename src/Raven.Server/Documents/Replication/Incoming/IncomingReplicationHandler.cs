@@ -455,16 +455,19 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
                                 {
-                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, attachmentTombstone.Key, false, "$fromReplication", null,
                                         newChangeVector,
-                                        attachmentTombstone.LastModifiedTicks, storageOnly: true);
+                                        attachmentTombstone.LastModifiedTicks);
                                 }
                                 else
                                 {
+                                    // Here it is a document attachment or retired attachment that need to be deleted from both cloud && storage
 
-                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+
+
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirectDocumentOrRetiredCloudAndStorage(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                         newChangeVector,
-                                        attachmentTombstone.LastModifiedTicks, storageOnly: false);
+                                        attachmentTombstone.LastModifiedTicks);
                                 }
 
                                 break;

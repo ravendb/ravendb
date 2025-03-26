@@ -7,7 +7,7 @@ using static Raven.Client.Documents.Operations.Attachments.Retired.DeleteRetired
 
 namespace Raven.Client.Documents.Session
 {
-    public sealed class DocumentSessionRetiredAttachmentsAsync : DocumentSessionAttachmentsBaseOfTheBase, IRetiredAttachmentsSessionOperationsAsync
+    public sealed class DocumentSessionRetiredAttachmentsAsync : DocumentSessionRetiredAttachmentsBase, IRetiredAttachmentsSessionOperationsAsync
     {
         public DocumentSessionRetiredAttachmentsAsync(InMemoryDocumentSessionOperations session) : base(session)
         {

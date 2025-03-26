@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string GetContentAsString(Encoding encoding)
         {
-            if (_attachment.Flags.Contain(AttachmentFlags.Retired))
+            if (_attachment.Flags == AttachmentFlags.Retired)
                 return DynamicNullObject.Null;
 
             if (_contentAsString == null)
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Stream GetContentAsStream()
         {
-            if (_attachment.Flags.Contain(AttachmentFlags.Retired))
+            if (_attachment.Flags == AttachmentFlags.Retired)
                 return null;
 
             _attachment.Stream.Position = 0;

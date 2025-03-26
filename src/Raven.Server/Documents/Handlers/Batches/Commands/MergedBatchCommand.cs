@@ -10,6 +10,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -170,7 +171,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     AttachmentDetailsServer attachmentPutResult;
                     if (cmd.FromEtl)
                     {
-                        if (cmd.Flags.Contain(AttachmentFlags.Retired) == false)
+                        if (cmd.Flags != AttachmentFlags.Retired)
                         {
                             AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
                             attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
@@ -221,7 +222,58 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                 case CommandType.AttachmentDELETE:
 
-                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null, storageOnly: storageOnly.Value);
+                    Console.WriteLine(cmd.FromEtl);
+                    //TODO: egor add test that we ETL deleted retired attachment ?
+                    // in etl we send this command for  deleted retired attachment, but on destination it won't delete since my config is purge on delete false!
+                    // I think need to send fromETL flag and force delete it!
+                    CollectionName collectionName;
+
+
+
+                    //TODO: egor btw I think I dont care if its from ETL
+                    if (cmd.FromEtl == false)
+                    {
+                        ////TODO: egor ideally I need to drop this method at all!!
+                        //var config = Database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(Database.Name);
+                        //  Database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentWhenStateUnknown(config, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+
+
+                      
+
+
+                        if (cmd.Flags == AttachmentFlags.Retired)
+                        {
+                            //retired attachment
+                            if (cmd.StorageOnly)
+                            {
+                                // keep the retired attachment on cloud storage
+                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+
+                            }
+                            else
+                            {
+                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+
+                            }
+                        }
+                        else
+                        {
+                            AttachmentHandlerProcessorForDeleteAttachment.CheckAttachmentFlagAndThrowIfNeededInternal(context, Database, cmd.Id, cmd.Name);
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+
+                        }
+                    }
+                    else
+                    {
+                        if (cmd.Flags == AttachmentFlags.Retired)
+                        {
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                        }
+                        else
+                        {
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                        }
+                    }
 
                     if (collectionName != null)
                         ModifiedCollections?.Add(collectionName.Name);

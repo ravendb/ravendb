@@ -310,20 +310,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             break;
                         if (_script.HasTransformation)
                         {
-                            Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
+                            Debug.Assert(item.AttachmentTombstone == null, "attachment tombstones are tracked only if script is empty");
 
                             ApplyDeleteCommands(item, OperationType.Delete, out _);
                         }
                         else
                         {
-                            if (item.IsAttachmentTombstone == false)
+                            if (item.AttachmentTombstone == null)
                             {
                                 _currentRun.Delete(item.DocumentId);
                             }
                             else
                             {
-                                var (doc, attachmentName) = AttachmentsStorage.GetDocIdAndAttachmentName(Context, item.AttachmentTombstoneId);
-                                _currentRun.DeleteAttachment(doc, attachmentName);
+                                _currentRun.DeleteAttachment(item);
                             }
                         }
                         break;

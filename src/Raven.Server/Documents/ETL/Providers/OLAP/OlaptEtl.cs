@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return EmptyEnumerator;
         }
 
-        protected override IEnumerator<ToOlapItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        protected override IEnumerator<ToOlapItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones, List<string> collections)
         {
             throw new NotSupportedException("Attachment tombstones aren't supported by OLAP ETL");
         }

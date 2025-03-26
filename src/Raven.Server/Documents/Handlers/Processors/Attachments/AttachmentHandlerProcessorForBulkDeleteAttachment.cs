@@ -59,20 +59,20 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
         protected virtual void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, string docId, string name)
         {
-            AttachmentHandlerProcessorForDeleteAttachment.CheckAttachmentFlagAndThrowIfNeededInternal(context, RequestHandler, docId, name);
+            AttachmentHandlerProcessorForDeleteAttachment.CheckAttachmentFlagAndThrowIfNeededInternal(context, RequestHandler.Database, docId, name);
         }
     }
-    internal sealed class MergedDeleteAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+
+    internal class MergedDeleteAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         public List<AttachmentRequest> Deletes;
         public DocumentDatabase Database;
-        public bool StorageOnly;
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             foreach (var delete in Deletes)
             {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, delete.DocumentId, delete.Name, null, collectionName: out _, storageOnly: StorageOnly);
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, delete.DocumentId, delete.Name, null, collectionName: out _);
             }
 
             return 1;
@@ -81,17 +81,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction,
             MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new MergedDeleteAttachmentsCommandDto { Deletes = Deletes, StorageOnly = StorageOnly };
+            return new MergedDeleteAttachmentsCommandDto { Deletes = Deletes };
         }
     }
 
-    internal sealed class MergedDeleteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedDeleteAttachmentsCommand>
+    internal class MergedDeleteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedDeleteAttachmentsCommand>
     {
         public List<AttachmentRequest> Deletes;
-        public bool StorageOnly;
-        public MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public virtual MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            return new MergedDeleteAttachmentsCommand { Deletes = Deletes, Database = database , StorageOnly = StorageOnly };
+            return new MergedDeleteAttachmentsCommand { Deletes = Deletes, Database = database };
         }
     }
 }

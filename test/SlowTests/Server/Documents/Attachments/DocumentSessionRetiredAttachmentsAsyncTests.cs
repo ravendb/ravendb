@@ -155,8 +155,10 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
-        public async Task CanDeleteRetiredAttachmentByDocumentIdAndName()
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanDeleteRetiredAttachmentByDocumentIdAndName(bool storageOnly)
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -176,20 +178,31 @@ namespace SlowTests.Server.Documents.Attachments
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.RetiredAttachments.Delete(id, "test.png", storageOnly: true);
+                    session.Advanced.RetiredAttachments.Delete(id, "test.png", storageOnly);
                     session.SaveChanges();
 
                     var exists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
                     Assert.False(exists);
                 }
+
+                if (storageOnly)
+                {
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+                }
+                else
+                {
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+                }
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
-        public async Task CanDeleteRetiredAttachmentByEntityAndName()
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanDeleteRetiredAttachmentByEntityAndName(bool storageOnly)
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -206,19 +219,30 @@ namespace SlowTests.Server.Documents.Attachments
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
                 store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
 
-
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
 
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+
                 using (var session = store.OpenSession())
                 {
                     var order = session.Load<Order>(id);
-                    session.Advanced.RetiredAttachments.Delete(order, "test.png", storageOnly: true);
+                    session.Advanced.RetiredAttachments.Delete(order, "test.png", storageOnly);
                     session.SaveChanges();
 
                     var exists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
                     Assert.False(exists);
+                }
+
+                if (storageOnly)
+                {
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+                }
+                else
+                {
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
                 }
             }
         }
@@ -361,8 +385,10 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
-        public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAsync()
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAsync(bool storageOnly)
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -384,17 +410,30 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.Advanced.RetiredAttachments.DeleteAsync(id, "test.png", storageOnly: true);
+                    await session.Advanced.RetiredAttachments.DeleteAsync(id, "test.png", storageOnly);
                     await session.SaveChangesAsync();
 
                     var exists = await session.Advanced.RetiredAttachments.ExistsAsync(id, "test.png");
                     Assert.False(exists);
                 }
+
+                if (storageOnly)
+                {
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+                }
+                else
+                {
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+                }
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
-        public async Task CanDeleteRetiredAttachmentByEntityAndNameAsync()
+
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanDeleteRetiredAttachmentByEntityAndNameAsync(bool storageOnly)
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -418,11 +457,22 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     var order = await session.LoadAsync<Order>(id);
-                    await session.Advanced.RetiredAttachments.DeleteAsync(order, "test.png", storageOnly: true);
+                    await session.Advanced.RetiredAttachments.DeleteAsync(order, "test.png", storageOnly);
                     await session.SaveChangesAsync();
 
                     var exists = await session.Advanced.RetiredAttachments.ExistsAsync(id, "test.png");
                     Assert.False(exists);
+                }
+
+
+                if (storageOnly)
+                {
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+                }
+                else
+                {
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
                 }
             }
         }

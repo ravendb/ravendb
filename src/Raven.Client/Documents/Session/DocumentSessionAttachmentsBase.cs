@@ -6,6 +6,7 @@
 
 using System;
 using System.IO;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Json.Serialization;
@@ -45,9 +46,81 @@ namespace Raven.Client.Documents.Session
 
             return results;
         }
+
+        protected static void ThrowDocumentAlreadyDeleted(string documentId, string name, string operation, string destinationDocumentId, string deletedDocumentId)
+        {
+            throw new InvalidOperationException($"Can't {operation} attachment '{name}' of document '{documentId}'{(destinationDocumentId != null ? $" to '{destinationDocumentId}'" : string.Empty)}', the document '{deletedDocumentId}' was already deleted in this session.");
+        }
+
+        protected static void ThrowOtherDeferredCommandException(string documentId, string name, string operation, string previousOperation)
+        {
+            throw new InvalidOperationException($"Can't {operation} attachment '{name}' of document '{documentId}', there is a deferred command registered to {previousOperation} an attachment with '{name}' name.");
+        }
+
+        protected bool ShouldNotContinueDelete(string documentId, string name)
+        {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentNullException(nameof(documentId));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.DELETE, null)) ||
+                DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, name)))
+                return true;
+
+            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
+                Session.DeletedEntities.Contains(documentInfo.Entity))
+                return true;
+
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
+                ThrowOtherDeferredCommandException(documentId, name, "delete", "create");
+
+            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentMOVE, name)))
+                ThrowOtherDeferredCommandException(documentId, name, "delete", "rename");
+
+            CanContinueRetiredAttachmentDelete(documentId, name, documentInfo);
+
+            return false;
+        }
+
+        protected abstract void CanContinueRetiredAttachmentDelete(string documentId, string name, DocumentInfo documentInfo);
+
     }
 
+    /// <summary>
+    /// Abstract implementation for in memory session operations
+    /// </summary>
+    public abstract class DocumentSessionRetiredAttachmentsBase : DocumentSessionAttachmentsBaseOfTheBase
+    {
+        protected DocumentSessionRetiredAttachmentsBase(InMemoryDocumentSessionOperations session) : base(session)
+        {
+        }
 
+        protected override void CanContinueRetiredAttachmentDelete(string documentId, string name, DocumentInfo documentInfo)
+        {
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == true)
+            {
+                for (var i = 0; i < attachments.Length; i++)
+                {
+                    var attachment = JsonDeserializationClient.AttachmentName((BlittableJsonReaderObject)attachments[i]);
+                    if (attachment.Name == name)
+                    {
+                        var x = attachment.Flags & AttachmentFlags.None;
+                        var xx = attachment.Flags & AttachmentFlags.Retired;
+                        var xxx = attachment.Flags & AttachmentFlags.Compressed;
+
+                        if (attachment.Flags == AttachmentFlags.None)
+                        {
+                            throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{documentId}' because it is not retired. Please use dedicated API.");
+                        }
+
+                        break;
+                    }
+
+                }
+            }
+        }
+    }
 
     /// <summary>
         /// Abstract implementation for in memory session operations
@@ -102,24 +175,8 @@ namespace Raven.Client.Documents.Session
 
         public void Delete(string documentId, string name)
         {
-            if (string.IsNullOrWhiteSpace(documentId))
-                throw new ArgumentNullException(nameof(documentId));
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentNullException(nameof(name));
-
-            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.DELETE, null)) ||
-                DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, name)))
+            if (ShouldNotContinueDelete(documentId, name))
                 return; // no-op
-
-            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
-                Session.DeletedEntities.Contains(documentInfo.Entity))
-                return; // no-op
-
-            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
-                ThrowOtherDeferredCommandException(documentId, name, "delete", "create");
-
-            if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentMOVE, name)))
-                ThrowOtherDeferredCommandException(documentId, name, "delete", "rename");
 
             Defer(new DeleteAttachmentCommandData(documentId, name, null));
         }
@@ -238,14 +295,25 @@ namespace Raven.Client.Documents.Session
             Defer(new CopyAttachmentCommandData(sourceDocumentId, sourceName, destinationDocumentId, destinationName, null));
         }
 
-        private static void ThrowDocumentAlreadyDeleted(string documentId, string name, string operation, string destinationDocumentId, string deletedDocumentId)
+        protected override void CanContinueRetiredAttachmentDelete(string documentId, string name, DocumentInfo documentInfo)
         {
-            throw new InvalidOperationException($"Can't {operation} attachment '{name}' of document '{documentId}'{(destinationDocumentId != null ? $" to '{destinationDocumentId}'" : string.Empty)}', the document '{deletedDocumentId}' was already deleted in this session.");
-        }
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == true)
+            {
+                for (var i = 0; i < attachments.Length; i++)
+                {
+                    var attachment = JsonDeserializationClient.AttachmentName((BlittableJsonReaderObject)attachments[i]);
+                    if (attachment.Name == name)
+                    {
+                        if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+                        {
+                            throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
+                        }
 
-        private static void ThrowOtherDeferredCommandException(string documentId, string name, string operation, string previousOperation)
-        {
-            throw new InvalidOperationException($"Can't {operation} attachment '{name}' of document '{documentId}', there is a deferred command registered to {previousOperation} an attachment with '{name}' name.");
+                        break;
+                    }
+
+                }
+            }
         }
     }
 }
