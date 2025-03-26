@@ -24,7 +24,7 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
     // Handle toggle dropdown by keyboard
     useEffect(() => {
         const handleToggleDropdown = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.key.toLowerCase() === "k") {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
                 e.preventDefault();
                 setIsDropdownOpen(true);
                 inputRef.current?.focus();
