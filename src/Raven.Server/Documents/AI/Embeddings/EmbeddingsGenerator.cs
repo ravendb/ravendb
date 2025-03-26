@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -681,6 +682,8 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         if (record is null)
             return;
 
+        HashSet<EmbeddingsGenerationTaskIdentifier> taskIdsToRetain = [];
+
         foreach (EmbeddingsGenerationConfiguration configuration in record.EmbeddingsGenerations)
         {
             var identifier = new EmbeddingsGenerationTaskIdentifier(configuration.Identifier);
@@ -693,7 +696,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
                 continue;
             }
-            
+
+            taskIdsToRetain.Add(identifier);
+
             if (_workers.TryGetValue(identifier, out var existing) is false)
             {
                 _ = _workers.GetOrAdd(identifier, CreateAiWorker).RunAsync();
@@ -709,6 +714,14 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     _ = toDispose.ShutdownAsync();
                 }
                 _ = _workers.GetOrAdd(identifier, CreateAiWorker).RunAsync();
+            }
+        }
+
+        foreach (var taskIdToRemove in _workers.Keys.Except(taskIdsToRetain))
+        {
+            if (_workers.TryRemove(taskIdToRemove, out var toDispose))
+            {
+                _ = toDispose.ShutdownAsync();
             }
         }
     }
