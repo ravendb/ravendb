@@ -5,26 +5,12 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Client.Util;
 
 internal static class CertificateHelper
 {
-#if FEATURE_X509CERTIFICATELOADER_SUPPORT
-    private static readonly Pkcs12LoaderLimits AllowDuplicateAttributes;
-
-    static CertificateHelper()
-    {
-        AllowDuplicateAttributes = new Pkcs12LoaderLimits(Pkcs12LoaderLimits.Defaults);
-
-        var allowDuplicateAttributesProperty = AllowDuplicateAttributes.GetType().GetProperty(nameof(AllowDuplicateAttributes), BindingFlags.Instance | BindingFlags.NonPublic);
-        Debug.Assert(allowDuplicateAttributesProperty != null, $"{nameof(allowDuplicateAttributesProperty)} != null");
-        allowDuplicateAttributesProperty.SetValue(AllowDuplicateAttributes, true);
-    }
-#endif
-
     public static X509Certificate2 CreateCertificateFromCert(byte[] rawData)
     {
         ValidateContentType(rawData, X509ContentType.Cert);
@@ -58,7 +44,7 @@ internal static class CertificateHelper
         ValidateContentType(rawData, X509ContentType.Pfx);
 
 #if FEATURE_X509CERTIFICATELOADER_SUPPORT
-        var certificate = X509CertificateLoader.LoadPkcs12(rawData, password, keyStorageFlags, AllowDuplicateAttributes);
+        var certificate = X509CertificateLoader.LoadPkcs12(rawData, password, keyStorageFlags);
 #else
         var certificate = new X509Certificate2(rawData, password, keyStorageFlags);
 #endif
