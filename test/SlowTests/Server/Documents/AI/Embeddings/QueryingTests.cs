@@ -65,7 +65,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), factory => factory.ByText(queriedText), minimumSimilarity: 0.75f).ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
@@ -111,7 +111,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), factory => factory.ByText(queriedText)).ToList();
+                var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), factory => factory.ByText(queriedText), minimumSimilarity: 0.75f).ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
@@ -190,7 +190,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText)).ProjectInto<Dto>().ToList();
+                var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText), minimumSimilarity: 0.75f).ProjectInto<Dto>().ToList();
                 
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
@@ -241,7 +241,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             using (var session = store.OpenSession())
             {
-                var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText)).ProjectInto<Dto>().ToList();
+                var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText), minimumSimilarity: 0.75f).ProjectInto<Dto>().ToList();
 
                 Assert.Single(result);
             }
@@ -267,15 +267,15 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
             
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(2, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "dog"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "dog"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(1, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["cat", "dog"])).ToList();
+                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["cat", "dog"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(0, multiVectorTextualQuery.Count);
         }
 
@@ -285,15 +285,15 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         using (var session = store.OpenSession())
         {
             var multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["italian food", "vehicle"])).ToList();
+                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(2, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["italian food", "dog"])).ToList();
+                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["italian food", "dog"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(1, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["cat", "dog"])).ToList();
+                .VectorSearch(f => f.WithField(s => s.TextualValue), v => v.ByTexts(["cat", "dog"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(0, multiVectorTextualQuery.Count);
         }
     }
@@ -319,15 +319,15 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
                 
                 var q1 = session1.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]))
+                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f)
                     .ToListAsync();
 
                 var q2 = session2.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "dog"]))
+                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "dog"]), minimumSimilarity: 0.75f)
                     .ToListAsync();
 
                 var q3 = session3.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["cat", "dog"])).ToListAsync();
+                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["cat", "dog"]), minimumSimilarity: 0.75f).ToListAsync();
                 
                 Task.WaitAll(q1, q2, q3);
                 
