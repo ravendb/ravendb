@@ -183,19 +183,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (PlatformDetails.RunningOnLinux == false)
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (var process = Process.GetCurrentProcess())
                 {
-                    var sharedClean = MemoryInformation.GetSharedCleanInBytes(process);
+                    var sharedClean = MemoryInformation.GetSharedCleanInBytes(out var workingSet, out _);
                     var rc = Win32MemoryQueryMethods.GetMaps();
                     var djv = new DynamicJsonValue
                     {
                         ["Totals"] = new DynamicJsonValue
                         {
-                            ["WorkingSet"] = process.WorkingSet64,
+                            ["WorkingSet"] = workingSet,
                             ["SharedClean"] = Sizes.Humane(sharedClean),
                             ["PrivateClean"] = "N/A",
                             ["TotalClean"] = rc.ProcessClean,
-                            ["RssHumanly"] = Sizes.Humane(process.WorkingSet64),
+                            ["RssHumanly"] = Sizes.Humane(workingSet),
                             ["SharedCleanHumanly"] = Sizes.Humane(sharedClean),
                             ["PrivateCleanHumanly"] = "N/A",
                             ["TotalCleanHumanly"] = Sizes.Humane(rc.ProcessClean)
@@ -324,6 +323,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 [nameof(MemoryInfo.PhysicalMemory)] = memInfo.TotalPhysicalMemory.ToString(),
                 [nameof(MemoryInfo.WorkingSet)] = memInfo.WorkingSet.ToString(),
+                [nameof(MemoryInfo.SharedClean)] = memInfo.SharedCleanMemory.ToString(),
                 [nameof(MemoryInfo.ManagedAllocations)] = Size.Humane(managedMemoryInBytes),
                 [nameof(MemoryInfo.ManagedHeapsAfterLastGC)] = ManagedHeapsInfo(gcInfo),
                 [nameof(MemoryInfo.UnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
@@ -571,6 +571,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             public string PhysicalMemory { get; set; }
             public string WorkingSet { get; set; }
+            public string SharedClean { get; set; }
             
             public string Remarks { get; set; }
             public string ManagedAllocations { get; set; }
