@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var sharedClean = MemoryInformation.GetSharedCleanInBytes(out var workingSet, out _);
-                    var rc = Win32MemoryQueryMethods.GetMaps();
+                    var rc = Win32MemoryMethods.GetMaps();
                     var djv = new DynamicJsonValue
                     {
                         ["Totals"] = new DynamicJsonValue

@@ -41,17 +41,16 @@ namespace Sparrow.LowMemory
 
                 if (PlatformDetails.RunningOnWindows)
                 {
-                    ProcessHandle = Win32MemoryQueryMethods.GetCurrentProcess();
-
-                    var memCounters = new PROCESS_MEMORY_COUNTERS_EX2
+                    ProcessHandle = Win32MemoryMethods.GetCurrentProcess();
+                    var memCounters = new Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2
                     {
-                        cb = (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX2))
+                        cb = (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2))
                     };
 
                     try
                     {
                         // Windows 10 22H2 with September 2023 cumulative update or Windows 11 22H2 with September 2023 cumulative update
-                        SupportsMemoryCountersEx2 = GetProcessMemoryInfo(process.Handle, out memCounters, (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX2)));
+                        SupportsMemoryCountersEx2 = Win32MemoryMethods.GetProcessMemoryInfo(process.Handle, out memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2)));
                     }
                     catch
                     {
@@ -693,53 +692,11 @@ namespace Sparrow.LowMemory
             };
         }
 
-        //https://learn.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters_ex2
-        [StructLayout(LayoutKind.Sequential)]
-        public struct PROCESS_MEMORY_COUNTERS_EX2
-        {
-            public uint cb;
-            public uint PageFaultCount;
-            public ulong PeakWorkingSetSize;
-            public ulong WorkingSetSize;
-            public ulong QuotaPeakPagedPoolUsage;
-            public ulong QuotaPagedPoolUsage;
-            public ulong QuotaPeakNonPagedPoolUsage;
-            public ulong QuotaNonPagedPoolUsage;
-            public ulong PagefileUsage;
-            public ulong PeakPagefileUsage;
-            public ulong PrivateUsage;
-            public ulong PrivateWorkingSetSize;
-            public ulong SharedCommitUsage;
-        }
-
-        //https://learn.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters_ex
-        [StructLayout(LayoutKind.Sequential)]
-        public struct PROCESS_MEMORY_COUNTERS_EX
-        {
-            public uint cb;
-            public uint PageFaultCount;
-            public ulong PeakWorkingSetSize;
-            public ulong WorkingSetSize;
-            public ulong QuotaPeakPagedPoolUsage;
-            public ulong QuotaPagedPoolUsage;
-            public ulong QuotaPeakNonPagedPoolUsage;
-            public ulong QuotaNonPagedPoolUsage;
-            public ulong PagefileUsage;
-            public ulong PeakPagefileUsage;
-            public ulong PrivateUsage;
-        }
-
-        [DllImport("psapi.dll", SetLastError = true)]
-        private static extern bool GetProcessMemoryInfo(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS_EX2 counters, uint size);
-
-        [DllImport("psapi.dll", SetLastError = true, EntryPoint = "GetProcessMemoryInfo")]
-        private static extern bool GetProcessMemoryInfoLegacy(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS_EX counters, uint size);
-
         public static long GetSharedCleanInBytes(out long workingSet, out long pageFileUsage)
         {
             if (SupportsMemoryCountersEx2)
             {
-                if (GetProcessMemoryInfo(ProcessHandle, out PROCESS_MEMORY_COUNTERS_EX2 memCounters, (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX2))) == false)
+                if (Win32MemoryMethods.GetProcessMemoryInfo(ProcessHandle, out Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2 memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2))) == false)
                 {
                     throw new InvalidOperationException("Failure when trying to read memory using GetProcessMemoryInfo, error code is: " + Marshal.GetLastWin32Error());
                 }
@@ -750,7 +707,7 @@ namespace Sparrow.LowMemory
             }
             else
             {
-                if (GetProcessMemoryInfoLegacy(ProcessHandle, out PROCESS_MEMORY_COUNTERS_EX memCounters, (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX))) == false)
+                if (Win32MemoryMethods.GetProcessMemoryInfoLegacy(ProcessHandle, out Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX))) == false)
                 {
                     throw new InvalidOperationException("Failure when trying to read memory using the legacy GetProcessMemoryInfo, error code is: " + Marshal.GetLastWin32Error());
                 }

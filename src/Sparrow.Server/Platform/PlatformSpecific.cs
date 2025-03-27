@@ -22,7 +22,7 @@ namespace Sparrow.Server.Platform
                 return CheckPageFileOnHdd.WindowsIsSwappingOnHddInsteadOfSsd();
             }
 
-            public static bool WillCauseHardPageFault(byte* address, long length) => PlatformDetails.RunningOnPosix ? PosixMemoryQueryMethods.WillCauseHardPageFault(address, length) : Win32MemoryQueryMethods.WillCauseHardPageFault(address, length);
+            public static bool WillCauseHardPageFault(byte* address, long length) => PlatformDetails.RunningOnPosix ? PosixMemoryQueryMethods.WillCauseHardPageFault(address, length) : Win32MemoryMethods.WillCauseHardPageFault(address, length);
         }
 
         public static class NativeMemory
