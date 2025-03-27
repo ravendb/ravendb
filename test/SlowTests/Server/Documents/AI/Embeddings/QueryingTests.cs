@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -337,7 +338,49 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             }
         }
     }
-    
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void WillFindUpdatedEmbeddingValues(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { ChunkingOptions = DefaultChunkingOptions, Path = "TextualValue" }]);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Dto() { TextualValue = "asdsdfsdf" }, "dto/1");
+            session.SaveChanges();
+
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+
+            var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
+            Assert.Equal(0, multiVectorTextualQuery.Count);
+        }
+
+        aiTaskDone.Reset();
+        
+        using (var session = store.OpenSession())
+        {
+            WaitForUserToContinueTheTest(store);
+
+            session.Store(new Dto() { TextualValue = "pizza" }, "dto/1");
+            session.SaveChanges();
+
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+
+            WaitForUserToContinueTheTest(store);
+
+            Thread.Sleep(2000); // TODO - auto index staleness need to take into account referenced embeddings collections
+            
+            var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
+            Assert.Equal(1, multiVectorTextualQuery.Count);
+        }
+    }
+
     private class VectorStaticIndex : AbstractIndexCreationTask<Dto>
     {
         public VectorStaticIndex()
