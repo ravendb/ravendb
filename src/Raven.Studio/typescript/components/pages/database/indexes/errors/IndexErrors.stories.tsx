@@ -1,6 +1,10 @@
 import { Meta, StoryObj } from "@storybook/react";
-import React from "react";
-import { databaseAccessArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import {
+    databaseAccessArgType,
+    withBootstrap5,
+    withForceRerender,
+    withStorybookContexts,
+} from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 import IndexErrors from "components/pages/database/indexes/errors/IndexErrors";
@@ -8,7 +12,7 @@ import { IndexesStubs } from "test/stubs/IndexesStubs";
 
 export default {
     title: "Pages/Indexes/Index Errors",
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
 interface IndexErrorsStoryArgs {

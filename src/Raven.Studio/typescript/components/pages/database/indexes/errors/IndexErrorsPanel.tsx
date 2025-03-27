@@ -243,20 +243,22 @@ function IndexErrorsPanelDetailsStatus({
                         </PopoverWithHoverWrapper>
                     </LazyLoad>
                 </RichPanelDetails>
-                <Collapse unmountOnExit mountOnEnter in={!panelCollapsed}>
-                    <RichPanelDetails>
-                        <div ref={ref} className="w-100">
-                            <IndexErrorsPanelTable
-                                status={asyncFetchErrorDetails.status}
-                                refresh={asyncFetchErrorDetails.execute}
-                                indexErrors={mappedIndexErrors}
-                                isLoading={asyncFetchErrorDetails.loading}
-                                width={width}
-                                table={table}
-                            />
-                        </div>
-                    </RichPanelDetails>
-                </Collapse>
+                <div ref={ref}>
+                    <Collapse in={!panelCollapsed} mountOnEnter unmountOnExit>
+                        <RichPanelDetails>
+                            <div className="w-100">
+                                <IndexErrorsPanelTable
+                                    status={asyncFetchErrorDetails.status}
+                                    refresh={asyncFetchErrorDetails.execute}
+                                    indexErrors={mappedIndexErrors}
+                                    isLoading={asyncFetchErrorDetails.loading}
+                                    width={width}
+                                    table={table}
+                                />
+                            </div>
+                        </RichPanelDetails>
+                    </Collapse>
+                </div>
             </>
         );
     }

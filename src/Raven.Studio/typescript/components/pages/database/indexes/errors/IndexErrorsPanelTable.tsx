@@ -3,6 +3,7 @@ import { Table, useReactTable } from "@tanstack/react-table";
 import { LoadError } from "components/common/LoadError";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { AsyncStateStatus } from "react-async-hook";
+import { useMemo } from "react";
 
 interface IndexErrorsPanelTableProps {
     status: AsyncStateStatus;
@@ -23,9 +24,11 @@ export function IndexErrorsPanelTable({
 }: IndexErrorsPanelTableProps) {
     const { indexErrorsPanelColumns } = useIndexErrorsPanelColumns(width);
 
+    const data = useMemo(() => indexErrors ?? [], [indexErrors]);
+
     const indexErrorsPanelTable = useReactTable<IndexErrorPerDocument>({
         ...table.options,
-        data: indexErrors ?? [],
+        data,
         columns: indexErrorsPanelColumns,
     });
 

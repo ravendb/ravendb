@@ -1,5 +1,4 @@
 import { rtlRender } from "test/rtlTestUtils";
-import React from "react";
 import { composeStories } from "@storybook/react";
 import * as stories from "./IndexErrors.stories";
 import { within } from "@testing-library/dom";
@@ -41,7 +40,7 @@ describe("IndexErrors", function () {
 
         expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
         expect(await screen.findAllByClassName(classSelectors.nodePanel)).toHaveLength(6);
-    }, 10000);
+    });
 
     it("renders a single non-sharded node with errors and displays total count", async () => {
         const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />);
