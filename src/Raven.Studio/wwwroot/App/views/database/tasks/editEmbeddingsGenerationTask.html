@@ -184,7 +184,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group flex-grow" data-bind="validationElement: pathConfigurationMaxTokensPerChunk">
-                                        <label class="control-label">Max Tokens Per Chunk</label>
+                                        <label class="control-label">Max Tokens per Chunk</label>
                                         <div class="flex-grow">
                                             <input type="number" class="form-control" data-bind="value: pathConfigurationMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
                                         </div>
@@ -207,7 +207,7 @@
                                             <tr>
                                                 <th>Path</th>
                                                 <th>Chunking Method</th>
-                                                <th>Max Tokens Per Chunk</th>
+                                                <th>Max Tokens per Chunk</th>
                                                 <th></th>
                                             </tr>
                                         </thead>
@@ -255,7 +255,10 @@
                             </div>
                         </div>
                         <div class="form-group" data-bind="validationElement: transformationMaxTokensPerChunk">
-                            <label class="control-label">Max Tokens Per Chunk</label>
+                            <label class="control-label">
+                                Max Tokens per Chunk
+                                <i class="icon-info text-info" title="This value will be used as the default when no specific value is set in the script"></i>
+                            </label>
                             <div class="flex-grow">
                                 <input type="number" class="form-control" data-bind="value: transformationMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
                             </div>
@@ -310,7 +313,7 @@
                                 </div>
                             </div>
                             <div class="form-group" data-bind="validationElement: maxTokensPerChunk">
-                                <label class="control-label">Max Tokens Per Chunk</label>
+                                <label class="control-label">Max Tokens per Chunk</label>
                                 <div class="flex-grow">
                                     <input type="number" class="form-control" data-bind="value: maxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
                                 </div>
