@@ -56,12 +56,20 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
             await asyncSave.execute(mapConnectionStringToDto(newConnection));
 
             if (isForNewConnection) {
-                dispatch(connectionStringsActions.connectionAdded(newConnection));
+                dispatch(
+                    connectionStringsActions.connectionAdded({
+                        ...newConnection,
+                        usedByTasks: initialConnection.usedByTasks,
+                    })
+                );
             } else {
                 dispatch(
                     connectionStringsActions.connectionEdited({
                         oldName: initialConnection.name,
-                        newConnection,
+                        newConnection: {
+                            ...newConnection,
+                            usedByTasks: initialConnection.usedByTasks,
+                        },
                     })
                 );
             }
