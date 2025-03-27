@@ -53,12 +53,12 @@ public static class EmbeddingsHelper
     
     public static string GetEmbeddingDocumentId(string documentId)
     {
-        return $"{documentId}/embeddings";
+        return $"embeddings/{documentId}";
     }
 
     public static string GetEmbeddingDocumentCollectionName(string sourceCollectionName)
     {
-        return $"{sourceCollectionName}/embeddings";
+        return $"@embeddings/{sourceCollectionName}";
     }
 
     public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier id, string valueHash, VectorEmbeddingType targetQuantization)
