@@ -29,18 +29,36 @@ namespace Sparrow.LowMemory
         private static readonly byte[] Committed_AS = Encoding.UTF8.GetBytes("Committed_AS:");
 
         private static readonly int ProcessId;
-
+        private static readonly bool SupportsMemoryCountersEx2;
         private static readonly IntPtr ProcessHandle = IntPtr.Zero;
-
         public static readonly Size TotalPhysicalMemory;
 
         static MemoryInformation()
         {
             using (var process = Process.GetCurrentProcess())
+            {
                 ProcessId = process.Id;
 
-            if (PlatformDetails.RunningOnWindows)
-                ProcessHandle = Win32MemoryQueryMethods.GetCurrentProcess();
+                if (PlatformDetails.RunningOnWindows)
+                {
+                    ProcessHandle = Win32MemoryQueryMethods.GetCurrentProcess();
+
+                    var memCounters = new PROCESS_MEMORY_COUNTERS_EX2
+                    {
+                        cb = (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX2))
+                    };
+
+                    try
+                    {
+                        // Windows 10 22H2 with September 2023 cumulative update or Windows 11 22H2 with September 2023 cumulative update
+                        SupportsMemoryCountersEx2 = GetProcessMemoryInfo(process.Handle, out memCounters, (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX2)));
+                    }
+                    catch
+                    {
+                        // not supported on this OS
+                    }
+                }
+            }
 
             TotalPhysicalMemory = GetMemoryInfo().TotalPhysicalMemory;
         }
@@ -408,12 +426,12 @@ namespace Sparrow.LowMemory
                 extended &= PlatformDetails.RunningOnLinux == false;
 
                 MemoryInfoResult result;
-                using (var process = extended ? Process.GetCurrentProcess() : null)
                 {
                     if (PlatformDetails.RunningOnPosix == false)
-                        result = GetMemoryInfoWindows(process, extended);
+                        result = GetMemoryInfoWindows();
                     else if (PlatformDetails.RunningOnMacOsx)
-                        result = GetMemoryInfoMacOs(process, extended);
+                        using (var process = extended ? Process.GetCurrentProcess() : null)
+                            result = GetMemoryInfoMacOs(process, extended);
                     else
                         result = GetMemoryInfoLinux(smapsReader, extended);
                 }
@@ -423,8 +441,8 @@ namespace Sparrow.LowMemory
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
             }
@@ -584,7 +602,7 @@ namespace Sparrow.LowMemory
 
         private static bool _reportedQueryJobObjectFailure = false;
 
-        private static unsafe MemoryInfoResult GetMemoryInfoWindows(Process process, bool extended)
+        private static unsafe MemoryInfoResult GetMemoryInfoWindows()
         {
             // windows
             var memoryStatus = new MemoryStatusEx
@@ -605,7 +623,7 @@ namespace Sparrow.LowMemory
             // Malformed SMBIOS data may indicate a problem with the user's computer.
             var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
 
-            var sharedCleanInBytes = GetSharedCleanInBytes(process);
+            var sharedCleanInBytes = GetSharedCleanInBytes(out long workingSet, out long pageFileUsage);
             long memoryStatusUllAvailPhys = (long)memoryStatus.ullAvailPhys;
             long totalPageFile = (long)memoryStatus.ullTotalPageFile;
             long availPageFile = (long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile);
@@ -648,21 +666,8 @@ namespace Sparrow.LowMemory
 
                     if (maxSize != long.MaxValue)
                     {
-                        long workingSet64;
-                        if (process == null)
-                        {
-                            using (var p = Process.GetCurrentProcess())
-                            {
-                                workingSet64 = p.WorkingSet64;
-                            }
-                        }
-                        else
-                        {
-                            workingSet64 = process.WorkingSet64;
-                        }
-
-                        availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSet64, 0);
-                        availPageFile = Math.Max(maxSize - workingSet64, 0);
+                        availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSet, 0);
+                        availPageFile = Math.Max(maxSize - workingSet, 0);
                         totalPageFile = maxSize;
                         memoryStatusUllAvailPhys = Math.Min(availableMemoryForProcessingInBytes, memoryStatusUllAvailPhys);
                         remarks = "Memory limited by Job Object limits";
@@ -682,17 +687,82 @@ namespace Sparrow.LowMemory
                 InstalledMemory = fetchedInstalledMemory ?
                     new Size(installedMemoryInKb, SizeUnit.Kilobytes) :
                     new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
-                WorkingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes),
-                IsExtended = extended,
-                TotalSwapUsage = new Size(process?.PagedMemorySize64 ?? 0, SizeUnit.Bytes)
+                WorkingSet = new Size(workingSet, SizeUnit.Bytes),
+                IsExtended = true,
+                TotalSwapUsage = new Size(pageFileUsage, SizeUnit.Bytes)
             };
         }
 
-        public static long GetSharedCleanInBytes(Process process)
+        //https://learn.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters_ex2
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESS_MEMORY_COUNTERS_EX2
         {
-            if (process == null)
-                return 0;
+            public uint cb;
+            public uint PageFaultCount;
+            public ulong PeakWorkingSetSize;
+            public ulong WorkingSetSize;
+            public ulong QuotaPeakPagedPoolUsage;
+            public ulong QuotaPagedPoolUsage;
+            public ulong QuotaPeakNonPagedPoolUsage;
+            public ulong QuotaNonPagedPoolUsage;
+            public ulong PagefileUsage;
+            public ulong PeakPagefileUsage;
+            public ulong PrivateUsage;
+            public ulong PrivateWorkingSetSize;
+            public ulong SharedCommitUsage;
+        }
 
+        //https://learn.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters_ex
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESS_MEMORY_COUNTERS_EX
+        {
+            public uint cb;
+            public uint PageFaultCount;
+            public ulong PeakWorkingSetSize;
+            public ulong WorkingSetSize;
+            public ulong QuotaPeakPagedPoolUsage;
+            public ulong QuotaPagedPoolUsage;
+            public ulong QuotaPeakNonPagedPoolUsage;
+            public ulong QuotaNonPagedPoolUsage;
+            public ulong PagefileUsage;
+            public ulong PeakPagefileUsage;
+            public ulong PrivateUsage;
+        }
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        private static extern bool GetProcessMemoryInfo(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS_EX2 counters, uint size);
+
+        [DllImport("psapi.dll", SetLastError = true, EntryPoint = "GetProcessMemoryInfo")]
+        private static extern bool GetProcessMemoryInfoLegacy(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS_EX counters, uint size);
+
+        public static long GetSharedCleanInBytes(out long workingSet, out long pageFileUsage)
+        {
+            if (SupportsMemoryCountersEx2)
+            {
+                if (GetProcessMemoryInfo(ProcessHandle, out PROCESS_MEMORY_COUNTERS_EX2 memCounters, (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX2))) == false)
+                {
+                    throw new InvalidOperationException("Failure when trying to read memory using GetProcessMemoryInfo, error code is: " + Marshal.GetLastWin32Error());
+                }
+
+                workingSet = (long)memCounters.WorkingSetSize;
+                pageFileUsage = (long)memCounters.PagefileUsage;
+                return workingSet - (long)memCounters.PrivateWorkingSetSize;
+            }
+            else
+            {
+                if (GetProcessMemoryInfoLegacy(ProcessHandle, out PROCESS_MEMORY_COUNTERS_EX memCounters, (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX))) == false)
+                {
+                    throw new InvalidOperationException("Failure when trying to read memory using the legacy GetProcessMemoryInfo, error code is: " + Marshal.GetLastWin32Error());
+                }
+
+                workingSet = (long)memCounters.WorkingSetSize;
+                pageFileUsage = (long)memCounters.PagefileUsage;
+                return GetLegacySharedClean(workingSet);
+            }
+        }
+
+        private static long GetLegacySharedClean(long workingSet)
+        {
             var mappedDirty = 0L;
             foreach (var mapping in NativeMemory.FileMapping)
             {
@@ -718,7 +788,7 @@ namespace Sparrow.LowMemory
                 mappedDirty += totalMapped;
             }
 
-            var sharedClean = process.WorkingSet64 - AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes() - AbstractLowMemoryMonitor.GetManagedMemoryInBytes() - mappedDirty;
+            var sharedClean = workingSet - AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes() - AbstractLowMemoryMonitor.GetManagedMemoryInBytes() - mappedDirty;
 
             // the shared dirty can be larger than the size of the working set
             // this can happen when some of the buffers were paged out
