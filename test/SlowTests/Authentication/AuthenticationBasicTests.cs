@@ -798,6 +798,7 @@ namespace SlowTests.Authentication
                 var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
                 {
                     ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                    ("POST", "/databases/*/studio/sample-data") // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -918,6 +919,7 @@ namespace SlowTests.Authentication
                 var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
                 {
                     ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                    ("POST", "/databases/*/studio/sample-data") // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -1032,6 +1034,7 @@ namespace SlowTests.Authentication
                 var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
                 {
                     ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                    ("POST", "/databases/*/studio/sample-data") // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -1143,6 +1146,7 @@ namespace SlowTests.Authentication
                 var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
                 {
                     ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                    ("POST", "/databases/*/studio/sample-data") // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -1249,6 +1253,7 @@ namespace SlowTests.Authentication
                 var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
                 {
                     ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                    ("POST", "/databases/*/studio/sample-data") // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
