@@ -289,10 +289,10 @@ namespace RachisTests.DatabaseCluster
         {
             using (var store = GetDocumentStore(options))
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User(), "users/1");
-                    session.SaveChanges();
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
                 }
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -312,6 +312,8 @@ namespace RachisTests.DatabaseCluster
                 // call StartBackupOperation - this will not start a new backup task for that id since we already have one running
                 var error = await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
                 Assert.Equal(error.OperationId, backup.RunningTask.Id);
+                
+                mre.Set();
             }
         }
 
@@ -322,10 +324,10 @@ namespace RachisTests.DatabaseCluster
             options.ReplicationFactor = 1;
             using (var store = GetDocumentStore(options))
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User(), "users/1");
-                    session.SaveChanges();
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
                 }
 
                 var database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0));
@@ -362,6 +364,8 @@ namespace RachisTests.DatabaseCluster
                 // call StartBackupOperation - this should throw since we the backup is still running on shard 0
                 var error = await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
                 Assert.Equal(error.OperationId, backupShard0.RunningTask.Id);
+
+                mreShard0.Set();
             }
         }
 
