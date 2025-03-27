@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Text;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -92,8 +92,16 @@ namespace Sparrow.Json.Parsing
 
         private static readonly JsonParserReadActionToken[] ByteToActionMap;
 
+        private static readonly (TokenInfo Token, JsonParserTokenContinuation Continuation)[] TokenInfoCache;
+
         static UnmanagedJsonParser()
         {
+            TokenInfoCache = new (TokenInfo, JsonParserTokenContinuation)[(int)JsonParserReadActionToken.Integer];
+            TokenInfoCache[(int)JsonParserReadActionToken.Null] = (new TokenInfo(AbstractBlittableJsonTextWriter.NullBuffer, 1, "null"), JsonParserTokenContinuation.PartialNull);
+            TokenInfoCache[(int)JsonParserReadActionToken.True] = (new TokenInfo(AbstractBlittableJsonTextWriter.TrueBuffer, 1, "true"), JsonParserTokenContinuation.PartialTrue);
+            TokenInfoCache[(int)JsonParserReadActionToken.False] = (new TokenInfo(AbstractBlittableJsonTextWriter.FalseBuffer, 1, "false"), JsonParserTokenContinuation.PartialFalse);
+
+
             ByteToActionMap = new JsonParserReadActionToken[255];
 
             // Structural characters
@@ -156,8 +164,6 @@ namespace Sparrow.Json.Parsing
             ParseNumberTable['-'] = ParseNumberTable['+'] = ParseNumberAction.ParseUnlikely;
             ParseNumberTable['\r'] = ParseNumberTable['\n'] = ParseNumberAction.ParseUnlikely;
         }
-
-
 
         public UnmanagedJsonParser(JsonOperationContext ctx, JsonParserState state, string debugTag)
         {
@@ -286,11 +292,11 @@ namespace Sparrow.Json.Parsing
                     case JsonParserReadActionToken.EndObject:
                     case JsonParserReadActionToken.StartArray:
                     case JsonParserReadActionToken.EndArray:
-                        state.CurrentTokenType = (JsonParserToken) (1 << (int)(actionToken & JsonParserReadActionToken.StructuralMask));
+                        state.CurrentTokenType = (JsonParserToken)(1 << (int)(actionToken & JsonParserReadActionToken.StructuralMask));
                         _pos = pos;
                         return true;
                     case JsonParserReadActionToken.Integer:
-                        goto ParseNumber;
+                        goto ParseNumberWithAdjustment;
                     case JsonParserReadActionToken.String:
                         goto ParseString;
                     case JsonParserReadActionToken.Separator:
@@ -298,53 +304,29 @@ namespace Sparrow.Json.Parsing
                             goto Error;
                         state.CurrentTokenType = JsonParserToken.Separator;
                         continue;
-                    case JsonParserReadActionToken.Null:
-                        {
-                            _state.CurrentTokenType = JsonParserToken.Null;
-                            _expectedTokenInfo = new TokenInfo(AbstractBlittableJsonTextWriter.NullBuffer, 1, "null");
-                            if (EnsureRestOfToken(ref pos))
-                            {
-                                _pos = pos;
-                                return true;
-                            }
-
-                            _state.Continuation = JsonParserTokenContinuation.PartialNull;
-                            _pos = pos;
-                            return false;
-                        }
-
                     case JsonParserReadActionToken.True:
-                        {
-                            _state.CurrentTokenType = JsonParserToken.True;
-                            _expectedTokenInfo = new TokenInfo(AbstractBlittableJsonTextWriter.TrueBuffer, 1, "true");
-                            if (EnsureRestOfToken(ref pos))
-                            {
-                                _pos = pos;
-                                return true;
-                            }
-
-                            _state.Continuation = JsonParserTokenContinuation.PartialTrue;
-                            _pos = pos;
-                            return false;
-                        }
+                    case JsonParserReadActionToken.Null:
                     case JsonParserReadActionToken.False:
                         {
-                            _state.CurrentTokenType = JsonParserToken.False;
-                            _expectedTokenInfo = new TokenInfo(AbstractBlittableJsonTextWriter.FalseBuffer, 1, "false");
+                            _state.CurrentTokenType = (JsonParserToken)(1 << (int)actionToken);
+
+                            ref var item = ref TokenInfoCache[(int)actionToken];
+
+                            _expectedTokenInfo = item.Token;
                             if (EnsureRestOfToken(ref pos))
                             {
                                 _pos = pos;
                                 return true;
                             }
 
-                            _state.Continuation = JsonParserTokenContinuation.PartialFalse;
+                            _state.Continuation = item.Continuation;
                             _pos = pos;
                             return false;
                         }
                 }
 
                 if (IsPossibleNegativeNumber(b, bufferSize, pos, currentBuffer))
-                    goto ParseNumber; // PERF: Avoid very lengthy method here; as we are going to return anyways.
+                    goto ParseNumberWithAdjustment; // PERF: Avoid very lengthy method here; as we are going to return anyways.
 
                 if (ReadUnlikely(b, ref pos, out bool couldRead) == false)
                     continue; // We can only continue here, if there is a failure to parse, we will throw inside ReadUnlikely.
@@ -372,6 +354,13 @@ namespace Sparrow.Json.Parsing
                 return true;
             }
 
+            ParseNumberWithAdjustment:
+            {
+                // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char and fall-through to ParseNumber
+                pos--;
+                _charPos--;
+            }
+
             ParseNumber:
             {
                 _unmanagedWriteBuffer.Clear();
@@ -382,10 +371,6 @@ namespace Sparrow.Json.Parsing
                 _isFractionedDouble = false;
                 _isExponent = false;
                 _isOverflow = false;
-
-                // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char
-                pos--;
-                _charPos--;
 
                 if (ParseNumber(ref state.Long, ref pos) == false)
                 {
