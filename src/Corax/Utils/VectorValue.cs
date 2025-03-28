@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Buffers;
 using Sparrow.Server;
-using Voron.Data.Graphs;
 
 namespace Corax.Utils;
 
@@ -15,9 +14,10 @@ public struct VectorValue : IDisposable
     public readonly bool IsNull;
     public static readonly VectorValue Null = new(true);
 
-    public readonly VectorEmbeddingType Type;
-    
-    public ReadOnlySpan<byte> GetEmbedding() =>_memory.Span.Slice(0, _length);
+    public ReadOnlySpan<byte> GetEmbedding()
+    {
+        return _memory.Span.Slice(0, _length);
+    }
 
     public VectorValue()
     {
@@ -28,9 +28,8 @@ public struct VectorValue : IDisposable
         IsNull = isNull;
     }
 
-    public VectorValue(IDisposable memoryScope, Memory<byte> embedding, VectorEmbeddingType type, int? length = null) : this(false)
+    public VectorValue(IDisposable memoryScope, Memory<byte> embedding, int? length = null)
     {
-        Type = type;
         _memoryScope = memoryScope;
         _memory = embedding;
         _length = length ?? embedding.Length;

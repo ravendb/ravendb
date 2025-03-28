@@ -992,34 +992,34 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                if (current is float[] fArray)
+                if (current is Dictionary<string, long> dsl)
                 {
-                    var dja = new DynamicJsonArray(fArray);
+                    var dja = new DynamicJsonArray();
+                    foreach (var item in dsl)
+                    {
+                        var djv = new DynamicJsonValue
+                        {
+                            [item.Key] = item.Value
+                        };
+                        dja.Add(djv);
+                    }
                     current = dja;
                     continue;
                 }
 
-                if (current is sbyte[] sbArray)
+                if (current is Enum)
                 {
-                    var dja = new DynamicJsonArray(sbArray);
-                    current = dja;
+                    current = current.ToString();
                     continue;
                 }
 
-                if (current is byte[] bArray)
+                if (current is IDynamicJsonValueConvertible convertible)
                 {
-                    var dja = new DynamicJsonArray(bArray);
-                    current = dja;
+                    current = convertible.ToJson();
                     continue;
                 }
 
-            DynamicJsonArray HandleLongsList(List<long> dd)
-            {
-                var dja = new DynamicJsonArray();
-                foreach (var item in dd)
-                    dja.Add(item);
-
-                return dja;
+                throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);
             }
         }
 

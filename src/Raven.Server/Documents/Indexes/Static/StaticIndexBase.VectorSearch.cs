@@ -8,7 +8,6 @@ using System.Runtime.InteropServices;
 using Corax.Utils;
 using Jint;
 using Jint.Native;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
@@ -155,32 +154,15 @@ public partial class AbstractStaticIndexBase
             return GenerateEmbeddings.FromBase64Array(vectorOptions, allocator, str, isAutoIndex);
         }
 
-        object HandleEnumerable(IEnumerable enumerable, bool allowNestedArrays = true)
+        object HandleEnumerable(IEnumerable enumerable)
         {
-            if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
-                throw new InsufficientExecutionStackException($"Too many nested arrays in {nameof(CreateVector)}");
-            
-            List<object> vectorValues = new();
-            if (enumerable is DynamicArray dynamicArray && CurrentIndexingScope.Current.Index.Type.IsMapReduce() && allowNestedArrays)
-            {
-                foreach (var item in dynamicArray.Inner)
-                {
-                    var reduce = HandleEnumerable(item as IEnumerable, false) as List<object>;
-                    vectorValues.AddRange(reduce!);                        
-                }
-
-                return vectorValues;
-            }
-            
             var enumerator = enumerable.GetEnumerator();
             using var _ = enumerator as IDisposable;
             if (enumerator.MoveNext() == false)
-            {
-                vectorValues.Add(VectorValue.Null);
-                return vectorValues;
-            };
+                return VectorValue.Null;
 
             // We've to find first non-null value do determine the underlying type of data.
+            List<object> vectorValues = new();
             while (IsNullValue(enumerator.Current))
             {
                 vectorValues.Add(VectorValue.Null);
@@ -208,19 +190,11 @@ public partial class AbstractStaticIndexBase
                 Memory<byte> mem;
                 switch (vectorOptions.SourceEmbeddingType)
                 {
-                    case VectorEmbeddingType.Single when enumerator.Current is float[] itemAsFloats:
+                    case VectorEmbeddingType.Single:
                     {
+                        var itemAsFloats = (float[])enumerator.Current!;
                         memScope = allocator.Allocate(itemAsFloats.Length * sizeof(float), out mem);
                         MemoryMarshal.Cast<float, byte>(itemAsFloats).CopyTo(mem.Span);
-                        vectorValues.Add(GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length));
-                        break;
-                    }
-                    case VectorEmbeddingType.Single when enumerator.Current is DynamicArray itemAsFloatsDynamic:
-                    {
-                        List<float> itemAsFloats = new();
-                        itemAsFloats.AddRange(itemAsFloatsDynamic.Inner.Select(x => (float)(LazyNumberValue)(object)x));
-                        memScope = allocator.Allocate(itemAsFloats.Count * sizeof(float), out mem);
-                        MemoryMarshal.Cast<float, byte>(CollectionsMarshal.AsSpan(itemAsFloats)).CopyTo(mem.Span);
                         vectorValues.Add(GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length));
                         break;
                     }
@@ -251,20 +225,9 @@ public partial class AbstractStaticIndexBase
             var dataLength = data.Length;
 
             if (TryGetFirstNonNullElement(data, out var firstNonNull) == false)
-                return new object[]{VectorValue.Null};
+                return VectorValue.Null;
 
             var values = new object[dataLength];
-
-            if (firstNonNull is BlittableJsonReaderVector)
-            {
-                for (var i = 0; i < dataLength; i++)
-                {
-                    values[i] = HandleBlittableJsonReaderVector(data[i] as BlittableJsonReaderVector);
-                }
-
-                return values;
-            }
-            
             if (firstNonNull is BlittableJsonReaderObject or DynamicBlittableJson)
             {
                 for (int i = 0; i < dataLength; i++)

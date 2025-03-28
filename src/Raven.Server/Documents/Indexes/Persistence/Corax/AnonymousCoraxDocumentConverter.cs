@@ -1,7 +1,6 @@
 using System;
-using System.Collections;
 using System.Diagnostics;
-using Corax.Utils;
+using Amazon.SimpleNotificationService.Model;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -73,30 +72,11 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 
             if (storedValue is not null && innerShouldSkip == false)
             {
-                //This method is explicitly for MapReduce because we have to have JSON as the last item.
+                //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
                 var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
-                
+
                 if (returnType != TypeConverter.BlittableSupportedReturnType.Ignored)
                     storedValue[property.Key] = blittableValue;
-
-                if (returnType == TypeConverter.BlittableSupportedReturnType.VectorValue)
-                {
-                    if (value is IEnumerable ie)
-                    {
-                        foreach (var item in ie)
-                            DisposeVectorValue(item);
-                    }
-                    else
-                    {
-                        DisposeVectorValue(value);
-                    }
-
-                    void DisposeVectorValue(object possibleVv)
-                    {
-                        if (possibleVv is VectorValue v)
-                            v.Dispose();
-                    }
-                }
             }
         }
 
@@ -109,7 +89,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             builder.Store(bjo);
         }
             
-        var id = key ?? throw new InvalidOperationException("Cannot find any identifier of the document.");
+        var id = key ?? throw new InvalidParameterException("Cannot find any identifier of the document.");
         if (sourceDocumentId != null && knownFields.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var documentSourceField))
             builder.Write(documentSourceField.FieldId, string.Empty, sourceDocumentId.AsSpan());
 

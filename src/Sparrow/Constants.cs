@@ -57,7 +57,7 @@ namespace Sparrow.Global
             }
         }
 
-        public static class Naming
+        internal static class Naming
         {
             public const string VectorPropertyName = "@vector";
             

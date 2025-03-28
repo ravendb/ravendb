@@ -30,7 +30,7 @@ public class LoadVectorWithMapReduceTests(ITestOutputHelper output) : Embeddings
                           select new Result() { Name = dto.Name, Vector = LoadVector("localaitask", "Description") };
             Reduce = results => from result in results
                                 group result by result.Name into g
-                                select new Result() { Name = g.Key, Vector = CreateVector(g.Select(p => p.Vector)) };
+                                select new Result() { Name = g.Key, Vector = CreateVector(g.Select(p => (float[])p.Vector)) };
         }
 
         public class Result

@@ -6,14 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Corax.Utils;
 using Jint;
 using Jint.Native;
 using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -26,7 +24,6 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
-using Voron.Data.Graphs;
 
 namespace Raven.Server.Utils
 {
@@ -203,17 +200,13 @@ namespace Raven.Server.Utils
             Dictionary = 5,
             GenericDictionary = 6,
             Enumerable = 7,
-            String = 8,
-            VectorValue = 9
+            String = 8
         }
 
         private static readonly TypeCache<BlittableSupportedReturnType> _supportedTypeCache = new (512);
 
         private static BlittableSupportedReturnType DoBlittableSupportedTypeInternal(Type type, object value)
         {
-            if (type == typeof(VectorValue))
-                return BlittableSupportedReturnType.VectorValue;
-            
             if (type == typeof(DynamicNullObject))
                 return BlittableSupportedReturnType.Null;
 
@@ -384,17 +377,6 @@ namespace Raven.Server.Utils
 
                     return @object;
                 }
-                case BlittableSupportedReturnType.VectorValue:
-                    var vector = (VectorValue)value;
-                    if (vector.IsNull)
-                        return null;
-                    
-                    return new DynamicJsonArray(vector.Type switch
-                    {
-                        VectorEmbeddingType.Single => MemoryMarshal.Cast<byte, float>(vector.GetEmbedding()).ToArray(),
-                        VectorEmbeddingType.Int8 => MemoryMarshal.Cast<byte, sbyte>(vector.GetEmbedding()).ToArray(),
-                        _ => vector.GetEmbedding().ToArray()
-                    });
             }
 
             if (value is DynamicBlittableJson dynamicDocument)
