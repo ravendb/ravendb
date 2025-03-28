@@ -43,11 +43,6 @@ function Details(props: AiEtlPanelProps & { canEdit: boolean }) {
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
-            {/* {data.shared.nodesUrls.map((nodeUrl) => (
-                <RichPanelDetailItem label="Node URL" key={nodeUrl}>
-                    {nodeUrl}
-                </RichPanelDetailItem>
-            ))} */}
             <EmptyScriptsWarning task={data} />
         </RichPanelDetails>
     );

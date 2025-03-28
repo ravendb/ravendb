@@ -19,6 +19,8 @@ export function AiConnectionStringsInfoHub() {
         ],
     });
 
+    // TODO adjust to only AI connection strings
+
     return (
         <AboutViewAnchored defaultOpen={hasAiEtl ? null : "licensing"}>
             <AccordionItemWrapper

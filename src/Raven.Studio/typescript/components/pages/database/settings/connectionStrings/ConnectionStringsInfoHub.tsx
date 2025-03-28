@@ -93,6 +93,13 @@ export function ConnectionStringsInfoHub() {
 
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
+        featureName: "AI",
+        featureIcon: "ai-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+    {
         featureName: "RavenDB ETL",
         featureIcon: "ravendb-etl",
         community: { value: false },
@@ -151,13 +158,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Amazon SQS ETL",
         featureIcon: "amazon-sqs-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "AI",
-        featureIcon: "ai-etl",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },

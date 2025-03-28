@@ -419,6 +419,24 @@ export function OngoingTasksPage() {
                             />
                         )}
 
+                        {aiEtls.length > 0 && (
+                            <div key="ai-etls">
+                                <HrHeader className="ai-etl" count={aiEtls.length}>
+                                    <Icon icon="ai-etl" />
+                                    AI
+                                </HrHeader>
+
+                                {aiEtls.map((x) => (
+                                    <AiEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
                         {externalReplications.length > 0 && (
                             <div key="external-replications" data-testid="external-replications">
                                 <HrHeader className="external-replication" count={externalReplications.length}>
@@ -600,24 +618,6 @@ export function OngoingTasksPage() {
 
                                 {rabbitMqSinks.map((x) => (
                                     <RabbitMqSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                                ))}
-                            </div>
-                        )}
-                        {aiEtls.length > 0 && (
-                            <div key="ai-etls">
-                                <HrHeader className="ai-etl" count={aiEtls.length}>
-                                    <Icon icon="ai-etl" />
-                                    AI ETL
-                                </HrHeader>
-
-                                {aiEtls.map((x) => (
-                                    <AiEtlPanel
-                                        {...sharedPanelProps}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onToggleDetails={startTrackingProgress}
-                                        showItemPreview={showItemPreview}
-                                    />
                                 ))}
                             </div>
                         )}

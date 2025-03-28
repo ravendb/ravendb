@@ -172,7 +172,7 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
         {
             value: "Ai",
             label: "AI",
-            icon: "ai-etl",
+            icon: "sparkles",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasAiEtl,
         },
