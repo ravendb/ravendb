@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -15,10 +16,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 /// FieldName = CreateVector("FieldName", x.Textual)
 /// to provide a way to create dynamic field with vector
 /// </summary>
-internal sealed class VectorFieldRewriter(ReferencedCollectionsRetriever referencedCollectionsRetriever, CollectionNameRetriever collectionNameRetriever) : CSharpSyntaxRewriter(true)
+internal sealed class VectorFieldRewriter(ReferencedCollectionsRetriever referencedCollectionsRetriever, CSharpSyntaxRewriter collectionNameRetriever, bool isMapReduce = false) : CSharpSyntaxRewriter(true)
 {
     private readonly ReferencedCollectionsRetriever _referencedCollectionsRetriever = referencedCollectionsRetriever;
-    private readonly CollectionNameRetriever _collectionNameRetriever = collectionNameRetriever;
+    private readonly CSharpSyntaxRewriter _collectionNameRetriever = collectionNameRetriever;
 
     public bool HasVectorField { get; private set; }
     
@@ -33,9 +34,18 @@ internal sealed class VectorFieldRewriter(ReferencedCollectionsRetriever referen
             
             case $"this.{nameof(StaticIndexBase.LoadVector)}":
             case $"{nameof(StaticIndexBase.LoadVector)}":
+                if (isMapReduce)
+                    throw new NotSupportedException($"Method {nameof(StaticIndexBase.LoadVector)} is not supported for map reduce indexes.");
+                
+                IEnumerable<string> names = _collectionNameRetriever switch
+                {
+                    CollectionNameRetriever cnr => cnr!.CollectionNames!.Select(AiHelper.GetDocumentEmbeddingsCollectionName),
+                    CollectionNameRetrieverBase cnrb => cnrb.Collections.Select(n => AiHelper.GetDocumentEmbeddingsCollectionName(n.CollectionName)),
+                    _ => throw new InvalidOperationException($"Unknown collection name retriever. Got: {_collectionNameRetriever.GetType().FullName}.")
+                };
+
                 _referencedCollectionsRetriever.CreateReferencedCollections();
-                var names = _collectionNameRetriever.CollectionNames.Select(AiHelper.GetDocumentEmbeddingsCollectionName);
-                _referencedCollectionsRetriever.ReferencedCollections.AddRange(names);
+                _referencedCollectionsRetriever.ReferencedCollections.AddRange(names.Distinct());
                 return Rewrite();
         }
 

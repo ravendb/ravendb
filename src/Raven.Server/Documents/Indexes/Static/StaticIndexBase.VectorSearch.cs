@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -8,6 +9,7 @@ using System.Runtime.InteropServices;
 using Corax.Utils;
 using Jint;
 using Jint.Native;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -81,7 +83,7 @@ public partial class AbstractStaticIndexBase
     {
         var currentIndexingScope = CurrentIndexingScope.Current;
         if (IsDictionaryTrainingPhase(currentIndexingScope) || IsNullValue(value))
-            return VectorValue.Null;
+            return new object[]{VectorValue.Null};
 
         var indexField = RetrieveCreateVectorField(fieldName, value);
         var vector = indexField!.Vector!.SourceEmbeddingType switch
@@ -102,7 +104,7 @@ public partial class AbstractStaticIndexBase
     internal static object CreateVector(IndexField indexField, object value, bool isAutoIndex)
     {
         if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current) || IsNullValue(value))
-            return VectorValue.Null;
+            return new object[]{VectorValue.Null};
 
         return indexField!.Vector!.SourceEmbeddingType switch
         {
@@ -153,15 +155,32 @@ public partial class AbstractStaticIndexBase
             return GenerateEmbeddings.FromBase64Array(vectorOptions, allocator, str, isAutoIndex);
         }
 
-        object HandleEnumerable(IEnumerable enumerable)
+        object HandleEnumerable(IEnumerable enumerable, bool allowNestedArrays = true)
         {
+            if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
+                throw new InsufficientExecutionStackException($"Too many nested arrays in {nameof(CreateVector)}");
+            
+            List<object> vectorValues = new();
+            if (enumerable is DynamicArray dynamicArray && CurrentIndexingScope.Current.Index.Type.IsMapReduce() && allowNestedArrays)
+            {
+                foreach (var item in dynamicArray.Inner)
+                {
+                    var reduce = HandleEnumerable(item as IEnumerable, false) as List<object>;
+                    vectorValues.AddRange(reduce!);                        
+                }
+
+                return vectorValues;
+            }
+            
             var enumerator = enumerable.GetEnumerator();
             using var _ = enumerator as IDisposable;
             if (enumerator.MoveNext() == false)
-                return VectorValue.Null;
+            {
+                vectorValues.Add(VectorValue.Null);
+                return vectorValues;
+            };
 
             // We've to find first non-null value do determine the underlying type of data.
-            List<object> vectorValues = new();
             while (IsNullValue(enumerator.Current))
             {
                 vectorValues.Add(VectorValue.Null);
@@ -189,11 +208,19 @@ public partial class AbstractStaticIndexBase
                 Memory<byte> mem;
                 switch (vectorOptions.SourceEmbeddingType)
                 {
-                    case VectorEmbeddingType.Single:
+                    case VectorEmbeddingType.Single when enumerator.Current is float[] itemAsFloats:
                     {
-                        var itemAsFloats = (float[])enumerator.Current!;
                         memScope = allocator.Allocate(itemAsFloats.Length * sizeof(float), out mem);
                         MemoryMarshal.Cast<float, byte>(itemAsFloats).CopyTo(mem.Span);
+                        vectorValues.Add(GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length));
+                        break;
+                    }
+                    case VectorEmbeddingType.Single when enumerator.Current is DynamicArray itemAsFloatsDynamic:
+                    {
+                        List<float> itemAsFloats = new();
+                        itemAsFloats.AddRange(itemAsFloatsDynamic.Inner.Select(x => (float)(LazyNumberValue)(object)x));
+                        memScope = allocator.Allocate(itemAsFloats.Count * sizeof(float), out mem);
+                        MemoryMarshal.Cast<float, byte>(CollectionsMarshal.AsSpan(itemAsFloats)).CopyTo(mem.Span);
                         vectorValues.Add(GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, mem.Length));
                         break;
                     }
@@ -224,9 +251,20 @@ public partial class AbstractStaticIndexBase
             var dataLength = data.Length;
 
             if (TryGetFirstNonNullElement(data, out var firstNonNull) == false)
-                return VectorValue.Null;
+                return new object[]{VectorValue.Null};
 
             var values = new object[dataLength];
+
+            if (firstNonNull is BlittableJsonReaderVector)
+            {
+                for (var i = 0; i < dataLength; i++)
+                {
+                    values[i] = HandleBlittableJsonReaderVector(data[i] as BlittableJsonReaderVector);
+                }
+
+                return values;
+            }
+            
             if (firstNonNull is BlittableJsonReaderObject or DynamicBlittableJson)
             {
                 for (int i = 0; i < dataLength; i++)
@@ -526,7 +564,7 @@ public partial class AbstractStaticIndexBase
         var currentIndexingScope = CurrentIndexingScope.Current;
         var relatedDocument = LoadVectorDocument(out var embeddingDocument) as DynamicBlittableJson;
         if (relatedDocument == null)
-            return VectorValue.Null;
+            return new object[]{VectorValue.Null};
         
 
         var currentAiModel = vectorField.Vector.AiIntegrationTaskName ?? currentIndexingScope.Index.Configuration.DefaultAiTask;
@@ -536,7 +574,7 @@ public partial class AbstractStaticIndexBase
             if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, (BlittableJsonReaderObject)aiResult, path, out var vectorValue))
             {
                 if (IsNullValue(vectorValue))
-                    return VectorValue.Null;
+                    return new object[]{VectorValue.Null};
                 
                 if (vectorValue is BlittableJsonReaderArray bjra)
                 {
@@ -546,7 +584,7 @@ public partial class AbstractStaticIndexBase
 
                     var attachments = currentIndexingScope.LoadAttachments(embeddingDocument, attachmentNames);
                     if (attachments is null)
-                        return VectorValue.Null;
+                        return new object[]{VectorValue.Null};
 
                     return VectorFromEmbedding(vectorField, attachments.Select(x => x.GetContentAsStream()), isAutoIndex: false);
                 }
@@ -562,7 +600,7 @@ public partial class AbstractStaticIndexBase
             }
         }
         
-        return VectorValue.Null;
+        return new object[]{VectorValue.Null};
     }
     
     private static dynamic LoadVectorDocument(out string embeddingDocument)

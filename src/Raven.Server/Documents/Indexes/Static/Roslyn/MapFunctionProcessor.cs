@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             CollectionRetriever = collectionRetriever;
             _refCollectionsRetriever = new ReferencedCollectionsRetriever();
             _compareExchangeReferenceDetector = new CompareExchangeReferenceDetectorRewriter();
-            _vectorFieldRewriter = new VectorFieldRewriter(_refCollectionsRetriever ,CollectionRetriever as CollectionNameRetriever);
+            _vectorFieldRewriter = new VectorFieldRewriter(_refCollectionsRetriever, CollectionRetriever);
         }
 
         public HashSet<string> ReferencedCollections => _refCollectionsRetriever.ReferencedCollections;

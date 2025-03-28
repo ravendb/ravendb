@@ -203,6 +203,8 @@ namespace Raven.Client.Documents.Indexes
         /// <param name="value">Source of embedding</param>
         public object CreateVector(IEnumerable<float> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
+        public object CreateVector(IEnumerable<object> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
         /// <summary>
         /// Creates a vector field in the index from the provided value
         /// </summary>

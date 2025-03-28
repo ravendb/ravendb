@@ -970,22 +970,48 @@ namespace Sparrow.Json.Parsing
                 }
             }
 
-            DynamicJsonArray HandleDictionaryType(Dictionary<string, long> dsl)
-            {
-                var dja = new DynamicJsonArray();
-                foreach (var item in dsl)
-                    dja.Add(new DynamicJsonValue(item.Key, item.Value));
-                return dja;
-            }
+                if (current is List<long> ll)
+                {
+                    var dja = new DynamicJsonArray();
+                    foreach (var item in ll)
+                    {
+                        dja.Add(item);
+                    }
+                    current = dja;
+                    continue;
+                }
+                
+                if (current is List<double> dd)
+                {
+                    var dja = new DynamicJsonArray();
+                    foreach (var item in dd)
+                    {
+                        dja.Add(item);
+                    }
+                    current = dja;
+                    continue;
+                }
 
-            DynamicJsonArray HandleDoublesList(List<double> dd)
-            {
-                var dja = new DynamicJsonArray();
-                foreach (var item in dd)
-                    dja.Add(item);
+                if (current is float[] fArray)
+                {
+                    var dja = new DynamicJsonArray(fArray);
+                    current = dja;
+                    continue;
+                }
 
-                return dja;
-            }
+                if (current is sbyte[] sbArray)
+                {
+                    var dja = new DynamicJsonArray(sbArray);
+                    current = dja;
+                    continue;
+                }
+
+                if (current is byte[] bArray)
+                {
+                    var dja = new DynamicJsonArray(bArray);
+                    current = dja;
+                    continue;
+                }
 
             DynamicJsonArray HandleLongsList(List<long> dd)
             {

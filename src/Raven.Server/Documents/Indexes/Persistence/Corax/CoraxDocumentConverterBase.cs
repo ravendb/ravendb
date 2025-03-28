@@ -308,7 +308,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
             
             case ValueType.Vector:
-                using (var vectorField = (VectorValue)value)
+                var vectorField = (VectorValue)value;
                 {
                     if (vectorField.IsNull)
                     {
@@ -323,6 +323,10 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     
                     builder.WriteVector(fieldId, path, embedding);
                 }
+                
+                if (_storeValue == false)
+                    vectorField.Dispose();
+                
                 break;
 
             case ValueType.Enumerable:
