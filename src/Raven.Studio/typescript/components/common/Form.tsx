@@ -1,7 +1,7 @@
 import React, { ComponentProps, ReactNode, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
-import { Control, ControllerProps, FieldPath, FieldValues, useController, UseControllerProps } from "react-hook-form";
+import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -64,7 +64,10 @@ type FormRadioToggleWithIconProps<
 > = FormElementProps<TFieldValues, TName> &
     Omit<ComponentProps<typeof RadioToggleWithIcon>, "name" | "selectedValue" | "setSelectedValue">;
 
-export function FormInput<T extends FieldValues>(props: UseControllerProps<T> & FormInputProps) {
+export function FormInput<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>(props: FormElementProps<TFieldValues, TName> & FormInputProps) {
     return <FormInputGeneral {...props} />;
 }
 
@@ -173,7 +176,7 @@ export function FormSelect<
         shouldUnregister,
     });
 
-    const valueAccessor = rest.getOptionValue ?? ((option: any) => option?.value ?? null);
+    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
 
     const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
 
@@ -227,7 +230,7 @@ export function FormSelectCreatable<
 
     const [customOptions, setCustomOptions] = useState<OptionsOrGroups<Option, Group>>(rest.customOptions ?? []);
 
-    const valueAccessor = rest.getOptionValue ?? ((option: any) => option?.value ?? null);
+    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
     const optionCreator = rest.optionCreator ?? ((value: string) => ({ value, label: value }));
 
     const selectedOptions = getFormSelectedOptions<Option>(
@@ -417,7 +420,10 @@ export function FormDatePicker<
     );
 }
 
-function FormInputGeneral<T extends FieldValues>(props: UseControllerProps<T> & FormInputProps) {
+function FormInputGeneral<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>(props: FormElementProps<TFieldValues, TName> & Omit<FormInputProps, "size">) {
     const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, passwordPreview, ...rest } =
         props;
 

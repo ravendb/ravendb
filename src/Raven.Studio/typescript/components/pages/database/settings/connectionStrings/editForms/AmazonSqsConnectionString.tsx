@@ -6,9 +6,8 @@ import * as yup from "yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { FormInput, FormLabel, FormSelect } from "components/common/Form";
+import { FormInput, FormSelect, FormLabel } from "components/common/Form";
 import Badge from "react-bootstrap/Badge";
-import Form from "react-bootstrap/Form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
@@ -20,6 +19,7 @@ import { Icon } from "components/common/Icon";
 import { mapAmazonSqsConnectionStringSettingsToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
+import Form from "react-bootstrap/Form";
 
 type FormData = ConnectionFormData<AmazonSqsConnection>;
 

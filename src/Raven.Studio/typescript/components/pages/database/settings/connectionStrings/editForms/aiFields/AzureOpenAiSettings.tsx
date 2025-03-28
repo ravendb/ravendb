@@ -1,4 +1,4 @@
-import { FormInput, FormSelectCreatable } from "components/common/Form";
+import { FormInput, FormSelectCreatable, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
 import {
@@ -7,7 +7,6 @@ import {
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useAsyncCallback } from "react-async-hook";
-import { Label } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
@@ -43,32 +42,32 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
     return (
         <>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     API Key
                     <PopoverWithHoverWrapper message="The API key used to authenticate requests to the Azure OpenAI service.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
 
                 <FormInput control={control} name="azureOpenAiSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Endpoint
                     <PopoverWithHoverWrapper message="The Azure OpenAI endpoint for generating embeddings from text.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
 
                 <FormInput control={control} name="azureOpenAiSettings.endpoint" type="text" />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Model
                     <PopoverWithHoverWrapper message="The Azure OpenAI text embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormSelectCreatable
                     control={control}
                     name="azureOpenAiSettings.model"
@@ -78,7 +77,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                 />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Deployment Name
                     <PopoverWithHoverWrapper
                         message={
@@ -93,11 +92,11 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     >
                         <Icon icon="info" color="info" id="deploymentName" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput control={control} name="azureOpenAiSettings.deploymentName" type="text" />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Dimensions <OptionalLabel />
                     <PopoverWithHoverWrapper
                         message={
@@ -110,7 +109,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     >
                         <Icon icon="info" color="info" id="dimensions" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput
                     control={control}
                     name="azureOpenAiSettings.dimensions"

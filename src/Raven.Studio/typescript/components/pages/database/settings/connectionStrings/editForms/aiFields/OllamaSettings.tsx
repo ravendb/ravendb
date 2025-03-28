@@ -1,12 +1,11 @@
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import {
     ConnectionFormData,
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Label } from "reactstrap";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -40,21 +39,21 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
     return (
         <>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Model
                     <PopoverWithHoverWrapper message="The Ollama text embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput control={control} name="ollamaSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     URI
                     <PopoverWithHoverWrapper message="The Ollama API URI to use.">
                         <Icon icon="info" color="info" id="uri" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput control={control} name="ollamaSettings.uri" type="text" />
             </div>
             <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />

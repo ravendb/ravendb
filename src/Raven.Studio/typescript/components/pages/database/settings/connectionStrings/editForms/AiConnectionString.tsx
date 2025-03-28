@@ -1,6 +1,5 @@
-﻿import { Form, Label } from "reactstrap";
-import Button from "react-bootstrap/Button";
-import { FormInput, FormSelect } from "components/common/Form";
+﻿import Button from "react-bootstrap/Button";
+import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, AiConnection } from "../connectionStringsTypes";
@@ -28,6 +27,7 @@ import { components, OptionProps } from "react-select";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import classNames from "classnames";
+import Form from "react-bootstrap/Form";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -77,7 +77,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
         <FormProvider {...form}>
             <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
                 <div className="mb-2">
-                    <Label>Name</Label>
+                    <FormLabel>Name</FormLabel>
                     <FormInput
                         control={control}
                         name="name"
@@ -93,7 +93,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     />
                 </div>
                 <div className="mb-2">
-                    <Label>
+                    <FormLabel>
                         Identifier <OptionalLabel />
                         <PopoverWithHoverWrapper
                             message="A unique identifier used in document paths. If not specified, it will be auto-generated
@@ -101,7 +101,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         >
                             <Icon icon="info" color="info" margin="ms-1" id="identifier" />
                         </PopoverWithHoverWrapper>
-                    </Label>
+                    </FormLabel>
                     <FormInput
                         control={control}
                         name="identifier"
@@ -122,7 +122,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     />
                 </div>
                 <div className="mb-2">
-                    <Label>Connector</Label>
+                    <FormLabel>Connector</FormLabel>
                     <FormSelect
                         control={control}
                         name="connectorType"

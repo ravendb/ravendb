@@ -1,8 +1,7 @@
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { Label } from "reactstrap";
 import { useFormContext } from "react-hook-form";
 import { Icon } from "components/common/Icon";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormLabel } from "components/common/Form";
 import {
     ConnectionFormData,
     AiConnection,
@@ -16,12 +15,12 @@ export default function EmbeddingsMaxConcurrentBatches({ baseName }: { baseName:
 
     return (
         <div className="mb-2">
-            <Label>
+            <FormLabel>
                 Embeddings Max Concurrent Batches <OptionalLabel />
                 <PopoverWithHoverWrapper message="Maximum number of query embedding batches that can be processed concurrently.">
                     <Icon icon="info" color="info" margin="ms-1" />
                 </PopoverWithHoverWrapper>
-            </Label>
+            </FormLabel>
             <FormInput control={control} name={`${baseName}.embeddingsMaxConcurrentBatches`} type="number" />
         </div>
     );

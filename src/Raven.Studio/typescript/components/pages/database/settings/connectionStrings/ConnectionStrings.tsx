@@ -1,6 +1,4 @@
 ﻿import { useEffect } from "react";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -16,6 +14,8 @@ import { exhaustiveStringTuple } from "components/utils/common";
 import { LoadError } from "components/common/LoadError";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { StudioConnectionType } from "./connectionStringsTypes";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 
 export interface ConnectionStringsUrlParameters {
     name?: string;

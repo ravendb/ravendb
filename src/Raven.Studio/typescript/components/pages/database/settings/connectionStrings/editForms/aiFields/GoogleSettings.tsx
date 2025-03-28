@@ -1,7 +1,7 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormSelect, FormInput, FormSelectCreatable } from "components/common/Form";
+import { FormSelect, FormInput, FormSelectCreatable, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
 import { SelectOption } from "components/common/select/Select";
@@ -14,10 +14,10 @@ import {
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Label } from "reactstrap";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
+
 type FormData = ConnectionFormData<AiConnection>;
 
 export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
@@ -46,12 +46,12 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 This configuration supports Google AI embeddings only. Not compatible with Vertex AI.
             </RichAlert>
             <div className="mb-2">
-                <Label className="col-form-label">
+                <FormLabel className="col-form-label">
                     AI Version <OptionalLabel />
                     <PopoverWithHoverWrapper message="The Google AI version to use.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormSelect
                     control={control}
                     name="googleSettings.aiVersion"
@@ -66,22 +66,22 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     API Key
                     <PopoverWithHoverWrapper message="The API key used to authenticate requests to Google's AI services.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
 
                 <FormInput control={control} name="googleSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Model
                     <PopoverWithHoverWrapper message="The Google AI text embedding model to use.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormSelectCreatable
                     control={control}
                     name="googleSettings.model"
@@ -91,12 +91,12 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Dimensions <OptionalLabel />
                     <PopoverWithHoverWrapper message="The number of dimensions for the output embeddings.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput
                     control={control}
                     name="googleSettings.dimensions"

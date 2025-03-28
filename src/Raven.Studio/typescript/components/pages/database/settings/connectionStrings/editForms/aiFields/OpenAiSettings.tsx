@@ -1,7 +1,7 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormInput, FormSelectCreatable } from "components/common/Form";
+import { FormInput, FormSelectCreatable, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
@@ -14,7 +14,6 @@ import {
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Label } from "reactstrap";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { SelectOption } from "components/common/select/Select";
 import { openAiModelOptions } from "../aiConnectionStringUtils";
@@ -46,21 +45,21 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
     return (
         <>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     API Key
                     <PopoverWithHoverWrapper message="The API key used to authenticate requests to OpenAI's API.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput control={control} name="openAiSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Endpoint
                     <PopoverWithHoverWrapper message="The OpenAI endpoint for generating embeddings from text.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormSelectCreatable
                     control={control}
                     name="openAiSettings.endpoint"
@@ -69,12 +68,12 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Model
                     <PopoverWithHoverWrapper message="The OpenAI tex embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormSelectCreatable
                     control={control}
                     name="openAiSettings.model"
@@ -84,7 +83,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Organization ID <OptionalLabel />
                     <PopoverWithHoverWrapper
                         message={
@@ -110,11 +109,11 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     >
                         <Icon icon="info" color="info" id="organizationId" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput control={control} name="openAiSettings.organizationId" type="text" />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Project ID <OptionalLabel />
                     <PopoverWithHoverWrapper
                         message={
@@ -133,16 +132,16 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     >
                         <Icon icon="info" color="info" id="projectId" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput control={control} name="openAiSettings.projectId" type="text" />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Dimensions <OptionalLabel />
                     <PopoverWithHoverWrapper message="The number of dimensions for the output embeddings.">
                         <Icon icon="info" color="info" id="dimensions" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput
                     control={control}
                     name="openAiSettings.dimensions"

@@ -1,11 +1,10 @@
-import { FormInput, FormSelectCreatable } from "components/common/Form";
+import { FormInput, FormSelectCreatable, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import {
     ConnectionFormData,
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Label } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
@@ -47,21 +46,21 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                 Each request to a Hugging Face model endpoint will be processed individually.
             </RichAlert>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     API Key
                     <PopoverWithHoverWrapper message="The API key used to authenticate requests to Hugging Face's text embedding services.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput control={control} name="huggingFaceSettings.apiKey" type="password" passwordPreview />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Endpoint <OptionalLabel />
                     <PopoverWithHoverWrapper message="The Hugging Face endpoint for generating embeddings from text. If not specified, the default endpoint is used.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormSelectCreatable
                     control={control}
                     name="huggingFaceSettings.endpoint"
@@ -70,12 +69,12 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                 />
             </div>
             <div className="mb-2">
-                <Label>
+                <FormLabel>
                     Model
                     <PopoverWithHoverWrapper message="The Hugging Face text embedding model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
-                </Label>
+                </FormLabel>
                 <FormInput control={control} name="huggingFaceSettings.model" type="text" disabled={isUsedByAnyTask} />
             </div>
             <EmbeddingsMaxConcurrentBatches baseName="huggingFaceSettings" />

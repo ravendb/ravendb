@@ -6,7 +6,6 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector, useAppDispatch } from "components/store";
 import { useEffect } from "react";
-import { Row, Col } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import ConnectionStringsPanels from "../../settings/connectionStrings/ConnectionStringsPanels";
 import EditConnectionStrings from "../../settings/connectionStrings/EditConnectionStrings";
@@ -16,6 +15,8 @@ import {
 } from "../../settings/connectionStrings/store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
 import { AiConnectionStringsInfoHub } from "./AiConnectionStringsInfoHub";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 
 export default function AiConnectionStrings() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
