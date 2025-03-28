@@ -37,72 +37,45 @@ public class RavenDB_23509 : RavenTestBase
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     public void MapReduceIndexTextualCreateVectorInMapShouldThrow()
     {
-        using var store = GetDocumentStoreWithDocuments(out _);
-        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceIndexWithCreateVectorInMap().Execute(store));
-        Assert.Contains("'CreateMethod' and 'LoadVector' are not supported in the map of a map-reduce index.", exception.Message);
-    }
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void MapReduceIndexLoadVectorInMapShouldThrow()
-    {
-        using var store = GetDocumentStoreWithDocuments(out _);
-        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceLoadVectorInMap().Execute(store));
-        Assert.Contains("'CreateMethod' and 'LoadVector' are not supported in the map of a map-reduce index.", exception.Message);
-    }
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void MapReduceIndexJsLoadVectorInMapShouldThrow()
-    {
-        using var store = GetDocumentStoreWithDocuments(out _);
-        var exception = Assert.Throws<IndexCreationException>(() => new MapReduceLoadVectorInMapJs().Execute(store));
-        Assert.Contains("Vector fields are not supported for map-reduces indexes.", exception.Message);
-    }
-
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void MapReduceIndexJsTextualCreateVectorInReduceShouldThrow()
-    {
-        using var store = GetDocumentStoreWithDocuments(out _);
-        new MapReduceTextualCreateVectorInReduceJs().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
-        Assert.NotNull(errors);
-        Assert.Contains("'createVector' is not supported in  MapReduce indexes.", errors[0].Errors[0].Error);
-    }
-
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void MapReduceIndexJsLoadVectorInReduceShouldThrow()
-    {
-        using var store = GetDocumentStoreWithDocuments(out _);
-        new MapReduceLoadVectorInReduceJs().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
-        Assert.NotNull(errors);
-        Assert.Contains("'loadVector' is not supported in MapReduce indexes.", errors[0].Errors[0].Error);
-    }
-
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void MapReduceIndexJsNumericalCreateVectorInReduceShouldThrow()
-    {
-        using var store = GetDocumentStoreWithDocuments(out _);
-        new MapReduceNumericalCreateVectorInReduceJs().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
-        Assert.NotNull(errors);
-        Assert.Contains("'createVector' is not supported in  MapReduce indexes.", errors[0].Errors[0].Error);
-    }
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    public void MapReduceIndexJsNumericalCreateVectorInMapShouldThrow()
-    {
-        using var store = GetDocumentStoreWithDocuments(out _);
+        using var store = GetDocumentStoreWithDocuments(out var ids);
+        new TIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
+        Assert.Null(errors);
         
-        var exception = Assert.Throws<IndexCreationException>(() => new MapReduceNumericalCreateVectorInMapJs().Execute(store));
-        Assert.Contains("Vector fields are not supported for map-reduces indexes.", exception.Message);
+        using var session = store.OpenSession();
+        var results = session.Query<Result, TIndex>()
+            .VectorSearch(f => f.WithField(s => s.Vector),
+                v => v.ByText("dog"), minimumSimilarity: 0.75f)
+            .ToList();
+        
+        Assert.Equal(1, results.Count);
+        Assert.Equal(ids["dog"], results[0].Id);
     }
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    private void MapReduceIndexNumericalCreateVectorInReduceShouldThrow()
+    public void CanCreateVectorFieldFromNumericalInMapReducePart() => CanCreateVectorFieldFromNumericalInMapReducePartBase<MapReduceNumerical>();
+
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    public void CanCreateVectorFieldFromNumericalInMapReducePartJs() => CanCreateVectorFieldFromNumericalInMapReducePartBase<MapReduceNumericalJs>();
+    
+    private void CanCreateVectorFieldFromNumericalInMapReducePartBase<TIndex>()
+        where TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = GetDocumentStoreWithDocuments(out _);
-        var exception = Assert.Throws<IndexCompilationException>(() => new MapReduceNumericalCreateVectorInReduce().Execute(store));
-        Assert.Contains("The 'CreateVector' method is not supported in map-reduce indexes.", exception.Message);
+        using var store = GetDocumentStoreWithDocuments(out var ids);
+        new TIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
+        Assert.Null(errors);
+        
+        using var session = store.OpenSession();
+        var results = session.Query<Result, TIndex>()
+            .VectorSearch(f => f.WithField(s => s.Vector),
+                v => v.ByEmbedding([-0.1f, -0.2f]), minimumSimilarity: 0.75f)
+            .ToList();
+        
+        Assert.Equal(1, results.Count);
+        Assert.Equal(ids["car"], results[0].Id);
     }
 
     private IDocumentStore GetDocumentStoreWithDocuments(out Dictionary<string, string> identifies)

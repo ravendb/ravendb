@@ -598,8 +598,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.Static.ComplexFieldIndexingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public CoraxComplexFieldIndexingBehavior CoraxStaticIndexComplexFieldIndexingBehavior { get; protected set; }
 
-        [Description("The default minimum similarity for vector search (0.0f - 1.0f, default is 0.75f)")]
-        [DefaultValue(0.75f)]
+        [Description("The default minimum similarity for vector search (0.0f - 1.0f, default is 0f)")]
+        [DefaultValue(0f)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultMinimumSimilarity", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public float CoraxVectorSearchDefaultMinimumSimilarity { get; protected set; }

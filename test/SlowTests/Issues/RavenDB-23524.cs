@@ -27,10 +27,10 @@ public class RavenDB_23524(ITestOutputHelper output) : RavenTestBase(output)
         var results = await session.Advanced.AsyncDocumentQuery<Product>()
             .WaitForNonStaleResults()
             .VectorSearch(f => f.WithText(p => p.Name),
-                v => v.ByText("italian"))
+                v => v.ByText("italian"), minimumSimilarity: 0.75f)
             .OrElse()
             .VectorSearch(f => f.WithText(p => p.Name),
-                v => v.ByText("food"))
+                v => v.ByText("food"), minimumSimilarity: 0.75f)
             .ToListAsync();
 
         Assert.Equal(3, results.Count);
