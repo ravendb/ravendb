@@ -29,10 +29,12 @@ import AiConnectionString from "components/pages/database/settings/connectionStr
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
+    afterSave?: (name: string) => void;
+    afterClose?: () => void;
 }
 
 export default function EditConnectionStrings(props: EditConnectionStringsProps) {
-    const { initialConnection } = props;
+    const { initialConnection, afterSave, afterClose } = props;
 
     const isForNewConnection = !initialConnection.name;
 
@@ -62,6 +64,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
             }
 
             dispatch(connectionStringsActions.editConnectionModalClosed());
+            afterSave?.(newConnection.name);
         });
     };
 
@@ -106,7 +109,10 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                     type="button"
                     variant="link"
                     className="link-muted"
-                    onClick={() => dispatch(connectionStringsActions.editConnectionModalClosed())}
+                    onClick={() => {
+                        dispatch(connectionStringsActions.editConnectionModalClosed());
+                        afterClose?.();
+                    }}
                     title="Cancel"
                 >
                     Cancel

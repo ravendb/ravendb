@@ -32,6 +32,7 @@ interface computedAppUrls {
     editSnowflakeEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editOlapEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editElasticSearchEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editAiEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editKafkaEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRabbitMqEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editAzureQueueStorageEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
@@ -62,6 +63,7 @@ interface computedAppUrls {
     editRabbitMqEtlTaskUrl: KnockoutComputed<string>;
     editAzureQueueStorageEtlTaskUrl: KnockoutComputed<string>;
     editAmazonSqsEtlTaskUrl: KnockoutComputed<string>;
+    editAiEtlTaskUrl: KnockoutComputed<string>;
     editKafkaSinkTaskUrl: KnockoutComputed<string>;
     editRabbitMqSinkTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;

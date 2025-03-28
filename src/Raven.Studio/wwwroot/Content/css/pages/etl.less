@@ -62,6 +62,10 @@
 @rabbitmq-sink-color-dark: darken(@rabbitmq-sink-color, 5%);
 @rabbitmq-sink-color-light: lighten(@rabbitmq-sink-color, 5%);
 
+@ai-etl-color: @color-3-3;
+@ai-etl-color-dark: darken(@ai-etl-color, 5%);
+@ai-etl-color-light: lighten(@ai-etl-color, 5%);
+
 .bigbtn-variant(@color, @color-dark) {
     background-color: fadeout(@color-dark,90%);
     color: @color;
@@ -92,6 +96,7 @@
     .external-replication, 
     .sql-etl, 
     .snowflake-etl, 
+    .ai-etl, 
     .olap-etl, 
     .elastic-etl, 
     .ravendb-etl, 
@@ -168,6 +173,9 @@
 
     .amazon-sqs-etl {
         .bigbtn-variant (@amazon-sqs-etl-color, @amazon-sqs-etl-color-dark);
+    }
+    .ai-etl {
+        .bigbtn-variant (@ai-etl-color, @ai-etl-color-dark);
     }
 
     .kafka-sink {
@@ -354,6 +362,9 @@
         .amazon-sqs-etl {
             color: @amazon-sqs-etl-color;
         }
+        .ai-etl {
+            color: @ai-etl-color;
+        }
 
         .task-azure-queue-storage-etl {
             background-color: @azure-queue-storage-etl-color;
@@ -361,6 +372,10 @@
 
         .task-amazon-sqs-etl {
             background-color: @amazon-sqs-etl-color;
+        }
+
+        .task-ai-etl {
+            background-color: @ai-etl-color;
         }
 
         .kafka-sink {
@@ -457,6 +472,9 @@
         }
 
         &.amazon-sqs-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+        &.ai-etl {
             .name-variant (@brand-info, @brand-info-light);
         }
         

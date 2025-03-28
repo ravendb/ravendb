@@ -43,6 +43,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
+    const hasAiEtl = useAppSelector(licenseSelectors.statusValue("HasAiEtl"));
 
     const { appUrl } = useAppUrls();
 
@@ -276,6 +277,19 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         <Icon icon="amazon-sqs-etl" />
                         <h4 className="mt-1 mb-0">Amazon SQS ETL</h4>
                         {!hasAmazonSqsEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                    </TaskItem>
+                    <TaskItem
+                        title="Create new AI ETL task"
+                        href={appUrl.forEditAiEtl(db.name)}
+                        className="ai-etl"
+                        target="AiETL"
+                        disabled={isSharded}
+                        disableReason={getDisableReasonForSharded()}
+                    >
+                        {/* TODO kalczur */}
+                        <Icon icon="question" />
+                        <h4 className="mt-1 mb-0">AI ETL</h4>
+                        {!hasAiEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
                 </Row>
                 <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>

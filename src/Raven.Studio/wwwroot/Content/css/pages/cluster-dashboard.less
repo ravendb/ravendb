@@ -868,6 +868,9 @@
         .amazon-sqs-etl {
             color: @amazon-sqs-etl-color;
         }
+        .ai-etl {
+            color: @ai-etl-color;
+        }
         .kafka-sink {
             color: @kafka-sink-color;
         }
@@ -971,8 +974,12 @@
                 color: @azure-queue-storage-etl-color;
             }
 
-            &.amazon-sqs-etl .task-name i {
-                color: @amazon-sqs-etl-color;
+            &.ai-etl .task-name i {
+                color: @ai-etl-color;
+            }
+
+            &.subscription .task-name i {
+                color: @subscription-color;
             }
 
             &.kafka-sink .task-name i {
@@ -989,7 +996,7 @@
 
             &.subscription .task-name i {
                 color: @subscription-color;
-            }
+            }            
         }
 
         .task-details-item {

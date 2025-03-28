@@ -7,6 +7,7 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
                                    Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeEtlConfiguration |
                                    Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration |
                                    Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration |
+                                   Raven.Client.Documents.Operations.ETL.AI.AiEtlConfiguration |
                                    Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration > extends commandBase {
     
     private constructor(private db: database | string, private payload: T, private scriptsToReset?: string[]) {
@@ -53,6 +54,10 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
 
     static forElasticSearchEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration>(db, payload, scriptsToReset);
+    }
+
+    static forAiEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.AI.AiEtlConfiguration, scriptsToReset?: string[]) {
+        return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.AI.AiEtlConfiguration>(db, payload, scriptsToReset);
     }
 
     static forQueueEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration, scriptsToReset?: string[]) {

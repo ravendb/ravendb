@@ -69,6 +69,7 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import recentError from "common/notifications/models/recentError";
 import { SnowflakeEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/SnowflakeEtlPanel";
 import { AmazonSqsEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AmazonSqsEtlPanel";
+import { AiEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AiEtlPanel";
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -198,6 +199,7 @@ export function OngoingTasksPage() {
         kafkaSinks,
         rabbitMqSinks,
         elasticSearchEtls,
+        aiEtls,
         backups,
         replicationHubs,
         replicationSinks,
@@ -601,6 +603,25 @@ export function OngoingTasksPage() {
                                 ))}
                             </div>
                         )}
+                        {aiEtls.length > 0 && (
+                            <div key="ai-etls">
+                                <HrHeader className="ai-etl" count={aiEtls.length}>
+                                    {/* TODO kalczur icon */}
+                                    <Icon icon="question" />
+                                    AI ETL
+                                </HrHeader>
+
+                                {aiEtls.map((x) => (
+                                    <AiEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
                         {elasticSearchEtls.length > 0 && (
                             <div key="elastic-search-etls" data-testid="elastic-search-etls">
                                 <HrHeader className="elastic-etl" count={elasticSearchEtls.length}>
@@ -806,6 +827,7 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         amazonSqsEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "AmazonSqsQueueEtl"
         ) as OngoingTaskAmazonSqsEtlInfo[],
+        aiEtls: filteredTasks.filter((x) => x.shared.taskType === "AiEtl") as OngoingTaskAmazonSqsEtlInfo[],
         kafkaSinks: filteredTasks.filter((x) => x.shared.taskType === "KafkaQueueSink") as OngoingTaskKafkaSinkInfo[],
         rabbitMqSinks: filteredTasks.filter(
             (x) => x.shared.taskType === "RabbitQueueSink"

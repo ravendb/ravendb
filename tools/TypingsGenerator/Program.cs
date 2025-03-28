@@ -580,6 +580,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TestRelationalDatabaseEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>));
             scripter.AddType(typeof(SnowflakeEtlTable));
 
+            // ongoing tasks - AI ETL
+            scripter.AddType(typeof(OngoingTaskAiEtl));
+            scripter.AddType(typeof(AiEtlConfiguration));
+
             // connection strings
             scripter.AddType(typeof(ConnectionString));
             scripter.AddType(typeof(RavenConnectionString));

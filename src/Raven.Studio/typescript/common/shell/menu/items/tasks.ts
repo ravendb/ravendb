@@ -337,6 +337,20 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             }
         }),
         new leafMenuItem({
+            route: 'databases/tasks/editAiEtlTask',
+            moduleId: require('viewmodels/database/tasks/editAiEtlTask'),
+            shardingMode: "allShards",
+            title: 'AI ETL Task',
+            nav: false,
+            css: "icon-plus",
+            dynamicHash: appUrls.editAiEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks',
+            search: {
+                overrideTitle: "Add New AI ETL Task",
+                alternativeTitles: ["Create AI ETL Task"],
+            }
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/editKafkaSinkTask',
             moduleId: require('viewmodels/database/tasks/editKafkaSinkTask'),
             title: 'Kafka Sink Task',
