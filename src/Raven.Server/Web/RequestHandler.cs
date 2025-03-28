@@ -878,7 +878,7 @@ namespace Raven.Server.Web
                 case EtlType.Olap:
                     return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToAuditJson();
 
-                case EtlType.Ai:
+                case EtlType.EmbeddingsGeneration:
                     return JsonDeserializationClient.AiIntegrationConfiguration(configuration).ToAuditJson();
             }
 

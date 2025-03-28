@@ -1430,8 +1430,8 @@ namespace Raven.Server.Documents.ETL
                         return result;
                     }
                     
-                case EtlType.Ai:
-                    using (var aiEtl = new EmbeddingsGenerationTask(testScript.Configuration.Transforms[0], testScript.Configuration as AiIntegrationConfiguration, database, database.ServerStore))
+                case EtlType.EmbeddingsGeneration:
+                    using (var aiEtl = new EmbeddingsGenerationTask(testScript.Configuration.Transforms[0], testScript.Configuration as EmbeddingsGenerationConfiguration, database, database.ServerStore))
                     using (aiEtl.EnterTestMode(out debugOutput))
                     {
                         aiEtl.EnsureThreadAllocationStats();

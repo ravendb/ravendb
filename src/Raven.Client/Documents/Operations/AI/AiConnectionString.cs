@@ -55,11 +55,11 @@ public sealed class AiConnectionString : ConnectionString
         }
     }
 
-    internal string GenerateIdentifier() => AiIntegrationConfiguration.GenerateIdentifier(Name);
+    internal string GenerateIdentifier() => EmbeddingsGenerationConfiguration.GenerateIdentifier(Name);
 
     internal bool ValidateIdentifier(out List<string> errors)
     {
-        return AiIntegrationConfiguration.ValidateIdentifier(Identifier, out errors);
+        return EmbeddingsGenerationConfiguration.ValidateIdentifier(Identifier, out errors);
     }
 
     public AiSettingsCompareDifferences Compare(AiConnectionString newConnectionString)

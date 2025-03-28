@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.SemanticKernel.Text;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Indexes.Vector;
@@ -14,11 +15,11 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI;
+namespace SlowTests.Server.Documents.AI.Embeddings;
 
-public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : AiIntegrationTestBase(output)
+public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void CanSingleDocumentHaveTwoEmbeddings()
     {
         using var store = GetDocumentStore();
@@ -51,14 +52,14 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
 
         aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-        
+
         WaitForUserToContinueTheTest(store);
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "SubDto.Name", ["Name1"], id);
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestDocumentsWithSingleValue()
     {
         using (var store = GetDocumentStore())
@@ -77,7 +78,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestDocumentsWithListOfValues()
     {
         using (var store = GetDocumentStore())
@@ -97,7 +98,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestDocumentsWithNestedPropertyPath()
     {
         using (var store = GetDocumentStore())
@@ -119,7 +120,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestDocumentsWithNestedArrayPropertyPath()
     {
         using (var store = GetDocumentStore())
@@ -141,7 +142,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TestIfEmbeddingsAreGeneratedOnlyOnceInSameBatch()
     {
         using (var store = GetDocumentStore())
@@ -176,7 +177,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestIfEmbeddingsAreGeneratedOnlyOnceInDifferentBatches()
     {
         using (var store = GetDocumentStore())
@@ -227,7 +228,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestDocumentsWithSingleValueWithUpdate()
     {
         using (var store = GetDocumentStore())
@@ -243,7 +244,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = RegisterAiIntegration(store);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            
+
             var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);
             var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
 
@@ -263,7 +264,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestHandlingOfNonStringValues()
     {
         using (var store = GetDocumentStore())
@@ -283,7 +284,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestIfFieldsToIncludeAreRespected()
     {
         using (var store = GetDocumentStore())
@@ -295,7 +296,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
                 session.Store(dto);
                 session.SaveChanges();
             }
-            
+
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = RegisterAiIntegration(store);
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
@@ -309,7 +310,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TestIfModificationOfNonProcessedFieldsTriggersEtl()
     {
         using (var store = GetDocumentStore())
@@ -342,7 +343,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TestIfDefaultBatchSizeIsRespected()
     {
         const string connectionStringName = "AI Connection String Name";
@@ -371,7 +372,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TestIfCustomBatchSizeIsRespected()
     {
         const string connectionStringName = "AI Connection String Name";
@@ -407,7 +408,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestDocumentDeletes()
     {
         var dto1 = new Dto { Name = "Name1" };
@@ -448,7 +449,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
     }
 
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestDocumentExpiration()
     {
         var dto = new Dto { Name = "Name1" };
@@ -479,7 +480,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestTransformation()
     {
         const string aiIntegrationName = "local-Onnx-AI";
@@ -495,7 +496,7 @@ public class AiIntegrationGenerateEmbeddingsTests(ITestOutputHelper output) : Ai
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
-            var (configuration, connectionString) = RegisterAiIntegration(store, aiIntegrationName: aiIntegrationName, script: @"
+            var (configuration, connectionString) = RegisterAiIntegration(store, embeddingsGenerationTaskName: aiIntegrationName, script: @"
 embeddings.generate(
 {
     Foo: this.Name, 
@@ -503,17 +504,17 @@ embeddings.generate(
 });");
 
             aiTaskDone.Wait(TimeSpan.FromSeconds(10));
-            
+
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Foo", ["Name1"], dto.Id);
-            
+
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Bar", ["ConstValue"], dto.Id);
         }
     }
-    
+
     private record Test(string Id, string Expires);
-    
-    [RavenFact(RavenTestCategory.AiIntegration)]
-    public void TestChunkingInTransformation()
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void TextChunkingInScript()
     {
         const string plainTextToChunk =
             "text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk";
@@ -533,18 +534,113 @@ embeddings.generate(
 
             var (configuration, connectionString) = RegisterAiIntegration(store,
                 script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 5) });");
-            
+
             aiTaskDone.Wait(TimeSpan.FromSeconds(20));
-            
+
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
+    public void MarkdownChunkingInScript()
+    {
+        const string markdownTextToChunk =
+            @"# Sample Markdown
+
+## Heading Level 2
+
+This is a **bold** word, and this is an *italic* word.  
+Here's a [link to example.com](https://example.com).
+
+### Unordered List
+- First item
+- Second item
+- Third item
+
+### Ordered List
+1. First item
+2. Second item
+3. Third item
+
+> This is a blockquote.
+
+`Inline code` and a code block:
+
+```csharp
+// C# code sample
+Console.WriteLine(""Hello, World!"");";
+#pragma warning disable SKEXP0050
+        string[] expectedChunks = TextChunker.SplitMarkDownLines(markdownTextToChunk, 20).ToArray();
+#pragma warning restore SKEXP0050
+
+        var dto = new Dto { Name = markdownTextToChunk };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+
+            var (configuration, connectionString) = RegisterAiIntegration(store,
+                script: "embeddings.generate({ ChunkedName: markdown.splitLines(this.Name, 20) });");
+
+            aiTaskDone.Wait(TimeSpan.FromSeconds(20));
+
+            AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void HtmlChunkingInScript()
+    {
+        const string htmlTextToChunk =
+            @"<html>
+<head>
+    <title>Sample HTML</title>
+</head>
+<body>
+    <h1>Hello, <span style=""color: red;"">World!</span></h1>
+    <p>This is a <strong>test</strong> paragraph with <a href=""https://example.com"">a link</a>.</p>
+    <ul>
+        <li>First item</li>
+        <li>Second item</li>
+        <li>Third item</li>
+    </ul>
+    <!-- This is a comment -->
+</body>
+</html>";
+        string[] expectedChunks = ["Sample HTML", "Hello, World!", "This is a test", "paragraph with a link.", "First item", "Second item", "Third item"];
+
+        var dto = new Dto { Name = htmlTextToChunk };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+
+            var (configuration, connectionString) = RegisterAiIntegration(store,
+                script: "embeddings.generate({ ChunkedName: html.splitLines(this.Name, 5) });");
+
+            aiTaskDone.Wait(TimeSpan.FromSeconds(20));
+
+            AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestTransformationWithArrayFieldOutput()
     {
         var dto = new Dto { Name = "CoolName" };
-        
+
         using (var store = GetDocumentStore())
         {
             using (var session = store.OpenSession())
@@ -557,27 +653,27 @@ embeddings.generate(
 
             var (configuration, connectionString) = RegisterAiIntegration(store,
                 script: "embeddings.generate({ ArrayField: [this.Name, 'ConstValue'] });");
-            
+
             aiTaskDone.Wait(TimeSpan.FromSeconds(20));
-            
+
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ArrayField", ["CoolName", "ConstValue"], dto.Id);
         }
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void TestQuantizationOfEmbeddingsInTask()
     {
         var dto = new Dto { Name = "CoolName" };
-        
+
         using (var store = GetDocumentStore())
         {
             using (var session = store.OpenSession())
             {
                 session.Store(dto);
                 session.SaveChanges();
-                
+
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
-                
+
                 var (configuration, connectionString) = RegisterAiIntegration(store,
                     embeddingsPaths: ["Name"], targetQuantization: VectorEmbeddingType.Binary);
 
@@ -587,15 +683,15 @@ embeddings.generate(
                 var integrationIdentifier = new EmbeddingsGenerationTaskIdentifier(configuration.Identifier);
 
                 AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, "Name", [dto.Name], dto.Id);
-                
+
                 var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(dto.Name);
                 var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput);
-                
+
                 var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
                 Assert.NotNull(embeddingCacheDocument);
-                
+
                 var expectedAttachmentNameInEmbeddingsDocument = EmbeddingsHelper.GetPrefixForAttachmentInEmbeddingsDocument(integrationIdentifier, "Name") + hashOfInput;
-                
+
                 var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);
                 var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;
                 Assert.NotNull(documentEmbeddings);
@@ -603,7 +699,7 @@ embeddings.generate(
                 using (var embeddingAttachment = session.Advanced.Attachments.Get(documentEmbeddingsId, expectedAttachmentNameInEmbeddingsDocument))
                 {
                     Assert.NotNull(embeddingAttachment);
-                    
+
                     var buffer = new byte[48];
 
                     using (var attachmentStream = new MemoryStream(buffer))
@@ -611,7 +707,7 @@ embeddings.generate(
                         embeddingAttachment.Stream.CopyTo(attachmentStream);
 
                         var embeddingValue = attachmentStream.ToArray();
-                        
+
                         Assert.NotEmpty(embeddingValue);
                     }
                 }

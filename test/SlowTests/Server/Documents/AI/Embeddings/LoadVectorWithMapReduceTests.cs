@@ -8,15 +8,15 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI;
+namespace SlowTests.Server.Documents.AI.Embeddings;
 
-public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegrationTestBase(output)
+public class LoadVectorWithMapReduceTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     public void CanMapReduceExistingVectors()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
-        
+
         using (var session = store.OpenSession())
         {
             session.Store(new Dto() { Name = "John", Description = "car" });
@@ -24,7 +24,7 @@ public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegra
             session.SaveChanges();
         }
         new SimpleMapReduceIndex().Execute(store);
-        
+
         var etlDone = Etl.WaitForEtlToComplete(store);
         RegisterAiIntegration(store, embeddingsPaths: ["Description"]);
         etlDone.Wait(TimeSpan.FromSeconds(10));
@@ -34,9 +34,9 @@ public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegra
             var result = session.Query<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>().VectorSearch(f => f.WithField(s => s.Vector),
                 v => v.ByText("car")).ToList();
             Assert.Equal(1, result.Count);
-        }        
+        }
     }
-    
+
     private class Dto
     {
         public string Name { get; set; }
@@ -49,12 +49,12 @@ public class AiIntegrationMapReduceIndexes(ITestOutputHelper output) : AiIntegra
         public SimpleMapReduceIndex()
         {
             Map = dtos => from dto in dtos
-                select new Result() { Name = dto.Name, Vector = LoadVector("localaitask", "Description") };
+                          select new Result() { Name = dto.Name, Vector = LoadVector("localaitask", "Description") };
             Reduce = results => from result in results
-                group result by result.Name into g
-                select new Result() { Name = g.Key, Vector = CreateVector(g.Select(p => p.Vector)) };
+                                group result by result.Name into g
+                                select new Result() { Name = g.Key, Vector = CreateVector(g.Select(p => p.Vector)) };
         }
-        
+
         public class Result
         {
             public string Name { get; set; }

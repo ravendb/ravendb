@@ -364,7 +364,7 @@ namespace Raven.Server.Dashboard
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.AmazonSqs);
 
             var aiEtlCount = database.EtlLoader.AiIntegrationDestinations.Count;
-            long aiEtlCountOnNode = GetTaskCountOnNode<AiIntegrationConfiguration>(database, dbRecord, serverStore, database.EtlLoader.AiIntegrationDestinations,
+            long aiEtlCountOnNode = GetTaskCountOnNode<EmbeddingsGenerationConfiguration>(database, dbRecord, serverStore, database.EtlLoader.AiIntegrationDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
             
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;

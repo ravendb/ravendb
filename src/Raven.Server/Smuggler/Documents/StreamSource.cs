@@ -473,15 +473,15 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.AiIntegrations), out BlittableJsonReaderArray aiEtls) &&
+                if (reader.TryGet(nameof(databaseRecord.EmbeddingsGenerations), out BlittableJsonReaderArray aiEtls) &&
                     aiEtls != null)
                 {
-                    databaseRecord.AiIntegrations = new List<AiIntegrationConfiguration>();
+                    databaseRecord.EmbeddingsGenerations = new List<EmbeddingsGenerationConfiguration>();
                     foreach (BlittableJsonReaderObject etl in aiEtls)
                     {
                         try
                         {
-                            databaseRecord.AiIntegrations.Add(JsonDeserializationCluster.AiIntegrationConfiguration(etl));
+                            databaseRecord.EmbeddingsGenerations.Add(JsonDeserializationCluster.AiIntegrationConfiguration(etl));
                         }
                         catch (Exception e)
                         {

@@ -16,8 +16,8 @@ using Raven.Client.Util;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
-using Raven.Server.Documents.ETL.Providers.AI.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -34,7 +34,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
-public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, AiIntegrationConfiguration, AiConnectionString, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
+public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationConfiguration, AiConnectionString, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
     private ITextEmbeddingGenerationService _service;
 
@@ -42,7 +42,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
 
     public const string EmbeddingsTaskTag = "AI/Embeddings Generation";
 
-    public EmbeddingsGenerationTask(Transformation transformation, AiIntegrationConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+    public EmbeddingsGenerationTask(Transformation transformation, EmbeddingsGenerationConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, EmbeddingsTaskTag)
     {
         Metrics = new EtlMetricsCountersManager();
@@ -50,7 +50,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
 
     private AiIntegrationStatsScope _statsScope;
 
-    public override EtlType EtlType => EtlType.Ai;
+    public override EtlType EtlType => EtlType.EmbeddingsGeneration;
     public override bool ShouldTrackCounters() => false;
     public override bool ShouldTrackTimeSeries() => false;
 
@@ -213,16 +213,16 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<AiIntegrationItem, Emb
         }
     }
 
-    public AiIntegrationTestScriptResult RunTest(IEnumerable<EmbeddingGenerationScriptResult> records, DocumentsOperationContext context)
+    public EmbeddingsGenerationTestScriptResult RunTest(IEnumerable<EmbeddingGenerationScriptResult> records, DocumentsOperationContext context)
     {
         var services = AiHelper.CreateServicesForTest(
-            new AiIntegrationConfiguration
+            new EmbeddingsGenerationConfiguration
             {
                 Connection = new AiConnectionString { OnnxSettings = new OnnxSettings()}
             }, out string serviceId);
 
         var embeddingService = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId);
-        var result = new AiIntegrationTestScriptResult();
+        var result = new EmbeddingsGenerationTestScriptResult();
 
         foreach (var record in records)
         {

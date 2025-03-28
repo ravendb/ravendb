@@ -6,7 +6,7 @@ using Raven.Server.Documents.ETL.Providers.AI;
 
 namespace Raven.Server.Documents.AI;
 
-public class AiTasksLoader : IDisposable
+public class AiTasksManager : IDisposable
 {
 //    public void HandleDatabaseRecordChange(DatabaseRecord record)
 //    {

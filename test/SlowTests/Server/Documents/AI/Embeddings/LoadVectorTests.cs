@@ -12,9 +12,9 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI;
+namespace SlowTests.Server.Documents.AI.Embeddings;
 
-public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrationTestBase(output)
+public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
     public void CanIndexSingleVectorGeneratedByEtl() => CanIndexSingleVectorGeneratedByEtlBase<IndexByName>();
@@ -38,7 +38,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
         var index = new TIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
-        
+
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -52,7 +52,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
-        
+
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -62,7 +62,7 @@ public class AiIntegrationLoadVectorTests(ITestOutputHelper output) : AiIntegrat
                 .VectorSearch(f => f.WithField(s => s.Vector),
                     v => v.ByText("joe"))
                 .ToList();
-WaitForUserToContinueTheTest(store);
+            WaitForUserToContinueTheTest(store);
             Assert.Single(byVector);
         }
 
@@ -218,7 +218,7 @@ WaitForUserToContinueTheTest(store);
 
         store.Maintenance.Send(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
-        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Name"], aiIntegrationName: embeddingEtlName);
+        var (config, connectionString) = RegisterAiIntegration(store, embeddingsPaths: ["Name"], embeddingsGenerationTaskName: embeddingEtlName);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
         AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
 
@@ -243,7 +243,7 @@ WaitForUserToContinueTheTest(store);
         }
 
         etlStatus.Reset();
-        var (config2, connectionString2) = RegisterAiIntegration(store, embeddingsPaths: ["Names"], aiIntegrationName: embeddingEtlName2);
+        var (config2, connectionString2) = RegisterAiIntegration(store, embeddingsPaths: ["Names"], embeddingsGenerationTaskName: embeddingEtlName2);
         etlStatus.Wait(TimeSpan.FromSeconds(10));
 
         Indexes.WaitForIndexing(store);
@@ -274,7 +274,7 @@ WaitForUserToContinueTheTest(store);
         public IndexByName()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("localaitask", "Name") };
+                          select new { Vector = LoadVector("localaitask", "Name") };
 
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
@@ -303,7 +303,7 @@ WaitForUserToContinueTheTest(store);
         public IndexByNames()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("localaitask", "Names") };
+                          select new { Vector = LoadVector("localaitask", "Names") };
 
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
@@ -333,8 +333,11 @@ WaitForUserToContinueTheTest(store);
         public IndexByFieldTwoFields()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("v1", "Name"), 
-                    Vector2 = LoadVector("v2", "Names") };
+                          select new
+                          {
+                              Vector = LoadVector("v1", "Name"),
+                              Vector2 = LoadVector("v2", "Names")
+                          };
 
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
@@ -354,7 +357,7 @@ WaitForUserToContinueTheTest(store);
                 }};
             }})"
             };
-            
+
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
     }

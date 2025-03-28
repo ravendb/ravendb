@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using HtmlAgilityPack;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -33,12 +34,12 @@ namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
 internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiIntegrationItem, EmbeddingGenerationScriptResult, AiIntegrationStatsScope, EmbeddingsGenerationPerformanceOperation>
 {
-    private readonly AiIntegrationConfiguration _configuration;
+    private readonly EmbeddingsGenerationConfiguration _configuration;
     private EmbeddingsGenerationScriptRun _currentRun;
-    private PatchRequest _mainScript;
+    private readonly PatchRequest _mainScript;
     private AiIntegrationStatsScope _stats;
 
-    public EmbeddingsGenerationScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, AiIntegrationConfiguration configuration) : base(database, context, null, behaviorFunctions)
+    public EmbeddingsGenerationScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, EmbeddingsGenerationConfiguration configuration) : base(database, context, null, behaviorFunctions)
     {
         _configuration = configuration;
         _mainScript = new PatchRequest(transformation.Script, PatchRequestType.AiIntegration);
@@ -67,6 +68,11 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
         markdownObject.FastSetProperty("splitLines", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitLines", SplitMarkDownLines), false, false, false));
         markdownObject.FastSetProperty("splitParagraphs", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitParagraphs", SplitMarkDownParagraphs), false, false, false));
         DocumentScript.ScriptEngine.SetValue("markdown", markdownObject);
+
+        ObjectInstance htmlObject = new JsObject(DocumentScript.ScriptEngine);
+        htmlObject.FastSetProperty("strip", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "strip", StripHtml), false, false, false));
+        htmlObject.FastSetProperty("splitLines", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitLines", SplitHtmlLines), false, false, false));
+        DocumentScript.ScriptEngine.SetValue("html", htmlObject);
     }
 
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
@@ -380,6 +386,59 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<AiI
         var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
 
         return jsArray;
+    }
+
+    private JsValue SplitHtmlLines(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "html.splitLines(text, maxTokensPerLine)";
+
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+
+        string text = StripHtml(args[0].AsString());
+        var chunks = TextChunker.SplitPlainTextLines(text, (int)args[1].AsNumber());
+
+        var jsChunks = new JsValue[chunks.Count];
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            jsChunks[i] = new JsString(chunks[i]);
+        }
+
+        var jsArray = new JsArray(DocumentScript.ScriptEngine, jsChunks);
+
+        return jsArray;
+    }
+
+    private JsValue StripHtml(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "html.strip(htmlText)";
+
+        if (args.Length != 1)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 1 argument");
+
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+
+
+        var text = StripHtml(args[0].AsString());
+
+        return new JsString(text);
+    }
+
+    private string StripHtml(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        var htmlDoc = new HtmlDocument();
+        htmlDoc.LoadHtml(input);
+        return htmlDoc.DocumentNode.InnerText;
     }
 
     private JsValue EmbeddingsGenerate(JsValue self, JsValue[] args)

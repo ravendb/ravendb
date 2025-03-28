@@ -70,7 +70,7 @@ public abstract class ActiveOngoingTasksBase : DatabaseBase<Integer32>
     
     protected static int GetNumberOfActiveSnowflakeEtls(RachisState rachisState, string nodeTag, RawDatabaseRecord database) => CountTasks(rachisState, nodeTag, database.Topology, database.SnowflakeEtls.Where(x => x.Disabled == false));
 
-    protected static int GetNumberOfActiveAiIntegrations(RachisState rachisState, string nodeTag, RawDatabaseRecord database) => CountTasks(rachisState, nodeTag, database.Topology, database.AiIntegrations.Where(x => x.Disabled == false));
+    protected static int GetNumberOfActiveAiIntegrations(RachisState rachisState, string nodeTag, RawDatabaseRecord database) => CountTasks(rachisState, nodeTag, database.Topology, database.EmbeddingsGenerations.Where(x => x.Disabled == false));
     
     protected static int GetNumberOfActiveSubscriptions(TransactionOperationContext context, RachisState rachisState, string nodeTag, RawDatabaseRecord database)
     {

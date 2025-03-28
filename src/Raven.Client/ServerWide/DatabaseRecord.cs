@@ -141,7 +141,7 @@ namespace Raven.Client.ServerWide
         
         public List<SnowflakeEtlConfiguration> SnowflakeEtls = new List<SnowflakeEtlConfiguration>();
         
-        public List<AiIntegrationConfiguration> AiIntegrations = [];
+        public List<EmbeddingsGenerationConfiguration> EmbeddingsGenerations = [];
 
         public ClientConfiguration Client;
 
@@ -485,7 +485,7 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Snowflake ETL task with that name");
             if (QueueSinks.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Queue Sink task with that name");
-            if (AiIntegrations.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+            if (EmbeddingsGenerations.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a AI Integration task with that name");
         }
 

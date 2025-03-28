@@ -664,14 +664,14 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             result.DatabaseRecord.SnowflakeEtlsUpdated = true;
         }
 
-        if (databaseRecord.AiIntegrations.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.AiIntegrations))
+        if (databaseRecord.EmbeddingsGenerations.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.EmbeddingsGenerations))
         {
             if (_log.IsInfoEnabled)
-                _log.Info("Configuring AI Integration configuration from smuggler");
+                _log.Info("Configuring Embedding Generation tasks configuration from smuggler");
 
-            foreach (var etl in databaseRecord.AiIntegrations)
+            foreach (var etl in databaseRecord.EmbeddingsGenerations)
             {
-                _currentDatabaseRecord?.AiIntegrations.ForEach(x =>
+                _currentDatabaseRecord?.EmbeddingsGenerations.ForEach(x =>
                 {
                     if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
                     {

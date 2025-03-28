@@ -64,5 +64,5 @@ public enum RavenTestCategory : long
     Sinks = 1L << 48,
     Monitoring = 1L << 50,
     Vector = 1L << 51,
-    AiIntegration = 1L << 52,
+    Ai = 1L << 52,
 }

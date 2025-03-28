@@ -285,7 +285,7 @@ public static class AiExtensions
     
     public static void Configure(
         this IKernelBuilder kernelBuilder,
-        AiIntegrationConfiguration configuration,
+        EmbeddingsGenerationConfiguration configuration,
         bool isConnectionTest,
         out string resolvedServiceId)
     {

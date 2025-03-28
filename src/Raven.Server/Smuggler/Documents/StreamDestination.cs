@@ -502,11 +502,11 @@ namespace Raven.Server.Smuggler.Documents
                             WriteQueueSinks(databaseRecord.QueueSinks);
                         }
 
-                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiIntegrations))
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.EmbeddingsGenerations))
                         {
                             _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.AiIntegrations));
-                            WriteAiIntegrations(databaseRecord.AiIntegrations);
+                            _writer.WritePropertyName(nameof(databaseRecord.EmbeddingsGenerations));
+                            WriteAiIntegrations(databaseRecord.EmbeddingsGenerations);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiConnectionStrings))
@@ -892,7 +892,7 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteAiIntegrations(List<AiIntegrationConfiguration> aiIntegrationConfigurations)
+            private void WriteAiIntegrations(List<EmbeddingsGenerationConfiguration> aiIntegrationConfigurations)
             {
                 if (aiIntegrationConfigurations == null)
                 {

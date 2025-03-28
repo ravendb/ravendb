@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.AI;
 public static class AiHelper
 {
     [Experimental("SKEXP0001")]
-    public static ITextEmbeddingGenerationService CreateService(AiIntegrationConfiguration configuration)
+    public static ITextEmbeddingGenerationService CreateService(EmbeddingsGenerationConfiguration configuration)
     {
         var kernelBuilder = Kernel.CreateBuilder();
         kernelBuilder.Configure(configuration, isConnectionTest: false, out _);
@@ -19,7 +19,7 @@ public static class AiHelper
     }
 
     [Experimental("SKEXP0001")]
-    public static IServiceProvider CreateServicesForTest(AiIntegrationConfiguration configuration, out string serviceId)
+    public static IServiceProvider CreateServicesForTest(EmbeddingsGenerationConfiguration configuration, out string serviceId)
     {
         var kernelBuilder = Kernel.CreateBuilder();
         kernelBuilder.Configure(configuration, isConnectionTest: true, out serviceId);

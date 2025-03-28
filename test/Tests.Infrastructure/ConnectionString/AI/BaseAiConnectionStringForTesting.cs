@@ -11,7 +11,7 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 
 public interface IAiConnectorForTesting
 {
-    AiIntegrationConfiguration GetEtlConfiguration();
+    EmbeddingsGenerationConfiguration GetEtlConfiguration();
     Lazy<bool> CanConnect { get; }
     Lazy<AiConnectorType> AiConnectorType { get; }
 }
@@ -25,7 +25,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
     internal static T CreateNewInstance(string prefixName) => new() { NamePrefix = new Lazy<string>(prefixName) };
 
-    private readonly Lazy<AiIntegrationConfiguration> _aiIntegrationConfiguration;
+    private readonly Lazy<EmbeddingsGenerationConfiguration> _aiIntegrationConfiguration;
 
     public Lazy<bool> CanConnect { get; }
 
@@ -35,7 +35,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
 
     protected BaseAiConnectorForTesting()
     {
-        _aiIntegrationConfiguration = new Lazy<AiIntegrationConfiguration>(GetEtlConfiguration);
+        _aiIntegrationConfiguration = new Lazy<EmbeddingsGenerationConfiguration>(GetEtlConfiguration);
         CanConnect = new Lazy<bool>(CanConnectInternal);
     }
 
@@ -69,11 +69,11 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
         return connectionString;
     }
 
-    public AiIntegrationConfiguration GetEtlConfiguration()
+    public EmbeddingsGenerationConfiguration GetEtlConfiguration()
     {
         var connectionString = GetAiConnectionString();
 
-        return new AiIntegrationConfiguration
+        return new EmbeddingsGenerationConfiguration
         {
             Name = AiIntegrationTaskName.Value,
             ConnectionStringName = ConnectionStringName.Value,

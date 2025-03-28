@@ -9,14 +9,14 @@ using Raven.Server.ServerWide.Commands.ETL;
 
 namespace Raven.Server.ServerWide.Commands.AI;
 
-public sealed class UpdateAiIntegrationCommand : UpdateEtlCommand<AiIntegrationConfiguration, AiConnectionString>
+public sealed class UpdateAiIntegrationCommand : UpdateEtlCommand<EmbeddingsGenerationConfiguration, AiConnectionString>
 {
     public UpdateAiIntegrationCommand()
     {
         // for deserialization
     }
 
-    public UpdateAiIntegrationCommand(long taskId, AiIntegrationConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Ai, databaseName, uniqueRequestId)
+    public UpdateAiIntegrationCommand(long taskId, EmbeddingsGenerationConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.EmbeddingsGeneration, databaseName, uniqueRequestId)
     {
 
     }
@@ -36,7 +36,7 @@ public sealed class UpdateAiIntegrationCommand : UpdateEtlCommand<AiIntegrationC
             if (record == null)
                 throw new RachisApplyException("Failed to get database record, but it is required for further validation");
 
-            var oldConfig = record.AiIntegrations.FirstOrDefault(x => x.Name == Configuration.Name);
+            var oldConfig = record.EmbeddingsGenerations.FirstOrDefault(x => x.Name == Configuration.Name);
             if (oldConfig == null)
                 return;
 

@@ -7,14 +7,14 @@ using Raven.Server.ServerWide.Commands.ETL;
 
 namespace Raven.Server.ServerWide.Commands.AI;
 
-public sealed class AddAiIntegrationCommand : AddEtlCommand<AiIntegrationConfiguration, AiConnectionString>
+public sealed class AddAiIntegrationCommand : AddEtlCommand<EmbeddingsGenerationConfiguration, AiConnectionString>
 {
     public AddAiIntegrationCommand()
     {
         // for deserialization
     }
 
-    public AddAiIntegrationCommand(AiIntegrationConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
+    public AddAiIntegrationCommand(EmbeddingsGenerationConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
     {
 
     }
@@ -33,7 +33,7 @@ public sealed class AddAiIntegrationCommand : AddEtlCommand<AiIntegrationConfigu
 
         InClusterValidation(record);
 
-        Add(ref record.AiIntegrations, record, etag);
+        Add(ref record.EmbeddingsGenerations, record, etag);
     }
 
     private void InClusterValidation(DatabaseRecord databaseRecord)
@@ -49,9 +49,9 @@ public sealed class AddAiIntegrationCommand : AddEtlCommand<AiIntegrationConfigu
             if (Configuration.ValidateIdentifier(out var errors) == false)
                 throw new RachisApplyException($"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
 
-            var isUpdate = databaseRecord.AiIntegrations.Any(x => x.Name == Configuration.Name);
+            var isUpdate = databaseRecord.EmbeddingsGenerations.Any(x => x.Name == Configuration.Name);
                 
-            var identifierConflicts = databaseRecord?.AiIntegrations
+            var identifierConflicts = databaseRecord?.EmbeddingsGenerations
                 .Where(x => x.Identifier == Configuration.Identifier && x.Name != Configuration.Name)
                 .ToArray();
 

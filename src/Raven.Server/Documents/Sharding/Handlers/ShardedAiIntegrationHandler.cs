@@ -6,10 +6,10 @@ namespace Raven.Server.Documents.Sharding.Handlers;
 
 public sealed class ShardedAiIntegrationHandler : ShardedDatabaseRequestHandler
 {
-    [RavenShardedAction("/databases/*/admin/ai/test", "POST")]
+    [RavenShardedAction("/databases/*/admin/ai/embeddings/test", "POST")]
     public async Task PostScriptTest()
     {
-        using (var processor = new ShardedAiIntegrationHandlerProcessorForPostScriptTest(this))
+        using (var processor = new ShardedEmbeddingsGenerationHandlerProcessorForPostScriptTest(this))
             await processor.ExecuteAsync();
     }
 }

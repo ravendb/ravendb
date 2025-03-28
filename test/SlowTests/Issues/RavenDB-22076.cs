@@ -467,7 +467,7 @@ public class RavenDB_22076 : RavenTestBase
                 session.SaveChanges();
             }
             
-            var configuration = new AiIntegrationConfiguration()
+            var configuration = new EmbeddingsGenerationConfiguration()
             {
                 Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
@@ -528,7 +528,7 @@ public class RavenDB_22076 : RavenTestBase
                 session.SaveChanges();
             }
             
-            var configuration = new AiIntegrationConfiguration()
+            var configuration = new EmbeddingsGenerationConfiguration()
             {
                 Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
@@ -576,7 +576,7 @@ public class RavenDB_22076 : RavenTestBase
                 session.SaveChanges();
             }
 
-            var configuration = new AiIntegrationConfiguration()
+            var configuration = new EmbeddingsGenerationConfiguration()
             {
                 Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,
@@ -623,7 +623,7 @@ public class RavenDB_22076 : RavenTestBase
                 session.SaveChanges();
             }
             
-            var configuration = new AiIntegrationConfiguration()
+            var configuration = new EmbeddingsGenerationConfiguration()
             {
                 Name = aiTaskName,
                 AllowEtlOnNonEncryptedChannel = true,

@@ -26,8 +26,9 @@
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
     <PackageVersion Include="Google.Api.Gax.Rest" Version="4.10.0" />
-    <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.11.0" />
-    <PackageVersion Include="Hl7.Fhir.R4" Version="5.11.4" />
+    <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.10.0" />
+    <PackageVersion Include="Hl7.Fhir.R4" Version="5.11.1" />
+    <PackageVersion Include="HtmlAgilityPack" Version="1.11.72" />
     <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
     <PackageVersion Include="Jint" Version="4.2.1" />
     <PackageVersion Include="JunitXml.TestLogger" Version="6.1.0" />

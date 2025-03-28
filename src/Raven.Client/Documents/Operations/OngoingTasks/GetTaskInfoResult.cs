@@ -425,7 +425,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
         public string ConnectionStringName { get; set; }
 
-        public AiIntegrationConfiguration Configuration { get; set; }
+        public EmbeddingsGenerationConfiguration Configuration { get; set; }
 
         public override DynamicJsonValue ToJson()
         {

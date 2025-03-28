@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionString>
+public sealed class EmbeddingsGenerationConfiguration : EtlConfiguration<AiConnectionString>
 {
     public string Identifier { get; set; }
 
@@ -21,13 +21,13 @@ public sealed class AiIntegrationConfiguration : EtlConfiguration<AiConnectionSt
     public override string GetDestination() => Identifier;
     public override string GetDefaultTaskName() => Identifier;
 
-    public override EtlType EtlType => EtlType.Ai;
+    public override EtlType EtlType => EtlType.EmbeddingsGeneration;
 
     public string Collection { get; set; }
 
     public List<string> EmbeddingsPaths { get; set; }
 
-    public AiEmbeddingsTransformation EmbeddingsTransformation { get; set; }
+    public EmbeddingsTransformation EmbeddingsTransformation { get; set; }
     
     public VectorEmbeddingType TargetQuantizationType { get; set; }
 

@@ -6,24 +6,24 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI;
+namespace SlowTests.Server.Documents.AI.Embeddings;
 
-public class AiIntegrationTasksManagementTests : RavenTestBase
+public class TasksManagementTests : RavenTestBase
 {
-    public AiIntegrationTasksManagementTests(ITestOutputHelper output) : base(output)
+    public TasksManagementTests(ITestOutputHelper output) : base(output)
     {
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
-    public void CanDeleteAiIntegrationTask()
+    [RavenFact(RavenTestCategory.Ai)]
+    public void CanDeleteTask()
     {
         using var store = GetDocumentStore();
 
-        var configuration = new AiIntegrationConfiguration
+        var configuration = new EmbeddingsGenerationConfiguration
         {
             Name = "ai-task-testing",
             ConnectionStringName = "ai-service-connection",
-            EmbeddingsPaths = ["PostContent", "Comments"], 
+            EmbeddingsPaths = ["PostContent", "Comments"],
             Collection = "Posts",
         };
 
@@ -43,12 +43,12 @@ public class AiIntegrationTasksManagementTests : RavenTestBase
         Assert.Null(ongoingTask);
     }
 
-    [RavenFact(RavenTestCategory.AiIntegration)]
-    public void CanUpdateAiIntegrationTask()
+    [RavenFact(RavenTestCategory.Ai)]
+    public void CanUpdateTask()
     {
         using var store = GetDocumentStore();
 
-        var configuration = new AiIntegrationConfiguration
+        var configuration = new EmbeddingsGenerationConfiguration
         {
             Name = "ai-task-testing",
             ConnectionStringName = "ai-service-connection",

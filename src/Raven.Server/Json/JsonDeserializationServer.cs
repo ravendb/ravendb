@@ -37,7 +37,6 @@ using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.Documents.Commands.Tombstones;
-using Raven.Server.Documents.ETL.Providers.AI.Test;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
@@ -82,6 +81,7 @@ using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 using RevisionsHandler = Raven.Server.Documents.Handlers.RevisionsHandler;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 
 namespace Raven.Server.Json
 {
@@ -143,7 +143,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, TestQueueSinkScript> TestQueueSinkScript = GenerateJsonDeserializationRoutine<TestQueueSinkScript>();
 
-        public static readonly Func<BlittableJsonReaderObject, TestAiIntegrationScript> TestAiIntegrationScript = GenerateJsonDeserializationRoutine<TestAiIntegrationScript>();
+        public static readonly Func<BlittableJsonReaderObject, TestEmbeddingsGenerationScript> TestEmbeddingsGenerationScript = GenerateJsonDeserializationRoutine<TestEmbeddingsGenerationScript>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
 

@@ -1151,8 +1151,8 @@ namespace Raven.Server.Commercial
                         databaseRecord.SnowflakeEtls.Count > 0)
                         snowflakeEtlCount++;
 
-                    if (databaseRecord.AiIntegrations != null &&
-                        databaseRecord.AiIntegrations.Count > 0)
+                    if (databaseRecord.EmbeddingsGenerations != null &&
+                        databaseRecord.EmbeddingsGenerations.Count > 0)
                         aiEtlCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);

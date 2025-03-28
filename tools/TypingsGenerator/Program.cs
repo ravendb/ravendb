@@ -65,7 +65,7 @@ using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.AI.Test;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
@@ -583,9 +583,9 @@ namespace TypingsGenerator
 
             // ongoing tasks - AI Integration
             scripter.AddType(typeof(OngoingTaskAiIntegration));
-            scripter.AddType(typeof(AiIntegrationConfiguration));
-            scripter.AddType(typeof(TestAiIntegrationScript));
-            scripter.AddType(typeof(AiIntegrationTestScriptResult));
+            scripter.AddType(typeof(EmbeddingsGenerationConfiguration));
+            scripter.AddType(typeof(TestEmbeddingsGenerationScript));
+            scripter.AddType(typeof(EmbeddingsGenerationTestScriptResult));
             scripter.AddType(typeof(AiConnectorType));
 
             // connection strings

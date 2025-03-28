@@ -8,9 +8,8 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
-using Raven.Server.Documents.ETL.Providers.AI.Test;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -26,7 +25,7 @@ public class AiConnectionStringsTests : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.AiIntegration)]
+    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Ai)]
     public async Task CanTestAiIntegrationScript()
     {
         using (var store = GetDocumentStore())
@@ -52,7 +51,7 @@ public class AiConnectionStringsTests : RavenTestBase
             Assert.NotNull(putConnectionStringResult.RaftCommandIndex);
 
 
-            var aiTaskConfiguration = new AiIntegrationConfiguration
+            var configuration = new EmbeddingsGenerationConfiguration
             {
                 Name = "AiIntegrationTaskForTestingPurposes",
                 ConnectionStringName = "ConnectionStringForTestingPurposes",
@@ -63,10 +62,10 @@ public class AiConnectionStringsTests : RavenTestBase
             var database = await GetDatabase(store.Database);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var testScript = new TestAiIntegrationScript
+                var testScript = new TestEmbeddingsGenerationScript
                 {
                     DocumentId = "orders/1-A",
-                    Configuration = aiTaskConfiguration
+                    Configuration = configuration
                 };
 
                 var testResult = EmbeddingsGenerationTask.TestScript(testScript, database, database.ServerStore, context);
@@ -75,174 +74,174 @@ public class AiConnectionStringsTests : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.AiIntegration)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.All, CheckCanConnect = false, NightlyBuildRequired = false)]
-    public void CanPutAiConnectionString_WithValidConfiguration_ShouldWork(Options options, AiIntegrationConfiguration aiIntegrationConfiguration)
+    public void CanPutAiConnectionString_WithValidConfiguration_ShouldWork(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
         using (var store = GetDocumentStore())
         {
-            store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(aiIntegrationConfiguration.Connection));
+            store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(embeddingsGenerationConfiguration.Connection));
 
-            var aiConnectionStringsDictionary = store.Maintenance.Send(new GetConnectionStringsOperation(aiIntegrationConfiguration.Connection.Name, ConnectionStringType.Ai)).AiConnectionStrings;
+            var aiConnectionStringsDictionary = store.Maintenance.Send(new GetConnectionStringsOperation(embeddingsGenerationConfiguration.Connection.Name, ConnectionStringType.Ai)).AiConnectionStrings;
 
             Assert.NotNull(aiConnectionStringsDictionary);
             Assert.Equal(1, aiConnectionStringsDictionary.Count);
-            Assert.True(aiConnectionStringsDictionary.ContainsKey(aiIntegrationConfiguration.Connection.Name));
+            Assert.True(aiConnectionStringsDictionary.ContainsKey(embeddingsGenerationConfiguration.Connection.Name));
 
-            switch (aiIntegrationConfiguration.AiConnectorType)
+            switch (embeddingsGenerationConfiguration.AiConnectorType)
             {
                 case AiConnectorType.OpenAi:
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OnnxSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OnnxSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
 
-                    Assert.NotNull(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.OpenAiSettings.ApiKey, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings.ApiKey);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.OpenAiSettings.Model, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings.Model);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.OpenAiSettings.Endpoint, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings.Endpoint);
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.OpenAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings.ApiKey);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.OpenAiSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings.Model);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.OpenAiSettings.Endpoint, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings.Endpoint);
                     break;
 
                 case AiConnectorType.AzureOpenAi:
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OnnxSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OnnxSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
 
-                    Assert.NotNull(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.AzureOpenAiSettings.ApiKey, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings.ApiKey);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.AzureOpenAiSettings.Model, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings.Model);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.AzureOpenAiSettings.Endpoint, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings.Endpoint);
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings.ApiKey);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings.Model);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.Endpoint, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings.Endpoint);
                     break;
 
                 case AiConnectorType.Ollama:
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OnnxSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OnnxSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
 
-                    Assert.NotNull(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.OllamaSettings.Model, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings.Model);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.OllamaSettings.Uri, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings.Uri);
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.OllamaSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings.Model);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.OllamaSettings.Uri, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings.Uri);
                     break;
 
                 case AiConnectorType.Onnx:
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
 
-                    Assert.NotNull(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OnnxSettings);
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OnnxSettings);
                     break;
 
                 case AiConnectorType.Google:
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OnnxSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OnnxSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
 
-                    Assert.NotNull(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.GoogleSettings.ApiKey, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings.ApiKey);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.GoogleSettings.Model, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings.Model);
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.GoogleSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings.ApiKey);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.GoogleSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings.Model);
                     break;
 
                 case AiConnectorType.HuggingFace:
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OnnxSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OnnxSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
 
-                    Assert.NotNull(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.HuggingFaceSettings.ApiKey, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings.ApiKey);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.HuggingFaceSettings.Model, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings.Model);
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.HuggingFaceSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings.ApiKey);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.HuggingFaceSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings.Model);
                     break;
 
                 case AiConnectorType.MistralAi:
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].AzureOpenAiSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OllamaSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].OnnxSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].GoogleSettings);
-                    Assert.Null(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OnnxSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
 
-                    Assert.NotNull(aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.MistralAiSettings.ApiKey, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings.ApiKey);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.MistralAiSettings.Model, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings.Model);
-                    Assert.Equal(aiIntegrationConfiguration.Connection.MistralAiSettings.Endpoint, aiConnectionStringsDictionary[aiIntegrationConfiguration.Connection.Name].MistralAiSettings.Endpoint);
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.ApiKey);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.Model);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.Endpoint, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.Endpoint);
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(aiIntegrationConfiguration.AiConnectorType), aiIntegrationConfiguration.AiConnectorType, null);
+                    throw new ArgumentOutOfRangeException(nameof(embeddingsGenerationConfiguration.AiConnectorType), embeddingsGenerationConfiguration.AiConnectorType, null);
             }
         }
     }
 
-    [RavenTheory(RavenTestCategory.AiIntegration)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.NonInternal, CheckCanConnect = false, NightlyBuildRequired = false)]
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.Onnx, Skip = "Onnx does not require any mandatory fields.")]
-    public void PutAiConnectionString_WithInvalidConfiguration_ShouldThrow(Options options, AiIntegrationConfiguration aiIntegrationConfiguration)
+    public void PutAiConnectionString_WithInvalidConfiguration_ShouldThrow(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
-        switch (aiIntegrationConfiguration.AiConnectorType)
+        switch (embeddingsGenerationConfiguration.AiConnectorType)
         {
             case AiConnectorType.OpenAi:
-                aiIntegrationConfiguration.Connection.OpenAiSettings.Model = string.Empty;
+                embeddingsGenerationConfiguration.Connection.OpenAiSettings.Model = string.Empty;
                 break;
             case AiConnectorType.AzureOpenAi:
-                aiIntegrationConfiguration.Connection.AzureOpenAiSettings.Model = string.Empty;
+                embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.Model = string.Empty;
                 break;
             case AiConnectorType.Ollama:
-                aiIntegrationConfiguration.Connection.OllamaSettings.Model = string.Empty;
+                embeddingsGenerationConfiguration.Connection.OllamaSettings.Model = string.Empty;
                 break;
             case AiConnectorType.Google:
-                aiIntegrationConfiguration.Connection.GoogleSettings.Model = string.Empty;
+                embeddingsGenerationConfiguration.Connection.GoogleSettings.Model = string.Empty;
                 break;
             case AiConnectorType.HuggingFace:
-                aiIntegrationConfiguration.Connection.HuggingFaceSettings.Model = string.Empty;
+                embeddingsGenerationConfiguration.Connection.HuggingFaceSettings.Model = string.Empty;
                 break;
             case AiConnectorType.MistralAi:
-                aiIntegrationConfiguration.Connection.MistralAiSettings.Model = string.Empty;
+                embeddingsGenerationConfiguration.Connection.MistralAiSettings.Model = string.Empty;
                 break;
         }
         using (var store = GetDocumentStore())
         {
-            var exception = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(aiIntegrationConfiguration.Connection)));
+            var exception = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(embeddingsGenerationConfiguration.Connection)));
             Assert.Contains($"Value of `{nameof(OpenAiSettings.Model)}` field cannot be empty.", exception.Message);
         }
     }
 
     private readonly List<string> _testValuesList = ["First test value", "Second test value", "Third test value"];
 
-    [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.AiIntegration)]
+    [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.All)]
-    public void SemanticKernel_WithValidConfiguration_ShouldWork(Options options, AiIntegrationConfiguration aiIntegrationConfiguration)
+    public void SemanticKernel_WithValidConfiguration_ShouldWork(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
-        var services = AiHelper.CreateServicesForTest(aiIntegrationConfiguration, out string serviceId);
+        var services = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration, out string serviceId);
         var embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
             .GenerateEmbeddingsAsync(_testValuesList).Result;
 
         Assert.Equal(_testValuesList.Count, embeddings.Count);
     }
 
-    [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.AiIntegration)]
+    [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Onnx | RavenAiIntegration.Google)]
     [RavenAiIntegrationData(IntegrationType = RavenAiIntegration.Ollama | RavenAiIntegration.HuggingFace | RavenAiIntegration.MistralAi, Skip = "This provider does not support dimensionality yet.")]
-    public void SemanticKernel_ShouldRespect_Dimensionality(Options options, AiIntegrationConfiguration aiIntegrationConfiguration)
+    public void SemanticKernel_ShouldRespect_Dimensionality(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
         const int dimensions = 5;
 
-        var services = AiHelper.CreateServicesForTest(aiIntegrationConfiguration, out string serviceId);
+        var services = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration, out string serviceId);
         var embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
             .GenerateEmbeddingsAsync(_testValuesList).Result;
 
@@ -252,23 +251,23 @@ public class AiConnectionStringsTests : RavenTestBase
         embeddings = null;
         Assert.Null(embeddings);
 
-        switch (aiIntegrationConfiguration.AiConnectorType)
+        switch (embeddingsGenerationConfiguration.AiConnectorType)
         {
             case AiConnectorType.OpenAi:
-                aiIntegrationConfiguration.Connection.OpenAiSettings.Dimensions = dimensions;
+                embeddingsGenerationConfiguration.Connection.OpenAiSettings.Dimensions = dimensions;
                 break;
             case AiConnectorType.AzureOpenAi:
-                aiIntegrationConfiguration.Connection.AzureOpenAiSettings.Dimensions = dimensions;
+                embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.Dimensions = dimensions;
                 break;
             case AiConnectorType.Onnx:
-                aiIntegrationConfiguration.Connection.OnnxSettings.Dimensions = dimensions;
+                embeddingsGenerationConfiguration.Connection.OnnxSettings.Dimensions = dimensions;
                 break;
             case AiConnectorType.Google:
-                aiIntegrationConfiguration.Connection.GoogleSettings.Dimensions = dimensions;
+                embeddingsGenerationConfiguration.Connection.GoogleSettings.Dimensions = dimensions;
                 break;
         }
 
-        services = AiHelper.CreateServicesForTest(aiIntegrationConfiguration, out serviceId);
+        services = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration, out serviceId);
         embeddings = services.GetRequiredKeyedService<ITextEmbeddingGenerationService>(serviceId)
             .GenerateEmbeddingsAsync(_testValuesList).Result;
 

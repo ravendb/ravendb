@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public class AiEmbeddingsTransformation
+public class EmbeddingsTransformation
 {
     internal const string GenerateEmbeddingsFunctionName = "embeddings.generate";
 

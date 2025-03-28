@@ -17,12 +17,12 @@ using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI;
+namespace SlowTests.Server.Documents.AI.Embeddings;
 
-public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTestBase(output)
+public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : RavenTestBase(output)
 {
     protected const string DefaultConnectionStringName = "Local AI connection";
-    protected const string DefaultAiIntegrationTaskName = "localAiTask";
+    protected const string DefaultEmbeddingGenerationTaskName = "localAiTask";
     protected ByteStringContext _allocator;
 
     protected float[] GenerateEmbeddingForTextViaOnnx(string text)
@@ -31,22 +31,22 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
         return MemoryMarshal.Cast<byte, float>(GenerateEmbeddings.FromText(_allocator, VectorOptions.DefaultText, text).GetEmbedding()).ToArray();
     }
 
-    protected static (AiIntegrationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
+    protected static (EmbeddingsGenerationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
         IDocumentStore store,
-        string aiIntegrationName = DefaultAiIntegrationTaskName,
+        string embeddingsGenerationTaskName = DefaultEmbeddingGenerationTaskName,
         string connectionStringName = DefaultConnectionStringName,
         List<string> embeddingsPaths = null,
         string script = null,
         string collectionName = null,
         VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
     {
-        var configuration = new AiIntegrationConfiguration
+        var configuration = new EmbeddingsGenerationConfiguration
         {
-            Name = aiIntegrationName,
+            Name = embeddingsGenerationTaskName,
             ConnectionStringName = connectionStringName,
             EmbeddingsPaths = embeddingsPaths ?? (string.IsNullOrEmpty(script) ? ["Name"] : null),
             Collection = collectionName ?? "Dtos",
-            EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new AiEmbeddingsTransformation
+            EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new EmbeddingsTransformation
             {
                 Script = script
             }
@@ -59,8 +59,8 @@ public abstract class AiIntegrationTestBase(ITestOutputHelper output) : RavenTes
         return RegisterAiIntegration(store, configuration);
     }
 
-    protected static (AiIntegrationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
-        IDocumentStore store, AiIntegrationConfiguration configuration)
+    protected static (EmbeddingsGenerationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) RegisterAiIntegration(
+        IDocumentStore store, EmbeddingsGenerationConfiguration configuration)
     {
         var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, OnnxSettings = new OnnxSettings() };
 

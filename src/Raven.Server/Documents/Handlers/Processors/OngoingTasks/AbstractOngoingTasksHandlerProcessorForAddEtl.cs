@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 case EtlType.Snowflake:
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl();
                     break;
-                case EtlType.Ai:
+                case EtlType.EmbeddingsGeneration:
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddAiIntegration();
                     break;
                 default:

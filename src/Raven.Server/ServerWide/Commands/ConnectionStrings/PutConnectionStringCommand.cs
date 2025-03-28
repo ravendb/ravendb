@@ -203,7 +203,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
                         $"connection string{(identifierConflicts.Length > 1 ? "s" : "")} " +
                         $"'{string.Join("', '", identifierConflicts.Select(x => x.Key))}'");
 
-                var etlsUsingConnection = databaseRecord.AiIntegrations.Where(x => x.ConnectionStringName == ConnectionString.Name).ToArray();
+                var etlsUsingConnection = databaseRecord.EmbeddingsGenerations.Where(x => x.ConnectionStringName == ConnectionString.Name).ToArray();
                 var isConnectionStringInUse = etlsUsingConnection.Length > 0;
 
                 if (isUpdate == false || isConnectionStringInUse == false)

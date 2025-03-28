@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
-using Microsoft.CodeAnalysis;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client;
-using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -181,7 +175,7 @@ public class EmbeddingsStorage
         }
 
         // todo skip disabled tasks?
-        foreach (var aiIntegrationConfiguration in record.AiIntegrations)
+        foreach (var aiIntegrationConfiguration in record.EmbeddingsGenerations)
         {
             var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(aiIntegrationConfiguration.Identifier);
             var connectionStringIdentifier = new AiConnectionStringIdentifier(record.AiConnectionStrings[aiIntegrationConfiguration.ConnectionStringName].Identifier);

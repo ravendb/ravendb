@@ -147,6 +147,7 @@
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" />
     <PackageReference Include="FluentFTP" />
     <PackageReference Include="Elastic.Clients.Elasticsearch" />
+    <PackageReference Include="HtmlAgilityPack" />
     <PackageReference Include="JetBrains.Annotations">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>

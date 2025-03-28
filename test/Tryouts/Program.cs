@@ -25,6 +25,7 @@ using RachisTests;
 using SlowTests.Server;
 using SlowTests.SlowTests.MailingList;
 using SlowTests.Server.Documents.AI;
+using SlowTests.Server.Documents.AI.Embeddings;
 
 namespace Tryouts;
 
@@ -48,7 +49,7 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new AiIntegrationGenerateEmbeddingsTests(testOutputHelper))
+                using (var test = new GenerateEmbeddingsTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
 
