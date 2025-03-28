@@ -1,5 +1,3 @@
-#pragma warning disable SKEXP0070
-
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
@@ -48,6 +46,3 @@ public sealed class AiConnectionString : ConnectionString
         return json;
     }
 }
-
-
-#pragma warning restore SKEXP0070

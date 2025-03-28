@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>7.0.0-custom-70</Version>
+    <Version></Version>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFrameworks>net8.0;net7.0;net6.0;netstandard2.1;netstandard2.0</TargetFrameworks>
@@ -139,7 +139,6 @@
     <PackageReference Include="Lambda2Js.Signed" />
     <PackageReference Include="Microsoft.AspNetCore.JsonPatch" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Onnx" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Nito.AsyncEx.Coordination" />
     <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />

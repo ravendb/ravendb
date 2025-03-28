@@ -49,8 +49,6 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Diagnostics.PerformanceCounter" />
-    <PackageReference Include="System.Text.Encodings.Web" />
-    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />

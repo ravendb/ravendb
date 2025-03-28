@@ -205,7 +205,7 @@ public sealed class VectorEmbeddingEnrichmentEtl : EtlProcess<AiEtlItem, KeyValu
 
             case LlmProviderType.Onnx:
                 var onnxSettings = configuration.Connection.OnnxSettings;
-                kernelBuilder.AddBertOnnxTextEmbeddingGeneration(onnxSettings.ModelPath, onnxSettings.VocabularyPath, onnxSettings.GetBertOnnxOptions());
+                kernelBuilder.AddBertOnnxTextEmbeddingGeneration(onnxSettings.ModelPath, onnxSettings.VocabularyPath, onnxSettings.ToBertOnnxOptions());
 
                 break;
 

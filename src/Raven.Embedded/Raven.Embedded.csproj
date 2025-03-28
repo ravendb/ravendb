@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>7.0.0-custom-70</Version>
+    <Version></Version>
     <Description>RavenDB Embedded library to run ravendb in embedded way</Description>
     <Authors>Hibernating Rhinos</Authors>
     <OutputType>Library</OutputType>

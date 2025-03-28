@@ -1,6 +1,4 @@
-﻿#pragma warning disable SKEXP0070
-using System.Text;
-using Microsoft.SemanticKernel.Connectors.Onnx;
+﻿using System.Text;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.AI;
@@ -64,27 +62,13 @@ public sealed class OnnxSettings
     public NormalizationForm UnicodeNormalization { get; set; } = NormalizationForm.FormD;
 
     /// <summary>Gets or sets the pooling mode to use when generating the fixed-length embedding result. Defaults to <see cref="EmbeddingPoolingMode.Mean"/>.</summary>
-    public EmbeddingPoolingMode PoolingMode { get; set; } = EmbeddingPoolingMode.Mean;
+    public OnnxEmbeddingPoolingMode PoolingMode { get; set; } = OnnxEmbeddingPoolingMode.Mean;
 
     /// <summary>Gets or sets whether the resulting embedding vectors should be explicitly normalized. Defaults to false.</summary>
     /// <remarks>Normalized embeddings may be compared more efficiently, such as by using a dot product rather than cosine similarity.</remarks>
     public bool NormalizeEmbeddings { get; set; } = false;
 
     public bool HasSettings() => string.IsNullOrWhiteSpace(ModelPath) == false && string.IsNullOrWhiteSpace(VocabularyPath) == false;
-
-    public BertOnnxOptions GetBertOnnxOptions() =>
-        new()
-        {
-            CaseSensitive = CaseSensitive,
-            MaximumTokens = MaximumTokens,
-            ClsToken = ClsToken,
-            UnknownToken = UnknownToken,
-            SepToken = SepToken,
-            PadToken = PadToken,
-            UnicodeNormalization = UnicodeNormalization,
-            PoolingMode = PoolingMode,
-            NormalizeEmbeddings = NormalizeEmbeddings
-        };
 
     public DynamicJsonValue ToJson() =>
         new()
@@ -103,4 +87,14 @@ public sealed class OnnxSettings
         };
 }
 
-#pragma warning restore SKEXP0070
+public enum OnnxEmbeddingPoolingMode
+{
+    /// <summary>Uses the maximum across all token embeddings.</summary>
+    Max,
+
+    /// <summary>Calculates the average across all token embeddings.</summary>
+    Mean,
+
+    /// <summary>Calculates the average across all token embeddings, divided by the square root of the number of tokens.</summary>
+    MeanSquareRootTokensLength,
+}

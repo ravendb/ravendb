@@ -39,7 +39,7 @@
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.14" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
-    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.13.0" />
@@ -54,12 +54,12 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
     <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="Microsoft.NETCore.Jit" Version="2.0.8" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.33.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.34.0-alpha" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Onnx" Version="1.33.0-alpha" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.33.0" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
@@ -97,7 +97,7 @@
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
     <PackageVersion Include="System.Collections.Immutable" Version="8.0.0" />
     <PackageVersion Include="System.Data.HashFunction.Blake2" Version="2.0.0" />
-    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.0" />
+    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.1" />
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="8.0.1" />
     <PackageVersion Include="System.DirectoryServices.Protocols" Version="8.0.0" />
     <PackageVersion Include="System.Formats.Asn1" Version="8.0.2" />
@@ -113,8 +113,8 @@
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageVersion Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="8.0.1" />
-    <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.0" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.0" />
+    <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.1" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.1" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
     <PackageVersion Include="System.Threading.Tasks.Extensions" Version="4.6.2" />
     <PackageVersion Include="TypeScripter" Version="0.5.4" />
