@@ -103,6 +103,8 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                             return null;
                         }
                     }
+                    case "AiEtl":
+                        return null; // TODO kalczur: add AI ETL
                     default:
                         assertUnreachable(taskType);
                 }

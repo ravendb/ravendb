@@ -4,6 +4,7 @@ import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.Qu
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import AzureQueueStorageConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings;
 import AmazonSqsConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings;
+import AiConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.AI.AiConnectionString;
 
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
@@ -107,6 +108,58 @@ export interface AmazonSqsConnection extends ConnectionBase {
     };
 }
 
+export interface AiConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "Ai">;
+    identifier?: string;
+    connectorType?:
+        | "azureOpenAiSettings"
+        | "googleSettings"
+        | "huggingFaceSettings"
+        | "ollamaSettings"
+        | "onnxSettings"
+        | "openAiSettings";
+    azureOpenAiSettings?: {
+        apiKey?: string;
+        endpoint?: string;
+        model?: string;
+        deploymentName?: string;
+        dimensions?: number;
+        serviceId?: string;
+    };
+    googleSettings?: {
+        aiVersion?: Raven.Client.Documents.Operations.ETL.AI.GoogleAIVersion;
+        apiKey?: string;
+        model?: string;
+    };
+    huggingFaceSettings?: {
+        apiKey?: string;
+        endpoint?: string;
+        model?: string;
+    };
+    ollamaSettings?: {
+        model?: string;
+        uri?: string;
+    };
+    onnxSettings?: {
+        caseSensitive?: boolean;
+        clsToken?: string;
+        maximumTokens?: number;
+        normalizeEmbeddings?: boolean;
+        padToken?: string;
+        poolingMode?: Raven.Client.Documents.Operations.ETL.AI.OnnxEmbeddingPoolingMode;
+        sepToken?: string;
+        unicodeNormalization?: System.Text.NormalizationForm;
+        unknownToken?: string;
+    };
+    openAiSettings?: {
+        apiKey?: string;
+        endpoint?: string;
+        model?: string;
+        organizationId?: string;
+        projectId?: string;
+    };
+}
+
 export type Connection =
     | RavenConnection
     | SqlConnection
@@ -116,7 +169,8 @@ export type Connection =
     | KafkaConnection
     | RabbitMqConnection
     | AzureQueueStorageConnection
-    | AmazonSqsConnection;
+    | AmazonSqsConnection
+    | AiConnection;
 
 export type ConnectionStringDto = Partial<
     | ElasticSearchConnectionStringDto
@@ -127,6 +181,7 @@ export type ConnectionStringDto = Partial<
     | SnowflakeConnectionStringDto
     | AzureQueueStorageConnectionSettingsDto
     | AmazonSqsConnectionSettingsDto
+    | AiConnectionSettingsDto
 >;
 
 export interface EditConnectionStringFormProps {

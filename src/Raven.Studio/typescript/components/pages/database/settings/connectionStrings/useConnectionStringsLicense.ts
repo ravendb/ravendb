@@ -8,6 +8,7 @@ export interface ConnectionStringsLicenseFeatures {
     hasOlapEtl: boolean;
     hasElasticSearchEtl: boolean;
     hasQueueEtl: boolean;
+    hasAiEtl: boolean;
 }
 
 interface ConnectionStringsLicense {
@@ -23,8 +24,17 @@ export default function useConnectionStringsLicense(): ConnectionStringsLicense 
     const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
     const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
     const hasQueueEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasAiEtl = useAppSelector(licenseSelectors.statusValue("HasAiEtl"));
 
-    const allFeatures = [hasRavenEtl, hasSqlEtl, hasSnowflakeEtl, hasOlapEtl, hasElasticSearchEtl, hasQueueEtl];
+    const allFeatures = [
+        hasRavenEtl,
+        hasSqlEtl,
+        hasSnowflakeEtl,
+        hasOlapEtl,
+        hasElasticSearchEtl,
+        hasQueueEtl,
+        hasAiEtl,
+    ];
     const hasNone = allFeatures.every((x) => !x);
     const hasAll = allFeatures.every((x) => x);
 
@@ -36,6 +46,7 @@ export default function useConnectionStringsLicense(): ConnectionStringsLicense 
             hasOlapEtl,
             hasElasticSearchEtl,
             hasQueueEtl,
+            hasAiEtl,
         },
         hasNone,
         hasAll,

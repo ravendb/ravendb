@@ -48,6 +48,9 @@ class etlScriptDefinitionCache {
                 case "Queue":
                     command = getOngoingTaskInfoCommand.forQueueEtl(databaseName, taskId);
                     break;
+                case "Ai":
+                    command = null; // TODO kalczur add command for AI ETL
+                    break;
                 default: 
                     genUtils.assertUnreachable(etlType, "Unknown studioEtlType: " + etlType);
             }

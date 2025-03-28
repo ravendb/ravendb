@@ -472,6 +472,7 @@ export class DatabasesStubs {
             RavenConnectionStrings: {},
             SqlConnectionStrings: {},
             SnowflakeConnectionStrings: {},
+            AiConnectionStrings: {},
         };
     }
 
@@ -582,6 +583,23 @@ export class DatabasesStubs {
                         },
                         Passwordless: false,
                     },
+                },
+            },
+            AiConnectionStrings: {
+                "ai-name": {
+                    Type: "Ai",
+                    Name: "ai-name",
+                    Identifier: "some-identifier",
+                    GoogleSettings: {
+                        ApiKey: "some-api-key",
+                        Model: "some-model",
+                        AiVersion: "V1",
+                    },
+                    AzureOpenAiSettings: null,
+                    HuggingFaceSettings: null,
+                    OllamaSettings: null,
+                    OnnxSettings: null,
+                    OpenAiSettings: null,
                 },
             },
         };

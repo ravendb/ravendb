@@ -63,6 +63,8 @@ function getTypeLabel(type: StudioEtlType): string {
             return "Azure Queue Storage";
         case "AmazonSqs":
             return "Amazon SQS";
+        case "Ai":
+            return "AI";
         default:
             return type;
     }
@@ -88,6 +90,8 @@ function getIcon(type: StudioEtlType): IconName {
             return "azure";
         case "AmazonSqs":
             return "amazon-sqs";
+        case "Ai":
+            return "question"; // TODO kalczur: replace with AI icon
         default:
             return null;
     }

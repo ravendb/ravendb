@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.AI;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -587,6 +588,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(QueueConnectionString));
             scripter.AddType(typeof(ConnectionStringType));
             scripter.AddType(typeof(GetConnectionStringsResult));
+            scripter.AddType(typeof(AiConnectionString));
 
             // server-wide tasks
             scripter.AddType(typeof(AdminStudioServerWideHandler.ServerWideTasksResult));

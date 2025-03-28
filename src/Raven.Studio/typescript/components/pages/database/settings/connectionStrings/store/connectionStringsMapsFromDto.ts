@@ -10,6 +10,7 @@ import {
     SqlConnection,
     SnowflakeConnection,
     AmazonSqsConnection,
+    AiConnection,
 } from "../connectionStringsTypes";
 
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
@@ -21,6 +22,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
+type AiConnectionStringDto = Raven.Client.Documents.Operations.ETL.AI.AiConnectionString;
 
 type OngoingTaskForConnection = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {
     ConnectionStringName?: string;
@@ -63,6 +65,9 @@ function getConnectionStringUsedTasks(
             break;
         case "AmazonSqs":
             filteredTasks = tasks.filter((task) => task.BrokerType === "AmazonSqs");
+            break;
+        case "Ai":
+            filteredTasks = tasks.filter((task) => task.TaskType === "AiEtl");
             break;
         default:
             assertUnreachable(connectionType);
@@ -323,4 +328,81 @@ function getAmazonSqsAuthType(dto: QueueConnectionStringDto): AmazonSqsAuthentic
         return "basic";
     }
     return null;
+}
+
+export function mapAiConnectionsFromDto(
+    connections: Record<string, AiConnectionStringDto>,
+    ongoingTasks: OngoingTaskForConnection[]
+): AiConnection[] {
+    const type: AiConnection["type"] = "Ai";
+
+    const getConnectorType = (connection: AiConnectionStringDto): AiConnection["connectorType"] => {
+        if (connection.AzureOpenAiSettings) {
+            return "azureOpenAiSettings";
+        }
+        if (connection.GoogleSettings) {
+            return "googleSettings";
+        }
+        if (connection.HuggingFaceSettings) {
+            return "huggingFaceSettings";
+        }
+        if (connection.OllamaSettings) {
+            return "ollamaSettings";
+        }
+        if (connection.OnnxSettings) {
+            return "onnxSettings";
+        }
+        if (connection.OpenAiSettings) {
+            return "openAiSettings";
+        }
+        return null;
+    };
+
+    return Object.values(connections).map(
+        (connection) =>
+            ({
+                type,
+                name: connection.Name,
+                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
+                identifier: connection.Identifier,
+                connectorType: getConnectorType(connection),
+                azureOpenAiSettings: {
+                    deploymentName: connection.AzureOpenAiSettings?.DeploymentName,
+                    dimensions: connection.AzureOpenAiSettings?.Dimensions,
+                    serviceId: connection.AzureOpenAiSettings?.ServiceId,
+                },
+                googleSettings: {
+                    aiVersion: connection.GoogleSettings?.AiVersion,
+                    apiKey: connection.GoogleSettings?.ApiKey,
+                    model: connection.GoogleSettings?.Model,
+                },
+                huggingFaceSettings: {
+                    apiKey: connection.HuggingFaceSettings?.ApiKey,
+                    endpoint: connection.HuggingFaceSettings?.Endpoint,
+                    model: connection.HuggingFaceSettings?.Model,
+                },
+                ollamaSettings: {
+                    model: connection.OllamaSettings?.Model,
+                    uri: connection.OllamaSettings?.Uri,
+                },
+                onnxSettings: {
+                    caseSensitive: connection.OnnxSettings?.CaseSensitive,
+                    clsToken: connection.OnnxSettings?.ClsToken,
+                    maximumTokens: connection.OnnxSettings?.MaximumTokens,
+                    normalizeEmbeddings: connection.OnnxSettings?.NormalizeEmbeddings,
+                    padToken: connection.OnnxSettings?.PadToken,
+                    poolingMode: connection.OnnxSettings?.PoolingMode,
+                    sepToken: connection.OnnxSettings?.SepToken,
+                    unicodeNormalization: connection.OnnxSettings?.UnicodeNormalization,
+                    unknownToken: connection.OnnxSettings?.UnknownToken,
+                },
+                openAiSettings: {
+                    apiKey: connection.OpenAiSettings?.ApiKey,
+                    endpoint: connection.OpenAiSettings?.Endpoint,
+                    model: connection.OpenAiSettings?.Model,
+                    organizationId: connection.OpenAiSettings?.OrganizationId,
+                    projectId: connection.OpenAiSettings?.ProjectId,
+                },
+            }) satisfies AiConnection
+    );
 }

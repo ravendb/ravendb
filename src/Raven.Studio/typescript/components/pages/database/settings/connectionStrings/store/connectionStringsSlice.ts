@@ -14,6 +14,7 @@ import {
     mapSqlConnectionsFromDto,
     mapSnowflakeConnectionsFromDto,
     mapAmazonSqsConnectionsFromDto,
+    mapAiConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
@@ -38,6 +39,7 @@ const initialState: ConnectionStringsState = {
         RabbitMQ: [],
         AzureQueueStorage: [],
         AmazonSqs: [],
+        Ai: [],
     },
     urlParameters: {
         name: null,
@@ -55,7 +57,8 @@ type StudioEtlType =
     | "Kafka"
     | "RabbitMQ"
     | "AzureQueueStorage"
-    | "AmazonSqs";
+    | "AmazonSqs"
+    | "Ai";
 
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
@@ -135,6 +138,7 @@ export const connectionStringsSlice = createSlice({
                     connectionStringsDto.QueueConnectionStrings,
                     ongoingTasks
                 );
+                connections.Ai = mapAiConnectionsFromDto(connectionStringsDto.AiConnectionStrings, ongoingTasks);
                 state.loadStatus = "success";
 
                 if (payload.hasDatabaseAdminAccess && urlParameters.name && urlParameters.type) {

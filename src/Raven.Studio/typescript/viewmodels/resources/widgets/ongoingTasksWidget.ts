@@ -95,6 +95,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             nameForUI: "Subscription",
             icon: "icon-subscription",
             colorClass: "subscription"
+        },
+        "AiEtl": {
+            nameForUI: "AI ETL",
+            icon: "icon-ai-etl", // TODO kalczur check icon name
+            colorClass: "ai-etl"
         }
     }
 

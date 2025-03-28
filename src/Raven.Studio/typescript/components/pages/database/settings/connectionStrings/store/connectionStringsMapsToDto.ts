@@ -12,6 +12,7 @@ import {
     ConnectionFormData,
     SnowflakeConnection,
     AmazonSqsConnection,
+    AiConnection,
 } from "../connectionStringsTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
 import ApiKeyAuthentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.ApiKeyAuthentication;
@@ -202,6 +203,72 @@ export function mapAmazonSqsConnectionStringToDto(connection: AmazonSqsConnectio
     };
 }
 
+export function mapAiConnectionStringToDto(connection: AiConnection): ConnectionStringDto {
+    return {
+        Type: "Ai",
+        Name: connection.name,
+        Identifier: connection.identifier,
+        AzureOpenAiSettings:
+            connection.connectorType === "azureOpenAiSettings"
+                ? {
+                      ApiKey: connection.azureOpenAiSettings.apiKey,
+                      Endpoint: connection.azureOpenAiSettings.endpoint,
+                      DeploymentName: connection.azureOpenAiSettings.deploymentName,
+                      Model: connection.azureOpenAiSettings.model,
+                      ServiceId: connection.azureOpenAiSettings.serviceId,
+                      Dimensions: connection.azureOpenAiSettings.dimensions,
+                  }
+                : null,
+        GoogleSettings:
+            connection.connectorType === "googleSettings"
+                ? {
+                      ApiKey: connection.googleSettings.apiKey,
+                      Model: connection.googleSettings.model,
+                      AiVersion: connection.googleSettings.aiVersion,
+                  }
+                : null,
+        HuggingFaceSettings:
+            connection.connectorType === "huggingFaceSettings"
+                ? {
+                      ApiKey: connection.huggingFaceSettings.apiKey,
+                      Endpoint: connection.huggingFaceSettings.endpoint,
+                      Model: connection.huggingFaceSettings.model,
+                  }
+                : null,
+        OllamaSettings:
+            connection.connectorType === "ollamaSettings"
+                ? {
+                      Model: connection.ollamaSettings.model,
+                      Uri: connection.ollamaSettings.uri,
+                  }
+                : null,
+        OnnxSettings:
+            connection.connectorType === "onnxSettings"
+                ? {
+                      CaseSensitive: connection.onnxSettings.caseSensitive,
+                      ClsToken: connection.onnxSettings.clsToken,
+                      MaximumTokens: connection.onnxSettings.maximumTokens,
+                      NormalizeEmbeddings: connection.onnxSettings.normalizeEmbeddings,
+                      PadToken: connection.onnxSettings.padToken,
+                      PoolingMode: connection.onnxSettings.poolingMode,
+                      SepToken: connection.onnxSettings.sepToken,
+                      UnicodeNormalization: connection.onnxSettings.unicodeNormalization,
+                      UnknownToken: connection.onnxSettings.unknownToken,
+                  }
+                : null,
+        OpenAiSettings:
+            connection.connectorType === "openAiSettings"
+                ? {
+                      ApiKey: connection.openAiSettings.apiKey,
+                      Endpoint: connection.openAiSettings.endpoint,
+                      Model: connection.openAiSettings.model,
+                      OrganizationId: connection.openAiSettings.organizationId,
+                      ProjectId: connection.openAiSettings.projectId,
+                  }
+                : null,
+    };
+}
+
 export function mapConnectionStringToDto(connection: Connection): ConnectionStringDto {
     const type = connection.type;
 
@@ -224,6 +291,8 @@ export function mapConnectionStringToDto(connection: Connection): ConnectionStri
             return mapAzureQueueStorageConnectionStringToDto(connection);
         case "AmazonSqs":
             return mapAmazonSqsConnectionStringToDto(connection);
+        case "Ai":
+            return mapAiConnectionStringToDto(connection);
         default:
             return assertUnreachable(type);
     }

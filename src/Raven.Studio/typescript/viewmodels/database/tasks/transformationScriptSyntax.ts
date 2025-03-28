@@ -68,6 +68,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
             case "AmazonSqs":
                 sampleText = transformationScriptSyntax.amazonSqsEtlSampleText;
                 break;
+            case "Ai":
+                sampleText = "TODO"; // TODO kalczur - add AI sample
+                break;
             default:
                 genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
         }
