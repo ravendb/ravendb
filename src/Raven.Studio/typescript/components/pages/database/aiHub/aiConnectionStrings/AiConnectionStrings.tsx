@@ -26,6 +26,7 @@ export default function AiConnectionStrings() {
     const dispatch = useAppDispatch();
 
     useEffect(() => {
+        dispatch(connectionStringsActions.viewContextSet("ai"));
         dispatch(connectionStringsActions.fetchData(databaseName));
 
         return () => {

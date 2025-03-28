@@ -20,11 +20,14 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
+type ConnectionStringsViewContext = "ai" | "connectionString";
+
 interface ConnectionStringsState {
     loadStatus: loadStatus;
     connections: { [key in StudioEtlType]: Connection[] };
     urlParameters: ConnectionStringsUrlParameters;
     initialEditConnection: Connection;
+    viewContext: ConnectionStringsViewContext;
 }
 
 const initialState: ConnectionStringsState = {
@@ -46,6 +49,7 @@ const initialState: ConnectionStringsState = {
         type: null,
     },
     initialEditConnection: null,
+    viewContext: "connectionString",
 };
 
 type StudioEtlType =
@@ -96,6 +100,9 @@ export const connectionStringsSlice = createSlice({
         },
         connectionDeleted: (state, { payload }: PayloadAction<Connection>) => {
             state.connections[payload.type] = state.connections[payload.type].filter((x) => x.name !== payload.name);
+        },
+        viewContextSet: (state, { payload: viewContext }: PayloadAction<ConnectionStringsViewContext>) => {
+            state.viewContext = viewContext;
         },
         reset: () => initialState,
     },
@@ -200,4 +207,5 @@ export const connectionStringSelectors = {
     connections: (store: RootState) => store.connectionStrings.connections,
     initialEditConnection: (store: RootState) => store.connectionStrings.initialEditConnection,
     isEmpty: (store: RootState) => _.isEqual(store.connectionStrings.connections, initialState.connections),
+    viewContext: (store: RootState) => store.connectionStrings.viewContext,
 };

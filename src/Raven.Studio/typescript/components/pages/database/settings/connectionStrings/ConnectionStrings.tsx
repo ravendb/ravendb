@@ -31,6 +31,7 @@ export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps
     const dispatch = useAppDispatch();
 
     useEffect(() => {
+        dispatch(connectionStringsActions.viewContextSet("connectionString"));
         dispatch(
             connectionStringsActions.urlParametersLoaded({
                 name: queryParams?.name,

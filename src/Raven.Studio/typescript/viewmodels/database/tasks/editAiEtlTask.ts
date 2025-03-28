@@ -24,6 +24,8 @@ import EditAiEtlInfoHub = require("viewmodels/database/tasks/EditAiEtlInfoHub");
 import typeUtils = require("common/typeUtils");
 import ongoingTaskAiEtlEditModel = require("models/database/tasks/ongoingTaskAiEtlEditModel");
 import EditConnectionStrings = require("components/pages/database/settings/connectionStrings/EditConnectionStrings");
+import connectionStringsSlice = require("components/pages/database/settings/connectionStrings/store/connectionStringsSlice");
+import storeCompat = require("components/storeCompat");
 
 class aiTaskTestMode {
 
@@ -244,6 +246,7 @@ class aiEtlTask extends shardViewModelBase {
         super.activate(args);
         const deferred = $.Deferred<void>();
 
+        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("ai"));
         this.sourceView(args.sourceView);
         
         this.loadPossibleMentors();
