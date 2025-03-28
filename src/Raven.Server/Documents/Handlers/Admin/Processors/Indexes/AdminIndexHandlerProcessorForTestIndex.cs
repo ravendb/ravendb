@@ -67,7 +67,7 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
             
             testIndexDefinition.Name = testIndexName;
 
-            ValidateIndexDefinition(testIndexDefinition);
+            RequestHandler.Database.IndexStore.Create.ValidateTestStaticIndex(testIndexDefinition);
             
             var djv = new DynamicJsonValue() { [nameof(IndexQueryServerSide.Query)] = query, [nameof(IndexQueryServerSide.QueryParameters)] = queryParameters };
 
@@ -114,20 +114,6 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
                     await result.WriteTestIndexResultAsync(RequestHandler.ResponseBodyStream(), context);
                 }
             }
-        }
-
-        return;
-
-        void ValidateIndexDefinition(IndexDefinition definition)
-        {
-            if (IndexStore.IsValidIndexName(definition.Name, true, out var errorMessage) == false)
-            {
-                throw new ArgumentException(errorMessage);
-            }
-            
-            definition.RemoveDefaultValues();
-            AbstractIndexCreateController.ValidateAnalyzers(definition, RequestHandler.DatabaseName);
-            AbstractIndexCreateController.ValidateConfiguration(definition);
         }
     }
 

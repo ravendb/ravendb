@@ -97,6 +97,18 @@ public abstract class AbstractIndexCreateController
         }
     }
 
+    internal virtual void ValidateTestStaticIndex(IndexDefinition definition)
+    {
+        if (IndexStore.IsValidIndexName(definition.Name, true, out var errorMessage) == false)
+        {
+            throw new ArgumentException(errorMessage);
+        }
+            
+        definition.RemoveDefaultValues();
+        ValidateAnalyzers(definition);
+        ValidateConfiguration(definition);
+    }
+
     public async ValueTask<long> CreateIndexAsync(IndexDefinition definition, string raftRequestId, string source = null)
     {
         if (definition == null)
@@ -196,7 +208,7 @@ public abstract class AbstractIndexCreateController
         return new IndexBatchScope(this, ServerStore, ServerStore.LicenseManager.GetNumberOfUtilizedCores(), onBatchSaved);
     }
 
-    internal static void ValidateAnalyzers(IndexDefinition definition, string databaseName)
+    private void ValidateAnalyzers(IndexDefinition definition)
     {
         if (definition.Fields == null)
             return;
@@ -208,7 +220,7 @@ public abstract class AbstractIndexCreateController
 
             try
             {
-                LuceneIndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, databaseName);
+                LuceneIndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, GetDatabaseName());
             }
             catch (Exception e)
             {
@@ -216,10 +228,8 @@ public abstract class AbstractIndexCreateController
             }
         }
     }
-
-    private void ValidateAnalyzers(IndexDefinition definition) => ValidateAnalyzers(definition, GetDatabaseName());
     
-    internal static void ValidateConfiguration(IndexDefinition definition)
+    private static void ValidateConfiguration(IndexDefinition definition)
     {
         if (definition.Configuration == null)
             return;
