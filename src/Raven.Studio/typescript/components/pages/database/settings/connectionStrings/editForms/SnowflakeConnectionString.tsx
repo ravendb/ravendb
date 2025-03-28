@@ -17,6 +17,8 @@ import { yupObjectSchema } from "components/utils/yupUtils";
 import { FlexGrow } from "components/common/FlexGrow";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import { connectionStringSelectors } from "../store/connectionStringsSlice";
+import { connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<SnowflakeConnection>;
 
@@ -29,11 +31,17 @@ export default function SnowflakeConnectionString({
     isForNewConnection,
     onSave,
 }: SnowflakeConnectionStringProps) {
+    const usedNames = useAppSelector(connectionStringSelectors.connections)["Snowflake"].map((x) => x.name);
+
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
+        context: {
+            isForNewConnection,
+            usedNames,
+        },
     });
 
     const formValues = useWatch({ control });
@@ -114,7 +122,7 @@ export default function SnowflakeConnectionString({
 }
 
 const schema = yupObjectSchema<FormData>({
-    name: yup.string().nullable().required(),
+    name: connectionStringsUtils.nameSchema,
     connectionString: yup.string().nullable().required(),
 });
 

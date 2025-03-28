@@ -30,7 +30,8 @@ import ElasticSearchCertificate from "./ElasticSearchCertificate";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
-import forge = require("node-forge");
+import { connectionStringSelectors } from "../store/connectionStringsSlice";
+import { connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<ElasticSearchConnection>;
 
@@ -43,10 +44,16 @@ export default function ElasticSearchConnectionString({
     isForNewConnection,
     onSave,
 }: ElasticSearchStringProps) {
+    const usedNames = useAppSelector(connectionStringSelectors.connections)["ElasticSearch"].map((x) => x.name);
+
     const { control, formState, handleSubmit, setValue, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
+        context: {
+            isForNewConnection,
+            usedNames,
+        },
     });
 
     const urlFieldArray = useFieldArray({
@@ -338,7 +345,7 @@ const authenticationOptions: SelectOption[] = exhaustiveStringTuple<ElasticSearc
 }));
 
 const schema = yupObjectSchema<FormData>({
-    name: yup.string().nullable().required(),
+    name: connectionStringsUtils.nameSchema,
     authMethodUsed: yup.string<ElasticSearchAuthenticationMethod>(),
     apiKey: yup
         .string()

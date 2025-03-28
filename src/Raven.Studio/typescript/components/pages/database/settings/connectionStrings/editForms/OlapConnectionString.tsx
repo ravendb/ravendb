@@ -1,9 +1,7 @@
-﻿import Form from "react-bootstrap/Form";
-import { FormInput, FormLabel } from "components/common/Form";
-import React from "react";
+import { Form, Label } from "reactstrap";
+import { FormInput } from "components/common/Form";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { ConnectionFormData, EditConnectionStringFormProps, OlapConnection } from "../connectionStringsTypes";
-import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import FormDestinationList from "components/common/formDestinations/FormDestinationList";
@@ -18,6 +16,9 @@ import {
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import { useAppSelector } from "components/store";
+import { connectionStringSelectors } from "../store/connectionStringsSlice";
+import { connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<OlapConnection>;
 
@@ -30,10 +31,16 @@ export default function OlapConnectionString({
     isForNewConnection,
     onSave,
 }: OlapConnectionStringProps) {
+    const usedNames = useAppSelector(connectionStringSelectors.connections)["Olap"].map((x) => x.name);
+
     const form = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
+        context: {
+            isForNewConnection,
+            usedNames,
+        },
     });
 
     const { control, handleSubmit } = form;
@@ -73,7 +80,7 @@ export default function OlapConnectionString({
 }
 
 const schema = yupObjectSchema<Omit<FormData, "destinations">>({
-    name: yup.string().nullable().required(),
+    name: connectionStringsUtils.nameSchema,
 }).concat(destinationsSchema);
 
 const yupSchemaResolver = yupResolver(schema);

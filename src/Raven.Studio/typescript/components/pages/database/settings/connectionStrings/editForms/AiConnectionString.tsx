@@ -20,6 +20,9 @@ import MistralAiSettings from "./aiFields/MistralAiSettings";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { connectionStringSelectors } from "../store/connectionStringsSlice";
+import { useAppSelector } from "components/store";
+import { connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -28,6 +31,8 @@ export interface AiConnectionStringProps extends EditConnectionStringFormProps {
 }
 
 export default function AiConnectionString({ initialConnection, isForNewConnection, onSave }: AiConnectionStringProps) {
+    const usedNames = useAppSelector(connectionStringSelectors.connections)["Ai"].map((x) => x.name);
+
     const form = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
@@ -36,6 +41,8 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 data,
                 {
                     connectorType: data.connectorType,
+                    isForNewConnection,
+                    usedNames,
                 },
                 options
             ),
@@ -159,7 +166,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
 }
 
 const schema = yupObjectSchema<FormData>({
-    name: yup.string().nullable().required(),
+    name: connectionStringsUtils.nameSchema,
     identifier: yup
         .string()
         .nullable()

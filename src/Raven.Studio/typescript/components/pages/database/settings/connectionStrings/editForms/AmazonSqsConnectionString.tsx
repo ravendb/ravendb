@@ -18,6 +18,8 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { Icon } from "components/common/Icon";
 import { mapAmazonSqsConnectionStringSettingsToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
+import { connectionStringSelectors } from "../store/connectionStringsSlice";
+import { connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<AmazonSqsConnection>;
 
@@ -30,6 +32,8 @@ export default function AmazonSqsConnectionString({
     isForNewConnection,
     onSave,
 }: AmazonSqsConnectionStringProps) {
+    const usedNames = useAppSelector(connectionStringSelectors.connections)["AmazonSqs"].map((x) => x.name);
+
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
@@ -38,6 +42,8 @@ export default function AmazonSqsConnectionString({
                 data,
                 {
                     authType: data.authType,
+                    isForNewConnection,
+                    usedNames,
                 },
                 options
             ),
@@ -204,7 +210,7 @@ function getStringRequiredSchema(authType: AmazonSqsAuthenticationType) {
 }
 
 const schema = yupObjectSchema<FormData>({
-    name: yup.string().nullable().required(),
+    name: connectionStringsUtils.nameSchema,
     authType: yup.string<AmazonSqsAuthenticationType>(),
     settings: yupObjectSchema<FormData["settings"]>({
         basic: yupObjectSchema<FormData["settings"]["basic"]>({

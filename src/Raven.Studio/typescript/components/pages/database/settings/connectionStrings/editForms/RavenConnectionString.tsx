@@ -17,6 +17,9 @@ import ConnectionTestError from "../../../../../common/connectionTests/Connectio
 import { yupObjectSchema } from "components/utils/yupUtils";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
+import { useAppSelector } from "components/store";
+import { connectionStringSelectors } from "../store/connectionStringsSlice";
+import { connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<RavenConnection>;
 
@@ -29,10 +32,16 @@ export default function RavenConnectionString({
     isForNewConnection,
     onSave,
 }: RavenConnectionStringProps) {
+    const usedNames = useAppSelector(connectionStringSelectors.connections)["Raven"].map((x) => x.name);
+
     const { control, handleSubmit, formState, watch, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
+        context: {
+            isForNewConnection,
+            usedNames,
+        },
     });
 
     const urlFieldArray = useFieldArray({
@@ -208,7 +217,7 @@ function AboutError({ isHTTPSuccess }: { isHTTPSuccess: boolean }) {
 }
 
 const schema = yupObjectSchema<FormData>({
-    name: yup.string().nullable().required(),
+    name: connectionStringsUtils.nameSchema,
     database: yup.string().nullable().required(),
     topologyDiscoveryUrls: yup
         .array()

@@ -18,6 +18,8 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import { connectionStringSelectors } from "../store/connectionStringsSlice";
+import { connectionStringsUtils } from "../connectionStringsUtils";
 
 type FormData = ConnectionFormData<RabbitMqConnection>;
 
@@ -30,10 +32,16 @@ export default function RabbitMqConnectionString({
     isForNewConnection,
     onSave,
 }: RabbitMqConnectionStringProps) {
+    const usedNames = useAppSelector(connectionStringSelectors.connections)["RabbitMQ"].map((x) => x.name);
+
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
         resolver: yupSchemaResolver,
+        context: {
+            isForNewConnection,
+            usedNames,
+        },
     });
 
     const formValues = useWatch({ control });
@@ -116,7 +124,7 @@ export default function RabbitMqConnectionString({
 }
 
 const schema = yupObjectSchema<FormData>({
-    name: yup.string().nullable().required(),
+    name: connectionStringsUtils.nameSchema,
     connectionString: yup.string().nullable().required(),
 });
 
