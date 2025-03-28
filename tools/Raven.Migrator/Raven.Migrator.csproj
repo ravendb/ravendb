@@ -16,13 +16,28 @@
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
     <PackageReference Include="Microsoft.Azure.DocumentDB.Core" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="MongoDB.Driver.GridFS" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Snappier" />
     <PackageReference Include="System.Data.HashFunction.Blake2" />
+    <PackageReference Include="System.Diagnostics.EventLog" />
+    <PackageReference Include="System.Formats.Asn1" />
     <PackageReference Include="System.Private.Uri" />
+    <PackageReference Include="System.Reflection.Metadata" />
     <PackageReference Include="System.Text.RegularExpressions" />
+    <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="ZstdSharp.Port" />
   </ItemGroup>
 </Project>

@@ -138,11 +138,24 @@
     <PackageReference Include="BouncyCastle.Cryptography" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Polly" />
+    <PackageReference Include="System.Formats.Asn1" />
+    <PackageReference Include="System.Reflection.Metadata" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="System.ServiceProcess.ServiceController" />
+    <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
   <ItemGroup>
