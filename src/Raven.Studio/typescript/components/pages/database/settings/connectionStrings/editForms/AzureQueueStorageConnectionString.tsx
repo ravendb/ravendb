@@ -23,7 +23,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { mapAzureQueueStorageConnectionStringSettingsToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
-import { PopoverWithHover } from "components/common/PopoverWithHover";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 

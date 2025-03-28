@@ -1,4 +1,4 @@
-﻿import Badge from "react-bootstrap/Badge";
+import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 
 import { FormInput, FormLabel, FormSelect } from "components/common/Form";
@@ -30,6 +30,7 @@ import ElasticSearchCertificate from "./ElasticSearchCertificate";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
+import forge = require("node-forge");
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 

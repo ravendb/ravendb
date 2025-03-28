@@ -1,5 +1,5 @@
-import { Form, Label } from "reactstrap";
-import { FormInput } from "components/common/Form";
+import Form from "react-bootstrap/Form";
+import { FormInput, FormLabel } from "components/common/Form";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { ConnectionFormData, EditConnectionStringFormProps, OlapConnection } from "../connectionStringsTypes";
 import { yupResolver } from "@hookform/resolvers/yup";

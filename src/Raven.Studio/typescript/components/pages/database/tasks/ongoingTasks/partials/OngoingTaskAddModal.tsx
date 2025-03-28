@@ -94,16 +94,13 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
             contentClassName="modal-border destination-modal bulge-primary"
             size="lg"
         >
-            <ModalBody>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={toggle} />
+            <Modal.Header className="hstack gap-3 pb-0" onCloseClick={toggle}>
+                <div className="text-center">
+                    <Icon icon="ongoing-tasks" color="primary" addon="plus" className="fs-1" margin="m-0" />
                 </div>
-                <div className="hstack gap-3 mb-4">
-                    <div className="text-center">
-                        <Icon icon="ongoing-tasks" color="primary" addon="plus" className="fs-1" margin="m-0" />
-                    </div>
-                    <div className="text-center lead">Add a Database Task</div>
-                </div>
+                <div className="text-center lead">Add a Database Task</div>
+            </Modal.Header>
+            <Modal.Body>
                 <HrHeader>AI</HrHeader>
                 <Row className="gy-sm">
                     <TaskItem
@@ -328,7 +325,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         </Row>
                     </>
                 )}
-            </ModalBody>
+            </Modal.Body>
         </Modal>
     );
 }
