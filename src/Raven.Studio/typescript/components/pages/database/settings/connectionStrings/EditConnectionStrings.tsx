@@ -1,4 +1,4 @@
-﻿﻿import { Icon } from "components/common/Icon";
+﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import InputGroup from "react-bootstrap/InputGroup";
 import Button from "react-bootstrap/Button";
