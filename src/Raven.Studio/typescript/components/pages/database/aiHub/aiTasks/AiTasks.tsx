@@ -23,8 +23,7 @@ import OngoingTaskOperationConfirm from "../../tasks/shared/OngoingTaskOperation
 import { useOngoingTasksOperations, BaseOngoingTaskPanelProps, taskKey } from "../../tasks/shared/shared";
 import { Icon } from "components/common/Icon";
 import AiTasksInfoHub from "./AiTasksInfoHub";
-import { useAppUrls } from "components/hooks/useAppUrls";
-import router from "plugins/router";
+import OngoingTaskAddModal from "../../tasks/ongoingTasks/OngoingTaskAddModal";
 
 type EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 
@@ -33,10 +32,10 @@ export default function AiTasks() {
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
 
-    const { appUrl } = useAppUrls();
     const { tasksService } = useServices();
     const [tasks, dispatch] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
 
+    const { value: isNewTaskModalOpen, toggle: toggleIsNewTaskModalOpen } = useBoolean(false);
     const { value: progressEnabled, setTrue: startTrackingProgress } = useBoolean(false);
     const [definitionCache] = useState(() => new etlScriptDefinitionCache(db.name));
 
@@ -144,15 +143,6 @@ export default function AiTasks() {
         isDeleting,
     };
 
-    const goToNewAiTask = (e: React.MouseEvent<HTMLButtonElement>) => {
-        const url = appUrl.forEditEmbeddingsGeneration(db.name);
-        if (e.ctrlKey) {
-            window.open(url, "_blank");
-        } else {
-            router.navigate(url);
-        }
-    };
-
     return (
         <div className="content-padding ongoing-tasks-page">
             {progressEnabled && <OngoingTaskProgressProvider onEtlProgress={onEtlProgress} />}
@@ -160,10 +150,21 @@ export default function AiTasks() {
             <StickyHeader>
                 <div className="hstack gap-3 flex-wrap">
                     {hasDatabaseWriteAccess && (
-                        <Button onClick={goToNewAiTask} color="primary" className="rounded-pill">
-                            <Icon icon="ongoing-tasks" addon="plus" />
-                            Add AI Task
-                        </Button>
+                        <>
+                            {isNewTaskModalOpen && (
+                                <OngoingTaskAddModal
+                                    toggle={toggleIsNewTaskModalOpen}
+                                    subscriptionsDatabaseCount={0}
+                                    isAiOnly
+                                />
+                            )}
+                            <div id="NewTaskButton">
+                                <Button onClick={toggleIsNewTaskModalOpen} color="primary" className="rounded-pill">
+                                    <Icon icon="ongoing-tasks" addon="plus" />
+                                    Add AI Task
+                                </Button>
+                            </div>
+                        </>
                     )}
                     <FlexGrow />
                     <AiTasksInfoHub />

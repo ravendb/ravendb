@@ -19,10 +19,11 @@ import Modal from "components/common/Modal";
 interface OngoingTaskAddModalProps {
     subscriptionsDatabaseCount: number;
     toggle: () => void;
+    isAiOnly?: boolean;
 }
 
 export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
-    const { toggle, subscriptionsDatabaseCount } = props;
+    const { toggle, subscriptionsDatabaseCount, isAiOnly } = props;
 
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const isSharded = db.isSharded;
@@ -104,7 +105,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     </div>
                     <div className="text-center lead">Add a Database Task</div>
                 </div>
-                <HrHeader>AI Integration</HrHeader>
+                <HrHeader>AI</HrHeader>
                 <Row className="gy-sm">
                     <TaskItem
                         title="Create new AI task"
@@ -115,217 +116,221 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         disableReason={getDisableReasonForSharded()}
                     >
                         <Icon icon="ai-etl" margin="m-0" />
-                        <h4 className="mt-1 mb-0">AI</h4>
+                        <h4 className="mt-1 mb-0">Embeddings Generation</h4>
                         {!hasAiIntegration && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
                 </Row>
-                <HrHeader>Replication</HrHeader>
-                <Row className="gy-sm">
-                    <TaskItem
-                        title="Create new External Replication task"
-                        href={appUrl.forEditExternalReplication(db.name)}
-                        className="external-replication"
-                        target="ExternalReplication"
-                    >
-                        <Icon icon="external-replication" />
-                        <h4 className="mt-1 mb-0">External Replication</h4>
-                        {!hasExternalReplication && <LicenseRestrictedBadge licenseRequired="Professional +" />}
-                    </TaskItem>
+                {!isAiOnly && (
+                    <>
+                        <HrHeader>Replication</HrHeader>
+                        <Row className="gy-sm">
+                            <TaskItem
+                                title="Create new External Replication task"
+                                href={appUrl.forEditExternalReplication(db.name)}
+                                className="external-replication"
+                                target="ExternalReplication"
+                            >
+                                <Icon icon="external-replication" />
+                                <h4 className="mt-1 mb-0">External Replication</h4>
+                                {!hasExternalReplication && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new Replication Hub task"
-                        href={appUrl.forEditReplicationHub(db.name)}
-                        className="pull-replication-hub"
-                        target="ReplicationHub"
-                        disabled={isSharded}
-                        disableReason={getDisableReasonForSharded()}
-                    >
-                        <Icon icon="pull-replication-hub" />
-                        <h4 className="mt-1 mb-0">Replication Hub</h4>
-                        {!hasReplicationHub && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
-                    <TaskItem
-                        title="Create new Replication Sink task"
-                        href={appUrl.forEditReplicationSink(db.name)}
-                        className="pull-replication-sink"
-                        target="ReplicationSink"
-                        disabled={isSharded}
-                        disableReason={getDisableReasonForSharded()}
-                    >
-                        <Icon icon="pull-replication-agent" />
-                        <h4 className="mt-1 mb-0">Replication Sink</h4>
-                        {!hasReplicationSink && <LicenseRestrictedBadge licenseRequired="Professional +" />}
-                    </TaskItem>
-                </Row>
-                <HrHeader>Backups & Subscriptions</HrHeader>
-                <Row className="gy-sm">
-                    <TaskItem
-                        title="Create new Backup task"
-                        href={appUrl.forEditPeriodicBackupTask(db.name, "OngoingTasks", false)}
-                        className="backup"
-                        target="PeriodicBackup"
-                    >
-                        <Icon icon="periodic-backup" />
-                        <h4 className="mt-1 mb-0">Periodic Backup</h4>
-                        {!hasPeriodicBackups && <LicenseRestrictedBadge licenseRequired="Professional +" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new Replication Hub task"
+                                href={appUrl.forEditReplicationHub(db.name)}
+                                className="pull-replication-hub"
+                                target="ReplicationHub"
+                                disabled={isSharded}
+                                disableReason={getDisableReasonForSharded()}
+                            >
+                                <Icon icon="pull-replication-hub" />
+                                <h4 className="mt-1 mb-0">Replication Hub</h4>
+                                {!hasReplicationHub && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
+                            <TaskItem
+                                title="Create new Replication Sink task"
+                                href={appUrl.forEditReplicationSink(db.name)}
+                                className="pull-replication-sink"
+                                target="ReplicationSink"
+                                disabled={isSharded}
+                                disableReason={getDisableReasonForSharded()}
+                            >
+                                <Icon icon="pull-replication-agent" />
+                                <h4 className="mt-1 mb-0">Replication Sink</h4>
+                                {!hasReplicationSink && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                            </TaskItem>
+                        </Row>
+                        <HrHeader>Backups & Subscriptions</HrHeader>
+                        <Row className="gy-sm">
+                            <TaskItem
+                                title="Create new Backup task"
+                                href={appUrl.forEditPeriodicBackupTask(db.name, "OngoingTasks", false)}
+                                className="backup"
+                                target="PeriodicBackup"
+                            >
+                                <Icon icon="periodic-backup" />
+                                <h4 className="mt-1 mb-0">Periodic Backup</h4>
+                                {!hasPeriodicBackups && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new Subscription task"
-                        href={appUrl.forEditSubscription(db.name)}
-                        className="subscription"
-                        target="Subscription"
-                        disabled={isSubscriptionDisabled}
-                        disableReason={getSubscriptionDisableReason()}
-                    >
-                        <Icon icon="subscription" />
-                        <h4 className="mt-1 mb-0">Subscription</h4>
-                        {!isProfessionalOrAbove && (
-                            <CounterBadge
-                                count={subscriptionsDatabaseCount}
-                                limit={subscriptionsDatabaseLimit}
-                                hideNotReached
-                            />
-                        )}
-                    </TaskItem>
-                </Row>
-                <HrHeader>ETL (RavenDB ⇛ TARGET)</HrHeader>
-                <Row className="gy-sm">
-                    <TaskItem
-                        title="Create new RavenDB ETL task"
-                        href={appUrl.forEditRavenEtl(db.name)}
-                        className="ravendb-etl"
-                        target="RavenETL"
-                    >
-                        <Icon icon="ravendb-etl" />
-                        <h4 className="mt-1 mb-0">RavenDB ETL</h4>
-                        {!hasRavenDbEtl && <LicenseRestrictedBadge licenseRequired="Professional +" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new Subscription task"
+                                href={appUrl.forEditSubscription(db.name)}
+                                className="subscription"
+                                target="Subscription"
+                                disabled={isSubscriptionDisabled}
+                                disableReason={getSubscriptionDisableReason()}
+                            >
+                                <Icon icon="subscription" />
+                                <h4 className="mt-1 mb-0">Subscription</h4>
+                                {!isProfessionalOrAbove && (
+                                    <CounterBadge
+                                        count={subscriptionsDatabaseCount}
+                                        limit={subscriptionsDatabaseLimit}
+                                        hideNotReached
+                                    />
+                                )}
+                            </TaskItem>
+                        </Row>
+                        <HrHeader>ETL (RavenDB ⇛ TARGET)</HrHeader>
+                        <Row className="gy-sm">
+                            <TaskItem
+                                title="Create new RavenDB ETL task"
+                                href={appUrl.forEditRavenEtl(db.name)}
+                                className="ravendb-etl"
+                                target="RavenETL"
+                            >
+                                <Icon icon="ravendb-etl" />
+                                <h4 className="mt-1 mb-0">RavenDB ETL</h4>
+                                {!hasRavenDbEtl && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new Elasticsearch ETL task"
-                        href={appUrl.forEditElasticSearchEtl(db.name)}
-                        className="elastic-etl"
-                        target="ElasticSearchETL"
-                    >
-                        <Icon icon="elastic-search-etl" />
-                        <h4 className="mt-1 mb-0">Elasticsearch ETL</h4>
-                        {!hasElasticSearchEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new Elasticsearch ETL task"
+                                href={appUrl.forEditElasticSearchEtl(db.name)}
+                                className="elastic-etl"
+                                target="ElasticSearchETL"
+                            >
+                                <Icon icon="elastic-search-etl" />
+                                <h4 className="mt-1 mb-0">Elasticsearch ETL</h4>
+                                {!hasElasticSearchEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new Kafka ETL task"
-                        href={appUrl.forEditKafkaEtl(db.name)}
-                        className="kafka-etl"
-                        target="KafkaETL"
-                        disabled={isSharded}
-                        disableReason={getDisableReasonForSharded()}
-                    >
-                        <Icon icon="kafka-etl" />
-                        <h4 className="mt-1 mb-0">Kafka ETL</h4>
-                        {!hasKafkaEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new Kafka ETL task"
+                                href={appUrl.forEditKafkaEtl(db.name)}
+                                className="kafka-etl"
+                                target="KafkaETL"
+                                disabled={isSharded}
+                                disableReason={getDisableReasonForSharded()}
+                            >
+                                <Icon icon="kafka-etl" />
+                                <h4 className="mt-1 mb-0">Kafka ETL</h4>
+                                {!hasKafkaEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new SQL ETL task"
-                        href={appUrl.forEditSqlEtl(db.name)}
-                        className="sql-etl"
-                        target="SqlETL"
-                    >
-                        <Icon icon="sql-etl" />
-                        <h4 className="mt-1 mb-0">SQL ETL</h4>
-                        {!hasSqlEtl && <LicenseRestrictedBadge licenseRequired="Professional +" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new SQL ETL task"
+                                href={appUrl.forEditSqlEtl(db.name)}
+                                className="sql-etl"
+                                target="SqlETL"
+                            >
+                                <Icon icon="sql-etl" />
+                                <h4 className="mt-1 mb-0">SQL ETL</h4>
+                                {!hasSqlEtl && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new Snowflake ETL task"
-                        href={appUrl.forEditSnowflakeEtl(db.name)}
-                        className="snowflake-etl"
-                        target="SnowflakeETL"
-                    >
-                        <Icon icon="snowflake-etl" />
-                        <h4 className="mt-1 mb-0">Snowflake ETL</h4>
-                        {!hasSnowflakeEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new Snowflake ETL task"
+                                href={appUrl.forEditSnowflakeEtl(db.name)}
+                                className="snowflake-etl"
+                                target="SnowflakeETL"
+                            >
+                                <Icon icon="snowflake-etl" />
+                                <h4 className="mt-1 mb-0">Snowflake ETL</h4>
+                                {!hasSnowflakeEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new OLAP ETL task"
-                        href={appUrl.forEditOlapEtl(db.name)}
-                        className="olap-etl"
-                        target="OlapETL"
-                    >
-                        <Icon icon="olap-etl" />
-                        <h4 className="mt-1 mb-0">OLAP ETL</h4>
-                        {!hasOlapEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new OLAP ETL task"
+                                href={appUrl.forEditOlapEtl(db.name)}
+                                className="olap-etl"
+                                target="OlapETL"
+                            >
+                                <Icon icon="olap-etl" />
+                                <h4 className="mt-1 mb-0">OLAP ETL</h4>
+                                {!hasOlapEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new RabbitMQ ETL task"
-                        href={appUrl.forEditRabbitMqEtl(db.name)}
-                        className="rabbitmq-etl"
-                        target="RabbitMqETL"
-                        disabled={isSharded}
-                        disableReason={getDisableReasonForSharded()}
-                    >
-                        <Icon icon="rabbitmq-etl" />
-                        <h4 className="mt-1 mb-0">RabbitMQ ETL</h4>
-                        {!hasRabbitMqEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new RabbitMQ ETL task"
+                                href={appUrl.forEditRabbitMqEtl(db.name)}
+                                className="rabbitmq-etl"
+                                target="RabbitMqETL"
+                                disabled={isSharded}
+                                disableReason={getDisableReasonForSharded()}
+                            >
+                                <Icon icon="rabbitmq-etl" />
+                                <h4 className="mt-1 mb-0">RabbitMQ ETL</h4>
+                                {!hasRabbitMqEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new Azure Queue Storage ETL task"
-                        href={appUrl.forEditAzureQueueStorageEtl(db.name)}
-                        className="azure-queue-storage-etl"
-                        target="AzureQueueStorageETL"
-                        disabled={isSharded}
-                        disableReason={getDisableReasonForSharded()}
-                    >
-                        <Icon icon="azure-queue-storage-etl" />
-                        <h4 className="mt-1 mb-0">Azure Queue Storage ETL</h4>
-                        {!hasAzureQueueStorageEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
-                    <TaskItem
-                        title="Create new Amazon SQS ETL task"
-                        href={appUrl.forEditAmazonSqsEtl(db.name)}
-                        className="amazon-sqs-etl"
-                        target="AmazonSqsETL"
-                        disabled={isSharded}
-                        disableReason={getDisableReasonForSharded()}
-                    >
-                        <Icon icon="amazon-sqs-etl" />
-                        <h4 className="mt-1 mb-0">Amazon SQS ETL</h4>
-                        {!hasAmazonSqsEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
-                </Row>
-                <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>
-                <Row className="gy-sm">
-                    <TaskItem
-                        title="Create new Kafka Sink task"
-                        href={appUrl.forEditKafkaSink(db.name)}
-                        className="kafka-sink"
-                        target="KafkaSink"
-                        disabled={isSharded}
-                        disableReason={getDisableReasonForSharded()}
-                    >
-                        <Icon icon="kafka-sink" />
-                        <h4 className="mt-1 mb-0">Kafka Sink</h4>
-                        {!hasKafkaSink && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
+                            <TaskItem
+                                title="Create new Azure Queue Storage ETL task"
+                                href={appUrl.forEditAzureQueueStorageEtl(db.name)}
+                                className="azure-queue-storage-etl"
+                                target="AzureQueueStorageETL"
+                                disabled={isSharded}
+                                disableReason={getDisableReasonForSharded()}
+                            >
+                                <Icon icon="azure-queue-storage-etl" />
+                                <h4 className="mt-1 mb-0">Azure Queue Storage ETL</h4>
+                                {!hasAzureQueueStorageEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
+                            <TaskItem
+                                title="Create new Amazon SQS ETL task"
+                                href={appUrl.forEditAmazonSqsEtl(db.name)}
+                                className="amazon-sqs-etl"
+                                target="AmazonSqsETL"
+                                disabled={isSharded}
+                                disableReason={getDisableReasonForSharded()}
+                            >
+                                <Icon icon="amazon-sqs-etl" />
+                                <h4 className="mt-1 mb-0">Amazon SQS ETL</h4>
+                                {!hasAmazonSqsEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
+                        </Row>
+                        <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>
+                        <Row className="gy-sm">
+                            <TaskItem
+                                title="Create new Kafka Sink task"
+                                href={appUrl.forEditKafkaSink(db.name)}
+                                className="kafka-sink"
+                                target="KafkaSink"
+                                disabled={isSharded}
+                                disableReason={getDisableReasonForSharded()}
+                            >
+                                <Icon icon="kafka-sink" />
+                                <h4 className="mt-1 mb-0">Kafka Sink</h4>
+                                {!hasKafkaSink && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
 
-                    <TaskItem
-                        title="Create new RabbitMQ Sink task"
-                        href={appUrl.forEditRabbitMqSink(db.name)}
-                        className="rabbitmq-sink"
-                        target="RabbitMqSink"
-                        disabled={isSharded}
-                        disableReason={getDisableReasonForSharded()}
-                    >
-                        <Icon icon="rabbitmq-sink" />
-                        <h4 className="mt-1 mb-0">RabbitMQ Sink</h4>
-                        {!hasRabbitMqSink && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
-                </Row>
-            </Modal.Body>
+                            <TaskItem
+                                title="Create new RabbitMQ Sink task"
+                                href={appUrl.forEditRabbitMqSink(db.name)}
+                                className="rabbitmq-sink"
+                                target="RabbitMqSink"
+                                disabled={isSharded}
+                                disableReason={getDisableReasonForSharded()}
+                            >
+                                <Icon icon="rabbitmq-sink" />
+                                <h4 className="mt-1 mb-0">RabbitMQ Sink</h4>
+                                {!hasRabbitMqSink && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                            </TaskItem>
+                        </Row>
+                    </>
+                )}
+            </ModalBody>
         </Modal>
     );
 }
