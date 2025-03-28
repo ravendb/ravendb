@@ -1,7 +1,6 @@
 ﻿﻿import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import InputGroup from "react-bootstrap/InputGroup";
-import { CloseButton, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps, StudioConnectionType } from "./connectionStringsTypes";
@@ -27,6 +26,8 @@ import AzureQueueStorageConnectionString from "components/pages/database/setting
 import SnowflakeConnectionString from "components/pages/database/settings/connectionStrings/editForms/SnowflakeConnectionString";
 import AmazonSqsConnectionString from "components/pages/database/settings/connectionStrings/editForms/AmazonSqsConnectionString";
 import AiConnectionString from "components/pages/database/settings/connectionStrings/editForms/AiConnectionString";
+import Modal from "components/common/Modal";
+import { FormLabel } from "components/common/Form";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -88,18 +89,16 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
 
     return (
         <Modal size="lg" show contentClassName="modal-border bulge-info">
-            <Modal.Header className="vstack gap-3" closeButton={false}>
+            <Modal.Header className="vstack gap-3" onCloseClick={handleCancel}>
                 <div className="text-center">
                     <Icon icon="manage-connection-strings" color="info" className="fs-1" margin="m-0" />
                 </div>
-                <div className="position-absolute m-2 end-0 top-0">
-                    <CloseButton onClick={handleCancel} />
-                </div>
                 <div className="text-center lead">{isForNewConnection ? "Create a new" : "Edit"} connection string</div>
-
-                {viewContext === "connectionString" && (
+            </Modal.Header>
+            <Modal.Body className="pb-0 vstack gap-3">
+                {viewContext && (
                     <div className="mb-2">
-                        <Label>Type</Label>
+                        <FormLabel>Type</FormLabel>
                         <InputGroup className="gap-1 flex-wrap flex-column">
                             <Select
                                 options={availableConnectionStringsOptions}
@@ -125,8 +124,8 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         onSave={save}
                     />
                 )}
-            </ModalBody>
-            <ModalFooter className="mt-2">
+            </Modal.Body>
+            <Modal.Footer className="mt-2">
                 <Button type="button" variant="link" className="link-muted" onClick={handleCancel} title="Cancel">
                     Cancel
                 </Button>
