@@ -105,7 +105,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
             {
                 Name = connectionStringName,
                 BrokerType = QueueBrokerType.RabbitMq,
-                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = connectionString ?? RabbitMqConnectionString.Instance.VerifiedConnectionString}
+                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = connectionString ?? RabbitMqConnectionString.Instance.VerifiedUrl.Value}
             });
         return config;
     }

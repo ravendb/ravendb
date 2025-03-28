@@ -14,14 +14,22 @@ public class RabbitMqConnectionString : IDisposable
     
     private IConnection _connection;
 
-    private readonly Lazy<string> _initialized;
+    private readonly Lazy<bool> _canConnect;
+    
+    private Lazy<string> Url { get; }
+
+    public Lazy<string> VerifiedUrl { get; }
 
     private RabbitMqConnectionString()
     {
-        _initialized = new Lazy<string>(EnsureInitialize);
+        VerifiedUrl = new Lazy<string>(VerifiedNodesValueFactory);
+
+        Url = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty);
+        
+        _canConnect = new Lazy<bool>(CanConnectInternal);
     }
 
-    private string EnsureInitialize()
+    protected virtual string VerifiedNodesValueFactory()
     {
         var localConnectionString = "amqp://guest:guest@localhost:5672/";
 
@@ -29,15 +37,14 @@ public class RabbitMqConnectionString : IDisposable
         if (_connection != null)
             return localConnectionString;
 
-        var envConnectionString = Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty;
-        if (envConnectionString.Length == 0)
+        if (Url.Value.Length == 0)
             throw new InvalidOperationException($"Environment variable {EnvironmentVariable} is empty");
 
-        _connection = CreateConnection(envConnectionString, out var ex);
+        _connection = CreateConnection(Url.Value, out var ex);
         if (_connection != null)
-            return envConnectionString;
+            return Url.Value;
 
-        throw new InvalidOperationException($"Can't create connection for Kafka instance. Provided url: {envConnectionString}", ex);
+        throw new InvalidOperationException($"Can't create connection for Rabbit MQ instance. Provided url: {Url.Value}", ex);
 
         IConnection CreateConnection(string connectionString, out Exception exception)
         {
@@ -72,11 +79,9 @@ public class RabbitMqConnectionString : IDisposable
 
     public IModel CreateModel()
     {
-        _ = _initialized.Value;
+        _ = _canConnect.Value;
         return _connection.CreateModel();
     }
-
-    public string VerifiedConnectionString => _initialized.Value;
 
     public bool CanConnect => CanConnectInternal();
 
@@ -84,7 +89,11 @@ public class RabbitMqConnectionString : IDisposable
     {
         try
         {
-            _ = _initialized.Value;
+            var url = Url.Value;
+            if (string.IsNullOrEmpty(url))
+                return false;
+
+            VerifiedNodesValueFactory();
             return true;
         }
         catch (Exception)
