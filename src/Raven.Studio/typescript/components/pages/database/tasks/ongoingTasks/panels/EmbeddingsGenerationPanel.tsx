@@ -20,8 +20,8 @@ import {
     RichPanelInfo,
     RichPanelSelect,
 } from "components/common/RichPanel";
-import { Input } from "reactstrap";
 import Collapse from "react-bootstrap/Collapse";
+import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
@@ -90,7 +90,7 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps 
                 <RichPanelInfo>
                     {canEdit && (
                         <RichPanelSelect>
-                            <Input
+                            <Form.Check
                                 type="checkbox"
                                 onChange={(e) => toggleSelection(e.currentTarget.checked, data.shared)}
                                 checked={isSelected(data.shared.taskId)}
