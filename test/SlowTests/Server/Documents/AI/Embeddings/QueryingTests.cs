@@ -379,6 +379,34 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void MultiVectorSearchSumsDuplicates(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            var (configuration, _) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration(){ ChunkingOptions = DefaultChunkingOptions, Path = "TextualValue" }]);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Dto() { TextualValue = "pizza" });
+                session.Store(new Dto() { TextualValue = "fruit" });
+                session.SaveChanges();
+
+                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+
+                var multiVectorTextualQueryResult = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
+                    .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask(configuration.Identifier), v => v.ByTexts(["pizza", "pineapple", "cherry", "strawberry", "blueberry"]))
+                    .ToList();
+                
+                Assert.Equal(2, multiVectorTextualQueryResult.Count);
+                Assert.Equal("fruit", multiVectorTextualQueryResult.First().TextualValue);
+            }
+        }
+    }
+    
     private class VectorStaticIndex : AbstractIndexCreationTask<Dto>
     {
         public VectorStaticIndex()

@@ -21,6 +21,8 @@ public struct MultiVectorSearchMatch : IQueryMatch
     private bool _persisted = false;
     private int _positionOnPersistedValues = 0;
 
+    private const long InitialSize = 16;
+
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
         in bool isExact, in bool singleVectorSearchDoNotSortByIds)
     {
@@ -29,6 +31,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _singleVectorSearchDoNotSortByIds = singleVectorSearchDoNotSortByIds;
         _nearestSearches = new Hnsw.NearestSearch[vectorsToSearch.Length];
         _isEmpty = true;
+        
         for (var i = 0; i < vectorsToSearch.Length; ++i)
         {
             var vectorToSearch = vectorsToSearch[i];
@@ -76,8 +79,8 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     private void FillAndPersistResults()
     {
-        _matches.Init(_searcher.Allocator, 16);
-        _distances.Init(_searcher.Allocator, 16);
+        _matches.Init(_searcher.Allocator, InitialSize);
+        _distances.Init(_searcher.Allocator, InitialSize);
         for (var i = 0; i < _nearestSearches.Length; ++i)
         {
             ref var nearestSearch = ref _nearestSearches[i];
@@ -97,7 +100,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             nearestSearch.Dispose();
         }
 
-        var uniqueCount = Sorting.SortAndRemoveDuplicates(_matches.Results, _distances.Results);
+        var uniqueCount = Sorting.MergeDuplicatesAndSort(_matches.Results, _distances.Results);
         _matches.Truncate(uniqueCount);
         _distances.Truncate(uniqueCount);
 

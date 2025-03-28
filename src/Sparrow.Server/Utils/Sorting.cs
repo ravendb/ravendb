@@ -40,7 +40,34 @@ namespace Sparrow.Server.Utils
 
             return outputIdx;
         }
+        
+        public static int MergeDuplicatesAndSort<T, W>(Span<T> values, Span<W> itemsAssociated)
+            where T : unmanaged, IBinaryNumber<T>
+            where W : unmanaged, IAdditionOperators<W, W, W>
+        {
+            if (values.Length <= 1)
+                return values.Length;
+            
+            values.Sort(itemsAssociated);
 
+            int outputIdx = 0;
+            for (int i = 1; i < values.Length; i++)
+            {
+                if (values[i] == values[outputIdx])
+                {
+                    itemsAssociated[outputIdx] += itemsAssociated[i];
+                }
+                else
+                {
+                    outputIdx++;
+                    values[outputIdx] = values[i];
+                    itemsAssociated[outputIdx] = itemsAssociated[i];
+                }
+            }
+
+            return outputIdx + 1;
+        }
+        
         public static unsafe int SortAndRemoveDuplicates<T>(Span<T> values)
             where T : unmanaged, IBinaryNumber<T>
         {

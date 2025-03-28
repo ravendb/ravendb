@@ -125,7 +125,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
              foreach (var (name, field) in props)
              {
                  HashSet<GenerateEmbeddings> hashes = [];
-                 foreach (var  (value,chunking) in field)
+                 foreach (var (value, chunking) in field)
                  {
                      List<string> pending = [];
                      List<ReadOnlyMemory<byte>> cachedEmbeddingsBuffers = [];

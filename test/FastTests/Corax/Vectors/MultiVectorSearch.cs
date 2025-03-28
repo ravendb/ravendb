@@ -11,6 +11,7 @@ using Nito.Disposables;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
@@ -151,7 +152,6 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
                 entry.WriteVector(1, "Vector", MemoryMarshal.Cast<float, byte>(vectors[2]));
                 entry.EndWriting();
                 sourceIds[2] = entry.EntryId;
-
             }
             
             indexWriter.Commit();
@@ -199,6 +199,60 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(1L, toAndWith[0]);
             Assert.Equal(3L, toAndWith[1]);
         }        
+    }
+
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    public void MergeDuplicatesAndSortShouldWork()
+    {
+        Span<int> values = [2, 1, 2, 3];
+        Span<float> itemsAssociated = [0.5f, 0.4f, 0.5f, 0.7f];
+
+        var length = Sorting.MergeDuplicatesAndSort(values, itemsAssociated);
+
+        Assert.Equal(3, length);
+    
+        Assert.Equal(1, values[0]);
+        Assert.Equal(2, values[1]);
+        Assert.Equal(3, values[2]);
+
+        Assert.Equal(0.4f, itemsAssociated[0]);
+        Assert.Equal(1.0f, itemsAssociated[1]);
+        Assert.Equal(0.7f, itemsAssociated[2]);
+    }
+    
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    public void MultiVectorSearchShouldSumDuplicates()
+    {
+        float[][] vectors = [[1f, 1f], [2f, 0f], [-1f, 3f]];
+        
+        using var _ = GetMappings(out var _, out var mapping, out var getVector);
+        using (var writer = new IndexWriter(Env, mapping, SupportedFeatures.All))
+        {
+            var id = 1;
+            foreach (var vector in vectors)
+            {
+                var idLocal = $"vectors/{id++}";
+                using (var entry = writer.Index(idLocal))
+                {
+                    entry.Write(0, Encodings.Utf8.GetBytes(idLocal));
+                    entry.WriteVector(1, "Vector", MemoryMarshal.Cast<float, byte>(vector));
+                    entry.EndWriting();
+                }
+            }
+
+            writer.Commit();
+        }
+
+        using (var indexSearcher = new IndexSearcher(Env, mapping))
+        {
+            var metadata = mapping.GetByFieldId(1).Metadata;
+            Span<long> ids = stackalloc long[16];
+            
+            var combinedQuery = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[0]), getVector(vectors[2]) }, 0.0f, 16, false, true);
+            var read = combinedQuery.Fill(ids);
+            Assert.Equal(3, read);
+            Assert.Equal(ids[2], 2);
+        }
     }
 
     private static IDisposable GetMappings(out ByteStringContext bsc, out IndexFieldsMapping mapping, out Func<float[], VectorValue> getVector)

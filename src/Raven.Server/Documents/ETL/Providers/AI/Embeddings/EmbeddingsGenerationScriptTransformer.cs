@@ -281,7 +281,6 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
     {
         const string methodSignature = "text.splitLines(text | [text], maxTokensPerLine)";
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitLines);
-
     }
     
     private JsValue SplitPlainTextParagraphs(JsValue self, JsValue[] args)
