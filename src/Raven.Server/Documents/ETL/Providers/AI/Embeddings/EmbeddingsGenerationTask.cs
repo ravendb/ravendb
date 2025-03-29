@@ -194,7 +194,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                 }
             }
         }
-        var results = AiHelper.GenerateEmbeddingsAsync(embeddingService, chunks, CancellationToken).GetAwaiter().GetResult();
+        var results = embeddingService.GenerateEmbeddingsAsync(chunks, cancellationToken: CancellationToken).GetAwaiter().GetResult();
         for (int i = 0; i < results.Count; i++)
         {
             allItems[i].Embeddings = MemoryMarshalEx.Cast<float, byte>(results[i]);

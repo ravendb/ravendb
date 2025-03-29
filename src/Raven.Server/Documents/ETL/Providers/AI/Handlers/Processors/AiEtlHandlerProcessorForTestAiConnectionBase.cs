@@ -82,7 +82,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                 var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
 
                 (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(aiEtlConfiguration);
-                var embeddings = await AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.ValuesListToVerifyConnection, token.Token);
+                var embeddings = await service.GenerateEmbeddingsAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: token.Token);
 
                 if (embeddings.Count != EmbeddingsHelper.ValuesListToVerifyConnection.Count)
                     throw new Exception(

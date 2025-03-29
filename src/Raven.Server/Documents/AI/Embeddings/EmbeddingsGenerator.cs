@@ -355,7 +355,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
                 try
                 {
-                    allEmbeddings = await AiHelper.GenerateEmbeddingsAsync(_embeddingGenerationService, batch, _cancellationToken);
+                    allEmbeddings = await _embeddingGenerationService.GenerateEmbeddingsAsync(batch, cancellationToken: _cancellationToken);
                 }
                 catch (HttpOperationException httpOperationException) when (httpOperationException.StatusCode == HttpStatusCode.TooManyRequests)
                 {

@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.SemanticKernel.Embeddings;
+﻿using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel.Connectors.HuggingFace;
-using NuGet.Packaging;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Extensions;
@@ -35,35 +29,5 @@ public static class AiHelper
         var embeddingsService = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
         var logger = (InMemoryLoggerProvider)kernel.GetRequiredService<ILoggerProvider>();
         return (embeddingsService, logger);
-    }
-
-    /// <summary>
-    /// HuggingFaceTextEmbeddingGenerationService has a distinctive feature in its implementation of the ITextEmbeddingGenerationService interface,
-    /// which requires processing each element of the array separately instead of batch processing. As a workaround, we created this wrapper method for
-    /// the GenerateEmbeddingsAsync() method of the ITextEmbeddingGenerationService interface.
-    /// </summary>
-    // TODO: Once batch processing is implemented on the SemanticKernel side, or we implement the proper implementation ourselves, we will remove this code.
-    [Experimental("SKEXP0001")]
-    public static async Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(ITextEmbeddingGenerationService embeddingsGenerationService, IList<string> values, CancellationToken token)
-    {
-        IList<ReadOnlyMemory<float>> embeddings;
-
-        if (embeddingsGenerationService is HuggingFaceTextEmbeddingGenerationService)
-        {
-            embeddings = new List<ReadOnlyMemory<float>>();
-            string[] singleItemArray = new string[1];
-
-            foreach (string value in values)
-            {
-                singleItemArray[0] = value;
-                embeddings.AddRange(await embeddingsGenerationService.GenerateEmbeddingsAsync(singleItemArray, cancellationToken: token));
-            }
-        }
-        else
-        {
-            embeddings = await embeddingsGenerationService.GenerateEmbeddingsAsync(values, cancellationToken: token);
-        }
-
-        return embeddings;
     }
 }

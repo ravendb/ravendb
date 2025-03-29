@@ -112,7 +112,7 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
             {
                 (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value);
-                var embeddings = AiHelper.GenerateEmbeddingsAsync(service, EmbeddingsHelper.ValuesListToVerifyConnection, cts.Token).GetAwaiter().GetResult();
+                var embeddings = service.GenerateEmbeddingsAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
                 var isExpectedResponse = embeddings.Count == EmbeddingsHelper.ValuesListToVerifyConnection.Count;
                 if (isExpectedResponse == false)

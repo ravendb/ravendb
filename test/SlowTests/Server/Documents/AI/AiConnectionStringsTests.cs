@@ -176,7 +176,7 @@ public class AiConnectionStringsTests : RavenTestBase
         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
         {
             (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-            var embeddings = AiHelper.GenerateEmbeddingsAsync(service, _testValuesList, cts.Token).GetAwaiter().GetResult();
+            var embeddings = service.GenerateEmbeddingsAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
             Assert.Equal(_testValuesList.Count, embeddings.Count);
         }
@@ -192,7 +192,7 @@ public class AiConnectionStringsTests : RavenTestBase
         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
         {
             (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-            var embeddings = AiHelper.GenerateEmbeddingsAsync(service, _testValuesList, cts.Token).GetAwaiter().GetResult();
+            var embeddings = service.GenerateEmbeddingsAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
             for (var i = 0; i < _testValuesList.Count; i++)
                 Assert.False(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
@@ -214,7 +214,7 @@ public class AiConnectionStringsTests : RavenTestBase
             }
 
             (service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-            embeddings = AiHelper.GenerateEmbeddingsAsync(service, _testValuesList, cts.Token).GetAwaiter().GetResult();
+            embeddings = service.GenerateEmbeddingsAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
             for (var i = 0; i < _testValuesList.Count; i++)
                 Assert.True(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality was configured to {dimensions}, but embeddings were generated with {embeddings[i].Length} dimensions.");
