@@ -13,8 +13,8 @@
             The license for the model remains MIT, but it's not redistributed in this repo or the NuGet
             package anyway, since it's downloaded at build time.
         -->
-        <LocalEmbeddingsModelUrl Condition="'$(LocalEmbeddingsModelUrl)' == ''">https://huggingface.co/SmartComponents/bge-micro-v2/resolve/72908b7/onnx/model_quantized.onnx</LocalEmbeddingsModelUrl>
-        <LocalEmbeddingsVocabUrl Condition="'$(LocalEmbeddingsVocabUrl)' == ''">https://huggingface.co/SmartComponents/bge-micro-v2/resolve/72908b7/vocab.txt</LocalEmbeddingsVocabUrl>
+        <LocalEmbeddingsModelUrl Condition="'$(LocalEmbeddingsModelUrl)' == ''">https://ravendb-build-assets.s3.us-east-1.amazonaws.com/LLM/bge-micro-v2/model_quantized.onnx</LocalEmbeddingsModelUrl>
+        <LocalEmbeddingsVocabUrl Condition="'$(LocalEmbeddingsVocabUrl)' == ''">https://ravendb-build-assets.s3.us-east-1.amazonaws.com/LLM/bge-micro-v2/vocab.txt</LocalEmbeddingsVocabUrl>
 
         <!-- Or, forget the URLs and just give paths to files on disk -->
         <LocalEmbeddingsModelPath Condition="'$(LocalEmbeddingsModelPath)' == ''">$(LocalEmbeddingsModelCacheDir)$([System.Text.RegularExpressions.Regex]::Replace($(LocalEmbeddingsModelUrl), "[^a-zA-Z0-9\.]", "_"))</LocalEmbeddingsModelPath>
