@@ -102,21 +102,17 @@ public static class AiExtensions
             case AiConnectorType.Google:
                 var googleSettings = connectionString.GoogleSettings;
 
-                HttpClient httpClient = null;
-                if (googleSettings.Dimensions.HasValue)
-                    httpClient = HttpClientExtensions.CreateWithDimensionality(googleSettings.Dimensions.Value);
-
                 if (googleSettings.AiVersion.HasValue)
                     kernelBuilder.AddGoogleAIEmbeddingGeneration(
                         googleSettings.Model,
                         googleSettings.ApiKey,
                         googleSettings.AiVersion.Value.ToGoogleApiVersion(),
-                        httpClient: httpClient);
+                        dimensions: googleSettings.Dimensions);
                 else
                     kernelBuilder.AddGoogleAIEmbeddingGeneration(
                         googleSettings.Model,
                         googleSettings.ApiKey,
-                        httpClient: httpClient);
+                        dimensions: googleSettings.Dimensions);
                 break;
 
             case AiConnectorType.HuggingFace:
