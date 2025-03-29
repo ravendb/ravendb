@@ -26,48 +26,48 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             using (var session = store.OpenSession())
             {
                 var q1 = session.Query<Dto>().VectorSearch(x => x.WithText("TextField").UsingTask("ai-task-identifier"), factory => factory.ByText("SomeText")).ToString();
-                
+
                 Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField,ai.task('ai-task-identifier')), $p0)", q1);
-                
+
                 var q2 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField").UsingTask("ai-task-identifier").TargetQuantization(VectorEmbeddingType.Int8),
                     factory => factory.ByText("aaaa")).ToString();
-                
+
                 Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField,ai.task('ai-task-identifier')), $p0)", q2);
             }
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanGenerateEmbeddingsForQuerying(Options options)
     {
         const string queriedText = "fruit";
-        
+
         using (var store = GetDocumentStore(options))
         {
             var dto1 = new Dto() { TextualValue = "apple" };
             var dto2 = new Dto() { TextualValue = "computer" };
-            
+
             using (var session = store.OpenSession())
             {
                 session.Store(dto1);
                 session.Store(dto2);
-                
+
                 session.SaveChanges();
             }
-            
+
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            
+
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
-            
+
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            
+
             var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
-            
+
             using (var session = store.OpenSession())
             {
                 var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), factory => factory.ByText(queriedText), minimumSimilarity: 0.75f).ToList();
-                
+
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
 
@@ -76,44 +76,44 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
                 // we have to wait, since the savings of the embedding values for queries happens in async manner
                 WaitForDocument<object>(store, valueEmbeddingsDocumentId, arg => true);
-                
+
                 var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
 
                 Assert.NotNull(valueEmbeddingsDocument);
             }
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanFetchEmbeddingFromCache(Options options)
     {
         const string queriedText = "fruit";
-        
+
         using (var store = GetDocumentStore(options))
         {
             var dto1 = new Dto() { TextualValue = queriedText };
             var dto2 = new Dto() { TextualValue = "computer" };
-            
+
             using (var session = store.OpenSession())
             {
                 session.Store(dto1);
                 session.Store(dto2);
-                
+
                 session.SaveChanges();
             }
-            
+
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
-            
+
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            
+
             using (var session = store.OpenSession())
             {
                 var result = session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask(configuration.Identifier), factory => factory.ByText(queriedText), minimumSimilarity: 0.75f).ToList();
-                
+
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
             }
@@ -138,21 +138,21 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
                 session.SaveChanges();
             }
-            
+
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            
+
             AddEmbeddingsGenerationTask(store);
-            
+
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
             using (var session = store.OpenSession())
             {
                 var ex = Assert.Throws<InvalidQueryException>(() => session.Query<Dto>().VectorSearch(x => x.WithText(d => d.TextualValue).UsingTask("NotExistingTask"), factory => factory.ByText(queriedText)).ToList());
-                
+
                 Assert.Contains("Couldn't find Embeddings Generation task with 'NotExistingTask' identifier", ex.Message);
-                
+
                 var indexCount = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length;
-                
+
                 Assert.Equal(0, indexCount);
             }
         }
@@ -163,7 +163,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     public void CanGenerateEmbeddingsWhenQueryingStaticIndex(Options options)
     {
         const string queriedText = "fruit";
-        
+
         using (var store = GetDocumentStore(options))
         {
             var dto1 = new Dto() { TextualValue = "apple" };
@@ -176,42 +176,40 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
                 session.SaveChanges();
             }
-            
+
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            
+
             var (_, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
-            
+
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            
+
             var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
-            
+
             var index = new SomeIndex();
             index.Execute(store);
             Indexes.WaitForIndexing(store);
-            
+
             using (var session = store.OpenSession())
             {
                 var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText), minimumSimilarity: 0.75f).ProjectInto<Dto>().ToList();
-                
+
                 Assert.Single(result);
                 Assert.Equal(dto1.TextualValue, result[0].TextualValue);
-                
-                var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
-                var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash, VectorEmbeddingType.Single);
-
-                var valueEmbeddingsDocument = session.Load<object>(valueEmbeddingsDocumentId);
-
-                Assert.NotNull(valueEmbeddingsDocument);
             }
+
+            var hash = EmbeddingsHelper.CalculateInputValueHash(queriedText);
+            var valueEmbeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hash, VectorEmbeddingType.Single);
+
+            Assert.True(WaitForDocument<object>(store, valueEmbeddingsDocumentId, predicate: null));
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanChunkValueInQuery(Options options)
     {
         const string queriedText = "computer machine technology tech";
-        
+
         using (var store = GetDocumentStore(options))
         {
             var dto1 = new Dto() { TextualValue = "computer" };
@@ -221,9 +219,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.Store(dto1);
                 session.SaveChanges();
             }
-            
+
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            
+
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [
                 new EmbeddingPathConfiguration()
                 {
@@ -233,13 +231,13 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                     }
                 }
             ], chunkingOptionsForQuerying: new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 });
-            
+
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
 
             var index = new SomeIndex();
             index.Execute(store);
             Indexes.WaitForIndexing(store);
-            
+
             using (var session = store.OpenSession())
             {
                 var result = session.Query<SomeIndex.IndexEntry, SomeIndex>().VectorSearch(x => x.WithField(d => d.TextualValueVector), factory => factory.ByText(queriedText), minimumSimilarity: 0.75f).ProjectInto<Dto>().ToList();
@@ -248,7 +246,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             }
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanSearchByMultipleVectorsByTexts(Options options)
@@ -256,8 +254,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         using var store = GetDocumentStore(options);
 
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
-        AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration(){ ChunkingOptions = DefaultChunkingOptions, Path = "TextualValue" }]);
-        
+        AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { ChunkingOptions = DefaultChunkingOptions, Path = "TextualValue" }]);
+
         using (var session = store.OpenSession())
         {
             session.Store(new Dto() { TextualValue = "pizza" });
@@ -266,7 +264,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             session.SaveChanges();
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            
+
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
                 .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(2, multiVectorTextualQuery.Count);
@@ -298,7 +296,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             Assert.Equal(0, multiVectorTextualQuery.Count);
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task CanSearchByMultipleVectorsByTextsInParallel(Options options)
@@ -318,7 +316,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 await session1.SaveChangesAsync();
 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                
+
                 var q1 = session1.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
                     .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f)
                     .ToListAsync();
@@ -329,9 +327,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
                 var q3 = session3.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
                     .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["cat", "dog"]), minimumSimilarity: 0.75f).ToListAsync();
-                
+
                 Task.WaitAll(q1, q2, q3);
-                
+
                 Assert.Equal(2, q1.Result.Count);
                 Assert.Equal(1, q2.Result.Count);
                 Assert.Equal(0, q3.Result.Count);
@@ -361,7 +359,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
 
         aiTaskDone.Reset();
-        
+
         using (var session = store.OpenSession())
         {
             WaitForUserToContinueTheTest(store);
@@ -374,7 +372,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             WaitForUserToContinueTheTest(store);
 
             Thread.Sleep(2000); // TODO - auto index staleness need to take into account referenced embeddings collections
-            
+
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
                 .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(1, multiVectorTextualQuery.Count);
@@ -392,18 +390,18 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             });
         }
     }
-    
+
     private class SomeIndex : AbstractIndexCreationTask<Dto>
     {
         public class IndexEntry
         {
             public object TextualValueVector { get; set; }
         }
-        
+
         public SomeIndex()
         {
             Map = dtos => from dto in dtos
-                select new IndexEntry { TextualValueVector = LoadVector("TextualValue", "localaitask") };
+                          select new IndexEntry { TextualValueVector = LoadVector("TextualValue", "localaitask") };
         }
     }
 
