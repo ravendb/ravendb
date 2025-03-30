@@ -110,7 +110,10 @@ namespace SlowTests
                 ""Name"": ""a1"",
             ""Hash"": ""Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco="",
         ""ContentType"": ""a1/png"",
-        ""Size"": 5
+        ""Size"": 5,
+        ""Flags"":""None"",
+        ""RetireAt"":null,
+        ""Collection"":""Users""
             }
             ]
         }

@@ -1331,7 +1331,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
             var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Flags,attachment.Size, retireAtDt: null, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
-            Debug.Assert(attachment.Flags == AttachmentFlags.Retired, "attachment.Flags.Contain(AttachmentFlags.Retired)");
+            Debug.Assert(attachment.Flags != AttachmentFlags.Retired, "attachment.Flags != AttachmentFlags.Retired");
             DeleteAttachment(DeleteAttachmentState.DocumentAttachment, context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
             return new MoveAttachmentDetailsServer()
@@ -1428,71 +1428,6 @@ namespace Raven.Server.Documents
                     collectionName = GetDocumentCollectionName(context, docTvr);
             }
         }
-
-        //public void DeleteAttachmentWhenStateUnknown(RetiredAttachmentsConfiguration config, DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, out CollectionName collectionName, bool updateDocument = true,
-        //    string hash = null, string contentType = null, bool usePartialKey = true, bool extractCollectionName = false)
-        //{
-        //    if (string.IsNullOrWhiteSpace(documentId))
-        //        throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
-        //    if (string.IsNullOrWhiteSpace(name))
-        //        throw new ArgumentException("Argument is null or whitespace", nameof(name));
-        //    if (context.Transaction == null)
-        //        throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
-
-        //    collectionName = null;
-        //    using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
-        //    {
-        //        var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out TableValueReader docTvr);
-        //        if (hasDoc == false)
-        //        {
-        //            if (expectedChangeVector != null)
-        //                throw new ConcurrencyException($"Document {documentId} does not exist, " +
-        //                                               $"but delete was called with change vector '{expectedChangeVector}' to remove attachment {name}. " +
-        //                                               "Optimistic concurrency violation, transaction will be aborted.")
-        //                {
-        //                    Id = documentId,
-        //                    ExpectedChangeVector = expectedChangeVector
-        //                };
-
-        //            // this basically mean that we tried to delete attachment whose document doesn't exist.
-        //            return;
-        //        }
-
-        //        var tombstoneEtag = _documentsStorage.GenerateNextEtag();
-        //        var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
-        //        context.LastDatabaseChangeVector = changeVector;
-
-        //        using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
-        //        {
-        //            Slice keySlice;
-        //            ByteStringContext<ByteStringMemoryCache>.InternalScope scope;
-        //            if (usePartialKey)
-        //            {
-        //                scope = GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, null, out keySlice);
-        //            }
-        //            else
-        //            {
-        //                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
-        //                using (Slice.From(context.Allocator, hash, out Slice base64Hash))
-        //                {
-        //                    scope = GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
-        //                        lowerContentType.Size, AttachmentType.Document, Slices.Empty, out keySlice);
-        //                }
-        //            }
-
-        //            using (scope)
-        //            {
-        //                var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-        //                DeleteAttachmentDirect2(config, context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks);
-        //            }
-        //        }
-
-        //        if (updateDocument)
-        //            UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, docTvr, changeVector, extractCollectionName: extractCollectionName, out collectionName);
-        //        else if (extractCollectionName)
-        //            collectionName = GetDocumentCollectionName(context, docTvr);
-        //    }
-        //}
 
         public void DeleteAttachmentConflicts(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
             BlittableJsonReaderObject conflictDocument, string changeVector)
