@@ -68,17 +68,21 @@ namespace Raven.Client.Documents.Session
                 DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentDELETE, name)))
                 return true;
 
-            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
-                Session.DeletedEntities.Contains(documentInfo.Entity))
-                return true;
+            if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo))
+            {
+                if (Session.DeletedEntities.Contains(documentInfo.Entity))
+                {
+                    return true;
+                }
+
+                CanContinueRetiredAttachmentDelete(documentId, name, documentInfo);
+            }
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
                 ThrowOtherDeferredCommandException(documentId, name, "delete", "create");
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentMOVE, name)))
                 ThrowOtherDeferredCommandException(documentId, name, "delete", "rename");
-
-            CanContinueRetiredAttachmentDelete(documentId, name, documentInfo);
 
             return false;
         }
