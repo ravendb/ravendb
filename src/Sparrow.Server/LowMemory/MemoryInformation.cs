@@ -85,20 +85,6 @@ namespace Sparrow.LowMemory
             InstalledMemory = new Size(256, SizeUnit.Megabytes)
         };
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MemoryStatusEx
-        {
-            public uint dwLength;
-            public uint dwMemoryLoad;
-            public ulong ullTotalPhys;
-            public ulong ullAvailPhys;
-            public ulong ullTotalPageFile;
-            public ulong ullAvailPageFile;
-            public ulong ullTotalVirtual;
-            public ulong ullAvailVirtual;
-            public ulong ullAvailExtendedVirtual;
-        }
-
         public static bool DisableEarlyOutOfMemoryCheck =
             string.Equals(Environment.GetEnvironmentVariable("RAVEN_DISABLE_EARLY_OOM"), "true", StringComparison.OrdinalIgnoreCase);
 
@@ -214,95 +200,6 @@ namespace Sparrow.LowMemory
                                                 MemoryUtils.GetExtendedMemoryInfo(memInfo, GetDirtyMemoryState()), memInfo);
 
         }
-
-        public enum JOBOBJECTINFOCLASS
-        {
-            AssociateCompletionPortInformation = 7,
-            BasicLimitInformation = 2,
-            BasicUIRestrictions = 4,
-            EndOfJobTimeInformation = 6,
-            ExtendedLimitInformation = 9,
-            SecurityLimitInformation = 5,
-            GroupInformation = 11
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct JOBOBJECT_BASIC_LIMIT_INFORMATION
-        {
-            public Int64 PerProcessUserTimeLimit;
-            public Int64 PerJobUserTimeLimit;
-            public JOBOBJECTLIMIT LimitFlags;
-            public UIntPtr MinimumWorkingSetSize;
-            public UIntPtr MaximumWorkingSetSize;
-            public UInt32 ActiveProcessLimit;
-            public Int64 Affinity;
-            public UInt32 PriorityClass;
-            public UInt32 SchedulingClass;
-        }
-
-        [Flags]
-        public enum JOBOBJECTLIMIT : uint
-        {
-            // Basic Limits
-            Workingset = 0x00000001,
-            ProcessTime = 0x00000002,
-            JobTime = 0x00000004,
-            ActiveProcess = 0x00000008,
-            Affinity = 0x00000010,
-            PriorityClass = 0x00000020,
-            PreserveJobTime = 0x00000040,
-            SchedulingClass = 0x00000080,
-
-            // Extended Limits
-            ProcessMemory = 0x00000100,
-            JobMemory = 0x00000200,
-            DieOnUnhandledException = 0x00000400,
-            BreakawayOk = 0x00000800,
-            SilentBreakawayOk = 0x00001000,
-            KillOnJobClose = 0x00002000,
-            SubsetAffinity = 0x00004000,
-
-            // Notification Limits
-            JobReadBytes = 0x00010000,
-            JobWriteBytes = 0x00020000,
-            RateControl = 0x00040000,
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
-        {
-            public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
-            public IO_COUNTERS IoInfo;
-            public UIntPtr ProcessMemoryLimit;
-            public UIntPtr JobMemoryLimit;
-            public UIntPtr PeakProcessMemoryUsed;
-            public UIntPtr PeakJobMemoryUsed;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct IO_COUNTERS
-        {
-            public UInt64 ReadOperationCount;
-            public UInt64 WriteOperationCount;
-            public UInt64 OtherOperationCount;
-            public UInt64 ReadTransferCount;
-            public UInt64 WriteTransferCount;
-            public UInt64 OtherTransferCount;
-        }
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool IsProcessInJob(IntPtr hProcess, IntPtr hJob, out bool isInJob);
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll")]
-        public static extern unsafe bool QueryInformationJobObject(IntPtr hJob, JOBOBJECTINFOCLASS JobObjectInformationClass, void* lpJobObjectInformation,
-            int cbJobObjectInformationLength, out int lpReturnLength);
-
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern unsafe bool GlobalMemoryStatusEx(MemoryStatusEx* lpBuffer);
 
         public static (long Rss, long Swap) GetMemoryUsageFromProcStatus()
         {
@@ -611,12 +508,12 @@ namespace Sparrow.LowMemory
         private static unsafe MemoryInfoResult GetMemoryInfoWindows()
         {
             // windows
-            var memoryStatus = new MemoryStatusEx
+            var memoryStatus = new Win32MemoryMethods.MemoryStatusEx
             {
-                dwLength = (uint)sizeof(MemoryStatusEx)
+                dwLength = (uint)sizeof(Win32MemoryMethods.MemoryStatusEx)
             };
 
-            if (GlobalMemoryStatusEx(&memoryStatus) == false)
+            if (Win32MemoryMethods.GlobalMemoryStatusEx(&memoryStatus) == false)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
@@ -630,20 +527,20 @@ namespace Sparrow.LowMemory
             var availableMemoryForProcessingInBytes = memoryStatusUllAvailPhys + sharedCleanInBytes;
 
             string remarks = null;
-            if (IsProcessInJob(ProcessHandle, IntPtr.Zero, out var isInJob) && isInJob)
+            if (Win32MemoryMethods.IsProcessInJob(ProcessHandle, IntPtr.Zero, out var isInJob) && isInJob)
             {
-                JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = default;
-                if (QueryInformationJobObject(IntPtr.Zero,
-                        JOBOBJECTINFOCLASS.ExtendedLimitInformation, (void*)&limits,
-                        sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
+                Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = default;
+                if (Win32MemoryMethods.QueryInformationJobObject(IntPtr.Zero,
+                        Win32MemoryMethods.JOBOBJECTINFOCLASS.ExtendedLimitInformation, (void*)&limits,
+                        sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
                         out int limitsOutputSize) == false ||
-                    limitsOutputSize != sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
+                    limitsOutputSize != sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
                 {
                     if (_reportedQueryJobObjectFailure == false && Logger.IsInfoEnabled)
                     {
                         _reportedQueryJobObjectFailure = true;
                         Logger.Info(
-                            $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
+                            $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
                     }
                 }
                 else

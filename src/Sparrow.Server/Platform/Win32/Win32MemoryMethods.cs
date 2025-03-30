@@ -7,8 +7,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
-// ReSharper disable InconsistentNaming
-
 namespace Sparrow.Server.Platform.Win32
 {
     public static unsafe class Win32MemoryMethods
@@ -17,11 +15,24 @@ namespace Sparrow.Server.Platform.Win32
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool GetPhysicallyInstalledSystemMemory(out long totalMemoryInKb);
 
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GlobalMemoryStatusEx(MemoryStatusEx* lpBuffer);
+
         [DllImport("psapi.dll", SetLastError = true)]
         public static extern bool GetProcessMemoryInfo(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS_EX2 counters, uint size);
 
         [DllImport("psapi.dll", SetLastError = true, EntryPoint = "GetProcessMemoryInfo")]
         public static extern bool GetProcessMemoryInfoLegacy(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS_EX counters, uint size);
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool IsProcessInJob(IntPtr hProcess, IntPtr hJob, out bool isInJob);
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll")]
+        public static extern bool QueryInformationJobObject(IntPtr hJob, JOBOBJECTINFOCLASS JobObjectInformationClass, void* lpJobObjectInformation,
+            int cbJobObjectInformationLength, out int lpReturnLength);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr GetCurrentProcess();
@@ -29,6 +40,20 @@ namespace Sparrow.Server.Platform.Win32
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool QueryWorkingSetEx(IntPtr hProcess, byte* pv, uint cb);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MemoryStatusEx
+        {
+            public uint dwLength;
+            public uint dwMemoryLoad;
+            public ulong ullTotalPhys;
+            public ulong ullAvailPhys;
+            public ulong ullTotalPageFile;
+            public ulong ullAvailPageFile;
+            public ulong ullTotalVirtual;
+            public ulong ullAvailVirtual;
+            public ulong ullAvailExtendedVirtual;
+        }
 
         //https://learn.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters_ex2
         [StructLayout(LayoutKind.Sequential)]
@@ -64,6 +89,81 @@ namespace Sparrow.Server.Platform.Win32
             public ulong PagefileUsage;
             public ulong PeakPagefileUsage;
             public ulong PrivateUsage;
+        }
+
+        public enum JOBOBJECTINFOCLASS
+        {
+            AssociateCompletionPortInformation = 7,
+            BasicLimitInformation = 2,
+            BasicUIRestrictions = 4,
+            EndOfJobTimeInformation = 6,
+            ExtendedLimitInformation = 9,
+            SecurityLimitInformation = 5,
+            GroupInformation = 11
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct JOBOBJECT_BASIC_LIMIT_INFORMATION
+        {
+            public Int64 PerProcessUserTimeLimit;
+            public Int64 PerJobUserTimeLimit;
+            public JOBOBJECTLIMIT LimitFlags;
+            public UIntPtr MinimumWorkingSetSize;
+            public UIntPtr MaximumWorkingSetSize;
+            public UInt32 ActiveProcessLimit;
+            public Int64 Affinity;
+            public UInt32 PriorityClass;
+            public UInt32 SchedulingClass;
+        }
+
+        [Flags]
+        public enum JOBOBJECTLIMIT : uint
+        {
+            // Basic Limits
+            Workingset = 0x00000001,
+            ProcessTime = 0x00000002,
+            JobTime = 0x00000004,
+            ActiveProcess = 0x00000008,
+            Affinity = 0x00000010,
+            PriorityClass = 0x00000020,
+            PreserveJobTime = 0x00000040,
+            SchedulingClass = 0x00000080,
+
+            // Extended Limits
+            ProcessMemory = 0x00000100,
+            JobMemory = 0x00000200,
+            DieOnUnhandledException = 0x00000400,
+            BreakawayOk = 0x00000800,
+            SilentBreakawayOk = 0x00001000,
+            KillOnJobClose = 0x00002000,
+            SubsetAffinity = 0x00004000,
+
+            // Notification Limits
+            JobReadBytes = 0x00010000,
+            JobWriteBytes = 0x00020000,
+            RateControl = 0x00040000,
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+        {
+            public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
+            public IO_COUNTERS IoInfo;
+            public UIntPtr ProcessMemoryLimit;
+            public UIntPtr JobMemoryLimit;
+            public UIntPtr PeakProcessMemoryUsed;
+            public UIntPtr PeakJobMemoryUsed;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct IO_COUNTERS
+        {
+            public UInt64 ReadOperationCount;
+            public UInt64 WriteOperationCount;
+            public UInt64 OtherOperationCount;
+            public UInt64 ReadTransferCount;
+            public UInt64 WriteTransferCount;
+            public UInt64 OtherTransferCount;
         }
 
         // ReSharper disable once InconsistentNaming
