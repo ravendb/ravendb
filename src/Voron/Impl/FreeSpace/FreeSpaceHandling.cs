@@ -214,27 +214,11 @@ namespace Voron.Impl.FreeSpace
             StreamBitArray current, long currentSectionId, out long? page)
         {
             page = -1;
-            var start = -1;
-            while (true)
-            {
-                start = current.FirstSetBit(start + 1);
-                if (start == -1 ||
-                    start + num > NumberOfPagesInSection)
-                    return false;
+            var start = current.GetContinuousRangeStart(num);
+            if (start == null)
+                return false;
 
-                if (num > 1)
-                {
-                    var nextUnsetBit = current.NextUnsetBits(start + 1);
-                    if (nextUnsetBit != -1 && (nextUnsetBit - start) < num)
-                    {
-                        start = nextUnsetBit;
-                        continue;
-                    }
-                }
-
-                page = currentSectionId * NumberOfPagesInSection + start;
-                break;
-            }
+            page = currentSectionId * NumberOfPagesInSection + start;
 
             if (current.SetCount == num)
             {
@@ -244,7 +228,7 @@ namespace Voron.Impl.FreeSpace
             {
                 for (int i = 0; i < num; i++)
                 {
-                    current.Set(i + start, false);
+                    current.Set(i + start.Value, false);
                 }
 
                 current.Write(freeSpaceTree, it.CurrentKey);
