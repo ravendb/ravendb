@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using Sparrow.Json.Parsing;
 using Voron.Data.Fixed;
@@ -358,29 +359,61 @@ public unsafe struct StreamBitArray
 
     public int GetEndRangeCount()
     {
-        int count = 0;
-        for (int i = CountOfWords - Vector256<uint>.Count; i >= 0; i -= Vector256<uint>.Count)
+        var count = 0;
+        fixed (uint* ptr = _inner)
         {
-            var a = Vector256.LoadUnsafe(ref _inner[i]);
-            if (a == Vector256<uint>.AllBitsSet)
-            {
-                count += 256;
-                continue;
-            }
+            long* span = (long*)ptr;
+            const int length = CountOfWords / 2;
 
-            for (int j = i + Vector256<uint>.Count - 1; j >= 0; j--)
+            for (var i = length - 1; i >= 0; i--)
             {
-                if (_inner[j] == uint.MaxValue)
+                long current = span[i];
+                if (current == 0)
+                    break;
+
+                if (current == -1)
                 {
-                    count += 32;
+                    count += BitsInWord * 2;
                     continue;
                 }
 
-                count += BitOperations.LeadingZeroCount(~_inner[j]);
+                int numberOfSetBits = BitOperations.LeadingZeroCount(~(ulong)current);
+                count += numberOfSetBits;
+
+                // we won't find any more continuous bits after this.
                 break;
             }
+        }
+        return count;
+    }
 
-            break;
+    public int GetStartRangeCount()
+    {
+        var count = 0;
+
+        fixed (uint* ptr = _inner)
+        {
+            long* span = (long*)ptr;
+
+            for (var i = 0; i < CountOfWords / 2; i++)
+            {
+                long current = span[i];
+
+                if (current == 0)
+                    break;
+
+                if (current == -1)
+                {
+                    count += BitsInWord * 2;
+                    continue;
+                }
+
+                int numberOfSetBits = BitOperations.TrailingZeroCount(~current);
+                count += numberOfSetBits;
+
+                // we won't find any more continuous bits after this.
+                return count;
+            }
         }
 
         return count;
@@ -388,38 +421,36 @@ public unsafe struct StreamBitArray
 
     public bool HasStartRangeCount(int max)
     {
-        Debug.Assert(max <= 2048, "max <= 2048 - maximum range inside the bit array");
+        var count = 0;
 
-        int count = 0;
-        for (int i = 0; i < CountOfWords; i += Vector256<uint>.Count)
+        fixed (uint* ptr = _inner)
         {
-            var a = Vector256.LoadUnsafe(ref _inner[i]);
-            if (a == Vector256<uint>.AllBitsSet)
-            {
-                count += 256;
-                if (count >= max)
-                    return true;
-                continue;
-            }
+            long* span = (long*)ptr;
 
-            for (int j = i; j < i + Vector256<uint>.Count; j++)
+            for (var i = 0; i < CountOfWords / 2; i++)
             {
-                if (_inner[j] == uint.MaxValue)
+                long current = span[i];
+
+                if (current == 0)
+                    break;
+
+                if (current == -1)
                 {
-                    count += 32;
+                    count += BitsInWord * 2;
                     if (count >= max)
                         return true;
                     continue;
                 }
 
-                count += BitOperations.TrailingZeroCount(~_inner[j]);
+                int numberOfSetBits = BitOperations.TrailingZeroCount(~current);
+                count += numberOfSetBits;
+
+                // we won't find any more continuous bits after this.
                 return count >= max;
             }
-
-            break;
         }
 
-        return count >= max;
+        return false;
     }
 
     public DynamicJsonValue ToJson(long key, bool hex)

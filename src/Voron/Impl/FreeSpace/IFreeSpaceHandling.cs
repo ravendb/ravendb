@@ -13,6 +13,8 @@ namespace Voron.Impl.FreeSpace
         void FreePage(LowLevelTransaction tx, long pageNumber);
         long GetFreePagesOverhead(LowLevelTransaction tx);
         IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx);
+        Dictionary<long, FreeSpaceHandling.SectionMetadata> GetMaxConsecutiveRangePerSection(LowLevelTransaction tx);
+        void OnRollback();
         FreeSpaceHandlingDisabler Disable();
         List<(long Start, long Count)> GetSparseRegions(LowLevelTransaction tx, HashSet<long> sparseRangeCandidate);
     }
