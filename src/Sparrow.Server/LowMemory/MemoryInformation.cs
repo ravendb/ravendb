@@ -43,20 +43,11 @@ namespace Sparrow.LowMemory
                 if (PlatformDetails.RunningOnWindows)
                 {
                     ProcessHandle = Win32MemoryMethods.GetCurrentProcess();
-                    var memCounters = new Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2
-                    {
-                        cb = (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2))
-                    };
 
-                    try
-                    {
-                        // supported only on Windows 10 22H2 with September 2023 cumulative update or Windows 11 22H2 with September 2023 cumulative update
-                        WindowsSupportsMemoryCountersEx2 = Win32MemoryMethods.GetProcessMemoryInfo(process.Handle, out memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2)));
-                    }
-                    catch
-                    {
-                        // not supported on this OS
-                    }
+                    // supported only on Windows 10 22H2 with September 2023 cumulative update or Windows 11 22H2 with September 2023 cumulative update and above
+                    var expectedSize = (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2));
+                    Win32MemoryMethods.GetProcessMemoryInfo(process.Handle, out var memCounters, expectedSize);
+                    WindowsSupportsMemoryCountersEx2 = expectedSize == memCounters.cb;
 
                     if (Win32MemoryMethods.GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb))
                     {
