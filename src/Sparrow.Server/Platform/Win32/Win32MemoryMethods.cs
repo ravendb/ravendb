@@ -13,6 +13,10 @@ namespace Sparrow.Server.Platform.Win32
 {
     public static unsafe class Win32MemoryMethods
     {
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetPhysicallyInstalledSystemMemory(out long totalMemoryInKb);
+
         [DllImport("psapi.dll", SetLastError = true)]
         public static extern bool GetProcessMemoryInfo(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS_EX2 counters, uint size);
 

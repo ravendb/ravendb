@@ -29,7 +29,8 @@ namespace Sparrow.LowMemory
         private static readonly byte[] Committed_AS = Encoding.UTF8.GetBytes("Committed_AS:");
 
         private static readonly int ProcessId;
-        private static readonly bool SupportsMemoryCountersEx2;
+        private static readonly bool WindowsSupportsMemoryCountersEx2;
+        private static readonly Size? WindowsInstalledMemory;
         private static readonly IntPtr ProcessHandle = IntPtr.Zero;
         public static readonly Size TotalPhysicalMemory;
 
@@ -49,13 +50,23 @@ namespace Sparrow.LowMemory
 
                     try
                     {
-                        // Windows 10 22H2 with September 2023 cumulative update or Windows 11 22H2 with September 2023 cumulative update
-                        SupportsMemoryCountersEx2 = Win32MemoryMethods.GetProcessMemoryInfo(process.Handle, out memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2)));
+                        // supported only on Windows 10 22H2 with September 2023 cumulative update or Windows 11 22H2 with September 2023 cumulative update
+                        WindowsSupportsMemoryCountersEx2 = Win32MemoryMethods.GetProcessMemoryInfo(process.Handle, out memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2)));
                     }
                     catch
                     {
                         // not supported on this OS
                     }
+
+                    if (Win32MemoryMethods.GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb))
+                    {
+                        // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function
+                        // must be equal to or greater than the amount reported by the GlobalMemoryStatusEx function
+                        // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA.
+                        // Malformed SMBIOS data may indicate a problem with the user's computer.
+                        WindowsInstalledMemory = new Size(installedMemoryInKb, SizeUnit.Kilobytes);
+                    }
+
                 }
             }
 
@@ -292,10 +303,6 @@ namespace Sparrow.LowMemory
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern unsafe bool GlobalMemoryStatusEx(MemoryStatusEx* lpBuffer);
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool GetPhysicallyInstalledSystemMemory(out long totalMemoryInKb);
 
         public static (long Rss, long Swap) GetMemoryUsageFromProcStatus()
         {
@@ -616,12 +623,6 @@ namespace Sparrow.LowMemory
                 return FailedResult;
             }
 
-            // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function
-            // must be equal to or greater than the amount reported by the GlobalMemoryStatusEx function
-            // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA.
-            // Malformed SMBIOS data may indicate a problem with the user's computer.
-            var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
-
             var sharedCleanInBytes = GetSharedCleanInBytes(out long workingSet, out long pageFileUsage);
             long memoryStatusUllAvailPhys = (long)memoryStatus.ullAvailPhys;
             long totalPageFile = (long)memoryStatus.ullTotalPageFile;
@@ -683,9 +684,7 @@ namespace Sparrow.LowMemory
                 AvailableMemoryForProcessing = new Size(availableMemoryForProcessingInBytes, SizeUnit.Bytes),
                 SharedCleanMemory = new Size(sharedCleanInBytes, SizeUnit.Bytes),
                 TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
-                InstalledMemory = fetchedInstalledMemory ?
-                    new Size(installedMemoryInKb, SizeUnit.Kilobytes) :
-                    new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
+                InstalledMemory = WindowsInstalledMemory ?? new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
                 WorkingSet = new Size(workingSet, SizeUnit.Bytes),
                 IsExtended = true,
                 TotalSwapUsage = new Size(pageFileUsage, SizeUnit.Bytes)
@@ -694,7 +693,7 @@ namespace Sparrow.LowMemory
 
         public static long GetSharedCleanInBytes(out long workingSet, out long pageFileUsage)
         {
-            if (SupportsMemoryCountersEx2)
+            if (WindowsSupportsMemoryCountersEx2)
             {
                 if (Win32MemoryMethods.GetProcessMemoryInfo(ProcessHandle, out Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2 memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2))) == false)
                 {
