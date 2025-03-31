@@ -344,7 +344,7 @@ namespace Sparrow.Json
             var head = _head;
 
             // Update Segment invariants
-            *(T*)(head.Address) = value;
+            *(T*)(head.Address + head.Used) = value;
             head.AccumulatedSizeInBytes += count;
             head.Used += count;
         }
