@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -362,17 +361,11 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
         using (var session = store.OpenSession())
         {
-            WaitForUserToContinueTheTest(store);
-
             session.Store(new Dto() { TextualValue = "pizza" }, "dto/1");
             session.SaveChanges();
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-
-            WaitForUserToContinueTheTest(store);
-
-            Thread.Sleep(2000); // TODO - auto index staleness need to take into account referenced embeddings collections
-
+            
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
                 .VectorSearch(f => f.WithText(s => s.TextualValue).UsingTask("localaitask"), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
             Assert.Equal(1, multiVectorTextualQuery.Count);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
@@ -42,15 +43,22 @@ namespace Raven.Server.Documents.Indexes
         {
             return IsStaleDueToReferences(index, index._compiled, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
         }
+        
+        internal static bool IsStaleDueToReferences(AutoMapIndex index, QueryOperationContext queryContext,
+            TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons) => IsStaleDueToReferences(index, index.GetReferencedCollections(), null, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
+        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, QueryOperationContext queryContext,
+            TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons) =>
+            IsStaleDueToReferences(index, compiled.ReferencedCollections, compiled.CollectionsWithCompareExchangeReferences, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
+
+        private static bool IsStaleDueToReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollectionsDictionary, HashSet<string> collectionsWithCompareExchangeReferences, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
         {
             foreach (var collection in index.Collections)
             {
                 long lastIndexedEtag = -1;
-
-                if (compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections))
+                
+                if (referencedCollectionsDictionary.TryGetValue(collection, out HashSet<CollectionName> referencedCollections))
                 {
                     lastIndexedEtag = index._indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
@@ -136,7 +144,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
 
-                if (compiled.CollectionsWithCompareExchangeReferences.Contains(collection))
+                if (collectionsWithCompareExchangeReferences != null && collectionsWithCompareExchangeReferences.Contains(collection))
                 {
                     if (lastIndexedEtag == -1)
                         lastIndexedEtag = index._indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);

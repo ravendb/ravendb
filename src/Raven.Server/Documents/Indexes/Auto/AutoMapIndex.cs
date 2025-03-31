@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     internal sealed class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition, AutoIndexField>
     {
-        private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections = new (StringComparer.OrdinalIgnoreCase);
 
         private AutoMapIndex(AutoMapIndexDefinition definition)
             : base(IndexType.AutoMap, IndexSourceType.Documents, definition, compiled: null)
@@ -48,7 +48,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && _referencedCollections.Contains(change.CollectionName) == false)
+            var collectionName = new CollectionName(change.CollectionName);
+            
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && _referencedCollections.First().Value.Contains(collectionName) == false)
                 return;
             
             _mre.Set();
@@ -69,17 +71,30 @@ namespace Raven.Server.Documents.Indexes.Auto
                 // We only have a single collection for auto map index
                 string collection = Collections.First();
                 var referencedEmbeddingsCollection = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collection);
-
-                _referencedCollections.Add(referencedEmbeddingsCollection);
-
-                var referencedCollections = new Dictionary<string, HashSet<CollectionName>>();
                 
-                referencedCollections.Add(collection, new HashSet<CollectionName>() { new CollectionName(referencedEmbeddingsCollection) });
+                _referencedCollections.Add(collection, new HashSet<CollectionName>() { new CollectionName(referencedEmbeddingsCollection) });
                 
-                workers.Add(new HandleDocumentReferences(this, referencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(new HandleDocumentReferences(this, _referencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
             }
             
             return workers.ToArray();
+        }
+        
+        internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, long? compareExchangeReferenceCutoff = null, List<string> stalenessReasons = null)
+        {
+            var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
+            if (isStale && stalenessReasons == null)
+                return isStale;
+            
+            if (_referencedCollections.Count == 0)
+                return isStale;
+
+            return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons) || isStale;
+        }
+        
+        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return _referencedCollections;
         }
 
         public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
