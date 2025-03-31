@@ -879,9 +879,6 @@ namespace Corax.Indexing
             _indexDebugDumper.Commit();
             using var _ = _entriesAllocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
 
-            using (stats.For(CommitOperation.Deletions))
-                ProcessDeletes();
-
             Tree entriesToTermsTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
             Tree entriesToSpatialTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToSpatialSlice);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);

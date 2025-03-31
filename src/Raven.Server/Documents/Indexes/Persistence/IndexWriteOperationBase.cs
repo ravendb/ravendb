@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract long EntriesCount();
 
-        public abstract (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations();
+        public abstract (long RamSizeInBytes, long FilesAllocationsInBytes, long UnmanagedAllocationsInBytes) GetAllocations();
 
         public abstract void Delete(LazyStringValue key, IndexingStatsScope stats);
 

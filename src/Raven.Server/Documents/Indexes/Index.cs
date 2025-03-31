@@ -4620,7 +4620,7 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            var txAllocationsInBytes = UpdateThreadAllocations(parameters.IndexingContext, parameters.IndexWriteOperation, parameters.Stats, parameters.WorkType);
+            var (txAllocationsInBytes, indexWriterUnmanagedAllocationsInBytes) = UpdateThreadAllocations(parameters.IndexingContext, parameters.IndexWriteOperation, parameters.Stats, parameters.WorkType);
 
             // we need to take the read transaction encryption size into account as we might read a lot of documents and produce very little indexing output.
             txAllocationsInBytes += parameters.QueryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
@@ -4694,6 +4694,17 @@ namespace Raven.Server.Documents.Indexes
                 if (txAllocations > TransactionSizeLimit.Value)
                 {
                     parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {new Size(txAllocationsInBytes, SizeUnit.Bytes)} in current transaction");
+                    return CanContinueBatchResult.False;
+                }
+            }
+
+            if (SearchEngineType is SearchEngineType.Corax)
+            {
+                var currentInternalCoraxUnmanagedAllocations = new Size(indexWriterUnmanagedAllocationsInBytes, SizeUnit.Bytes);
+                if (currentInternalCoraxUnmanagedAllocations > Configuration.UnmanagedAllocationsBatchLimit)
+                {
+                    parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Reached Corax's unmanaged allocations limit ({Configuration.UnmanagedAllocationsBatchLimit}). Allocated {currentInternalCoraxUnmanagedAllocations} in current batch");
+
                     return CanContinueBatchResult.False;
                 }
             }
@@ -4809,12 +4820,11 @@ namespace Raven.Server.Documents.Indexes
 
                 return canContinue ? CanContinueBatchResult.True : CanContinueBatchResult.False;
             }
-
+            
             return CanContinueBatchResult.True;
         }
 
-        public long UpdateThreadAllocations(
-            TransactionOperationContext indexingContext,
+        public (long TxAllocationsInBytes, long IndexWriterUnmanagedAllocationsInBytes) UpdateThreadAllocations(TransactionOperationContext indexingContext,
             Lazy<IndexWriteOperationBase> indexWriteOperation,
             IndexingStatsScope stats,
             IndexingWorkType workType)
@@ -4827,19 +4837,20 @@ namespace Raven.Server.Documents.Indexes
 
             long indexWriterAllocations = 0;
             long luceneFilesAllocations = 0;
-
+            long indexWriterUnmanagedAllocations = 0;
             if (indexWriteOperation?.IsValueCreated == true)
             {
                 var allocations = indexWriteOperation.Value.GetAllocations();
                 indexWriterAllocations = allocations.RamSizeInBytes;
                 luceneFilesAllocations = allocations.FilesAllocationsInBytes;
+                indexWriterUnmanagedAllocations = allocations.UnmanagedAllocationsInBytes;
             }
 
             var totalTxAllocations = txAllocations + luceneFilesAllocations;
 
             if (stats != null)
             {
-                var allocatedForStats = threadAllocations + totalTxAllocations + indexWriterAllocations;
+                var allocatedForStats = threadAllocations + totalTxAllocations + indexWriterAllocations + indexWriterUnmanagedAllocations;
 
                 switch (workType)
                 {
@@ -4855,16 +4866,16 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            stats?.SetAllocatedUnmanagedBytes(threadAllocations + txAllocations);
+            stats?.SetAllocatedUnmanagedBytes(threadAllocations + txAllocations + indexWriterUnmanagedAllocations);
 
-            var allocatedForProcessing = threadAllocations + indexWriterAllocations +
-                                         // we multiple it to take into account additional work
+            var allocatedForProcessing = threadAllocations + indexWriterAllocations + indexWriterUnmanagedAllocations +
+                                         // we multiply it to take into account additional work
                                          // that will need to be done during the commit phase of the index
                                          (long)(totalTxAllocations * _txAllocationsRatio);
 
             _threadAllocations.CurrentlyAllocatedForProcessing = allocatedForProcessing;
 
-            return totalTxAllocations;
+            return (totalTxAllocations, indexWriterUnmanagedAllocations);
         }
 
         private void HandleStoppedBatchesConcurrently(

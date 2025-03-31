@@ -63,7 +63,7 @@ public sealed class TestIndexWriteOperation : IndexWriteOperationBase
         return _inner.EntriesCount();
     }
 
-    public override (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
+    public override (long RamSizeInBytes, long FilesAllocationsInBytes, long UnmanagedAllocationsInBytes) GetAllocations()
     {
         return _inner.GetAllocations();
     }

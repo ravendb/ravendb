@@ -152,10 +152,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override long EntriesCount() => _indexWriter.GetNumberOfEntries();
 
-        public override (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
+        public override (long RamSizeInBytes, long FilesAllocationsInBytes, long UnmanagedAllocationsInBytes) GetAllocations()
         {
-            //todo maciej
-            return (1024 * 1024, 1024 * 1024);
+            return (RamSizeInBytes: 0, FilesAllocationsInBytes: 0, UnmanagedAllocationsInBytes: _indexWriter.EntriesAllocatorTotalAllocationsInBytes);
         }
 
         public override void Optimize(CancellationToken token)

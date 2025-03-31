@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _writer.EntriesCount(_state);
         }
 
-        public override (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
+        public override (long RamSizeInBytes, long FilesAllocationsInBytes, long UnmanagedAllocationsInBytes) GetAllocations()
         {
             var usedMemory = _writer.RamSizeInBytes();
             var fileAllocations = _directory.FilesAllocations;
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            return (usedMemory, fileAllocations);
+            return (RamSizeInBytes: usedMemory, FilesAllocationsInBytes: fileAllocations, UnmanagedAllocationsInBytes: 0);
         }
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)

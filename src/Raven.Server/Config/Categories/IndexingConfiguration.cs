@@ -302,6 +302,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.ManagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
+        
+        [Description("Corax's unmanaged allocations limit in an indexing batch after which the batch will complete and an index will continue by starting a new one")]
+        [DefaultValue(2048)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public Size? UnmanagedAllocationsBatchLimit { get; protected set; }
 
         [Description("EXPERT: The maximum size in MB that we'll consider for segments merging")]
         [DefaultValue(DefaultValueSetInConstructor)]
