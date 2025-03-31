@@ -10,43 +10,43 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Logs)]
     public sealed class LogsConfiguration : ConfigurationCategory
     {
-        [Description("A path to an XML file that overrides all NLog configuration")]
+        [Description("A path to an XML file that overrides all NLog configuration.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Logs.ConfigPath", ConfigurationEntryScope.ServerWideOnly)]
         [ReadOnlyPath]
         public PathSetting ConfigPath { get; set; }
 
-        [Description("The path to a folder that log files are written to")]
+        [Description("The path to the folder where log files are written.")]
         [DefaultValue("Logs")]
         [ConfigurationEntry("Logs.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting Path { get; set; }
 
-        [Description("Determines the minimal logging level.")]
+        [Description("Determines the minimum logging level.")]
         [DefaultValue(LogLevel.Info)]
         [ConfigurationEntry("Logs.MinLevel", ConfigurationEntryScope.ServerWideOnly)]
         public LogLevel MinLevel { get; set; }
 
-        [Description("The path to a folder that NLog internal-usage logs are written to")]
+        [Description("The path to the folder where NLog's internal logs are written.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Logs.Internal.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NLogInternalPath { get; set; }
 
-        [Description("Determines the logging level for NLog internal-usage logs.")]
+        [Description("Determines the logging level for NLog's internal logs.")]
         [DefaultValue(LogLevel.Info)]
         [ConfigurationEntry("Logs.Internal.Level", ConfigurationEntryScope.ServerWideOnly)]
         public LogLevel NLogInternalLevel { get; set; }
 
-        [Description("Determines whether to write NLog internal-usage messages to the standard output stream.")]
+        [Description("Determines whether to write NLog's internal logs to the standard output stream.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Logs.Internal.LogToStandardOutput", ConfigurationEntryScope.ServerWideOnly)]
         public bool NLogInternalLogToStandardOutput { get; set; }
 
-        [Description("Determines whether to write NLog internal-usage messages to the standard output error stream.")]
+        [Description("Determines whether to write NLog's internal logs to the standard error stream.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Logs.Internal.LogToStandardError", ConfigurationEntryScope.ServerWideOnly)]
         public bool NLogInternalLogToStandardError { get; set; }
 
-        [Description("The largest size (in megabytes) that a log file may reach " +
+        [Description("The maximum size (in megabytes) a log file may reach " +
                      "before it is archived and logging is directed to a new file.")]
         [DefaultValue(128)]
         [MinValue(16)]
@@ -54,12 +54,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.ArchiveAboveSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size ArchiveAboveSize { get; set; }
 
-        [Description("The maximum number of days that an archived log file is kept")]
+        [Description("The maximum number of days that an archived log file is kept.")]
         [DefaultValue(3)]
         [ConfigurationEntry("Logs.MaxArchiveDays", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaxArchiveDays { get; set; }
 
-        [Description("The maximum number of archived log files to keep")]
+        [Description("The maximum number of archived log files to keep.")]
         [DefaultValue(null)]
         [MinValue(0)]
         [ConfigurationEntry("Logs.MaxArchiveFiles", ConfigurationEntryScope.ServerWideOnly)]
@@ -71,7 +71,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.Compress", ConfigurationEntryScope.ServerWideOnly)]
         public bool EnableArchiveFileCompression { get; set; }
 
-        [Description("The minimal logging level for Microsoft logs")]
+        [Description("The minimum logging level for Microsoft logs.")]
         [DefaultValue(LogLevel.Error)]
         [ConfigurationEntry("Logs.Microsoft.MinLevel", ConfigurationEntryScope.ServerWideOnly)]
         public LogLevel MicrosoftMinLevel { get; set; }
@@ -81,17 +81,17 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.ThrowConfigExceptions", ConfigurationEntryScope.ServerWideOnly)]
         public bool ThrowConfigExceptions { get; set; }
 
-        [Description("Location of NuGet packages cache")]
+        [Description("Location of NuGet packages.")]
         [DefaultValue("Packages/NuGet/Logging")]
         [ConfigurationEntry("Logs.NuGet.PackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }
 
-        [Description("Default NuGet source URL")]
+        [Description("The default URL for the NuGet package source.")]
         [DefaultValue("https://api.nuget.org/v3/index.json")]
         [ConfigurationEntry("Logs.NuGet.PackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string NuGetPackageSourceUrl { get; set; }
 
-        [Description("Determines whether to allow installation of NuGet prerelease packages.")]
+        [Description("Determines whether to allow installation of NuGet pre-release packages.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Logs.NuGet.AllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
         public bool NuGetAllowPreReleasePackages { get; set; }
