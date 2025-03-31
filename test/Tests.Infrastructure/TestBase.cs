@@ -378,8 +378,7 @@ namespace FastTests
 
             if (sockets != null && sockets.Count > 0)
             {
-                co.ReservedSocket = sockets[0];
-                co.ReservedTcpSocket = sockets[1];
+                co.ReservedSockets = new ServerCreationOptions.ReservedSocketsToFree { ReservedSocket = sockets[0], ReservedTcpSocket = sockets[1] };
             }
 
             _localServer = GetNewServer(co, caller);
@@ -390,27 +389,22 @@ namespace FastTests
 
         public class ServerCreationOptions
         {
-            private IDictionary<string, string> _customSettings;
-            private Socket _reservedSocket;
-            private Socket _reservedTcpSocket;
-
-            public Socket ReservedSocket
+            internal class ReservedSocketsToFree
             {
-                get => _reservedSocket;
-                set
-                {
-                    AssertNotFrozen();
-                    _reservedSocket = value;
-                }
+                public Socket ReservedSocket { get; set; }
+                public Socket ReservedTcpSocket { get; set; }
             }
 
-            public Socket ReservedTcpSocket
+            private IDictionary<string, string> _customSettings;
+
+            private ReservedSocketsToFree _reservedSockets;
+
+            internal ReservedSocketsToFree ReservedSockets
             {
-                get => _reservedTcpSocket;
+                get => _reservedSockets;
                 set
                 {
-                    AssertNotFrozen();
-                    _reservedTcpSocket = value;
+                    _reservedSockets = value;
                 }
             }
 
@@ -595,10 +589,10 @@ namespace FastTests
                     if (options.BeforeDatabasesStartup != null)
                         server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;
 
-                    if (options.ReservedSocket != null && options.ReservedTcpSocket != null)
+                    if (options.ReservedSockets != null)
                     {
-                        server.ForTestingPurposesOnly().SocketsToFree.Add(options.ReservedSocket);
-                        server.ForTestingPurposesOnly().SocketsToFree.Add(options.ReservedTcpSocket);
+                        var forTesting = server.ForTestingPurposesOnly();
+                        forTesting.ReservedSockets = new List<Socket> { options.ReservedSockets.ReservedSocket, options.ReservedSockets.ReservedTcpSocket };
                     }
                     server.Initialize();
                     server.ServerStore.ValidateFixedPort = false;

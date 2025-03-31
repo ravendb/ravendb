@@ -80,8 +80,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
             },
-            ReservedSocket = socketPort,
-            ReservedTcpSocket = socketTcpPort
+            ReservedSockets = new ServerCreationOptions.ReservedSocketsToFree{ ReservedSocket = socketPort, ReservedTcpSocket = socketTcpPort }
         });
 
 
@@ -170,8 +169,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
             },
-            ReservedSocket = socketPortA,
-            ReservedTcpSocket = socketTcpPortA
+            ReservedSockets = new ServerCreationOptions.ReservedSocketsToFree { ReservedSocket = socketPortA, ReservedTcpSocket = socketTcpPortA }
         });
 
         using var __ = GetNewServer(new ServerCreationOptions
@@ -182,8 +180,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = "tcp://" + unsecuredSetupInfo.NodeSetupInfos["B"].Addresses[0] + ":" + unsecuredSetupInfo.NodeSetupInfos["B"].TcpPort,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
             },
-            ReservedSocket = socketPortB,
-            ReservedTcpSocket = socketTcpPortB
+            ReservedSockets = new ServerCreationOptions.ReservedSocketsToFree { ReservedSocket = socketPortB, ReservedTcpSocket = socketTcpPortB }
         });
 
         using var ___ = GetNewServer(new ServerCreationOptions
@@ -194,8 +191,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = "tcp://" + unsecuredSetupInfo.NodeSetupInfos["C"].Addresses[0] + ":" + unsecuredSetupInfo.NodeSetupInfos["C"].TcpPort,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
             },
-            ReservedSocket = socketPortC,
-            ReservedTcpSocket = socketTcpPortC
+            ReservedSockets = new ServerCreationOptions.ReservedSocketsToFree { ReservedSocket = socketPortC, ReservedTcpSocket = socketTcpPortC }
         });
 
         var dbName = GetDatabaseName();

@@ -247,8 +247,7 @@ namespace Raven.Server
 
                         _refreshClusterCertificate = new Timer(RefreshClusterCertificateTimerCallback);
                     }
-                    if (_forTestingPurposes != null && _forTestingPurposes.SocketsToFree != null)
-                        _forTestingPurposes.UnbindSocketForPort(ListenEndpoints.Port);
+                    _forTestingPurposes?.UnbindSocketForPort(ListenEndpoints.Port);
                 }
 
                 var webHostBuilder = new WebHostBuilder()
@@ -1929,9 +1928,7 @@ namespace Raven.Server
             {
                 foreach (var serverUrl in Configuration.Core.ServerUrls)
                 {
-                    var uri = new Uri(serverUrl);
-                    port = uri.Port;
-                    var host = uri.DnsSafeHost;
+                    var host = new Uri(serverUrl).DnsSafeHost;
                     StartListeners(host, customPort ?? port, status, listenToNewTcpConnection);
                 }
             }
@@ -1973,8 +1970,8 @@ namespace Raven.Server
                         Logger.Info($"RavenDB TCP is configured to use {string.Join(", ", Configuration.Core.TcpServerUrls)} and bind to {ipAddress} at {port}");
 
                     var listener = new TcpListener(ipAddress, status.Port != 0 ? status.Port : port);
-                    if (_forTestingPurposes != null && _forTestingPurposes.SocketsToFree != null)
-                        _forTestingPurposes.UnbindSocketForPort(port);
+ 
+                    _forTestingPurposes?.UnbindSocketForPort(port);
                     try
                     {
                         listener.Start();
@@ -2951,26 +2948,27 @@ namespace Raven.Server
             {
                 internal string[] RoutesToSkip = new string[] { };
             }
-            internal List<Socket> SocketsToFree = new List<Socket> { };
-            public void UnbindSocketForPort(int listenEndpointsPort)
+            internal Action<int> OnSimulateRunningServerFinally;
+            internal List<Socket> ReservedSockets;
+            internal void UnbindSocketForPort(int port)
             {
-                var socketList = SocketsToFree
-                    .Where(x =>
+                if (ReservedSockets == null)
+                    return;
+
+                var socket = ReservedSockets.FirstOrDefault(x =>
+                {
+                    try
                     {
-                        try
-                        {
-                            return x.LocalEndPoint is IPEndPoint ep && ep.Port == listenEndpointsPort;
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            return false;
-                        }
-                    })
-                    .ToList();
-                foreach (var socket in socketList)
-               {
+                        return x.LocalEndPoint is IPEndPoint ep && ep.Port == port;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        return false;
+                    }
+                });
+
+                if (socket != null)
                     socket.Close();
-               }
             }
         }
 
