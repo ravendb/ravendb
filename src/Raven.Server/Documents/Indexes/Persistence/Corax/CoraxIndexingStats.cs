@@ -15,6 +15,11 @@ public readonly struct CoraxIndexingStats : ICoraxStatsScope
     {
         return new CoraxIndexingStats(_stats.For(name, start));
     }
+
+    public void SetAllocatedUnmanagedBytes(long sizeInBytes)
+    {
+        _stats.SetAllocatedUnmanagedBytes(sizeInBytes);
+    }
     
     public void Dispose()
     {

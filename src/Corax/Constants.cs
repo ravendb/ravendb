@@ -91,6 +91,8 @@ namespace Corax
 
             public const int FrequencyTermFreeSpace = 0b1111_1111;
             public const int MaxSizeOfTermVectorList = int.MaxValue >> 1;
+            
+            public const int InvalidPageId = -1;
 
             static IndexWriter()
             {

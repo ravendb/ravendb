@@ -86,7 +86,7 @@ internal sealed class IndexedField
     }
     
     public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
-        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, in SupportedFeatures supportedFeatures, string nameForStatistics = null, long fieldRootPage = -1, long termsVectorFieldRootPage = -1)
+        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, in SupportedFeatures supportedFeatures, string nameForStatistics = null, long fieldRootPage = Constants.IndexWriter.InvalidPageId, long termsVectorFieldRootPage = Constants.IndexWriter.InvalidPageId)
     {
         Name = name;
         NameLong = nameLong;

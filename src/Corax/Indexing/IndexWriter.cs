@@ -38,6 +38,8 @@ namespace Corax.Indexing
 {
     public unsafe partial class IndexWriter : IDisposable // single threaded, controlled by caller
     {
+        public long EntriesAllocatorTotalAllocationsInBytes => _entriesAllocator?._totalAllocated ?? 0;
+        
         private long _numberOfModifications;
         private readonly HashSet<Slice> _indexedEntries = new(SliceComparer.Instance);
         private List<(long EntryId, float Boost)> _boostedDocs;
@@ -62,7 +64,6 @@ namespace Corax.Indexing
         private bool _hasSuggestions;
         private readonly IndexedField[] _knownFieldsTerms;
         private Dictionary<Slice, IndexedField> _dynamicFieldsTerms;
-        private readonly HashSet<long> _deletedEntries = new();
         private FieldsCache _fieldsCache;
 
         private long _postingListContainerId;
@@ -71,14 +72,37 @@ namespace Corax.Indexing
         private Lookup<Int64LookupKey> _entryIdToLocation;
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
+        private long _compactTreeDictionaryId = Constants.IndexSearcher.InvalidId;
 
+        /// <summary>
+        /// Container of deleted entries' IDs. Even if we're not bulk-removing them in the Commit phase,
+        /// we need to keep track of how many documents we actually deleted
+        /// (e.g., when we perform a delete operation not by 'primary key,'
+        /// we might end up in a situation where we try to remove the same document twice, and we need to detect it).
+        /// </summary>
+        private readonly HashSet<long> _deletedEntries = new();
+
+        /// <summary>
+        /// A collection used to keep track of IDs currently marked for deletion (single-call execution).
+        /// It is being cleared between Delete calls.
+        /// </summary>
+        private ContextBoundNativeList<long> _entriesToDelete;
+        
+        private HashSet<long> _nullTermsMarkers;
+        private HashSet<long> _nonExistingTermsMarkers;
+        private Dictionary<long, IndexedField> _fieldsByRootPage;
+        
+        /// <summary>
+        /// Method to update dynamic mapping in runtime. 
+        /// </summary>
+        /// <param name="current">Updated mapping from IndexWriter object owner.</param>
         public void UpdateDynamicFieldsMapping(IndexFieldsMapping current)
         {
             _dynamicFieldsMapping = current;
         }
 
-        // The reason why we want to have the transaction open for us is so that we avoid having
-        // to explicitly provide the index writer with opening semantics and also every new
+        // One of the reasons why we want to have the transaction open for us is so that we avoid having
+        // to explicitly provide the index writer with opening semantics, and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
 
         private IndexWriter(IndexFieldsMapping fieldsMapping, SupportedFeatures supportedFeatures)
@@ -146,11 +170,15 @@ namespace Corax.Indexing
             _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
 
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
+            
+            // We want to use the LLT allocator because the list will be small most of the time,
+            // and we do not want to manually handle updating the allocator after a flush.
+            _entriesToDelete = new(_transaction.LowLevelTransaction.Allocator);
         }
         
         private void InitializeFieldRootPage(IndexedField field)
         {
-            if (field.FieldRootPage == -1)
+            if (field.FieldRootPage == Constants.IndexWriter.InvalidPageId)
             {
                 _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 field.FieldRootPage = _fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
@@ -162,7 +190,7 @@ namespace Corax.Indexing
             Debug.Assert(field.FieldIndexingMode is FieldIndexingMode.Search, "field.FieldIndexingMode is FieldIndexingMode.Search");
             Debug.Assert(_supportedFeatures.PhraseQuery, "_phraseQuerySupport");
             
-            if (field.TermsVectorFieldRootPage == -1)
+            if (field.TermsVectorFieldRootPage == Constants.IndexWriter.InvalidPageId)
             {
                 _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 _transaction.Allocator.Allocate(field.Name.Size + Constants.PhraseQuerySuffix.Length, out var memory);
@@ -232,29 +260,34 @@ namespace Corax.Indexing
             return entryId;
         }
         
-        //Document Boost should add priority to some documents but also should not be the main component of boosting.
-        //The natural logarithm slows down our scoring increase for a document so that the ranking calculated at query time is not forgotten.
-        //We've to add entry container id (without frequency etc) here because in 'SortingMatch' we have already decoded ids.
+        /// <summary>
+        /// Document Boost should add priority to some documents but also should not be the main component of boosting.
+        /// The natural logarithm slows down our scoring increase for a document so that the ranking calculated at query time is not forgotten.
+        /// We've to add entry container id (without frequency etc) here because in 'SortingMatch' we have already decoded ids.
+        /// </summary>
+        /// <param name="entryId">Document id</param>
+        /// <param name="documentBoost">Document boost value</param>
         private void BoostEntry(long entryId, float documentBoost)
         {
             if (documentBoost.AlmostEquals(1f))
             {
-                // We don't store `1` but if user update boost value to 1
+                // We don't store `1` but if user updates boost value to 1
                 // we've to delete the previous one, we don't need to do this explicitly
                 // since we'll delete it during ProcessDeletes()
                 return;
             }
 
-            // probably user want this to be at the same end.
+            // probably user wants this to be at the same end.
             if (documentBoost <= 0f)
                 documentBoost = 0;
 
-            documentBoost = MathF.Log(documentBoost + 1); // ensure we've positive number
+            documentBoost = MathF.Log(documentBoost + 1); // ensure we've a positive number
             _boostedDocs ??= new();
             _boostedDocs.Add((entryId, documentBoost));
         }
 
 
+        /// <summary>Remove a document boosting from the tree.</summary>
         /// <param name="entryId">Container id of entry (without encodings)</param>
         private void RemoveDocumentBoost(long entryId)
         {
@@ -420,40 +453,39 @@ namespace Corax.Indexing
 
             return Slice.From(context, localValue, ByteStringType.Mutable, out slice);
         }
-
-        private void ProcessDeletes()
+        
+        /// <summary>
+        /// Handle removals found in RecordAndPrepareDocumentsIdsForDeletion.
+        /// </summary>
+        private void ProcessCurrentDeletes()
         {
-            if (_deletedEntries.Count == 0)
-                return;
-            
-            var llt = _transaction.LowLevelTransaction;
-            Page lastVisitedPage = default;
-
-            var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree);
-            
-            var nullTermsMarkers = new HashSet<long>();
-            Querying.IndexSearcher.LoadSpecialTermMarkers(_nullEntriesPostingListsTree, nullTermsMarkers);
-
-            var nonExistingTermsMarkers = new HashSet<long>();
-            Querying.IndexSearcher.LoadSpecialTermMarkers(_nonExistingEntriesPostingListsTree, nonExistingTermsMarkers);
-            
-            long dicId = CompactTree.GetDictionaryId(llt);
-
-            _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, _deletedEntries.Count);
-            
-            foreach (long entryToDelete in _deletedEntries)
+            if (_nullTermsMarkers is null || _nonExistingTermsMarkers is null)
             {
+                Querying.IndexSearcher.LoadSpecialTermMarkers(_nullEntriesPostingListsTree, out _nullTermsMarkers);
+                Querying.IndexSearcher.LoadSpecialTermMarkers(_nonExistingEntriesPostingListsTree, out _nonExistingTermsMarkers);
+            }
+            
+            if (_compactTreeDictionaryId == Constants.IndexSearcher.InvalidId)
+                _compactTreeDictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
+                
+            _fieldsByRootPage ??= GetIndexedFieldByRootPage(_fieldsTree);
+
+            foreach (var entryToDelete in _entriesToDelete)
+            {
+                _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, 1);
                 if (_entryIdToLocation.TryRemove(entryToDelete, out var entryTermsId) == false)
                     ThrowUnableToLocateEntry(entryToDelete);
-
+            
                 RemoveDocumentBoost(entryToDelete);
-                var entryTerms = Container.MaybeGetFromSamePage(llt, ref lastVisitedPage, entryTermsId);
-
+                var entryTerms = Container.Get(_transaction.LowLevelTransaction, entryTermsId);
                 var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
-                
-                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, nullTermsMarkers, nonExistingTermsMarkers, dicId, entryToDelete, termsPerEntryIndex);
-                Container.Delete(llt, _entriesTermsContainerId, entryTermsId);
+                RecordTermDeletionsForEntry(entryTerms, _transaction.LowLevelTransaction, _fieldsByRootPage, _nullTermsMarkers, _nonExistingTermsMarkers, _compactTreeDictionaryId, entryToDelete, termsPerEntryIndex);
+            
+            
+                Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, entryTermsId);
             }
+            
+            _entriesToDelete.Clear();
         }
         
         private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
@@ -462,8 +494,8 @@ namespace Corax.Indexing
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
-                // Null/empty is not stored in container, just exists as marker.
-                if (reader.TermId == -1)
+                // Null/empty is not stored in a container, just exists as a marker.
+                if (reader.TermId == Constants.IndexSearcher.InvalidId)
                     continue;
                 
                 Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
@@ -498,7 +530,7 @@ namespace Corax.Indexing
                 {
                     termLocation = field.Storage.Count;
                     field.Storage.AddByRef(new EntriesModifications(decodedKey.Length));
-                    scope = default; // We dont want to reclaim the term name
+                    scope = default; // We don't want to reclaim the term name
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
@@ -579,7 +611,7 @@ namespace Corax.Indexing
                     var found = _fieldsMapping.TryGetByFieldName(it.CurrentKey, out var field);
                     if (found == false)
                     {
-                        if(it.CurrentKey.EndsWith("-D"u8) || it.CurrentKey.EndsWith("-L"u8))
+                        if(it.CurrentKey.EndsWith(Constants.IndexWriter.DoubleTreeSuffix) || it.CurrentKey.EndsWith(Constants.IndexWriter.LongTreeSuffix))
                             continue; // numeric postfix values
                         var dynamicIndexedField = GetDynamicIndexedField(_entriesAllocator, it.CurrentKey.AsSpan());
                         pageToField.Add(state->RootPage, dynamicIndexedField);
@@ -618,11 +650,14 @@ namespace Corax.Indexing
                     // note that the containerId may be a single value or many(!), if it is many items
                     // we'll delete them, but treat this as a _new_ entry, not an update to an existing
                     // one
-                    var result = RecordDeletion(containerId, out entryId, out var setsAreDisjoint);
+                    RecordAndPrepareDocumentsIdsForDeletion(containerId, out var setsAreDisjoint, out var isSingleDocument);
+                    entryId = isSingleDocument ? _entriesToDelete[0] : Constants.IndexSearcher.InvalidId;                        
+                    ProcessCurrentDeletes();
+                    
                     Debug.Assert(setsAreDisjoint, "The set scheduled for deletion shares common elements with the posting list. This should not be possible here.");
-                    return result;
+                    return isSingleDocument;
                 }
-                entryId = -1;
+                entryId = Constants.IndexSearcher.InvalidId;
                 return false;
             }
 
@@ -630,35 +665,40 @@ namespace Corax.Indexing
             return TryDeleteEntry(termSlice, out entryId);
         }
 
-        public void DeleteByPrefix(ReadOnlySpan<byte> term)
+        public void DeleteByPrefix(ReadOnlySpan<byte> prefix)
         {
-            using var __ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
-
-            if (_indexedEntries.Any(id => SliceComparer.StartWith(id, termSlice)) == false)
+            using var __ = Slice.From(_transaction.Allocator, prefix, ByteStringType.Immutable, out var prefixSlice);
+            var hasPrefixInCurrentlyIndexedEntries = _indexedEntries.Any(id => SliceComparer.StartWith(id, prefixSlice));
+            var requiresFlushingBatch = hasPrefixInCurrentlyIndexedEntries;
+            
+            if (hasPrefixInCurrentlyIndexedEntries == false)
             {
-                  var fieldsTree = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName);
+                var primaryKeyTree = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName);
+                var treeIterator = primaryKeyTree.Iterate();
+                treeIterator.Seek(prefixSlice);
 
-                var iterator = fieldsTree.Iterate();
-                iterator.Seek(termSlice);
-
-                while (iterator.MoveNext(out var key, out var id, out _))
+                while (requiresFlushingBatch == false && treeIterator.MoveNext(out var currentKey, out var postingListId, out _))
                 {
-                    if (key.Decoded().StartsWith(termSlice) == false)
-                        continue;
+                    // Since we're seeking, we will have a key that has exactly the same prefix or prefix + 1 (in terms of order).
+                    if (currentKey.Decoded().StartsWith(prefixSlice) == false)
+                        break;
 
-                    RecordDeletion(id, out _, out _);
+                    RecordAndPrepareDocumentsIdsForDeletion(postingListId, out bool setsAreDisjoint, out _);
+                    ProcessCurrentDeletes();
+                    requiresFlushingBatch |= setsAreDisjoint == false;
                 }
             }
-            else
+
+            if (requiresFlushingBatch)
             {
                 FlushBatch();
-                DeleteByPrefix(term);
+                DeleteByPrefix(prefix);
             }
         }
 
         private void FlushBatch()
         {
-            // We cannot actually handles modifications to the same entry in the same batch, so we cheat
+            // We cannot handle modifications to the same entry in the same batch, so we cheat
             // we do a side channel flush at this point, then reset the state of the writer back to its initial level
             bool prevValue = _ownsTransaction;
             _ownsTransaction = false;
@@ -680,6 +720,11 @@ namespace Corax.Indexing
             _entriesAlreadyAdded.Clear();
             _additionsForTerm.Clear();
             _removalsForTerm.Clear();
+
+            // We have to reset markers and root pages because we may have created new ones in the commit phase.
+            _nullTermsMarkers = null;
+            _nonExistingTermsMarkers = null;
+            _fieldsByRootPage = null;
 
             foreach (var term in _knownFieldsTerms)
             {
@@ -728,90 +773,88 @@ namespace Corax.Indexing
                     return;
             }
 
-            RecordDeletion(idInTree, out _, out var setsAreDisjoint);
+            RecordAndPrepareDocumentsIdsForDeletion(idInTree, out var setsAreDisjoint, out _);
+            ProcessCurrentDeletes();
+            
             if (setsAreDisjoint == false)
             {
                 FlushBatch();
                 TryDeleteEntryByField(field, term);
             }
-            
         }
-        
+
         /// <summary>
         /// Record term for deletion from Index.
         /// </summary>
         /// <param name="idInTree">With frequencies and container type.</param>
-        /// <param name="setsAreDisjoint">Intersection between PostingList and _deletedEntries. We may use it as indicate for flushing batch.</param>
+        /// <param name="setsAreDisjoint">Intersection between PostingList and _deletedEntries. We may use it as indicator for flushing batch.</param>
         [SkipLocalsInit]
-        private bool RecordDeletion(long idInTree, out long singleEntryId, out bool setsAreDisjoint)
+        private void RecordAndPrepareDocumentsIdsForDeletion(long postingListId, out bool setsAreDisjoint, out bool isSingleDocument)
         {
+            Debug.Assert(_entriesToDelete.Count == 0);
+            
             var countOfAlreadyDeletedEntries = _deletedEntries.Count;
-            var totalRead = 0L;
             setsAreDisjoint = true;
-            var containerId = EntryIdEncodings.GetContainerId(idInTree);
-            if ((idInTree & (long)TermIdMask.PostingList) != 0)
+            var containerId = EntryIdEncodings.GetContainerId(postingListId);
+
+            if ((postingListId & (long)TermIdMask.EnsureIsSingleMask) == (long)TermIdMask.Single)
+            {
+                var singleEntryId = containerId;
+                Debug.Assert(singleEntryId > 0);
+                var isNewDocument = _deletedEntries.Add(containerId);
+                if (isNewDocument)
+                    _entriesToDelete.Add(singleEntryId);
+                setsAreDisjoint &= isNewDocument;
+                _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
+                isSingleDocument = true;
+                return;
+            }
+
+            const int bufferSize = 1024;
+            var bufferPtr = stackalloc long[bufferSize];
+            var buffer = new Span<long>(bufferPtr, bufferSize);
+            isSingleDocument = false;
+            
+            if ((postingListId & (long)TermIdMask.PostingList) != 0)
             {
                 var setSpace = Container.GetMutable(_transaction.LowLevelTransaction, containerId);
                 ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
                 
                 using var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
                 var iterator = set.Iterate();
-                Span<long> buffer = stackalloc long[1024];
+
                 while (iterator.Fill(buffer, out var read))
-                {
-                    // since this is also encoded we've to delete frequency and container type as well
-                    EntryIdEncodings.DecodeAndDiscardFrequency(buffer, read);
-                    for (int i = 0; i < read; i++)
-                    {
-                        long entryId = buffer[i];
-                        Debug.Assert(entryId>0);
-                        setsAreDisjoint &= _deletedEntries.Add(entryId);
-                    }
-                    totalRead += read;
-                }
-
-                singleEntryId = -1;
-                _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
-                return false;
-                
+                    AddDocumentsToDeletion(buffer, read, ref setsAreDisjoint);
             }
-
-            if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
+            
+            if ((postingListId & (long)TermIdMask.SmallPostingList) != 0)
             {
                 var smallSet = Container.Get(_transaction.LowLevelTransaction, containerId);
                 // combine with existing value
                 _ = VariableSizeEncoding.Read<int>(smallSet.Address, out var pos);
-                
                 _pforDecoder.Init(smallSet.Address + pos, smallSet.Length - pos);
-                var output = stackalloc long[1024];
-                while (true)
-                {
-                    var read = _pforDecoder.Read(output, 1024);
-                    if (read == 0) 
-                        break;
-                    EntryIdEncodings.DecodeAndDiscardFrequency(new Span<long>(output, 1024), read);
-                    for (int i = 0; i < read; i++)
-                    {
-                        long entryId = output[i];
-                        Debug.Assert(entryId>0);
-                        setsAreDisjoint &= _deletedEntries.Add(entryId);
-                    }
-                    totalRead += read;
-                }
-
-                _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
-                singleEntryId = -1;
-                return false;
+                
+                while (_pforDecoder.Read(bufferPtr, bufferSize) is var read and > 0)
+                    AddDocumentsToDeletion(buffer, read, ref setsAreDisjoint);
             }
 
-            singleEntryId = containerId;
-            Debug.Assert(containerId > 0);
-            
-            setsAreDisjoint &= _deletedEntries.Add(containerId);
             _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
-            return true;
-        }
 
+            void AddDocumentsToDeletion(Span<long> entries, int read, ref bool setsAreDisjoint)
+            {
+                // since this is also encoded, we've to delete frequency and container type as well
+                EntryIdEncodings.DecodeAndDiscardFrequency(entries, read);
+                foreach (var entryId in entries[..read])
+                {
+                    Debug.Assert(entryId > 0);
+                    var isNewDocument = _deletedEntries.Add(entryId);
+                    setsAreDisjoint &= isNewDocument;
+                    if (isNewDocument)
+                        _entriesToDelete.Add(entryId);
+                }
+            }
+        }
+        
         /// <summary>
         /// Get TermId (id of container) from FieldTree 
         /// </summary>
@@ -869,6 +912,8 @@ namespace Corax.Indexing
             uniquePostingList.Sort(sortedFields);
             foreach (var indexedField in sortedFields)
             {
+                stats.SetAllocatedUnmanagedBytes(_entriesAllocator?._totalAllocated ?? 0);
+
                 //Dynamic terms will be indexed with explicit field terms.
                 if (indexedField.IsVirtual)
                     continue;
@@ -942,8 +987,9 @@ namespace Corax.Indexing
             {
                 _transaction.Commit();
             }
+            
         }
-
+        
         private void RecordFieldHasMultipleTerms(IndexedField indexedField)
         {
             var tree = _transaction.CreateTree(Constants.IndexWriter.MultipleTermsInField);
@@ -989,7 +1035,7 @@ namespace Corax.Indexing
                 return;
 
             var fieldRootPage = _fieldsTree.GetLookupRootPage(indexedField.Name);
-            Debug.Assert(fieldRootPage != -1);
+            Debug.Assert(fieldRootPage != Constants.IndexWriter.InvalidPageId);
             var termContainerId = fieldRootPage << 3 | 0b010;
             Debug.Assert(termContainerId >>> 3 == fieldRootPage, "field root too high?");
             var entriesToTerms = entriesToSpatialTree.FixedTreeFor(indexedField.Name, sizeof(double)+sizeof(double));
@@ -1235,7 +1281,7 @@ namespace Corax.Indexing
                                     // The issue is that we may have a term id that was remembered by a separator key
                                     // and we'll lose that after a page merge, so we'll have a reference to a deleted key
                                     // see: RavenDB-21272
-                                    keys[j].ContainerId = -1;
+                                    keys[j].ContainerId = Container.InvalidId;
                                 }
                                 break;
                             }
@@ -1277,7 +1323,7 @@ namespace Corax.Indexing
                     _writer.SetRange(_writer._removalsForTerm, entries.Removals);
                 }
 
-                bool found = postListId != -1;
+                bool found = postListId != Constants.IndexSearcher.InvalidId;
                 Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
 
                 int totalLengthOfTerm = 0;
@@ -1543,7 +1589,7 @@ namespace Corax.Indexing
                     var term = sortedTerms[i];
 
                     var key = buffers.Keys[i].Key ??= llt.AcquireCompactKey();
-                    buffers.Keys[i].ContainerId = -1;
+                    buffers.Keys[i].ContainerId = Container.InvalidId;
                     key.Set(term.AsSpan());
                     key.ChangeDictionary(fieldTree.DictionaryId);
                     key.EncodedWithCurrent(out _);
@@ -1602,7 +1648,7 @@ namespace Corax.Indexing
 
                 foreach (var cur in postListIds)
                 {
-                    if (cur == -1)
+                    if (cur == Constants.IndexSearcher.InvalidId)
                         continue;
                     if ((cur & (long)TermIdMask.EnsureIsSingleMask) == 0) 
                         continue;
@@ -1734,7 +1780,7 @@ namespace Corax.Indexing
             if (_entriesToTermsBuffer.Count == 0)
             {
                 Container.Delete(llt, _postingListContainerId, containerId);
-                termIdInTree = -1;
+                termIdInTree = Constants.IndexSearcher.InvalidId;
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
@@ -1752,7 +1798,7 @@ namespace Corax.Indexing
                 encoded.CopyTo(mutableSpace);
 
                 // can update in place
-                termIdInTree = -1;
+                termIdInTree = Constants.IndexSearcher.InvalidId;
                 return AddEntriesToTermResult.NothingToDo;
             }
 
@@ -1793,7 +1839,7 @@ namespace Corax.Indexing
                     var newId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, (long)TermIdMask.Single);
                     if (newId == idInTree)
                     {
-                        termId = -1;
+                        termId = Constants.IndexSearcher.InvalidId;
                         return AddEntriesToTermResult.NothingToDo;
                     }
                 }
@@ -1808,7 +1854,7 @@ namespace Corax.Indexing
                 
                 Debug.Assert(EntryIdEncodings.QuantizeAndDequantize(entries.Removals[0].Frequency) == existingFrequency, "The item stored and the item we're trying to delete are different, which is impossible.");
                 
-                termId = -1;
+                termId = Constants.IndexSearcher.InvalidId;
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
@@ -1851,7 +1897,7 @@ namespace Corax.Indexing
             var numberOfEntries = PostingList.Update(_transaction.LowLevelTransaction, ref postingListState, additions, entries.Additions.Count, removals,
                 entries.Removals.Count, _pForEncoder, ref _tempListBuffer, ref _pforDecoder );
 
-            termId = -1;
+            termId = Constants.IndexSearcher.InvalidId;
 
             if (numberOfEntries == 0)
             {

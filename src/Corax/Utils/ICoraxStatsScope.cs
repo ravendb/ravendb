@@ -5,6 +5,8 @@ namespace Corax.Utils;
 public interface ICoraxStatsScope : IDisposable
 {
     ICoraxStatsScope For(string name, bool start = true);
+
+    void SetAllocatedUnmanagedBytes(long sizeInBytes);
 }
 
 public static class CommitOperation
@@ -24,7 +26,11 @@ internal struct EmptyStatsScope : ICoraxStatsScope
     {
         return this;
     }
-    
+
+    public void SetAllocatedUnmanagedBytes(long sizeInBytes)
+    {
+    }
+
     public void Dispose()
     {
     }

@@ -560,28 +560,27 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_nullTermsMarkersLoaded == false)
         {
             _nullTermsMarkersLoaded = true;
-            _nullTermsMarkers = new HashSet<long>();
             
             InitNullPostingList();
             
             if (_nullPostingListsTree != null)
-                LoadSpecialTermMarkers(_nullPostingListsTree, _nullTermsMarkers);
+                LoadSpecialTermMarkers(_nullPostingListsTree, out _nullTermsMarkers);
         }
 
         if (_nonExistingTermsMarkersLoaded == false)
         {
             _nonExistingTermsMarkersLoaded = true;
-            _nonExistingTermsMarkers = new HashSet<long>();
             
             InitNonExistingPostingList();
             
             if (_nonExistingPostingListsTree != null)
-                LoadSpecialTermMarkers(_nonExistingPostingListsTree, _nonExistingTermsMarkers);
+                LoadSpecialTermMarkers(_nonExistingPostingListsTree, out _nonExistingTermsMarkers);
         }
     }
 
-    public static void LoadSpecialTermMarkers(Tree postingList, HashSet<long> termsMarkers)
+    public static void LoadSpecialTermMarkers(Tree postingList, out HashSet<long> termsMarkers)
     {
+        termsMarkers = new HashSet<long>();
         using (var it = postingList.Iterate(prefetch: false))
         {
             if (it.Seek(Slices.BeforeAllKeys))
