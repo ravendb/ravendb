@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Text;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -943,6 +944,9 @@ namespace Sparrow.Json
             _pos += buffer.Length;
         }
 
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
         public void WriteDouble(double val)
         {
             if (double.IsNaN(val))
@@ -963,11 +967,13 @@ namespace Sparrow.Json
                 return;
             }
 
-            using (var lazyStr = _context.GetLazyString(val.ToString(CultureInfo.InvariantCulture)))
+            Span<byte> buffer = stackalloc byte[32];
+            if (Utf8Formatter.TryFormat(val, buffer, out int bytesWritten) is false)
             {
-                EnsureBuffer(lazyStr.Size);
-                WriteRawString(lazyStr.Buffer, lazyStr.Size);
+                throw new InvalidOperationException("Somehow we failed to write double (max 25 chars) to a 32 bytes buffer?! " + val);
             }
+            EnsureBuffer(bytesWritten);
+            WriteRawString(buffer.Slice(0, bytesWritten));
         }
 
         protected void DisposeInternal()
