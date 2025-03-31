@@ -247,6 +247,8 @@ namespace Raven.Server
 
                         _refreshClusterCertificate = new Timer(RefreshClusterCertificateTimerCallback);
                     }
+                    if (_forTestingPurposes != null && _forTestingPurposes.SocketsToFree != null)
+                        _forTestingPurposes.UnbindSocketForPort(ListenEndpoints.Port);
                 }
 
                 var webHostBuilder = new WebHostBuilder()
@@ -1927,8 +1929,9 @@ namespace Raven.Server
             {
                 foreach (var serverUrl in Configuration.Core.ServerUrls)
                 {
-                    var host = new Uri(serverUrl).DnsSafeHost;
-
+                    var uri = new Uri(serverUrl);
+                    port = uri.Port;
+                    var host = uri.DnsSafeHost;
                     StartListeners(host, customPort ?? port, status, listenToNewTcpConnection);
                 }
             }
@@ -1970,7 +1973,8 @@ namespace Raven.Server
                         Logger.Info($"RavenDB TCP is configured to use {string.Join(", ", Configuration.Core.TcpServerUrls)} and bind to {ipAddress} at {port}");
 
                     var listener = new TcpListener(ipAddress, status.Port != 0 ? status.Port : port);
-
+                    if (_forTestingPurposes != null && _forTestingPurposes.SocketsToFree != null)
+                        _forTestingPurposes.UnbindSocketForPort(port);
                     try
                     {
                         listener.Start();
@@ -2946,6 +2950,27 @@ namespace Raven.Server
             internal class DebugPackageTestingStuff
             {
                 internal string[] RoutesToSkip = new string[] { };
+            }
+            internal List<Socket> SocketsToFree = new List<Socket> { };
+            public void UnbindSocketForPort(int listenEndpointsPort)
+            {
+                var socketList = SocketsToFree
+                    .Where(x =>
+                    {
+                        try
+                        {
+                            return x.LocalEndPoint is IPEndPoint ep && ep.Port == listenEndpointsPort;
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            return false;
+                        }
+                    })
+                    .ToList();
+                foreach (var socket in socketList)
+               {
+                    socket.Close();
+               }
             }
         }
 

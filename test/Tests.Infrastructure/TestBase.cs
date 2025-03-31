@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Text;
@@ -359,7 +360,7 @@ namespace FastTests
             }
         }
 
-        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool? runInMemory = null, string customConfigPath = null, [CallerMemberName] string caller = null)
+        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool? runInMemory = null, string customConfigPath = null, [CallerMemberName] string caller = null, List<Socket> sockets = null)
         {
             if (_localServer != _globalServer && _globalServer != null)
             {
@@ -374,6 +375,13 @@ namespace FastTests
                 CustomConfigPath = customConfigPath,
                 RegisterForDisposal = false
             };
+
+            if (sockets != null && sockets.Count > 0)
+            {
+                co.ReservedSocket = sockets[0];
+                co.ReservedTcpSocket = sockets[1];
+            }
+
             _localServer = GetNewServer(co, caller);
         }
 
@@ -383,6 +391,28 @@ namespace FastTests
         public class ServerCreationOptions
         {
             private IDictionary<string, string> _customSettings;
+            private Socket _reservedSocket;
+            private Socket _reservedTcpSocket;
+
+            public Socket ReservedSocket
+            {
+                get => _reservedSocket;
+                set
+                {
+                    AssertNotFrozen();
+                    _reservedSocket = value;
+                }
+            }
+
+            public Socket ReservedTcpSocket
+            {
+                get => _reservedTcpSocket;
+                set
+                {
+                    AssertNotFrozen();
+                    _reservedTcpSocket = value;
+                }
+            }
 
             public IDictionary<string, string> CustomSettings
             {
@@ -565,6 +595,11 @@ namespace FastTests
                     if (options.BeforeDatabasesStartup != null)
                         server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;
 
+                    if (options.ReservedSocket != null && options.ReservedTcpSocket != null)
+                    {
+                        server.ForTestingPurposesOnly().SocketsToFree.Add(options.ReservedSocket);
+                        server.ForTestingPurposesOnly().SocketsToFree.Add(options.ReservedTcpSocket);
+                    }
                     server.Initialize();
                     server.ServerStore.ValidateFixedPort = false;
 

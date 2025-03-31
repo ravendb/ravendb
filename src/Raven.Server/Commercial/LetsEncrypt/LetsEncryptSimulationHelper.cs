@@ -96,7 +96,7 @@ public class LetsEncryptSimulationHelper
                     .UseShutdownTimeout(TimeSpan.FromMilliseconds(150));
 
                 webHost = webHostBuilder.Build();
-
+                serverStore.Server.ForTestingPurposesOnly().UnbindSocketForPort(port);
                 await webHost.StartAsync(token);
             }
             catch (Exception e)

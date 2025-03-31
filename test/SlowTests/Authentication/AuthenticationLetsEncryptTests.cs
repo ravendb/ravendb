@@ -23,6 +23,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Sparrow.Server;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -49,8 +50,9 @@ namespace SlowTests.Authentication
             RemoveAcmeCache(acmeUrl);
 
             SetupLocalServer();
-            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
-
+            TestingSetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+            Server.ForTestingPurposesOnly().SocketsToFree.Add(setupInfo.Sockets[0]);
+            Server.ForTestingPurposesOnly().SocketsToFree.Add(setupInfo.Sockets[1]);
             await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
 
             Server.Dispose();
@@ -62,13 +64,15 @@ namespace SlowTests.Authentication
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
             
             SetupLocalServer();
-            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+            TestingSetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+            Server.ForTestingPurposesOnly().SocketsToFree.Add(setupInfo.Sockets[0]);
+            Server.ForTestingPurposesOnly().SocketsToFree.Add(setupInfo.Sockets[1]);
 
             var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
             var firstServerCertThumbprint = serverCert.Thumbprint;
             Server.Dispose();
 
-            UseNewLocalServer();
+            UseNewLocalServer(null, null, null, null, setupInfo.Sockets);
             await RenewCertificate(serverCert, firstServerCertThumbprint);
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -103,11 +107,12 @@ namespace SlowTests.Authentication
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
             
             SetupLocalServer();
-            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
-
+            TestingSetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+            Server.ForTestingPurposesOnly().SocketsToFree.Add(setupInfo.Sockets[0]);
+            Server.ForTestingPurposesOnly().SocketsToFree.Add(setupInfo.Sockets[1]);
             var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
             Server.Dispose();
-            UseNewLocalServer();
+            UseNewLocalServer(null, null, null, null, setupInfo.Sockets);
 
             var mre = new AsyncManualResetEvent();
             Server.ServerCertificateChanged += (sender, args) => mre.Set();
@@ -173,13 +178,14 @@ namespace SlowTests.Authentication
             RemoveAcmeCache(acmeUrl);
 
             SetupLocalServer();
-            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
-
+            TestingSetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+            Server.ForTestingPurposesOnly().SocketsToFree.Add(setupInfo.Sockets[0]);
+            Server.ForTestingPurposesOnly().SocketsToFree.Add(setupInfo.Sockets[1]);
             var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
             var firstServerCertThumbprint = serverCert.Thumbprint;
             Server.Dispose();
 
-            UseNewLocalServer();
+            UseNewLocalServer(null, null, null, null, setupInfo.Sockets);
             Server.ForTestingPurposesOnly().ThrowExceptionAfterLetsEncryptRefresh = true;
             await RenewCertificate(serverCert, firstServerCertThumbprint);
 
@@ -209,14 +215,14 @@ namespace SlowTests.Authentication
             UseNewLocalServer(customConfigPath: settingPath);
         }
 
-        private async Task<X509Certificate2> GetCertificateFromLetsEncrypt(SetupInfo setupInfo, string acmeUrl)
+        private async Task<X509Certificate2> GetCertificateFromLetsEncrypt(TestingSetupInfo setupInfo, string acmeUrl)
         {
             X509Certificate2 serverCert;
             using (var store = GetDocumentStoreForServerOnly())
             using (var commands = store.Commands())
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var command = new SetupLetsEncryptCommand(store.Conventions, context, setupInfo)
+                var command = new SetupLetsEncryptCommand(store.Conventions, context, setupInfo.setupInfo)
                 {
                     Timeout = TimeSpan.FromMinutes(10)
                 };
@@ -245,6 +251,7 @@ namespace SlowTests.Authentication
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail), out string letsEncryptEmail);
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
+                settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.TcpServerUrls), out string tcpServerUrl);
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ExternalIp), out string externalIp);
@@ -258,6 +265,7 @@ namespace SlowTests.Authentication
                     [RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = letsEncryptEmail,
                     [RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = certPassword,
                     [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = publicServerUrl,
+                    [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl,
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl,
                     [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                     [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
@@ -319,7 +327,12 @@ namespace SlowTests.Authentication
             }
         }
 
-        private async Task<SetupInfo> SetupClusterInfo(string acmeUrl)
+        public class TestingSetupInfo
+        {
+            public SetupInfo setupInfo;
+            public List<Socket> Sockets;
+        }
+        private async Task<TestingSetupInfo> SetupClusterInfo(string acmeUrl)
         {
             Server.Configuration.Core.AcmeUrl = acmeUrl;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
@@ -343,6 +356,8 @@ namespace SlowTests.Authentication
                 rootDomain = command.Result.RootDomains[0];
                 email = command.Result.Email;
             }
+            var (port, socketPort) = ReservePort();
+            var (tcpPort, socketTcpPort) = ReservePort();
 
             var setupInfo = new SetupInfo
             {
@@ -357,10 +372,11 @@ namespace SlowTests.Authentication
                 Email = email,
                 NodeSetupInfos = new Dictionary<string, NodeInfo>()
                 {
-                    ["A"] = new NodeInfo { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } }
+                    ["A"] = new NodeInfo { Port = port, TcpPort = tcpPort, Addresses = new List<string> { "127.0.0.1" } }
                 }
             };
-            return setupInfo;
+            var testingSetupInfo = new TestingSetupInfo { setupInfo = setupInfo, Sockets = new List<Socket> { socketPort, socketTcpPort } };
+            return testingSetupInfo;
         }
 
         public DocumentStore GetDocumentStoreForServerOnly(X509Certificate2 certificate = null, [CallerMemberName] string caller = null)

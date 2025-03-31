@@ -29,6 +29,8 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
     public async Task Should_Create_Unsecured_Cluster_And_Setup_Zip_File_From_Rvn_One_Node()
     {
         DoNotReuseServer();
+        var (port, socketPort) = ReservePort();
+        var (tcpPort, socketTcpPort) = ReservePort();
 
         var unsecuredSetupInfo = new UnsecuredSetupInfo
         {
@@ -36,7 +38,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             ZipOnly = false,
             NodeSetupInfos = new Dictionary<string,NodeInfo>()
             {
-                ["A"] = new() { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } },
+                ["A"] = new() { Port = port, TcpPort = tcpPort, Addresses = new List<string> { "127.0.0.1" } },
             }
         };
       
@@ -66,6 +68,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             false);
 
         settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.TcpServerUrls), out string tcpServerUrl);
         settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
 
         using var server = GetNewServer(new ServerCreationOptions
@@ -74,8 +77,11 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             {
                 [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = serverUrl,
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl,
+                [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
-            }
+            },
+            ReservedSocket = socketPort,
+            ReservedTcpSocket = socketTcpPort
         });
 
 
@@ -103,6 +109,13 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
     public async Task Should_Create_Unsecured_Cluster_And_Setup_Zip_File_From_Rvn_Three_Nodes()
     {
         DoNotReuseServer();
+        var (portA, socketPortA) = ReservePort();
+        var (portB, socketPortB) = ReservePort();
+        var (portC, socketPortC) = ReservePort();
+
+        var (tcpPortA, socketTcpPortA) = ReservePort();
+        var (tcpPortB, socketTcpPortB) = ReservePort();
+        var (tcpPortC, socketTcpPortC) = ReservePort();
 
         var unsecuredSetupInfo = new UnsecuredSetupInfo
         {
@@ -110,9 +123,9 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             ZipOnly = false,
             NodeSetupInfos = new Dictionary<string,NodeInfo>()
             {
-                ["A"] = new() { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } },
-                ["B"] = new() { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } },
-                ["C"] = new() { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } }
+                ["A"] = new() { Port = portA, TcpPort = tcpPortA, Addresses = new List<string> { "127.0.0.1" } },
+                ["B"] = new() { Port = portB, TcpPort = tcpPortB, Addresses = new List<string> { "127.0.0.1" } },
+                ["C"] = new() { Port = portC, TcpPort = tcpPortC, Addresses = new List<string> { "127.0.0.1" } }
             }
         };
         Assert.True(unsecuredSetupInfo.ZipOnly == false, nameof(unsecuredSetupInfo.ZipOnly) + " != false");
@@ -140,6 +153,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             false);
 
         settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.TcpServerUrls), out string tcpServerUrl);
         settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
 
 
@@ -153,8 +167,11 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             {
                 [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = serverUrl,
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl,
+                [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
-            }
+            },
+            ReservedSocket = socketPortA,
+            ReservedTcpSocket = socketTcpPortA
         });
 
         using var __ = GetNewServer(new ServerCreationOptions
@@ -162,8 +179,11 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             CustomSettings = new ConcurrentDictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url2,
+                [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = "tcp://" + unsecuredSetupInfo.NodeSetupInfos["B"].Addresses[0] + ":" + unsecuredSetupInfo.NodeSetupInfos["B"].TcpPort,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
-            }
+            },
+            ReservedSocket = socketPortB,
+            ReservedTcpSocket = socketTcpPortB
         });
 
         using var ___ = GetNewServer(new ServerCreationOptions
@@ -171,8 +191,11 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
             CustomSettings = new ConcurrentDictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url3,
+                [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = "tcp://" + unsecuredSetupInfo.NodeSetupInfos["C"].Addresses[0] + ":" + unsecuredSetupInfo.NodeSetupInfos["C"].TcpPort,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
-            }
+            },
+            ReservedSocket = socketPortC,
+            ReservedTcpSocket = socketTcpPortC
         });
 
         var dbName = GetDatabaseName();
