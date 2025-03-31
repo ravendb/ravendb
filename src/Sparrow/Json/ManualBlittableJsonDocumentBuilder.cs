@@ -587,7 +587,6 @@ namespace Sparrow.Json
         public unsafe void WriteEmbeddedBlittableDocument(byte* ptr, int size)
         {
             var currentState = _continuationState.Pop();
-            // var valuePos = _writer.WriteValue(ptr, size, out _, UsageMode.None, null);
             var valuePos = _writer.WriteValue(ptr, size);
             _writeToken = new WriteToken
             {

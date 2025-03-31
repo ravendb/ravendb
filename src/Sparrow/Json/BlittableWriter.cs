@@ -504,6 +504,9 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe int WriteValueFromStack(ReadOnlySpan<byte> str, out BlittableJsonToken token)
         {
+            // This should never trigger, if it does it mean the caller was modified incorrectly.
+            Debug.Assert(str.Length < 512);
+
             int* escapePositions = stackalloc int[str.Length]; // Max escapes: one per char
             byte* buffer = stackalloc byte[str.Length * 6]; // Max size: 6 bytes per char
 
