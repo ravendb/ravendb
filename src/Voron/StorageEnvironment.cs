@@ -664,6 +664,8 @@ namespace Voron
 
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
+            LowLevelTransaction tx = null;
+
             try
             {
                 IncrementUsageOnNewTransaction();
@@ -710,8 +712,6 @@ namespace Voron
                         _idleFlushTimer = Task.Run(() => IdleFlushTimer(SelfReference.WeekReference, Token), Token); 
                     }
                 }
-
-                LowLevelTransaction tx;
 
                 _txCreation.EnterReadLock();
                 try
@@ -766,6 +766,9 @@ namespace Voron
                 finally
                 {
                     DecrementUsageOnTransactionCreationFailure();
+
+                    if (tx != null)
+                        ActiveTransactions.TryRemove(tx);
                 }
                 throw;
             }
