@@ -33,6 +33,7 @@ namespace Voron.Data.Containers
         public const int AllPagesOffset = 1;
         public const int NumberOfEntriesOffset = 2;
         public const int NextFreePageOffset = 3;
+        public const ushort Ensure4BytesAlignmentMask = 0xFF_FC;
 
         public int CeilingOfOffsets => NumberOfOffsets * sizeof(Container.ItemMetadata) + PageHeader.SizeOf;
     }

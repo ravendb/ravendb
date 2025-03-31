@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Sparrow;
 using Sparrow.Server;
@@ -29,9 +30,7 @@ namespace Voron.Data.Containers
     
     public readonly unsafe ref struct Container
     {
-        private static readonly Slice AllPagesTreeName;
-        private static readonly Slice FreePagesTreeName;
-
+        public const int InvalidId = -1;
         private const int MinimumAdditionalFreeSpaceToConsider = 64;
         private const int NumberOfReservedEntries = 4; // all pages, free pages, number of entries, next free page
 
@@ -185,6 +184,10 @@ namespace Voron.Data.Containers
             /// </summary>
             private ushort _compactBackingStore;
 
+            public const ushort SizeMask = 0x1F;
+            public const ushort OffsetMask = 0xFFFC;
+            public const int OffsetShift = 3;
+            
             public bool IsFree
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -196,8 +199,8 @@ namespace Voron.Data.Containers
             {
                 // The offset it stored in bits 5..16, but it is actually 4 bytes
                 // aligned, so we shift by 9 to get the raw offset
-                var offset = _compactBackingStore >> 3 & 0xFFFC;
-                int size = _compactBackingStore & 0x1F;
+                var offset = _compactBackingStore >> OffsetShift & OffsetMask;
+                int size = _compactBackingStore & SizeMask;
                 switch (size)
                 {
                     case 0: // means it is freed 
@@ -226,7 +229,7 @@ namespace Voron.Data.Containers
             {
                 Debug.Assert((entryOffset & 0b11) == 0, "entryOffset must always be 4 bytes aligned");
                 Debug.Assert(size < ushort.MaxValue);
-                int modifiedOffset = (entryOffset << 3); // lowest two bits already cleared
+                int modifiedOffset = (entryOffset << OffsetShift); // lowest two bits already cleared
                 switch (size)
                 {
                     case < 30:
@@ -262,11 +265,6 @@ namespace Voron.Data.Containers
         static Container()
         {
             Debug.Assert(sizeof(ItemMetadata) == sizeof(ushort));
-            using (StorageEnvironment.GetStaticContext(out var ctx))
-            {
-                Slice.From(ctx, "AllPagesSet", ByteStringType.Immutable, out AllPagesTreeName);
-                Slice.From(ctx, "FreePagesSet", ByteStringType.Immutable, out FreePagesTreeName);
-            }
         }        
 
         private readonly Page _page;
@@ -274,15 +272,9 @@ namespace Voron.Data.Containers
         public ref ContainerPageHeader Header => ref MemoryMarshal.AsRef<ContainerPageHeader>(_page.AsSpan());
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ref ItemMetadata MetadataFor(int pos)
+        private ref ItemMetadata MetadataFor(int pos = 0)
         {
             return ref Unsafe.AsRef<ItemMetadata>(_page.DataPointer + sizeof(ItemMetadata) * pos);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ref ItemMetadata MetadataFor()
-        {
-            return ref Unsafe.AsRef<ItemMetadata>(_page.DataPointer);
         }
 
         public string Dump()
@@ -316,27 +308,195 @@ namespace Voron.Data.Containers
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Checks if the current container has any item.
+        /// For reference check the scalar version: Voron.Data.Containers.Container.ItemMetadata.IsFree
+        /// </summary>
+        /// <returns>True when any item contains a value, otherwise false.</returns>
         private bool HasEntries()
         {
+            Debug.Assert(sizeof(ItemMetadata) == sizeof(ushort));
             ushort numberOfOffsets = Header.NumberOfOffsets;
-            for (var index = 0; index < numberOfOffsets; index++)
+            var index = 0;
+
+            if (AdvInstructionSet.IsAcceleratedVector512)
             {
-                if (MetadataFor(index).IsFree == false)
-                    return true;
+                var N = Vector512<ushort>.Count;
+                for (; index + N <= numberOfOffsets; index += N)
+                {
+                    var metadataItems = Vector512.Load((ushort*)_page.DataPointer + index);
+                    if (metadataItems.Equals(Vector512<ushort>.Zero) == false)
+                        return true;
+                }
+            }
+            
+            if (AdvInstructionSet.IsAcceleratedVector256)
+            {
+                var N = Vector256<ushort>.Count;
+                for (; index + N <= numberOfOffsets; index += N)
+                {
+                    var metadataItems = Vector256.Load((ushort*)_page.DataPointer + index);
+                    if (metadataItems.Equals(Vector256<ushort>.Zero) == false)
+                        return true;
+                }
             }
 
+            if (AdvInstructionSet.IsAcceleratedVector128)
+            {
+                var N = Vector128<ushort>.Count;
+                for (; index + N <= numberOfOffsets; index += N)
+                {
+                    var metadataItems = Vector128.Load((ushort*)_page.DataPointer + index);
+                    if (metadataItems.Equals(Vector128<ushort>.Zero) == false)
+                        return true;
+                }
+            }
+
+            ref var currentMetadata = ref MetadataFor();
+            for (; index < numberOfOffsets; index++)
+                if (Unsafe.Add(ref currentMetadata, index).IsFree == false)
+                    return true;
+            
             return false;
         }
+        
+        /// <summary>
+        /// Calculates space used in all container items.
+        /// Equals operation forEachMetadata.Sum(i => container.MetadataFor(i).Get(ptr)).
+        /// </summary>
+        /// <param name="pagePtr">Storage of size</param>
+        /// <param name="usedItems">Number of items that are currently in use.</param>
+        /// <returns></returns>
+        private int SpaceUsedInItems(byte* pagePtr, out int usedItems)
+        {
+            int numberOfOffsets = Header.NumberOfOffsets;
+            var size = 0;
+            usedItems = numberOfOffsets;
+            var index = 0;
 
+            if (AdvInstructionSet.IsAcceleratedVector512)
+            {
+                var N = Vector512<ushort>.Count;
+                for (; index + N <= numberOfOffsets; index += N)
+                {
+                    var metadataItems = Vector512.Load((ushort*)_page.DataPointer + index);
+                    var offsets = Vector512.BitwiseAnd(
+                        left: Vector512.ShiftRightLogical(metadataItems, ItemMetadata.OffsetShift), 
+                        right: Vector512.Create(ItemMetadata.OffsetMask));
+                    var sizes = Vector512.BitwiseAnd(
+                        left: metadataItems, 
+                        right: Vector512.Create(ItemMetadata.SizeMask));
+                    for (var i = 0; i < N; i++)
+                    {
+                        var sizeOfElement = sizes.GetElement(i);
+                        switch (sizeOfElement)
+                        {
+                            case 0:
+                                usedItems--;
+                                continue;
+                            case 30:
+                                size += *(pagePtr + offsets.GetElement(i));
+                                break;
+                            case 31:
+                                size += *(ushort*)(pagePtr + offsets.GetElement(i));
+                                continue;
+                            default:
+                                Debug.Assert(sizeOfElement is < 30 and > 0);
+                                break;
+                        }
+                    }
+                }
+            }
+            
+            if (AdvInstructionSet.IsAcceleratedVector256)
+            {
+                var N = Vector256<ushort>.Count;
+                for (; index + N <= numberOfOffsets; index += N)
+                {
+                    var metadataItems = Vector256.Load((ushort*)_page.DataPointer + index);
+                    var offsets = Vector256.BitwiseAnd(
+                        left: Vector256.ShiftRightLogical(metadataItems, ItemMetadata.OffsetShift), 
+                        right: Vector256.Create(ItemMetadata.OffsetMask));
+                    var sizes = Vector256.BitwiseAnd(
+                        left: metadataItems, 
+                        right: Vector256.Create(ItemMetadata.SizeMask));
+
+                    for (var i = 0; i < N; i++)
+                    {
+                        var sizeOfElement = sizes.GetElement(i);
+                        switch (sizeOfElement)
+                        {
+                            case 0:
+                                usedItems--;
+                                continue;
+                            case 30:
+                                size += *(pagePtr + offsets.GetElement(i));
+                                break;
+                            case 31:
+                                size += *(ushort*)(pagePtr + offsets.GetElement(i));
+                                continue;
+                            default:
+                                Debug.Assert(sizeOfElement is < 30 and > 0);
+                                break;
+                        }
+                    }
+                }
+            }
+            
+            if (AdvInstructionSet.IsAcceleratedVector128)
+            {
+                var N = Vector256<ushort>.Count;
+                for (; index + N <= numberOfOffsets; index += N)
+                {
+                    var metadataItems = Vector128.Load((ushort*)_page.DataPointer + index);
+                    var offsets = Vector128.BitwiseAnd(
+                        left: Vector128.ShiftRightLogical(metadataItems, ItemMetadata.OffsetShift), 
+                        right: Vector128.Create(ItemMetadata.OffsetMask));
+                    var sizes = Vector128.BitwiseAnd(
+                        left: metadataItems, 
+                        right: Vector128.Create(ItemMetadata.SizeMask));
+
+                    for (var i = 0; i < N; i++)
+                    {
+                        var sizeOfElement = sizes.GetElement(i);
+                        switch (sizeOfElement)
+                        {
+                            case 0:
+                                usedItems--;
+                                continue;
+                            case 30:
+                                size += *(pagePtr + offsets.GetElement(i));
+                                break;
+                            case 31:
+                                size += *(ushort*)(pagePtr + offsets.GetElement(i));
+                                continue;
+                            default:
+                                Debug.Assert(sizeOfElement is < 30 and > 0);
+                                break;
+                        }
+                    }
+                }
+            }
+            
+            ref var metadata = ref MetadataFor();
+            for (; index < numberOfOffsets; index++)
+            {
+                var metadataSize = Unsafe.Add(ref metadata, index).GetSize(pagePtr);
+                usedItems -= (metadataSize == 0).ToInt32();
+                size += metadataSize;
+            }
+            return size;
+        }
+        
+        /// <summary>
+        /// Calculates total space used by the current container.
+        /// </summary>
+        /// <returns>Used space in bytes.</returns>
         public int SpaceUsed()
         {
             int numberOfOffsets = Header.NumberOfOffsets;
             var size = numberOfOffsets * sizeof(ItemMetadata) + PageHeader.SizeOf;
-            for (int i = 0; i < numberOfOffsets; i++)
-            {
-                size += MetadataFor(i).GetSize(_page.Pointer);
-            }
-            return size;
+            return size + SpaceUsedInItems(_page.Pointer, out _);
         }
 
         public Container(Page page)
@@ -408,7 +568,7 @@ namespace Voron.Data.Containers
                 byte* p = _page.Pointer;
                 int entrySize = tmpOffset.Get(ref p);
                 tmpHeader.FloorOfData -= (ushort)ComputeRequiredSize(entrySize);
-                tmpHeader.FloorOfData &= 0xFFFC;// ensure that this is aligned of 4 bytes boundary
+                tmpHeader.FloorOfData &= ContainerPageHeader.Ensure4BytesAlignmentMask; // ensure that this is aligned of 4 bytes boundary
                 int entryOffset = tmpHeader.FloorOfData;
                 tmpOffset.SetSize(entrySize, tmpPtr, ref entryOffset);
                 Memory.Copy(tmpPtr + entryOffset, p, entrySize);
@@ -521,7 +681,7 @@ namespace Voron.Data.Containers
             Debug.Assert(HasEnoughSpaceFor(reqSize));
 
             Header.FloorOfData -= (ushort)reqSize;
-            Header.FloorOfData &= 0xFF_FC; // ensure 4 bytes alignment
+            Header.FloorOfData &= ContainerPageHeader.Ensure4BytesAlignmentMask;
             if (pos == Header.NumberOfOffsets)
             {
                 Header.NumberOfOffsets++;
@@ -734,9 +894,8 @@ namespace Voron.Data.Containers
                 do
                 {
                     int count = GetEntriesInto(containerId, ref offset, page, items, out itemsLeftOnCurrentPage);
+                    list.AddRange(items[..count]);
 
-                    for(int i = 0; i < count; ++i)
-                        list.Add(items[i]);
                     //need read to the end of page
                 } while (itemsLeftOnCurrentPage > 0);
             }
@@ -766,9 +925,10 @@ namespace Voron.Data.Containers
                 ushort numberOfOffsets = container.Header.NumberOfOffsets;
                 var baseOffset = page.PageNumber * Constants.Storage.PageSize;
                 int results = 0;
+                ref var metadata = ref container.MetadataFor();
                 for (; results < ids.Length && i < numberOfOffsets; i++, offset++)
                 {
-                    if (container.MetadataFor(i).IsFree)
+                    if (Unsafe.Add(ref metadata, i).IsFree)
                         continue;
 
                     ids[results++] = baseOffset + IndexToOffset(i);
@@ -840,7 +1000,7 @@ namespace Voron.Data.Containers
         private bool HasEnoughSpaceFor(int reqSize)
         {
             // we have to take into account 4 bytes alignment
-            int nextCeiling = (Header.CeilingOfOffsets + reqSize + 3) & 0xFFFC;
+            int nextCeiling = (Header.CeilingOfOffsets + reqSize + 3) & ContainerPageHeader.Ensure4BytesAlignmentMask;
             return nextCeiling < Header.FloorOfData &&
                    // we have a max of 1K items per page, so we ensure we have at least one offset
                    Header.NumberOfOffsets < 1023;
@@ -853,7 +1013,22 @@ namespace Voron.Data.Containers
             ushort* metadataPtr = (ushort*)_page.DataPointer;
             var pos = 0;
             ushort numberOfOffsets = Header.NumberOfOffsets;
-            if (Vector256.IsHardwareAccelerated)
+
+            if (AdvInstructionSet.IsAcceleratedVector512)
+            {
+                var N = Vector512<ushort>.Count;
+                for (; pos + N <= numberOfOffsets; pos += N)
+                {
+                    var vec = Vector512.Load(metadataPtr + pos);
+                    var cmp = Vector512.Equals(vec, Vector512<ushort>.Zero);
+                    ulong bits = cmp.ExtractMostSignificantBits();
+                    var first = BitOperations.TrailingZeroCount(bits);
+                    if (first < 64)
+                        return (reqSize, pos + first);
+                }
+            }
+            
+            if (AdvInstructionSet.IsAcceleratedVector256)
             {
                 for (; pos + Vector256<ushort>.Count <= numberOfOffsets; pos += Vector256<ushort>.Count)
                 {
@@ -865,7 +1040,7 @@ namespace Voron.Data.Containers
                         return (reqSize, pos + first);
                 }
             }
-            if (Vector128.IsHardwareAccelerated)
+            if (AdvInstructionSet.IsAcceleratedVector128)
             {
                 for (; pos + Vector128<ushort>.Count <= numberOfOffsets; pos += Vector128<ushort>.Count)
                 {
@@ -919,25 +1094,16 @@ namespace Voron.Data.Containers
 
             var index = OffsetToIndex(offset);
             var container = new Container(page);
-            var numberOfOffsets = container.Header.NumberOfOffsets;
-            Debug.Assert(numberOfOffsets > 0);
+            Debug.Assert(container.Header.NumberOfOffsets > 0);
             ref var metadata = ref container.MetadataFor(index);
             
             if (metadata.IsFree)
                 throw new VoronErrorException("Attempt to delete a container item that was ALREADY DELETED! Item " + id + " on page " + page.PageNumber);
 
-            int totalSize = 0, count = 0;
+            int totalSize = 0, usedSegments = 0;
             byte* pagePointer = page.Pointer;
-            for (var i = 0; i < numberOfOffsets; i++)
-            {
-                int size = container.MetadataFor(i).GetSize(pagePointer);
-                if(size == 0)
-                    continue;
-                count++;
-                totalSize += size;
-            }
-
-            var averageSize = count == 0 ? 0 : totalSize / count;
+            totalSize += container.SpaceUsedInItems(pagePointer, out usedSegments);
+            var averageSize = usedSegments == 0 ? 0 : totalSize / usedSegments;
             metadata.Clear(pagePointer);
 
             // we may change the value of the entriesOffsets, but we can still use the old value
@@ -1078,8 +1244,7 @@ namespace Voron.Data.Containers
             var size = itemMetadata.Get(ref pagePointer);
             return new Span<byte>(pagePointer, size);
         }
-
-
+        
         public static Item Get(LowLevelTransaction llt, long id)
         {
             Get(llt, id, out Item result);
