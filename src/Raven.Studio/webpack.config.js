@@ -289,17 +289,18 @@ module.exports = (env, args) => {
                         loader: 'swc-loader',
                     },
                 },
-                {
-                    test: /\.tsx?$/,
-                    exclude: /node_modules/,
-                    include: [
-                        path.resolve(__dirname, 'typescript/components/')
-                    ],
-                    use: {
-                        loader: reactCompilerLoader,
-                        options: defineReactCompilerLoaderOption()
-                    }
-                },
+                // Disabled temporary due to react @tanstack/react-table issue https://github.com/TanStack/table/issues/5903
+                // {
+                //     test: /\.tsx?$/,
+                //     exclude: /node_modules/,
+                //     include: [
+                //         path.resolve(__dirname, 'typescript/components/')
+                //     ],
+                //     use: {
+                //         loader: reactCompilerLoader,
+                //         options: defineReactCompilerLoaderOption()
+                //     }
+                // },
                 {
                     test: /\.html$/,
                     use: {
