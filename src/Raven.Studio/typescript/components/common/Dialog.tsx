@@ -46,23 +46,29 @@ export function DialogProvider({ children }: PropsWithChildren) {
     return (
         <Dialog.Provider value={exposedPromise}>
             {children}
-                <Modal size={modalSize} container={container} show={isOpen} onHide={onClose} contentClassName={`modal-border bulge-${actionColor}`}>
-                    <Modal.Header closeButton className="vstack gap-4" onCloseClick={onClose}>
-                        {icon && (
-                            <div className="text-center">
-                                <Icon icon={icon} color={actionColor} className="fs-1" margin="m-0" />
-                            </div>
-                        )}
-                        <div className="text-center lead">{title}</div>
-                    </Modal.Header>
-                    <Modal.Body className="vstack gap-4 position-relative">{message}</Modal.Body>
-                    <Modal.Footer>
-                        <Button variant={actionColor} onClick={onClose} className="rounded-pill">
-                            {closeIcon && <Icon icon={closeIcon} />}
-                            {closeText}
-                        </Button>
-                    </Modal.Footer>
-                </Modal>
+            <Modal
+                size={modalSize}
+                container={container}
+                show={isOpen}
+                onHide={onClose}
+                contentClassName={`modal-border bulge-${actionColor}`}
+            >
+                <Modal.Header closeButton className="vstack gap-4" onCloseClick={onClose}>
+                    {icon && (
+                        <div className="text-center">
+                            <Icon icon={icon} color={actionColor} className="fs-1" margin="m-0" />
+                        </div>
+                    )}
+                    <div className="text-center lead">{title}</div>
+                </Modal.Header>
+                <Modal.Body className="vstack gap-4 position-relative">{message}</Modal.Body>
+                <Modal.Footer>
+                    <Button variant={actionColor} onClick={onClose} className="rounded-pill">
+                        {closeIcon && <Icon icon={closeIcon} />}
+                        {closeText}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Dialog.Provider>
     );
 }
