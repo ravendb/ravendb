@@ -182,9 +182,9 @@ function SortLabel({ filter }: { filter: IndexFilterCriteria }) {
         <>
             {sortByOptions.find((x) => x.value === filter.sortBy).label}
             {filter.sortDirection === "asc" ? (
-                <Icon icon="arrow-thin-bottom" margin="ms-1" />
-            ) : (
                 <Icon icon="arrow-thin-top" margin="ms-1" />
+            ) : (
+                <Icon icon="arrow-thin-bottom" margin="ms-1" />
             )}
             {filter.groupBy !== "None" && (
                 <span className="ms-2">{groupByOptions.find((x) => x.value === filter.groupBy).label}</span>
