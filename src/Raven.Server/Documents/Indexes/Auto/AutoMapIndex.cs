@@ -7,8 +7,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.AI.Embeddings;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Cleanup;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -16,7 +18,12 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     internal sealed class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition, AutoIndexField>
     {
-        private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections = new (StringComparer.OrdinalIgnoreCase);
+        // Auto map index references at most one collection (embeddings), this means single hash set is sufficient
+        // We only want to use dictionary to pass data to relevant methods
+        private readonly HashSet<string> _referencedCollections = new (StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollectionsDict = new (StringComparer.OrdinalIgnoreCase);
+        
+        private HandleDocumentReferences _handleReferences;
 
         private AutoMapIndex(AutoMapIndexDefinition definition)
             : base(IndexType.AutoMap, IndexSourceType.Documents, definition, compiled: null)
@@ -48,9 +55,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            var collectionName = new CollectionName(change.CollectionName);
-            
-            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && _referencedCollections.First().Value.Contains(collectionName) == false)
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && _referencedCollections.Contains(change.CollectionName) == false)
                 return;
             
             _mre.Set();
@@ -71,10 +76,14 @@ namespace Raven.Server.Documents.Indexes.Auto
                 // We only have a single collection for auto map index
                 string collection = Collections.First();
                 var referencedEmbeddingsCollection = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collection);
+
+                var referencedEmbeddingsCollectionName = new CollectionName(referencedEmbeddingsCollection);
+                _referencedCollections.Add(referencedEmbeddingsCollection);
+                _referencedCollectionsDict.Add(collection, new HashSet<CollectionName>() { referencedEmbeddingsCollectionName });
                 
-                _referencedCollections.Add(collection, new HashSet<CollectionName>() { new CollectionName(referencedEmbeddingsCollection) });
-                
-                workers.Add(new HandleDocumentReferences(this, _referencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                _handleReferences = new HandleDocumentReferences(this, _referencedCollectionsDict, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration);
+
+                workers.Add(_handleReferences);
             }
             
             return workers.ToArray();
@@ -83,10 +92,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, long? compareExchangeReferenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
-            if (isStale && stalenessReasons == null)
-                return isStale;
-            
-            if (_referencedCollections.Count == 0)
+            if (isStale && (stalenessReasons == null || _handleReferences == null))
                 return isStale;
 
             return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons) || isStale;
@@ -94,7 +100,42 @@ namespace Raven.Server.Documents.Indexes.Auto
         
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
-            return _referencedCollections;
+            return _referencedCollectionsDict;
+        }
+        
+        public override HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection, bool isCompareExchange)
+        {
+            var references = isCompareExchange ? (HandleReferencesBase)null : _handleReferences;
+            return references == null ? HandleReferencesBase.InMemoryReferencesInfo.Default : references.GetReferencesInfo(collection);
+        }
+        
+        protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale)
+        {
+            if (_handleReferences == null)
+                return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
+
+            return CalculateIndexEtagWithReferences(
+                _handleReferences, null, queryContext,
+                indexContext, query, isStale, _referencedCollections, _referencedCollectionsDict, null);
+        }
+        
+        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
+        {
+            if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
+                return null;
+
+            using (CurrentlyInUse())
+            {
+                return StaticIndexHelper.GetLastProcessedDocumentTombstonesPerCollection(
+                    this, _referencedCollections, Collections, _referencedCollectionsDict, _indexStorage, lastProcessedTombstonesInfo);
+            }
+        }
+        
+        public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            StaticIndexHelper.HandleReferencesDelete(_handleReferences, null, tombstone, collection, writer, indexContext, stats);
+
+            base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
         public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)

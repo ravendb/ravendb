@@ -210,11 +210,11 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long CalculateIndexEtag(Index index, AbstractStaticIndexBase compiled, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
+        public static unsafe long CalculateIndexEtag(Index index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext, Dictionary<string,HashSet<CollectionName>> referencedCollectionsDict, HashSet<string> collectionsWithCompareExchangeReferences)
         {
             foreach (var collection in index.Collections)
             {
-                if (compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections))
+                if (referencedCollectionsDict.TryGetValue(collection, out HashSet<CollectionName> referencedCollections))
                 {
                     foreach (var referencedCollection in referencedCollections)
                     {
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
 
-                if (compiled.CollectionsWithCompareExchangeReferences.Contains(collection))
+                if (collectionsWithCompareExchangeReferences != null && collectionsWithCompareExchangeReferences.Contains(collection))
                 {
                     var lastCompareExchangeEtag = queryContext.Documents.DocumentDatabase.CompareExchangeStorage.GetLastCompareExchangeIndex(queryContext.Server);
                     var lastProcessedReferenceEtag = index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection: IndexStorage.CompareExchangeReferences.CompareExchange);

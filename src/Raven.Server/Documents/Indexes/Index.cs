@@ -4184,10 +4184,15 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public unsafe long CalculateIndexEtagWithReferences(
+        protected long CalculateIndexEtagWithReferences(
             HandleReferences handleReferences, HandleReferences handleCompareExchangeReferences,
             QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale,
-            HashSet<string> referencedCollections, AbstractStaticIndexBase compiled)
+            HashSet<string> referencedCollections, AbstractStaticIndexBase compiled) => CalculateIndexEtagWithReferences(handleReferences, handleCompareExchangeReferences, queryContext, indexContext, query, isStale, referencedCollections, compiled.ReferencedCollections, compiled.CollectionsWithCompareExchangeReferences);
+
+        protected unsafe long CalculateIndexEtagWithReferences(
+            HandleReferences handleReferences, HandleReferences handleCompareExchangeReferences,
+            QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale,
+            HashSet<string> referencedCollections, Dictionary<string,HashSet<CollectionName>> referencedCollectionsDict, HashSet<string> collectionsWithCompareExchangeReferences)
         {
             var minLength = MinimumSizeForCalculateIndexEtagLength(query);
             var length = minLength;
@@ -4205,7 +4210,7 @@ namespace Raven.Server.Documents.Indexes
                 // last referenced collection etags (document + tombstone)
                 // last processed reference collection etags (document + tombstone)
                 // last processed in memory (early exit batch) etags (document + tombstone)
-                length += sizeof(long) * 6 * compiled.CollectionsWithCompareExchangeReferences.Count;
+                length += sizeof(long) * 6 * collectionsWithCompareExchangeReferences.Count;
             }
 
             var indexEtagBytes = stackalloc byte[length];
@@ -4215,7 +4220,7 @@ namespace Raven.Server.Documents.Indexes
 
             var writePos = indexEtagBytes + minLength;
 
-            return StaticIndexHelper.CalculateIndexEtag(this, compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
+            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext, referencedCollectionsDict, collectionsWithCompareExchangeReferences);
         }
 
         private static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(QueryOperationContext queryContext, QueryMetadata q, int length, byte* indexEtagBytes)
