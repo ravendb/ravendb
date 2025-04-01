@@ -50,42 +50,20 @@ public abstract class AbstractIndexCreateController
 
     protected virtual async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
     {
-        if (IndexStore.IsValidIndexName(definition.Name, true, out var errorMessage) == false)
-        {
-            throw new ArgumentException(errorMessage);
-        }
-
-        ServerStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(definition);
-
-        definition.RemoveDefaultValues();
-        ValidateAnalyzers(definition);
-        
-        ValidateConfiguration(definition);
-
-        var databaseConfiguration = GetDatabaseConfiguration();
-        var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion); // pre-compile it and validate
+        ValidateStaticIndexInternal(definition);
 
         if (definition.Type == IndexType.MapReduce)
         {
+            var databaseConfiguration = GetDatabaseConfiguration();
+            // pre-compile it and validate
+            var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+        
             await MapReduceIndex.ValidateReduceResultsCollectionNameAsync(
                 definition,
                 instance,
                 GetIndexes,
                 GetCollectionCountAsync,
                 NeedToCheckIfCollectionEmpty(definition, databaseConfiguration));
-
-            if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
-                OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
-        }
-
-        if (definition.SourceType != IndexSourceType.Documents)
-        {
-            if (definition.ArchivedDataProcessingBehavior != null && definition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.IncludeArchived)
-            {
-                throw new ArgumentException(
-                    $"{nameof(ArchivedDataProcessingBehavior)} other than '{ArchivedDataProcessingBehavior.IncludeArchived}' can be set only for document indexes,  not for indexes with {nameof(IndexSourceType)} '{definition.SourceType}' .");
-            }
-            definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived;
         }
     }
 
@@ -99,14 +77,35 @@ public abstract class AbstractIndexCreateController
 
     internal virtual void ValidateTestStaticIndex(IndexDefinition definition)
     {
+        ValidateStaticIndexInternal(definition);
+    }
+    
+    private void ValidateStaticIndexInternal(IndexDefinition definition)
+    {
         if (IndexStore.IsValidIndexName(definition.Name, true, out var errorMessage) == false)
         {
             throw new ArgumentException(errorMessage);
         }
-            
+
+        ServerStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(definition);
+
         definition.RemoveDefaultValues();
         ValidateAnalyzers(definition);
+        
         ValidateConfiguration(definition);
+        
+        if (definition.SourceType != IndexSourceType.Documents)
+        {
+            if (definition.ArchivedDataProcessingBehavior != null && definition.ArchivedDataProcessingBehavior != ArchivedDataProcessingBehavior.IncludeArchived)
+            {
+                throw new ArgumentException(
+                    $"{nameof(ArchivedDataProcessingBehavior)} other than '{ArchivedDataProcessingBehavior.IncludeArchived}' can be set only for document indexes,  not for indexes with {nameof(IndexSourceType)} '{definition.SourceType}' .");
+            }
+            definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.IncludeArchived;
+        }
+        
+        if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
+            OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
     }
 
     public async ValueTask<long> CreateIndexAsync(IndexDefinition definition, string raftRequestId, string source = null)
