@@ -42,6 +42,8 @@ class cluster extends viewModelBase {
 
     clientVersion = viewModelBase.clientVersion;
 
+    clusterDebugUrl: KnockoutComputed<string>;
+
     cssCores = ko.pureComputed(() => {
         if (this.utilizedCores() === this.maxCores()) {
             return "text-success";
@@ -132,6 +134,10 @@ class cluster extends viewModelBase {
             const numberOfCores = typeUtils.sumBy(nodes, x => !x.numberOfCores() || x.numberOfCores() === -1 ? 0 : x.numberOfCores());
             return numberOfCores;
         });
+
+        this.clusterDebugUrl = ko.pureComputed(() => {
+            return appUrl.forDebugAdvancedClusterDebug();
+        })
     }
 
     activate(args: any) {

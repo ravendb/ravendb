@@ -68,6 +68,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
         const jsonString = JSON.stringify(connection, null, 4);
         await dialog({
             title: "Connection details",
+            container: document.getElementById("cluster-debug"),
             message: <Code elementToCopy={jsonString} code={jsonString} language="json" />,
             modalSize: "lg",
         });
