@@ -26,6 +26,7 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
 
     // Set default filter function
     table.setOptions((prev) => ({
+        columnResizeMode: "onChange",
         ...prev,
         defaultColumn: {
             filterFn: "stringifyIncludes" as any, // custom filter function

@@ -19,6 +19,7 @@ import { Icon } from "components/common/Icon";
 import { ClusterDebugNodeInfo } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/common";
 import { nodeAwareLoadableData } from "hooks/useClusterWideAsync";
 import RichAlert from "components/common/RichAlert";
+import { useClusterDebugFetcher } from "../hooks/useClusterDebugFetcher";
 
 interface ClusterDebugEntriesProps {
     availableWidth: number;
@@ -36,7 +37,6 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
     const { manageServerService } = useServices();
 
     const [activeTab, setActiveTab] = useState<string>(localNode.nodeTag);
-    const [commitIndex, setCommitIndex] = useState<number>();
 
     const showInlinePreview = useCallback(
         async (logIndex: number) => {
@@ -78,17 +78,8 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
         [manageServerService, activeTab, confirm]
     );
 
-    const { dataArray, componentProps } = useVirtualTableWithoutTotalCount({
-        fetchData: async (skip, take) => {
-            try {
-                const result = await manageServerService.getClusterLog(activeTab, undefined, take);
-                setCommitIndex(result?.Log.CommitIndex);
-                return { items: result?.Log.Logs ?? [] };
-            } catch {
-                setCommitIndex(null);
-                return { items: [] };
-            }
-        },
+    const { dataArray, commitIndex, componentProps } = useClusterDebugFetcher({
+        nodeTag: activeTab,
         dependencies: [activeTab],
     });
 
