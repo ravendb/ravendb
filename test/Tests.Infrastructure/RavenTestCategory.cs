@@ -59,5 +59,5 @@ public enum RavenTestCategory : long
     Monitoring = 1L << 44,
     Core = 1L << 45,
     Interversion = 1L << 46,
-    Inheritance = 1L << 47
+    Conventions = 1L << 47
 }

@@ -27,7 +27,7 @@ namespace SlowTests.Tests
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
 
         // In linux we might encounter Microsoft's VisualStudio assembly types, so we skip this test in linux, and rely on the windows tests result as good for linux too
-        [RavenMultiplatformFact(RavenTestCategory.Inheritance, RavenPlatform.Windows | RavenPlatform.OsX)]
+        [RavenMultiplatformFact(RavenTestCategory.Conventions, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void NonDisposableTestShouldNotExist()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
@@ -44,7 +44,7 @@ namespace SlowTests.Tests
             throw new Exception(userMessage);
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Inheritance, RavenPlatform.Windows | RavenPlatform.OsX)]
+        [RavenMultiplatformFact(RavenTestCategory.Conventions, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void TestsShouldInheritFromRightBaseClasses()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
@@ -61,7 +61,7 @@ namespace SlowTests.Tests
             throw new Exception(userMessage);
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Inheritance, RavenPlatform.Windows | RavenPlatform.OsX)]
+        [RavenMultiplatformFact(RavenTestCategory.Conventions, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void HandlersShouldNotInheritStraightFromRequestHandler()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
@@ -78,7 +78,7 @@ namespace SlowTests.Tests
             throw new Exception(userMessage);
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Inheritance, RavenPlatform.All)]
+        [RavenFact(RavenTestCategory.Conventions)]
         public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
@@ -88,7 +88,7 @@ namespace SlowTests.Tests
                         select method;
 
             var array = types.ToArray();
-            const int numberToTolerate = 6392;
+            const int numberToTolerate = 6391;
             if (array.Length == numberToTolerate)
                 return;
 
