@@ -749,7 +749,7 @@ namespace Voron
 
                 return tx;
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 try
                 {
@@ -770,6 +770,17 @@ namespace Voron
                     if (tx != null)
                         ActiveTransactions.TryRemove(tx);
                 }
+
+                try
+                {
+                    if (_log.IsOperationsEnabled)
+                        _log.Operations("Failed to create transaction", e);
+                }
+                catch
+                {
+                   // ignored
+                }
+
                 throw;
             }
         }
