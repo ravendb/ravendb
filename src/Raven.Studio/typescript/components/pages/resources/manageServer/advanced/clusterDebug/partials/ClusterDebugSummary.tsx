@@ -228,7 +228,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                             }
                                         >
                                             <ProgressBar
-                                                variant={node.data.progress === 100 ? "success" : "info"}
+                                                variant={node.data.progress === 100 ? "success" : "progress"}
                                                 striped={node.data.progress < 100}
                                                 now={node.data.progress}
                                                 animated={node.data.progress < 100}
