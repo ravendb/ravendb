@@ -40,6 +40,7 @@
         &:hover {
             transition: $default-panel-transitions;
             filter: bs5variables.$hover-filter-var;
+            z-index: 1;
         }
     }
 
