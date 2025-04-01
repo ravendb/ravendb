@@ -82,7 +82,7 @@ export function useClusterDebugColumns(
     ];
 
     const allocatedSize = columns.reduce((p, c) => p + c.size, 0);
-    const remainingSize = availableWidth - allocatedSize - 32; //TODO: don't hardcode padding?
+    const remainingSize = availableWidth - allocatedSize - padding;
     const commandTypeColumn = columns.find((x) => x.id === "commandType");
     if (commandTypeColumn) {
         commandTypeColumn.size = remainingSize;
@@ -92,3 +92,5 @@ export function useClusterDebugColumns(
         columns,
     };
 }
+
+const padding = 32;

@@ -1,7 +1,5 @@
-import React from "react";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 
-//TODO: add some description
 export default function ClusterDebugAboutView() {
     return (
         <AboutViewFloating>
