@@ -81,7 +81,7 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
     const { dataArray, componentProps } = useVirtualTableWithoutTotalCount({
         fetchData: async (skip, take) => {
             try {
-                const result = await manageServerService.getClusterLog(activeTab, skip, take);
+                const result = await manageServerService.getClusterLog(activeTab, undefined, take);
                 setCommitIndex(result?.Log.CommitIndex);
                 return { items: result?.Log.Logs ?? [] };
             } catch {

@@ -22,7 +22,7 @@ import Table from "react-bootstrap/Table";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { Progress } from "reactstrap";
+import ProgressBar from "react-bootstrap/ProgressBar";
 import { EmptySet } from "components/common/EmptySet";
 
 interface ClusterDebugSummaryProps {
@@ -226,13 +226,13 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                                 </>
                                             }
                                         >
-                                            <Progress
-                                                color="progress"
-                                                value={node.data.progress}
+                                            <ProgressBar
+                                                variant={node.data.progress === 100 ? "success" : "info"}
+                                                striped={node.data.progress < 100}
+                                                now={node.data.progress}
                                                 animated={node.data.progress < 100}
-                                            >
-                                                {node.data.progress}%
-                                            </Progress>
+                                                label={`${node.data.progress}%`}
+                                            />
                                         </PopoverWithHoverWrapper>
                                     )}
                                 </ConditionalRender>

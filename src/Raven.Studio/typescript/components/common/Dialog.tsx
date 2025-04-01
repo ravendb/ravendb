@@ -1,6 +1,6 @@
 import { TextColor } from "components/models/common";
-import React, { ReactNode, createContext, useContext, useState, PropsWithChildren, useRef } from "react";
-import { CloseButton, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { ReactNode, createContext, useContext, useState, PropsWithChildren, useRef } from "react";
+import Modal from "./Modal";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
 import Button from "react-bootstrap/Button";
@@ -21,7 +21,7 @@ const Dialog = createContext<(options: DialogOptions) => Promise<boolean>>(null)
 
 export function DialogProvider({ children }: PropsWithChildren) {
     const [options, setOptions] = useState<InnerOptions>({ isOpen: false });
-    const promise = useRef<() => void>();
+    const promise = useRef<() => void>(null);
 
     const { isOpen, title, icon, closeIcon, message, modalSize } = options;
 
@@ -45,32 +45,22 @@ export function DialogProvider({ children }: PropsWithChildren) {
         <Dialog.Provider value={exposedPromise}>
             {children}
             {isOpen && (
-                <Modal
-                    isOpen
-                    toggle={onClose}
-                    wrapClassName="bs5"
-                    size={modalSize}
-                    centered
-                    contentClassName={`modal-border bulge-${actionColor}`}
-                >
-                    <ModalBody className="vstack gap-4 position-relative">
+                <Modal size={modalSize} show onHide={onClose} contentClassName={`modal-border bulge-${actionColor}`}>
+                    <Modal.Header closeButton className="vstack gap-4" onCloseClick={onClose}>
                         {icon && (
                             <div className="text-center">
                                 <Icon icon={icon} color={actionColor} className="fs-1" margin="m-0" />
                             </div>
                         )}
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton onClick={onClose} />
-                        </div>
                         <div className="text-center lead">{title}</div>
-                        {message}
-                    </ModalBody>
-                    <ModalFooter>
+                    </Modal.Header>
+                    <Modal.Body className="vstack gap-4 position-relative">{message}</Modal.Body>
+                    <Modal.Footer>
                         <Button variant={actionColor} onClick={onClose} className="rounded-pill">
                             {closeIcon && <Icon icon={closeIcon} />}
                             {closeText}
                         </Button>
-                    </ModalFooter>
+                    </Modal.Footer>
                 </Modal>
             )}
         </Dialog.Provider>
