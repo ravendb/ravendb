@@ -341,7 +341,6 @@ public abstract class RaftDebugView : IDynamicJsonValueConvertible
 
             return new DetailedPeerConnection(destination, status, connected)
             {
-                Destination = connection.Dest,
                 Version = connection.Features.ProtocolVersion,
                 Features = connection.Features.Cluster,
                 Compression = connection.Features.DataCompression,
