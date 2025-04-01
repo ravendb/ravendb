@@ -51,6 +51,7 @@ export function useClusterDebugFetcher(props: useClusterDebugFetcherProps): Clus
         setCommitIndex(result.Log.CommitIndex);
 
         const hasMore = result.Log.Logs.length === chuckSize;
+        setHasMore(hasMore);
 
         if (hasMore) {
             // truncate last item
@@ -58,7 +59,7 @@ export function useClusterDebugFetcher(props: useClusterDebugFetcherProps): Clus
             setNextIndexToFetch(lastItem.Index);
         }
 
-        setDataArray(result.Log.Logs);
+        setDataArray((prev) => [...prev, ...result.Log.Logs]);
     });
 
     // Handle scroll
