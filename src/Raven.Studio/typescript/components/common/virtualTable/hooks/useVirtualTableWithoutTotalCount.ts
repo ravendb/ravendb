@@ -81,8 +81,7 @@ export function useVirtualTableWithoutTotalCount<T extends PagedResultWithoutCou
         return () => {
             current.removeEventListener("scroll", handleScroll);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [hasMore]);
 
     return {
         dataArray,
