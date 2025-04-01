@@ -70,9 +70,6 @@ export function useClusterDebugColumns(
                     title="Delete Log Entry"
                     variant="danger"
                     onClick={() => deleteEntry(context.row.original.Index)}
-                    className={classNames({
-                        invisible: context.row.original.Index <= commitIndex,
-                    })}
                 >
                     <Icon icon="trash" margin="m-0" />
                 </Button>

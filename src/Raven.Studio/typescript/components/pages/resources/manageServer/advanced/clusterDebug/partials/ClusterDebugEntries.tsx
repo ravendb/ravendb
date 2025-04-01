@@ -67,6 +67,7 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
                         </RichAlert>
                     </div>
                 ),
+                container: document.getElementById("cluster-debug"),
             });
 
             if (isConfirmed) {

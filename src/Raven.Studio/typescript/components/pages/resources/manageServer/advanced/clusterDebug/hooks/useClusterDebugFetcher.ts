@@ -27,20 +27,27 @@ export function useClusterDebugFetcher(props: useClusterDebugFetcherProps): Clus
     const [commitIndex, setCommitIndex] = useState<number>(null);
 
     const asyncLoadInitialData = useAsync(async () => {
-        const result = await manageServerService.getClusterLog(props.nodeTag, undefined, 1024);
+        try {
+            const result = await manageServerService.getClusterLog(props.nodeTag, undefined, 1024);
 
-        const log = result.Log;
-        const data = log.Logs;
-        setCommitIndex(log.CommitIndex);
+            const log = result.Log;
+            const data = log.Logs;
+            setCommitIndex(log.CommitIndex);
 
-        const logLength = result.Log.Logs.length;
-        const hasMore = logLength !== result.Log.TotalEntries;
+            const logLength = result.Log.Logs.length;
+            const hasMore = logLength !== result.Log.TotalEntries;
 
-        setHasMore(hasMore);
+            setHasMore(hasMore);
 
-        setNextIndexToFetch(log.Logs.length ? log.Logs[log.Logs.length - 1].Index - 1 : 0);
+            setNextIndexToFetch(log.Logs.length ? log.Logs[log.Logs.length - 1].Index - 1 : 0);
 
-        setDataArray(data);
+            setDataArray(data);
+        } catch (_) {
+            setCommitIndex(null);
+            setHasMore(false);
+            setNextIndexToFetch(null);
+            setDataArray([]);
+        }
     }, props.dependencies);
 
     const asyncLoadData = useAsyncCallback(async () => {

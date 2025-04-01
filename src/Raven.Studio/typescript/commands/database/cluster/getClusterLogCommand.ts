@@ -22,8 +22,7 @@ class getClusterLogCommand extends commandBase {
             nodeTag: this.nodeTag,
         });
 
-        return this.query<Raven.Server.Rachis.RaftDebugView>(url, null)
-            .fail((response: JQueryXHR) => this.reportError("Unable to get cluster log", response.responseText, response.statusText));
+        return this.query<Raven.Server.Rachis.RaftDebugView>(url, null);
     }
 }
 
