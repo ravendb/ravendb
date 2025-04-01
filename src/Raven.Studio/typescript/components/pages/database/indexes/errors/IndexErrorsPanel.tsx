@@ -188,7 +188,7 @@ function IndexErrorsPanelDetailsStatus({
     hasErrors,
     table,
 }: IndexErrorsPanelDetailsStatusProps) {
-    const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
+    const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(false);
     const ref = useRef<HTMLDivElement>(null);
     const { width } = useResizeObserver({ ref });
     const mostRecentDateId = useUniqueId("most-recent-date");
