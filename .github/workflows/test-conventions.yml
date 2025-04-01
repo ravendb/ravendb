@@ -12,6 +12,7 @@ on:
         - feature/*
         - release/**
         - 'v[4-9]+.[0-9]+'
+  workflow_dispatch:
 
 jobs:
   release:
