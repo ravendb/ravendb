@@ -17,7 +17,7 @@ interface ClusterWideReducerState<T> {
 export function useClusterWideAsync<T>(perNodeProvider: (nodeTag: string) => Promise<T>) {
     const nodeTags = useAppSelector(clusterSelectors.allNodeTags);
 
-    const [state, dispatch] = useReducer(clusterWideReducer<T>, nodeTags, initReducer);
+    const [state, dispatch] = useReducer(clusterWideReducer<T>, nodeTags, initReducer<T>);
 
     const handleNode = useCallback(
         async (nodeTag: string) => {

@@ -10,7 +10,7 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useServices } from "hooks/useServices";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useClusterDebugColumns } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/useClusterDebugColumns";
+import { useClusterDebugColumns } from "components/pages/resources/manageServer/advanced/clusterDebug/hooks/useClusterDebugColumns";
 import Code from "components/common/Code";
 import useDialog from "components/common/Dialog";
 import useConfirm from "components/common/ConfirmDialog";

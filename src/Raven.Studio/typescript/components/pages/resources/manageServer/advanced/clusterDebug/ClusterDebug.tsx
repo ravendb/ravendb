@@ -8,10 +8,7 @@ import ClusterDebugEntries from "./partials/ClusterDebugEntries";
 import { useServices } from "hooks/useServices";
 import { useClusterWideAsync } from "hooks/useClusterWideAsync";
 import ClusterDebugGlobalInfo from "components/pages/resources/manageServer/advanced/clusterDebug/partials/ClusterDebugGlobalInfo";
-import {
-    ClusterDebugNodeInfo,
-    mapRaftDebugView,
-} from "components/pages/resources/manageServer/advanced/clusterDebug/partials/common";
+import { mapRaftDebugView } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/common";
 import SizeGetter from "components/common/SizeGetter";
 
 export default function ClusterDebug() {
@@ -59,14 +56,12 @@ export default function ClusterDebug() {
                         Refresh
                     </ButtonWithSpinner>
                     <FlexGrow />
-                    <ClusterDebugGlobalInfo nodes={result as TODO} />
+                    <ClusterDebugGlobalInfo nodes={result} />
                 </div>
                 <h3 className="mt-3">Summary</h3>
-                <ClusterDebugSummary nodes={result as TODO} />
+                <ClusterDebugSummary nodes={result} />
                 <h3 className="hstack align-items-center mt-4">Log Entries</h3>
-                <SizeGetter
-                    render={(size) => <ClusterDebugEntries availableWidth={size.width} nodes={result as TODO} />}
-                />
+                <SizeGetter render={(size) => <ClusterDebugEntries availableWidth={size.width} nodes={result} />} />
             </div>
         </div>
     );
