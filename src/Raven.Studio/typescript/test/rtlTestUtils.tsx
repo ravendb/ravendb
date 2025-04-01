@@ -23,6 +23,7 @@ import { setEffectiveTestStore } from "components/storeCompat";
 import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
 import userEvent from "@testing-library/user-event";
+import { DialogProvider } from "components/common/Dialog";
 
 let needsTestMock = true;
 
@@ -87,9 +88,11 @@ function AllProvidersInner({ children }: any) {
         <ReduxProvider store={store}>
             <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
                 <ConfirmDialogProvider>
-                    <ServiceProvider services={mockServices.context}>
-                        <ChangesProvider changes={mockHooks.useChanges.mock}>{children}</ChangesProvider>
-                    </ServiceProvider>
+                    <DialogProvider>
+                        <ServiceProvider services={mockServices.context}>
+                            <ChangesProvider changes={mockHooks.useChanges.mock}>{children}</ChangesProvider>
+                        </ServiceProvider>
+                    </DialogProvider>
                 </ConfirmDialogProvider>
             </DirtyFlagProvider>
         </ReduxProvider>

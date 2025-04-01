@@ -7,6 +7,7 @@ import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
 import { ReactRenderer } from "@storybook/react";
 import { PartialStoryFn } from "storybook/internal/types";
+import { DialogProvider } from "components/common/Dialog";
 
 type StoryFunction = PartialStoryFn<
     ReactRenderer,
@@ -40,11 +41,13 @@ export function withStorybookContexts(Story: StoryFunction) {
     return (
         <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
             <ConfirmDialogProvider>
-                <ServiceProvider services={mockServices.context}>
-                    <ChangesProvider changes={mockHooks.useChanges.mock}>
-                        <Story />
-                    </ChangesProvider>
-                </ServiceProvider>
+                <DialogProvider>
+                    <ServiceProvider services={mockServices.context}>
+                        <ChangesProvider changes={mockHooks.useChanges.mock}>
+                            <Story />
+                        </ChangesProvider>
+                    </ServiceProvider>
+                </DialogProvider>
             </ConfirmDialogProvider>
         </DirtyFlagProvider>
     );

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Badge, Button, Table, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -17,6 +17,11 @@ import moment from "moment";
 import notificationCenter from "common/notifications/notificationCenter";
 import messagePublisher from "common/messagePublisher";
 import { withPreventDefault } from "components/utils/common";
+import useConfirm from "components/common/ConfirmDialog";
+import useDialog from "components/common/Dialog";
+import Code from "components/common/Code";
+import ClusterSnapshotInstallation from "components/pages/resources/manageServer/advanced/clusterDebug/partials/ClusterSnapshotInstallation";
+import SizeGetter from "components/common/SizeGetter";
 
 interface ClusterDebugSummaryProps {
     nodes: nodeAwareLoadableData<ClusterDebugNodeInfo>[];
@@ -32,11 +37,38 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
     const localNode = useAppSelector(clusterSelectors.localNode);
     const allNodes = useAppSelector(clusterSelectors.allNodes);
 
+    const dialog = useDialog();
     const hasAnyCriticalError = nodes.some((x) => !!x.data?.criticalError);
 
-    const openInstallationDetails = (nodeTag: string) => {};
+    const openInstallationDetails = async (nodeTag: string) => {
+        const nodeData = nodes.find((x) => x.nodeTag === nodeTag);
 
-    const showConnectionDetails = (connection: Raven.Server.Rachis.RaftDebugView.PeerConnection) => {};
+
+        if (nodeData.data.installingSnapshot) {
+            await dialog({
+                title: "Cluster Snapshot installation progress for node: " + nodeTag,
+                modalSize: "lg",
+                message: (
+                    <SizeGetter
+                        render={(size) => (
+                            <ClusterSnapshotInstallation
+                                availableWidth={size.width}
+                                messages={nodeData.data.installationLog}
+                            />
+                        )}
+                    />
+                ),
+            });
+        }
+    };
+    const showConnectionDetails = async (connection: Raven.Server.Rachis.RaftDebugView.PeerConnection) => {
+        const jsonString = JSON.stringify(connection, null, 4);
+        await dialog({
+            title: "Connection details",
+            message: <Code elementToCopy={jsonString} code={jsonString} language="json" />,
+            modalSize: "lg",
+        });
+    };
 
     const openCriticalError = (nodeTag: string) => {
         if (nodeTag !== localNode.nodeTag) {
@@ -56,7 +88,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
     };
 
     return (
-        <>
+        <React.Fragment key="summary">
             <Table dark bordered responsive className="mb-1 rounded-1 overflow-hidden">
                 <thead>
                     <tr>
@@ -99,35 +131,33 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                         <th>Progress</th>
                         {nodes.map((node) => {
                             return (
-                                <td key={node.nodeTag}>
-                                    <ConditionalRender node={node}>
-                                        {() => {
-                                            return (
-                                                <>
-                                                    <div className="hstack gap-1" id={"progress-" + node.nodeTag}>
-                                                        <span className="text-nowrap">{node.data.progress}%</span>
-                                                        <ProgressBarWithTrackingPoint
-                                                            startingPoint={0}
-                                                            progress={node.data.progress}
-                                                            endingPoint={100}
-                                                        />
-                                                    </div>
-                                                    <UncontrolledTooltip target={"progress-" + node.nodeTag}>
-                                                        First entry index:{" "}
-                                                        <strong>{node.data.firstEntryIndex.toLocaleString()}</strong>
-                                                        <br />
-                                                        Commit index:{" "}
-                                                        <strong>{node.data.commitIndex.toLocaleString()}</strong>
-                                                        <br />
-                                                        Last log entry index:{" "}
-                                                        <strong>{node.data.lastLogEntryIndex.toLocaleString()}</strong>
-                                                        <br />
-                                                    </UncontrolledTooltip>
-                                                </>
-                                            );
-                                        }}
-                                    </ConditionalRender>
-                                </td>
+                                <ConditionalRender node={node} key={node.nodeTag}>
+                                    {() => {
+                                        return (
+                                            <>
+                                                <div className="hstack gap-1" id={"progress-" + node.nodeTag}>
+                                                    <span className="text-nowrap">{node.data.progress}%</span>
+                                                    <ProgressBarWithTrackingPoint
+                                                        startingPoint={0}
+                                                        progress={node.data.progress}
+                                                        endingPoint={100}
+                                                    />
+                                                </div>
+                                                <UncontrolledTooltip target={"progress-" + node.nodeTag}>
+                                                    First entry index:{" "}
+                                                    <strong>{node.data.firstEntryIndex.toLocaleString()}</strong>
+                                                    <br />
+                                                    Commit index:{" "}
+                                                    <strong>{node.data.commitIndex.toLocaleString()}</strong>
+                                                    <br />
+                                                    Last log entry index:{" "}
+                                                    <strong>{node.data.lastLogEntryIndex.toLocaleString()}</strong>
+                                                    <br />
+                                                </UncontrolledTooltip>
+                                            </>
+                                        );
+                                    }}
+                                </ConditionalRender>
                             );
                         })}
                     </tr>
@@ -140,11 +170,9 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                         </th>
                         {nodes.map((node) => {
                             return (
-                                <td key={node.nodeTag}>
-                                    <ConditionalRender node={node}>
-                                        {() => <>{node.data.queueSize.toLocaleString()}</>}
-                                    </ConditionalRender>
-                                </td>
+                                <ConditionalRender node={node} key={node.nodeTag}>
+                                    {() => <>{node.data.queueSize.toLocaleString()}</>}
+                                </ConditionalRender>
                             );
                         })}
                     </tr>
@@ -157,32 +185,31 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                         </th>
                         {nodes.map((node) => {
                             return (
-                                <td
+                                <ConditionalRender
+                                    node={node}
                                     key={node.nodeTag}
-                                    className={classNames(node.data?.chocked && "bg-faded-warning text-warning")}
+                                    tdClassName={classNames(node.data?.chocked && "bg-faded-warning text-warning")}
                                 >
-                                    <ConditionalRender node={node}>
-                                        {() => (
-                                            <>
-                                                {node.data.commitIndex.toLocaleString()}
-                                                {node.data.chocked && (
-                                                    <>
-                                                        <Icon
-                                                            icon="warning"
-                                                            margin="ms-1"
-                                                            id={"failed-commit-" + node.nodeTag}
-                                                        />
-                                                        <UncontrolledTooltip target={"failed-commit-" + node.nodeTag}>
-                                                            <span className="text-warning">
-                                                                Warning: No commits for over 2 minutes
-                                                            </span>
-                                                        </UncontrolledTooltip>
-                                                    </>
-                                                )}
-                                            </>
-                                        )}
-                                    </ConditionalRender>
-                                </td>
+                                    {() => (
+                                        <>
+                                            {node.data.commitIndex.toLocaleString()}
+                                            {node.data.chocked && (
+                                                <>
+                                                    <Icon
+                                                        icon="warning"
+                                                        margin="ms-1"
+                                                        id={"failed-commit-" + node.nodeTag}
+                                                    />
+                                                    <UncontrolledTooltip target={"failed-commit-" + node.nodeTag}>
+                                                        <span className="text-warning">
+                                                            Warning: No commits for over 2 minutes
+                                                        </span>
+                                                    </UncontrolledTooltip>
+                                                </>
+                                            )}
+                                        </>
+                                    )}
+                                </ConditionalRender>
                             );
                         })}
                     </tr>
@@ -195,31 +222,29 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                         </th>
                         {nodes.map((node) => {
                             return (
-                                <td key={node.nodeTag}>
-                                    <ConditionalRender node={node}>
-                                        {() => {
-                                            if (node.data.installingSnapshot) {
-                                                return (
-                                                    <div className="d-flex">
-                                                        {node.data.role} / Installing Snapshot{" "}
-                                                        <small className="ms-1">
-                                                            <span className="global-spinner spinner-sm"></span>
-                                                        </small>
-                                                        <FlexGrow />
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => openInstallationDetails(node.nodeTag)}
-                                                        >
-                                                            view details
-                                                        </Button>
-                                                    </div>
-                                                );
-                                            } else {
-                                                return <>{node.data.role}</>;
-                                            }
-                                        }}
-                                    </ConditionalRender>
-                                </td>
+                                <ConditionalRender node={node} key={node.nodeTag}>
+                                    {() => {
+                                        if (node.data.installingSnapshot) {
+                                            return (
+                                                <div className="d-flex">
+                                                    {node.data.role} / Installing Snapshot{" "}
+                                                    <small className="ms-1">
+                                                        <span className="global-spinner spinner-sm"></span>
+                                                    </small>
+                                                    <FlexGrow />
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => openInstallationDetails(node.nodeTag)}
+                                                    >
+                                                        view details
+                                                    </Button>
+                                                </div>
+                                            );
+                                        } else {
+                                            return <>{node.data.role}</>;
+                                        }
+                                    }}
+                                </ConditionalRender>
                             );
                         })}
                     </tr>
@@ -236,22 +261,18 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                 ? genUtils.formatDurationByDate(moment.utc(node.data.lastCommitedTime), true)
                                 : null;
                             return (
-                                <td key={node.nodeTag}>
-                                    <ConditionalRender node={node}>
-                                        {() => (
-                                            <>
-                                                <div id={"last-commited-" + node.nodeTag}>
-                                                    {lastCommitedAsAgo ?? "n/a"}
-                                                </div>
-                                                {lastCommitedAsAgo && (
-                                                    <UncontrolledTooltip target={"last-commited-" + node.nodeTag}>
-                                                        {node.data.lastCommitedTime}
-                                                    </UncontrolledTooltip>
-                                                )}
-                                            </>
-                                        )}
-                                    </ConditionalRender>
-                                </td>
+                                <ConditionalRender node={node} key={node.nodeTag}>
+                                    {() => (
+                                        <>
+                                            <div id={"last-commited-" + node.nodeTag}>{lastCommitedAsAgo ?? "n/a"}</div>
+                                            {lastCommitedAsAgo && (
+                                                <UncontrolledTooltip target={"last-commited-" + node.nodeTag}>
+                                                    {node.data.lastCommitedTime}
+                                                </UncontrolledTooltip>
+                                            )}
+                                        </>
+                                    )}
+                                </ConditionalRender>
                             );
                         })}
                     </tr>
@@ -267,22 +288,18 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                 ? genUtils.formatDurationByDate(moment.utc(node.data.lastAppendedTime), true)
                                 : null;
                             return (
-                                <td key={node.nodeTag}>
-                                    <ConditionalRender node={node}>
-                                        {() => (
-                                            <>
-                                                <div id={"last-appended-" + node.nodeTag}>
-                                                    {lastAppendedAsAgo ?? "n/a"}
-                                                </div>
-                                                {lastAppendedAsAgo && (
-                                                    <UncontrolledTooltip target={"last-appended-" + node.nodeTag}>
-                                                        {node.data.lastAppendedTime}
-                                                    </UncontrolledTooltip>
-                                                )}
-                                            </>
-                                        )}
-                                    </ConditionalRender>
-                                </td>
+                                <ConditionalRender node={node} key={node.nodeTag}>
+                                    {() => (
+                                        <>
+                                            <div id={"last-appended-" + node.nodeTag}>{lastAppendedAsAgo ?? "n/a"}</div>
+                                            {lastAppendedAsAgo && (
+                                                <UncontrolledTooltip target={"last-appended-" + node.nodeTag}>
+                                                    {node.data.lastAppendedTime}
+                                                </UncontrolledTooltip>
+                                            )}
+                                        </>
+                                    )}
+                                </ConditionalRender>
                             );
                         })}
                     </tr>
@@ -295,11 +312,9 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                         </th>
                         {nodes.map((node) => {
                             return (
-                                <td key={node.nodeTag}>
-                                    <ConditionalRender node={node}>
-                                        {() => <>{node.data.localVersion}</>}
-                                    </ConditionalRender>
-                                </td>
+                                <ConditionalRender node={node} key={node.nodeTag}>
+                                    {() => <>{node.data.localVersion}</>}
+                                </ConditionalRender>
                             );
                         })}
                     </tr>
@@ -307,33 +322,31 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                         <th>Connection</th>
                         {nodes.map((node) => {
                             return (
-                                <td key={node.nodeTag}>
-                                    <ConditionalRender node={node}>
-                                        {() => (
-                                            <div>
-                                                {node.data.connections.map((connection) => (
-                                                    <a
-                                                        href="#"
-                                                        onClick={withPreventDefault(() =>
-                                                            showConnectionDetails(connection)
-                                                        )}
-                                                    >
-                                                        <small className="margin-right-sm">
-                                                            <strong>
-                                                                {connection.Destination}
-                                                                {connection.Connected ? (
-                                                                    <i className="icon-check text-success"></i>
-                                                                ) : (
-                                                                    <i className="icon-danger text-danger"></i>
-                                                                )}
-                                                            </strong>
-                                                        </small>
-                                                    </a>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </ConditionalRender>
-                                </td>
+                                <ConditionalRender node={node} key={node.nodeTag}>
+                                    {() => (
+                                        <div>
+                                            {node.data.connections.map((connection) => (
+                                                <a
+                                                    href="#"
+                                                    onClick={withPreventDefault(() =>
+                                                        showConnectionDetails(connection)
+                                                    )}
+                                                >
+                                                    <small className="margin-right-sm">
+                                                        <strong>
+                                                            {connection.Destination}
+                                                            {connection.Connected ? (
+                                                                <i className="icon-check text-success"></i>
+                                                            ) : (
+                                                                <i className="icon-danger text-danger"></i>
+                                                            )}
+                                                        </strong>
+                                                    </small>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
+                                </ConditionalRender>
                             );
                         })}
                     </tr>
@@ -342,55 +355,56 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                             <th>Cluster Critical Error</th>
                             {nodes.map((node) => {
                                 return (
-                                    <td key={node.nodeTag}>
-                                        <ConditionalRender node={node}>
-                                            {() => (
-                                                <div>
-                                                    {node.data.criticalError ? (
-                                                        <Button
-                                                            size="sm"
-                                                            color="danger"
-                                                            onClick={() => openCriticalError(node.nodeTag)}
-                                                        >
-                                                            view details
-                                                        </Button>
-                                                    ) : (
-                                                        <>-</>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </ConditionalRender>
-                                    </td>
+                                    <ConditionalRender node={node} key={node.nodeTag}>
+                                        {() => (
+                                            <div>
+                                                {node.data.criticalError ? (
+                                                    <Button
+                                                        size="sm"
+                                                        color="danger"
+                                                        onClick={() => openCriticalError(node.nodeTag)}
+                                                    >
+                                                        view details
+                                                    </Button>
+                                                ) : (
+                                                    <>-</>
+                                                )}
+                                            </div>
+                                        )}
+                                    </ConditionalRender>
                                 );
                             })}
                         </tr>
                     )}
                 </tbody>
             </Table>
-        </>
+        </React.Fragment>
     );
 }
 
 interface ConditionalRenderProps {
     node: nodeAwareLoadableData<ClusterDebugNodeInfo>;
     children: () => React.ReactNode;
+    tdClassName?: string;
 }
 
 function ConditionalRender(props: ConditionalRenderProps) {
-    const { node, children } = props;
+    const { node, children, tdClassName } = props;
     const status = node.status;
     switch (status) {
         case "loading":
             return (
-                <LazyLoad active={true}>
-                    <div>&nbsp;</div>
-                </LazyLoad>
+                <td className={tdClassName}>
+                    <LazyLoad active={true}>
+                        <div>&nbsp;</div>
+                    </LazyLoad>
+                </td>
             );
         case "idle":
         case "failure":
             return null;
         case "success":
-            return <React.Fragment>{children()}</React.Fragment>;
+            return <td className={tdClassName}>{children()}</td>;
         default:
             assertUnreachable(status);
     }

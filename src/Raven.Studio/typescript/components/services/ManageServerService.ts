@@ -12,6 +12,7 @@ import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testP
 import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/saveServerWideCustomSorterCommand");
 import saveServerWideCustomAnalyzerCommand from "commands/serverWide/analyzers/saveServerWideCustomAnalyzerCommand";
 import getServerSettingsCommand from "commands/maintenance/getServerSettingsCommand";
+import getClusterLogCommand from "commands/database/cluster/getClusterLogCommand";
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -67,5 +68,9 @@ export default class ManageServerService {
 
     async getServerSettings() {
         return new getServerSettingsCommand().execute();
+    }
+
+    async getClusterLog(nodeTag: string) {
+        return new getClusterLogCommand(nodeTag, undefined, 1).execute();
     }
 }

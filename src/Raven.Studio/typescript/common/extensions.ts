@@ -10,6 +10,7 @@ import store = require("components/store");
 import Redux = require("react-redux");
 import useDirtyFlag = require("components/hooks/useDirtyFlag");
 import ConfirmDialog = require("components/common/ConfirmDialog");
+import Dialog = require("components/common/Dialog");
 
 class extensions {
     static install() {
@@ -242,8 +243,9 @@ class extensions {
                     const dirtyFlagWrapper = react.createElement(useDirtyFlag.DirtyFlagProvider, options.dirtyFlag, component);
                     const reduxWrapper = react.createElement(Redux.Provider, { store: store.default } as Redux.ProviderProps, dirtyFlagWrapper);
                     const confirmDialogProvider = react.createElement(ConfirmDialog.ConfirmDialogProvider, null, reduxWrapper);
+                    const dialogProvider = react.createElement(Dialog.DialogProvider, null, confirmDialogProvider);
 
-                    root.render(confirmDialogProvider);
+                    root.render(dialogProvider);
                 }
             }
         }

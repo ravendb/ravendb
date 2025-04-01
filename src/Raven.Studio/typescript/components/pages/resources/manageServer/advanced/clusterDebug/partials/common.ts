@@ -16,6 +16,7 @@ export interface ClusterDebugNodeInfo {
     chocked: boolean;
     progress: number;
     connections: Raven.Server.Rachis.RaftDebugView.PeerConnection[];
+    installationLog: Raven.Server.Rachis.RachisDebugMessage[];
 }
 
 export function mapRaftDebugView(view: Raven.Server.Rachis.RaftDebugView): ClusterDebugNodeInfo {
@@ -35,6 +36,7 @@ export function mapRaftDebugView(view: Raven.Server.Rachis.RaftDebugView): Clust
         chocked: isChoked(view),
         progress: progress(view),
         connections: connections(view),
+        installationLog: installationLog(view),
     };
 }
 
@@ -44,6 +46,14 @@ function isFollower(view: Raven.Server.Rachis.RaftDebugView): view is Raven.Serv
 
 function isLeader(view: Raven.Server.Rachis.RaftDebugView): view is Raven.Server.Rachis.LeaderDebugView {
     return view.Role === "Leader";
+}
+
+function installationLog(view: Raven.Server.Rachis.RaftDebugView): Raven.Server.Rachis.RachisDebugMessage[] {
+    if (isFollower(view) && isInstallingSnapshot(view)) {
+        return view.RecentMessages;
+    }
+
+    return [];
 }
 
 function connections(view: Raven.Server.Rachis.RaftDebugView): Raven.Server.Rachis.RaftDebugView.PeerConnection[] {
