@@ -27,7 +27,7 @@ namespace SlowTests.Tests
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
 
         // In linux we might encounter Microsoft's VisualStudio assembly types, so we skip this test in linux, and rely on the windows tests result as good for linux too
-        [NonLinuxFact]
+        [RavenMultiplatformFact(RavenTestCategory.Inheritance, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void NonDisposableTestShouldNotExist()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
@@ -44,7 +44,7 @@ namespace SlowTests.Tests
             throw new Exception(userMessage);
         }
 
-        [NonLinuxFact]
+        [RavenMultiplatformFact(RavenTestCategory.Inheritance, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void TestsShouldInheritFromRightBaseClasses()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
@@ -61,7 +61,7 @@ namespace SlowTests.Tests
             throw new Exception(userMessage);
         }
 
-        [NonLinuxFact]
+        [RavenMultiplatformFact(RavenTestCategory.Inheritance, RavenPlatform.Windows | RavenPlatform.OsX)]
         public void HandlersShouldNotInheritStraightFromRequestHandler()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
@@ -78,7 +78,7 @@ namespace SlowTests.Tests
             throw new Exception(userMessage);
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Inheritance, RavenPlatform.All)]
         public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
         {
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)

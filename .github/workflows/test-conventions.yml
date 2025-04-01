@@ -1,0 +1,65 @@
+name: test/conventions
+
+on:
+  push:
+    branches:
+        - feature/*
+        - release/**
+        - 'v[4-9]+.[0-9]+'
+
+  pull_request:
+    branches:
+        - feature/*
+        - release/**
+        - 'v[4-9]+.[0-9]+'
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+          os: [ ubuntu-latest, windows-latest, macos-13 ]
+        fail-fast: false
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
+
+    - name: Install dependencies
+      run: dotnet restore SlowTests.csproj
+      working-directory: ./test/SlowTests
+
+    - name: Test - Release
+      run: dotnet test SlowTests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~InheritanceTests"
+      env: # Or as an environment variable
+        RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
+        RAVEN_MAX_RUNNING_TESTS: 1
+      working-directory: ./test/SlowTests
+
+  debug:
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+          os: [ ubuntu-latest, windows-latest, macos-13 ]
+        fail-fast: false
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
+
+    - name: Install dependencies
+      run: dotnet restore SlowTests.csproj
+      working-directory: ./test/SlowTests
+
+    - name: Test - Debug
+      run: dotnet test SlowTests.csproj --configuration Debug --no-restore --filter "FullyQualifiedName~InheritanceTests"
+      env: # Or as an environment variable
+        RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
+        RAVEN_MAX_RUNNING_TESTS: 1
+      working-directory: ./test/SlowTests
