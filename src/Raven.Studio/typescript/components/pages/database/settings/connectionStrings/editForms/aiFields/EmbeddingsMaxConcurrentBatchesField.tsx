@@ -16,7 +16,7 @@ export default function EmbeddingsMaxConcurrentBatches({ baseName }: { baseName:
     return (
         <div className="mb-2">
             <FormLabel>
-                Embeddings Max Concurrent Batches <OptionalLabel />
+                Max Concurrent Query Batches <OptionalLabel />
                 <PopoverWithHoverWrapper message="Maximum number of query embedding batches that can be processed concurrently.">
                     <Icon icon="info" color="info" margin="ms-1" />
                 </PopoverWithHoverWrapper>
