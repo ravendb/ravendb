@@ -49,6 +49,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
             await dialog({
                 title: "Cluster Snapshot installation progress for node: " + nodeTag,
                 modalSize: "lg",
+                container: document.getElementById("cluster-debug"),
                 message: (
                     <SizeGetter
                         render={(size) => (

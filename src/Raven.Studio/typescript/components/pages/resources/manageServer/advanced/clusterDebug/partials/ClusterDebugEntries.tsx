@@ -14,7 +14,6 @@ import { useClusterDebugColumns } from "components/pages/resources/manageServer/
 import Code from "components/common/Code";
 import useDialog from "components/common/Dialog";
 import useConfirm from "components/common/ConfirmDialog";
-import { useVirtualTableWithoutTotalCount } from "components/common/virtualTable/hooks/useVirtualTableWithoutTotalCount";
 import { Icon } from "components/common/Icon";
 import { ClusterDebugNodeInfo } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/common";
 import { nodeAwareLoadableData } from "hooks/useClusterWideAsync";
@@ -46,6 +45,7 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
                 title: "Cluster Log Entry",
                 message: <Code elementToCopy={jsonString} code={jsonString} language="json" />,
                 modalSize: "lg",
+                container: document.getElementById("cluster-debug")
             });
         },
         [manageServerService, activeTab, dialog]
