@@ -52,12 +52,12 @@ public abstract class AbstractIndexCreateController
     {
         ValidateStaticIndexInternal(definition);
 
+        var databaseConfiguration = GetDatabaseConfiguration();
+        // pre-compile it and validate
+        var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+        
         if (definition.Type == IndexType.MapReduce)
         {
-            var databaseConfiguration = GetDatabaseConfiguration();
-            // pre-compile it and validate
-            var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
-        
             await MapReduceIndex.ValidateReduceResultsCollectionNameAsync(
                 definition,
                 instance,
