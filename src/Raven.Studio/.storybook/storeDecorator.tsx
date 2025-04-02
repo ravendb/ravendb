@@ -20,6 +20,7 @@ export const StoreDecorator = (Story, context) => {
         <Provider store={store}>
             <div className="h-100">
                 <Story />
+                <div id="bs5-modal" className="bs5"></div>
             </div>
         </Provider>
     );

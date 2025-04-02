@@ -15,7 +15,7 @@ export function Modal({ children, container, isLoading, className, ...props }: M
         <ReactBootstrapModal
             centered
             contentClassName={classNames("position-relative", className)}
-            container={container || document.getElementById("page-host")}
+            container={container || document.getElementById("bs5-modal")}
             {...props}
         >
             {isLoading && <LoadingView />}
