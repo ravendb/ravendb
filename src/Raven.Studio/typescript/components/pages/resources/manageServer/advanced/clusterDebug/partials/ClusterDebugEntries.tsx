@@ -27,13 +27,13 @@ interface ClusterDebugEntriesProps {
 
 export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
     const { availableWidth, nodes } = props;
-    const localNode = useAppSelector(clusterSelectors.localNode);
+    const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
 
     const dialog = useDialog();
     const confirm = useConfirm();
     const { manageServerService } = useServices();
 
-    const [activeTab, setActiveTab] = useState<string>(localNode.nodeTag);
+    const [activeTab, setActiveTab] = useState<string>(localNodeTag);
 
     const showInlinePreview = useCallback(
         async (logIndex: number) => {
@@ -111,7 +111,7 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
                                     />
                                     <span className="text-nowrap">Node {node.nodeTag}</span>
                                 </span>
-                                {node.nodeTag === localNode.nodeTag && (
+                                {node.nodeTag === localNodeTag && (
                                     <Badge bg="node" pill>
                                         Current
                                     </Badge>
