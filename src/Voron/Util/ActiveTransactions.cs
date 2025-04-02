@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
 using System.Threading;
 using Sparrow.Threading;
 using Voron.Debugging;
@@ -12,7 +11,7 @@ namespace Voron.Util
 {
     public class ActiveTransactions
     {
-        private RacyConcurrentBag _activeTxs = new RacyConcurrentBag(growthFactor: 64);
+        private readonly RacyConcurrentBag _activeTxs = new RacyConcurrentBag(growthFactor: 64);
 
         private long _oldestTransaction;
 

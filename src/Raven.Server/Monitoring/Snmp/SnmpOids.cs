@@ -286,6 +286,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Monitor lock contention count")]
             public const string MonitorLockContentionCount = "1.18.1";
 
+            [Description("Time since creation of oldest transaction")]
+            public const string ServerLongestTransaction = "1.19.1";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();

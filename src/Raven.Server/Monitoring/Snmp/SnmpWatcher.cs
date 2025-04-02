@@ -511,6 +511,8 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new MonitorLockContentionCount());
 
+            store.Add(new ServerLongestTransaction(server.ServerStore));
+
             return store;
 
             void AddGc(GCKind gcKind)
