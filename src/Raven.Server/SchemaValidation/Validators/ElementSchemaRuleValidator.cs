@@ -62,27 +62,32 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
 
 public static class ElementSchemaRuleValidatorFactory
 {
-    public static SelfElementSchemaRuleValidator CreateSelfElementSchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public static SelfObjectElementSchemaRuleValidator CreateSelfElementSchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+        RefSchemas refSchemas)
     {
-        return TryReadSchema(schemaDefinition, schemaPath, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
-            ? new SelfElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) : 
+        return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
+            ? new SelfObjectElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) : 
             null;
     }
     
-    public static ArrayItemSchemaRuleValidator CreateArrayItemSchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    
+    public static ArrayItemSchemaRuleValidator CreateArrayItemSchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+        RefSchemas refSchemas)
     {
-        return TryReadSchema(schemaDefinition, schemaPath, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
+        return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
             ? new ArrayItemSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath){SchemaDefinition = schemaDefinition} : 
             null;
     }
-    public static PropertySchemaRuleValidator CreatePropertySchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public static PropertySchemaRuleValidator CreatePropertySchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+        RefSchemas refSchemas)
     {
-        return TryReadSchema(schemaDefinition, schemaPath, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
+        return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
             ? new PropertySchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) : 
             null;
     }
 
-    private static bool TryReadSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+    public static bool TryReadSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+        RefSchemas refSchemas,
         out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
     {
         if (schemaDefinition == null)
@@ -92,16 +97,30 @@ public static class ElementSchemaRuleValidatorFactory
             return false;
         }
         typesRestriction = ReadTypeRestrictionsRule(schemaDefinition, schemaPath);
-        ruleValidators = ReadValueSchemaRuleValidators(schemaDefinition, schemaPath);
+        ruleValidators = ReadValueSchemaRuleValidators(schemaDefinition, schemaPath, refSchemas);
+
+        if (SchemaValidationHelper.TryGetString(schemaDefinition, SchemaValidatorConstants.Ref, schemaPath.ToString(), out var @ref))
+        {
+            if (refSchemas.TryGet(@ref, out var refSchema) == false)
+                throw new InvalidSchemaValidationDefinitionException(
+                    $"The reference '{@ref}' at '{schemaPath}' does not match any defined subschema.");
+
+            typesRestriction = Concat(typesRestriction, refSchema.TypesRestriction)?.Distinct().ToArray();
+            ruleValidators = Concat(ruleValidators, refSchema.RuleValidators);
+        }
+        
         return true;
+
+        T[] Concat<T>(T[] first, T[] second) => first == null ? second 
+            : second == null ? first : first.Concat(second).ToArray();
     }
 
     private static BlittableJsonToken[] ReadTypeRestrictionsRule(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        if (schemaDefinition.TryGet(SchemaValidatorConstants.type, out object typesRestrictionSchema) == false)
+        if (schemaDefinition.TryGet(SchemaValidatorConstants.Type, out object typesRestrictionSchema) == false)
             return null;
 
-        schemaPath += SchemaValidatorConstants.type;
+        schemaPath += SchemaValidatorConstants.Type;
         var allowedTypes = new List<BlittableJsonToken>();
         if (typesRestrictionSchema is BlittableJsonReaderArray types)
         {
@@ -116,7 +135,6 @@ public static class ElementSchemaRuleValidatorFactory
         }
 
         return allowedTypes.ToArray();
-        // return _typesRestriction.Select(SchemaValidationHelper.GetPublicType).Distinct().ToArray();
     }
     
     private static BlittableJsonToken[] ConvertTypeToTokens(object type, SchemaPath schemaPath)
@@ -125,7 +143,7 @@ public static class ElementSchemaRuleValidatorFactory
         if(SchemaValidationHelper.TryGetTokensForType(stringType, out BlittableJsonToken[] tokens) == false)
         {
             throw new InvalidSchemaValidationDefinitionException(
-                $"The '{SchemaValidatorConstants.type}' restriction must be one of the allowed types ('{string.Join("', '", SchemaValidationHelper.PublicTypes)}'), but found '{type}'. " +
+                $"The '{SchemaValidatorConstants.Type}' restriction must be one of the allowed types ('{string.Join("', '", SchemaValidationHelper.PublicTypes)}'), but found '{type}'. " +
                 $"Schema path: '{schemaPath}'.");
         }
         return tokens;
@@ -141,38 +159,43 @@ public static class ElementSchemaRuleValidatorFactory
         };
     }
     
-    private static ISchemaRuleValidator[] ReadValueSchemaRuleValidators(BlittableJsonReaderObject propertySchemaDefinition, SchemaPath schemaPath)
+    private static ISchemaRuleValidator[] ReadValueSchemaRuleValidators(BlittableJsonReaderObject propertySchemaDefinition, SchemaPath schemaPath,
+        RefSchemas refSchemas)
     {
         List<ISchemaRuleValidator> ruleValidators = null;
-        var hasObjectRestrictions = false;
-        var hasArrayRestrictions = false;
+        var alreadyHasObjectRestrictions = false;
+        var alreadyHasArrayRestrictions = false;
         foreach (var rule in propertySchemaDefinition.GetPropertyNames())
         {
-            if (rule is SchemaValidatorConstants.type or SchemaValidatorConstants.description)
+            if (rule is SchemaValidatorConstants.Type or SchemaValidatorConstants.Description)
                 continue;
 
             ISchemaRuleValidator validator;
             switch (rule)
             {
-                case SchemaValidatorConstants.properties or SchemaValidatorConstants.patternProperties or SchemaValidatorConstants.additionalProperties:
+                case SchemaValidatorConstants.Properties or SchemaValidatorConstants.PatternProperties or SchemaValidatorConstants.AdditionalProperties:
                 {
-                    if (hasObjectRestrictions)
+                    if (alreadyHasObjectRestrictions)
                         continue;
-                    validator = SchemaRuleValidatorFactoryHelper.CreateObjectValidator(propertySchemaDefinition, schemaPath);
-                    hasObjectRestrictions = true;
+                    validator = SchemaRuleValidatorFactoryHelper.CreateObjectValidator(propertySchemaDefinition, schemaPath, refSchemas);
+                    alreadyHasObjectRestrictions = true;
                     break;
                 }
-                case SchemaValidatorConstants.prefixItems or SchemaValidatorConstants.items:
+                case SchemaValidatorConstants.PrefixItems or SchemaValidatorConstants.Items:
                 {
-                    if (hasArrayRestrictions)
+                    if (alreadyHasArrayRestrictions)
                         continue;
-                    validator = SchemaRuleValidatorFactoryHelper.CreateArrayValidator(propertySchemaDefinition, schemaPath);
-                    hasArrayRestrictions = true;
+                    validator = SchemaRuleValidatorFactoryHelper.CreateArrayValidator(propertySchemaDefinition, schemaPath, refSchemas);
+                    alreadyHasArrayRestrictions = true;
                     break;
+                }
+                case SchemaValidatorConstants.Ref:
+                {
+                    continue;
                 }
                 default:
                 {
-                    if (SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertySchemaDefinition, schemaPath, out validator) == false)
+                    if (SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertySchemaDefinition, schemaPath, refSchemas, out validator) == false)
                         continue;
                     break;
                 }

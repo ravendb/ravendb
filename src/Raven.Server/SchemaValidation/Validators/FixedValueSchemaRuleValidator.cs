@@ -15,6 +15,8 @@ public abstract class FixedValueSchemaRuleValidator : SchemaRuleValidator<object
             LazyStringValue  => v,
             LazyCompressedStringValue lcsv => lcsv.ToLazyStringValue(),
             BlittableJsonReaderObject or BlittableJsonReaderArray => v,
+            bool => v,
+            null => null,
             _ => throw new InvalidOperationException($"The type {v.GetType()} is not supported.")
         };
     }

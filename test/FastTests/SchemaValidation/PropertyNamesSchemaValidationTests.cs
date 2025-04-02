@@ -21,9 +21,9 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.propertyNames] = new DynamicJsonValue
+            [SVC.PropertyNames] = new DynamicJsonValue
             {
-                [SVC.pattern] = "^[A-Z]+$"
+                [SVC.Pattern] = "^[A-Z]+$"
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -59,9 +59,9 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.propertyNames] = new DynamicJsonValue
+            [SVC.PropertyNames] = new DynamicJsonValue
             {
-                [SVC.minLength] = 3
+                [SVC.MinLength] = 3
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -107,9 +107,9 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.propertyNames] = new DynamicJsonValue
+            [SVC.PropertyNames] = new DynamicJsonValue
             {
-                [SVC.maxLength] = 5
+                [SVC.MaxLength] = 5
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))

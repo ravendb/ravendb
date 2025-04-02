@@ -47,21 +47,22 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.contains)]
+[SchemaRule(SchemaValidatorConstants.Contains)]
+// ReSharper disable once UnusedType.Global
 public class ContainsRuleValidatorRuleValidatorFactory : SchemaRuleValidatorFactory<ContainsRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override ContainsRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var containsSchema) == false)
             return null;
 
-        if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.minContains, schemaPath.FullPath, out var minContains) == false)
+        if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.MinContains, schemaPath.FullPath, out var minContains) == false)
             minContains = 1L;
         
-        if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.maxContains, schemaPath.FullPath, out var maxContains) == false)
+        if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.MaxContains, schemaPath.FullPath, out var maxContains) == false)
             maxContains = long.MaxValue;
         
-        var containsValidator = ElementSchemaRuleValidatorFactory.CreateArrayItemSchemaRuleValidator(containsSchema, schemaPath + Rule);
+        var containsValidator = ElementSchemaRuleValidatorFactory.CreateArrayItemSchemaRuleValidator(containsSchema, schemaPath + Rule, refSchemas);
         return new ContainsRuleValidator(containsValidator, minContains, maxContains);
     }
 }

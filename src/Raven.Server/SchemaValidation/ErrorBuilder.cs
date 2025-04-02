@@ -41,10 +41,10 @@ public class ErrorBuilder : IDisposable
                 _errorBuffer.Read(streamReader);
             }
         }
-        
         public void AppendFormatted(LazyStringValue value) => _errorBuffer.AppendUtf8(value.AsSpan());
         public void AppendFormatted(ValidationPath value) => _errorBuffer.Append(value.AsSpan());
         public void AppendFormatted(Regex value) => _errorBuffer.Append(value.ToString());
+        public void AppendFormatted(bool value) => _errorBuffer.Append(value.ToString());
         
         public void AppendFormatted(IEnumerable<object> value, string format)
         {
@@ -73,6 +73,12 @@ public class ErrorBuilder : IDisposable
                     break;
                 case Regex regexValue:
                     AppendFormatted(regexValue);
+                    break; 
+                case bool boolValue:
+                    AppendFormatted(boolValue);
+                    break;
+                case null:
+                    _errorBuffer.Append(null);
                     break;
                 default:
                     _errorBuffer.Append(value);
@@ -88,6 +94,6 @@ public static class ErrorBuilderHelper
 {
     public static void AddError(this ErrorBuilder errorBuilder, [InterpolatedStringHandlerArgument("errorBuilder")]ErrorBuilder.ErrorInterpolatedStringHandler message)
     {
-        
+        message.AppendLiteral(Environment.NewLine);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using Raven.Server.SchemaValidation.Validators;
 using Sparrow.Json;
@@ -8,11 +9,11 @@ namespace Raven.Server.SchemaValidation;
 
 public class SchemaValidator : IDisposable
 {
-    private SelfElementSchemaRuleValidator _root;
-    //The context is only written during the initialization phase. During validation, it is used for reading only.
+    private SelfObjectElementSchemaRuleValidator _root;
+    //The context is only written during the initialization phase. During validation, it is used for reading only and can be used in parallel.
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
     private int _activeValidations;
-    private SingleUseFlag _disposing = new SingleUseFlag();
+    private readonly SingleUseFlag _disposing = new SingleUseFlag();
     
     public SchemaValidator(JsonContextPool contextPool)
     {
@@ -22,7 +23,11 @@ public class SchemaValidator : IDisposable
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
         schemaDefinition = schemaDefinition.Clone(_context.Value);
-        _root = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(schemaDefinition, new SchemaPath());
+        
+        var refSchemas = new RefSchemas();
+        refSchemas.Init(schemaDefinition);
+        
+        _root = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(schemaDefinition, new SchemaPath(), refSchemas);
     }
 
     public bool Validate(BlittableJsonReaderObject obj, out string errors)
@@ -45,18 +50,23 @@ public class SchemaValidator : IDisposable
 
     public void Dispose()
     {
-        _disposing.Raise();
+        if (_disposing.Raise() == false)
+            return;
             
+        Interlocked.Decrement(ref _activeValidations);
         while (true)
         {
-            var origin = Interlocked.CompareExchange(ref _activeValidations, -1, 0);
-            if (origin == -1)
-                return;
-            if (origin == 0)
+            if (_activeValidations == -1)
                 break;
             Thread.Sleep(10);
         }
         
         _context.Return?.Dispose();
     }
+}
+
+public class RefSchema
+{
+    public (BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators) Rules { get; set; } 
+    public BlittableJsonReaderObject Raw { get; set; }
 }

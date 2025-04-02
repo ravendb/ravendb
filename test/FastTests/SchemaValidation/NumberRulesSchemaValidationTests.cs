@@ -25,16 +25,16 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    [SVC.minimum] = 0
+                    [SVC.Minimum] = 0
                 },
                 [doubleProp] = new DynamicJsonValue
                 {
-                    [SVC.minimum] = 0.5
+                    [SVC.Minimum] = 0.5
                 }
             }
         };
@@ -115,18 +115,18 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    [SVC.minimum] = 0, 
-                    [SVC.exclusiveMinimum] = true
+                    [SVC.Minimum] = 0, 
+                    [SVC.ExclusiveMinimum] = true
                 },
                 [doubleProp] = new DynamicJsonValue
                 {
-                    [SVC.minimum] = 0.5, 
-                    [SVC.exclusiveMinimum] = true
+                    [SVC.Minimum] = 0.5, 
+                    [SVC.ExclusiveMinimum] = true
                 }
             }
         };
@@ -189,16 +189,16 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    [SVC.maximum] = 0
+                    [SVC.Maximum] = 0
                 }, 
                 [doubleProp] = new DynamicJsonValue
                 {
-                    [SVC.maximum] = 0.5
+                    [SVC.Maximum] = 0.5
                 },
             }
         };
@@ -278,18 +278,18 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    [SVC.maximum] = 0,
-                    [SVC.exclusiveMaximum] = true
+                    [SVC.Maximum] = 0,
+                    [SVC.ExclusiveMaximum] = true
                 },
                 [doubleProp] = new DynamicJsonValue
                 {
-                    [SVC.maximum] = 0.5,
-                    [SVC.exclusiveMaximum] = true
+                    [SVC.Maximum] = 0.5,
+                    [SVC.ExclusiveMaximum] = true
                 }
             }
         };
@@ -370,16 +370,16 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 [longProp] = new DynamicJsonValue
                 {
-                    [SVC.multipleOf] = 3
+                    [SVC.MultipleOf] = 3
                 },
                 [doubleProp] = new DynamicJsonValue
                 {
-                    [SVC.multipleOf] = 0.6
+                    [SVC.MultipleOf] = 0.6
                 }
             }
         };

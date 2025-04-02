@@ -24,10 +24,11 @@ public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.multipleOf)]
+[SchemaRule(SchemaValidatorConstants.MultipleOf)]
+// ReSharper disable once UnusedType.Global
 public class MultipleOfSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MultipleOfSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override MultipleOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         return SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath.FullPath, out var multipleOf)
             ? new MultipleOfSchemaRuleValidator(multipleOf) 

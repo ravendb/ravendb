@@ -4,9 +4,17 @@ namespace Raven.Server.SchemaValidation;
 
 public readonly struct SchemaPath
 {
-    public string Property { get; private init; }
-    public string FullPath { get; private init; }
+    public static SchemaPath Root = new SchemaPath();
+    private const string RootStr = "#";
+    
+    public string Property { get; private init; } = null;
+    public string FullPath { get; private init; } = RootStr;
 
+    public SchemaPath()
+    {
+        
+    }
+    
     public override string ToString() => FullPath;
 
     public static SchemaPath operator +(SchemaPath me, string property)
@@ -14,7 +22,7 @@ public readonly struct SchemaPath
         return new SchemaPath
         {
             Property = property,
-            FullPath = string.IsNullOrEmpty(me.FullPath) ? property : $"{me.FullPath}.{property}"
+            FullPath = $"{me.FullPath}/{property}"
         };
     }
     

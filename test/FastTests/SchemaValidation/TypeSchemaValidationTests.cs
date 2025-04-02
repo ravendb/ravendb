@@ -24,7 +24,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
+            [SVC.Type] = "object",
         };
         using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
         {
@@ -43,12 +43,12 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.@type] = "object"
+                    [SVC.Type] = "object"
                 }
             }
         };
@@ -74,12 +74,12 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.@type] = "object"
+                    [SVC.Type] = "object"
                 }
             }
         };
@@ -105,12 +105,12 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.@type] = "string"
+                    [SVC.Type] = "string"
                 }
             }
         };
@@ -135,12 +135,12 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.@type] = "string"
+                    [SVC.Type] = "string"
                 }
             }
         };
@@ -165,12 +165,12 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.@type] = "integer"
+                    [SVC.Type] = "integer"
                 }
             }
         };
@@ -195,12 +195,12 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.@type] = "integer"
+                    [SVC.Type] = "integer"
                 }
             }
         };
@@ -225,12 +225,12 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.@type] = "integer"
+                    [SVC.Type] = "integer"
                 }
             }
         };
@@ -255,10 +255,10 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
-                ["prop"] = new DynamicJsonValue { [SVC.@type] = "boolean" }
+                ["prop"] = new DynamicJsonValue { [SVC.Type] = "boolean" }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -297,10 +297,10 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
-                ["prop"] = new DynamicJsonValue { [SVC.@type] = "null" }
+                ["prop"] = new DynamicJsonValue { [SVC.Type] = "null" }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -332,10 +332,10 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
-                ["prop"] = new DynamicJsonValue { [SVC.@type] = "array" }
+                ["prop"] = new DynamicJsonValue { [SVC.Type] = "array" }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -372,10 +372,10 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
-                ["prop"] = new DynamicJsonValue { [SVC.@type] = new DynamicJsonArray{"null", "object"} }
+                ["prop"] = new DynamicJsonValue { [SVC.Type] = new DynamicJsonArray{"null", "object"} }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -412,10 +412,10 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
-                ["prop"] = new DynamicJsonValue { [SVC.@type] = new DynamicJsonArray{} }
+                ["prop"] = new DynamicJsonValue { [SVC.Type] = new DynamicJsonArray{} }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -438,10 +438,10 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object",
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object",
+            [SVC.Properties] = new DynamicJsonValue
             {
-                ["prop"] = new DynamicJsonValue { [SVC.@enum] = new object[] { 15, "somevalue", new DynamicJsonValue { ["prop"] = 8 } } }
+                ["prop"] = new DynamicJsonValue { [SVC.Enum] = new object[] { 15, "somevalue", new DynamicJsonValue { ["prop"] = 8 } } }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -494,18 +494,18 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenTheory(RavenTestCategory.JavaScript)]
-    [InlineData("invalidType", "The 'type' restriction must be one of the allowed types ('null', 'integer', 'number', 'string', 'boolean', 'object', 'array'), but found 'invalidType'. Schema path: 'properties.prop.type'.")]
-    [InlineData(89, "Expected a value of type 'string' for 'type', but received 'integer' of type '89' at path 'properties.prop.type'.")]
-    [InlineData(45.5, "Expected a value of type 'string' for 'type', but received 'number' of type '45.5' at path 'properties.prop.type'.")]
-    [InlineData(true, "Expected a value of type 'string' for 'type', but received 'boolean' of type 'True' at path 'properties.prop.type'.")]
+    [InlineData("invalidType", "The 'type' restriction must be one of the allowed types ('null', 'integer', 'number', 'string', 'boolean', 'object', 'array'), but found 'invalidType'. Schema path: '#/properties/prop/type'.")]
+    [InlineData(89, "Expected a value of type 'string' for 'type', but received 'integer' of type '89' at path '#/properties/prop/type'.")]
+    [InlineData(45.5, "Expected a value of type 'string' for 'type', but received 'number' of type '45.5' at path '#/properties/prop/type'.")]
+    [InlineData(true, "Expected a value of type 'string' for 'type', but received 'boolean' of type 'True' at path '#/properties/prop/type'.")]
     public void InvalidSchema_WhenTypeIsNotValid_ShouldThrow(object type, string error)
     {
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Properties] = new DynamicJsonValue
             {
-                ["prop"] = new DynamicJsonValue { [SVC.type] = type }
+                ["prop"] = new DynamicJsonValue { [SVC.Type] = type }
             },
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -519,19 +519,19 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void InvalidSchema_WhenTypeIsObject_ShouldThrow()
     {
         var type = new DynamicJsonValue();
-        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'object' of type '{}' at path 'properties.prop.type'.");
+        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'object' of type '{}' at path '#/properties/prop/type'.");
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
     public void InvalidSchema_WhenTypeIsNull_ShouldThrow()
     {
-        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(null, "Expected a value of type 'string' for 'type', but received 'null' of type '' at path 'properties.prop.type'.");
+        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(null, "Expected a value of type 'string' for 'type', but received 'null' of type '' at path '#/properties/prop/type'.");
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
     public void InvalidSchema_WhenTypeRuleIsArrayOfInt_ShouldThrow()
     {
         var type = new DynamicJsonArray { 54 };
-        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'integer' of type '54' at path 'properties.prop.type'.");
+        InvalidSchema_WhenTypeIsNotValid_ShouldThrow(type, "Expected a value of type 'string' for 'type', but received 'integer' of type '54' at path '#/properties/prop/type'.");
     }
 }

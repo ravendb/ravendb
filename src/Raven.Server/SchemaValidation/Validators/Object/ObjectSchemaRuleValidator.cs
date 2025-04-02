@@ -79,15 +79,15 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
 
 public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ObjectSchemaRuleValidator>
 {
-    public override ObjectSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override ObjectSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         //TODO To create an informative error when fails to read
-        var named = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.properties)?
+        var named = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.Properties, refSchemas)?
             .ToDictionary(x => x.Property);
-        var pattern = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.patternProperties)?
+        var pattern = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.PatternProperties, refSchemas)?
             .Select(x => (new Regex(x.Property), x)).ToArray();
 
-        var additional = ReadAdditionalProperties(schemaDefinition, schemaPath);
+        var additional = ReadAdditionalProperties(schemaDefinition, schemaPath, refSchemas);
 
         if (named == null && pattern == null && additional is { IsAllowed: true, Validator: null })
             return null;
@@ -96,9 +96,10 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
         return validator;
     }
     
-    private static (bool IsAllowed, PropertySchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    private static (bool IsAllowed, PropertySchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+        RefSchemas refSchemas)
     {
-        const string rule = SchemaValidatorConstants.additionalProperties;
+        const string rule = SchemaValidatorConstants.AdditionalProperties;
         if (schemaDefinition.TryGet(rule, out object additionalProperties) == false)
         {
             return (true, null);
@@ -111,7 +112,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
                 return (isAdditionalPropertiesAllowed, null);
             case BlittableJsonReaderObject additionalPropertiesSchema:
             {
-                var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(additionalPropertiesSchema, schemaPath);
+                var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(additionalPropertiesSchema, schemaPath, refSchemas);
                 return (true, validator);
             }
             default:
@@ -122,7 +123,8 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
         }
     }
 
-    private static List<PropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    private static List<PropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+        RefSchemas refSchemas)
     {
         if (schemaDefinition.TryGet(schemaPath.Property, out object readPropertySpecifiers) == false) 
             return null;
@@ -136,8 +138,9 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
             var propertySchemaPath = schemaPath + propertySpecifier;
             SchemaValidationHelper.TryGetObject(propertySpecifiers, propertySpecifier, propertySchemaPath.FullPath, out var propertySchemaDefinition);
 
-            var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(propertySchemaDefinition, propertySchemaPath);
-            (validators ??= []).Add(validator);
+            var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(propertySchemaDefinition, propertySchemaPath, refSchemas);
+            if(validator != null)
+                (validators ??= []).Add(validator);
         }
 
         return validators;

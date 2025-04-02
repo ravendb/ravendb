@@ -6,7 +6,6 @@ namespace Raven.Server.SchemaValidation;
 
 public class ValidationPath
 {
-    //TODO To remove Stack allocation
     private readonly RentedBuffer<int> _sizes = new RentedBuffer<int>();
     private readonly RentedCharBuffer _path = new RentedCharBuffer();
     private string _toString;

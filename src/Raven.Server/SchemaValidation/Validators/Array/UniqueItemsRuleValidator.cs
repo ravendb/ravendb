@@ -24,10 +24,11 @@ public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.uniqueItems)]
+[SchemaRule(SchemaValidatorConstants.UniqueItems)]
+// ReSharper disable once UnusedType.Global
 public class UniqueItemsRuleValidatorFactory : SchemaRuleValidatorFactory<UniqueItemsRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override UniqueItemsRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         if (SchemaValidationHelper.TryGetBoolean(schemaDefinition, Rule, schemaPath.FullPath, out bool uniqueItems) == false) 
             return null;

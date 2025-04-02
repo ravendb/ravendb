@@ -21,10 +21,11 @@ public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.maxProperties)]
+[SchemaRule(SchemaValidatorConstants.MaxProperties)]
+// ReSharper disable once UnusedType.Global
 public class MaxPropertiesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaxPropertiesSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override MaxPropertiesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath.FullPath, out var maxProperties) 
             ? new MaxPropertiesSchemaRuleValidator(maxProperties)

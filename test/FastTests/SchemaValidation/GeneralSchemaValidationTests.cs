@@ -24,10 +24,10 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         const string prop = "prop";
 
         var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue { [SVC.@type] = "object", [SVC.required] = new DynamicJsonArray { prop } };
+        var schemaDefinition = new DynamicJsonValue { [SVC.Type] = "object", [SVC.Required] = new DynamicJsonArray { prop } };
         if (withAdditionalRestriction)
         {
-            schemaDefinition[SVC.properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.@type] = "string" } };
+            schemaDefinition[SVC.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.Type] = "string" } };
         }
 
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -59,9 +59,9 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Properties] = new DynamicJsonValue
             {
-                [prop] = new DynamicJsonValue { [SVC.properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.@const] = 123 } } }
+                [prop] = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.Const] = 123 } } }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -89,7 +89,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     public async Task SchemaValidation_WhenRestrictOnMinProperties()
     {
         var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue { [SVC.minProperties] = 2 };
+        var schemaDefinition = new DynamicJsonValue { [SVC.MinProperties] = 2 };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
@@ -122,7 +122,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     public async Task SchemaValidation_WhenRestrictOnMaxProperties()
     {
         var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue { [SVC.maxProperties] = 3 };
+        var schemaDefinition = new DynamicJsonValue { [SVC.MaxProperties] = 3 };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
@@ -153,5 +153,4 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                 AssertError("The object at '' must have no more than 3 properties, but it has 4.", errors);
             });
     }
-
 }

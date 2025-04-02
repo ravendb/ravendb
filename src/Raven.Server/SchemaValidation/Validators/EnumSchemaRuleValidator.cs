@@ -16,7 +16,7 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
 
     protected override bool ValidateInternal(object value, ErrorBuilder errorBuilder)
     {
-        if (_enums.Any(x => x.Equals(value))) 
+        if (_enums.Any(x => Equals(x, value))) 
             return true;
         
         //TODO Clear error to differentiate between number and string (15 or "15")
@@ -31,11 +31,11 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.@enum)]
+[SchemaRule(SchemaValidatorConstants.Enum)]
 // ReSharper disable once UnusedType.Global
 public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<EnumSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override EnumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath.FullPath, out var enums) 
             ? new EnumSchemaRuleValidator(enums)
