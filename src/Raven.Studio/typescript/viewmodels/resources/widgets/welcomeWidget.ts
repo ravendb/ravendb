@@ -18,7 +18,7 @@ class welcomeWidget extends widget {
     bootstrapped: KnockoutComputed<boolean>;
 
     isCreateDatabaseViewOpen = ko.observable(false);
-    createDatabaseView: ReactInKnockout<typeof CreateDatabase>;
+    createDatabaseView: ReactInKnockout<typeof CreateDatabase.default>;
 
     private static createLink(hash: string) {
         return ko.pureComputed(() => {
@@ -33,7 +33,7 @@ class welcomeWidget extends widget {
         this.bootstrapped = ko.pureComputed(() => this.controller.currentServerNodeTag !== "?");
 
         this.createDatabaseView = ko.pureComputed(() => ({
-            component: CreateDatabase,
+            component: CreateDatabase.default,
             props: {
                 closeModal: () => this.isCreateDatabaseViewOpen(false),
             }

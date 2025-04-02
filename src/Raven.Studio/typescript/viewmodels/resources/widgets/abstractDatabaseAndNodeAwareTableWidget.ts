@@ -22,8 +22,8 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     noDatabases = ko.pureComputed(() => !this.databaseManager.databases().length);
 
     isCreateDatabaseViewOpen = ko.observable(false);
-    createDatabaseView: ReactInKnockout<typeof CreateDatabase> = ko.pureComputed(() => ({
-        component: CreateDatabase,
+    createDatabaseView: ReactInKnockout<typeof CreateDatabase.default> = ko.pureComputed(() => ({
+        component: CreateDatabase.default,
         props: {
             closeModal: () => this.isCreateDatabaseViewOpen(false),
         }
