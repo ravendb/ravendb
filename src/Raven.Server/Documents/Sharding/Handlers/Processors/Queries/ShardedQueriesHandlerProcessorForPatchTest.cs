@@ -28,7 +28,7 @@ internal sealed class ShardedQueriesHandlerProcessorForPatchTest : AbstractQueri
 
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            var proxyCommand = new ProxyCommand<PatchByQueryTestCommand.Response>(command, HttpContext.Response);
+            var proxyCommand = new ProxyCommand<PatchByQueryTestCommand.Response>(command, HttpContext);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
         }
     }

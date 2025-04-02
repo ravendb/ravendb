@@ -45,7 +45,7 @@ internal abstract class AbstractShardedEtlHandlerProcessorForTest<TTestEtlScript
 
             var command = CreateCommand(testScriptJson);
 
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand(command, RequestHandler.HttpContext.Response), shardNumber, token.Token);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand(command, RequestHandler.HttpContext), shardNumber, token.Token);
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
 using Raven.Server.Utils;
@@ -12,7 +11,8 @@ namespace Raven.Server.Web.Http;
 
 public sealed class ProxyCommand : ProxyCommand<object>
 {
-    public ProxyCommand(RavenCommand command, [NotNull] HttpResponse response) : base(command, response)
+    public ProxyCommand(RavenCommand command, HttpContext httpContext)
+        : base(command, httpContext)
     {
     }
 }
@@ -21,12 +21,14 @@ public class ProxyCommand<T> : RavenCommand
 {
     private readonly RavenCommand<T> _command;
     private readonly HttpResponse _response;
+    private readonly HttpRequest _request;
 
-    public ProxyCommand(RavenCommand<T> command, [NotNull] HttpResponse response)
+    public ProxyCommand(RavenCommand<T> command, HttpContext httpContext)
     {
         _command = command ?? throw new ArgumentNullException(nameof(command));
-        _response = response ?? throw new ArgumentNullException(nameof(response));
-        ResponseBehavior = new ProxyCommandResponseBehavior(response);
+        _response = httpContext?.Response ?? throw new ArgumentNullException(nameof(httpContext.Response));
+        _request = httpContext?.Request ?? throw new ArgumentNullException(nameof(httpContext.Request));
+        ResponseBehavior = new ProxyCommandResponseBehavior(_response);
     }
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -42,6 +44,22 @@ public class ProxyCommand<T> : RavenCommand
         await HttpResponseHelper.CopyContentAsync(response, _response);
 
         return ResponseDisposeHandling.Automatic;
+    }
+
+    public override void OnBeforeRequest(HttpRequestMessage request)
+    {
+        if (_request == null)
+            return;
+
+        if (_request.Headers.AcceptEncoding.Count == 0)
+            return;
+
+        if (_request.Headers.AcceptEncoding == request.Headers.AcceptEncoding)
+            return;
+
+        request.Headers.AcceptEncoding.Clear();
+        foreach (var encoding in _request.Headers.AcceptEncoding)
+            request.Headers.AcceptEncoding.ParseAdd(encoding);
     }
 
     public override bool IsReadRequest => _command.IsReadRequest;

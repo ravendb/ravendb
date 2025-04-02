@@ -990,6 +990,9 @@ namespace Raven.Client.Http
 
                 command.NumberOfAttempts += 1;
                 var attemptNum = command.NumberOfAttempts;
+
+                command.OnBeforeRequest(request);
+
                 OnBeforeRequest?.Invoke(this, new BeforeRequestEventArgs(_databaseName, url, request, attemptNum));
                 var response = await SendRequestToServer(chosenNode, nodeIndex, context, command, shouldRetry, sessionInfo, request, url, token).ConfigureAwait(false);
                 if (response == null) // the fail-over mechanism took care of this

@@ -234,8 +234,12 @@ namespace Raven.Client.Http
 
         public virtual void OnResponseFailure(HttpResponseMessage response)
         {
-
         }
+
+        public virtual void OnBeforeRequest(HttpRequestMessage request)
+        {
+        }
+
         internal void SetTimeout(TimeSpan timeout)
         {
             Timeout = timeout;

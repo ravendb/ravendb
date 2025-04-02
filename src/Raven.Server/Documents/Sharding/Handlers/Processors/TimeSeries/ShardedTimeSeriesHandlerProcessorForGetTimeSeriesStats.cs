@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
         {
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
             var op = new GetTimeSeriesStatisticsOperation.GetTimeSeriesStatisticsCommand(docId);
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<TimeSeriesStatistics>(op, RequestHandler.HttpContext.Response), shardNumber);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<TimeSeriesStatistics>(op, RequestHandler.HttpContext), shardNumber);
         }
     }
 }

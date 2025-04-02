@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 //redirect
                 var cmd = new GetRunningBackupStatusCommand(taskId);
                 cmd.SelectedNodeTag = responsibleNode;
-                await RequestHandler.ExecuteRemoteAsync(new ProxyCommand<OperationIdResult>(cmd, HttpContext.Response));
+                await RequestHandler.ExecuteRemoteAsync(new ProxyCommand<OperationIdResult>(cmd, HttpContext));
             }
         }
     }

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             //redirect
             var cmd = new StartBackupOperation.StartBackupCommand(isFullBackup, taskId, operationId, startTime);
             cmd.SelectedNodeTag = nodeTag;
-            await RequestHandler.ExecuteRemoteAsync(new ProxyCommand<OperationIdResult<StartBackupOperationResult>>(cmd, HttpContext.Response));
+            await RequestHandler.ExecuteRemoteAsync(new ProxyCommand<OperationIdResult<StartBackupOperationResult>>(cmd, HttpContext));
             
             return (operationId, IsResponsibleNode: false);
         }

@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
         protected override async Task GetConflictsForDocumentAsync(TransactionOperationContext context, string documentId)
         {
             var cmd = new GetConflictsCommand(id: documentId);
-            var proxyCommand = new ProxyCommand<GetConflictsResult>(cmd, RequestHandler.HttpContext.Response);
+            var proxyCommand = new ProxyCommand<GetConflictsResult>(cmd, RequestHandler.HttpContext);
 
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, documentId);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber);

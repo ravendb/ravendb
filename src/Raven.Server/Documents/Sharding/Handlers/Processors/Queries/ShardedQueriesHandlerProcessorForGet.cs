@@ -65,7 +65,7 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
     {
         var command = new ExplainQueryCommand(DocumentConventions.DefaultForServer, query.ToJson(queryContext));
 
-        var proxyCommand = new ProxyCommand<ExplainQueryCommand.ExplainQueryResult[]>(command, HttpContext.Response);
+        var proxyCommand = new ProxyCommand<ExplainQueryCommand.ExplainQueryResult[]>(command, HttpContext);
 
         await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(queryContext, proxyCommand, shardNumber: 0, token.Token);
     }

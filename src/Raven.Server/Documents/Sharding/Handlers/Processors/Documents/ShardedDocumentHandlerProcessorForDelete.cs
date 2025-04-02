@@ -23,7 +23,7 @@ internal sealed class ShardedDocumentHandlerProcessorForDelete : AbstractDocumen
 
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            var proxyCommand = new ProxyCommand(command, HttpContext.Response);
+            var proxyCommand = new ProxyCommand(command, HttpContext);
 
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
         }

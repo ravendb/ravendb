@@ -19,7 +19,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
         protected override async Task GetSuggestConflictResolutionAsync(TransactionOperationContext context, string documentId)
         {
             var cmd = new GetSuggestConflictResolutionOperation.GetSuggestConflictResolutionCommand(documentId);
-            var proxyCommand = new ProxyCommand<ConflictResolverAdvisor.MergeResult>(cmd, RequestHandler.HttpContext.Response);
+            var proxyCommand = new ProxyCommand<ConflictResolverAdvisor.MergeResult>(cmd, RequestHandler.HttpContext);
 
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, documentId);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber);

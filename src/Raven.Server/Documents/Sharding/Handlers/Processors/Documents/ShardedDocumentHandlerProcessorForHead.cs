@@ -23,7 +23,7 @@ internal sealed class ShardedDocumentHandlerProcessorForHead : AbstractDocumentH
 
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            var proxyCommand = new ProxyCommand<string>(command, HttpContext.Response);
+            var proxyCommand = new ProxyCommand<string>(command, HttpContext);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
         }
     }

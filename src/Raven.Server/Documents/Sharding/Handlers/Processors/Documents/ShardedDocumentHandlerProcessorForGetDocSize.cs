@@ -23,7 +23,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGetDocSize : AbstractDoc
 
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            var proxyCommand = new ProxyCommand<DocumentSizeDetails>(command, HttpContext.Response);
+            var proxyCommand = new ProxyCommand<DocumentSizeDetails>(command, HttpContext);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
         }
     }

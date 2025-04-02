@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         {
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
             var cmd = new GetTimeSeriesCommand(docId, name, from, to, offset);
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand(cmd, HttpContext.Response), shardNumber, token);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand(cmd, HttpContext), shardNumber, token);
         }
     }
 }

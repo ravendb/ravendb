@@ -23,8 +23,8 @@ internal sealed class ShardedAttachmentHandlerProcessorForGetAttachmentMetadataW
 
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            var proxyCommand = new ProxyCommand<GetAttachmentMetadataWithCountsCommand.Response>(command, HttpContext.Response);
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
+            var proxyCommand = new ProxyCommand<GetAttachmentMetadataWithCountsCommand.Response>(command, HttpContext);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token); 
         }
     }
 }

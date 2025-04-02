@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
             using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
                 var cmd = new TimeSeriesBatchOperation.TimeSeriesBatchCommand(RequestHandler.ShardExecutor.Conventions, docId, operation);
-                await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<object>(cmd, RequestHandler.HttpContext.Response), shardNumber, token.Token);
+                await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<object>(cmd, RequestHandler.HttpContext), shardNumber, token.Token);
             }
         }
     }

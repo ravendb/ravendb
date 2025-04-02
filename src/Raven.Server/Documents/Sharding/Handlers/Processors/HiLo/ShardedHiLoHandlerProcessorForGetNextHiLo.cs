@@ -29,7 +29,7 @@ internal sealed class ShardedHiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHa
                 shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, hiloDocId);
 
             var command = CreateCommand();
-            var proxyCommand = new ProxyCommand<HiLoResult>(command, HttpContext.Response);
+            var proxyCommand = new ProxyCommand<HiLoResult>(command, HttpContext);
 
             await RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
         }
