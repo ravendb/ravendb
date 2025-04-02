@@ -20,7 +20,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
-using DbProviderFactories = System.Data.Common.DbProviderFactories;
+using DbProviderFactories = Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters.DbProviderFactories;
 
 namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
 
