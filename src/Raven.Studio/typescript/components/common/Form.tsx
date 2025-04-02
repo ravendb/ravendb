@@ -228,10 +228,19 @@ export function FormSelectCreatable<
         shouldUnregister,
     });
 
-    const [customOptions, setCustomOptions] = useState<OptionsOrGroups<Option, Group>>(rest.customOptions ?? []);
-
     const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
     const optionCreator = rest.optionCreator ?? ((value: string) => ({ value, label: value }));
+
+    const getOptionsFromValue = (formValues: any, creator: (value: string) => any) => {
+        if (!formValues) {
+            return [];
+        }
+        return Array.isArray(formValues) ? formValues.map(creator) : [creator(formValues)];
+    };
+
+    const [customOptions, setCustomOptions] = useState<OptionsOrGroups<Option, Group>>(
+        rest.customOptions ?? getOptionsFromValue(formValues, optionCreator)
+    );
 
     const selectedOptions = getFormSelectedOptions<Option>(
         formValues,
