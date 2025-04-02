@@ -135,6 +135,9 @@ public class AutoToStaticIndexConverter
         indexDefinition.Maps = ConstructMaps(autoIndex, context);
         indexDefinition.Reduce = ConstructReduce(autoIndex);
         indexDefinition.Fields = ConstructFields(autoIndex, context);
+        
+        if (indexDefinition.Fields.Any(x => x.Value.Vector != null))
+            indexDefinition.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Corax.ToString();
 
         return indexDefinition;
 
@@ -595,9 +598,9 @@ public class AutoToStaticIndexConverter
                 }
                 else if (kvp.Value.Vector != null)
                 {
-                    var newFieldName = vectorCounter == 0 ? "Vector" : $"Vector{vectorCounter}";
+                    var newFieldName = $"Vector{vectorCounter}";
                     context.FieldNameMapping.Add(f.FieldName, newFieldName);
-                    sb.AppendLine($"{newFieldName} = {nameof(AbstractIndexCreationTask.CreateVector)}(item.{kvp.Value.Vector.SourceFieldName})");
+                    sb.AppendLine($"{newFieldName} = {nameof(AbstractIndexCreationTask.CreateVector)}(item.{kvp.Value.Vector.SourceFieldName}),");
                     vectorCounter++;
                 }
             }
