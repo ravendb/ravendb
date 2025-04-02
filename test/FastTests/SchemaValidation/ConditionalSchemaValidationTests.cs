@@ -25,17 +25,17 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@if] = new DynamicJsonValue
+            [SVC.If] = new DynamicJsonValue
             {
-                [SVC.required] = new []{ifProp}
+                [SVC.Required] = new []{ifProp}
             },
-            [SVC.then] = new DynamicJsonValue
+            [SVC.Then] = new DynamicJsonValue
             {
-                [SVC.required] = new []{thenProp}
+                [SVC.Required] = new []{thenProp}
             },
-            [SVC.@else] = new DynamicJsonValue
+            [SVC.Else] = new DynamicJsonValue
             {
-                [SVC.required] = new []{elseProp}
+                [SVC.Required] = new []{elseProp}
             }
         };
 
@@ -110,7 +110,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     public async Task SchemaValidation_WhenRestrictOnDependentRequired()
     {
         var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue { [SVC.dependentRequired] = new DynamicJsonValue { ["prop1"] = new[] { "prop2", "prop3" } } };
+        var schemaDefinition = new DynamicJsonValue { [SVC.DependentRequired] = new DynamicJsonValue { ["prop1"] = new[] { "prop2", "prop3" } } };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
@@ -152,15 +152,15 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue 
         { 
-            [SVC.dependentSchemas] = new DynamicJsonValue 
+            [SVC.DependentSchemas] = new DynamicJsonValue 
             { 
                 ["prop1"] = new DynamicJsonValue
                 {
-                    [SVC.properties] = new DynamicJsonValue
+                    [SVC.Properties] = new DynamicJsonValue
                     {
                         ["prop2"] = new DynamicJsonValue
                         {
-                            [SVC.type] = "string"
+                            [SVC.Type] = "string"
                         }
                     }
                 } 
@@ -201,9 +201,9 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue 
         { 
-            [SVC.not] = new DynamicJsonValue 
+            [SVC.Not] = new DynamicJsonValue 
             { 
-                [SVC.required] = new DynamicJsonArray
+                [SVC.Required] = new DynamicJsonArray
                 {
                     "prop"
                 } 

@@ -14,7 +14,7 @@ public class ConstantSchemaRuleValidator : FixedValueSchemaRuleValidator
 
     protected override bool ValidateInternal(object value, ErrorBuilder errorBuilder)
     {
-        if (_constantValue.Equals(value)) 
+        if (Equals(_constantValue, value)) 
             return true;
         
         //TODO Clear error to differentiate between number and string (15 or "15")
@@ -29,10 +29,11 @@ public class ConstantSchemaRuleValidator : FixedValueSchemaRuleValidator
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.@const)]
+[SchemaRule(SchemaValidatorConstants.Const)]
+// ReSharper disable once UnusedType.Global
 public class ConstantSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ConstantSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override ConstantSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         return schemaDefinition.TryGet(Rule, out object multipleOf)
             ? new ConstantSchemaRuleValidator(multipleOf) 

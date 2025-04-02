@@ -40,15 +40,16 @@ public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.maximum)]
+[SchemaRule(SchemaValidatorConstants.Maximum)]
+// ReSharper disable once UnusedType.Global
 public class MaximumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaximumSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override MaximumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath.FullPath, out var maximum) == false)
             return null;
 
-        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.exclusiveMaximum, schemaPath.FullPath, out bool exclusiveMaximum);
+        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.ExclusiveMaximum, schemaPath.FullPath, out bool exclusiveMaximum);
         
         return new MaximumSchemaRuleValidator(maximum, exclusiveMaximum);
     }

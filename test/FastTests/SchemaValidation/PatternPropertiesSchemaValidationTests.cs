@@ -20,11 +20,11 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.patternProperties] = new DynamicJsonValue
+            [SVC.PatternProperties] = new DynamicJsonValue
             {
                 [Regex("[a-z]{3,}")] = new DynamicJsonValue
                 {
-                    [SVC.minimum] = 0
+                    [SVC.Minimum] = 0
                 },
             }
         };
@@ -49,11 +49,11 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.patternProperties] = new DynamicJsonValue
+            [SVC.PatternProperties] = new DynamicJsonValue
             {
                 [Regex("[a-z]{3,}")] = new DynamicJsonValue
                 {
-                    [SVC.minimum] = 0
+                    [SVC.Minimum] = 0
                 },
             }
         };
@@ -78,11 +78,11 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.patternProperties] = new DynamicJsonValue
+            [SVC.PatternProperties] = new DynamicJsonValue
             {
                 [Regex("[a-z]{3,}")] = new DynamicJsonValue
                 {
-                    [SVC.minimum] = 0
+                    [SVC.Minimum] = 0
                 },
             }
         };

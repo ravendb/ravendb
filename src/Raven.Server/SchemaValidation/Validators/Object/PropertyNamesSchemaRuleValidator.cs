@@ -33,10 +33,11 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.propertyNames)]
+[SchemaRule(SchemaValidatorConstants.PropertyNames)]
+// ReSharper disable once UnusedType.Global
 public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PropertyNamesSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override PropertyNamesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var propertyNames) == false)
             return null;
@@ -44,7 +45,7 @@ public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
         List<SchemaRuleValidator<string>> propertyNameValidators = null;
         foreach (var rule in propertyNames.GetPropertyNames())
         {
-            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertyNames, schemaPath, out var ruleValidator) == false)
+            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertyNames, schemaPath, refSchemas, out var ruleValidator) == false)
                 continue;
             var ruleSchemaPath = schemaPath + rule;
             if (ruleValidator is not StringSchemaRuleValidator stringValidator)

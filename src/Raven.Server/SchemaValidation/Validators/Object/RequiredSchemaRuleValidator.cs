@@ -32,10 +32,11 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.required)]
+[SchemaRule(SchemaValidatorConstants.Required)]
+// ReSharper disable once UnusedType.Global
 public class RequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<RequiredSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override RequiredSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath.FullPath, out var required)
             ? new RequiredSchemaRuleValidator(required)

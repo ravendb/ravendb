@@ -37,15 +37,16 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.minimum)]
+[SchemaRule(SchemaValidatorConstants.Minimum)]
+// ReSharper disable once UnusedType.Global
 public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override MinimumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath.FullPath, out var minimum) == false)
             return null;
         
-        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.exclusiveMinimum, schemaPath.FullPath, out bool exclusiveMinimum);
+        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.ExclusiveMinimum, schemaPath.FullPath, out bool exclusiveMinimum);
 
         return new MinimumSchemaRuleValidator(minimum, exclusiveMinimum);
     }

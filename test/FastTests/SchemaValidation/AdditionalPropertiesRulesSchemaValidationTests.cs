@@ -25,11 +25,11 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         var schemaValidator = new SchemaValidator(ContextPool);
         var jsonSchemaValidator = new DynamicJsonValue
         {
-            [SVC.additionalProperties] = false
+            [SVC.AdditionalProperties] = false
         };
         if (withDefinedProp)
         {
-            jsonSchemaValidator[SVC.properties] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
+            jsonSchemaValidator[SVC.Properties] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
         }
 
         using (ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition))
@@ -42,7 +42,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
                 if (withDefinedProp == false)
                     return;
                 
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["definedProp"] = "12345" }, out var obj);
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [definedProp] = "12345" }, out var obj);
 
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
@@ -67,14 +67,14 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         var schemaValidator = new SchemaValidator(ContextPool);
         var jsonSchemaValidator = new DynamicJsonValue
         {
-            [SVC.additionalProperties] = new DynamicJsonValue
+            [SVC.AdditionalProperties] = new DynamicJsonValue
             {
-                [SVC.@const] = 1
+                [SVC.Const] = 1
             }
         };
         if (withDefinedProp)
         {
-            jsonSchemaValidator[SVC.properties] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
+            jsonSchemaValidator[SVC.Properties] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
         }
 
         using (ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition))

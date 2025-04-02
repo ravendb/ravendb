@@ -21,12 +21,12 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object", 
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object", 
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.minLength] = 5
+                    [SVC.MinLength] = 5
                 }
             }
         };
@@ -63,12 +63,12 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object", 
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object", 
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.maxLength] = 5
+                    [SVC.MaxLength] = 5
                 }
             }
         };
@@ -104,12 +104,12 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SVC.@type] = "object", 
-            [SVC.properties] = new DynamicJsonValue
+            [SVC.Type] = "object", 
+            [SVC.Properties] = new DynamicJsonValue
             {
                 ["prop"] = new DynamicJsonValue
                 {
-                    [SVC.pattern] = Regex(@"[A-Za-z]{2,3}\d")
+                    [SVC.Pattern] = Regex(@"[A-Za-z]{2,3}\d")
                 }
             }
         };

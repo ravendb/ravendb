@@ -18,7 +18,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
     public async Task SchemaValidation_WhenRestrictOnUniqueItems()
     {
         var schemaValidator = new SchemaValidator(ContextPool);
-        var schemaDefinition = new DynamicJsonValue { [SchemaValidatorConstants.properties] = new DynamicJsonValue { ["prop1"] = new DynamicJsonValue { [SchemaValidatorConstants.uniqueItems] = true } } };
+        var schemaDefinition = new DynamicJsonValue { [SchemaValidatorConstants.Properties] = new DynamicJsonValue { ["prop1"] = new DynamicJsonValue { [SchemaValidatorConstants.UniqueItems] = true } } };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
             schemaValidator.Init(blitSchemaDefinition);
@@ -55,13 +55,13 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SchemaValidatorConstants.properties] = new DynamicJsonValue
+            [SchemaValidatorConstants.Properties] = new DynamicJsonValue
             {
                 [prop] = new DynamicJsonValue
                 {
-                    [SchemaValidatorConstants.prefixItems] = new DynamicJsonArray
+                    [SchemaValidatorConstants.PrefixItems] = new DynamicJsonArray
                     {
-                        new DynamicJsonValue { [SchemaValidatorConstants.type] = "integer" }, new DynamicJsonValue { [SchemaValidatorConstants.type] = "string" },
+                        new DynamicJsonValue { [SchemaValidatorConstants.Type] = "integer" }, new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" },
                     }
                 }
             }
@@ -123,15 +123,15 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SchemaValidatorConstants.properties] = new DynamicJsonValue
+            [SchemaValidatorConstants.Properties] = new DynamicJsonValue
             {
                 [prop] = new DynamicJsonValue
                 {
-                    [SchemaValidatorConstants.prefixItems] = new DynamicJsonArray
+                    [SchemaValidatorConstants.PrefixItems] = new DynamicJsonArray
                     {
-                        new DynamicJsonValue { [SchemaValidatorConstants.type] = "integer" }, new DynamicJsonValue { [SchemaValidatorConstants.type] = "string" },
+                        new DynamicJsonValue { [SchemaValidatorConstants.Type] = "integer" }, new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" },
                     },
-                    [SchemaValidatorConstants.items] = false
+                    [SchemaValidatorConstants.Items] = false
                 }
             }
         };
@@ -164,7 +164,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SchemaValidatorConstants.properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SchemaValidatorConstants.items] = new DynamicJsonValue { [SchemaValidatorConstants.type] = "string" } } }
+            [SchemaValidatorConstants.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SchemaValidatorConstants.Items] = new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" } } }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
@@ -196,7 +196,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SchemaValidatorConstants.properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SchemaValidatorConstants.contains] = new DynamicJsonValue { [SchemaValidatorConstants.type] = "string" } } }
+            [SchemaValidatorConstants.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SchemaValidatorConstants.Contains] = new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" } } }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
@@ -229,9 +229,9 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SchemaValidatorConstants.properties] = new DynamicJsonValue
+            [SchemaValidatorConstants.Properties] = new DynamicJsonValue
             {
-                [prop] = new DynamicJsonValue { [SchemaValidatorConstants.contains] = new DynamicJsonValue { [SchemaValidatorConstants.type] = "string" }, [SchemaValidatorConstants.maxContains] = 3 }
+                [prop] = new DynamicJsonValue { [SchemaValidatorConstants.Contains] = new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" }, [SchemaValidatorConstants.MaxContains] = 3 }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
@@ -275,9 +275,9 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
-            [SchemaValidatorConstants.properties] = new DynamicJsonValue
+            [SchemaValidatorConstants.Properties] = new DynamicJsonValue
             {
-                [prop] = new DynamicJsonValue { [SchemaValidatorConstants.contains] = new DynamicJsonValue { [SchemaValidatorConstants.type] = "string" }, [SchemaValidatorConstants.minContains] = 3 }
+                [prop] = new DynamicJsonValue { [SchemaValidatorConstants.Contains] = new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" }, [SchemaValidatorConstants.MinContains] = 3 }
             }
         };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))

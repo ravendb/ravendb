@@ -23,10 +23,11 @@ public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.minLength)]
+[SchemaRule(SchemaValidatorConstants.MinLength)]
+// ReSharper disable once UnusedType.Global
 public class MinimumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumLengthSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override MinimumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath.FullPath, out var minimumLength) 
             ? new MinimumLengthSchemaRuleValidator(minimumLength)

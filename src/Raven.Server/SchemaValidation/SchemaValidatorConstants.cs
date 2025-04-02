@@ -2,52 +2,52 @@
 
 internal static class SchemaValidatorConstants
 {
-    // ReSharper disable InconsistentNaming
-    public const string type = "type";
-    public const string description = "description";
-    public const string @const = "const";
-    public const string @enum = "enum";
+    public const string Type = "type";
+    public const string Description = "description";
+    public const string Const = "const";
+    public const string Enum = "enum";
+    public const string Ref = "$ref";
+    public const string Defs = "$defs";
 
     #region Numbers
-    public const string maximum = "maximum";
-    public const string exclusiveMaximum = "exclusiveMaximum";
-    public const string minimum = "minimum";
-    public const string exclusiveMinimum = "exclusiveMinimum";
-    public const string multipleOf = "multipleOf";
+    public const string Maximum = "maximum";
+    public const string ExclusiveMaximum = "exclusiveMaximum";
+    public const string Minimum = "minimum";
+    public const string ExclusiveMinimum = "exclusiveMinimum";
+    public const string MultipleOf = "multipleOf";
     #endregion
     
     #region String
-    public const string maxLength = "maxLength";
-    public const string minLength = "minLength";
-    public const string pattern = "pattern";
+    public const string MaxLength = "maxLength";
+    public const string MinLength = "minLength";
+    public const string Pattern = "pattern";
     #endregion
 
     #region Object
-    public const string properties = "properties";
-    public const string patternProperties = "patternProperties";
-    public const string additionalProperties = "additionalProperties";
-    public const string maxProperties = "maxProperties";
-    public const string minProperties = "minProperties";
-    public const string propertyNames = "propertyNames";
-    public const string required = "required";
+    public const string Properties = "properties";
+    public const string PatternProperties = "patternProperties";
+    public const string AdditionalProperties = "additionalProperties";
+    public const string MaxProperties = "maxProperties";
+    public const string MinProperties = "minProperties";
+    public const string PropertyNames = "propertyNames";
+    public const string Required = "required";
     #endregion
     
     #region Array
-    public const string uniqueItems = "uniqueItems";
-    public const string items = "items";
-    public const string prefixItems = "prefixItems";
-    public const string contains = "contains";
-    public const string minContains = "minContains";
-    public const string maxContains = "maxContains";
+    public const string UniqueItems = "uniqueItems";
+    public const string Items = "items";
+    public const string PrefixItems = "prefixItems";
+    public const string Contains = "contains";
+    public const string MinContains = "minContains";
+    public const string MaxContains = "maxContains";
     #endregion
 
     #region conditional
-    public const string dependentRequired = "dependentRequired";
-    public const string dependentSchemas = "dependentSchemas";
-    public const string @if = "if";
-    public const string then = "then";
-    public const string @else = "else";
-    public const string not = "not";
+    public const string DependentRequired = "dependentRequired";
+    public const string DependentSchemas = "dependentSchemas";
+    public const string If = "if";
+    public const string Then = "then";
+    public const string Else = "else";
+    public const string Not = "not";
     #endregion
-    // ReSharper restore InconsistentNaming
 }

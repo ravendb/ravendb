@@ -23,10 +23,11 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.maxLength)]
+[SchemaRule(SchemaValidatorConstants.MaxLength)]
+// ReSharper disable once UnusedType.Global
 public class MaximumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaximumLengthSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override MaximumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath.FullPath, out var maximumLength) 
             ? new MaximumLengthSchemaRuleValidator(maximumLength)

@@ -4,11 +4,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
-[SchemaRule(SchemaValidatorConstants.dependentRequired)]
+[SchemaRule(SchemaValidatorConstants.DependentRequired)]
 // ReSharper disable once UnusedType.Global
 public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<GroupedIfThenElseSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override GroupedIfThenElseSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var dependentRequiredSchema) == false)
             return null;
@@ -29,10 +29,10 @@ public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFa
                     
             var propertySchemaPath = schemaPath + propertyName; 
             var ifRequiredValidator = new RequiredSchemaRuleValidator(propertyName);
-            var ifValidator = new SelfElementSchemaRuleValidator(null, [ifRequiredValidator], propertySchemaPath);
+            var ifValidator = new SelfObjectElementSchemaRuleValidator(null, [ifRequiredValidator], propertySchemaPath);
             
             var thenRequiredValidator = new RequiredSchemaRuleValidator(requiredSchema);
-            var thenValidator = new SelfElementSchemaRuleValidator(null, [thenRequiredValidator], propertySchemaPath);
+            var thenValidator = new SelfObjectElementSchemaRuleValidator(null, [thenRequiredValidator], propertySchemaPath);
 
             (dependentRequires ??= new List<IfThenElseSchemaRuleValidator>()).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
         }

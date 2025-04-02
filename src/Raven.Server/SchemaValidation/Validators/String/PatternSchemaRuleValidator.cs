@@ -23,10 +23,11 @@ public class PatternSchemaRuleValidator : StringSchemaRuleValidator
     }
 }
 
-[SchemaRule(SchemaValidatorConstants.pattern)]
+[SchemaRule(SchemaValidatorConstants.Pattern)]
+// ReSharper disable once UnusedType.Global
 public class PatternSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PatternSchemaRuleValidator>
 {
-    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    public override PatternSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         return SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath.FullPath, out var pattern) 
             ? new PatternSchemaRuleValidator(pattern)
