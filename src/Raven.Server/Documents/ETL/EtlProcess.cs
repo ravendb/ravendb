@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection);
 
-        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments);
+        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection);
 
         protected abstract IEnumerator<TExtracted> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones, List<string> collections);
 
@@ -226,14 +226,21 @@ namespace Raven.Server.Documents.ETL
                 scope.EnsureDispose(docs);
                 merged.AddEnumerator(ConvertDocsEnumerator(context, docs, null));
 
-                // when collection isn't specified this will get the tombstones for docs, attachments & revisions in a single enumerator
+                // when collection isn't specified this will get the tombstones for docs & revisions in a single enumerator, and get the attachments in a separate one
                 // otherwise we will handle attachment and documents in a dedicated enumerator
 
                 if (ShouldTrackDocumentTombstones())
                 {
                     var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, long.MaxValue).GetEnumerator();
                     scope.EnsureDispose(tombstones);
-                    merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, null, trackAttachments: ShouldTrackAttachmentTombstones()));
+                    merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, collection: null));
+
+                    if (ShouldTrackAttachmentTombstones())
+                    {
+                        var attachmentTombstones = Database.DocumentsStorage.GetAttachmentTombstonesFrom(context, fromEtag, start: 0, take: long.MaxValue).GetEnumerator();
+                        scope.EnsureDispose(attachmentTombstones);
+                        merged.AddEnumerator(ConvertAttachmentTombstonesEnumerator(context, attachmentTombstones, collections: null));
+                    }
                 }
             }
             else
@@ -248,7 +255,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, long.MaxValue).GetEnumerator();
                         scope.EnsureDispose(tombstones);
-                        merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, collection, trackAttachments: false));
+                        merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, collection));
                     }
                 }
 

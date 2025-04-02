@@ -38,7 +38,7 @@ public abstract class RetiredAttachmentsS3Base : RetiredAttachmentsHolder<S3Sett
         });
     }
 
-    public override async Task PutRetireAttachmentsConfiguration(DocumentStore store, S3Settings settings, List<string> collections = null, string database = null)
+    public override async Task PutRetireAttachmentsConfiguration(IDocumentStore store, S3Settings settings, List<string> collections = null, string database = null)
     {
         if (collections == null)
             collections = new List<string> { "Orders" };

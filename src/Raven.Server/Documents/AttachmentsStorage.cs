@@ -300,7 +300,21 @@ namespace Raven.Server.Documents
                     }
 
                     var retiredAttachmentsConfiguration = new Lazy<RetiredAttachmentsConfiguration>(() => _documentDatabase.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(_documentDatabase.Name));
-                    if (table.ReadByKey(keySlice, out TableValueReader oldValue))
+
+                    var keyExists = table.ReadByKey(keySlice, out TableValueReader oldValue);
+                    var existingFlags = new Lazy<AttachmentFlags>(() => TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue));
+
+                    bool retiredAttachmentExists = false;
+                    if (keyExists)
+                    {
+                        if (existingFlags.Value == AttachmentFlags.Retired)
+                        {
+                            keyExists = false; //TODO: egor now just to go to else clause few lines below
+                            retiredAttachmentExists = true;
+                        }
+                    }
+
+                    if (keyExists)
                     {
                         // This is an update to the attachment with the same stream and content type
                         // Just updating the etag and casing of the name and the content type.
@@ -317,13 +331,15 @@ namespace Raven.Server.Documents
                         if (forceRetireAt == false)
                         {
                             retireAt = TableValueToLong((int)AttachmentsTable.RetireAt, ref oldValue);
-                            var existingFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue);
-                            if (existingFlags.HasFlag(AttachmentFlags.Retired) == false && retireAt == -1L)
+                            if (existingFlags.Value == AttachmentFlags.None)
                             {
-                                Debug.Assert(collectionName != null, "collectionName != null");
-                                Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
+                                if (retireAt == -1L)
+                                {
+                                    Debug.Assert(collectionName != null, "collectionName != null");
+                                    Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
 
-                                TryPutRetiredAttachment(context, retiredAttachmentsConfiguration.Value, collectionName, keySlice, out retireAt);
+                                    TryPutRetiredAttachment(context, retiredAttachmentsConfiguration.Value, collectionName, keySlice, out retireAt);
+                                }
                             }
                         }
                         else
@@ -376,10 +392,16 @@ namespace Raven.Server.Documents
                                     }
                                 }
 
+
+                                if (retiredAttachmentExists)
+                                {
+
+                                }
+
                                 // Delete the attachment stream only if we have a different hash
                                 using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
                                 {
-                                    putStream = existingHash.Content.Match(base64Hash.Content) == false;
+                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || retiredAttachmentExists;
                                     if (putStream)
                                     {
                                         using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
@@ -387,7 +409,7 @@ namespace Raven.Server.Documents
                                         {
                                             var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
                                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                                            var existingAttachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr);
+                                             var existingAttachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr);
                                             var existingRetireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref partialTvr);
                                             DeleteAttachmentState state = GetDeleteAttachmentState(retiredAttachmentsConfiguration.Value, existingAttachmentFlags);
                                             DeleteInternal2(state, context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingRetireAtTicks, collectionName.Name);

@@ -18,12 +18,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public RavenEtlItem(Tombstone tombstone, string collection, EtlItemType type) : base(tombstone, collection, type)
         {
-            if (tombstone.Type == Tombstone.TombstoneType.Attachment)
-            {
-                Debug.Assert(false, "tombstone.Type == Tombstone.TombstoneType.Attachment");
-            }
         }
-        //AttachmentTombstoneReplicationItem
 
         public RavenEtlItem(DocumentsOperationContext context, AttachmentTombstoneReplicationItem attachment)
         {

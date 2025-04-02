@@ -176,17 +176,22 @@ namespace SlowTests.Server.Documents.Attachments
                     if (storageOnly == false)
                     {
                         var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                        var key = string.Empty;
-                        S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
+                      //  var key = string.Empty;
+
+                        var keys = new List<string>();
+                        S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 2, infos =>
                         {
                             if (infos == null)
                                 return;
 
-                            key = infos.First().LowerId.ToString();
+
+                            keys = infos.Select(x=> x.LowerId.ToString()).ToList();
                         });
 
                         var expected = $"d\u001eOrders\u001eorders/0\u001ed\u001etest_0.png\u001e{data.Hash}\u001eimage/png";
-                        Assert.Equal(expected, key);
+
+                        Assert.Contains(expected, keys);
+                        Assert.Contains($"p\u001eorders/0\u001ed\u001eprofile.png\u001ebucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=\u001eimage/png", keys);
                         await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
 
                         database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(1);
@@ -641,7 +646,7 @@ namespace SlowTests.Server.Documents.Attachments
                     nodeTag = database.ServerStore.NodeTag;
                 }
 
-                var options = new BackgroundWorkParameters(context, DateTime.MaxValue, dbRecord, nodeTag, int.MinValue);
+                var options = new BackgroundWorkParameters(context, DateTime.MaxValue, dbRecord, nodeTag, int.MaxValue);
                 // need to sort the list so current checked node is first in topology, since only the "first topology node is checked in GetDocuments() method
                 options.DatabaseRecord.Topology.Members = options.DatabaseRecord.Topology.Members.OrderByDescending(x => x == nodeTag).ToList();
 
@@ -822,7 +827,7 @@ namespace SlowTests.Server.Documents.Attachments
 
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
-        [InlineData(32, 3)]
+        [InlineData(64, 3)]
         public async Task AddRetiredAttachmentThenExternalReplicateToDatabaseWithoutRetiredConfig(int attachmentsCount, int size)
         {
             using (var store1 = GetDocumentStore())
@@ -848,7 +853,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentsCount, Attachments.Count);
 
                     // I don't have retire attachments config. but as in other background task features, I populate the retire attachment tree after replicating it
-                    GetToRetireAttachmentsCount(database2,1);
+                    GetToRetireAttachmentsCount(database2, attachmentsCount);
 
                     try
                     {
@@ -898,7 +903,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetRetiredAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(store1, ids.First().Id, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
+                                await GetAndCompareRetiredAttachment(store1, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
                             });
                         }
                     }
@@ -1085,7 +1090,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentsCount, Attachments.Count);
 
                     // I don't have retire attachments config. but as in other background task features, I populate the retire attachment tree after replicating it
-                    GetToRetireAttachmentsCount(database2, 1);
+                    GetToRetireAttachmentsCount(database2, attachmentsCount);
 
 
                     var database = await Databases.GetDocumentDatabaseInstanceFor( store1);

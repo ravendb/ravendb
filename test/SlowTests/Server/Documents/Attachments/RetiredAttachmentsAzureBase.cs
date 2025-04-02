@@ -38,7 +38,7 @@ public abstract class RetiredAttachmentsAzureBase : RetiredAttachmentsHolder<Azu
         });
     }
 
-    public override async Task PutRetireAttachmentsConfiguration(DocumentStore store, AzureSettings settings, List<string> collections = null, string database = null)
+    public override async Task PutRetireAttachmentsConfiguration(IDocumentStore store, AzureSettings settings, List<string> collections = null, string database = null)
     {
         if (collections == null)
             collections = new List<string> { "Orders" };

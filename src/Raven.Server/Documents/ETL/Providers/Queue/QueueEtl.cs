@@ -73,7 +73,7 @@ public abstract class QueueEtl<T> : EtlProcess<QueueItem, QueueWithItems<T>, Que
     }
 
     protected override IEnumerator<QueueItem> ConvertTombstonesEnumerator(DocumentsOperationContext context,
-        IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+        IEnumerator<Tombstone> tombstones, string collection)
     {
         throw new NotSupportedException("Tombstones aren't processed by Queue ETL currently");
     }

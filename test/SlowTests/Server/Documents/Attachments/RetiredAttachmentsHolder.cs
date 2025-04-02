@@ -44,7 +44,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
     public abstract IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null);
     protected abstract Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(TSettings settings, int expected, int timeout = 120_000);
     public abstract Task DeleteObjects(TSettings s3Settings);
-    public abstract Task PutRetireAttachmentsConfiguration(DocumentStore store, TSettings settings, List<string> collections = null, string database = null);
+    public abstract Task PutRetireAttachmentsConfiguration(IDocumentStore store, TSettings settings, List<string> collections = null, string database = null);
 
     public Action<RetiredAttachmentsConfiguration> ModifyRetiredAttachmentsConfig = null;
 
@@ -135,6 +135,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     t.Key = attachment.Key;
                     t.Hash = attachment.Base64Hash.ToString();
                     t.RetireAt = attachment.RetiredAt;
+                   t.Flags = attachment.Flags;
                     //TODO: egor I can use getcollecton method here
                     t.RetiredKey =
                         $"{settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";

@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return new DocumentsToOlapItems(docs, collection);
         }
 
-        protected override IEnumerator<ToOlapItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+        protected override IEnumerator<ToOlapItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
         {
             return EmptyEnumerator;
         }

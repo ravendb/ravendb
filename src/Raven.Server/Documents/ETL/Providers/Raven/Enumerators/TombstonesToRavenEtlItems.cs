@@ -11,16 +11,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
         private readonly DocumentsOperationContext _context;
         private readonly IEnumerator<Tombstone> _tombstones;
         private readonly string _collection;
-        private readonly bool _trackAttachments;
         private readonly bool _allDocs;
 
-        public TombstonesToRavenEtlItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+        public TombstonesToRavenEtlItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
         {
             _context = context;
             _tombstones = tombstones;
             _collection = collection;
 
-            _trackAttachments = trackAttachments;
             _allDocs = _collection == null;
         }
 
@@ -40,17 +38,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 
             switch (tombstone.Type)
             {
-                case Tombstone.TombstoneType.Attachment:
-                    if (_trackAttachments == false)
-                        return true;
-
-                    return AttachmentTombstonesToRavenEtlItems.FilterAttachment(_context, item);
                 case Tombstone.TombstoneType.Document:
                     return false;
+
+                case Tombstone.TombstoneType.Attachment:
                 case Tombstone.TombstoneType.Revision:
                 case Tombstone.TombstoneType.Counter:
                     return true;
-
                 default:
                     throw new ArgumentOutOfRangeException(nameof(tombstone.Type),$"Unknown type '{tombstone.Type}'");
             }
