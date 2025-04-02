@@ -43,7 +43,6 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
                 title: "Cluster Log Entry",
                 message: <Code elementToCopy={jsonString} code={jsonString} language="json" />,
                 modalSize: "lg",
-                container: document.getElementById("cluster-debug"),
             });
         },
         [manageServerService, activeTab, dialog]
@@ -67,7 +66,6 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
                         </RichAlert>
                     </div>
                 ),
-                container: document.getElementById("cluster-debug"),
             });
 
             if (isConfirmed) {

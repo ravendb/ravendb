@@ -4,7 +4,6 @@ import Modal from "./Modal";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
 import Button from "react-bootstrap/Button";
-import { DOMContainer } from "@restart/ui/useWaitForDOMRef";
 
 interface DialogOptions {
     title: ReactNode;
@@ -14,7 +13,6 @@ interface DialogOptions {
     closeText?: string;
     closeIcon?: IconName;
     modalSize?: "sm" | "lg" | "xl" | undefined;
-    container?: DOMContainer;
 }
 
 type InnerOptions = Partial<DialogOptions> & { isOpen: boolean };
@@ -25,7 +23,7 @@ export function DialogProvider({ children }: PropsWithChildren) {
     const [options, setOptions] = useState<InnerOptions>({ isOpen: false });
     const promise = useRef<() => void>(null);
 
-    const { isOpen, title, icon, closeIcon, message, modalSize, container } = options;
+    const { isOpen, title, icon, closeIcon, message, modalSize } = options;
 
     const closeText = options.closeText ?? "Close";
     const actionColor = options.actionColor ?? "primary";
@@ -47,13 +45,7 @@ export function DialogProvider({ children }: PropsWithChildren) {
         <Dialog.Provider value={exposedPromise}>
             {children}
             {isOpen && (
-                <Modal
-                    size={modalSize}
-                    container={container}
-                    show
-                    onHide={onClose}
-                    contentClassName={`modal-border bulge-${actionColor}`}
-                >
+                <Modal size={modalSize} show onHide={onClose} contentClassName={`modal-border bulge-${actionColor}`}>
                     <Modal.Header closeButton className="vstack gap-4" onCloseClick={onClose}>
                         {icon && (
                             <div className="text-center">
