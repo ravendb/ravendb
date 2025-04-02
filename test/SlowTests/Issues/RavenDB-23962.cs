@@ -6,6 +6,7 @@ using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,9 +29,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
                 
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-            
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
                 
                 var result = session.Query<Dto>()
@@ -78,13 +77,21 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 using (index._indexStorage._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var lastProcessedReferenceEtag2 = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(tx.InnerTransaction, collectionName, new CollectionName(referencedCollection));
-                    
+                    var lastProcessedReferenceEtag2 =
+                        index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(tx.InnerTransaction, collectionName,
+                            new CollectionName(referencedCollection));
+
                     Assert.Equal(lastProcessedReferenceEtag, lastProcessedReferenceEtag2);
                 }
                 
+                WaitForValue(() =>
+                {
+                    var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(stats.IndexName));
+
+                    return staleness.StalenessReasons.Any(x => x.Contains("There are still some document references to process from collection '@embeddings/Dtos'"));
+                }, true);
+
                 var startIndexOp = new StartIndexOperation(stats.IndexName);
-                
                 store.Maintenance.Send(startIndexOp);
                 
                 Indexes.WaitForIndexing(store);
@@ -113,8 +120,104 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void TombstonesAreProcessed()
+    {
+        const string collectionName = "Dtos";
+        var referencedCollection = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collectionName);
+        
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto = new Dto() { Id = "dtos/1", Name = "computer" };
+                session.Store(dto);
+                session.SaveChanges();
+                
+                var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            
+                var (configuration, _) = AddEmbeddingsGenerationTask(store);
+            
+                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                
+                _ = session.Query<Dto>()
+                    .Customize(c => c.WaitForNonStaleResults())
+                    .Statistics(out var stats)
+                    .VectorSearch(x => x
+                            .WithText(d => d.Name)
+                            .UsingTask(configuration.Identifier), 
+                        factory => factory.ByText("fruit"), 0.75f).ToList();
+                
+                var index = GetDatabase(store.Database).GetAwaiter().GetResult().IndexStore.GetIndex(stats.IndexName);
+                
+                var tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
+
+                Assert.Equal(0, tombstones[collectionName]);
+                Assert.Equal(0, tombstones[referencedCollection]);
+                
+                var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);
+                
+                session.Delete(embeddingDocId);
+                session.SaveChanges();
+                
+                Indexes.WaitForIndexing(store);
+                
+                tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
+
+                Assert.Equal(0, tombstones[collectionName]);
+                Assert.NotEqual(0, tombstones[referencedCollection]);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void DeletesAreHandled()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto = new Dto() { Id = "dtos/1", Name = "strawberry" };
+                session.Store(dto);
+                session.SaveChanges();
+                
+                var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            
+                var (configuration, _) = AddEmbeddingsGenerationTask(store);
+            
+                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                
+                var result = session.Query<Dto>()
+                    .Customize(c => c.WaitForNonStaleResults())
+                    .VectorSearch(x => x
+                            .WithText(d => d.Name)
+                            .UsingTask(configuration.Identifier), 
+                        factory => factory.ByText("fruit"), 0.75f).ToList();
+                
+                Assert.Single(result);
+                
+                var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);
+                
+                session.Delete(embeddingDocId);
+                session.SaveChanges();
+                
+                Indexes.WaitForIndexing(store);
+                
+                result = session.Query<Dto>()
+                    .Customize(c => c.WaitForNonStaleResults())
+                    .VectorSearch(x => x
+                            .WithText(d => d.Name)
+                            .UsingTask(configuration.Identifier), 
+                        factory => factory.ByText("fruit"), 0.75f).ToList();
+                
+                Assert.Empty(result);
+            }
+        }
+    }
+
     private class Dto
     {
+        public string Id { get; set; }
         public string Name { get; set; }
     }
 }

@@ -2638,7 +2638,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual void DeleteArchived(IndexItem indexItem, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats, LazyStringValue lowerId)
         {
             if (MustDeleteArchivedDocument(indexItem))
-                HandleDelete(new Tombstone { LowerId = lowerId}, collection, writer, indexContext, stats);
+                HandleDelete(new Tombstone { LowerId = lowerId }, collection, writer, indexContext, stats);
         }
         
         private void HandleIndexChange(IndexChange change)
