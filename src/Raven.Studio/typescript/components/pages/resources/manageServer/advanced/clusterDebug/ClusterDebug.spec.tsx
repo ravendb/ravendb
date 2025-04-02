@@ -7,14 +7,14 @@ import { within } from "@testing-library/dom";
 const { Default } = composeStories(stories);
 
 const selectors = {
-    summary: "Summary",
-    entries: "Entries",
-    viewDetails: "view details",
-    close: "Close",
+    summary: /Summary/,
+    entries: /Log Entries/,
+    viewDetails: /View details/,
+    close: /Close/,
     connectionDetailsTitle: /Click to see connection details/,
-    showItemPreviewTitle: "Show item preview",
-    connectionDetails: "Connection details",
-    waitForEntries: "Wait for entries",
+    showItemPreviewTitle: /Show item preview/,
+    connectionDetails: /Connection details/,
+    waitForEntries: /Wait for entries/,
     installationProgressHeader: /Cluster Snapshot installation progress/,
 };
 
@@ -38,8 +38,8 @@ describe("ClusterDebug", function () {
 
         expect(await screen.findByText(selectors.waitForEntries)).toBeInTheDocument();
 
-        const closeButton = await screen.findByRole("button", { name: selectors.close });
-        await fireClick(closeButton);
+        const closeButtons = await screen.findAllByRole("button", { name: selectors.close });
+        await fireClick(closeButtons[0]);
 
         expect(screen.queryByText(selectors.installationProgressHeader)).not.toBeInTheDocument();
     });
@@ -53,9 +53,8 @@ describe("ClusterDebug", function () {
         await fireClick(connectionDetailsButtons[0]);
 
         const modal = await screen.findByRole("dialog");
-
-        const closeButton = await within(modal).findByRole("button", { name: selectors.close });
-        await fireClick(closeButton);
+        const closeButtons = await within(modal).findAllByRole("button", { name: selectors.close });
+        await fireClick(closeButtons[0]);
     });
 
     it("can see item preview", async () => {
@@ -68,7 +67,7 @@ describe("ClusterDebug", function () {
 
         const modal = await screen.findByRole("dialog");
 
-        const closeButton = await within(modal).findByRole("button", { name: selectors.close });
-        await fireClick(closeButton);
+        const closeButtons = await within(modal).findAllByRole("button", { name: selectors.close });
+        await fireClick(closeButtons[0]);
     });
 });

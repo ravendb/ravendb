@@ -46,7 +46,6 @@ export default function ClusterSnapshotInstallation(props: ClusterSnapshotInstal
         },
         columns: messagesColumns,
         data: messages,
-        columnResizeMode: "onChange",
         getCoreRowModel: getCoreRowModel(),
     });
 
