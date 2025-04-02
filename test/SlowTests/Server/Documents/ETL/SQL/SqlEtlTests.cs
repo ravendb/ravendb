@@ -25,6 +25,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Tests.Core.Utils.Entities;
@@ -1175,6 +1176,54 @@ loadToOrders(orderData);
                             Assert.Equal(3, dbCommand.ExecuteScalar());
                         }
                     }
+                }
+            }
+        }
+
+        [RequiresMsSqlRetryFact(delayBetweenRetriesMs: 1000)]
+        public void CanTestMsSqlConnection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    SqlDatabaseWriter.TestConnection("Microsoft.Data.SqlClient", connectionString);
+                }
+            }
+        }
+        
+        [RequiresNpgSqlFact]
+        public void CanTestNpgsqlConnection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    SqlDatabaseWriter.TestConnection("Npgsql", connectionString);
+                }
+            }
+        }
+                
+        [RequiresOracleSqlFact]
+        public void CanTestOracleConnection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.Oracle, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    SqlDatabaseWriter.TestConnection("Oracle.ManagedDataAccess.Client", connectionString);
+                }
+            }
+        }
+                
+        [RequiresMySqlFact]
+        public void CanTestMySqlConnection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MySQL_MySqlConnector, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    SqlDatabaseWriter.TestConnection("MySqlConnector.MySqlConnectorFactory", connectionString);
                 }
             }
         }
