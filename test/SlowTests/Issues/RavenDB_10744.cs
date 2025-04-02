@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Shold_stop_unloading_database_after_consecutive_corruptions_in_given_time()
+        public void Should_stop_unloading_database_after_consecutive_corruptions_in_given_time()
         {
             UseNewLocalServer();
 
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                         Assert.True(unloadTask.Wait(TimeSpan.FromSeconds(30)));
                 }
 
-                handler.Execute(db.Name, new Exception("Catastrophic"), Guid.Empty, null, Environment.StackTrace);
+                handler.Execute(db.Name, new Exception("Catastrophic"), environmentId, null, Environment.StackTrace);
 
                 handler.TryGetStats(environmentId, out failureStats);
 
@@ -64,7 +64,10 @@ namespace SlowTests.Issues
                 handler.TryGetStats(environmentId, out failureStats);
 
                 Assert.True(failureStats.WillUnloadDatabase);
-                Assert.True(failureStats.DatabaseUnloadTask.Wait(TimeSpan.FromSeconds(30)));
+                var unloadTask2 = failureStats.DatabaseUnloadTask;
+
+                if (unloadTask2 != null) // could already unload it and null DatabaseUnloadTask 
+                    Assert.True(unloadTask2.Wait(TimeSpan.FromSeconds(30)));
             }
         }
 
