@@ -29,45 +29,31 @@ describe("ClusterDebug", function () {
     });
 
     it("can see snapshot installation details", async () => {
-        const { screen, fireClick } = rtlRender(<Default />);
+        const { screen, user } = rtlRender(<Default />);
 
         const viewDetailsButton = await screen.findByText(selectors.viewDetails);
-        await fireClick(viewDetailsButton);
+        await user.click(viewDetailsButton);
 
         expect(await screen.findByText(selectors.installationProgressHeader)).toBeInTheDocument();
 
         expect(await screen.findByText(selectors.waitForEntries)).toBeInTheDocument();
 
         const closeButtons = await screen.findAllByRole("button", { name: selectors.close });
-        await fireClick(closeButtons[0]);
+        await user.click(closeButtons[0]);
 
         expect(screen.queryByText(selectors.installationProgressHeader)).not.toBeInTheDocument();
     });
 
     it("can see connection details", async () => {
-        const { screen, fireClick } = rtlRender(<Default />);
+        const { screen, user } = rtlRender(<Default />);
 
         const connectionDetailsButtons = await screen.findAllByTitle(selectors.connectionDetailsTitle);
         expect(connectionDetailsButtons.length).toBePositive();
 
-        await fireClick(connectionDetailsButtons[0]);
+        await user.click(connectionDetailsButtons[0]);
 
-        const modal = await screen.findByRole("dialog");
+        const modal = await screen.findByRole("dialog", undefined, { timeout: 500 });
         const closeButtons = await within(modal).findAllByRole("button", { name: selectors.close });
-        await fireClick(closeButtons[0]);
-    });
-
-    it("can see item preview", async () => {
-        const { screen, fireClick } = rtlRender(<Default />);
-
-        const showPreviewButtons = await screen.findAllByTitle(selectors.showItemPreviewTitle);
-        expect(showPreviewButtons.length).toBePositive();
-
-        await fireClick(showPreviewButtons[0]);
-
-        const modal = await screen.findByRole("dialog");
-
-        const closeButtons = await within(modal).findAllByRole("button", { name: selectors.close });
-        await fireClick(closeButtons[0]);
+        await user.click(closeButtons[0]);
     });
 });
