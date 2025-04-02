@@ -62,9 +62,7 @@ namespace Raven.Server.Documents
             where TTransaction : RavenTransaction
         {
             var charCount = Encodings.Utf8.GetCharCount(id.Buffer, id.Size);
-            var tempBuffer = ByteStringContext.ToLowerTempBuffer;
-            if (tempBuffer == null || tempBuffer.Length < charCount)
-                ByteStringContext.ToLowerTempBuffer = tempBuffer = new char[Bits.PowerOf2(charCount)];
+            var tempBuffer = ByteStringContext.GetThreadStaticBufferOf(charCount);
 
             fixed (char* pChars = tempBuffer)
             {

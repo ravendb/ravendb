@@ -85,7 +85,7 @@ namespace Raven.Server.Rachis.Remote
             if (Buffer.Length < size)
             {
                 ArrayPool<byte>.Shared.Return(Buffer);
-                Buffer = ArrayPool<byte>.Shared.Rent(Bits.PowerOf2(size));
+                Buffer = ArrayPool<byte>.Shared.Rent(Bits.NextAllocationSize(size));
             }
             var totalRead = 0;
             while (totalRead < size)

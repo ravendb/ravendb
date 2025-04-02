@@ -136,7 +136,7 @@ namespace Voron
             if (_tmpBuf != null && _tmpBuf.Length >= size)
                 return _tmpBuf;
 
-            return _tmpBuf = new byte[Bits.PowerOf2(size)];
+            return _tmpBuf = new byte[Bits.NextAllocationSize(size)];
         }
 
         public string ReadString(int length)

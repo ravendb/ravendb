@@ -95,7 +95,7 @@ public unsafe struct FastPForDecoder : IDisposable
 
     private void GrowAllocation(int sizeInElements)
     {
-        int sizeInBytes = Bits.PowerOf2(sizeInElements * sizeof(uint));
+        int sizeInBytes = Bits.NextAllocationSize(sizeInElements * sizeof(uint));
         _allocator.GrowAllocation(ref _buffer, ref _exceptionsScope, sizeInBytes);
         _exceptions = (uint*)_buffer.Ptr;
     }

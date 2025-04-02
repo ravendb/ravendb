@@ -689,7 +689,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         {
             if (additionalSize + index >= _compoundFieldsBuffer.Length)
             {
-                var newSize = Bits.PowerOf2(additionalSize + index + 1);
+                var newSize = Bits.NextAllocationSize(additionalSize + index + 1);
                 Array.Resize(ref _compoundFieldsBuffer, newSize);
             }
 
