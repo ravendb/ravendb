@@ -1534,7 +1534,7 @@ namespace Corax.Indexing
 
                 void UnlikelyGrowBuffer(ByteStringContext allocator, int count, ref Span<long> termsBuffer, ref Span<int> indexesBuffer, ref Span<byte> processingBuffer)
                 {
-                    var length = Bits.PowerOf2(count + 1);
+                    var length = Bits.NextAllocationSize(count + 1);
                     memoryHandler?.Dispose();
                     memoryHandler = allocator.Allocate(length * (sizeof(int) + sizeof(long) + ZigZagEncoding.MaxEncodedSize), out var memory);
                     termsBuffer = MemoryMarshal.Cast<byte, long>(memory.ToSpan().Slice(0, length * sizeof(long)));

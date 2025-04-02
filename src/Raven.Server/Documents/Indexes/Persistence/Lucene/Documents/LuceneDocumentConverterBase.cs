@@ -749,7 +749,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private byte[] GetStoredValue(BlittableJsonReaderObject value, IWriteOperationBuffer writeBuffer)
         {
-            var necessarySize = Bits.PowerOf2(value.Size);
+            var necessarySize = Bits.NextAllocationSize(value.Size);
 
             var storeValueBuffer = writeBuffer.GetBuffer(necessarySize);
 

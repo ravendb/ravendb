@@ -2,6 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using Sparrow.Global;
 
 namespace Sparrow.Binary
 {
@@ -280,6 +281,20 @@ namespace Sparrow.Binary
             256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256
         };
 #endif
+        private const int _64M = 64 * Constants.Size.Megabyte;
+
+        public static int NextAllocationSize(int v)
+        {
+            if (v < 0)
+                throw new ArgumentOutOfRangeException(nameof(v), "Argument cannot be negative, but was: " + v);
+            if (v < _64M)
+                return PowerOf2(v);
+            
+            var plus64MbAlign  = ((v + _64M - 1) / _64M) * _64M;
+            if (plus64MbAlign < 0)
+                return int.MaxValue; //overflow handling
+            return plus64MbAlign;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int PowerOf2(int v)

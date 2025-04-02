@@ -1002,7 +1002,7 @@ namespace Sparrow.Server
             // that even looking for memory to reuse can dominate the actual operation cost.
             // We will allocate from the current segment.
             int allocationSize = length + sizeof(ByteStringStorage);
-            int allocationUnit = Bits.PowerOf2(allocationSize);
+            int allocationUnit = Bits.NextAllocationSize(allocationSize);
             _currentlyAllocated += allocationUnit;
             
             if (allocationUnit <= _internalCurrent.SizeLeft)
@@ -1028,7 +1028,7 @@ namespace Sparrow.Server
             // that even looking for memory to reuse can dominate the actual operation cost.
             // We will allocate from the current segment.
             int allocationSize = length + sizeof(ByteStringStorage);
-            int allocationUnit = Bits.PowerOf2(allocationSize);
+            int allocationUnit = Bits.NextAllocationSize(allocationSize);
             _currentlyAllocated += allocationUnit;
             
             if (allocationUnit <= _internalCurrent.SizeLeft)
@@ -1111,7 +1111,7 @@ namespace Sparrow.Server
             type &= ~ByteStringType.External; // We are allocating internal, so we will force it (even if we are checking for it in debug).
 
             int allocationSize = length + sizeof(ByteStringStorage);
-            int allocationUnit = Bits.PowerOf2(allocationSize);
+            int allocationUnit = Bits.NextAllocationSize(allocationSize);
             if (allocationUnit < 0)
             {
                 if (((long)length + sizeof(ByteStringStorage)) < int.MaxValue)
@@ -1251,7 +1251,15 @@ namespace Sparrow.Server
         }
 
         [ThreadStatic]
-        public static char[] ToLowerTempBuffer;
+        private static char[] _toLowerTempBuffer;
+
+        public static char[] GetThreadStaticBufferOf(int charCount)
+        {
+            var tempBuffer = _toLowerTempBuffer;
+            if (tempBuffer == null || tempBuffer.Length < charCount)
+                _toLowerTempBuffer = tempBuffer = new char[Bits.NextAllocationSize(charCount)];
+            return tempBuffer;
+        }
 
         /// <summary>
         /// Mutate the string to lower case
@@ -1265,23 +1273,18 @@ namespace Sparrow.Server
                 throw new InvalidOperationException("Cannot mutate an immutable ByteString");
 
             var charCount = Encodings.Utf8.GetCharCount(str._pointer->Ptr, str.Length);
-            if (ToLowerTempBuffer == null || ToLowerTempBuffer.Length < charCount)
-            {
-                ToLowerTempBuffer = new char[Bits.PowerOf2(charCount)];
-            }
 
             // PERF: We are not removing the fixed here because GetChars will use fixed internally.
             // When the framework removes the fixed from GetChars, we can remove the fixed here and
             // use the span version instead.
             // https://issues.hibernatingrhinos.com/issue/RavenDB-20321
-            fixed (char* pChars = ToLowerTempBuffer)
+            char[] tempBuffer = GetThreadStaticBufferOf(charCount * 2);
+            fixed (char* pChars = tempBuffer)
             {
-                charCount = Encodings.Utf8.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
-                for (int i = 0; i < charCount; i++)
-                {
-                    ToLowerTempBuffer[i] = char.ToLowerInvariant(ToLowerTempBuffer[i]);
-                }
-                var byteCount = Encodings.Utf8.GetByteCount(pChars, charCount);
+                charCount = Encodings.Utf8.GetChars(str._pointer->Ptr, str.Length, pChars, tempBuffer.Length);
+                Span<char> span = tempBuffer.AsSpan();
+                MemoryExtensions.ToLowerInvariant(span[..charCount], span[charCount..]);
+                var byteCount = Encodings.Utf8.GetByteCount(pChars + charCount, charCount);
                 if (// we can't mutate external memory!
                     str.IsExternal ||
                     // calling to lower has increased the size, and we can't fit in the space
@@ -1290,7 +1293,8 @@ namespace Sparrow.Server
                 {
                     Allocate(byteCount, out str);
                 }
-                str._pointer->Length = Encodings.Utf8.GetBytes(pChars, charCount, str._pointer->Ptr, str._pointer->Size);
+
+                str._pointer->Length = Encodings.Utf8.GetBytes(pChars + charCount, charCount, str._pointer->Ptr, str._pointer->Size);
             }
         }
 
@@ -1318,7 +1322,7 @@ namespace Sparrow.Server
 
         private ByteString AllocateWholeSegment(int length, ByteStringType type)
         {
-            var size = Bits.PowerOf2(length + sizeof(ByteStringStorage));
+            var size = Bits.NextAllocationSize(length + sizeof(ByteStringStorage));
             SegmentInformation segment = AllocateSegment(size);
 
             var byteString = Create(segment.Current, length, segment.Size, type);

@@ -132,7 +132,7 @@ public struct PhraseMatch<TInner> : IQueryMatch
     
     private void UnlikelyGrowBuffer(ref Span<long> buffer, ref Span<int> indexes)
     {
-        var length = Bits.PowerOf2(buffer.Length + 1);
+        var length = Bits.NextAllocationSize(buffer.Length + 1);
         var newDisposable = _indexSearcher.Allocator.Allocate(length * (sizeof(long) + sizeof(int)), out ByteString memory);
         Span<long> newBuffer = MemoryMarshal.Cast<byte, long>(memory.ToSpan().Slice(0, sizeof(long) * length));
         Span<int> newIndexes = MemoryMarshal.Cast<byte, int>(memory.ToSpan().Slice(length * sizeof(long)));

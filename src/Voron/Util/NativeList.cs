@@ -126,14 +126,14 @@ public unsafe struct NativeList<T>
 
     public void Initialize(ByteStringContext ctx, int count = 1)
     {
-        var capacity = count == 1 ? 1 : Math.Max(1, Bits.PowerOf2(count));
+        var capacity = count == 1 ? 1 : Math.Max(1, Bits.NextAllocationSize(count));
         ctx.Allocate(capacity * sizeof(T), out _storage);
         Capacity = _storage.Length / sizeof(T);
     }
     
     public void Grow(ByteStringContext ctx, int addition)
     {
-        var capacity = Math.Max(1, Bits.PowerOf2(Capacity + addition));
+        var capacity = Math.Max(1, Bits.NextAllocationSize(Capacity + addition));
         ctx.Allocate(capacity * sizeof(T), out var mem);
 
         if (_storage.HasValue)
