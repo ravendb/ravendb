@@ -1,4 +1,4 @@
-name: test/conventions
+name: tests/conventions
 
 on:
   push:
