@@ -36,7 +36,7 @@ public class RavenDB_23446(ITestOutputHelper output) : RavenTestBase(output)
         Map = items => from item in items
                        select new
                        {
-                           Vector = CreateVector(item.Vector)
+                           Vector = CreateVector(item.Vector),
                        };
 
         Vector(""Vector"", factory => factory.SourceEmbedding(VectorEmbeddingType.Single).DestinationEmbedding(VectorEmbeddingType.Single));
@@ -94,7 +94,7 @@ public class RavenDB_23446(ITestOutputHelper output) : RavenTestBase(output)
         Map = items => from item in items
                        select new
                        {
-                           Vector = CreateVector(item.Vector)
+                           Vector = CreateVector(item.Vector),
                        };
 
         Vector(""Vector"", factory => factory.SourceEmbedding(VectorEmbeddingType.Single).DestinationEmbedding(VectorEmbeddingType.Int8));
@@ -152,7 +152,7 @@ public class RavenDB_23446(ITestOutputHelper output) : RavenTestBase(output)
         Map = items => from item in items
                        select new
                        {
-                           Vector = CreateVector(item.Text)
+                           Vector = CreateVector(item.Text),
                        };
 
         Vector(""Vector"", factory => factory.SourceEmbedding(VectorEmbeddingType.Text).DestinationEmbedding(VectorEmbeddingType.Single));

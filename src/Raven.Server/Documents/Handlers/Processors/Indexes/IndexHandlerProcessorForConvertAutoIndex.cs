@@ -598,7 +598,7 @@ public class AutoToStaticIndexConverter
                 }
                 else if (kvp.Value.Vector != null)
                 {
-                    var newFieldName = $"Vector{vectorCounter}";
+                    var newFieldName = vectorCounter == 0 ? "Vector" : $"Vector{vectorCounter}";
                     context.FieldNameMapping.Add(f.FieldName, newFieldName);
                     sb.AppendLine($"{newFieldName} = {nameof(AbstractIndexCreationTask.CreateVector)}(item.{kvp.Value.Vector.SourceFieldName}),");
                     vectorCounter++;
