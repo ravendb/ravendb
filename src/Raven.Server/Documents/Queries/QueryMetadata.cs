@@ -75,11 +75,6 @@ namespace Raven.Server.Documents.Queries
             IsDistinct = Query.IsDistinct;
             IsGroupBy = Query.GroupBy != null;
 
-            if (query.Filter != null)
-            {
-                BuildFilterScript(query);
-            }
-
             IsDynamic = Query.From.Index == false;
             var fromToken = Query.From.From;
 
@@ -97,6 +92,14 @@ namespace Raven.Server.Documents.Queries
             DeclaredFunctions = Query.DeclaredFunctions;
 
             Build(parameters);
+            
+            if (query.Filter != null)
+            {
+                if (HasVectorSearch)
+                    throw new NotSupportedException("Vector search is not supported in combination with filter.");
+                
+                BuildFilterScript(query);
+            }
 
             CanCache = cacheKey != 0 && AddSpatialProperties == false;
 
