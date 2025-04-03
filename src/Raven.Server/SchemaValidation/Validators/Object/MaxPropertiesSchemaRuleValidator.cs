@@ -12,7 +12,7 @@ public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     {
         _maxProperties = maxProperties;
     }
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         if(value.Count <= _maxProperties)
             return true;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Sparrow.Json;
@@ -8,13 +9,13 @@ namespace Raven.Server.SchemaValidation;
 
 public static class SchemaValidationHelper
 {
-    private const string Null = "null";
-    private const string Integer = "integer";
-    private const string Number = "number";
-    private const string String = "string";
-    private const string Boolean = "boolean";
-    private const string Object = "object";
-    private const string Array = "array";
+    public const string Null = "null";
+    public const string Integer = "integer";
+    public const string Number = "number";
+    public const string String = "string";
+    public const string Boolean = "boolean";
+    public const string Object = "object";
+    public const string Array = "array";
 
     public static string[] PublicTypes { get; }
     private static Dictionary<IComparable<string>, BlittableJsonToken[]> StringTypeToBlittableToken { get; }
@@ -85,7 +86,7 @@ public static class SchemaValidationHelper
             return Null;
         if (type == typeof(long))
             return Integer;
-        if (type == typeof(LazyNumberValue))
+        if (type == typeof(LazyNumberValue) || type == typeof(decimal))
             return Number;
         if (type == typeof(LazyStringValue) || type == typeof(LazyCompressedStringValue))
             return String;
@@ -96,7 +97,8 @@ public static class SchemaValidationHelper
         if (type == typeof(BlittableJsonReaderArray))
             return Array;
 
-        throw new NotImplementedException($"The type '{type.FullName}' is not supported.");
+        Debug.Assert(false, $"The type '{type.FullName}' is not supported.");
+        return type.Name;
     }
 
     public static string GetPublicType(BlittableJsonToken type)
@@ -169,7 +171,6 @@ public static class SchemaValidationHelper
     
     private static void ThrowRuleTypeError(string rule, object ruleValue, string expectedPublicType, string actualPublicType, string schemaPath)
     {
-        
         throw new InvalidSchemaValidationDefinitionException(
             $"The value of '{rule}' must be {GetIndefiniteArticle(expectedPublicType)} {expectedPublicType}, but received '{ruleValue}' of type '{actualPublicType}'. Schema path '{schemaPath}'.");
     }

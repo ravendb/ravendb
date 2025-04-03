@@ -23,7 +23,7 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         _schemaPath = schemaPath;
     }
 
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         var isValid = true;
         if (_namedPropertyValidators != null)
@@ -81,7 +81,6 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
 {
     public override ObjectSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        //TODO To create an informative error when fails to read
         var named = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.Properties, refSchemas)?
             .ToDictionary(x => x.Property);
         var pattern = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.PatternProperties, refSchemas)?
@@ -92,8 +91,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
         if (named == null && pattern == null && additional is { IsAllowed: true, Validator: null })
             return null;
         
-        var validator = new ObjectSchemaRuleValidator(named, pattern, additional, schemaPath);
-        return validator;
+        return new ObjectSchemaRuleValidator(named, pattern, additional, schemaPath);
     }
     
     private static (bool IsAllowed, PropertySchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
@@ -116,27 +114,23 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
                 return (true, validator);
             }
             default:
-                //TODO To improve error message
-                throw new InvalidSchemaValidationDefinitionException(
-                    $"The value of '{rule}' must be a 'boolean' or an 'object', but received a value of type '{SchemaValidationHelper.GetPublicTypeOfObj(additionalProperties)}'. Schema path '{schemaPath}'."
-                );
+                SchemaValidationHelper.TrowRuleTypeError(
+                    rule, additionalProperties, [BlittableJsonToken.Boolean, BlittableJsonToken.StartObject], SchemaValidationHelper.GetPublicTypeOfObj(additionalProperties), schemaPath.FullPath);
+                return (false, null);
         }
     }
 
     private static List<PropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas)
     {
-        if (schemaDefinition.TryGet(schemaPath.Property, out object readPropertySpecifiers) == false) 
+        if(SchemaValidationHelper.TryGetObject(schemaDefinition, schemaPath.Property, schemaPath.FullPath, out var propertySchema) == false)
             return null;
 
-        if (readPropertySpecifiers is BlittableJsonReaderObject propertySpecifiers == false)
-            throw new InvalidSchemaValidationDefinitionException($"The value of '{schemaPath.Property}' must be an 'object', but received a value of type '{SchemaValidationHelper.GetPublicTypeOfObj(readPropertySpecifiers)}'. Schema path '{schemaPath}'.");
-            
         List<PropertySchemaRuleValidator> validators = null;
-        foreach (var propertySpecifier in propertySpecifiers.GetPropertyNames())
+        foreach (var propertySpecifier in propertySchema.GetPropertyNames())
         {
             var propertySchemaPath = schemaPath + propertySpecifier;
-            SchemaValidationHelper.TryGetObject(propertySpecifiers, propertySpecifier, propertySchemaPath.FullPath, out var propertySchemaDefinition);
+            SchemaValidationHelper.TryGetObject(propertySchema, propertySpecifier, propertySchemaPath.FullPath, out var propertySchemaDefinition);
 
             var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(propertySchemaDefinition, propertySchemaPath, refSchemas);
             if(validator != null)

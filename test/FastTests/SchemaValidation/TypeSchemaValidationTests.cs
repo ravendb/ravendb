@@ -475,14 +475,14 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "16" }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value '16' at 'prop' is not an allowed value. Expected one of: '15', 'somevalue', '{\"prop\":8}'.", errors);
+                AssertError("The value '\"16\"' at 'prop' is not an allowed value. Expected one of: '15', 'somevalue', '{\"prop\":8}'.", errors);
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "someothervalue" }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value 'someothervalue' at 'prop' is not an allowed value. Expected one of: '15', 'somevalue', '{\"prop\":8}'.", errors);
+                AssertError("The value '\"someothervalue\"' at 'prop' is not an allowed value. Expected one of: '15', 'somevalue', '{\"prop\":8}'.", errors);
             },
             () =>
             {

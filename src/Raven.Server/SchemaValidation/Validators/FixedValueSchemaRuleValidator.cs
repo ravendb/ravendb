@@ -20,4 +20,9 @@ public abstract class FixedValueSchemaRuleValidator : SchemaRuleValidator<object
             _ => throw new InvalidOperationException($"The type {v.GetType()} is not supported.")
         };
     }
+
+    protected static object WrapStringWithQuotationMarks(object constantValue)
+    {
+        return SchemaValidationHelper.GetPublicTypeOfObj(constantValue) == SchemaValidationHelper.String ? $"\"{constantValue}\"" : constantValue;
+    }
 }

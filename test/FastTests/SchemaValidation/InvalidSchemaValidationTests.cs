@@ -66,9 +66,9 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenTheory(RavenTestCategory.JavaScript)]
-    [InlineData(SVC.Properties, "invalidvalue", "The value of 'properties' must be an 'object', but received a value of type 'string'. Schema path '#/properties'.")]
-    [InlineData(SVC.PatternProperties, "invalidvalue", "The value of 'patternProperties' must be an 'object', but received a value of type 'string'. Schema path '#/patternProperties'.")]
-    [InlineData(SVC.AdditionalProperties, "invalidvalue", "The value of 'additionalProperties' must be a 'boolean' or an 'object', but received a value of type 'string'. Schema path '#/additionalProperties'.")]
+    [InlineData(SVC.Properties, "invalidvalue", "The value of 'properties' must be an object, but received 'invalidvalue' of type 'string'. Schema path '#/properties'.")]
+    [InlineData(SVC.PatternProperties, "invalidvalue", "The value of 'patternProperties' must be an object, but received 'invalidvalue' of type 'string'. Schema path '#/patternProperties'.")]
+    [InlineData(SVC.AdditionalProperties, "invalidvalue", "The value of 'additionalProperties' must be a boolean or an object but received 'invalidvalue' of type 'string'. Schema path '#/additionalProperties'.")]
     public void InvalidSchema_WhenDefineWithWrongValue(string key, object value, string error)
     {
         var schemaDefinition = new DynamicJsonValue

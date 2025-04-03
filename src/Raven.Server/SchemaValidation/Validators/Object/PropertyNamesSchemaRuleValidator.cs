@@ -15,7 +15,7 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         if (_propertyNameValidators == null)
             return true;
@@ -50,9 +50,8 @@ public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
             var ruleSchemaPath = schemaPath + rule;
             if (ruleValidator is not StringSchemaRuleValidator stringValidator)
                 throw new InvalidSchemaValidationDefinitionException(
-                    $"The rule '{rule}' defined in 'propertyNames' at '{ruleSchemaPath}' is invalid because it includes constraints that are not applicable to strings.");
+                    $"The rule '{rule}' defined in '{Rule}' at '{ruleSchemaPath}' is invalid because it includes constraints that are not applicable to strings.");
 
-            //TODO Maybe find more elegant way
             stringValidator.FocusOnPropertyName();
             (propertyNameValidators ??= []).Add(stringValidator);
         }

@@ -12,13 +12,12 @@ public class ConstantSchemaRuleValidator : FixedValueSchemaRuleValidator
         _constantValue = ConvertTypeForComparison(constantValue);
     }
 
-    protected override bool ValidateInternal(object value, ErrorBuilder errorBuilder)
+    public override bool Validate(object value, ErrorBuilder errorBuilder)
     {
-        if (Equals(_constantValue, value)) 
+        if (Equals(_constantValue, ConvertTypeForComparison(value))) 
             return true;
         
-        //TODO Clear error to differentiate between number and string (15 or "15")
-        errorBuilder?.AddError($"The value at '{errorBuilder.Path}' must be '{_constantValue}', but it is '{value}'.");
+        errorBuilder?.AddError($"The value at '{errorBuilder.Path}' must be '{WrapStringWithQuotationMarks(_constantValue)}', but it is '{WrapStringWithQuotationMarks(value)}'.");
         return false;
     }
 

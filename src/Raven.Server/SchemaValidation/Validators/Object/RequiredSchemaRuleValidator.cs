@@ -18,7 +18,7 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
         _requiredHashSet = [required];
     }
     
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         var isValid = true;
         foreach (var required in _requiredHashSet)

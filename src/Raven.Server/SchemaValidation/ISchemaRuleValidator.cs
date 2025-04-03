@@ -1,7 +1,4 @@
-﻿using System;
-using Sparrow.Json;
-
-namespace Raven.Server.SchemaValidation;
+﻿namespace Raven.Server.SchemaValidation;
 
 public interface ISchemaRuleValidator
 {
@@ -10,11 +7,11 @@ public interface ISchemaRuleValidator
 
 public abstract class SchemaRuleValidator<T> : ISchemaRuleValidator
 {
-    protected abstract bool ValidateInternal(T value, ErrorBuilder errorBuilder);
+    public abstract bool Validate(T value, ErrorBuilder errorBuilder);
     
-    public bool Validate(object value, ErrorBuilder errorBuilder)
+    bool ISchemaRuleValidator.Validate(object value, ErrorBuilder errorBuilder)
     {
-        return CheckTypeAndGetValue(value, out T tValue) == false || ValidateInternal(tValue, errorBuilder);
+        return CheckTypeAndGetValue(value, out T tValue) == false || Validate(tValue, errorBuilder);
     }
 
     protected virtual bool CheckTypeAndGetValue(object value, out T tValue)

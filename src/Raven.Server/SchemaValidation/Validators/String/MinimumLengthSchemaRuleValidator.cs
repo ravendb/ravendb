@@ -13,7 +13,7 @@ public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
         _minLength = minLength;
     }
 
-    protected override bool ValidateInternal(string value, ErrorBuilder errorBuilder)
+    public override bool Validate(string value, ErrorBuilder errorBuilder)
     {
         if (value.Length >= _minLength) 
             return true;
