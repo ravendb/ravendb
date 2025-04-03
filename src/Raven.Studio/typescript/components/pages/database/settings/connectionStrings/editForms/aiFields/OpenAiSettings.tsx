@@ -47,7 +47,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <FormLabel>
                     API Key
-                    <PopoverWithHoverWrapper message="The API key used to authenticate requests to OpenAI's API.">
+                    <PopoverWithHoverWrapper message="The API key used to authenticate requests to OpenAI or any OpenAI-compatible provider.">
                         <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
@@ -56,7 +56,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <FormLabel>
                     Endpoint
-                    <PopoverWithHoverWrapper message="The OpenAI endpoint for generating embeddings from text.">
+                    <PopoverWithHoverWrapper message="The endpoint for generating text embeddings using OpenAI or any OpenAI-compatible provider.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
@@ -70,7 +70,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             <div className="mb-2">
                 <FormLabel>
                     Model
-                    <PopoverWithHoverWrapper message="The OpenAI tex embedding model to use.">
+                    <PopoverWithHoverWrapper message="The text embedding model to use with OpenAI or any OpenAI-compatible provider.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
