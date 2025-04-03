@@ -1,7 +1,7 @@
 import React, { ComponentProps, ReactNode, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
-import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
+import { Control, ControllerProps, FieldPath, FieldValues, PathValue, useController } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -231,7 +231,10 @@ export function FormSelectCreatable<
     const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
     const optionCreator = rest.optionCreator ?? ((value: string) => ({ value, label: value }));
 
-    const getOptionsFromValue = (formValues: any, creator: (value: string) => any) => {
+    const getOptionsFromValue = (
+        formValues: PathValue<TFieldValues, TName>,
+        creator: (value: string) => Option
+    ): Option[] => {
         if (!formValues) {
             return [];
         }
