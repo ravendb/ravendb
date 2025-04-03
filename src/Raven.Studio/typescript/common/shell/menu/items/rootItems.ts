@@ -35,30 +35,24 @@ function aboutItem() {
 }
 
 interface WhatsNewItemOptions {
-    isNewVersionAvailable?: boolean;
     isWhatsNewVisible?: boolean;
 }
 
-function whatsNewItem({ isNewVersionAvailable = false, isWhatsNewVisible = false }: WhatsNewItemOptions = {}) {
+function whatsNewItem({ isWhatsNewVisible = false }: WhatsNewItemOptions = {}) {
     
     const moduleId = reactUtils.bridgeToReact(
         () => React.createElement(AboutPage.AboutPage, { initialChangeLogMode: "changeLog" }),
         "nonShardedView"
     );
 
-    const badgeHtml = isNewVersionAvailable
-        ? `<div class="badge badge-info rounded-pill">Update available</div>`
-        : null
-
     return new leafMenuItem({
         route: 'whatsNew',
         moduleId,
-        title: 'What\'s new',
-        tooltip: "What's new",
+        title: 'Release notes',
+        tooltip: "Release notes",
         nav: isWhatsNewVisible,
         css: 'icon-sparkles',
         dynamicHash: appUrl.forWhatsNew,
-        badgeHtml,
         search: {
             isExcluded: !isWhatsNewVisible,
             isCapitalizedDisabled: true

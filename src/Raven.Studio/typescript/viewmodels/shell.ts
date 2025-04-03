@@ -219,14 +219,12 @@ class shell extends viewModelBase {
         this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
         
         const menuItems = ko.pureComputed(() => {
-            const isNewVersionAvailable = genUtils.isNewVersionAvailable(buildInfo.serverBuildVersion(), this.latestVersionInfo());
             
             // we hide "What's new" menu item for all builds that buildNumber is less than 60_000, so nightly, local, etc
             const isWhatsNewVisible = buildInfo.serverBuildVersion()?.BuildVersion >= 60_000;
 
             return generateMenuItems({
                 db: activeDatabaseTracker.default.database(),
-                isNewVersionAvailable,
                 isWhatsNewVisible
             })
         });

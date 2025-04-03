@@ -22,7 +22,6 @@ export default {
 interface StoryArgs {
     hasMenuItems: boolean;
     isDatabaseSelected: boolean;
-    isNewVersionAvailable: boolean;
     isWhatsNewVisible: boolean;
 }
 
@@ -62,7 +61,6 @@ export const DefaultStory: StoryObj<StoryArgs> = {
         const menuItems = args.hasMenuItems
             ? generateMenuItems({
                   db: args.isDatabaseSelected ? db1.name : "",
-                  isNewVersionAvailable: args.isNewVersionAvailable,
                   isWhatsNewVisible: args.isWhatsNewVisible,
               })
             : [];
@@ -71,7 +69,6 @@ export const DefaultStory: StoryObj<StoryArgs> = {
     },
     args: {
         hasMenuItems: true,
-        isNewVersionAvailable: false,
         isWhatsNewVisible: false,
         isDatabaseSelected: true,
     },
