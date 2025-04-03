@@ -44,7 +44,8 @@ class configurationItem {
         "Indexing.Corax.IncludeSpatialDistance",
         "Indexing.Corax.MaxMemoizationSizeInMb",
         "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
-        "Indexing.Corax.Static.ComplexFieldIndexingBehavior"
+        "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
+        "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb"
 
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*

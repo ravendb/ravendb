@@ -88,7 +88,8 @@ namespace FastTests.Issues
                 "Indexing.Corax.MaxMemoizationSizeInMb",
                 "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
                 "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
-
+                "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
+                
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",
                 "Indexing.Analyzers.NGram.MaxGram",
