@@ -11,7 +11,7 @@ import ReactSelect, {
 import { Icon } from "../Icon";
 import "./Select.scss";
 import IconName from "typings/server/icons";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import classNames from "classnames";
 
 export type SelectValue = string | number | boolean;
@@ -23,7 +23,7 @@ export interface SelectOption<T = string> {
 
 export interface SelectOptionIcon {
     icon?: IconName;
-    iconColor?: TextColor;
+    iconColor?: ThemeColor;
 }
 
 export interface SelectOptionWarning {

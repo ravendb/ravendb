@@ -1,4 +1,4 @@
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import { ReactNode, createContext, useContext, useState, PropsWithChildren, useRef } from "react";
 import Modal from "./Modal";
 import IconName from "typings/server/icons";
@@ -8,7 +8,7 @@ import Button from "react-bootstrap/Button";
 interface DialogOptions {
     title: ReactNode;
     icon?: IconName;
-    actionColor?: TextColor;
+    actionColor?: ThemeColor;
     message?: ReactNode;
     closeText?: string;
     closeIcon?: IconName;

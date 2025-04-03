@@ -2,18 +2,24 @@
 
 export type loadStatus = "idle" | "loading" | "success" | "failure";
 
-export type TextColor =
+export type ThemeColor =
     | "primary"
     | "secondary"
     | "success"
     | "info"
     | "warning"
     | "danger"
+    | "light"
+    | "dark"
     | "muted"
     | "emphasis"
     | "node"
     | "shard"
-    | "orchestrator";
+    | "orchestrator"
+    | "progress"
+    | "professional"
+    | "enterprise"
+    | "developer";
 
 export interface loadableData<T> {
     data?: T;
@@ -37,7 +43,7 @@ export interface perNodeTagLoadStatus {
 
 export interface InputItemLimit {
     value: number;
-    badgeColor?: TextColor;
+    badgeColor?: ThemeColor;
     message?: ReactNode | ReactNode[];
 }
 

@@ -4,7 +4,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { capitalize } from "lodash";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
 import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
@@ -115,7 +115,7 @@ function getInfinitiveForType(type: OngoingTaskOperationConfirmType) {
     return capitalize(type);
 }
 
-function getTypeColor(type: OngoingTaskOperationConfirmType): TextColor {
+function getTypeColor(type: OngoingTaskOperationConfirmType): ThemeColor {
     switch (type) {
         case "enable":
             return "success";
@@ -140,7 +140,7 @@ function getTypeIcon(type: OngoingTaskOperationConfirmType): IconName {
     }
 }
 
-function getStatusColor(status: OngoingTaskState | DestinationStatus): TextColor {
+function getStatusColor(status: OngoingTaskState | DestinationStatus): ThemeColor {
     switch (status) {
         case "Enabled":
             return "success";

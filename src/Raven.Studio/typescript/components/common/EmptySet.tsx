@@ -2,13 +2,13 @@
 import { Icon, IconSize } from "./Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import "./EmptySet.scss";
 
 interface EmptySetProps {
     children?: ReactNode | ReactNode[];
     icon?: IconName;
-    color?: TextColor;
+    color?: ThemeColor;
     className?: string;
     iconClassName?: string;
     iconSize?: IconSize;

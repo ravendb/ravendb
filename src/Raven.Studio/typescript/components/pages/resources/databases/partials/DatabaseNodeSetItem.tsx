@@ -3,7 +3,7 @@ import { NodeSetItem } from "components/common/NodeSet";
 import React from "react";
 import assertUnreachable from "components/utils/assertUnreachable";
 import IconName from "typings/server/icons";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 
 interface DatabaseNodeSetItemProps {
     node: NodeInfo;
@@ -25,7 +25,7 @@ export function DatabaseNodeSetItem(props: DatabaseNodeSetItemProps) {
     );
 }
 
-function colorForNodeType(type: databaseGroupNodeType, isInactive?: boolean): TextColor {
+function colorForNodeType(type: databaseGroupNodeType, isInactive?: boolean): ThemeColor {
     if (isInactive) {
         return "muted";
     }

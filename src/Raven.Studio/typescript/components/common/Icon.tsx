@@ -1,14 +1,14 @@
 ﻿import React, { HTMLAttributes } from "react";
 import classNames from "classnames";
 import IconName from "typings/server/icons";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export interface IconProps extends HTMLAttributes<HTMLDivElement> {
     icon: IconName;
     addon?: IconName;
-    color?: TextColor;
+    color?: ThemeColor;
     margin?: string;
     className?: string;
     size?: IconSize;

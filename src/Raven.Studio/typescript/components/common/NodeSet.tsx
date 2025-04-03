@@ -5,7 +5,7 @@ import Card from "react-bootstrap/Card";
 import "./NodeSet.scss";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 
 interface NodeSetProps {
     children?: ReactNode | ReactNode[];
@@ -42,7 +42,7 @@ export function NodeSetListCard(props: { children?: ReactNode | ReactNode[] }) {
 interface NodeSetItemProps {
     children?: ReactNode | ReactNode[];
     icon?: IconName;
-    color?: TextColor;
+    color?: ThemeColor;
     title?: string;
     extraIconClassName?: string;
 }

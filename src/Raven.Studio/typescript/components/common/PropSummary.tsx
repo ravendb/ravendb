@@ -2,6 +2,7 @@
 
 import "./PropSummary.scss";
 import classNames from "classnames";
+import { ThemeColor } from "components/models/common";
 
 interface PropSummaryProps {
     children: ReactNode | ReactNode[];
@@ -24,8 +25,8 @@ export function PropSummaryName(props: PropSummaryProps) {
 }
 
 interface PropSummaryValueProps {
-    children: ReactNode | ReactNode[];
-    color?: string;
+    children: ReactNode;
+    color?: ThemeColor;
     className?: string;
 }
 

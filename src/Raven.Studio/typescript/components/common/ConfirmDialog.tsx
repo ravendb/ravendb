@@ -1,4 +1,4 @@
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import React, { createContext, PropsWithChildren, ReactNode, useContext, useRef, useState } from "react";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
@@ -8,7 +8,7 @@ import Modal from "./Modal";
 interface ConfirmOptions {
     title: ReactNode;
     icon?: IconName;
-    actionColor?: TextColor;
+    actionColor?: ThemeColor;
     message?: ReactNode;
     confirmText?: string;
     confirmIcon?: IconName;

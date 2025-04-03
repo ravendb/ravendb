@@ -5,7 +5,7 @@ import Button from "react-bootstrap/Button";
 import classNames from "classnames";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import { uniqueId } from "lodash";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
@@ -86,7 +86,7 @@ const AboutViewFloating = (props: AboutViewProps) => {
 
 interface AccordionItemWrapperProps {
     icon: IconName;
-    color: TextColor;
+    color: ThemeColor;
     heading: string;
     description: string;
     children: ReactNode;

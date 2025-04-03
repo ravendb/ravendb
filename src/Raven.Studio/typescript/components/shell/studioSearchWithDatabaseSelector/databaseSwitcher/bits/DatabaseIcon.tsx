@@ -1,5 +1,5 @@
 import { Icon } from "components/common/Icon";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import React from "react";
 import IconName from "typings/server/icons";
 
@@ -14,7 +14,7 @@ export default function DatabaseIcon({ databaseName, isSharded }: DatabaseIconPr
     }
 
     const addon: IconName = isSharded ? "sharding" : null;
-    const color: TextColor = isSharded ? "shard" : "primary";
+    const color: ThemeColor = isSharded ? "shard" : "primary";
 
     return <Icon icon="database" addon={addon} color={color} />;
 }
