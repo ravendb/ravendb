@@ -188,6 +188,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
                 
                 var result = session.Query<Dto>()
+                    .Statistics(out var stats)
                     .Customize(c => c.WaitForNonStaleResults())
                     .VectorSearch(x => x
                             .WithText(d => d.Name)
@@ -196,10 +197,28 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 
                 Assert.Single(result);
                 
+                var stopIndexOp = new StopIndexOperation(stats.IndexName);
+                
+                store.Maintenance.Send(stopIndexOp);
+                
                 var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);
                 
                 session.Delete(embeddingDocId);
                 session.SaveChanges();
+                
+                _ = session.Query<Dto>()
+                    .VectorSearch(x => x
+                            .WithText(d => d.Name)
+                            .UsingTask(configuration.Identifier), 
+                        factory => factory.ByText("fruit"), 0.75f).ToList();
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(stats.IndexName));
+
+                Assert.True(staleness.IsStale);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still some tombstone references to process from collection '@embeddings/Dtos'")));
+                
+                var startIndexOp = new StartIndexOperation(stats.IndexName);
+                store.Maintenance.Send(startIndexOp);
                 
                 Indexes.WaitForIndexing(store);
                 
