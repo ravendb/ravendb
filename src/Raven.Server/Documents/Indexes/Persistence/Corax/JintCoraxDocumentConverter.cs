@@ -289,11 +289,26 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
     {
         if (_fields.TryGetValue(propertyAsString, out var field) == false)
         {
+            // Check if we have already processed this name as a dynamic field in the current indexing batch
+            if (indexingScope.DynamicFields != null && indexingScope.DynamicFields.TryGetValue(propertyAsString, out field))
+                return field;
+            
             int currentId = CoraxLib.Constants.IndexWriter.DynamicField;
+            // Check if the name is declared as a static field in the index definition
             if (KnownFieldsForWriter.TryGetByFieldName(Allocator, propertyAsString, out var binding))
                 currentId = binding.FieldId;
 
-            field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields, currentId);
+            field = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields, currentId);
+            if (currentId != CoraxLib.Constants.IndexWriter.DynamicField)
+            {
+                // This field is declared in the index definition,
+                // so the field exists in the writer mapping, we can cache it between calls
+                _fields.Add(propertyAsString, field);
+                return field;
+            }
+            
+            // This is the first occurrence of the field in the current indexing batch.
+            // We have to create a batch-bounded mapping for it and update the IndexWriter.
             indexingScope.DynamicFields ??= new();
             indexingScope.DynamicFields[propertyAsString] = field;
             indexingScope.IncrementDynamicFields();
