@@ -237,7 +237,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError($"The value at 'prop1' must be '', but it is 'somethingelse'.{Environment.NewLine}The value at 'prop2' must be '', but it is 'somethingelse", errors);
+                AssertError($"The value at 'prop1' must be '', but it is '\"somethingelse\"'.{Environment.NewLine}The value at 'prop2' must be '', but it is '\"somethingelse\"'.", errors);
             });
     }
 

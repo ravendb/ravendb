@@ -45,6 +45,7 @@ public class ErrorBuilder : IDisposable
         public void AppendFormatted(ValidationPath value) => _errorBuffer.Append(value.AsSpan());
         public void AppendFormatted(Regex value) => _errorBuffer.Append(value.ToString());
         public void AppendFormatted(bool value) => _errorBuffer.Append(value.ToString());
+        public void AppendFormatted(LazyNumberValue value) => AppendFormatted(value.Inner);
         
         public void AppendFormatted(IEnumerable<object> value, string format)
         {
@@ -67,6 +68,9 @@ public class ErrorBuilder : IDisposable
                     break;
                 case LazyStringValue lazyStringValue:
                     AppendFormatted(lazyStringValue);
+                    break;
+                case LazyNumberValue lazyNumberValue:
+                    AppendFormatted(lazyNumberValue);
                     break;
                 case ValidationPath validationPathValue:
                     AppendFormatted(validationPathValue);

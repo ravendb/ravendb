@@ -14,7 +14,7 @@ public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
         _multipleOf = multipleOf;
     }
 
-    protected override bool ValidateInternal(decimal value, ErrorBuilder errorBuilder)
+    public override bool Validate(decimal value, ErrorBuilder errorBuilder)
     {
         if (value % _multipleOf == 0) 
             return true;

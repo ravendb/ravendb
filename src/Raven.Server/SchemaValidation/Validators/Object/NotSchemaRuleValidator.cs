@@ -13,7 +13,7 @@ public class NotSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObj
         _not = not;
     }
 
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         if (_not.Validate(value, null, null) == false)
             return true;

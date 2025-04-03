@@ -16,7 +16,7 @@ public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
         _validatePredicate = exclusiveMinimum ? ExclusiveValidate : NonExclusiveValidate;
     }
 
-    protected override bool ValidateInternal(decimal value, ErrorBuilder errorBuilder)
+    public override bool Validate(decimal value, ErrorBuilder errorBuilder)
     {
         return _validatePredicate(value, errorBuilder);
     }

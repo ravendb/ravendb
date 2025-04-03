@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Server.SchemaValidation.Validators.Array;
@@ -49,7 +50,6 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
             return true;
 
         var isValid = true;
-        //TODO Maybe to filter _ruleValidators by argument type and avoid cast and checking inside ruleValidator.Validate
         foreach (var ruleValidator in _ruleValidators)
         {
             isValid &= ruleValidator.Validate(value, errorBuilder);

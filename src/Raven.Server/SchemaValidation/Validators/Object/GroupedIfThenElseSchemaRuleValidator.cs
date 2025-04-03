@@ -12,7 +12,7 @@ public class GroupedIfThenElseSchemaRuleValidator : SchemaRuleValidator<Blittabl
         _ifThenElseSchemaRuleValidators = ifThenElseSchemaRuleValidators;
     }
 
-    protected override bool ValidateInternal(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         var isValid = true;
         foreach (var dependentRequire in _ifThenElseSchemaRuleValidators)

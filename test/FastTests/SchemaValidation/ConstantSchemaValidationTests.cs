@@ -46,7 +46,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["stringProp"] = "someothervalue" }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value at 'stringProp' must be 'somevalue', but it is 'someothervalue'.", errors);
+                AssertError("The value at 'stringProp' must be '\"somevalue\"', but it is '\"someothervalue\"'.", errors);
             });
     }
     

@@ -14,13 +14,13 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
         _enums = enums.Select(ConvertTypeForComparison).ToArray();
     }
 
-    protected override bool ValidateInternal(object value, ErrorBuilder errorBuilder)
+    public override bool Validate(object value, ErrorBuilder errorBuilder)
     {
         if (_enums.Any(x => Equals(x, value))) 
             return true;
         
-        //TODO Clear error to differentiate between number and string (15 or "15")
-        errorBuilder?.AddError($"The value '{value}' at '{errorBuilder.Path}' is not an allowed value. Expected one of: '{_enums:', '}'.");
+        //TODO Differentiate between number and string for the expected(15 or "15")
+        errorBuilder?.AddError($"The value '{WrapStringWithQuotationMarks(value)}' at '{errorBuilder.Path}' is not an allowed value. Expected one of: '{_enums:', '}'.");
         return false;
     }
     

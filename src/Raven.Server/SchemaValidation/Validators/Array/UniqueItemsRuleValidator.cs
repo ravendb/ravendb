@@ -6,7 +6,7 @@ namespace Raven.Server.SchemaValidation.Validators.Array;
 public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected override bool ValidateInternal(BlittableJsonReaderArray value, ErrorBuilder errorBuilder)
+    public override bool Validate(BlittableJsonReaderArray value, ErrorBuilder errorBuilder)
     {
         HashSet<object> duplicates = null;
         var hashSet = new HashSet<object>();
