@@ -99,14 +99,11 @@ public static class CoraxIndexingHelpers
         using var mappingBuilder = forQuerying 
             ? IndexFieldsMappingBuilder.CreateForReader() 
             : IndexFieldsMappingBuilder.CreateForWriter(false);
-        mappingBuilder.AddDefaultAnalyzer(defaultAnalyzer ?? defaultAnalyzerToUse);
+        mappingBuilder
+            .AddDefaultAnalyzer(defaultAnalyzer ?? defaultAnalyzerToUse)
+            .AddExactAnalyzer(fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, forQuerying, CreateKeywordAnalyzer))
+            .AddSearchAnalyzer(fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type,forQuerying, CreateStandardAnalyzer));
         
-        if (indexDefinition.HasDynamicFields)
-        {
-            mappingBuilder
-                .AddExactAnalyzer(fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, forQuerying, CreateKeywordAnalyzer))
-                .AddSearchAnalyzer(fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type,forQuerying, CreateStandardAnalyzer));
-        }
         
         //Adding id of document        
         mappingBuilder.AddBinding(global::Corax.Constants.IndexWriter.PrimaryKeyFieldId, keyFieldName, defaultAnalyzer);
