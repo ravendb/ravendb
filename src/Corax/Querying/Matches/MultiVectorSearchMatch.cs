@@ -100,7 +100,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             nearestSearch.Dispose();
         }
 
-        var uniqueCount = Sorting.MergeDuplicatesAndSort(_matches.Results, _distances.Results);
+        var uniqueCount = Sorting.SortAndMergeDuplicates(_matches.Results, _distances.Results);
         _matches.Truncate(uniqueCount);
         _distances.Truncate(uniqueCount);
 
