@@ -14,7 +14,8 @@ import { certificatesSelectors } from "components/pages/resources/manageServer/c
 import { CertificatesSortMode } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useCallback, useEffect, useRef } from "react";
-import { Button, DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
+import { DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import endpoints from "endpoints";
 import CertificatesGenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
@@ -137,6 +138,7 @@ export default function CertificatesAuthEnabled() {
                                         ),
                                     },
                                 ]}
+                                popoverPlacement="right"
                             >
                                 <DropdownItem
                                     onClick={() => {
@@ -179,7 +181,7 @@ export default function CertificatesAuthEnabled() {
                             {nameOrThumbprintFilter && (
                                 <div className="clear-button">
                                     <Button
-                                        color="secondary"
+                                        variant="secondary"
                                         size="sm"
                                         onClick={() => nameOrThumbprintFilterInputHandleChange("")}
                                     >
@@ -199,6 +201,12 @@ export default function CertificatesAuthEnabled() {
                             placeholder="Select a database"
                             isRoundedPill
                             isClearable
+                            styles={{
+                                container: (base) => ({
+                                    ...base,
+                                    width: "250px",
+                                }),
+                            }}
                         />
                     </div>
                     <div>

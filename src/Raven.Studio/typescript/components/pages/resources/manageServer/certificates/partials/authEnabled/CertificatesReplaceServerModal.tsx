@@ -1,12 +1,13 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import { FormCheckbox, FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormSwitch, FormGroup, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useServices } from "components/hooks/useServices";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { useAppDispatch } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Button, Form, FormGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
@@ -59,8 +60,7 @@ export default function CertificatesReplaceServerModal() {
                             <Icon icon="refresh" className="fs-1" color="warning" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
-                            <Button
-                                close
+                            <CloseButton
                                 onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
                             />
                         </div>
@@ -85,7 +85,7 @@ export default function CertificatesReplaceServerModal() {
                         </LazyLoad>
                         <CertificatesFileField infoPopoverBody="Certificate file cannot be password protected." />
                         <FormGroup>
-                            <Label>Certificate Passphrase</Label>
+                            <FormLabel>Certificate Passphrase</FormLabel>
                             <FormInput type="password" control={control} name="certificatePassphrase" passwordPreview />
                         </FormGroup>
                         <FormGroup>
@@ -103,7 +103,7 @@ export default function CertificatesReplaceServerModal() {
                     </ModalBody>
                     <ModalFooter>
                         <Button
-                            color="link"
+                            variant="link"
                             onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
                             className="link-muted"
                         >
@@ -111,7 +111,7 @@ export default function CertificatesReplaceServerModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="warning"
+                            variant="warning"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >

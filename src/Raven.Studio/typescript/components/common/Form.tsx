@@ -701,3 +701,15 @@ export function FormGroup(props: FormGroupProps) {
 }
 
 export const FormLabel = Form.Label;
+
+export function FormGroup(props: FormGroupProps) {
+    const uniqueId = useUniqueId("form-group-");
+
+    return (
+        <Form.Group {...props} className={classNames(props.className, "mb-3")} controlId={uniqueId}>
+            {props.children}
+        </Form.Group>
+    );
+}
+
+export const FormLabel = Form.Label;

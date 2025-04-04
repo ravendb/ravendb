@@ -1,11 +1,10 @@
-import { FormInput, FormSelect } from "components/common/Form";
+import { FormInput, FormSelect, FormGroup, FormLabel } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { CertificatesRegenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
 import { ExpireTimeUnit } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useFormContext } from "react-hook-form";
-import { FormGroup, Label } from "reactstrap";
 
 export default function CertificatesExpireField() {
     const { control } = useFormContext<
@@ -14,7 +13,7 @@ export default function CertificatesExpireField() {
 
     return (
         <FormGroup>
-            <Label>Expire in</Label>
+            <FormLabel>Expire in</FormLabel>
             <FormInput
                 type="number"
                 control={control}

@@ -1,8 +1,8 @@
+import copyToClipboard from "common/copyToClipboard";
 import { Icon } from "components/common/Icon";
 import {
     RichPanel,
     RichPanelHeader,
-    RichPanelName,
     RichPanelDetails,
     RichPanelDetailItem,
     RichPanelStatus,
@@ -10,7 +10,8 @@ import {
 } from "components/common/RichPanel";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { useAppSelector } from "components/store";
-import { Badge } from "reactstrap";
+import Badge from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
 
 export default function CertificatesWellKnownList() {
     const wellKnownAdminCerts = useAppSelector(certificatesSelectors.wellKnownAdminCerts);
@@ -56,7 +57,7 @@ function WellKnownItem({ title, wellKnownThumbprints }: WellKnownItemProps) {
     }
 
     return (
-        <RichPanel className="flex-row with-status ">
+        <RichPanel className="flex-row with-status" hover>
             <RichPanelStatus color="info">Well known</RichPanelStatus>
             <div className="flex-grow">
                 <RichPanelHeader>
@@ -65,6 +66,18 @@ function WellKnownItem({ title, wellKnownThumbprints }: WellKnownItemProps) {
                             {title}
                         </RichPanelNameMultiLine>
                         {wellKnownThumbprints.join(", ")}
+                        <Button
+                            variant="link"
+                            size="xs"
+                            onClick={() =>
+                                copyToClipboard.copy(
+                                    wellKnownThumbprints.join(", "),
+                                    "Successfully copied thumbprints to clipboard"
+                                )
+                            }
+                        >
+                            <Icon icon="copy" margin="m-0" />
+                        </Button>
                     </div>
                 </RichPanelHeader>
                 <RichPanelDetails>
@@ -86,7 +99,7 @@ function WellKnownItem({ title, wellKnownThumbprints }: WellKnownItemProps) {
                             </>
                         }
                     >
-                        <Badge color="faded-success" pill>
+                        <Badge bg="faded-success" pill>
                             <Icon icon="user" />
                             All
                         </Badge>

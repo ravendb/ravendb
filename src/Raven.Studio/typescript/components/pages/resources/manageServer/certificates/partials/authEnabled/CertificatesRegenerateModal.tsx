@@ -5,7 +5,8 @@ import { certificatesActions } from "components/pages/resources/manageServer/cer
 import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Button, Form, FormGroup, Input, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Form, Input, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { FormGroup, FormLabel } from "components/common/Form";
 import * as yup from "yup";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -14,6 +15,7 @@ import CertificatesExpireField from "components/pages/resources/manageServer/cer
 import { ExpireTimeUnit } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import Button from "react-bootstrap/Button";
 
 export default function CertificatesRegenerateModal() {
     const dispatch = useAppDispatch();
@@ -61,11 +63,11 @@ export default function CertificatesRegenerateModal() {
                             <Icon icon="refresh" className="fs-1" color="warning" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
-                            <Button close onClick={() => dispatch(certificatesActions.regenerateModalClosed())} />
+                            <CloseButton onClick={() => dispatch(certificatesActions.regenerateModalClosed())} />
                         </div>
                         <div className="text-center lead mb-3">Regenerate client certificate</div>
                         <FormGroup>
-                            <Label>Name</Label>
+                            <FormLabel>Name</FormLabel>
                             <Input type="text" value={certificate.Name} disabled />
                         </FormGroup>
                         <CertificatesExpireField />
@@ -73,7 +75,7 @@ export default function CertificatesRegenerateModal() {
                     </ModalBody>
                     <ModalFooter>
                         <Button
-                            color="link"
+                            variant="link"
                             onClick={() => dispatch(certificatesActions.regenerateModalClosed())}
                             className="link-muted"
                         >
@@ -81,7 +83,7 @@ export default function CertificatesRegenerateModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="warning"
+                            variant="warning"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >

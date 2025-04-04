@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import genUtils from "common/generalUtils";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormGroup, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useServices } from "components/hooks/useServices";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
@@ -8,7 +8,8 @@ import { useAppDispatch } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { useRef } from "react";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Button, Form, FormGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import endpoints from "endpoints";
 import notificationCenter from "common/notifications/notificationCenter";
@@ -85,16 +86,16 @@ export default function CertificatesGenerateModal() {
                             <Icon icon="certificate" addon="plus" color="primary" className="fs-1" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
-                            <Button close onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())} />
+                            <CloseButton onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())} />
                         </div>
                         <div className="text-center lead mb-3">Generate client certificate</div>
                         <FormGroup>
-                            <Label>Name</Label>
+                            <FormLabel>Name</FormLabel>
                             <FormInput type="text" control={control} name="name" />
                         </FormGroup>
                         <CertificatesSecurityClearanceField />
                         <FormGroup>
-                            <Label>Certificate Passphrase</Label>
+                            <FormLabel>Certificate Passphrase</FormLabel>
                             <FormInput type="password" control={control} name="certificatePassphrase" passwordPreview />
                         </FormGroup>
                         <CertificatesExpireField />
@@ -104,7 +105,7 @@ export default function CertificatesGenerateModal() {
                     </ModalBody>
                     <ModalFooter>
                         <Button
-                            color="link"
+                            variant="link"
                             onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}
                             className="link-muted"
                         >
@@ -112,7 +113,7 @@ export default function CertificatesGenerateModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="primary"
+                            variant="primary"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >

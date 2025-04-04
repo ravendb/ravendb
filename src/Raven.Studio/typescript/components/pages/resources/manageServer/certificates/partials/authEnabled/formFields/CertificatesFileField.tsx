@@ -1,10 +1,12 @@
 import fileImporter from "common/fileImporter";
-import { FormValidationMessage } from "components/common/Form";
+import { FormValidationMessage, FormGroup, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { CertificatesUploadFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesUploadModal";
 import { useState, ChangeEvent, ReactNode } from "react";
 import { useFormContext } from "react-hook-form";
-import { FormGroup, InputGroup, InputGroupText, Label, PopoverBody, UncontrolledPopover } from "reactstrap";
+import InputGroup from "react-bootstrap/InputGroup";
+import InputGroupText from "react-bootstrap/InputGroupText";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export default function CertificatesFileField({ infoPopoverBody }: { infoPopoverBody: ReactNode }) {
     const { formState, setValue } = useFormContext<CertificatesUploadFormData>();
@@ -23,12 +25,12 @@ export default function CertificatesFileField({ infoPopoverBody }: { infoPopover
 
     return (
         <FormGroup>
-            <Label>
-                Certificate File <Icon icon="info" color="info" id="certificateFilePopover" />
-            </Label>
-            <UncontrolledPopover trigger="hover" placement="top" target="certificateFilePopover">
-                <PopoverBody>{infoPopoverBody}</PopoverBody>
-            </UncontrolledPopover>
+            <FormLabel>
+                Certificate File
+                <PopoverWithHoverWrapper message={infoPopoverBody}>
+                    <Icon icon="info" color="info" id="certificateFilePopover" />
+                </PopoverWithHoverWrapper>
+            </FormLabel>
             <input id="filePicker" type="file" onChange={selectFile} className="d-none" />
             <InputGroup>
                 <span className="static-name form-control d-flex align-items-center">

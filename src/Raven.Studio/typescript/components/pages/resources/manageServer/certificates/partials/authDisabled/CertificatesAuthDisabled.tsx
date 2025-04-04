@@ -1,8 +1,9 @@
 import { Icon } from "components/common/Icon";
 import RichAlert from "components/common/RichAlert";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import { Card, Col, Row } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { NumberedList, NumberedListItem } from "components/common/NumberedList";
+import Card from "react-bootstrap/Card";
 
 export default function CertificatesAuthDisabled() {
     const certificatesDocsLink = useRavenLink({ hash: "RSFSL5" });

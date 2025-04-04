@@ -1,5 +1,5 @@
 import copyToClipboard from "common/copyToClipboard";
-import { FormSelect, FormInput, FormSwitch } from "components/common/Form";
+import { FormSelect, FormInput, FormSwitch, FormGroup, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import RichAlert from "components/common/RichAlert";
 import { SelectOption } from "components/common/select/Select";
@@ -16,7 +16,9 @@ import { QRCode } from "qrcodejs";
 import { useRef, ElementRef, useState, useEffect } from "react";
 import { useAsync } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
-import { FormGroup, Label, Collapse, Button, InputGroup } from "reactstrap";
+import Button from "react-bootstrap/Button";
+import Collapse from "react-bootstrap/Collapse";
+import InputGroup from "react-bootstrap/InputGroup";
 
 export default function Certificates2FAField({ editingCert }: { editingCert?: CertificateItem }) {
     const { manageServerService } = useServices();
@@ -99,7 +101,7 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
         <>
             {editingCert?.HasTwoFactor ? (
                 <FormGroup>
-                    <Label>Two-factor</Label>
+                    <FormLabel>Two-factor</FormLabel>
                     <FormSelect
                         control={control}
                         name="twoFactorAction"
@@ -119,43 +121,45 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
                     Two-factor authentication (2FA) will be disabled for this certificate.
                 </RichAlert>
             )}
-            <Collapse isOpen={formValues.isRequire2FA}>
-                <FormGroup>
-                    <Label>Authentication Key</Label>
-                    <InputGroup>
-                        <FormInput
-                            type="text"
-                            control={control}
-                            name="authenticationKey"
-                            disabled
-                            className="border-top-right-radius-none border-bottom-right-radius-none"
-                        />
-                        <Button
-                            onClick={() =>
-                                copyToClipboard.copy(
-                                    formValues.authenticationKey,
-                                    "Authentication key was copied to clipboard"
-                                )
-                            }
-                            color="secondary"
-                            title="Copy authentication key to clipboard"
-                        >
-                            <Icon icon="copy" margin="m-0" />
-                        </Button>
-                    </InputGroup>
-                </FormGroup>
-                <FormGroup>
-                    <Label>QR Code</Label>
-                    <br />
-                    <div ref={qrContainerRef} className="qrcode rounded-2 overflow-hidden" />
-                </FormGroup>
+            <Collapse in={formValues.isRequire2FA}>
+                <div>
+                    <FormGroup>
+                        <FormLabel>Authentication Key</FormLabel>
+                        <InputGroup>
+                            <FormInput
+                                type="text"
+                                control={control}
+                                name="authenticationKey"
+                                disabled
+                                className="border-top-right-radius-none border-bottom-right-radius-none"
+                            />
+                            <Button
+                                onClick={() =>
+                                    copyToClipboard.copy(
+                                        formValues.authenticationKey,
+                                        "Authentication key was copied to clipboard"
+                                    )
+                                }
+                                variant="secondary"
+                                title="Copy authentication key to clipboard"
+                            >
+                                <Icon icon="copy" margin="m-0" />
+                            </Button>
+                        </InputGroup>
+                    </FormGroup>
+                    <FormGroup>
+                        <FormLabel>QR Code</FormLabel>
+                        <br />
+                        <div ref={qrContainerRef} className="qrcode rounded-2 overflow-hidden" />
+                    </FormGroup>
+                </div>
             </Collapse>
         </>
     );
 }
 
 const twoFactorActionOptions: SelectOption<TwoFactorAction>[] = [
-    { value: "update", label: "Update existing authentication key" },
-    { value: "delete", label: "Delete existing authentication key" },
-    { value: "leave", label: "Leave existing authentication key" },
+    { value: "update", label: "Generate new 2FA authentication key" },
+    { value: "delete", label: "Delete current 2FA authentication key and disable 2FA" },
+    { value: "leave", label: "Do not modify current 2FA authentication key" },
 ];

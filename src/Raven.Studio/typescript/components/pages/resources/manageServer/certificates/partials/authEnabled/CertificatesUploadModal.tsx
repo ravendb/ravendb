@@ -1,12 +1,12 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import { FormInput } from "components/common/Form";
+import { FormGroup, FormInput, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useServices } from "components/hooks/useServices";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { useAppDispatch } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
-import { Button, Form, FormGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import CertificatesPermissionsField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesPermissionsField";
@@ -18,6 +18,9 @@ import CertificatesExpireField from "components/pages/resources/manageServer/cer
 import CertificatesFileField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesFileField";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
+import Form from "react-bootstrap/Form";
+import Button from "react-bootstrap/Button";
+import CloseButton from "react-bootstrap/CloseButton";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -69,12 +72,12 @@ export default function CertificatesUploadModal() {
                             <Icon icon="upload" className="fs-1" color="primary" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
-                            <Button close onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())} />
+                            <CloseButton onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())} />
                         </div>
                         <div className="text-center lead mb-3">Upload client certificate</div>
                         <FormGroup>
-                            <Label>Name</Label>
-                            <FormInput type="text" control={control} name="name" />
+                            <FormLabel>Name</FormLabel>
+                            <FormInput control={control} type="text" name="name" />
                         </FormGroup>
                         <CertificatesSecurityClearanceField />
                         <CertificatesFileField
@@ -86,7 +89,7 @@ export default function CertificatesUploadModal() {
                             }
                         />
                         <FormGroup>
-                            <Label>Certificate Passphrase</Label>
+                            <FormLabel className="form-label">Certificate Passphrase</FormLabel>
                             <FormInput type="password" control={control} name="certificatePassphrase" passwordPreview />
                         </FormGroup>
                         <CertificatesExpireField />
@@ -96,7 +99,7 @@ export default function CertificatesUploadModal() {
                     </ModalBody>
                     <ModalFooter>
                         <Button
-                            color="link"
+                            variant="link"
                             onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}
                             className="link-muted"
                         >
@@ -104,7 +107,7 @@ export default function CertificatesUploadModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="primary"
+                            variant="primary"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >

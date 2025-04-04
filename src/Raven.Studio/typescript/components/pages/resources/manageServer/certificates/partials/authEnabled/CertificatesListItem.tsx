@@ -1,3 +1,4 @@
+import copyToClipboard from "common/copyToClipboard";
 import { sortBy } from "common/typeUtils";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import useConfirm from "components/common/ConfirmDialog";
@@ -107,7 +108,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     };
 
     return (
-        <RichPanel className="flex-row with-status">
+        <RichPanel className="flex-row with-status" hover>
             <RichPanelStatus color={certificatesUtils.getStateColor(state)}>{state}</RichPanelStatus>
 
             <div className="flex-grow">
@@ -137,6 +138,18 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             )}
                         </RichPanelNameMultiLine>
                         {certificate.Thumbprints.join(", ")}
+                        <Button
+                            variant="link"
+                            size="xs"
+                            onClick={() =>
+                                copyToClipboard.copy(
+                                    certificate.Thumbprints.join(", "),
+                                    "Successfully copied thumbprints to clipboard"
+                                )
+                            }
+                        >
+                            <Icon icon="copy" margin="m-0" />
+                        </Button>
                     </div>
                     <RichPanelActions>
                         {canRegenerate && (

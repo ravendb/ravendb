@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import genUtils from "common/generalUtils";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormGroup, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useServices } from "components/hooks/useServices";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
@@ -8,7 +8,8 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { useRef } from "react";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Button, Form, FormGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import endpoints from "endpoints";
 import notificationCenter from "common/notifications/notificationCenter";
@@ -87,16 +88,16 @@ export default function CertificatesCloneModal() {
                             <Icon icon="copy" className="fs-1" color="primary" margin="m-0" />
                         </div>
                         <div className="position-absolute m-2 end-0 top-0">
-                            <Button close onClick={() => dispatch(certificatesActions.cloneModalClosed())} />
+                            <CloseButton onClick={() => dispatch(certificatesActions.cloneModalClosed())} />
                         </div>
                         <div className="text-center lead mb-3">Clone client certificate</div>
                         <FormGroup>
-                            <Label>Name</Label>
+                            <FormLabel>Name</FormLabel>
                             <FormInput type="text" control={control} name="name" />
                         </FormGroup>
                         <CertificatesSecurityClearanceField />
                         <FormGroup>
-                            <Label>Certificate Passphrase</Label>
+                            <FormLabel>Certificate Passphrase</FormLabel>
                             <FormInput type="password" control={control} name="certificatePassphrase" passwordPreview />
                         </FormGroup>
                         <CertificatesExpireField />
@@ -106,7 +107,7 @@ export default function CertificatesCloneModal() {
                     </ModalBody>
                     <ModalFooter>
                         <Button
-                            color="link"
+                            variant="link"
                             onClick={() => dispatch(certificatesActions.cloneModalClosed())}
                             className="link-muted"
                         >
@@ -114,7 +115,7 @@ export default function CertificatesCloneModal() {
                         </Button>
                         <ButtonWithSpinner
                             type="submit"
-                            color="primary"
+                            variant="primary"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
                         >
