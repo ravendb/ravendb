@@ -102,7 +102,7 @@ export default function CertificatesAuthEnabled() {
     return (
         <div className="vstack gap-2">
             <StickyHeader>
-                {loadStatus === "success" && (
+                {!isInitialLoad && (
                     <Dropdown>
                         <Dropdown.Toggle title="Manage certificates" variant="primary" className="rounded-pill">
                             Manage certificates
@@ -255,7 +255,7 @@ export default function CertificatesAuthEnabled() {
                     refresh={() => dispatch(certificatesActions.fetchData())}
                 />
             )}
-            {loadStatus === "success" && (
+            {!isInitialLoad && (
                 <>
                     <CertificatesWellKnownList />
                     <CertificatesServerList />
