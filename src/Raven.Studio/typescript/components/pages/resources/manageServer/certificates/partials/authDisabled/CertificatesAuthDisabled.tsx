@@ -1,9 +1,10 @@
 import { Icon } from "components/common/Icon";
 import RichAlert from "components/common/RichAlert";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import { Col, Row } from "reactstrap";
 import { NumberedList, NumberedListItem } from "components/common/NumberedList";
 import Card from "react-bootstrap/Card";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 
 export default function CertificatesAuthDisabled() {
     const certificatesDocsLink = useRavenLink({ hash: "RSFSL5" });
@@ -22,15 +23,17 @@ export default function CertificatesAuthDisabled() {
                     <hr />
                     <strong>In order to set up authentication for your server, proceed with the following:</strong>
                     <NumberedList className="mt-3 mb-4">
-                        <NumberedListItem>
+                        <NumberedListItem stepKey={1}>
                             Locate the <code>settings.json</code> file in your server directory.
                         </NumberedListItem>
-                        <NumberedListItem>
+                        <NumberedListItem stepKey={2}>
                             Enter your .pfx certificate path under <code>Security.Certificate.Path</code>, or if you are
                             using an executable or command that returns a .pfx file, place it under{" "}
                             <code>Security.Certificate.Load.Exec</code>.
                         </NumberedListItem>
-                        <NumberedListItem>Save and restart the server to apply the changes.</NumberedListItem>
+                        <NumberedListItem stepKey={3}>
+                            Save and restart the server to apply the changes.
+                        </NumberedListItem>
                     </NumberedList>
                     <RichAlert variant="info">
                         If either option is specified, RavenDB will use <i>HTTPS/SSL</i> for all network activities.

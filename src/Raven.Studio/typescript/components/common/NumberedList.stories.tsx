@@ -21,7 +21,9 @@ export const Default: StoryObj<NumberedListStoryProps> = {
     },
     render: ({ length }) => {
         const items = Array.from({ length }, (_, i) => (
-            <NumberedListItem key={i}>This is a description for step {i + 1}</NumberedListItem>
+            <NumberedListItem key={i} stepKey={i}>
+                This is a description for step {i + 1}
+            </NumberedListItem>
         ));
         return <NumberedList>{items}</NumberedList>;
     },
