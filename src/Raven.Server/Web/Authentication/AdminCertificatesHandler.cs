@@ -779,6 +779,8 @@ namespace Raven.Server.Web.Authentication
                         $"Certificate {newCertificate?.Name}. Security Clearance: {newCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}");
                 }
 
+                var notAfter = newCertificate.NotAfter ?? existingCertificate.NotAfter;
+
                 var cmd = new PutCertificateCommand(newCertificate.Thumbprint,
                     new CertificateDefinition
                     {
