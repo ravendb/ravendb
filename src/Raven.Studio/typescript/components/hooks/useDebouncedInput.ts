@@ -15,7 +15,6 @@ export default function useDebouncedInput<T>({
     const debouncedUpdateValue = useMemo(
         () => debounce((value: T) => onDebouncedUpdate(value), delayInMs),
         // create only once
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         []
     );
 
