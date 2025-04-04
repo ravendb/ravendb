@@ -15,6 +15,7 @@ import getServerSettingsCommand from "commands/maintenance/getServerSettingsComm
 import getClusterLogCommand from "commands/database/cluster/getClusterLogCommand";
 import getClusterLogEntryCommand from "commands/database/cluster/getClusterLogEntryCommand";
 import removeEntryFromLogCommand from "commands/database/cluster/removeEntryFromLogCommand";
+import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -82,5 +83,9 @@ export default class ManageServerService {
 
     async removeClusterEntryLog(nodeTag: string, index: number) {
         return new removeEntryFromLogCommand(nodeTag, index).execute();
+    }
+
+    async getCertificates(...args: ConstructorParameters<typeof getCertificatesCommand>) {
+        return new getCertificatesCommand(...args).execute();
     }
 }

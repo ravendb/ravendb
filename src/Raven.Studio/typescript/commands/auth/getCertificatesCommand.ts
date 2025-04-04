@@ -3,11 +3,16 @@ import endpoints = require("endpoints");
 
 class getCertificatesCommand extends commandBase {
 
-    constructor(private includeSecondary: boolean = false, private metadataOnly: boolean = true) {
+    private readonly includeSecondary: boolean;
+    private readonly metadataOnly: boolean;
+
+    constructor(includeSecondary: boolean = false, metadataOnly: boolean = true) {
         super();
+        this.includeSecondary = includeSecondary;
+        this.metadataOnly = metadataOnly;
     }
     
-    execute(): JQueryPromise<{ Certificates: Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition & { HasTwoFactor: boolean; }>, LoadedServerCert: string, WellKnownAdminCerts: string[], WellKnownIssuers: string[] }> {
+    execute(): JQueryPromise<CertificatesResponseDto> {
         const args = {
             secondary: this.includeSecondary,
             metadataOnly: this.metadataOnly

@@ -86,4 +86,8 @@ export default class MockManageServerService extends AutoMockService<ManageServe
     withGetClusterLogEntry() {
         return this.mockResolvedValue(this.mocks.getClusterLogEntry, null, ManageServerStubs.getClusterLogEntry());
     }
+
+    withCertificates(dto?: MockedValue<CertificatesResponseDto>) {
+        return this.mockResolvedValue(this.mocks.getCertificates, dto, ManageServerStubs.certificates());
+    }
 }

@@ -715,7 +715,7 @@ class certificates extends viewModelBase {
             .done(certificatesInfo => {
                 const mergedCertificates: unifiedCertificateDefinition[] = [];
                 
-                const secondaryCertificates: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition[] = [];
+                const secondaryCertificates: any[] = [];
                 
                 certificatesInfo.Certificates.forEach(cert => {
                     cert.HasTwoFactor = cert.HasTwoFactor ?? false; // force property to exist
