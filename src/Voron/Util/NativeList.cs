@@ -19,6 +19,7 @@ namespace Voron.Util;
 public unsafe struct NativeList<T>
     where T: unmanaged
 {
+    private static readonly int MaxCapacity = int.MaxValue / sizeof(T);
     private ByteString _storage;
 
     public T* RawItems => Capacity > 0 ? (T*)_storage.Ptr : null;
@@ -120,6 +121,10 @@ public unsafe struct NativeList<T>
     public void Initialize(ByteStringContext ctx, int count = 1)
     {
         var capacity = count == 1 ? 1 : Math.Max(1, Bits.NextAllocationSize(count));
+        
+        if (capacity > MaxCapacity)
+            ThrowMaxCapacityExceeded(capacity);
+        
         ctx.Allocate(capacity * sizeof(T), out _storage);
         Capacity = _storage.Length / sizeof(T);
     }
@@ -127,6 +132,10 @@ public unsafe struct NativeList<T>
     public void Grow(ByteStringContext ctx, int addition)
     {
         var capacity = Math.Max(1, Bits.NextAllocationSize(Capacity + addition));
+        
+        if (capacity > MaxCapacity)
+            ThrowMaxCapacityExceeded(capacity);
+        
         ctx.Allocate(capacity * sizeof(T), out var mem);
 
         if (_storage.HasValue)
@@ -206,6 +215,10 @@ public unsafe struct NativeList<T>
         Count = 0;
     }
     
+    private static void ThrowMaxCapacityExceeded(int requestedSize)
+    {
+        throw new InvalidOperationException($"{nameof(NativeList<T>)} cannot be larger than {MaxCapacity} items. Requested size: {requestedSize})");
+    }
 
     public Enumerator GetEnumerator() => new(RawItems, Count);
 
