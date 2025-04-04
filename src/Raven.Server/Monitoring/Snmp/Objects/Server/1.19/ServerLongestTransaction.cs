@@ -38,6 +38,9 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
                     oldestTransaction = databaseOldestTransaction;
             }
 
+            if (oldestTransaction == DateTime.MinValue)
+                return SnmpValuesHelper.TimeTicksZero;
+
             var transactionAge = now - oldestTransaction;
             return SnmpValuesHelper.TimeSpanToTimeTicks(transactionAge.TotalMilliseconds > 0 ? transactionAge : TimeSpan.Zero);
         }
