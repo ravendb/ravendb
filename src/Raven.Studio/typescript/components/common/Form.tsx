@@ -129,9 +129,44 @@ export function FormSwitch<TFieldValues extends FieldValues, TName extends Field
 }
 
 export function FormRadio<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
-    props: FormToggleProps<TFieldValues, TName>
+    props: FormToggleProps<TFieldValues, TName> & { value: PathValue<TFieldValues, TName> }
 ) {
-    return <FormCheckbox type="radio" {...props} />;
+    const { name, control, rules, defaultValue, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, onBlur, value },
+        fieldState: { invalid },
+        formState,
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    console.log("kalczur ", {
+        value,
+        propsValue: props.value,
+    });
+
+    return (
+        <div className="position-relative">
+            <div className="d-flex flex-grow-1">
+                <Radio
+                    selected={value === props.value}
+                    toggleSelection={() => {
+                        onChange(props.value);
+                    }}
+                    invalid={invalid}
+                    onBlur={onBlur}
+                    color="primary"
+                    disabled={formState.isSubmitting}
+                    {...rest}
+                />
+            </div>
+        </div>
+    );
 }
 
 export function getFormSelectedOptions<Option>(
