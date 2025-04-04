@@ -79,7 +79,8 @@ const selectFilteredCertificates = createSelector(
                 return false;
             }
 
-            if (databaseFilter && !Object.keys(cert.Permissions).includes(databaseFilter)) {
+            const permissionKeys = Object.keys(cert.Permissions);
+            if (databaseFilter && permissionKeys.length > 0 && !permissionKeys.includes(databaseFilter)) {
                 return false;
             }
 

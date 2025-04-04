@@ -32,6 +32,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import Form from "react-bootstrap/Form";
+import SelectCreatable from "components/common/select/SelectCreatable";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -190,7 +191,7 @@ export default function CertificatesAuthEnabled() {
                     </div>
                     <div>
                         <span className="small-label">Filter by database</span>
-                        <Select<SelectOption>
+                        <SelectCreatable<SelectOption>
                             options={databaseOptions}
                             onChange={(x) => dispatch(certificatesActions.databaseFilterSet(x?.value))}
                             value={databaseOptions.find((x) => x.value === databaseFilter)}
