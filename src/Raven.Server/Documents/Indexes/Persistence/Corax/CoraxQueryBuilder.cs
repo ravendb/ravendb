@@ -838,8 +838,7 @@ public static class CoraxQueryBuilder
         return (valueFirstType, valueSecondType) switch
         {
             (ValueTokenType.String, ValueTokenType.String) => HandleStringBetween(),
-            _ => CoraxBooleanItem.Build(builderParameters.IndexSearcher, index, fieldMetadata, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation,
-                rightSideOperation, ref builderParameters.StreamingDisabled)
+            _ => CoraxBooleanItem.BuildBetween(builderParameters.IndexSearcher, index, fieldMetadata, valueFirst, valueSecond, leftSideOperation, rightSideOperation, ref builderParameters.StreamingDisabled)
         };
 
         IQueryMatch HandleStringBetween()
@@ -854,8 +853,7 @@ public static class CoraxQueryBuilder
                 builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
 
-            return CoraxBooleanItem.Build(builderParameters.IndexSearcher, index, fieldMetadata, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between,
-                leftSideOperation, rightSideOperation, ref builderParameters.StreamingDisabled);
+            return CoraxBooleanItem.BuildBetween(builderParameters.IndexSearcher, index, fieldMetadata, valueFirstAsString, valueSecondAsString, leftSideOperation, rightSideOperation, ref builderParameters.StreamingDisabled);
         }
     }
 
@@ -871,7 +869,6 @@ public static class CoraxQueryBuilder
         return streamingOptimization.TrySetMultiTermMatchAsStreamingField(builderParameters.IndexSearcher, fieldMetadata, MethodType.Exists) 
             ? builderParameters.IndexSearcher.ExistsQuery(fieldMetadata, forward: streamingOptimization.Forward, streamingEnabled: true) 
             : builderParameters.IndexSearcher.ExistsQuery(fieldMetadata);
-        
     }
 
     private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization,

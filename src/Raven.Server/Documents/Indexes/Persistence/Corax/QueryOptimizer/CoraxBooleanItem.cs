@@ -1,11 +1,14 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Raven.Server.Documents.Queries;
 using Sparrow.Binary;
 using Sparrow.Extensions;
 using Voron;
+using Constants = Raven.Client.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
@@ -20,26 +23,22 @@ public struct CoraxBooleanItem : IQueryMatch
     public readonly UnaryMatchOperation BetweenLeft;
     public readonly UnaryMatchOperation BetweenRight;
     private readonly IndexSearcher _indexSearcher;
-    private readonly bool _isTime;
     public bool IsBoosting => Boosting.HasValue;
     public float? Boosting;
     public long Count { get; }
 
-    private CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation)
+    private CoraxBooleanItem(IndexSearcher indexSearcher, FieldMetadata field, object term, UnaryMatchOperation operation)
     {
         Field = field;
-        var ticks = default(long);
-        
-        _isTime = term is not null && index.IndexFieldsPersistence.HasTimeValues(Field.FieldName.ToString()) && QueryBuilderHelper.TryGetTime(index, term, out ticks);
-        Term = _isTime ? ticks : term;
+        Term = term;
 
         // in case of query "Field != null" or `Field != ""`
         if (Term is null || Term is string s)
             Term = QueryBuilderHelper.CoraxGetValueAsString(Term);
-        
-        
+
+
         Operation = operation;
-        _indexSearcher = searcher;
+        _indexSearcher = indexSearcher;
 
         Unsafe.SkipInit(out Term2);
         Unsafe.SkipInit(out BetweenLeft);
@@ -49,63 +48,121 @@ public struct CoraxBooleanItem : IQueryMatch
         {
             if (term is not (long or double))
                 TermAsString = QueryBuilderHelper.CoraxGetValueAsString(term);
-            
+
             Count = Term switch
             {
-                long l => searcher.NumberOfDocumentsUnderSpecificTerm(Field, l),
-                double d => searcher.NumberOfDocumentsUnderSpecificTerm(Field, d),
-                _ => searcher.NumberOfDocumentsUnderSpecificTerm(Field, TermAsString)
+                long l => indexSearcher.NumberOfDocumentsUnderSpecificTerm(Field, l),
+                double d => indexSearcher.NumberOfDocumentsUnderSpecificTerm(Field, d),
+                _ => indexSearcher.NumberOfDocumentsUnderSpecificTerm(Field, TermAsString)
             };
         }
         else
         {
             Unsafe.SkipInit(out TermAsString);
-            Count = searcher.GetTermAmountInField(Field);
+            Count = indexSearcher.GetTermAmountInField(Field);
         }
     }
 
-    public static IQueryMatch Build(IndexSearcher searcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation, ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
+
+    private CoraxBooleanItem(IndexSearcher indexSearcher, FieldMetadata field, object leftTerm, object rightTerm,
+        UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
     {
-        var cbi = new CoraxBooleanItem(searcher, index, field, term, operation);
-        if (field.HasBoost)
-            return cbi.Materialize(ref streamingOptimization);
-        return cbi;
+        Operation = UnaryMatchOperation.Between;
+        BetweenLeft = leftOperation;
+        BetweenRight = rightOperation;
+        Field = field;
+        Count = indexSearcher.GetTermAmountInField(Field);
+        _indexSearcher = indexSearcher;
+        Term = leftTerm is not string ? leftTerm : QueryBuilderHelper.CoraxGetValueAsString(leftTerm);
+        Term2 = rightTerm is not string ? rightTerm : QueryBuilderHelper.CoraxGetValueAsString(rightTerm);
     }
+
+    public static IQueryMatch Build(IndexSearcher indexSearcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation, ref CoraxQueryBuilder.StreamingOptimization streamingOptimization) => Build(indexSearcher, index, field, term, operation, ref streamingOptimization, out _);
     
-    public static IQueryMatch Build(IndexSearcher searcher, Index index, FieldMetadata field, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left, UnaryMatchOperation right, ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
+    private static IQueryMatch Build(IndexSearcher indexSearcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation, ref CoraxQueryBuilder.StreamingOptimization streamingOptimization, out bool isTimeOrNumerical)
     {
-        var cbi = new CoraxBooleanItem(searcher, index, field, term1, term2, operation, left, right);
-        if (field.HasBoost)
-            return cbi.Materialize(ref streamingOptimization);
-        return cbi;
-    }
-    
-    private CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left, UnaryMatchOperation right) : this(searcher, index, field, term1, operation)
-    {
-        //Between handler
+        long timeTicks = 0L;
+        var fieldHasTime = index.IndexFieldsPersistence.HasTimeValues(field.FieldName.ToString());
+        var isTimeValue = fieldHasTime 
+                          && term is not null 
+                          && QueryBuilderHelper.TryGetTime(index, term, out timeTicks);
+        term = isTimeValue ? timeTicks : term;
         
-        if (_isTime) //found time at `Term1`, lets check if second item also contains time
-        {
-            if (term2 != null && index.IndexFieldsPersistence.HasTimeValues(field.FieldName.ToString()) && QueryBuilderHelper.TryGetTime(index, term2, out var ticks))
-            {
-                Term2 = ticks;
-            }
-            else  //not found, lets revert Term1 
-            {
-                Term = term1;
-                Term2 = term2;
-                _isTime = false;
-            }
-        }
-        else
-        {
-            Term2 = term2;
-        }
-
-        BetweenRight = right;
-        BetweenLeft = left;
+        if (fieldHasTime)
+            field = field.ChangeAnalyzer(FieldIndexingMode.Exact);
+        
+        var cbi = new CoraxBooleanItem(indexSearcher, field, term, operation);
+        
+        isTimeOrNumerical = term is long or double;
+        return field.HasBoost 
+            ? cbi.Materialize(ref streamingOptimization) 
+            : cbi;
     }
-    
+
+    public static IQueryMatch BuildBetween(IndexSearcher indexSearcher, Index index, FieldMetadata field, object leftValue, object rightValue,
+        UnaryMatchOperation leftOperator, UnaryMatchOperation rightOperator, ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
+    {
+        var leftIsUnbounded = leftValue is null or Constants.Documents.Querying.Terms.LeftNullValueOfBetweenQuery;
+        var rightIsUnbounded = rightValue is null or Constants.Documents.Querying.Terms.RightNullValueOfBetweenQuery;
+
+        switch (IsLeftUnbounded: leftIsUnbounded, IsRightUnbounded: rightIsUnbounded)
+        {
+            case (IsLeftUnbounded: true, IsRightUnbounded: true):
+            {
+                Debug.Assert(streamingOptimization.OptimizationIsPossible == false);
+                var existsQuery = indexSearcher.ExistsQuery(field, streamingEnabled: false, forward: true);
+                
+                // matching lucene results, nulls included
+                return indexSearcher.IncludeNullMatch(field, existsQuery, forward: false);
+            }
+            
+            case (IsLeftUnbounded: true, IsRightUnbounded: false):
+            {
+                Debug.Assert(streamingOptimization.OptimizationIsPossible == false);
+                // between null and Value => (oo, x)
+                return Build(indexSearcher, index, field, rightValue, rightOperator, ref streamingOptimization);
+            }
+
+            case (IsLeftUnbounded: false, IsRightUnbounded: true):
+            {
+                Debug.Assert(streamingOptimization.OptimizationIsPossible == false);
+                // between Value and null => (x, oo)
+                var query = Build(indexSearcher, index, field, leftValue, leftOperator, ref streamingOptimization, out bool isNumerical);
+
+                // For numerical queries we will include the null values for backward compatibility.
+                if (isNumerical == false)
+                    return query;
+                
+                var materializedQuery = query switch
+                {
+                    CoraxBooleanItem bq => bq.Materialize(ref streamingOptimization),
+                    _ => query
+                };
+                
+                //matching lucene results, nulls included to right side (only for numerical & time queries)
+                return indexSearcher.IncludeNullMatch(field, materializedQuery, false);
+            }
+
+            case (IsLeftUnbounded: false, IsRightUnbounded: false):
+            {
+                var fieldHasTime = index.IndexFieldsPersistence.HasTimeValues(field.FieldName.ToString());
+                long ticksFromTerm1 = 0L, ticksFromTerm2 = 0L;
+                var term1HasTime = fieldHasTime && QueryBuilderHelper.TryGetTime(index, leftValue, out ticksFromTerm1);
+                var term2HasTime = fieldHasTime && QueryBuilderHelper.TryGetTime(index, rightValue, out ticksFromTerm2);
+
+                if (term1HasTime && term2HasTime)
+                    return new CoraxBooleanItem(indexSearcher, field, ticksFromTerm1, ticksFromTerm2, leftOperator, rightOperator);
+        
+                // since the field has time values, and time values are indexed in the exact manner,
+                // we disable analyzer (matching Lucene behavior) 
+                if (fieldHasTime)
+                    field = field.ChangeAnalyzer(FieldIndexingMode.Exact);
+        
+                return new CoraxBooleanItem(indexSearcher, field, leftValue, rightValue, leftOperator, rightOperator);
+            }
+        }
+    }
+
     public IQueryMatch OptimizeCompoundField(ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
     {
         switch (Operation)
@@ -114,7 +171,8 @@ public struct CoraxBooleanItem : IQueryMatch
             {
                 Slice startWith = GetStartWithTerm();
                 streamingOptimization.SkipOrderByClause = true;
-                return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, isNegated: false, forward: streamingOptimization.Forward, streamingEnabled: true, validatePostfixLen: true);
+                return _indexSearcher.StartWithQuery(streamingOptimization.CompoundField, startWith, isNegated: false, forward: streamingOptimization.Forward,
+                    streamingEnabled: true, validatePostfixLen: true);
             }
             default:
                 // TODO: RavenDB-21188

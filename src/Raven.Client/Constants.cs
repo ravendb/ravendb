@@ -453,8 +453,12 @@ namespace Raven.Client
                     internal const string ShardContextDocumentIds = "DocumentIds";
 
                     internal const string ShardContextPrefixes = "Prefixes";
-
-
+                }
+                
+                public sealed class Terms
+                {
+                    internal const string LeftNullValueOfBetweenQuery = "*";
+                    internal const string RightNullValueOfBetweenQuery = "NULL";
                 }
             }
 
