@@ -32,6 +32,10 @@ export default function CertificatesAuthDisabled() {
                             <code>Security.Certificate.Load.Exec</code>.
                         </NumberedListItem>
                         <NumberedListItem stepKey={3}>
+                            Please ensure that all <code>ServerUrl</code> configurations use HTTPS protocol instead of
+                            HTTP.
+                        </NumberedListItem>
+                        <NumberedListItem stepKey={4}>
                             Save and restart the server to apply the changes.
                         </NumberedListItem>
                     </NumberedList>
