@@ -5,7 +5,6 @@ import { certificatesActions } from "components/pages/resources/manageServer/cer
 import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { CloseButton, Form, Input, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
@@ -17,6 +16,8 @@ import CertificatesSecurityClearanceField from "components/pages/resources/manag
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
 import { FormGroup, FormLabel } from "components/common/Form";
+import Modal from "components/common/Modal";
+import Form from "react-bootstrap/Form";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -66,27 +67,29 @@ export default function CertificatesEditModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
             <FormProvider {...form}>
-                <Form onSubmit={handleSubmit(handleEdit)}>
-                    <ModalBody>
-                        <div className="text-center mb-3">
+                <form onSubmit={handleSubmit(handleEdit)}>
+                    <Modal.Header
+                        className="vstack gap-4"
+                        onCloseClick={() => dispatch(certificatesActions.editModalClosed())}
+                    >
+                        <div className="text-center">
                             <Icon icon="certificate" addon="edit" className="fs-1" color="primary" margin="m-0" />
                         </div>
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton onClick={() => dispatch(certificatesActions.editModalClosed())} />
-                        </div>
-                        <div className="text-center lead mb-3">Edit client certificate</div>
+                        <div className="text-center lead">Edit client certificate</div>
+                    </Modal.Header>
+                    <Modal.Body>
                         <FormGroup>
                             <FormLabel>Name</FormLabel>
-                            <Input type="text" value={certificate.Name} disabled />
+                            <Form.Control type="text" value={certificate.Name} disabled />
                         </FormGroup>
                         <CertificatesSecurityClearanceField />
                         <hr />
                         <CertificatesPermissionsField />
                         <Certificates2FAField editingCert={certificate} />
-                    </ModalBody>
-                    <ModalFooter>
+                    </Modal.Body>
+                    <Modal.Footer>
                         <Button
                             variant="link"
                             onClick={() => dispatch(certificatesActions.editModalClosed())}
@@ -103,8 +106,8 @@ export default function CertificatesEditModal() {
                             <Icon icon="save" />
                             Save changes
                         </ButtonWithSpinner>
-                    </ModalFooter>
-                </Form>
+                    </Modal.Footer>
+                </form>
             </FormProvider>
         </Modal>
     );

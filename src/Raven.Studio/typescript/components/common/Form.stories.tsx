@@ -116,8 +116,11 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 </FormSwitch>
             </FormGroup>
             <FormGroup>
-                <FormRadio control={control} name="inputRadio">
-                    Radio
+                <FormRadio control={control} name="inputRadio" value="true">
+                    Radio true
+                </FormRadio>
+                <FormRadio control={control} name="inputRadio" value="false">
+                    Radio false
                 </FormRadio>
             </FormGroup>
             <FormGroup>
@@ -207,7 +210,7 @@ const schema = yup.object().shape({
     inputGroupCheckbox: yup.boolean().oneOf([true]),
     inputCheckboxes: yup.array().of(yup.boolean().oneOf([true])),
     inputSwitch: yup.boolean().oneOf([true]),
-    inputRadio: yup.boolean().oneOf([true]),
+    inputRadio: yup.string().oneOf(["true", "false"]),
     inputRadioToggleWithIcon: yup.boolean().oneOf([true]),
     inputSelect: yup.number().nullable().required(),
     inputMultiSelect: yup.number().nullable().required(),
@@ -228,7 +231,7 @@ const validValues: FormData = {
     inputCheckbox: true,
     inputGroupCheckbox: true,
     inputCheckboxes: [true, false],
-    inputRadio: true,
+    inputRadio: "true",
     inputSelect: 1,
     inputMultiSelect: 1,
     inputSelectCreatable: 1,
@@ -245,7 +248,7 @@ const invalidValues: FormData = {
     inputCheckbox: false,
     inputGroupCheckbox: false,
     inputCheckboxes: [false, false],
-    inputRadio: false,
+    inputRadio: "false",
     inputSelect: null,
     inputMultiSelect: null,
     inputSelectCreatable: null,

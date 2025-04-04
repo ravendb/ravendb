@@ -1,3 +1,4 @@
+/* eslint-disable react-compiler/react-compiler */
 import { yupResolver } from "@hookform/resolvers/yup";
 import genUtils from "common/generalUtils";
 import { FormInput, FormGroup, FormLabel } from "components/common/Form";
@@ -8,7 +9,6 @@ import { useAppDispatch } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { useRef } from "react";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import endpoints from "endpoints";
@@ -22,6 +22,8 @@ import CertificatesSecurityClearanceField from "components/pages/resources/manag
 import CertificatesExpireField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesExpireField";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
+import Modal from "components/common/Modal";
+import Form from "react-bootstrap/Form";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -78,17 +80,19 @@ export default function CertificatesGenerateModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleGenerate)}>
-                    <ModalBody>
-                        <div className="text-center mb-3">
+                    <Modal.Header
+                        className="vstack gap-4"
+                        onCloseClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}
+                    >
+                        <div className="text-center">
                             <Icon icon="certificate" addon="plus" color="primary" className="fs-1" margin="m-0" />
                         </div>
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())} />
-                        </div>
-                        <div className="text-center lead mb-3">Generate client certificate</div>
+                        <div className="text-center lead">Generate client certificate</div>
+                    </Modal.Header>
+                    <Modal.Body>
                         <FormGroup>
                             <FormLabel>Name</FormLabel>
                             <FormInput type="text" control={control} name="name" />
@@ -102,8 +106,8 @@ export default function CertificatesGenerateModal() {
                         <hr />
                         <CertificatesPermissionsField />
                         <Certificates2FAField />
-                    </ModalBody>
-                    <ModalFooter>
+                    </Modal.Body>
+                    <Modal.Footer>
                         <Button
                             variant="link"
                             onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}
@@ -119,7 +123,7 @@ export default function CertificatesGenerateModal() {
                         >
                             Generate certificate
                         </ButtonWithSpinner>
-                    </ModalFooter>
+                    </Modal.Footer>
                 </Form>
             </FormProvider>
 

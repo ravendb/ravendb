@@ -6,7 +6,6 @@ import { certificatesActions } from "components/pages/resources/manageServer/cer
 import { useAppDispatch } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -17,6 +16,7 @@ import { useAsync } from "react-async-hook";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import classNames from "classnames";
+import Modal from "components/common/Modal";
 
 export default function CertificatesReplaceServerModal() {
     const dispatch = useAppDispatch();
@@ -52,19 +52,19 @@ export default function CertificatesReplaceServerModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-warning">
+        <Modal show size="lg" centered contentClassName="modal-border bulge-warning">
             <FormProvider {...form}>
-                <Form onSubmit={handleSubmit(handleReplace)}>
-                    <ModalBody>
-                        <div className="text-center mb-3">
+                <form onSubmit={handleSubmit(handleReplace)}>
+                    <Modal.Header
+                        className="vstack gap-4"
+                        onCloseClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
+                    >
+                        <div className="text-center">
                             <Icon icon="refresh" className="fs-1" color="warning" margin="m-0" />
                         </div>
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton
-                                onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
-                            />
-                        </div>
-                        <div className="text-center lead mb-3">Replace server certificates (cluster-wide)</div>
+                        <div className="text-center lead">Replace server certificates (cluster-wide)</div>
+                    </Modal.Header>
+                    <Modal.Body>
                         <LazyLoad active={asyncGetClusterDomains.loading}>
                             <RichAlert title="" variant="info" className="my-2">
                                 <span>
@@ -100,8 +100,8 @@ export default function CertificatesReplaceServerModal() {
                                 certificate in those nodes. <strong>Use with care.</strong>
                             </RichAlert>
                         )}
-                    </ModalBody>
-                    <ModalFooter>
+                    </Modal.Body>
+                    <Modal.Footer>
                         <Button
                             variant="link"
                             onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
@@ -117,8 +117,8 @@ export default function CertificatesReplaceServerModal() {
                         >
                             Replace certificate
                         </ButtonWithSpinner>
-                    </ModalFooter>
-                </Form>
+                    </Modal.Footer>
+                </form>
             </FormProvider>
         </Modal>
     );

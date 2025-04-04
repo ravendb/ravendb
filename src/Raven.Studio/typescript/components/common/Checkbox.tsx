@@ -87,7 +87,7 @@ export function Switch(props: CheckboxProps) {
 }
 
 export function Radio(props: CheckboxProps) {
-    const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, invalid, ...rest } =
+    const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, isInvalid, ...rest } =
         props;
     const defaultId = useUniqueId("radio");
 
@@ -105,7 +105,7 @@ export function Radio(props: CheckboxProps) {
                 onChange={toggleSelection}
                 label={children}
                 disabled={disabled}
-                invalid={invalid}
+                isInvalid={isInvalid}
                 {...rest}
             />
         </div>

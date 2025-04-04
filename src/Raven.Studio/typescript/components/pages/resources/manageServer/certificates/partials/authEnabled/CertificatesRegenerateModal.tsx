@@ -5,7 +5,6 @@ import { certificatesActions } from "components/pages/resources/manageServer/cer
 import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { CloseButton, Form, Input, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { FormGroup, FormLabel } from "components/common/Form";
 import * as yup from "yup";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
@@ -16,6 +15,8 @@ import { ExpireTimeUnit } from "components/pages/resources/manageServer/certific
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import Button from "react-bootstrap/Button";
+import Modal from "components/common/Modal";
+import Form from "react-bootstrap/Form";
 
 export default function CertificatesRegenerateModal() {
     const dispatch = useAppDispatch();
@@ -55,25 +56,27 @@ export default function CertificatesRegenerateModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-warning">
+        <Modal show size="lg" centered contentClassName="modal-border bulge-warning">
             <FormProvider {...form}>
-                <Form onSubmit={handleSubmit(handleRegenerate)}>
-                    <ModalBody>
-                        <div className="text-center mb-3">
+                <form onSubmit={handleSubmit(handleRegenerate)}>
+                    <Modal.Header
+                        className="vstack gap-4"
+                        onCloseClick={() => dispatch(certificatesActions.regenerateModalClosed())}
+                    >
+                        <div className="text-center">
                             <Icon icon="refresh" className="fs-1" color="warning" margin="m-0" />
                         </div>
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton onClick={() => dispatch(certificatesActions.regenerateModalClosed())} />
-                        </div>
-                        <div className="text-center lead mb-3">Regenerate client certificate</div>
+                        <div className="text-center lead">Regenerate client certificate</div>
+                    </Modal.Header>
+                    <Modal.Body>
                         <FormGroup>
                             <FormLabel>Name</FormLabel>
-                            <Input type="text" value={certificate.Name} disabled />
+                            <Form.Control type="text" value={certificate.Name} disabled />
                         </FormGroup>
                         <CertificatesExpireField />
                         <Certificates2FAField editingCert={certificate} />
-                    </ModalBody>
-                    <ModalFooter>
+                    </Modal.Body>
+                    <Modal.Footer>
                         <Button
                             variant="link"
                             onClick={() => dispatch(certificatesActions.regenerateModalClosed())}
@@ -89,8 +92,8 @@ export default function CertificatesRegenerateModal() {
                         >
                             Regenerate certificate
                         </ButtonWithSpinner>
-                    </ModalFooter>
-                </Form>
+                    </Modal.Footer>
+                </form>
             </FormProvider>
         </Modal>
     );

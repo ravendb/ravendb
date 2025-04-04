@@ -6,7 +6,7 @@ import { certificatesActions } from "components/pages/resources/manageServer/cer
 import { useAppDispatch } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
-import { Modal, ModalBody, ModalFooter } from "reactstrap";
+import Modal from "components/common/Modal";
 import * as yup from "yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import CertificatesPermissionsField from "components/pages/resources/manageServer/certificates/partials/authEnabled/formFields/CertificatesPermissionsField";
@@ -20,7 +20,6 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
-import CloseButton from "react-bootstrap/CloseButton";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -64,17 +63,19 @@ export default function CertificatesUploadModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleUpload)}>
-                    <ModalBody>
-                        <div className="text-center mb-3">
+                    <Modal.Header
+                        className="vstack gap-4"
+                        onCloseClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}
+                    >
+                        <div className="text-center">
                             <Icon icon="upload" className="fs-1" color="primary" margin="m-0" />
                         </div>
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())} />
-                        </div>
-                        <div className="text-center lead mb-3">Upload client certificate</div>
+                        <div className="text-center lead">Upload client certificate</div>
+                    </Modal.Header>
+                    <Modal.Body>
                         <FormGroup>
                             <FormLabel>Name</FormLabel>
                             <FormInput control={control} type="text" name="name" />
@@ -96,8 +97,8 @@ export default function CertificatesUploadModal() {
                         <hr />
                         <CertificatesPermissionsField />
                         <Certificates2FAField />
-                    </ModalBody>
-                    <ModalFooter>
+                    </Modal.Body>
+                    <Modal.Footer>
                         <Button
                             variant="link"
                             onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}
@@ -113,7 +114,7 @@ export default function CertificatesUploadModal() {
                         >
                             Upload certificate
                         </ButtonWithSpinner>
-                    </ModalFooter>
+                    </Modal.Footer>
                 </Form>
             </FormProvider>
         </Modal>

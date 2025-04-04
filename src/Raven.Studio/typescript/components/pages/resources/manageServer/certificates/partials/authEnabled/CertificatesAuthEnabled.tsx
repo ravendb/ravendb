@@ -14,7 +14,7 @@ import { certificatesSelectors } from "components/pages/resources/manageServer/c
 import { CertificatesSortMode } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useCallback, useEffect, useRef } from "react";
-import { DropdownItem, DropdownMenu, DropdownToggle, Input, UncontrolledDropdown } from "reactstrap";
+import Dropdown from "react-bootstrap/Dropdown";
 import Button from "react-bootstrap/Button";
 import endpoints from "endpoints";
 import CertificatesGenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
@@ -31,6 +31,7 @@ import { useChanges } from "components/hooks/useChanges";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
+import Form from "react-bootstrap/Form";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -101,26 +102,22 @@ export default function CertificatesAuthEnabled() {
         <div className="vstack gap-2">
             <StickyHeader>
                 {loadStatus === "success" && (
-                    <UncontrolledDropdown>
-                        <DropdownToggle color="primary" caret className="rounded-pill">
+                    <Dropdown>
+                        <Dropdown.Toggle title="Manage certificates" variant="primary" className="rounded-pill">
                             Manage certificates
-                        </DropdownToggle>
-                        <DropdownMenu>
-                            <DropdownItem header className="small-label">
-                                Client
-                            </DropdownItem>
-                            <DropdownItem onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}>
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                            <Dropdown.Header className="small-label">Client</Dropdown.Header>
+                            <Dropdown.Item onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}>
                                 <Icon icon="certificate" addon="plus" />
                                 Generate client certificate
-                            </DropdownItem>
-                            <DropdownItem onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}>
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}>
                                 <Icon icon="upload" />
                                 Upload client certificate
-                            </DropdownItem>
-                            <DropdownItem divider />
-                            <DropdownItem header className="small-label">
-                                Server
-                            </DropdownItem>
+                            </Dropdown.Item>
+                            <Dropdown.Divider />
+                            <Dropdown.Header className="small-label">Server</Dropdown.Header>
                             <ConditionalPopover
                                 conditions={[
                                     {
@@ -140,7 +137,7 @@ export default function CertificatesAuthEnabled() {
                                 ]}
                                 popoverPlacement="right"
                             >
-                                <DropdownItem
+                                <Dropdown.Item
                                     onClick={() => {
                                         reportEvent("certificates", "export-certs");
                                         exportServerCertFormRef.current?.submit();
@@ -149,7 +146,7 @@ export default function CertificatesAuthEnabled() {
                                 >
                                     <Icon icon="download" />
                                     Export server certificate
-                                </DropdownItem>
+                                </Dropdown.Item>
                             </ConditionalPopover>
                             <ConditionalPopover
                                 conditions={{
@@ -157,22 +154,22 @@ export default function CertificatesAuthEnabled() {
                                     message: "You need to have a server certificate to replace it",
                                 }}
                             >
-                                <DropdownItem
+                                <Dropdown.Item
                                     onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
                                     disabled={!hasClusterNodeCertificate}
                                 >
                                     <Icon icon="refresh" />
                                     Replace server certificate
-                                </DropdownItem>
+                                </Dropdown.Item>
                             </ConditionalPopover>
-                        </DropdownMenu>
-                    </UncontrolledDropdown>
+                        </Dropdown.Menu>
+                    </Dropdown>
                 )}
                 <div className="hstack gap-2 mt-2 flex-wrap">
                     <div className="flex-grow">
                         <span className="small-label">Filter by name/thumbprint</span>
                         <div className="clearable-input">
-                            <Input
+                            <Form.Control
                                 onChange={(x) => nameOrThumbprintFilterInputHandleChange(x.target.value)}
                                 value={nameOrThumbprintFilterInputValue}
                                 placeholder="e.g. johndoe.certificate"

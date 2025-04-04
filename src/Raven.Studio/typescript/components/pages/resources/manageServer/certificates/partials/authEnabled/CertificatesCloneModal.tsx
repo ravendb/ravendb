@@ -1,3 +1,4 @@
+/* eslint-disable react-compiler/react-compiler */
 import { yupResolver } from "@hookform/resolvers/yup";
 import genUtils from "common/generalUtils";
 import { FormInput, FormGroup, FormLabel } from "components/common/Form";
@@ -8,7 +9,6 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { useRef } from "react";
 import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { CloseButton, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import endpoints from "endpoints";
@@ -23,6 +23,7 @@ import CertificatesExpireField from "components/pages/resources/manageServer/cer
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
+import Modal from "components/common/Modal";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -80,17 +81,19 @@ export default function CertificatesCloneModal() {
     };
 
     return (
-        <Modal isOpen wrapClassName="bs5" size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
             <FormProvider {...form}>
-                <Form onSubmit={handleSubmit(handleClone)}>
-                    <ModalBody>
-                        <div className="text-center mb-3">
+                <form onSubmit={handleSubmit(handleClone)}>
+                    <Modal.Header
+                        className="vstack gap-4"
+                        onCloseClick={() => dispatch(certificatesActions.cloneModalClosed())}
+                    >
+                        <div className="text-center">
                             <Icon icon="copy" className="fs-1" color="primary" margin="m-0" />
                         </div>
-                        <div className="position-absolute m-2 end-0 top-0">
-                            <CloseButton onClick={() => dispatch(certificatesActions.cloneModalClosed())} />
-                        </div>
-                        <div className="text-center lead mb-3">Clone client certificate</div>
+                        <div className="text-center lead">Clone client certificate</div>
+                    </Modal.Header>
+                    <Modal.Body>
                         <FormGroup>
                             <FormLabel>Name</FormLabel>
                             <FormInput type="text" control={control} name="name" />
@@ -104,8 +107,8 @@ export default function CertificatesCloneModal() {
                         <hr />
                         <CertificatesPermissionsField />
                         <Certificates2FAField />
-                    </ModalBody>
-                    <ModalFooter>
+                    </Modal.Body>
+                    <Modal.Footer>
                         <Button
                             variant="link"
                             onClick={() => dispatch(certificatesActions.cloneModalClosed())}
@@ -121,8 +124,8 @@ export default function CertificatesCloneModal() {
                         >
                             Clone certificate
                         </ButtonWithSpinner>
-                    </ModalFooter>
-                </Form>
+                    </Modal.Footer>
+                </form>
             </FormProvider>
 
             {/* This form is used to download certificate */}
