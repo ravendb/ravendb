@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Queries
             if (query.Filter != null)
             {
                 if (HasVectorSearch)
-                    throw new NotSupportedException("Vector search is not supported in combination with filter.");
+                    throw new InvalidQueryException("Cannot use 'filter' when 'vector.search' is used in where statement.");
                 
                 BuildFilterScript(query);
             }
