@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -13,6 +14,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -256,14 +258,15 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 session.SaveChanges();
             }
 
-            await WaitForValueAsync(async () =>
+            Assert.True(await WaitForValueAsync(async () =>
             {
                 ongoingTask = await src.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
                 return ongoingTask.ResponsibleNode.NodeTag != responsibleNodeNodeTag;
-            }, true);
+            }, expectedVal: true, timeout: 30_000), 
+                userMessage: $"new responsible node was not selected in time {Environment.NewLine}{await AddEtlDebugInfo(src.Database, responsibleNode: null, originalResponsibleNode: responsibleNodeNodeTag, srcRaft.Nodes)}");
 
             Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", timeout: 30_000), 
-                userMessage: await Etl.GetEtlDebugInfo(src.Database, server: srcRaft.Nodes.Single(s => s.ServerStore.NodeTag == ongoingTask.ResponsibleNode.NodeTag)));
+                userMessage: $"document 'users/2' did not reach destination in time {Environment.NewLine}{await AddEtlDebugInfo(src.Database, ongoingTask.ResponsibleNode.NodeTag, responsibleNodeNodeTag, srcRaft.Nodes)}");
         }
     }
 
@@ -522,5 +525,29 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             Assert.Equal(1, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 1));
             Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
         }
+    }
+
+    private async Task<string> AddEtlDebugInfo(string database, string responsibleNode, string originalResponsibleNode, List<RavenServer> servers)
+    {
+        var sb = new StringBuilder();
+
+        var original = servers.SingleOrDefault(s => s.ServerStore.NodeTag == originalResponsibleNode);
+        var etlStatsFromOriginalResponsibleNode = await Etl.GetEtlDebugInfo(database, server: original);
+        sb.AppendLine($"ETL stats from original responsible node '{originalResponsibleNode}':")
+            .AppendLine(etlStatsFromOriginalResponsibleNode);
+
+        if (responsibleNode != null)
+        {
+            var newResponsibleNode = servers.SingleOrDefault(s => s.ServerStore.NodeTag == responsibleNode);
+            var etlStatsFromNewResponsibleNode = await Etl.GetEtlDebugInfo(database, server: newResponsibleNode);
+
+            sb.AppendLine($"ETL stats from new responsible node '{responsibleNode}':")
+                .AppendLine(etlStatsFromNewResponsibleNode);
+        }
+
+        sb.AppendLine("clusterDebugInfo:");
+        await GetClusterDebugLogsAsync(sb);
+
+        return sb.ToString();
     }
 }
