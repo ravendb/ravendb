@@ -685,7 +685,7 @@ namespace Corax.Indexing
 
                     RecordAndPrepareDocumentsIdsForDeletion(postingListId, out bool setsAreDisjoint, out _);
                     ProcessCurrentDeletes();
-                    requiresFlushingBatch |= setsAreDisjoint == false;
+                    requiresFlushingBatch = setsAreDisjoint == false;
                 }
             }
 
