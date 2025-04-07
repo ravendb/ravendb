@@ -9,6 +9,7 @@ using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
 using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Platform.Win32;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using NativeMemory = Sparrow.Utils.NativeMemory;
@@ -39,7 +40,7 @@ namespace Sparrow.LowMemory
                 ProcessId = process.Id;
 
             if (PlatformDetails.RunningOnWindows)
-                ProcessHandle = GetCurrentProcess();
+                ProcessHandle = Win32MemoryQueryMethods.GetCurrentProcess();
 
             TotalPhysicalMemory = GetMemoryInfo().TotalPhysicalMemory;
         }
@@ -260,9 +261,6 @@ namespace Sparrow.LowMemory
             public UInt64 WriteTransferCount;
             public UInt64 OtherTransferCount;
         }
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr GetCurrentProcess();
 
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport("kernel32.dll", SetLastError = true)]

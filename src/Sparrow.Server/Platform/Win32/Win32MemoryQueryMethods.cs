@@ -14,7 +14,7 @@ namespace Sparrow.Server.Platform.Win32
     public static unsafe class Win32MemoryQueryMethods
     {
         [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr GetCurrentProcess();
+        public static extern IntPtr GetCurrentProcess();
 
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
