@@ -127,7 +127,7 @@ namespace Raven.Server.Commercial
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
 
                 TableValueReader infoTvr;
-                using (Slice.From(tx.InnerTransaction.Allocator, nameof(BuildNumber), out Slice keyAsSlice))
+                using (Slice.From(tx.InnerTransaction.Allocator, nameof(LicenseVersionInformation), out Slice keyAsSlice))
                 {
                     // it seems like the database was shutdown rudely and never wrote it stats onto the disk
                     if (table.ReadByKey(keyAsSlice, out infoTvr) == false)
@@ -137,6 +137,51 @@ namespace Raven.Server.Commercial
                 using (var blittable = Read(context, ref infoTvr))
                 {
                     return JsonDeserializationServer.BuildNumber(blittable);
+                }
+            }
+        }
+
+        public unsafe void SetLicenseVersionInformation(LicenseVersionInformation licenseVersionInformation)
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
+
+                var id = context.GetLazyString(nameof(LicenseVersionInformation));
+                using (var json = context.ReadObject(licenseVersionInformation.ToJson(), nameof(LicenseVersionInformation), BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    using (table.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(id.Buffer, id.Size);
+                        tvb.Add(json.BasePointer, json.Size);
+
+                        table.Set(tvb);
+                    }
+                }
+
+                tx.Commit();
+            }
+        }
+
+        public LicenseVersionInformation GetLicenseVersionInformation()
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
+
+                TableValueReader infoTvr;
+                using (Slice.From(tx.InnerTransaction.Allocator, nameof(LicenseVersionInformation), out Slice keyAsSlice))
+                {
+                    // it seems like the database was shutdown rudely and never wrote it stats onto the disk
+                    if (table.ReadByKey(keyAsSlice, out infoTvr) == false)
+                        return null;
+                }
+
+                using (var blittable = Read(context, ref infoTvr))
+                {
+                    return JsonDeserializationServer.LicenseVersionInformation(blittable);
                 }
             }
         }

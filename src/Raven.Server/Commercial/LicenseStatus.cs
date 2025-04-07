@@ -21,6 +21,8 @@ namespace Raven.Server.Commercial
 
         public DateTime FirstServerStartDate { get; set; }
 
+        internal LicenseVersionInformation LicenseVersionInformation { get; set; }
+
         private T GetValue<T>(LicenseAttribute attributeName, T agplValue = default)
         {
             if (Attributes == null)
@@ -109,23 +111,31 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public bool UpgradeRequired
+        public UpgradeRequired UpgradeRequired
         {
             get
             {
                 if (Type != LicenseType.Community)
-                    return false;
+                    return null;
 
                 if (IsCloud)
-                    return false;
+                    return null;
 
-                if (Version == null)
-                    return false;
+                if (Version == null || LicenseVersionInformation == null)
+                    return null;
 
                 if (Version.TryParse(RavenVersionAttribute.Instance.Version, out var currentVersion) == false)
-                    return false;
+                    return null;
 
-                return Version > currentVersion;
+                if (Version <= currentVersion)
+                    return null;
+
+                var allowDismissUntil = LicenseVersionInformation.UpdatedAt.AddDays(7);
+                return new UpgradeRequired
+                {
+                    AllowDismiss = allowDismissUntil >= DateTime.UtcNow,
+                    AllowDismissUntil = allowDismissUntil
+                };
             }
         }
 
