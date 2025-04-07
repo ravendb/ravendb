@@ -1,7 +1,9 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
@@ -199,7 +201,10 @@ namespace Sparrow.Json
             _innerBuffer ??= _context.GetMemory(32);
         }
 
-        public WriteToken WriteObjectMetadata(FastList<AbstractBlittableJsonDocumentBuilder.PropertyTag> properties, long firstWrite, int maxPropId)
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
+        public unsafe WriteToken WriteObjectMetadata(FastList<AbstractBlittableJsonDocumentBuilder.PropertyTag> properties, long firstWrite, int maxPropId)
         {
             CachedProperties.Sort(properties);
 
@@ -211,16 +216,37 @@ namespace Sparrow.Json
             var positionSize = SetOffsetSizeFlag(ref objectToken, distanceFromFirstProperty);
             var propertyIdSize = SetPropertyIdSizeFlag(ref objectToken, maxPropId);
 
-            _position += WriteVariableSizeInt(properties.Count);
+            Debug.Assert(positionSize == sizeof(byte) || positionSize == sizeof(short) || positionSize == sizeof(int), $"Unsupported size {positionSize}");
+            Debug.Assert(propertyIdSize == sizeof(byte) || propertyIdSize == sizeof(short) || propertyIdSize == sizeof(int), $"Unsupported size {propertyIdSize}");
+
+            const int maxPropertySize = 2 * sizeof(int) + sizeof(byte);
+
+            // PERF: By reserving on the stack the maximum size, we are able to avoid multiple calls to 
+            // the unmanaged writer. This is a trade-off between stack usage and performance.
+            byte* metadataBuffer = stackalloc byte[maxPropertySize * properties.Count + VariableSizeEncoding.MaximumSizeOf<int>()];
 
             // Write object metadata
+            byte* metadataPtr = metadataBuffer + VariableSizeEncoding.Write(metadataBuffer, properties.Count);
+
             foreach (var sortedProperty in properties)
             {
-                WriteNumber(objectMetadataStart - sortedProperty.Position, positionSize);
-                WriteNumber(sortedProperty.Property.PropertyId, propertyIdSize);
-                _unmanagedWriteBuffer.Write(sortedProperty.Type);
-                _position += positionSize + propertyIdSize + sizeof(byte);
+                // PERF: We are using the known fact that it doesn't matter if the value is big or not because
+                // the memory has already been reserved. Doing this, we avoid the branching associated with the
+                // .WriteNumber() method. And since we know how many bytes we will write, we advance the pointer
+                // appropriately.
+                *(int*)metadataPtr = objectMetadataStart - sortedProperty.Position;
+                metadataPtr += positionSize;
+
+                *(int*)metadataPtr = sortedProperty.Property.PropertyId;
+                metadataPtr += propertyIdSize;
+
+                *metadataPtr = sortedProperty.Type;
+                metadataPtr++;
             }
+
+            int length = (int)(metadataPtr - metadataBuffer);
+            _unmanagedWriteBuffer.Write(metadataBuffer, length);
+            _position += length;
 
             return new WriteToken(objectMetadataStart, objectToken);
         }
@@ -288,31 +314,28 @@ namespace Sparrow.Json
             _intBuffer = null;
         }
 
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int WritePropertyNames(int rootOffset)
+        private unsafe int WritePropertyNames(int rootOffset)
         {
             var cachedProperties = CachedProperties;
             int propertiesDiscovered = cachedProperties.PropertiesDiscovered;
 
             // Write the property names and register their positions
-            if (_propertyArrayOffset == null || _propertyArrayOffset.Length < propertiesDiscovered)
-            {
-                _propertyArrayOffset = new int[Bits.NextAllocationSize(propertiesDiscovered)];
-            }
+            int* propertyArrayOffset = stackalloc int[propertiesDiscovered];
 
-            unsafe
+            for (var index = 0; index < propertiesDiscovered; index++)
             {
-                for (var index = 0; index < propertiesDiscovered; index++)
+                var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
+                if (str.EscapePositions == null || str.EscapePositions.Length == 0)
                 {
-                    var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
-                    if (str.EscapePositions == null || str.EscapePositions.Length == 0)
-                    {
-                        _propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size);
-                        continue;
-                    }
-
-                    _propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions);
+                    propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size);
+                    continue;
                 }
+
+                propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions);
             }
 
             // Register the position of the properties offsets start
@@ -323,15 +346,25 @@ namespace Sparrow.Json
             var propertyNamesOffset = _position - rootOffset;
             var propertyArrayOffsetValueByteSize = SetOffsetSizeFlag(ref propertiesSizeMetadata, propertyNamesOffset);
 
-            WriteNumber((int)propertiesSizeMetadata, sizeof(byte));
+            byte* propertiesStartPtr = stackalloc byte[sizeof(byte) + propertiesDiscovered * sizeof(int)];
+            byte* propertiesPtr = propertiesStartPtr;
+            *propertiesPtr = (byte)propertiesSizeMetadata;
+            propertiesPtr++;
 
-            // Write property names offsets
             // PERF: Using for to avoid the cost of the enumerator.
             for (int i = 0; i < propertiesDiscovered; i++)
             {
-                int offset = _propertyArrayOffset[i];
-                WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
+                // PERF: We are using the known fact that it doesn't matter if the value is big or not because
+                // the memory has already been reserved. Doing this, we avoid the branching associated with the
+                // .WriteNumber() method. And since we know how many bytes we will write, we advance the pointer
+                // appropriately.
+                *(int*)propertiesPtr = propertiesStart - propertyArrayOffset[i];
+                propertiesPtr += propertyArrayOffsetValueByteSize;
             }
+
+            // Write property names offsets in the actual buffer.
+            _unmanagedWriteBuffer.Write(propertiesStartPtr, (int)(propertiesPtr - propertiesStartPtr));
+            _position += (int)(propertiesPtr - propertiesStartPtr);
 
             return propertiesStart;
         }
@@ -340,9 +373,8 @@ namespace Sparrow.Json
         {
             var propertiesStart = WritePropertyNames(rootOffset);
 
-            WriteVariableSizeIntInReverse(rootOffset);
-            WriteVariableSizeIntInReverse(propertiesStart);
-            WriteNumber((int)documentToken, sizeof(byte));
+            WriteVariableSizeIntInReverse(rootOffset, propertiesStart);
+            _unmanagedWriteBuffer.Write((byte)documentToken);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -383,82 +415,121 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Write((byte)(value >> 24));
         }
 
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeLong(long value)
         {
-            // see zig zap trick here:
-            // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
-            // for negative values
-
-            var buffer = _innerBuffer.Address;
-            var count = 0;
+            // We will do zigzag encoding for int64, but not for int32
             var v = (ulong)((value << 1) ^ (value >> 63));
-            while (v >= 0x80)
+
+            // If value is 0, write a single byte and return
+            if (v < 0x80)
             {
-                buffer[count++] = (byte)(v | 0x80);
-                v >>= 7;
+                _unmanagedWriteBuffer.Write((byte)v);
+                return 1;
             }
-            buffer[count++] = (byte)(v);
 
-            if (count == 1)
-                _unmanagedWriteBuffer.Write(*buffer);
-            else
-                _unmanagedWriteBuffer.Write(buffer, count);
-
-            return count;
+            byte* dest = stackalloc byte[VariableSizeEncoding.MaximumSizeOf<long>()];
+            var writtenBytes = VariableSizeEncoding.Write(dest, v);
+            _unmanagedWriteBuffer.Write(dest, writtenBytes);
+            return writtenBytes;
         }
 
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeInt(int value)
         {
-            // assume that we don't use negative values very often
-            var buffer = _innerBuffer.Address;
-
-            var count = 0;
-            var v = (uint)value;
-            while (v >= 0x80)
+            // If value is 0, write a single byte and return
+            if (value is >= 0 and < 0x80)
             {
-                buffer[count++] = (byte)(v | 0x80);
-                v >>= 7;
+                _unmanagedWriteBuffer.Write((byte)value);
+                return 1;
             }
-            buffer[count++] = (byte)(v);
 
-            if (count == 1)
-                _unmanagedWriteBuffer.Write(*buffer);
-            else
-                _unmanagedWriteBuffer.Write(buffer, count);
-
-            return count;
+            byte* dest = stackalloc byte[VariableSizeEncoding.MaximumSizeOf<int>()];
+            var writtenBytes = VariableSizeEncoding.Write(dest, value);
+            _unmanagedWriteBuffer.Write(dest, writtenBytes);
+            return writtenBytes;
         }
 
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeIntInReverse(int value)
         {
-            // assume that we don't use negative values very often
-            var buffer = _innerBuffer.Address;
-            var count = 0;
+            // If value is 0, write a single byte and return
+            if (value is >= 0 and < 0x80)
+            {
+                _unmanagedWriteBuffer.Write((byte)value);
+                return 1;
+            }
+
+            // Calculate the number of bytes needed
+            int significantBits = 32 - Bits.LeadingZeroes((uint)value);
+            int byteCount = (significantBits + 6) / 7;
+
+            byte* dest = stackalloc byte[VariableSizeEncoding.MaximumSizeOf<int>()];
+            
+            byte* destPtr = dest + byteCount - 1;
+
             var v = (uint)value;
             while (v >= 0x80)
             {
-                buffer[count++] = (byte)(v | 0x80);
+                *destPtr = (byte)(v | 0x80);
+                destPtr--;
                 v >>= 7;
             }
-            buffer[count++] = (byte)(v);
+            *destPtr = (byte)(v);
 
-            if (count == 1)
-            {
-                _unmanagedWriteBuffer.Write(*buffer);
-            }
-            else
-            {
-                for (int i = count - 1; i >= count / 2; i--)
-                {
-                    (buffer[i], buffer[count - 1 - i]) = (buffer[count - 1 - i], buffer[i]);
-                }
-                _unmanagedWriteBuffer.Write(buffer, count);
-            }
+            _unmanagedWriteBuffer.Write(dest, byteCount);
 
-            return count;
+            return byteCount;
+        }
+
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void WriteVariableSizeIntInReverse(int v1, int v2)
+        {
+            // We will write in reverse, so we will grow the buffer from the end 
+            // and use that to send to the unmanaged write buffer.
+
+            // Calculate the maximum number of bytes needed
+            int bufferSize = 2 * VariableSizeEncoding.MaximumSizeOf<int>();
+
+            byte* dest = stackalloc byte[bufferSize];
+            byte* destEnd = dest + bufferSize;
+            byte* destPtr = destEnd - 1;
+
+            // Since we are doing it the other way around, we will write the last first
+            var v = (uint)v2;
+            while (v >= 0x80)
+            {
+                *destPtr = (byte)(v | 0x80);
+                destPtr--;
+                v >>= 7;
+            }
+            *destPtr = (byte)(v);
+            destPtr--;
+
+            // Then we will write the first
+            v = (uint)v1;
+            while (v >= 0x80)
+            {
+                *destPtr = (byte)(v | 0x80);
+                destPtr--;
+                v >>= 7;
+            }
+            *destPtr = (byte)(v);
+
+            // Then take the first byte and calculate the distance to the end and write it.
+            _unmanagedWriteBuffer.Write(destPtr, (int)(destEnd - destPtr));
         }
 
 #if NET7_0_OR_GREATER

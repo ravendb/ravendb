@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -42,10 +44,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(byte[] buffer, int start, int count)
         {
-            fixed (byte* p = buffer)
-            {
-                Write(p + start, count);
-            }
+            Write<byte>(buffer.AsSpan(start, count));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -290,11 +289,7 @@ namespace Sparrow.Json
             Debug.Assert(count >= 0); // count is a size
             Debug.Assert(start + count <= buffer.Length); // can't overrun the buffer
 
-            fixed (byte* bufferPtr = buffer)
-            {
-                Debug.Assert(bufferPtr + start >= bufferPtr); // overflow check
-                Write(bufferPtr + start, count);
-            }
+            Write<byte>(buffer.AsSpan(start, count));
         }
 
         [Conditional("DEBUG")]
@@ -384,6 +379,10 @@ namespace Sparrow.Json
 
             // Update Segment invariants
             var head = _head;
+
+            // IMPORTANT: Even though we will be allocating a new segment, growing is allowed therefore the source address
+            // may be the same. There is no guarantee that head.Address is the actual address of the data. So we always
+            // have to account for the used pointer. 
             *(T*)(head.Address + head.Used) = data;
             head.AccumulatedSizeInBytes += sizeof(T);
             head.Used += sizeof(T);
@@ -430,6 +429,9 @@ namespace Sparrow.Json
                 // Write as much as we can in the current Segment
                 var amountWrittenInRound = Math.Min(vector.Length, availableSpace);
 
+                // IMPORTANT: Even though we will be allocating a new segment, growing is allowed therefore the source address
+                // may be the same. There is no guarantee that head.Address is the actual address of the data. So we always
+                // have to account for the used pointer. 
                 vector.Slice(0, amountWrittenInRound)
                       .CopyTo(new Span<byte>(head.Address + head.Used, amountWrittenInRound));
                 
@@ -485,11 +487,17 @@ namespace Sparrow.Json
             _head.AccumulatedSizeInBytes = previousHead.AccumulatedSizeInBytes;
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowOnAllocationSizeExceeded(int required, int maxSizeInBytes)
         {
             throw new InvalidOperationException($"Tried to allocate {new Size(required, SizeUnit.Bytes)}, which exceeds maximum allocation size of {new Size(maxSizeInBytes, SizeUnit.Bytes)}");
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowOnAllocationSizeMismatch(int allocationSizeInBytes, int required)
         {
             throw new InvalidOperationException($"Allocated {new Size(allocationSizeInBytes, SizeUnit.Bytes)}" +
