@@ -62,7 +62,6 @@ namespace SlowTests.Server.Documents.Attachments
             using (var store = GetDocumentStore())
             await using (var holder = CreateCloudSettings())
             {
-
                 await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/2";
                 using (var session = store.OpenSession())
@@ -502,7 +501,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                await PutAttachmentForTests(store, id, "test.png",profileStream, "Orders");
+                await PutAttachmentForTests(store, id, "test.png", profileStream, "Orders");
                 using (var session = store.OpenSession())
                 {
                     var exists = session.Advanced.Attachments.Exists(id, "test.png");
@@ -554,6 +553,97 @@ namespace SlowTests.Server.Documents.Attachments
 
                 Assert.Equal(blobs2.First().FullPath, $"{Settings.RemoteFolderName}/{a.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(a.Key))}");
                 Assert.Equal(1, Attachments.Count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAndRead(bool storageOnly)
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var id = "Orders/5";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/5", Company = $"Companies/5" });
+                    session.SaveChanges();
+                }
+
+
+                var rnd = new Random();
+                var b = new byte[3];
+                rnd.NextBytes(b);
+
+                var profileStream = new MemoryStream(b);
+                store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.RetiredAttachments.Delete(id, "test.png", storageOnly);
+                    session.SaveChanges();
+
+                    var exists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
+                    Assert.False(exists);
+                }
+
+                if (storageOnly)
+                {
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+                }
+                else
+                {
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+                }
+
+                // add attachment with same name but different
+
+                rnd = new Random();
+                b = new byte[3];
+                rnd.NextBytes(b);
+
+                var newProfileStream = new MemoryStream(b);
+                store.Operations.Send(new PutAttachmentOperation(id, "test.png", newProfileStream, "image/png"));
+
+                using (var session = store.OpenSession())
+                {
+                    var exists = session.Advanced.Attachments.Exists(id, "test.png");
+                    Assert.True(exists);
+                }
+
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                using (var session = store.OpenSession())
+                {
+                    var retiredExists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
+                    Assert.True(retiredExists);
+
+                    var attachment = session.Advanced.RetiredAttachments.Get(id, "test.png");
+                    Assert.NotNull(attachment);
+                    Assert.Equal("test.png", attachment.Details.Name);
+                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
+
+                    // compare streams
+                    using var ms = new MemoryStream();
+                    await attachment.Stream.CopyToAsync(ms);
+                    Assert.Equal(b, ms.ToArray());
+
+                    if (storageOnly)
+                    {
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 2);
+                    }
+                    else
+                    {
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+                    }
+                }
             }
         }
 

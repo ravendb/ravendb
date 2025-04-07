@@ -101,15 +101,19 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 var profileStream = new MemoryStream(b);
                 var name = $"test_{i + start}.png";
                 await store.Operations.SendAsync(new PutAttachmentOperation(id, name, profileStream, "image/png"));
-
                 profileStream.Position = 0;
+
+                using AttachmentResult a = await store.Operations.SendAsync(new GetAttachmentOperation(id, name, AttachmentType.Document, null));
+
                 Attachments.Add(new RetiredAttachment()
                 {
                     Name = name,
                     DocumentId = id,
                     Collection = collection,
                     Stream = profileStream,
-                    ContentType = "image/png"
+                    ContentType = "image/png",
+                    Hash = a.Details.Hash,
+                    Flags = AttachmentFlags.None,
                 });
             }
         }
@@ -135,7 +139,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     t.Key = attachment.Key;
                     t.Hash = attachment.Base64Hash.ToString();
                     t.RetireAt = attachment.RetiredAt;
-                   t.Flags = attachment.Flags;
+                    t.Flags = attachment.Flags;
                     //TODO: egor I can use getcollecton method here
                     t.RetiredKey =
                         $"{settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";

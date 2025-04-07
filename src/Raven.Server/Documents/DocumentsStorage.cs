@@ -1316,7 +1316,9 @@ namespace Raven.Server.Documents
                 var attachmentTombstone = TombstoneReplicationItem.AttachmentTombstoneReplicationItem(context, ref result.Reader, t);
                 unsafe
                 {
-                    Slice.From(context.Allocator, t.LowerId.Buffer, t.LowerId.Size, ByteStringType.Immutable, out attachmentTombstone.Key);
+                    var disposable = Slice.From(context.Allocator, t.LowerId.Buffer, t.LowerId.Size, ByteStringType.Immutable, out attachmentTombstone.Key);
+
+                    attachmentTombstone.ToDispose(disposable);
                 }
                 yield return attachmentTombstone;
 

@@ -33,11 +33,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             if (document == null)
                 return true; // document could be deleted, no need to send DELETE of tombstone, we can filter it out
 
+            var collection = context.DocumentDatabase.DocumentsStorage.ExtractCollectionName(context, document.Data).Name;
+            item.Collection = collection;
+
             if (_collections == null)
                 return false;
 
-            var collection = context.DocumentDatabase.DocumentsStorage.ExtractCollectionName(context, document.Data).Name;
-            item.Collection = collection;
             return _collections.Contains(item.Collection) == false;
         }
 
