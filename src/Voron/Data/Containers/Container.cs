@@ -10,6 +10,7 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Binary;
 using Voron.Data.Lookups;
 using Voron.Exceptions;
 using Voron.Global;
@@ -187,6 +188,9 @@ namespace Voron.Data.Containers
             public const ushort SizeMask = 0x1F;
             public const ushort OffsetMask = 0xFFFC;
             public const int OffsetShift = 3;
+            public const ushort FreeElement = 0;
+            public const ushort ByteSizeElement = 30;
+            public const ushort UshortSizeElement = 31;
             
             public bool IsFree
             {
@@ -203,13 +207,13 @@ namespace Voron.Data.Containers
                 int size = _compactBackingStore & SizeMask;
                 switch (size)
                 {
-                    case 0: // means it is freed 
+                    case FreeElement: // means it is freed 
                         return 0;
-                    case 30: // size is one byte  at offset
+                    case ByteSizeElement: // size is one byte  at offset
                         size = *(pagePointer + offset);
                         offset += sizeof(byte);
                         break;
-                    case 31: // size is two bytes at offset
+                    case UshortSizeElement: // size is two bytes at offset
                         size = *(ushort*)(pagePointer + offset);
                         offset += sizeof(ushort);
                         break;
@@ -272,7 +276,7 @@ namespace Voron.Data.Containers
         public ref ContainerPageHeader Header => ref MemoryMarshal.AsRef<ContainerPageHeader>(_page.AsSpan());
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ref ItemMetadata MetadataFor(int pos = 0)
+        internal ref ItemMetadata MetadataFor(int pos = 0)
         {
             return ref Unsafe.AsRef<ItemMetadata>(_page.DataPointer + sizeof(ItemMetadata) * pos);
         }
@@ -313,7 +317,7 @@ namespace Voron.Data.Containers
         /// For reference check the scalar version: Voron.Data.Containers.Container.ItemMetadata.IsFree
         /// </summary>
         /// <returns>True when any item contains a value, otherwise false.</returns>
-        private bool HasEntries()
+        internal bool HasEntries()
         {
             Debug.Assert(sizeof(ItemMetadata) == sizeof(ushort));
             ushort numberOfOffsets = Header.NumberOfOffsets;
@@ -359,7 +363,7 @@ namespace Voron.Data.Containers
             
             return false;
         }
-        
+
         /// <summary>
         /// Calculates space used in all container items.
         /// Equals operation forEachMetadata.Sum(i => container.MetadataFor(i).Get(ptr)).
@@ -367,13 +371,17 @@ namespace Voron.Data.Containers
         /// <param name="pagePtr">Storage of size</param>
         /// <param name="usedItems">Number of items that are currently in use.</param>
         /// <returns></returns>
-        private int SpaceUsedInItems(byte* pagePtr, out int usedItems)
+        internal int SpaceUsedInItems(byte* pagePtr, out int usedItems)
         {
             int numberOfOffsets = Header.NumberOfOffsets;
             var size = 0;
             usedItems = numberOfOffsets;
             var index = 0;
 
+            Debug.Assert(Vector512.IsHardwareAccelerated == false || Vector512<ushort>.Count == 32);
+            //Vector512<ushort>.Count; explicit declaration when hardware does not support Vector
+            ushort* offsetArray = stackalloc ushort[32]; 
+            
             if (AdvInstructionSet.IsAcceleratedVector512)
             {
                 var N = Vector512<ushort>.Count;
@@ -381,29 +389,58 @@ namespace Voron.Data.Containers
                 {
                     var metadataItems = Vector512.Load((ushort*)_page.DataPointer + index);
                     var offsets = Vector512.BitwiseAnd(
-                        left: Vector512.ShiftRightLogical(metadataItems, ItemMetadata.OffsetShift), 
+                        left: (metadataItems >> ItemMetadata.OffsetShift), 
                         right: Vector512.Create(ItemMetadata.OffsetMask));
+                    offsets.Store(offsetArray);
+                    
                     var sizes = Vector512.BitwiseAnd(
                         left: metadataItems, 
                         right: Vector512.Create(ItemMetadata.SizeMask));
-                    for (var i = 0; i < N; i++)
+                    
+                    var byteElements = Vector512.Equals(
+                        left: sizes, 
+                        right: Vector512.Create(ItemMetadata.ByteSizeElement));
+                    
+                    var ushortElements = Vector512.Equals(
+                        left: sizes, 
+                        right: Vector512.Create(ItemMetadata.UshortSizeElement));
+                    
+                    var byteSizedPopulation = byteElements.ExtractMostSignificantBits();
+                    var ushortSizedPopulation = ushortElements.ExtractMostSignificantBits();
+                    var usedPopulation = byteSizedPopulation | ushortSizedPopulation;
+                    var zeroPopulation = Vector512.Equals(sizes, Vector512<ushort>.Zero);
+                    usedItems -= BitOperations.PopCount(zeroPopulation.ExtractMostSignificantBits());
+                    
+                    
+                    //sizes are expected to be between 0 and 31, so it is safe to sum
+                    size += Vector512.Sum(sizes);
+                    size -= ItemMetadata.ByteSizeElement * BitOperations.PopCount(byteSizedPopulation);
+                    size -= ItemMetadata.UshortSizeElement * BitOperations.PopCount(ushortSizedPopulation);
+                    
+#if DEBUG
+                    var lessThanOrEqualUshortElement = Vector512.LessThanOrEqualAll(
+                        left: sizes, 
+                        right: Vector512.Create(ItemMetadata.UshortSizeElement));
+                    Debug.Assert(lessThanOrEqualUshortElement);
+
+                    var greaterThanOrEqualZero = Vector512.GreaterThanOrEqualAll(
+                        left: sizes, 
+                        right: Vector512<ushort>.Zero);
+                    Debug.Assert(greaterThanOrEqualZero);
+#endif
+                    
+                    while (usedPopulation != 0)
                     {
-                        var sizeOfElement = sizes.GetElement(i);
-                        switch (sizeOfElement)
-                        {
-                            case 0:
-                                usedItems--;
-                                continue;
-                            case 30:
-                                size += *(pagePtr + offsets.GetElement(i));
-                                break;
-                            case 31:
-                                size += *(ushort*)(pagePtr + offsets.GetElement(i));
-                                continue;
-                            default:
-                                Debug.Assert(sizeOfElement is < 30 and > 0);
-                                break;
-                        }
+                        int currentOffset = BitOperations.TrailingZeroCount(usedPopulation);
+                        
+                        //Sets are disjoint, so if the bit is set in byteMask, we read the value as byte,
+                        //otherwise it is ushort
+                        var sizePtr = (pagePtr + offsetArray[currentOffset]);
+                        size += (byteSizedPopulation & (1UL << currentOffset)) != 0 
+                            ? *sizePtr
+                            : *(ushort*)sizePtr;
+                        
+                        usedPopulation &= (usedPopulation - 1);
                     }
                 }
             }
@@ -415,65 +452,115 @@ namespace Voron.Data.Containers
                 {
                     var metadataItems = Vector256.Load((ushort*)_page.DataPointer + index);
                     var offsets = Vector256.BitwiseAnd(
-                        left: Vector256.ShiftRightLogical(metadataItems, ItemMetadata.OffsetShift), 
+                        left: (metadataItems >> ItemMetadata.OffsetShift), 
                         right: Vector256.Create(ItemMetadata.OffsetMask));
+                    offsets.Store(offsetArray);
+                    
                     var sizes = Vector256.BitwiseAnd(
                         left: metadataItems, 
                         right: Vector256.Create(ItemMetadata.SizeMask));
+                    
+                    var byteElements = Vector256.Equals(
+                        left: sizes, 
+                        right: Vector256.Create(ItemMetadata.ByteSizeElement));
+                    
+                    var ushortElements = Vector256.Equals(
+                        left: sizes, 
+                        right: Vector256.Create(ItemMetadata.UshortSizeElement));
+                    
+                    
+                    var byteSizedPopulation = byteElements.ExtractMostSignificantBits();
+                    var ushortSizedPopulation = ushortElements.ExtractMostSignificantBits();
+                    var zeroPopulation = Vector256.Equals(sizes, Vector256<ushort>.Zero);
 
-                    for (var i = 0; i < N; i++)
+                    var usedPopulation = byteSizedPopulation | ushortSizedPopulation;
+                    usedItems -= BitOperations.PopCount(zeroPopulation.ExtractMostSignificantBits());
+                    
+                    
+                    size += Vector256.Sum(sizes);
+                    size -= ItemMetadata.ByteSizeElement * BitOperations.PopCount(byteSizedPopulation);
+                    size -= ItemMetadata.UshortSizeElement * BitOperations.PopCount(ushortSizedPopulation);
+                    
+#if DEBUG
+                    var lessThanOrEqualUshortElement = Vector256.LessThanOrEqualAll(
+                        left: sizes, 
+                        right: Vector256.Create(ItemMetadata.UshortSizeElement));
+                    Debug.Assert(lessThanOrEqualUshortElement);
+
+                    var greaterThanOrEqualZero = Vector256.GreaterThanOrEqualAll(
+                        left: sizes, 
+                        right: Vector256<ushort>.Zero);
+                    Debug.Assert(greaterThanOrEqualZero);
+#endif
+                    
+                    
+                    while (usedPopulation != 0)
                     {
-                        var sizeOfElement = sizes.GetElement(i);
-                        switch (sizeOfElement)
-                        {
-                            case 0:
-                                usedItems--;
-                                continue;
-                            case 30:
-                                size += *(pagePtr + offsets.GetElement(i));
-                                break;
-                            case 31:
-                                size += *(ushort*)(pagePtr + offsets.GetElement(i));
-                                continue;
-                            default:
-                                Debug.Assert(sizeOfElement is < 30 and > 0);
-                                break;
-                        }
+                        int currentOffset = BitOperations.TrailingZeroCount(usedPopulation);
+                        var sizePtr = (pagePtr + offsetArray[currentOffset]);
+                        size += (byteSizedPopulation & ((uint)1 << currentOffset)) != 0 
+                            ? *sizePtr
+                            : *(ushort*)sizePtr;
+                        
+                        usedPopulation &= (usedPopulation - 1);
                     }
                 }
             }
             
             if (AdvInstructionSet.IsAcceleratedVector128)
             {
-                var N = Vector256<ushort>.Count;
+                var N = Vector128<ushort>.Count;
                 for (; index + N <= numberOfOffsets; index += N)
                 {
                     var metadataItems = Vector128.Load((ushort*)_page.DataPointer + index);
                     var offsets = Vector128.BitwiseAnd(
-                        left: Vector128.ShiftRightLogical(metadataItems, ItemMetadata.OffsetShift), 
+                        left: (metadataItems >> ItemMetadata.OffsetShift),
                         right: Vector128.Create(ItemMetadata.OffsetMask));
+                    offsets.Store(offsetArray);
+
                     var sizes = Vector128.BitwiseAnd(
-                        left: metadataItems, 
+                        left: metadataItems,
                         right: Vector128.Create(ItemMetadata.SizeMask));
 
-                    for (var i = 0; i < N; i++)
+                    var byteElements = Vector128.Equals(
+                        left: sizes,
+                        right: Vector128.Create(ItemMetadata.ByteSizeElement));
+
+                    var ushortElements = Vector128.Equals(
+                        left: sizes,
+                        right: Vector128.Create(ItemMetadata.UshortSizeElement));
+
+                    var byteSizedPopulation = byteElements.ExtractMostSignificantBits();
+                    var ushortSizedPopulation = ushortElements.ExtractMostSignificantBits();
+                    var usedPopulation = byteSizedPopulation | ushortSizedPopulation;
+
+                    var zeroPopulation = Vector128.Equals(sizes, Vector128<ushort>.Zero);
+                    usedItems -= BitOperations.PopCount(zeroPopulation.ExtractMostSignificantBits());
+                    size += Vector128.Sum(sizes);
+                    size -= ItemMetadata.ByteSizeElement * BitOperations.PopCount(byteSizedPopulation);
+                    size -= ItemMetadata.UshortSizeElement * BitOperations.PopCount(ushortSizedPopulation);
+
+#if DEBUG
+                    var lessThanOrEqualUshortElement = Vector128.LessThanOrEqualAll(
+                        left: sizes, 
+                        right: Vector128.Create(ItemMetadata.UshortSizeElement));
+                    Debug.Assert(lessThanOrEqualUshortElement);
+
+                    var greaterThanOrEqualZero = Vector128.GreaterThanOrEqualAll(
+                        left: sizes, 
+                        right: Vector128<ushort>.Zero);
+                    Debug.Assert(greaterThanOrEqualZero);
+#endif
+
+                    while (usedPopulation != 0)
                     {
-                        var sizeOfElement = sizes.GetElement(i);
-                        switch (sizeOfElement)
-                        {
-                            case 0:
-                                usedItems--;
-                                continue;
-                            case 30:
-                                size += *(pagePtr + offsets.GetElement(i));
-                                break;
-                            case 31:
-                                size += *(ushort*)(pagePtr + offsets.GetElement(i));
-                                continue;
-                            default:
-                                Debug.Assert(sizeOfElement is < 30 and > 0);
-                                break;
-                        }
+                        int currentOffset = BitOperations.TrailingZeroCount(usedPopulation);
+
+                        var sizePtr = (pagePtr + offsetArray[currentOffset]);
+                        size += (byteSizedPopulation & ((uint)1 << currentOffset)) != 0
+                            ? *sizePtr
+                            : *(ushort*)sizePtr;
+                        usedPopulation &= (usedPopulation - 1);
                     }
                 }
             }
@@ -482,12 +569,12 @@ namespace Voron.Data.Containers
             for (; index < numberOfOffsets; index++)
             {
                 var metadataSize = Unsafe.Add(ref metadata, index).GetSize(pagePtr);
-                usedItems -= (metadataSize == 0).ToInt32();
+                usedItems -= (metadataSize == ItemMetadata.FreeElement).ToInt32();
                 size += metadataSize;
             }
             return size;
         }
-        
+
         /// <summary>
         /// Calculates total space used by the current container.
         /// </summary>
@@ -498,7 +585,7 @@ namespace Voron.Data.Containers
             var size = numberOfOffsets * sizeof(ItemMetadata) + PageHeader.SizeOf;
             return size + SpaceUsedInItems(_page.Pointer, out _);
         }
-
+        
         public Container(Page page)
         {
             Debug.Assert(page.IsOverflow == false);
