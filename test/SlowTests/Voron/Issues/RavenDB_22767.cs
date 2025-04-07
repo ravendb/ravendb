@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using FastTests.Voron;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,6 +11,11 @@ public class RavenDB_22767 : StorageTest
 {
     public RavenDB_22767(ITestOutputHelper output) : base(output)
     {
+    }
+    
+    protected override void Configure(StorageEnvironmentOptions options)
+    {
+        options.ManualFlushing = true;
     }
     
     [RavenFact(RavenTestCategory.Voron)]
