@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using NuGet.Protocol;
 using Raven.Client.Properties;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -301,7 +302,7 @@ namespace Raven.Server.Commercial
                 [nameof(LicensedTo)] = LicensedTo,
                 [nameof(Status)] = Status,
                 [nameof(Expired)] = Expired,
-                [nameof(UpgradeRequired)] = UpgradeRequired,
+                [nameof(UpgradeRequired)] = UpgradeRequired?.ToJson(),
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
