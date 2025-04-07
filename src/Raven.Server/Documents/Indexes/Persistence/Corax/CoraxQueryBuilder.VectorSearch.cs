@@ -261,13 +261,18 @@ public static partial class CoraxQueryBuilder
                 return indexField.Vector;
 
             builderParameters.Index.IndexFieldsPersistence.TryReadVectorSourceEmbeddingType(fieldName, out var vectorSourceEmbeddingType);
-            return vectorSourceEmbeddingType switch
+            
+            var defaultVectorOptions = vectorSourceEmbeddingType switch
             {
                 VectorEmbeddingType.Single => VectorOptions.Default,
                 VectorEmbeddingType.Text => VectorOptions.DefaultText,
                 _ => throw new InvalidDataException(
                     $"Unknown vector source embedding type: {vectorSourceEmbeddingType}. Implicit configuration support only single and text vector source embedding types.")
             };
+
+            indexField.Vector = defaultVectorOptions;
+            
+            return defaultVectorOptions;
         }
 
         internal static void ThrowDifferentNumberOfDimensions(in IndexField indexField, in string fieldName, in VectorValue transformedEmbedding,
