@@ -125,7 +125,7 @@ namespace Raven.Server.Commercial
             {
                 OnBeforeInitialize?.Invoke();
 
-                _licenseStorage.Initialize(environment, contextPool);
+                _licenseStorage.Initialize(_serverStore, environment, contextPool);
 
                 var firstServerStartDate = _licenseStorage.GetFirstServerStartDate();
                 if (firstServerStartDate == null)
@@ -240,7 +240,16 @@ namespace Raven.Server.Commercial
                         Minor = licenseStatus.Version.Minor,
                         UpdatedAt = SystemTime.UtcNow
                     };
-                    _licenseStorage.SetLicenseVersionInformation(licenseVersionInformation);
+
+                    try
+                    {
+                        _licenseStorage.SetLicenseVersionInformation(licenseVersionInformation);
+                    }
+                    catch
+                    {
+                        // avoid throwing here in case of an error (out of memory or out of disk space for example).
+                        // we'll set it on next license change or on startup.
+                    }
                 }
 
                 LicenseStatus.LicenseVersionInformation = licenseVersionInformation;
