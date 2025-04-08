@@ -69,7 +69,7 @@ export default function UpgradeModal(props: { close: () => void }) {
                             <br />
                             <br />
                             <span className="text-muted">
-                                You can dismiss this message until {allowDismissUntilUtc.format(dateFormat)} UTC
+                                You can dismiss this message until {allowDismissUntilUtc.format(dateFormat)} UTC afterwards the RavenDB studio will be blocked
                                 <PopoverWithHoverWrapper
                                     message={`${allowDismissUntilUtc.local().format(dateFormat)} your local time`}
                                 >
