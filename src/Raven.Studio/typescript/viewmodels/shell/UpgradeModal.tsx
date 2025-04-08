@@ -6,6 +6,12 @@ import { useAppSelector } from "components/store";
 import Modal from "components/common/Modal";
 import moment from "moment";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { LicenseTooltip } from "components/pages/resources/about/partials/LicenseSummary";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { useAsync } from "react-async-hook";
+import { useServices } from "components/hooks/useServices";
+import registration from "viewmodels/shell/registration";
+import Button from "react-bootstrap/Button";
 
 const upgradeLicenseImg = require("Content/img/upgrade-license.svg");
 
@@ -15,6 +21,24 @@ export default function UpgradeModal(props: { close: () => void }) {
     const upgradeRequired = useAppSelector(licenseSelectors.statusValue("UpgradeRequired"));
     const latestVersion = useAppSelector(licenseSelectors.statusValue("Version"));
     const productVersion = useAppSelector(clusterSelectors.serverVersion)?.ProductVersion;
+    const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+
+    const { licenseService } = useServices();
+    const asyncGetConfigurationSettings = useAsync(licenseService.getConfigurationSettings, []);
+    const canActivate = asyncGetConfigurationSettings.result?.CanActivate;
+    const isReplaceLicenseEnabled = canActivate && isClusterAdminOrClusterNode;
+
+    const licenseStatus = useAppSelector(licenseSelectors.status);
+    
+    const registerLicense = () => {
+        registration.showRegistrationDialog(licenseStatus, false, true);
+
+        // Remove tabindex from bs5 modal for bs3 to work
+        const upgradeModalElement = document.querySelector("#bs5-modal [role='dialog']");
+        if (upgradeModalElement && upgradeModalElement.hasAttribute("tabindex")) {
+            upgradeModalElement.removeAttribute("tabindex");
+        }
+    };
 
     if (!upgradeRequired || !latestVersion || !productVersion) {
         return null;
@@ -56,7 +80,25 @@ export default function UpgradeModal(props: { close: () => void }) {
                     )}
                 </p>
             </Modal.Body>
-            <Modal.Footer className="justify-content-center">
+            <Modal.Footer className="hstack gap-2 justify-content-center">
+                <LicenseTooltip
+                    target="replace-license-btn"
+                    operationEnabledInConfiguration={canActivate}
+                    hasPrivileges={isClusterAdminOrClusterNode}
+                    operationAction="Replace the current license with another"
+                    operationTitle="Replacing license"
+                >
+                    <span>
+                        <Button
+                            variant="outline-secondary"
+                            className="rounded-pill"
+                            onClick={registerLicense}
+                            disabled={!isReplaceLicenseEnabled}
+                        >
+                            <Icon icon="replace" /> Replace
+                        </Button>
+                    </span>
+                </LicenseTooltip>
                 <a href={downloadLink} target="_blank" className="btn btn-warning rounded-pill">
                     <Icon icon="download" />
                     Download now

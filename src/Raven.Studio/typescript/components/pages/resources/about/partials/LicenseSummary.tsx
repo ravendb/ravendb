@@ -292,7 +292,7 @@ function LicenseActions(props: LicenseActionsProps) {
     );
 }
 
-function LicenseTooltip(props: {
+export function LicenseTooltip(props: {
     children: React.ReactNode;
     target: string;
     operationEnabledInConfiguration: boolean;
@@ -300,7 +300,7 @@ function LicenseTooltip(props: {
     operationAction: string;
     operationTitle: string;
 }) {
-    const { children, target, operationEnabledInConfiguration, operationTitle, operationAction, hasPrivileges } = props;
+    const { children, operationEnabledInConfiguration, operationTitle, operationAction, hasPrivileges } = props;
 
     let msg = operationEnabledInConfiguration && hasPrivileges ? `${operationAction}` : "";
 
@@ -317,9 +317,9 @@ function LicenseTooltip(props: {
     }
 
     return (
-        <OverlayTrigger overlay={<Tooltip id={target}>{msg}</Tooltip>}>
+        <PopoverWithHoverWrapper message={msg}>
             <span>{children}</span>
-        </OverlayTrigger>
+        </PopoverWithHoverWrapper>
     );
 }
 

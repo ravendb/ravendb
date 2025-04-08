@@ -58,10 +58,10 @@ dialog.addContext('bootstrapModal', {
             
             $(".modal-content").addClass("neo-modal");
             
-            $(".modal-backdrop").addClass("bs3");
+            $(".modal-backdrop").not('.bs5-modal-backdrop').addClass("bs3");
             
             if ($("body").hasClass("fullscreen")) {
-                $('.modal-backdrop ').appendTo('.modal-root');   
+                $('.modal-backdrop ').not('.bs5-modal-backdrop').appendTo('.modal-root');   
             }
             
             $('#bootstrapModal').on('hidden.bs.modal', () => {
@@ -69,7 +69,7 @@ dialog.addContext('bootstrapModal', {
                     theDialog.close();
                 }
                 ko.removeNode(theDialog.host);
-                $('.modal-backdrop').remove();
+                $('.modal-backdrop').not('.bs5-modal-backdrop').remove();
             });
         }
     } as any);

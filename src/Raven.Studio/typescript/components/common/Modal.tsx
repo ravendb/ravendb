@@ -16,6 +16,7 @@ export function Modal({ children, container, isLoading, className, ...props }: M
             centered
             contentClassName={classNames("position-relative", className)}
             container={container || document.getElementById("bs5-modal")}
+            backdropClassName="bs5-modal-backdrop"
             {...props}
         >
             {isLoading && <LoadingView />}
