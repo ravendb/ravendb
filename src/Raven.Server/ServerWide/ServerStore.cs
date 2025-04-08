@@ -72,6 +72,7 @@ using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.BackgroundTasks;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -158,6 +159,7 @@ namespace Raven.Server.ServerWide
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
         public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
+        public readonly ServerBackupRunner BackupRunner;
         public bool Initialized;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
@@ -230,6 +232,8 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache = new DatabaseInfoCache(this);
 
             Secrets = new SecretProtection(configuration.Security);
+
+            BackupRunner = new ServerBackupRunner(this);
 
             InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
 
@@ -955,6 +959,8 @@ namespace Raven.Server.ServerWide
             ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup, LicenseManager);
 
             RavenLogManager.Instance.ConfigureAuditLog(Server, Logger);
+
+            BackupRunner.Initialize();
 
             Initialized = true;
             InitializationCompleted.Set();
