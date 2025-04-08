@@ -16,7 +16,7 @@ import {
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { CertificateItem } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
@@ -330,7 +330,7 @@ function getAccessIcon(access: Raven.Client.ServerWide.Operations.Certificates.D
     }
 }
 
-function getAccessColor(access: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess): `faded-${TextColor}` {
+function getAccessColor(access: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess): `faded-${ThemeColor}` {
     switch (access) {
         case "Admin":
             return "faded-success";

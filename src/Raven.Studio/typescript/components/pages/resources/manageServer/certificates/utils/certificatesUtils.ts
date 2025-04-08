@@ -1,5 +1,5 @@
 import serverSettings from "common/settings/serverSettings";
-import { TextColor } from "components/models/common";
+import { ThemeColor } from "components/models/common";
 import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
@@ -53,7 +53,7 @@ function getState(notAfter: string): CertificatesState {
     return "Valid";
 }
 
-function getStateDateColor(state: CertificatesState): TextColor {
+function getStateDateColor(state: CertificatesState): ThemeColor {
     switch (state) {
         case "Expired":
             return "danger";
@@ -66,7 +66,7 @@ function getStateDateColor(state: CertificatesState): TextColor {
     }
 }
 
-function getStateColor(state: CertificatesState): TextColor {
+function getStateColor(state: CertificatesState): ThemeColor {
     switch (state) {
         case "Expired":
             return "danger";
