@@ -1749,6 +1749,7 @@ namespace Raven.Server.Documents
             try
             {
                 UpdateSchemaValidation(record.SchemaValidation);
+                _serverStore.BackupRunner.HandleDatabaseRecordChange(record);
                 PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
                 EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);

@@ -30,6 +30,7 @@ using Raven.Server.EventListener;
 using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Backups.Policies.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
@@ -194,6 +195,12 @@ namespace FastTests
                 AllocationsLoggingIntervalInMs = configuration.DebugConfiguration.AllocationsLoggingInterval.GetValue(TimeUnit.Milliseconds),
                 AllocationsLoggingCount = configuration.DebugConfiguration.AllocationsLoggingCount
             });
+
+            ServerConcurrentBackupPolicy.Disabled = true;
+            ServerHighDirtyMemoryPolicy.Disabled = true;
+            ServerLowMemoryPolicy.Disabled = true;
+            ServerCpuCreditsPolicy.Disabled = true;
+            ServerStartupPolicy.Disabled = true;
         }
 
         protected TestBase(ITestOutputHelper output) : base(output)

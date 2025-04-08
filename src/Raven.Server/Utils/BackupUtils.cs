@@ -41,7 +41,7 @@ public static class BackupUtils
     internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
     {
         return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
-            ? new DirectUploadBackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes) 
+            ? new DirectUploadBackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes)
             : new BackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes);
     }
 
