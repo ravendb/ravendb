@@ -33,7 +33,7 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
         
         using (var wTx = Env.WriteTransaction())
         {
-            var currentContainer = wTx.OpenContainer(nameof(VectorizedCalculateTestIsExactlyTheSameAsNonVectorized));
+            var currentContainer = wTx.OpenContainer(nameof(ContainerSpaceUsageCalculationTests));
 
             for (int i = 0; i < elementsUsed; i++)
             {
@@ -47,7 +47,7 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
 
         using (var rTx = Env.ReadTransaction())
         {
-            var currentContainer = rTx.OpenContainer(nameof(VectorizedCalculateTestIsExactlyTheSameAsNonVectorized));
+            var currentContainer = rTx.OpenContainer(nameof(ContainerSpaceUsageCalculationTests));
             var rootPage = rTx.LowLevelTransaction.GetPage(currentContainer);
             var rootContainer = new Container(rootPage);
 
@@ -78,13 +78,14 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
         long rootContainerPage;
         using (var wTx = Env.WriteTransaction())
         {
-            rootContainerPage = wTx.OpenContainer(nameof(VectorizedCalculateTestIsExactlyTheSameAsNonVectorized));
+            rootContainerPage = wTx.OpenContainer(nameof(ContainerSpaceUsageCalculationTests));
             for (int i = 0; i < elementsUsed; i++)
             {
                 containersToRemove[i] = Container.Allocate(llt: wTx.LowLevelTransaction, containerId: rootContainerPage, size: random.Next(1, 512), out var memory);
                 memory.Fill((byte)random.Next(0, byte.MaxValue +1));
             }
             
+            wTx.Commit();
         }
 
         AssertSpaceUsedInItems(rootContainerPage, -1);
@@ -138,11 +139,10 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
 
     private unsafe void AssertSpaceUsedInItems(long rootContainerPage, int iterationIdx)
     {
-        using (var rTx = Env.ReadTransaction())
+        using (var rTx = Env.WriteTransaction())
         {
-            var rootPage = rTx.LowLevelTransaction.GetPage(rootContainerPage);
+            var rootPage = rTx.LowLevelTransaction.ModifyPage(rootContainerPage);
             var rootContainer = new Container(rootPage);
-
             var spaceUsedFromMethod = rootContainer.SpaceUsedInItems(rootPage.Pointer, out var usedItemsFromMethod);
             var sizeUsedOneByOne = SpaceUsedInItems(rootPage, ref rootContainer, out var usedItems);
 

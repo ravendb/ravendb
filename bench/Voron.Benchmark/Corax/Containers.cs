@@ -25,8 +25,6 @@ public class Containers
     private IndexFieldsMapping _mapping;
     private List<string> _ids;
 
-    private ushort[] data;
-    
     [GlobalSetup]
     public void GlobalSetup()
     {

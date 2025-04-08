@@ -366,7 +366,7 @@ namespace Voron.Data.Containers
 
         /// <summary>
         /// Calculates space used in all container items.
-        /// Equals operation forEachMetadata.Sum(i => container.MetadataFor(i).Get(ptr)).
+        /// Equals operation forEachMetadata.Sum(i => container.MetadataFor(i).GetSize(ptr)).
         /// </summary>
         /// <param name="pagePtr">Storage of size</param>
         /// <param name="usedItems">Number of items that are currently in use.</param>
@@ -391,6 +391,9 @@ namespace Voron.Data.Containers
                     var offsets = Vector512.BitwiseAnd(
                         left: (metadataItems >> ItemMetadata.OffsetShift), 
                         right: Vector512.Create(ItemMetadata.OffsetMask));
+                    
+                    // Store prepared offsets in offsetArray to avoid overhead from using `.ElementAt()`
+                    // method from the Vector impl.
                     offsets.Store(offsetArray);
                     
                     var sizes = Vector512.BitwiseAnd(
@@ -405,14 +408,23 @@ namespace Voron.Data.Containers
                         left: sizes, 
                         right: Vector512.Create(ItemMetadata.UshortSizeElement));
                     
+                    //Byte and ushort populations are distinct, so we can merge them and process
+                    //reading from page in single loop
                     var byteSizedPopulation = byteElements.ExtractMostSignificantBits();
                     var ushortSizedPopulation = ushortElements.ExtractMostSignificantBits();
                     var usedPopulation = byteSizedPopulation | ushortSizedPopulation;
+                    
+                    // We need to calculate how many elements are freed (unused)
+                    // because initially we treat all elements as used.
+                    // This is done via comparing the sizes to 0 and popcnt on MSB
                     var zeroPopulation = Vector512.Equals(sizes, Vector512<ushort>.Zero);
                     usedItems -= BitOperations.PopCount(zeroPopulation.ExtractMostSignificantBits());
                     
-                    
-                    //sizes are expected to be between 0 and 31, so it is safe to sum
+                    // Sizes are expected to be between 0 and 31 (so, VectorX<ushort>.Sum will be in the ushort range)
+                    // However, sizes equal to ItemMetadata.ByteSizeElement or
+                    // ItemMetadata.UshortSizeElement must be read from the page.
+                    // To optimize calculations, we first sum all sizes, then adjust
+                    // by subtracting the additional sum based on popcnt.
                     size += Vector512.Sum(sizes);
                     size -= ItemMetadata.ByteSizeElement * BitOperations.PopCount(byteSizedPopulation);
                     size -= ItemMetadata.UshortSizeElement * BitOperations.PopCount(ushortSizedPopulation);
@@ -433,13 +445,14 @@ namespace Voron.Data.Containers
                     {
                         int currentOffset = BitOperations.TrailingZeroCount(usedPopulation);
                         
-                        //Sets are disjoint, so if the bit is set in byteMask, we read the value as byte,
+                        //Sets are disjoint, so if the bit is high in byteMask, we read the value as byte,
                         //otherwise it is ushort
                         var sizePtr = (pagePtr + offsetArray[currentOffset]);
                         size += (byteSizedPopulation & (1UL << currentOffset)) != 0 
                             ? *sizePtr
                             : *(ushort*)sizePtr;
                         
+                        //Remove the last processed element (bit)
                         usedPopulation &= (usedPopulation - 1);
                     }
                 }
