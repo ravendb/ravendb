@@ -122,7 +122,8 @@ namespace Raven.Server.Documents.Handlers
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = new DynamicJsonArray(items.Select(x => x.ToDebugJson()))
+                    ["Results"] = new DynamicJsonArray(items.Select(x => x.ToDebugJson())),
+                    ["DatabaseChangeVector"] = DocumentsStorage.GetFullDatabaseChangeVector(context)
                 });
             }
         }

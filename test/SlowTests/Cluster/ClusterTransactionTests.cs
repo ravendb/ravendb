@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
@@ -11,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
@@ -31,6 +34,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -1122,8 +1126,16 @@ namespace SlowTests.Cluster
                     }
                 }.Initialize())
                 {
-                    // let the document with the revision to replicate
-                    Assert.True(WaitForDocument(revivedStore, "foo/bar"));
+                    try
+                    {
+                        // let the document with the revision to replicate
+                        Assert.True(WaitForDocument(revivedStore, "foo/bar"));
+                    }
+                    catch
+                    {
+                        Console.WriteLine(await CollectDebugInfo(leader, revived, leaderStore, revivedStore, options));
+                        throw;
+                    }
                     using (var session = revivedStore.OpenAsyncSession())
                     {
                         session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
@@ -1170,6 +1182,93 @@ namespace SlowTests.Cluster
                     }
                 }
             }
+        }
+
+        private async Task<string> CollectDebugInfo(RavenServer leader, RavenServer revived, IDocumentStore leaderStore, IDocumentStore revivedStore, Options options)
+        {
+            var sb = new StringBuilder();
+            sb.Append("*********************************************************ClusterTransactionRequestWithRevisions(").Append(options.DatabaseMode)
+                .AppendLine(") Failed - Debug info -START-**********************************************************");
+
+            var nodeA = leader; //Servers[0];
+            var nodeB = revived;
+
+            if (nodeA != Servers[0])
+                sb.Append("nodeA (leader) is not Servers[0] - leader is '").Append(leader.ServerStore.NodeTag).Append("' and Servers[0] is '")
+                    .Append(Servers[0].ServerStore.NodeTag).AppendLine("'");
+
+            if (nodeB != Servers[1])
+                sb.Append("nodeB (revived) is not Servers[1] - revived is '").Append(revived.ServerStore.NodeTag).Append("' and Servers[1] is '")
+                    .Append(Servers[1].ServerStore.NodeTag).AppendLine("'");
+
+            sb.AppendLine("*********************************nodeA debug view*********************************");
+            GetDebugView(nodeA, sb);
+            sb.AppendLine("*********************************nodeA All Replication Items**********************");
+            var resA = await leaderStore.Maintenance.ForNode(nodeA.ServerStore.NodeTag).ForDatabase(leaderStore.Database).SendAsync(new GetAllReplicationItemsOperation());
+            sb.AppendLine(resA).AppendLine();
+
+            sb.AppendLine("*********************************nodeB debug view*********************************");
+            GetDebugView(nodeB, sb);
+            sb.AppendLine("*********************************nodeB All Replication Items**********************");
+            var resB = await revivedStore.Maintenance.ForNode(nodeB.ServerStore.NodeTag).ForDatabase(revivedStore.Database).SendAsync(new GetAllReplicationItemsOperation());
+            sb.AppendLine(resB).AppendLine();
+            
+            sb.AppendLine();
+            sb.Append("*********************************nodeA GetClusterDebugLogs*****************************");
+            GetClusterDebugLogsFromSpecificServer(sb, nodeA);
+            sb.AppendLine();
+            sb.Append("*********************************nodeB GetClusterDebugLogs******************************");
+            GetClusterDebugLogsFromSpecificServer(sb, nodeB);
+            
+            sb.AppendLine().AppendLine();
+            sb.Append("*********************************************************ClusterTransactionRequestWithRevisions(").Append(options.DatabaseMode)
+                .AppendLine(") Failed - Debug info -END-**********************************************************");
+            return sb.ToString();
+            
+            void GetDebugView(RavenServer server, StringBuilder sb)
+            {
+                var debugViewA = server.ServerStore.Engine.DebugView();
+                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    debugViewA.PopulateLogs(context, fromIndex: null, take: Int32.MaxValue, detailed: true);
+                    var b = context.ReadObject(debugViewA.ToJson(), "");
+                    sb.AppendLine(b.ToString());
+                }
+            }
+        }
+
+
+
+        private class GetAllReplicationItemsOperation : IMaintenanceOperation<string>
+        {
+
+            public RavenCommand<string> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetAllReplicationItemsCommand();
+            }
+
+            private class GetAllReplicationItemsCommand : RavenCommand<string>
+            {
+                public override bool IsReadRequest => true;
+
+                public GetAllReplicationItemsCommand()
+                {
+                }
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/debug/replication/all-items";
+
+                    return new HttpRequestMessage { Method = HttpMethod.Get };
+                }
+
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+                {
+                    Result = response.ToString();
+                }
+            }
+
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]

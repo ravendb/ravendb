@@ -1222,6 +1222,15 @@ namespace Tests.Infrastructure
             AppendDebugInfo(sb, debugInfo);
         }
 
+        internal void GetClusterDebugLogsFromSpecificServer(StringBuilder sb, RavenServer server)
+        {
+            NodeDebugInfo debugInfo = null;
+
+            debugInfo = GetDebugInfoForNode(server);
+
+            AppendDebugInfo(sb, debugInfo);
+        }
+
         internal static void GetDebugLogsForNode(RavenServer node, StringBuilder sb) => AppendDebugInfo(sb, GetDebugInfoForNode(node));
 
         private static NodeDebugInfo GetDebugInfoForNode(RavenServer node)
