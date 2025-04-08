@@ -105,7 +105,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-certificate',
             dynamicHash: appUrl.forCertificates,
-            requiredAccess: "Operator" // TODO omni search
+            requiredAccess: "Operator"
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideTasks',

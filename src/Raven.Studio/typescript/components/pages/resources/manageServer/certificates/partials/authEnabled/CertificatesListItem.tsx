@@ -1,4 +1,5 @@
 import copyToClipboard from "common/copyToClipboard";
+import genUtils from "common/generalUtils";
 import { sortBy } from "common/typeUtils";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import useConfirm from "components/common/ConfirmDialog";
@@ -210,7 +211,9 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             </>
                         }
                     >
-                        {certificate.NotBefore ? moment.utc(certificate.NotBefore).format("YYYY-MM-DD") : "Unavailable"}
+                        {certificate.NotBefore
+                            ? moment.utc(certificate.NotBefore).format(genUtils.basicDateFormat)
+                            : "Unavailable"}
                     </RichPanelDetailItem>
                     <RichPanelDetailItem
                         label={
@@ -221,7 +224,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         }
                     >
                         <span className={`text-${certificatesUtils.getStateDateColor(state)}`}>
-                            {moment.utc(certificate.NotAfter).format("YYYY-MM-DD")}
+                            {moment.utc(certificate.NotAfter).format(genUtils.basicDateFormat)}
                         </span>
                     </RichPanelDetailItem>
                     <RichPanelDetailItem
@@ -233,7 +236,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         }
                     >
                         {certificate.LastUsedDate
-                            ? moment.utc(certificate.LastUsedDate).format("YYYY-MM-DD")
+                            ? moment.utc(certificate.LastUsedDate).format(genUtils.basicDateFormat)
                             : "(not used)"}
                     </RichPanelDetailItem>
                     {canBeAutomaticallyRenewed && (
@@ -245,7 +248,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                 </>
                             }
                         >
-                            {moment.utc(serverCertificateRenewalDate).format("YYYY-MM-DD")}
+                            {moment.utc(serverCertificateRenewalDate).format(genUtils.basicDateFormat)}
                             <ButtonWithSpinner
                                 variant="link"
                                 size="xs"

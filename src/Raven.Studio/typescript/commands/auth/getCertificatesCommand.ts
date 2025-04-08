@@ -3,13 +3,8 @@ import endpoints = require("endpoints");
 
 class getCertificatesCommand extends commandBase {
 
-    private readonly includeSecondary: boolean;
-    private readonly metadataOnly: boolean;
-
-    constructor(includeSecondary: boolean = false, metadataOnly: boolean = true) {
+    constructor(private includeSecondary: boolean = false, private metadataOnly: boolean = true) {
         super();
-        this.includeSecondary = includeSecondary;
-        this.metadataOnly = metadataOnly;
     }
     
     execute(): JQueryPromise<CertificatesResponseDto> {
