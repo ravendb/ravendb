@@ -17,7 +17,7 @@ export class LicenseStubs {
             LicensedTo: "Studio Stubs",
             Status: "Commercial",
             Expired: false,
-            UpgradeRequired: false,
+            UpgradeRequired: null,
             FirstServerStartDate: moment()
                 .add(-1 as const, "month")
                 .format(),

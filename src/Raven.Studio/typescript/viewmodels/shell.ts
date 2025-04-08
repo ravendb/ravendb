@@ -127,7 +127,7 @@ class shell extends viewModelBase {
 
     private onBootstrapFinishedTask = $.Deferred<void>();
 
-    upgradeModalView: ReactInKnockout<typeof UpgradeModal>;
+    upgradeModalView: ReactInKnockout<typeof UpgradeModal.default>;
     isUpgradeModalVisible = ko.observable<boolean>(false);
 
     studioSearchWithDatabaseSwitcherView: ReactInKnockout<typeof StudioSearchWithDatabaseSwitcher.default>;
@@ -216,7 +216,12 @@ class shell extends viewModelBase {
 
         this.bindToCurrentInstance("toggleMenu");
 
-        this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
+        this.upgradeModalView = ko.pureComputed(() => ({
+            component: UpgradeModal.default,
+            props: {
+                close: () => this.isUpgradeModalVisible(false),
+            },
+        }))
         
         const menuItems = ko.pureComputed(() => {
             
