@@ -6,16 +6,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -46,8 +39,6 @@ namespace SlowTests.Server.Documents.Attachments
                 }))
                 {
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
-
-                    await PutRetireAttachmentsConfiguration(store, Settings);
 
                     foreach (var attachment in Attachments)
                     {
@@ -114,14 +105,6 @@ namespace SlowTests.Server.Documents.Attachments
                 }))
                 {
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
-
-                    await PutRetireAttachmentsConfiguration(store, Settings);
-
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-
-                    await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
-
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath);
@@ -168,7 +151,6 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-
         [AmazonS3RetryTheory]
         [InlineData(1, 1024 * 1024 * 10)] // 10 MB
         [InlineData(5, 1024 * 1024 * 50)] // 50 MB
@@ -184,13 +166,6 @@ namespace SlowTests.Server.Documents.Attachments
                 }))
                 {
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
-
-                    await PutRetireAttachmentsConfiguration(store, Settings);
-
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-
-                    await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -254,13 +229,6 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
 
-                    await PutRetireAttachmentsConfiguration(store, Settings, collections);
-
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-
-                    await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
-
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath);
@@ -323,18 +291,10 @@ namespace SlowTests.Server.Documents.Attachments
                 }))
                 {
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
-
-                    //TODO: egor this is already called in CanUploadRetiredAttachmentToCloudAndGetInternal
-                    await PutRetireAttachmentsConfiguration(store, Settings);
-
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-
-                    await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
-
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
-                    using (var _documentInfoHelper = new DocumentInfoHelper(context))
+                    using (var documentInfoHelper = new DocumentInfoHelper(context))
                     {
                         var attachments = database.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).ToList();
                         Assert.Equal(1, attachments.Count);
@@ -342,7 +302,7 @@ namespace SlowTests.Server.Documents.Attachments
                         var attachment = attachments.FirstOrDefault();
                         Assert.NotNull(attachment);
 
-                        using (var docId = _documentInfoHelper.GetDocumentId(attachment.Key))
+                        using (var docId = documentInfoHelper.GetDocumentId(attachment.Key))
                         {
                             var t = Attachments.FirstOrDefault(x => x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name && x.Flags == AttachmentFlags.None && x.Hash == attachment.Base64Hash.ToString());
                             Assert.NotNull(t);
@@ -361,15 +321,15 @@ namespace SlowTests.Server.Documents.Attachments
                     var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 * * *");
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                     config.TaskId = backupTaskId;
-                    // Make some changes (e.g., add more attachments, retire them)
 
+                    // Make some changes (e.g., add more attachments, retire them)
                     await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
-                    Assert.Equal(attachmentsCount, Attachments.Count);
+                    Assert.Equal(attachmentsCount + 1, Attachments.Count);
 
                     // move in time & start retire
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount + 1, 15_000);
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
@@ -394,7 +354,6 @@ namespace SlowTests.Server.Documents.Attachments
                             t.RetireAt = attachment.RetiredAt;
                             t.Flags = attachment.Flags;
                             t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
-                            ;
                             Attachments.Add(t);
 
                             t.Stream.Position = 0;
@@ -406,6 +365,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                     Assert.Equal(attachmentsCount, stats.CountOfRetiredAttachments);
                     Backup.RunBackup(Server, config.TaskId, store, isFullBackup: false);
+
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
                     Backup.RestoreDatabase(store, new RestoreBackupConfiguration
@@ -462,16 +422,6 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
 
-                    //TODO: egor this is already called in CanUploadRetiredAttachmentToCloudAndGetInternal
-                    await PutRetireAttachmentsConfiguration(store, Settings);
-
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-
-                    await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
-
-                    GetStorageAttachmentsMetadataFromAllAttachments(database);
-
                     // Perform initial backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 * * *");
@@ -484,6 +434,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentsCount * 2, Attachments.Count);
 
                     // move in time & start retire
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                     var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount * 2, 15_000);
