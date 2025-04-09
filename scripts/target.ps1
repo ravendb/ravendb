@@ -23,14 +23,6 @@ $TARGET_SPECS = (
         "NativeBinExtension" = "so";
     },
     @{
-        "Name"      = "macos-x64";
-        "Runtime"   = "osx-x64";
-        "PkgType"   = "tar.bz2";
-        "IsUnix"    = $True;
-        "TargetId" = "macos-x64";
-        "NativeBinExtension" = "dylib";
-    },
-    @{
         "Name"      = "macos-arm64";
         "Runtime"   = "osx-arm64";
         "PkgType"   = "tar.bz2";
@@ -60,10 +52,6 @@ function GetBuildTargets( $targets ) {
 
     if (($targets -eq $null) -or ($targets.Count -eq 0)) {
         return $TARGET_SPECS;
-    }
-
-    if ($targets.Contains("macos")) {
-        $targets += "macos-x64"
     }
 
     $result = @( );

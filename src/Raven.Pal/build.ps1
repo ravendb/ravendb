@@ -65,7 +65,6 @@ mkdir runtimes/win-x64/native -ErrorAction Ignore > $null
 mkdir runtimes/linux-x64/native -ErrorAction Ignore > $null
 mkdir runtimes/linux-arm/native -ErrorAction Ignore > $null
 mkdir runtimes/linux-arm64/native -ErrorAction Ignore > $null
-mkdir runtimes/osx-x64/native -ErrorAction Ignore > $null
 mkdir runtimes/osx-arm64/native -ErrorAction Ignore > $null
 
 
@@ -101,9 +100,6 @@ zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target arm-linux-gnueabihf -o runtimes
 
 Write-Output "Building Linux ARM64"
 zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target aarch64-linux-gnu ../../libs/liburing/liburing-2.8.1-aarch64.a -o runtimes/linux-arm64/native/librvnpal.so $shared $posix_files $linux_only 
-
-Write-Output "Building Linux Mac x64"
-zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-macos-none -o runtimes/osx-x64/native/librvnpal.dylib $shared $posix_files "src/posix/maconly.c" 
 
 Write-Output "Building Linux Mac ARM64"
 zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target aarch64-macos-none -o runtimes/osx-arm64/native/librvnpal.dylib $shared $posix_files "src/posix/maconly.c" 

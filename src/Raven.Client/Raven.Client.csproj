@@ -117,14 +117,6 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.mac.x64.dylib" Link="libzstd.mac.x64.dylib">
-      <PackagePath>runtimes/osx-x64/native/</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
     <None Include="..\..\libs\libzstd\libzstd.mac.arm64.dylib" Link="libzstd.mac.arm64.dylib">
       <PackagePath>runtimes/osx-arm64/native/</PackagePath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

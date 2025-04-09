@@ -53,7 +53,7 @@ Options are available via `-help` switch and they include
 -Osx        - build only OS X artifacts
 -Rpi        - build only Raspberry Pi artifacts
 -DontRebuildStudio - skip building studio if it was build before
--Target [TargetIds] - accepts comma-separated list of build target names; builds only for selected platforms (possible build targets: win-x64, win-x86, linux-x64, macos-x64, macos-arm64, rpi, linux-arm64)
+-Target [TargetIds] - accepts comma-separated list of build target names; builds only for selected platforms (possible build targets: win-x64, win-x86, linux-x64, macos-arm64, rpi, linux-arm64)
 ```
 
 Building Studio takes significant amount of time. In case you did not make any changes to the Studio,
