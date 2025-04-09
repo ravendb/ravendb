@@ -58,6 +58,10 @@ namespace Raven.Server.Config.Categories
             QueryClauseCacheSize = PlatformDetails.Is32Bits ? new Size(32, SizeUnit.Megabytes) : (MemoryInformation.TotalPhysicalMemory / 10);
             MaximumSizePerSegment = new Size(PlatformDetails.Is32Bits ? 128 : 1024, SizeUnit.Megabytes);
             LargeSegmentSizeToMerge = new Size(PlatformDetails.Is32Bits ? 16 : 32, SizeUnit.Megabytes);
+            
+            UnmanagedAllocationsBatchLimit = PlatformDetails.Is32Bits || _root.Storage.ForceUsing32BitsPager
+                ? new Size(128, SizeUnit.Megabytes) 
+                : new Size(2048, SizeUnit.Megabytes);
 
             var totalMem = MemoryInformation.TotalPhysicalMemory;
 
@@ -304,7 +308,7 @@ namespace Raven.Server.Config.Categories
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
         
         [Description("Corax's unmanaged allocations limit in an indexing batch after which the batch will complete and an index will continue by starting a new one")]
-        [DefaultValue(2048)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
