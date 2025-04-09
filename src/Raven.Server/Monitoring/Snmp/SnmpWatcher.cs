@@ -19,6 +19,7 @@ using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
@@ -226,15 +227,9 @@ namespace Raven.Server.Monitoring.Snmp
                 }
             }
 
-            int engineBoots;
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                var tree = tx.InnerTransaction.CreateTree(nameof(SnmpWatcher));
-                engineBoots = (int)tree.Increment("EngineBoots", 1);
-
-                tx.Commit();
-            }
+            var command = new IncrementEngineBootsCommand();
+            server.ServerStore.Engine.TxMerger.EnqueueSync(command);
+            var engineBoots = command.EngineBoots;
 
             var engineGroup = new EngineGroup(engineBoots, GetIsInTime(server.Configuration.Monitoring))
             {
@@ -243,7 +238,7 @@ namespace Raven.Server.Monitoring.Snmp
 
             var engine = new SnmpEngine(factory, listener, engineGroup);
             engine.Listener.AddBinding(new IPEndPoint(IPAddress.Any, server.Configuration.Monitoring.Snmp.Port));
-            engine.Listener.ExceptionRaised += (sender, e) =>
+            engine.Listener.ExceptionRaised += (_, e) =>
             {
                 // MessageFactoryException hides inner exception
                 if (Logger.IsOperationsEnabled)
@@ -305,8 +300,8 @@ namespace Raven.Server.Monitoring.Snmp
         private static Func<int[], int, int, bool> GetIsInTime(MonitoringConfiguration monitoringConfiguration)
         {
             return monitoringConfiguration.Snmp.DisableTimeWindowChecks
-                ? (currentTimeData, pastReboots, pastTime) => true
-                : (Func<int[], int, int, bool>)null;
+                ? (_, _, _) => true
+                : null;
         }
 
         private static (HashSet<SnmpVersion> Versions, string HandlerVersion) GetVersions(RavenServer server)
@@ -694,6 +689,24 @@ namespace Raven.Server.Monitoring.Snmp
 
                 _logger.Info(builder.ToString());
 #endif
+            }
+        }
+
+        private class IncrementEngineBootsCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+        {
+            public int EngineBoots;
+
+            protected override long ExecuteCmd(ClusterOperationContext context)
+            {
+                var tree = context.Transaction.InnerTransaction.CreateTree(nameof(SnmpWatcher));
+                EngineBoots = (int)tree.Increment(nameof(EngineBoots), 1);
+
+                return 1;
+            }
+
+            public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
+            {
+                throw new NotImplementedException();
             }
         }
     }
