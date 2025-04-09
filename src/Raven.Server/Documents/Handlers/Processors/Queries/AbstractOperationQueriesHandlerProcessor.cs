@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
@@ -60,14 +61,26 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
 
     protected QueryOperationOptions GetQueryOperationOptions()
     {
-        return new QueryOperationOptions
+        var options = new QueryOperationOptions
         {
             AllowStale = RequestHandler.GetBoolValueQueryString("allowStale", required: false) ?? false,
             MaxOpsPerSecond = RequestHandler.GetIntValueQueryString("maxOpsPerSec", required: false),
             StaleTimeout = RequestHandler.GetTimeSpanQueryString("staleTimeout", required: false),
             RetrieveDetails = RequestHandler.GetBoolValueQueryString("details", required: false) ?? false,
-            IgnoreMaxStepsForScript = RequestHandler.GetBoolValueQueryString("ignoreMaxStepsForScript", required: false) ?? false
+            IgnoreMaxStepsForScript = RequestHandler.GetBoolValueQueryString("ignoreMaxStepsForScript", required: false) ?? false,
         };
+        var WaitForIndexes = RequestHandler.GetBoolValueQueryString("waitForIndexes", required: false) ?? false;
+        var WaitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+        var ThrowOnTimeoutInWaitForIndexes = RequestHandler.GetBoolValueQueryString("ThrowOnTimeoutInWaitForIndexes", required: false) ?? false;
+        var WaitForSpecificIndexes = RequestHandler.GetStringValuesQueryString("waitForSpecificIndexes", required: false);
+        options.IndexOptions = new IndexBatchOptions()
+        {
+            WaitForIndexes = WaitForIndexes,
+            WaitForIndexesTimeout = WaitForIndexesTimeout,
+            WaitForSpecificIndexes = WaitForSpecificIndexes,
+            ThrowOnTimeoutInWaitForIndexes = ThrowOnTimeoutInWaitForIndexes,
+        };
+        return options;
     }
 
     protected static string GetOperationDescription(IndexQueryServerSide query)

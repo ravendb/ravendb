@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -92,25 +93,52 @@ namespace Raven.Server.Documents.Queries.Dynamic
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
 
-        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var runner = new CollectionRunner(Database, queryContext.Documents, query);
 
-            return runner.ExecuteDelete(query.Metadata.CollectionName, query.Start, query.PageSize, new CollectionOperationOptions
-            {
-                MaxOpsPerSecond = options.MaxOpsPerSecond
-            }, onProgress, token);
+            var result = await runner.ExecuteDelete(query.Metadata.CollectionName, query.Start, query.PageSize, options, onProgress, token);
+
+            return result;
         }
 
-        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch,
+            BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var runner = new CollectionRunner(Database, queryContext.Documents, query);
+            return runner.ExecutePatch(query.Metadata.CollectionName, query.Start, query.PageSize, options, patch, patchArgs,
+                onProgress, token);
+        }
 
-            return runner.ExecutePatch(query.Metadata.CollectionName, query.Start, query.PageSize, new CollectionOperationOptions
+        private async Task WaitForIndexesAfterPatch(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext,
+            OperationCancelToken token)
+        {
+            bool isAllDocs = query.Metadata.CollectionName == Constants.Documents.Collections.AllDocumentsCollection;
+            long lastEtag;
+            long lastTombstoneEtag;
+            using (queryContext.OpenReadTransaction())
             {
-                IgnoreMaxStepsForScript = options.IgnoreMaxStepsForScript,
-                MaxOpsPerSecond = options.MaxOpsPerSecond
-            }, patch, patchArgs, onProgress, token);
+                lastEtag = isAllDocs
+                    ? DocumentsStorage.ReadLastDocumentEtag(queryContext.Documents.Transaction.InnerTransaction)
+                    : Database.DocumentsStorage.GetLastDocumentEtag(
+                        queryContext.Documents.Transaction.InnerTransaction,
+                        query.Metadata.CollectionName);
+
+                lastTombstoneEtag = Database.DocumentsStorage.GetLastTombstoneEtag(queryContext.Documents.Transaction.InnerTransaction, query.Metadata.CollectionName);
+            }
+
+            Console.WriteLine("lastEtag = "+lastEtag);
+            Console.WriteLine("lastTombstoneEtag = "+lastTombstoneEtag);
+            await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(
+                Database,
+                options.IndexOptions.WaitForIndexesTimeout.Value,
+                specifiedIndexesQueryString: options.IndexOptions.WaitForSpecificIndexes,
+                throwOnTimeout: options.IndexOptions.ThrowOnTimeoutInWaitForIndexes,
+                lastDocumentEtag: lastEtag,
+                lastTombstoneEtag: lastTombstoneEtag,
+                modifiedCollections: [query.Metadata.CollectionName],
+                token: token.Token
+            );
         }
 
         public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)

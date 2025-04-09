@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
@@ -18,7 +19,7 @@ namespace Raven.Server.Web.Studio
             _excludeIds = excludeIds;
         }
 
-        public override Task<IOperationResult> ExecuteDelete(string collectionName, long start, long take, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecuteDelete(string collectionName, long start, long take, QueryOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             if (_excludeIds.Count == 0)
                 return base.ExecuteDelete(collectionName, start, take, options, onProgress, token);

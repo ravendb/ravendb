@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Documents.Commands.Batches;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -47,5 +48,16 @@ namespace Raven.Client.Documents.Queries
         /// Determines whether operation details about each document should be returned by server.
         /// </summary>
         public bool RetrieveDetails { get; set; }
+
+
+        /// <summary>
+        /// Encapsulates advanced options for waiting on indexes during bulk or patch operations.
+        /// When WaitForIndexes is true, the operation will wait until the affected indexes become non-stale.
+        /// WaitForIndexesTimeout specifies the maximum duration to wait, and if this period is exceeded while
+        /// ThrowOnTimeoutInWaitForIndexes is true, an exception will be thrown.
+        /// If WaitForSpecificIndexes contains one or more index names, the operation will restrict the wait
+        /// to those indexes only; otherwise, all relevant indexes are considered.
+        /// </summary>
+        public IndexBatchOptions IndexOptions { get; set; }
     }
 }

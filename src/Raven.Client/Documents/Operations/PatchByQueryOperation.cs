@@ -99,6 +99,23 @@ namespace Raven.Client.Documents.Operations
                         .Append(_operationId.Value);
                 }
 
+                if (_options.IndexOptions != null && _options.IndexOptions.WaitForIndexes)
+                {
+                    path
+                        .Append("&waitForIndexes=true")
+                        .Append("&waitForIndexesTimeout=")
+                        .Append(_options.IndexOptions.WaitForIndexesTimeout ?? _conventions.WaitForIndexesAfterSaveChangesTimeout)
+                        .Append("&throwOnTimeoutInWaitForIndexes=")
+                        .Append(_options.IndexOptions.ThrowOnTimeoutInWaitForIndexes);
+                    if (_options.IndexOptions.WaitForSpecificIndexes != null && _options.IndexOptions.WaitForSpecificIndexes.Length > 0)
+                    {
+                        foreach (var index in _options.IndexOptions.WaitForSpecificIndexes)
+                        {
+                            path.Append("&waitForSpecificIndexes=").Append(Uri.EscapeDataString(index));
+                        }
+                    }
+                }
+
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Patch,

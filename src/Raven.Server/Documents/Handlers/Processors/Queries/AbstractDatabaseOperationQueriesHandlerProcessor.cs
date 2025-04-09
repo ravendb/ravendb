@@ -73,7 +73,8 @@ internal abstract class AbstractDatabaseOperationQueriesHandlerProcessor : Abstr
             operationType,
             description,
             details,
-            onProgress => operation(RequestHandler.Database.QueryRunner, options, onProgress, token),
+            onProgress => 
+                operation(RequestHandler.Database.QueryRunner, options, onProgress, token),
             token: token);
 
         _ = task.ContinueWith(_ =>

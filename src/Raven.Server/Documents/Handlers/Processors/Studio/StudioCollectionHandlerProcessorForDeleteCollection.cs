@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
         }
 
         private void ExecuteCollectionOperation(
-            Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation,
+            Func<CollectionRunner, string, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation,
             DocumentsOperationContext docsContext, IDisposable returnToContextPool, OperationType operationType, string collectionName, long operationId,
             HashSet<string> excludeIds)
         {
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             var collectionRunner = new StudioCollectionRunner(RequestHandler.Database, docsContext, excludeIds);
 
             // use default options
-            var options = new CollectionOperationOptions();
+            var options = new QueryOperationOptions();
 
             var task = RequestHandler.Database.Operations.AddLocalOperation(
                 operationId,
