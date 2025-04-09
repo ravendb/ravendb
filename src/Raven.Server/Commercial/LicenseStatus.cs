@@ -131,7 +131,7 @@ namespace Raven.Server.Commercial
                 if (Version <= currentVersion)
                     return null;
 
-                var allowDismissUntil = LicenseVersionInformation.UpdatedAt.AddDays(7);
+                var allowDismissUntil = LicenseVersionInformation.UpdatedAt.AddDays(14);
                 return new UpgradeRequired
                 {
                     AllowDismiss = allowDismissUntil >= DateTime.UtcNow,

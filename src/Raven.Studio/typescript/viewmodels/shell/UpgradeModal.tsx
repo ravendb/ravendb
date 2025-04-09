@@ -74,8 +74,11 @@ export default function UpgradeModal(props: { close: () => void }) {
                                     message={`${allowDismissUntilUtc.local().format(dateFormat)} your local time`}
                                 >
                                     <Icon icon="info" color="info" margin="ms-1" />
-                                </PopoverWithHoverWrapper>. 
-                                Afterwards the RavenDB studio will be blocked.
+                                </PopoverWithHoverWrapper> 
+                            </span>
+                            <br />
+                            <span className="text-muted">
+                                Afterwards the <strong>RavenDB Studio</strong> will be <strong className="text-danger">blocked</strong>.
                             </span>
                         </>
                     )}
