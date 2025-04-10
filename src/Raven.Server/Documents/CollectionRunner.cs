@@ -90,8 +90,8 @@ namespace Raven.Server.Documents
                         etag = docEtag;
                 }
             }
-
-            await WaitForIndexesAfterPatch(options, collections, etag, token);
+            if(options.IndexOptions.WaitForIndexes)
+                await WaitForIndexesAfterPatch(options, collections, etag, token);
             return opResult;
         }
 

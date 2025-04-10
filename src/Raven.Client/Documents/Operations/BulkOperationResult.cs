@@ -96,12 +96,6 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public sealed class IndexingDetails
-        {
-            public string Collection { get; set; }
-            public long Etag { get; set; }
-        }
-
         public sealed class OperationDetails : IOperationDetailedDescription
         {
             public string Query { get; set; }

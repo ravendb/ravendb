@@ -110,14 +110,14 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                 x =>
                     new BulkOperationResult.DeleteDetails { Id = key, Etag = x.DeleteResult?.Etag, }, null,
                 x =>
-                    new BulkOperationResult.IndexingDetails { Collection = x.DeleteResult?.Collection.Name, Etag = x.DeleteResult?.Etag ?? 0 });
+                    new WaitForIndexingDetails { Collection = x.DeleteResult?.Collection.Name, Etag = x.DeleteResult?.Etag ?? 0 });
         }, token);
     }
 
-protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index index, QueryOperationOptions options, PatchRequest patch,
+    protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index index, QueryOperationOptions options, PatchRequest patch,
         BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<DeterminateProgress> onProgress, OperationCancelToken token)
     {
-        var operation =  ExecuteOperation(query, index, options, queryContext, onProgress,
+        var operation = ExecuteOperation(query, index, options, queryContext, onProgress,
             (key, retrieveDetails) =>
             {
                 var command = new PatchDocumentCommand(queryContext.Documents, key,
@@ -137,7 +137,7 @@ protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index 
                 return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails,
                     x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Status = x.PatchResult.Status, },
                     c => c.PatchResult?.Dispose(),
-                    x => new BulkOperationResult.IndexingDetails
+                    x => new WaitForIndexingDetails
                     {
                         Collection = x.PatchResult.Collection, Etag = ChangeVectorUtils.GetEtagById(x.PatchResult.ChangeVector, Database.DbBase64Id)
                     });
@@ -191,7 +191,8 @@ protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index 
         WaitForIndexesInformation information = null;
 
         void RetrieveDetails(IBulkOperationDetails details) => result.Details.Add(details);
-        void RetrieveDetailsForIndexing(BulkOperationResult.IndexingDetails indexingDetails)
+
+        void RetrieveDetailsForIndexing(WaitForIndexingDetails indexingDetails)
 
         {
             information ??= new WaitForIndexesInformation();
@@ -229,7 +230,9 @@ protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index 
 
             if (options.IndexOptions != null && options.IndexOptions.WaitForIndexes)
             {
-                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexOptions.WaitForIndexesTimeout.Value, options.IndexOptions.WaitForSpecificIndexes, throwOnTimeout: options.IndexOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag, lastTombstoneEtag: 0, information.Collections, token.Token);
+                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexOptions.WaitForIndexesTimeout.Value,
+                    options.IndexOptions.WaitForSpecificIndexes, throwOnTimeout: options.IndexOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag,
+                    lastTombstoneEtag: 0, information.Collections, token.Token);
             }
         }
 
@@ -263,9 +266,10 @@ protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index 
         private readonly bool _retrieveDetails;
         private readonly Func<T, IBulkOperationDetails> _getDetails;
         private readonly Action<T> _afterExecuted;
-        private readonly Func<T, BulkOperationResult.IndexingDetails> _getDetailsForIndexing;
+        private readonly Func<T, WaitForIndexingDetails> _getDetailsForIndexing;
 
-        public BulkOperationCommand(T command, bool retrieveDetails, Func<T, IBulkOperationDetails> getDetails, Action<T> afterExecuted, Func<T, BulkOperationResult.IndexingDetails> getDetailsForIndexing = null)
+        public BulkOperationCommand(T command, bool retrieveDetails, Func<T, IBulkOperationDetails> getDetails, Action<T> afterExecuted,
+            Func<T, WaitForIndexingDetails> getDetailsForIndexing = null)
         {
             _command = command;
             _retrieveDetails = retrieveDetails;
@@ -304,6 +308,7 @@ protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index 
         }
 
         public Action<IBulkOperationDetails> RetrieveDetails { private get; set; }
-        public Action<BulkOperationResult.IndexingDetails> RetrieveDetailsForIndexing { private get; set; }
+
+        public Action<WaitForIndexingDetails> RetrieveDetailsForIndexing { private get; set; }
     }
 }
