@@ -30,8 +30,10 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using DisposableAction = Voron.Util.DisposableAction;
@@ -782,7 +784,7 @@ namespace SlowTests.Client.Subscriptions
                 await Assert.ThrowsAsync<SubscriptionClosedException>(() => subscription.Run(x => { }).WaitAsync(_reasonableWaitTime));
             }
         }
-
+        
         [Fact]
         public async Task ShouldThrow()
         {
@@ -1508,6 +1510,71 @@ namespace SlowTests.Client.Subscriptions
 
             var db = await Databases.GetDocumentDatabaseInstanceFor(server, store);
             await AssertWaitForExceptionAsync<KeyNotFoundException>(async () => await Task.Run(() => db.SubscriptionStorage.GetSubscriptionStateById(state.SubscriptionId)), interval: 1000);
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task Subscriptions_WithWaitForFree_ShouldNotDisconnectOnStreamTimeout()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var sub = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
+                {
+                    Filter = user => user.Count > 0
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        await session.StoreAsync(new User { Count = 1 });
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                async Task ProcessDocuments(SubscriptionBatch<User> x)
+                {
+                    using var session = x.OpenAsyncSession();
+
+                    foreach (var item in x.Items)
+                    {
+                        item.Result.Count--;
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var ops = new SubscriptionWorkerOptions(sub)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(40),
+                    MaxErroneousPeriod = TimeSpan.FromHours(1),
+                    Strategy = SubscriptionOpeningStrategy.WaitForFree,
+                    ConnectionStreamTimeout = TimeSpan.FromSeconds(15),
+                };
+
+                var mre = new AsyncManualResetEvent();
+                await using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(ops);
+                subscription.OnEstablishedSubscriptionConnection += () => mre.Set();
+
+                var processingSubs = subscription.Run(ProcessDocuments);
+                await using var subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(ops);
+                await using var subscription3 = store.Subscriptions.GetSubscriptionWorker<User>(ops);
+
+                var exceptions = new ConcurrentSet<Exception>();
+                subscription2.OnSubscriptionConnectionRetry += exception => exceptions.Add(exception);
+                subscription2.OnUnexpectedSubscriptionError += exception => exceptions.Add(exception);
+                subscription3.OnSubscriptionConnectionRetry += exception => exceptions.Add(exception);
+                subscription3.OnUnexpectedSubscriptionError += exception => exceptions.Add(exception);
+
+                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+
+                var waitingSubs1 = subscription2.Run(ProcessDocuments);
+                var waitingSubs2 = subscription3.Run(ProcessDocuments);
+
+                var delay = Task.Delay((ops.TimeToWaitBeforeConnectionRetry / 2) + TimeSpan.FromSeconds(5));
+                await delay;
+
+                Assert.True(exceptions.Count == 0, $"Exceptions: {string.Join(", ", exceptions.Select(x => x))}");
+            }
         }
 
         private class IdleDatabaseStatistics

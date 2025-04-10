@@ -269,8 +269,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             $"{_subscriptionConnectionsState.GetConnectionsAsString()} is released");
                     }
 
-                    var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
-                    await Task.Delay(timeout);
+                    await Task.Delay(random.Next(2400, 2600), CancellationTokenSource.Token);
                     await SendHeartBeatIfNeededAsync(sp,
                         $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
                         $"{_subscriptionConnectionsState.GetConnectionsAsString()} to be released");
