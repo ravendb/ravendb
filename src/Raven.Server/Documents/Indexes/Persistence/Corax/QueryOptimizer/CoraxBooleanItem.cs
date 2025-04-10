@@ -76,10 +76,8 @@ public struct CoraxBooleanItem : IQueryMatch
         Term = leftTerm is not string ? leftTerm : QueryBuilderHelper.CoraxGetValueAsString(leftTerm);
         Term2 = rightTerm is not string ? rightTerm : QueryBuilderHelper.CoraxGetValueAsString(rightTerm);
     }
-
-    public static IQueryMatch Build(IndexSearcher indexSearcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation, ref CoraxQueryBuilder.StreamingOptimization streamingOptimization) => Build(indexSearcher, index, field, term, operation, ref streamingOptimization, out _);
     
-    private static IQueryMatch Build(IndexSearcher indexSearcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation, ref CoraxQueryBuilder.StreamingOptimization streamingOptimization, out bool isTimeOrNumerical)
+    public static IQueryMatch Build(IndexSearcher indexSearcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation, ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
     {
         long timeTicks = 0L;
         var fieldHasTime = index.IndexFieldsPersistence.HasTimeValues(field.FieldName.ToString());
@@ -88,12 +86,8 @@ public struct CoraxBooleanItem : IQueryMatch
                           && QueryBuilderHelper.TryGetTime(index, term, out timeTicks);
         term = isTimeValue ? timeTicks : term;
         
-        if (fieldHasTime)
-            field = field.ChangeAnalyzer(FieldIndexingMode.Exact);
-        
         var cbi = new CoraxBooleanItem(indexSearcher, field, term, operation);
         
-        isTimeOrNumerical = term is long or double;
         return field.HasBoost 
             ? cbi.Materialize(ref streamingOptimization) 
             : cbi;
@@ -127,11 +121,7 @@ public struct CoraxBooleanItem : IQueryMatch
             {
                 Debug.Assert(streamingOptimization.OptimizationIsPossible == false);
                 // between Value and null => (x, oo)
-                var query = Build(indexSearcher, index, field, leftValue, leftOperator, ref streamingOptimization, out bool isNumerical);
-
-                // For numerical queries we will include the null values for backward compatibility.
-                if (isNumerical == false)
-                    return query;
+                var query = Build(indexSearcher, index, field, leftValue, leftOperator, ref streamingOptimization);
                 
                 var materializedQuery = query switch
                 {
@@ -139,7 +129,6 @@ public struct CoraxBooleanItem : IQueryMatch
                     _ => query
                 };
                 
-                //matching lucene results, nulls included to right side (only for numerical & time queries)
                 return indexSearcher.IncludeNullMatch(field, materializedQuery, false);
             }
 
@@ -155,7 +144,7 @@ public struct CoraxBooleanItem : IQueryMatch
         
                 // since the field has time values, and time values are indexed in the exact manner,
                 // we disable analyzer (matching Lucene behavior) 
-                if (fieldHasTime)
+                if (term1HasTime || term2HasTime)
                     field = field.ChangeAnalyzer(FieldIndexingMode.Exact);
         
                 return new CoraxBooleanItem(indexSearcher, field, leftValue, rightValue, leftOperator, rightOperator);

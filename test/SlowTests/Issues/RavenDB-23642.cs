@@ -1,6 +1,7 @@
 ﻿using System;
 using FastTests;
 using Raven.Client;
+using Sparrow.Server.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,10 +17,15 @@ public class RavenDB_23642(ITestOutputHelper output) : RavenTestBase(output)
         using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
+        var upTo = new DateTime(2021, 1, 1).ToString("O");
+
         var user2021 =
-            new User { StartDate = new DateTime(2021, 1, 1), EndDate = new DateTime(2021, 1, 31) };
+            new User { StartDate = new DateTime(2021, 1, 1), 
+                EndDate = new DateTime(2021, 1, 31),
+                Textual = upTo
+            };
         var user2022 =
-            new User { StartDate = new DateTime(2022, 1, 1), EndDate = new DateTime(2022, 1, 31) };
+            new User { StartDate = new DateTime(2022, 1, 1), EndDate = new DateTime(2022, 1, 31), Textual = "Maciej"};
         var emptyUser = new User();
 
         session.Store(user2021);
@@ -54,6 +60,23 @@ public class RavenDB_23642(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(user2021.Id, results[0].Id);
         Assert.Equal(user2022.Id, results[1].Id);
         Assert.Equal(emptyUser.Id, results[2].Id);
+
+
+        results = session.Advanced
+            .RawQuery<User>($"from Users where Textual between '1' and '{upTo}'")
+            .WaitForNonStaleResults()
+            .ToList();
+        Assert.Equal(1, results.Count);
+        Assert.Equal(user2021.Id, results[0].Id);
+
+        results = session.Advanced
+            .RawQuery<User>($"from Users where Textual between 'm' and 'Maciej'")
+            .WaitForNonStaleResults()
+            .ToList();
+        
+        Assert.Equal(1, results.Count);
+        Assert.Equal(user2022.Id, results[0].Id);
+
     }
     
     [RavenTheory(RavenTestCategory.Querying)]
@@ -96,10 +119,11 @@ public class RavenDB_23642(ITestOutputHelper output) : RavenTestBase(output)
             .WhereBetween(x => x.Textual, "&a", null)
             .ToList();
         
-        Assert.Equal(3, results.Count);
+        Assert.Equal(4, results.Count);
         Assert.Equal(u1.Id, results[0].Id);
         Assert.Equal(u2.Id, results[1].Id);
         Assert.Equal(u3.Id, results[2].Id);
+        Assert.Equal(u4.Id, results[3].Id);
         
         results = session.Advanced
             .DocumentQuery<User>()
@@ -112,6 +136,7 @@ public class RavenDB_23642(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(u1.Id, results[1].Id);
         Assert.Equal(u2.Id, results[2].Id);
         Assert.Equal(u3.Id, results[3].Id);
+        Assert.Equal(u4.Id, results[4].Id);
     }
 
     private class User
