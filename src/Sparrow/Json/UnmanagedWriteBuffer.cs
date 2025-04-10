@@ -16,6 +16,8 @@ namespace Sparrow.Json
         void Write(byte[] buffer, int start, int count);
         void Write(byte* buffer, int length);
         void Write<T>(in T value) where T : unmanaged;
+
+        void Write<T>(in Span<T> buffer) where T : unmanaged;
         void Write<T>(in ReadOnlySpan<T> buffer) where T : unmanaged;
         void EnsureSingleChunk(JsonParserState state);
         void EnsureSingleChunk(out byte* ptr, out int size);
@@ -64,6 +66,59 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write<T>(in Span<T> buffer) where T : unmanaged
+        {
+            int count = buffer.Length * sizeof(T);
+            if (count == 0)
+                return;
+
+            if (_buffer.Size - Used > count)
+            {
+                ref byte destStart = ref Unsafe.AsRef<byte>(_buffer.Address + Used);
+                ref byte srcStart = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, byte>(buffer));
+                Unsafe.CopyBlockUnaligned(ref destStart, ref srcStart, (uint)count);
+                _sizeInBytes += count;
+                Used += count;
+            }
+            else
+            {
+                UnlikelyWrite(buffer);
+            }
+        }
+
+        private void UnlikelyWrite<T>(in Span<T> src) where T : unmanaged
+        {
+            int count = src.Length * sizeof(T);
+            if (count == 0)
+                return;
+
+            var buffer = src;
+            var bufferPosition = 0;
+            var lengthLeft = count;
+            do
+            {
+                if (Used == _buffer.Size)
+                {
+                    _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
+                    Used = 0;
+                }
+
+                var bytesToWrite = Math.Min(lengthLeft, _buffer.Size - Used);
+
+                ref byte destStart = ref Unsafe.AsRef<byte>(_buffer.Address + Used);
+                ref byte srcStart = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, byte>(buffer));
+                Unsafe.CopyBlockUnaligned(ref destStart, ref srcStart, (uint)bytesToWrite);
+
+                _sizeInBytes += bytesToWrite;
+                lengthLeft -= bytesToWrite;
+                bufferPosition += bytesToWrite;
+                buffer = buffer.Slice(bytesToWrite);
+                Used += bytesToWrite;
+
+            } while (bufferPosition < count);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write<T>(in ReadOnlySpan<T> buffer) where T : unmanaged
         {
             int count = buffer.Length * sizeof(T);
@@ -84,7 +139,7 @@ namespace Sparrow.Json
             }
         }
 
-        private void UnlikelyWrite<T>(ReadOnlySpan<T> src) where T : unmanaged
+        private void UnlikelyWrite<T>(in ReadOnlySpan<T> src) where T : unmanaged
         {
             int count = src.Length * sizeof(T);
             if (count == 0)
@@ -390,6 +445,31 @@ namespace Sparrow.Json
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write<T>(in ReadOnlySpan<T> vector) where T : unmanaged
+        {
+            DisposableExceptions.ThrowIfDisposedOnDebug(this);
+
+            var vectorAsBytes = MemoryMarshal.Cast<T, byte>(vector);
+
+            int count = vectorAsBytes.Length;
+            if (count == 0)
+                return;
+
+            var head = _head;
+            if (head.Allocation.SizeInBytes - head.Used > count)
+            {
+                vectorAsBytes.CopyTo(
+                    new Span<byte>(head.Address + head.Used, count)
+                );
+
+                head.AccumulatedSizeInBytes += count;
+                head.Used += count;
+            }
+            else
+                WriteUnlikely(vectorAsBytes);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write<T>(in Span<T> vector) where T : unmanaged
         {
             DisposableExceptions.ThrowIfDisposedOnDebug(this);
 

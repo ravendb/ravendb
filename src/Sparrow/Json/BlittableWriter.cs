@@ -223,10 +223,18 @@ namespace Sparrow.Json
 
             // PERF: By reserving on the stack the maximum size, we are able to avoid multiple calls to 
             // the unmanaged writer. This is a trade-off between stack usage and performance.
-            byte* metadataBuffer = stackalloc byte[maxPropertySize * properties.Count + VariableSizeEncoding.MaximumSizeOf<int>()];
+            var requiredMetadataBufferSize = maxPropertySize * properties.Count + VariableSizeEncoding.MaximumSizeOf<int>();
+
+            // PERF: If the amount of properties is bigger than 512, we are facing a real outlier. This may happen
+            // when we store a large dictionary. Therefore, we want to just deal with it differently than face a stackoverflow
+            // even though the probability is quite low.
+            Span<byte> metadataBuffer = properties.Count < 512 ? 
+                                            stackalloc byte[requiredMetadataBufferSize] : 
+                                            new byte[requiredMetadataBufferSize];
 
             // Write object metadata
-            byte* metadataPtr = metadataBuffer + VariableSizeEncoding.Write(metadataBuffer, properties.Count);
+            ref byte metadataStartPtr = ref MemoryMarshal.GetReference(metadataBuffer);
+            ref byte metadataPtr = ref Unsafe.Add(ref metadataStartPtr, VariableSizeEncoding.Write(metadataBuffer, properties.Count));
 
             foreach (var sortedProperty in properties)
             {
@@ -234,18 +242,18 @@ namespace Sparrow.Json
                 // the memory has already been reserved. Doing this, we avoid the branching associated with the
                 // .WriteNumber() method. And since we know how many bytes we will write, we advance the pointer
                 // appropriately.
-                *(int*)metadataPtr = objectMetadataStart - sortedProperty.Position;
-                metadataPtr += positionSize;
+                Unsafe.WriteUnaligned<int>(ref metadataPtr, objectMetadataStart - sortedProperty.Position);
+                metadataPtr = ref Unsafe.Add(ref metadataPtr, positionSize);
 
-                *(int*)metadataPtr = sortedProperty.Property.PropertyId;
-                metadataPtr += propertyIdSize;
+                Unsafe.WriteUnaligned<int>(ref metadataPtr, sortedProperty.Property.PropertyId);
+                metadataPtr = ref Unsafe.Add(ref metadataPtr, propertyIdSize);
 
-                *metadataPtr = sortedProperty.Type;
-                metadataPtr++;
+                Unsafe.WriteUnaligned<byte>(ref metadataPtr, sortedProperty.Type);
+                metadataPtr = ref Unsafe.Add(ref metadataPtr, 1);
             }
-
-            int length = (int)(metadataPtr - metadataBuffer);
-            _unmanagedWriteBuffer.Write(metadataBuffer, length);
+            
+            int length = (int)Unsafe.ByteOffset(ref metadataStartPtr, ref metadataPtr);
+            _unmanagedWriteBuffer.Write(metadataBuffer.Slice(0, length));
             _position += length;
 
             return new WriteToken(objectMetadataStart, objectToken);
@@ -299,8 +307,6 @@ namespace Sparrow.Json
         [ThreadStatic]
         private static FastList<int> _intBuffer;
 
-        [ThreadStatic]
-        private static int[] _propertyArrayOffset;
 
         static BlittableWriter()
         {
@@ -309,8 +315,8 @@ namespace Sparrow.Json
 
         public static void CleanPropertyArrayOffset()
         {
-            _propertyArrayOffset = null;
-            _intBuffer?.Clear();
+            // Since we are releasing it because the current thread is no longer active,
+            // we just nullify the reference and let the GC do its job.
             _intBuffer = null;
         }
 
@@ -324,9 +330,11 @@ namespace Sparrow.Json
             int propertiesDiscovered = cachedProperties.PropertiesDiscovered;
 
             // Write the property names and register their positions
-            int* propertyArrayOffset = stackalloc int[propertiesDiscovered];
+            Span<int> propertyArrayOffset = propertiesDiscovered < 512 ? 
+                                            stackalloc int[propertiesDiscovered] : 
+                                            new int[propertiesDiscovered];
 
-            for (var index = 0; index < propertiesDiscovered; index++)
+            for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
                 var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
                 if (str.EscapePositions == null || str.EscapePositions.Length == 0)
@@ -346,25 +354,32 @@ namespace Sparrow.Json
             var propertyNamesOffset = _position - rootOffset;
             var propertyArrayOffsetValueByteSize = SetOffsetSizeFlag(ref propertiesSizeMetadata, propertyNamesOffset);
 
-            byte* propertiesStartPtr = stackalloc byte[sizeof(byte) + propertiesDiscovered * sizeof(int)];
-            byte* propertiesPtr = propertiesStartPtr;
-            *propertiesPtr = (byte)propertiesSizeMetadata;
-            propertiesPtr++;
+            int maxPropertiesBufferLength = sizeof(byte) + propertiesDiscovered * sizeof(int);
+            Span<byte> propertiesBuffer = propertiesDiscovered < 512 ? 
+                                                stackalloc byte[maxPropertiesBufferLength] :
+                                                new byte[maxPropertiesBufferLength];
 
-            // PERF: Using for to avoid the cost of the enumerator.
-            for (int i = 0; i < propertiesDiscovered; i++)
+            ref byte propertiesStartPtr = ref MemoryMarshal.GetReference(propertiesBuffer);
+            ref byte propertiesPtr = ref propertiesStartPtr;
+
+
+            Unsafe.WriteUnaligned<byte>(ref propertiesPtr, (byte)propertiesSizeMetadata);
+            propertiesPtr = ref Unsafe.Add(ref propertiesPtr, 1);
+
+            foreach (var propertyOffset in propertyArrayOffset)
             {
                 // PERF: We are using the known fact that it doesn't matter if the value is big or not because
                 // the memory has already been reserved. Doing this, we avoid the branching associated with the
                 // .WriteNumber() method. And since we know how many bytes we will write, we advance the pointer
                 // appropriately.
-                *(int*)propertiesPtr = propertiesStart - propertyArrayOffset[i];
-                propertiesPtr += propertyArrayOffsetValueByteSize;
+                Unsafe.WriteUnaligned<int>(ref propertiesPtr, propertiesStart - propertyOffset);
+                propertiesPtr = ref Unsafe.Add(ref propertiesPtr, propertyArrayOffsetValueByteSize);
             }
 
             // Write property names offsets in the actual buffer.
-            _unmanagedWriteBuffer.Write(propertiesStartPtr, (int)(propertiesPtr - propertiesStartPtr));
-            _position += (int)(propertiesPtr - propertiesStartPtr);
+            int length = (int)(Unsafe.ByteOffset(ref propertiesStartPtr, ref propertiesPtr));
+            _unmanagedWriteBuffer.Write(propertiesBuffer.Slice(0, length));
+            _position += length;
 
             return propertiesStart;
         }
@@ -684,13 +699,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(ReadOnlySpan<byte> str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
         {
-            if (str.Length == 0)
-            {
-
-            }
-
 #if NET7_0_OR_GREATER
-                if (str.Length <= 256 && mode is not (UsageMode.CompressSmallStrings or UsageMode.CompressStrings))
+            if (str.Length <= 256 && mode is not (UsageMode.CompressSmallStrings or UsageMode.CompressStrings))
             {
                 // PERF: Since we know the size, we can actually do this much more efficiently. 
                 // even more if the caller is an actual string constant, which will cause the call to be inlined

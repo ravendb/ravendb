@@ -296,7 +296,7 @@ namespace Sparrow.Json.Parsing
                         _pos = pos;
                         return true;
                     case JsonParserReadActionToken.Integer:
-                        goto ParseNumberWithAdjustment;
+                        goto ParseNumber;
                     case JsonParserReadActionToken.String:
                         goto ParseString;
                     case JsonParserReadActionToken.Separator:
@@ -326,7 +326,7 @@ namespace Sparrow.Json.Parsing
                 }
 
                 if (IsPossibleNegativeNumber(b, bufferSize, pos, currentBuffer))
-                    goto ParseNumberWithAdjustment; // PERF: Avoid very lengthy method here; as we are going to return anyways.
+                    goto ParseNumber; // PERF: Avoid very lengthy method here; as we are going to return anyways.
 
                 if (ReadUnlikely(b, ref pos, out bool couldRead) == false)
                     continue; // We can only continue here, if there is a failure to parse, we will throw inside ReadUnlikely.
@@ -354,15 +354,12 @@ namespace Sparrow.Json.Parsing
                 return true;
             }
 
-            ParseNumberWithAdjustment:
+            ParseNumber:
             {
                 // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char and fall-through to ParseNumber
                 pos--;
                 _charPos--;
-            }
 
-            ParseNumber:
-            {
                 _unmanagedWriteBuffer.Clear();
                 state.EscapePositions.Clear();
                 state.Long = 0;

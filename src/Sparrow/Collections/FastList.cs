@@ -186,8 +186,9 @@ namespace Sparrow.Collections
         public void Clear()
         {
             if (typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(byte) ||
+                typeof(T) == typeof(sbyte) || typeof(T) == typeof(ushort) ||
                 typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
-                typeof(T) == typeof(nint) || typeof(T) == typeof(IntPtr))
+                typeof(T) == typeof(nint) || typeof(T) == typeof(nuint) || typeof(T) == typeof(IntPtr))
             {
                 _size = 0;
                 _version++;

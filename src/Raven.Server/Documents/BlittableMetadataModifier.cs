@@ -192,38 +192,6 @@ namespace Raven.Server.Documents
 
         }
 
-        private unsafe bool AboutToReadPropertyNameInternal<TJsonParser>(TJsonParser reader, JsonParserState state)
-            where TJsonParser : IJsonParser
-        {
-            if (_state != State.None)
-            {
-                if (!AboutToReadWithStateUnlikely(reader, state))
-                    return false;
-            }
-
-            _state = State.None;
-
-            while (true)
-            {
-                if (reader.Read() == false)
-                    return false;
-
-                if (state.CurrentTokenType != JsonParserToken.String)
-                    return true; // let the caller handle that
-
-                if (_readingMetadataObject == false)
-                {
-                    if ("@metadata"u8.IsEqualConstant(state.StringBuffer, state.StringSize) == true)
-                        _readingMetadataObject = true;
-
-                    return true;
-                }
-
-                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out bool aboutToReadPropertyName))
-                    return aboutToReadPropertyName;
-            }
-        }
-
         private unsafe bool AboutToReadPropertyNameInMetadataUnlikely(IJsonParser reader, JsonParserState state, out bool aboutToReadPropertyName)
         {
             aboutToReadPropertyName = true;
