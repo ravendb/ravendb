@@ -414,10 +414,8 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         _hasWork.Set();
     }
 
-    private AiWorker CreateAiWorker(EmbeddingsGenerationConfiguration configuration)
+    private AiWorker CreateAiWorker(DatabaseRecord record, EmbeddingsGenerationConfiguration configuration)
     {
-        var record = _database.ReadDatabaseRecord();
-
         if (configuration.Disabled)
             throw new InvalidOperationException($"The task {configuration.Name} has been disabled and cannot be used");
 
@@ -695,7 +693,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
             if (_workers.TryGetValue(identifier, out var existing) is false)
             {
-                _ = _workers.GetOrAdd(identifier, _ => CreateAiWorker(configuration)).RunAsync();
+                _ = _workers.GetOrAdd(identifier, _ => CreateAiWorker(record, configuration)).RunAsync();
                 continue;
             }
 
@@ -707,7 +705,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 {
                     _ = toDispose.ShutdownAsync();
                 }
-                _ = _workers.GetOrAdd(identifier, _ => CreateAiWorker(configuration)).RunAsync();
+                _ = _workers.GetOrAdd(identifier, _ => CreateAiWorker(record, configuration)).RunAsync();
             }
         }
 
