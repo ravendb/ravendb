@@ -266,6 +266,7 @@ class indexPerformance extends shardViewModelBase {
             "Linq": undefined as string,
             "Jint": undefined as string,
             "LoadDocument": undefined as string,
+            "LoadAttachment": undefined as string,
             "Bloom": undefined as string,
             "Lucene/Delete": undefined as string,
             "Lucene/Suggestion": undefined as string,
