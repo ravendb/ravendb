@@ -252,11 +252,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                         [nameof(ClusterTopologyResponse.Etag)] = topology.Etag,
                         [nameof(ClusterTopologyResponse.Leader)] = ServerStore.LeaderTag,
                         ["LeaderShipDuration"] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
-                        ["CurrentState"] = ServerStore.CurrentRachisState,
+                        [nameof(RachisConsensus.CurrentState)] = ServerStore.CurrentRachisState,
                         [nameof(ClusterTopologyResponse.NodeTag)] = nodeTag,
                         [nameof(ClusterTopologyResponse.ServerRole)] = topology.GetServerRoleForTag(nodeTag),
-                        ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
-                        ["NodeLicenseDetails"] = nodeLicenseDetails,
+                        [nameof(ServerStore.Engine.CurrentTerm)] = ServerStore.Engine.CurrentTerm,
+                        [nameof(LicenseLimits.NodeLicenseDetails)] = nodeLicenseDetails,
                         [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();

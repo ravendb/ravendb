@@ -1,0 +1,650 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Net.NetworkInformation;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Http;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Dashboard;
+using Raven.Server.Documents.Handlers.Debugging.DebugPackage;
+using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results;
+using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Maintenance;
+using Sparrow.Json;
+using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace SlowTests.Issues;
+
+public class RavenDB_14548 : RavenTestBase
+{
+    private static readonly JsonSerializerOptions DeserializeOptions = new JsonSerializerOptions { IncludeFields = true, Converters = { new JsonStringEnumConverter() } };
+    
+    public RavenDB_14548(ITestOutputHelper output) : base(output)
+    {
+    }
+
+    [RavenFact(RavenTestCategory.Debug)]
+    public void CanAnalyzeServerDebugPackage()
+    {
+        using (var debugPackageStream = typeof(RavenDB_14548).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_14548.debug-package - Node [A].zip"))
+        {
+            var analyzer = new DebugPackageAnalyzer(debugPackageStream);
+
+            var packageReport = analyzer.Analyze();
+
+            var report = packageReport.ForNode("A");
+
+            Assert.Equal(2, report.Machine.NumberOfCores);
+            Assert.Equal(2, report.Machine.UtilizedCores);
+            Assert.NotNull(report.Machine.InstalledMemoryInGb);
+            Assert.NotNull(report.Machine.UsableMemoryInGb);
+            Assert.Equal(report.Machine.InstalledMemoryInGb.Value, 1.88, 0.1);
+            Assert.Equal(report.Machine.UsableMemoryInGb.Value, 1.88, 0.1);
+            Assert.NotNull(report.Machine.OsInfo);
+            Assert.Equal(OSType.Linux, report.Machine.OsInfo.Type);
+            Assert.Contains("Ubuntu", report.Machine.OsInfo.FullName);
+
+            Assert.NotNull(report.Server.BasicServerInfo.UpTime);
+            Assert.NotNull(report.Server.BasicServerInfo.StartUpTime);
+            Assert.Equal("A", report.Server.BasicServerInfo.NodeTag);
+            Assert.Equal("7.0.2-nightly-20250415-0350", report.Server.BasicServerInfo.Version);
+            Assert.NotNull(report.Server.BasicServerInfo.ServerId);
+            Assert.NotNull(report.Server.CpuUsageInfo.AverageCpuUsage);
+            Assert.Equal(report.Server.CpuUsageInfo.AverageCpuUsage.Value, 4.2, 0.1);
+
+            Assert.Equal(71, report.Server.NetworkInfo.TotalActiveTcpConnections);
+            var networkInfoTcpConnections = report.Server.NetworkInfo.TcpConnections;
+
+            var establishedConnections = networkInfoTcpConnections.First(x => x.TcpState == nameof(TcpState.Established));
+            Assert.Equal(14, establishedConnections.NumberOfConnectionsInState);
+            Assert.NotEmpty(establishedConnections.TopConnectionsInState);
+
+            var timeWaitConnections = networkInfoTcpConnections.First(x => x.TcpState == nameof(TcpState.TimeWait));
+            Assert.Equal(57, timeWaitConnections.NumberOfConnectionsInState);
+            Assert.NotEmpty(establishedConnections.TopConnectionsInState);
+
+            var databasesOverview = report.Server.DatabasesOverview;
+
+            Assert.Equal(3, databasesOverview.TotalNumberOfDatabases);
+
+            Assert.Contains("aaa", databasesOverview.DatabaseNames);
+            Assert.Contains("DemoUser-8d208a62-2252-4bdb-84ec-acb5daee25c2", databasesOverview.DatabaseNames);
+            Assert.Contains("DemoUser-d25cbd4f-6b1c-4828-a868-25cf81bd783a", databasesOverview.DatabaseNames);
+
+            Assert.True(databasesOverview.TotalNumberOfDocuments > 0);
+            Assert.True(databasesOverview.TotalNumberOfIndexes > 0);
+            Assert.True(databasesOverview.TotalNumberOfAttachments > 0);
+            Assert.True(databasesOverview.TotalNumberOfRevisions > 0);
+            Assert.True(databasesOverview.TotalNumberOfCounterEntries > 0);
+            Assert.True(databasesOverview.TotalNumberOfTimeSeriesSegments > 0);
+
+            var memoryInfo = report.Server.MemoryInfo;
+
+            Assert.Equal("293.9 MBytes", memoryInfo.AvailableMemory);
+            Assert.Equal("828.97 MBytes", memoryInfo.AvailableMemoryForProcessing);
+            Assert.Equal("1.886 GBytes", memoryInfo.PhysicalMemory);
+            Assert.Equal("556.02 MBytes", memoryInfo.WorkingSet);
+            Assert.Equal("262.48 MBytes", memoryInfo.Managed.ManagedAllocations);
+            Assert.Equal("7.46 MBytes", memoryInfo.Unmanaged.UnmanagedAllocations);
+
+            Assert.NotNull(memoryInfo.Managed.LastGcInfo);
+
+            Assert.NotNull(report.Server.NetworkInfo);
+            Assert.NotNull(report.Server.NetworkInfo.TcpConnections);
+            Assert.Equal(2, report.Server.NetworkInfo.TcpConnections.Count(x =>
+                x.TcpState == nameof(TcpState.Established) || x.TcpState == nameof(TcpState.TimeWait)));
+            Assert.NotNull(report.Server.NetworkInfo.TcpConnections);
+            Assert.Equal(71, report.Server.NetworkInfo.TotalActiveTcpConnections);
+
+            Assert.NotNull(report.Server.ThreadsInfo);
+            Assert.NotNull(report.Server.ThreadsInfo.Threads);
+            Assert.NotNull(report.Server.ThreadsInfo.StackTracesEntry);
+            Assert.True(report.Server.ThreadsInfo.Threads.CpuUsage > 0);
+            Assert.True(report.Server.ThreadsInfo.Threads.ProcessCpuUsage > 0);
+            Assert.Equal(2, report.Server.ThreadsInfo.Threads.ActiveCores);
+            Assert.NotNull(report.Server.ThreadsInfo.Threads.List);
+
+            Assert.NotEmpty(report.Server.CpuUsageInfo.TopCurrentCpuUsageThreads);
+            Assert.NotEmpty(report.Server.CpuUsageInfo.TopOverallCpuUsageThreads);
+
+            Assert.NotNull(report.ClusterNode);
+            Assert.NotNull(report.ClusterNode.NodeStateInfo.CurrentTerm);
+            Assert.NotNull(report.ClusterNode.NodeStateInfo.Topology.NodeTag);
+            Assert.Equal("A", report.ClusterNode.NodeStateInfo.Topology.NodeTag);
+            Assert.NotNull(report.ClusterNode.NodeStateInfo.CurrentState);
+            Assert.Equal(RachisState.Leader, report.ClusterNode.NodeStateInfo.CurrentState);
+            Assert.Equal(1, report.ClusterNode.NodeStateInfo.CurrentTerm);
+            Assert.NotEmpty(report.ClusterNode.NodeStateInfo.Topology.Topology.Members);
+            Assert.Contains(report.ClusterNode.NodeStateInfo.Topology.Topology.Members, m => m.Key == "A");
+            Assert.NotNull(report.ClusterNode.NodeStateInfo.Topology.Topology.Watchers);
+            Assert.NotNull(report.ClusterNode.NodeStateInfo.Topology.Topology.Promotables);
+            Assert.Equal("A", report.ClusterNode.NodeStateInfo.Topology.Topology.LastNodeId);
+            Assert.NotEmpty(report.ClusterNode.NodeStateInfo.Topology.Topology.TopologyId);
+
+            Assert.NotNull(report.ClusterNode.NodeLogInfo);
+            Assert.NotNull(report.ClusterNode.NodeLogInfo.LogEntry);
+            Assert.NotNull(report.ClusterNode.NodeLogInfo.LogSummary);
+            Assert.NotNull(report.ClusterNode.NodeLogInfo.DebugInfoCollectedAt);
+
+            Assert.NotNull(report.ClusterNode.NodeLogInfo.ConnectionToPeers);
+
+            Assert.NotNull(report.ClusterNode.ObserverInfo.ObserverDecisions);
+            Assert.NotNull(report.ClusterNode.ObserverInfo.ObserverDecisionsEntry);
+            Assert.False(report.ClusterNode.ObserverInfo.ObserverDecisions.Suspended);
+            Assert.NotNull(report.ClusterNode.ObserverInfo.ObserverDecisions.ObserverLog);
+            Assert.NotNull(report.ClusterNode.ObserverInfo.ObserverDecisions.LeaderNode);
+            Assert.True(report.ClusterNode.ObserverInfo.ObserverDecisions.Iteration > 0);
+            Assert.True(report.ClusterNode.ObserverInfo.ObserverDecisions.Term > 0);
+            Assert.True(report.ClusterNode.ObserverInfo.ObserverDecisions.ObserverLog.Count >= 0);
+
+            Assert.Equal(3, report.Databases.Length);
+
+            foreach (var db in report.Databases)
+            {
+                Assert.NotNull(db.DatabaseInfo);
+                Assert.NotNull(db.DatabaseName);
+                Assert.NotNull(db.DatabaseInfo.Stats.DatabaseId);
+                Assert.True(db.DatabaseInfo.Stats.CountOfDocuments > 0);
+                Assert.True(db.DatabaseInfo.Stats.CountOfIndexes >= 0);
+                Assert.True(db.DatabaseInfo.Stats.CountOfAttachments >= 0);
+                Assert.True(db.DatabaseInfo.Stats.CountOfRevisionDocuments >= 0);
+                Assert.True(db.DatabaseInfo.Stats.CountOfCounterEntries >= 0);
+                Assert.True(db.DatabaseInfo.Stats.CountOfTimeSeriesSegments >= 0);
+
+                Assert.NotNull(db.IndexesInfo);
+                Assert.NotNull(db.IndexesInfo.Definitions);
+
+                foreach (var index in db.IndexesInfo.Stats)
+                {
+                    Assert.NotNull(index.Priority);
+                    Assert.NotNull(index.State);
+                    Assert.NotNull(index.Type);
+                    Assert.NotNull(index.Status);
+
+                    if (index.LastIndexingTime.HasValue)
+                    {
+                        Assert.True(index.LastIndexingTime.Value > DateTime.MinValue);
+                    }
+
+                    Assert.NotNull(index.LockMode);
+                    Assert.True(index.EntriesCount >= 0);
+                    Assert.True(index.ErrorsCount >= 0);
+                }
+
+                foreach (IndexDefinition definition in db.IndexesInfo.Definitions)
+                {
+                    Assert.NotNull(definition.Name);
+                    Assert.NotNull(definition.Maps);
+                    Assert.NotEmpty(definition.Maps);
+                    Assert.True(definition.Fields?.Count >= 0);
+                    Assert.NotNull(definition.Type);
+                    Assert.True(definition.LockMode >= 0);
+                    Assert.True(definition.Priority >= 0);
+                    Assert.NotNull(definition.Configuration);
+                }
+
+                foreach (var metadataInfo in db.IndexesInfo.Metadata)
+                {
+                    Assert.NotNull(metadataInfo.Name);
+                    Assert.True(metadataInfo.State >= 0);
+                    Assert.True(metadataInfo.Priority >= 0);
+                    Assert.NotNull(metadataInfo.Type);
+                    Assert.NotNull(metadataInfo.LockMode);
+                }
+            }
+
+            Assert.Equal(0, report.AnalyzeErrors.Errors.Count);
+            Assert.Equal(5, report.DetectedIssues.ServerIssues.Count);
+            Assert.Equal(0, report.DetectedIssues.ClusterIssues.Count);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Core)]
+    public void CanAnalyzeClusterWideDebugPackageAndGetSummary()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var executor = store.GetRequestExecutor();
+
+            using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
+
+            var summaryResult = UploadClusterWideDebugPackage(store, ctx);
+
+            try
+            {
+                Assert.NotNull(summaryResult);
+                Assert.NotNull(summaryResult.PackageId);
+                Assert.NotEmpty(summaryResult.PackageId);
+                Assert.NotNull(summaryResult.SummaryPerNode);
+                Assert.NotEmpty(summaryResult.SummaryPerNode);
+                Assert.True(summaryResult.SummaryPerNode.ContainsKey("A"));
+
+                // node C was down - intentionally
+                Assert.NotNull(summaryResult.SummaryPerNode["A"]);
+                Assert.NotNull(summaryResult.SummaryPerNode["B"]);
+
+                foreach (var item in summaryResult.SummaryPerNode.Where(x => x.Key != "C"))
+                {
+                    var nodeSummary = item.Value;
+                    var nodeTag = item.Key;
+
+                    Assert.NotNull(nodeSummary.BasicServerInfo);
+                    Assert.Equal(nodeTag, nodeSummary.BasicServerInfo.NodeTag);
+                    Assert.Equal("6.2.5", nodeSummary.BasicServerInfo.Version);
+                    Assert.NotNull(nodeSummary.BasicServerInfo.ServerId);
+                    Assert.NotNull(nodeSummary.BasicServerInfo.StartUpTime);
+                    Assert.NotNull(nodeSummary.BasicServerInfo.UpTime);
+
+                    Assert.NotNull(nodeSummary.DatabasesOverview);
+
+                    if (nodeTag == "A")
+                    {
+                        Assert.Equal(2, nodeSummary.DatabasesOverview.TotalNumberOfDatabases);
+                        Assert.Contains("Northwind", nodeSummary.DatabasesOverview.DatabaseNames);
+                        Assert.Contains("EastRain", nodeSummary.DatabasesOverview.DatabaseNames);
+                    }
+                    else
+                    {
+                        Debug.Assert(nodeTag == "B", "Unexpected node tag");
+
+                        Assert.Equal(2, nodeSummary.DatabasesOverview.TotalNumberOfDatabases);
+                        Assert.Contains("Northwind", nodeSummary.DatabasesOverview.DatabaseNames);
+                        Assert.Contains("WestCloud", nodeSummary.DatabasesOverview.DatabaseNames);
+                    }
+
+                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfDocuments > 0);
+                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfIndexes > 0);
+                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfAttachments > 0);
+                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfRevisions > 0);
+                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfCounterEntries > 0);
+                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfTimeSeriesSegments > 0);
+
+                    Assert.NotNull(nodeSummary.MachineInfo);
+                    Assert.Equal(2, nodeSummary.MachineInfo.NumberOfCores);
+                    Assert.Equal(2, nodeSummary.MachineInfo.UtilizedCores);
+                    Assert.NotNull(nodeSummary.MachineInfo.InstalledMemoryInGb);
+                    Assert.NotNull(nodeSummary.MachineInfo.UsableMemoryInGb);
+                    Assert.Equal(nodeSummary.MachineInfo.InstalledMemoryInGb.Value, 1.88, 0.1);
+                    Assert.Equal(nodeSummary.MachineInfo.UsableMemoryInGb.Value, 1.88, 0.1);
+                    Assert.NotNull(nodeSummary.MachineInfo.OsInfo);
+                    Assert.Equal(OSType.Linux, nodeSummary.MachineInfo.OsInfo.Type);
+                    Assert.Contains("Ubuntu", nodeSummary.MachineInfo.OsInfo.FullName);
+
+                    Assert.NotNull(nodeSummary.BasicMemoryInfo);
+                    Assert.NotNull(nodeSummary.BasicMemoryInfo.AvailableMemory);
+                    Assert.NotNull(nodeSummary.BasicMemoryInfo.AvailableMemoryForProcessing);
+                    Assert.NotNull(nodeSummary.BasicMemoryInfo.PhysicalMemory);
+                    Assert.NotNull(nodeSummary.BasicMemoryInfo.WorkingSet);
+                    Assert.NotNull(nodeSummary.BasicMemoryInfo.ManagedAllocations);
+                    Assert.NotNull(nodeSummary.BasicMemoryInfo.UnmanagedAllocations);
+
+                    Assert.NotNull(nodeSummary.DetectedIssues);
+
+                    if (nodeTag == "A")
+                    {
+                        Assert.NotNull(nodeSummary.DetectedIssues.ServerIssues);
+
+                        Assert.Equal(8, nodeSummary.DetectedIssues.ServerIssues.Count);
+                        Assert.Equal(2, nodeSummary.DetectedIssues.ClusterIssues.Count);
+                    }
+                    else
+                    {
+                        Debug.Assert(nodeTag == "B", "Unexpected node tag");
+
+                        Assert.NotNull(nodeSummary.DetectedIssues.ServerIssues);
+
+                        Assert.Equal(8, nodeSummary.DetectedIssues.ServerIssues.Count);
+                        Assert.Equal(0, nodeSummary.DetectedIssues.ClusterIssues.Count);
+                    }
+
+                    Assert.NotNull(nodeSummary.AnalyzeErrors);
+                    Assert.Equal(0, nodeSummary.AnalyzeErrors.Errors.Count);
+                }
+
+                Assert.NotNull(summaryResult.ClusterWideIssues);
+            }
+            finally
+            {
+                if (summaryResult != null)
+                {
+                    var removePackageAnalysis = new RemoveDebugPackageAnalysisCommand(summaryResult.PackageId);
+                    store.GetRequestExecutor().Execute(removePackageAnalysis, ctx);
+                }
+            }
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Debug)]
+    [InlineData("single-node", "A", "aaa")]
+    [InlineData("single-node", "A", "DemoUser-d25cbd4f-6b1c-4828-a868-25cf81bd783a")]
+    [InlineData("cluster-wide", "A", "Northwind")]
+    [InlineData("cluster-wide", "B", "WestCloud")]
+    [InlineData("cluster-wide", "A", "EastRain")]
+    public void DebugPackageAnalysisReadEndpoints(string packageType, string node, string database)
+    {
+        using (var store = GetDocumentStore())
+        {
+            var executor = store.GetRequestExecutor();
+
+            using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
+
+            DebugPackageAnalysisSummary summaryResult;
+            
+            switch (packageType)
+            {
+                case "single-node":
+                    summaryResult = UploadSingleNodeDebugPackage(store, ctx);
+                    break;
+                case "cluster-wide":
+                    summaryResult = UploadClusterWideDebugPackage(store, ctx);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(packageType), packageType, null);
+            }
+            
+            try
+            {
+                foreach (var item in new (string Endpoint, Type ReturnedType)[]
+                         {
+                             ($"summary?packageId={summaryResult.PackageId}", typeof(DebugPackageAnalysisSummary)),
+                             ($"summary/node?packageId={summaryResult.PackageId}&nodeTag={node}", typeof(DebugPackageNodeAnalysisSummary)),
+                             
+                             ($"network?packageId={summaryResult.PackageId}&nodeTag={node}", typeof(NetworkAnalysisInfo)),
+                             ($"memory?packageId={summaryResult.PackageId}&nodeTag={node}", typeof(MemoryAnalysisInfo)),
+                             ($"threads/runaway?packageId={summaryResult.PackageId}&nodeTag={node}", typeof(ThreadsInfo)),
+                             ($"threads/stack-trace?packageId={summaryResult.PackageId}&nodeTag={node}", null),
+                             
+                             ($"cluster/topology?packageId={summaryResult.PackageId}&nodeTag={node}", typeof(ClusterTopology)),
+                             ($"cluster/log?packageId={summaryResult.PackageId}&nodeTag={node}", typeof(LogSummary)),
+                             ($"cluster/observer/decisions?packageId={summaryResult.PackageId}&nodeTag={node}", typeof(ClusterObserverDecisions)),
+                             
+                             //($"databases/overview?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(DatabaseOverviewAnalysisInfo)),
+                             ($"databases/stats?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(DatabaseStatistics)),
+                             ($"databases/record?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(DatabaseRecord)),
+                             ($"databases/indexes?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(GetIndexesResponse)),
+                             ($"databases/indexes/stats?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(GetIndexStatisticsResponse)),
+                             ($"databases/indexes/performance?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(GetIndexPerformanceStatsResponse)),
+                             ($"databases/indexes/errors?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(GetIndexErrorsResponse)),
+                         })
+                {
+                    var getInfoCmd = new GetDebugPackageAnalysisInfoCommand<dynamic>(item.Endpoint)
+                    {
+                        DeserializeType = item.ReturnedType
+                    };
+                    store.GetRequestExecutor().Execute(getInfoCmd, ctx);
+                   
+                    Assert.NotNull(getInfoCmd.Result);
+                    
+                    if (item.ReturnedType != null)
+                        Assert.NotNull(getInfoCmd.DeserializedObject);
+                }
+            }
+            finally
+            {
+                if (summaryResult != null)
+                {
+                    var removePackageAnalysis = new RemoveDebugPackageAnalysisCommand(summaryResult.PackageId);
+                    store.GetRequestExecutor().Execute(removePackageAnalysis, ctx);
+                }
+            }
+        }
+    }
+    
+    private sealed class GetIndexPerformanceStatsResponse : ResultsResponse<IndexPerformanceStats>
+    {
+    }
+    
+    private sealed class GetIndexErrorsResponse : ResultsResponse<IndexErrors>
+    {
+    }
+
+    [RavenFact(RavenTestCategory.Debug)]
+    public void CanGetNetworkInfoForNode()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var executor = store.GetRequestExecutor();
+
+            using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
+
+            var summaryResult = UploadClusterWideDebugPackage(store, ctx);
+
+            try
+            {
+                var networkInfoDebugPackageCmd = new GetNetworkAnalysisInfoCommand(summaryResult.PackageId, "A");
+                store.GetRequestExecutor().Execute(networkInfoDebugPackageCmd, ctx);
+                var networkInfo = networkInfoDebugPackageCmd.Result;
+
+                Assert.Equal(16, networkInfo.TotalActiveTcpConnections);
+
+                var establishedConnections = networkInfo.TcpConnections.First(x => x.TcpState == nameof(TcpState.Established));
+                var timeWaitConnections = networkInfo.TcpConnections.First(x => x.TcpState == nameof(TcpState.TimeWait));
+
+                Assert.Equal(14, establishedConnections.NumberOfConnectionsInState);
+                Assert.Equal(2, timeWaitConnections.NumberOfConnectionsInState);
+
+                Assert.Equal(5, establishedConnections.TopConnectionsInState.Count);
+                Assert.Equal(2, timeWaitConnections.TopConnectionsInState.Count);
+
+                foreach (var topConnections in new[] { establishedConnections.TopConnectionsInState, timeWaitConnections.TopConnectionsInState })
+                {
+                    foreach (int ip in topConnections.Values)
+                    {
+                        Assert.NotNull(ip);
+                    }
+                }
+            }
+            finally
+            {
+                if (summaryResult != null)
+                {
+                    var removePackageAnalysis = new RemoveDebugPackageAnalysisCommand(summaryResult.PackageId);
+                    store.GetRequestExecutor().Execute(removePackageAnalysis, ctx);
+                }
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Debug)]
+    public void CanGetMemoryInfoForNode()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var executor = store.GetRequestExecutor();
+
+            using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
+
+            var summaryResult = UploadClusterWideDebugPackage(store, ctx);
+
+            try
+            {
+                var memoryInfoDebugPackageCmd = new GetMemoryAnalysisInfoCommand(summaryResult.PackageId, "A");
+                store.GetRequestExecutor().Execute(memoryInfoDebugPackageCmd, ctx);
+                var memoryInfo = memoryInfoDebugPackageCmd.Result;
+
+                Assert.NotNull(memoryInfo);
+                Assert.NotNull(memoryInfo.PhysicalMemory);
+                Assert.NotNull(memoryInfo.WorkingSet);
+                Assert.NotNull(memoryInfo.AvailableMemory);
+                Assert.NotNull(memoryInfo.AvailableMemoryForProcessing);
+
+                Assert.NotNull(memoryInfo.Managed);
+                Assert.NotNull(memoryInfo.Managed.ManagedAllocations);
+                Assert.NotNull(memoryInfo.Managed.LastGcInfo);
+
+                Assert.NotNull(memoryInfo.Unmanaged);
+                Assert.NotNull(memoryInfo.Unmanaged.UnmanagedAllocations);
+
+                Assert.NotEmpty(memoryInfo.PhysicalMemory);
+                Assert.NotEmpty(memoryInfo.WorkingSet);
+                Assert.NotEmpty(memoryInfo.AvailableMemory);
+                Assert.NotEmpty(memoryInfo.AvailableMemoryForProcessing);
+                Assert.NotEmpty(memoryInfo.Managed.ManagedAllocations);
+                Assert.NotEmpty(memoryInfo.Unmanaged.UnmanagedAllocations);
+
+                Assert.Contains("GBytes", memoryInfo.PhysicalMemory);
+                Assert.NotNull(memoryInfo.WorkingSet);
+                Assert.NotNull(memoryInfo.AvailableMemory);
+                Assert.NotNull(memoryInfo.AvailableMemoryForProcessing);
+                Assert.NotNull(memoryInfo.Managed.ManagedAllocations);
+                Assert.NotNull(memoryInfo.Unmanaged.UnmanagedAllocations);
+
+                var gcRunInfo = memoryInfo.Managed.LastGcInfo;
+                Assert.NotNull(gcRunInfo);
+
+                Assert.True(gcRunInfo.FragmentedBytes >= 0);
+                Assert.True(gcRunInfo.HeapSizeBytes > 0);
+                Assert.True(gcRunInfo.HighMemoryLoadThresholdBytes >= 0);
+                Assert.True(gcRunInfo.MemoryLoadBytes >= 0);
+                Assert.True(gcRunInfo.PromotedBytes >= 0);
+                Assert.True(gcRunInfo.TotalAvailableMemoryBytes >= 0);
+                Assert.True(gcRunInfo.TotalCommittedBytes > 0);
+
+                Assert.NotNull(gcRunInfo.FragmentedHumane);
+                Assert.NotNull(gcRunInfo.HeapSizeHumane);
+                Assert.NotNull(gcRunInfo.HighMemoryLoadThresholdHumane);
+                Assert.NotNull(gcRunInfo.MemoryLoadHumane);
+                Assert.NotNull(gcRunInfo.PromotedHumane);
+                Assert.NotNull(gcRunInfo.TotalAvailableMemoryHumane);
+                Assert.NotNull(gcRunInfo.TotalCommittedHumane);
+
+                var humanReadableSizeProperties = new[]
+                {
+                    gcRunInfo.FragmentedHumane, gcRunInfo.HeapSizeHumane, gcRunInfo.HighMemoryLoadThresholdHumane, gcRunInfo.MemoryLoadHumane,
+                    gcRunInfo.PromotedHumane, gcRunInfo.TotalAvailableMemoryHumane, gcRunInfo.TotalCommittedHumane
+                };
+
+                foreach (var sizeStr in humanReadableSizeProperties.Where(s => !string.IsNullOrEmpty(s)))
+                {
+                    Assert.True(
+                        sizeStr.Contains("Bytes") ||
+                        sizeStr.Contains("KBytes") ||
+                        sizeStr.Contains("MBytes") ||
+                        sizeStr.Contains("GBytes"),
+                        $"Size string '{sizeStr}' does not contain expected unit format");
+                }
+
+                Assert.True(gcRunInfo.PauseTimePercentage >= 0 && gcRunInfo.PauseTimePercentage <= 100);
+
+                Assert.NotNull(gcRunInfo.PauseDurations);
+                Assert.Equal(2, gcRunInfo.PauseDurations.Count);
+
+                foreach (var pauseDuration in gcRunInfo.PauseDurations)
+                {
+                    Assert.True(pauseDuration.TotalMilliseconds >= 0);
+                }
+
+                Assert.NotNull(gcRunInfo.GenerationInfo);
+                foreach (var genInfo in gcRunInfo.GenerationInfo)
+                {
+                    Assert.NotNull(genInfo);
+                    Assert.True(genInfo.SizeAfterBytes >= 0);
+                    Assert.True(genInfo.SizeBeforeBytes >= 0);
+                    Assert.NotNull(genInfo.SizeAfterHumane);
+                    Assert.NotNull(genInfo.SizeBeforeHumane);
+                }
+            }
+            finally
+            {
+                if (summaryResult != null)
+                {
+                    var removePackageAnalysis = new RemoveDebugPackageAnalysisCommand(summaryResult.PackageId);
+                    store.GetRequestExecutor().Execute(removePackageAnalysis, ctx);
+                }
+            }
+        }
+    }
+    
+    private class UploadDebugPackageCommand(Stream debugPackageStream) : RavenCommand<DebugPackageAnalysisSummary>
+    {
+        public override bool IsReadRequest { get; } = false;
+
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            url = $"{node.Url}/debug/info-package/analyzer/upload";
+
+            return new HttpRequestMessage 
+            { 
+                Method = HttpMethod.Post, 
+                Content = new StreamContent(debugPackageStream)
+            };
+        }
+
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+        {
+            Result = JsonSerializer.Deserialize<DebugPackageAnalysisSummary>(response.ToString(), DeserializeOptions);
+        }
+    }
+
+    private class RemoveDebugPackageAnalysisCommand(string debugPackageId) : RavenCommand<DebugPackageAnalysisSummary>
+    {
+        public override bool IsReadRequest { get; } = false;
+
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            url = $"{node.Url}/debug/info-package/analyzer/remove?packageId={debugPackageId}";
+
+            return new HttpRequestMessage { Method = HttpMethod.Delete };
+        }
+    }
+
+    private class GetDebugPackageAnalysisInfoCommand<T>(string endpointInfoSuffixWithParameters) : RavenCommand<T> where T : class
+    {
+        public override bool IsReadRequest => true;
+        public Type DeserializeType { get; set; }
+        public object DeserializedObject { get; set; }
+
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            url = $"{node.Url}/debug/info-package/analyzer/{endpointInfoSuffixWithParameters.TrimStart("/")}";
+
+            return new HttpRequestMessage { Method = HttpMethod.Get };
+        }
+
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+        {
+            if (DeserializeType != null)
+            {
+                // for testing the deserialization of a specific type
+                DeserializedObject = JsonSerializer.Deserialize(response.ToString(), DeserializeType, DeserializeOptions);
+            }
+            
+            Result = JsonSerializer.Deserialize<T>(response.ToString(), DeserializeOptions);
+        }
+    }
+    
+    private class GetNetworkAnalysisInfoCommand(string packageId, string nodeTag)
+        : GetDebugPackageAnalysisInfoCommand<NetworkAnalysisInfo>($"network?packageId={packageId}&nodeTag={nodeTag}");
+
+    private class GetMemoryAnalysisInfoCommand (string packageId, string nodeTag)
+        : GetDebugPackageAnalysisInfoCommand<MemoryAnalysisInfo>($"memory?packageId={packageId}&nodeTag={nodeTag}");
+
+    private static DebugPackageAnalysisSummary UploadClusterWideDebugPackage(DocumentStore store, JsonOperationContext ctx)
+    {
+        return UploadDebugPackage("SlowTests.Data.RavenDB_14548.debug-package - Cluster Wide.zip", store, ctx);
+    }
+    
+    private static DebugPackageAnalysisSummary UploadSingleNodeDebugPackage(DocumentStore store, JsonOperationContext ctx)
+    {
+        return UploadDebugPackage("SlowTests.Data.RavenDB_14548.debug-package - Node [A].zip", store, ctx);
+    }
+    
+    private static DebugPackageAnalysisSummary UploadDebugPackage(string packageResourceName, DocumentStore store, JsonOperationContext ctx)
+    {
+        using var debugPackageStream = typeof(RavenDB_14548).Assembly.GetManifestResourceStream(packageResourceName);
+        var analyzeDebugPackageCmd = new UploadDebugPackageCommand(debugPackageStream);
+        store.GetRequestExecutor().Execute(analyzeDebugPackageCmd, ctx);
+        return analyzeDebugPackageCmd.Result;
+    }
+}
