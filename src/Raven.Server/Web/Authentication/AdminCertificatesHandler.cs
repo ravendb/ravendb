@@ -776,7 +776,7 @@ namespace Raven.Server.Web.Authentication
                     var permissions = FormatPermissions(newCertificate);
 
                     LogAuditFor("Certificates", "CHANGE", 
-                        $"Certificate {newCertificate?.Name}. Security Clearance: {newCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}");
+                        $"Certificate {newCertificate?.Name}. Security Clearance: {newCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Not After: {newCertificate?.NotAfter}.)");
                 }
 
                 var notAfter = newCertificate.NotAfter ?? existingCertificate.NotAfter;
@@ -790,7 +790,7 @@ namespace Raven.Server.Web.Authentication
                         SecurityClearance = newCertificate.SecurityClearance,
                         Thumbprint = existingCertificate.Thumbprint,
                         PublicKeyPinningHash = existingCertificate.PublicKeyPinningHash,
-                        NotAfter = existingCertificate.NotAfter,
+                        NotAfter = notAfter,
                         NotBefore = existingCertificate.NotBefore
                     }, GetRaftRequestIdFromQuery())
                 { TwoFactorAuthenticationKey = twoFactorAuthenticationKey };
