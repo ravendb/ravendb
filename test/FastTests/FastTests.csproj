@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <RuntimeFrameworkVersion>9.0.3</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>9.0.4</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>FastTests</AssemblyName>
     <PackageId>FastTests</PackageId>
