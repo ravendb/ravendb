@@ -99,6 +99,20 @@ namespace Corax.Indexing
         public void UpdateDynamicFieldsMapping(IndexFieldsMapping current)
         {
             _dynamicFieldsMapping = current;
+
+            if (_dynamicFieldsTerms == null)
+                return;
+            
+            foreach (var binding in _dynamicFieldsMapping)
+            {
+                if (_dynamicFieldsTerms.TryGetValue(binding.FieldName, out var indexedField) == false || indexedField.IsCreatedByDelete == false)
+                    continue;
+
+                //Update the indexed field in case when empty config was created by Delete operation
+                var newIndexedField = new IndexedField(indexedField, binding);
+                _dynamicFieldsTerms[binding.FieldName] = newIndexedField;
+            }
+            
         }
 
         // One of the reasons why we want to have the transaction open for us is so that we avoid having
@@ -300,21 +314,23 @@ namespace Corax.Indexing
             return GetDynamicIndexedField(slice);
         }
         
-        private IndexedField GetDynamicIndexedField(ByteStringContext context, Span<byte> currentFieldName)
+        private IndexedField GetDynamicIndexedField(ByteStringContext context, Span<byte> currentFieldName, bool createdByDelete = false)
         {
             using var _ = Slice.From(context, currentFieldName, out var slice);
-            return GetDynamicIndexedField(slice);
+            return GetDynamicIndexedField(slice, createdByDelete);
         }
 
 
-        private IndexedField GetDynamicIndexedField(Slice fieldName)
+        private IndexedField GetDynamicIndexedField(Slice fieldName, bool createdByDelete = false)
         {
             //We have to use transaction context here for storing slices in _dynamicFieldsTerms since we may reset other
             //allocators during the document insertion.
             var context = _transaction.LowLevelTransaction.Allocator;
             _dynamicFieldsTerms ??= new(SliceComparer.Instance);
             if (_dynamicFieldsTerms.TryGetValue(fieldName, out var indexedField))
+            {
                 return indexedField;
+            }
 
             IndexedField source = null;
             if (_fieldsMapping.TryGetByFieldName(fieldName, out var knownField))
@@ -323,7 +339,7 @@ namespace Corax.Indexing
             var clonedFieldName = fieldName.Clone(context);
             if (_dynamicFieldsMapping?.TryGetByFieldName(clonedFieldName, out var binding) is true)
             {
-                indexedField = source?.CreateVirtualIndexedField(binding) 
+                indexedField = source?.CreateVirtualIndexedField(binding, createdByDelete) 
                                ?? new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong,
                     binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer,
                     binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore, _supportedFeatures);
@@ -343,8 +359,8 @@ namespace Corax.Indexing
                 IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 IndexFieldsMappingBuilder.GetFieldForTotalSum(context, clonedFieldName, out var nameSum);
                 var field = source is null 
-                    ? new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, hasSuggestions: false, shouldStore: false, _supportedFeatures)
-                    : source.CreateVirtualIndexedField(new IndexFieldBinding(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, true, analyzer, hasSuggestions: false, FieldIndexingMode.Normal));
+                    ? new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, hasSuggestions: false, shouldStore: false, _supportedFeatures, isCreatedByDelete: createdByDelete)
+                    : source.CreateVirtualIndexedField(new IndexFieldBinding(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, true, analyzer, hasSuggestions: false, FieldIndexingMode.Normal), createdByDelete);
                 return field;
             }
         }
@@ -595,7 +611,7 @@ namespace Corax.Indexing
         }
 
 
-        private Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree)
+        private Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree, bool isFromDelete = true)
         {
             var pageToField = new Dictionary<long, IndexedField>();
             
@@ -613,7 +629,7 @@ namespace Corax.Indexing
                     {
                         if(it.CurrentKey.EndsWith(Constants.IndexWriter.DoubleTreeSuffix) || it.CurrentKey.EndsWith(Constants.IndexWriter.LongTreeSuffix))
                             continue; // numeric postfix values
-                        var dynamicIndexedField = GetDynamicIndexedField(_entriesAllocator, it.CurrentKey.AsSpan());
+                        var dynamicIndexedField = GetDynamicIndexedField(_entriesAllocator, it.CurrentKey.AsSpan(), createdByDelete: isFromDelete);
                         pageToField.Add(state->RootPage, dynamicIndexedField);
 
                     }

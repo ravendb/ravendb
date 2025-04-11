@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Corax;
 
-public class RavenDB_23050(ITestOutputHelper output) : RavenTestBase(output)
+public class RavenDB_23050(ITestOutputHelper output) : RavenTestBase(output)                                                                     
 {
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
