@@ -814,11 +814,11 @@ namespace Raven.Server.Documents.Indexes
 
             return Task.Run(() =>
             {
-                if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
-                    OpenIndexesFromRecord(record, raftIndex, addToInitLog);
-
                 HandleSorters(record, raftIndex);
                 HandleAnalyzers(record, raftIndex);
+                
+                if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
+                    OpenIndexesFromRecord(record, raftIndex, addToInitLog);
             });
         }
 
