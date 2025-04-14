@@ -9,8 +9,6 @@ const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ZipPlugin = require("zip-webpack-plugin");
 
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-
 module.exports = (env, args) => {
     const isProductionMode = args && args.mode === 'production';
 
@@ -73,8 +71,7 @@ module.exports = (env, args) => {
             'window.jQuery': 'jquery',
             'window.ko': "knockout"
         }),
-        new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /(en)$/),
-        //new BundleAnalyzerPlugin()
+        new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /(en)$/)
     ];
     
     if (isProductionMode) {
