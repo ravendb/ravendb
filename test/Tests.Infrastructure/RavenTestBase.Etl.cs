@@ -167,8 +167,7 @@ namespace FastTests
                     if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
                         mre.Set();
                 };
-
-
+                
                 return mre;
             }
 

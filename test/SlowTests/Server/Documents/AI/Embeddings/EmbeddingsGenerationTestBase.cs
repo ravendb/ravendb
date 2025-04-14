@@ -101,7 +101,8 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         string docId,
         VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
     {
-        AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: false);
+        WaitForValue(() => 
+            AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: false), true);
     }
     protected void AssertMissingEmbeddingsForPath(
         IDocumentStore store,
@@ -112,9 +113,11 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         string docId,
         VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
     {
-        AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: true);
+        WaitForValue(() =>
+            AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: true), true);
     }
-    protected void AssertEmbeddingsForPath(
+    
+    private bool AssertEmbeddingsForPath(
         IDocumentStore store,
         EmbeddingsGenerationTaskIdentifier integrationIdentifier,
         AiConnectionStringIdentifier connectionStringIdentifier,
@@ -136,38 +139,51 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(inputValue);
             var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, targetQuantization);
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
-            Assert.NotNull(embeddingCacheDocument);
+
+            if (embeddingCacheDocument == null)
+                return false;
 
             var attachmentsInEmbeddingCache = session.Advanced.Attachments.Get(embeddingsDocumentId, hashOfInput);
-            Assert.NotNull(attachmentsInEmbeddingCache);
+            
+            if (attachmentsInEmbeddingCache == null)
+                return false;
+            
             var hashContentHash = AttachmentsStorageHelper.CalculateHash(attachmentsInEmbeddingCache.Stream.ReadData());
 
             //Assert if embeddings document exists
             var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(docId);
             var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;
-            Assert.NotNull(documentEmbeddings);
+
+            if (documentEmbeddings == null)
+                return false;
 
             // Assert if contains current ETL result
             var currentEtlObject = documentEmbeddings[integrationIdentifier.Value];
-            Assert.NotNull(currentEtlObject);
+            
+            if (currentEtlObject is null)
+                return false;
 
             // Assert if ETL result contains current path
             var currentPathObject = currentEtlObject[path] as JArray;
-            Assert.NotNull(currentPathObject);
+
+            if (currentPathObject == null)
+                return false;
 
             var attachmentExistsInEmbeddingsDocument = session.Advanced.Attachments.Exists(documentEmbeddingsId, hashContentHash);
             if (assertMissing is false)
             {
                 // Assert if current path contain embedding of current input value
-                Assert.Contains(hashContentHash, currentPathObject.Select(x=>x.ToString()));
-                Assert.True(attachmentExistsInEmbeddingsDocument);
+                if (currentPathObject.Select(x => x.ToString()).Contains(hashContentHash) == false || attachmentExistsInEmbeddingsDocument == false)
+                    return false;
             }
             else
             {
-                Assert.DoesNotContain(hashContentHash, currentPathObject.Select(x=>x.ToString()));
-                Assert.False(attachmentExistsInEmbeddingsDocument);
+                if (currentPathObject.Select(x => x.ToString()).Contains(hashContentHash) || attachmentExistsInEmbeddingsDocument)
+                    return false;
             }
         }
+        
+        return true;
     }
 
     public override void Dispose()

@@ -1127,7 +1127,9 @@ Console.WriteLine(""Hello, World!"");";
             session.Load<Dto>(id).Name = "Updated";
             session.SaveChanges();
         }        
+
         Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+
         AssertEmbeddingsForPath(store, config, connection, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, config2, connection2, "Names", ["Name1"], id);
     }

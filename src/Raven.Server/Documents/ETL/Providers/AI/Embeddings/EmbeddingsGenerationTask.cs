@@ -35,8 +35,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
     private const string EmbeddingsTaskTag = "AI/Embeddings Generation";
 
     private int _fallbackCounter = 0;
-
-
+    
     public EmbeddingsGenerationTask(Transformation transformation, EmbeddingsGenerationConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, EmbeddingsTaskTag)
     {
@@ -132,9 +131,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
         {
             foreach (var embeddingItem in embeddingsScriptRun.Additions)
             {
-                batch.StartGenerateEmbeddingFor(context,embeddingItem.DocumentId, embeddingItem.DocumentCollectionName,
+                batch.StartGenerateEmbeddingFor(context, embeddingItem.DocumentId, embeddingItem.DocumentCollectionName,
                     embeddingItem.Fields);
             }
+            // We only wait for embeddings generation here, documents creation (and update) is done in the background
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-24062
             batch.WaitForGenerationAsync().GetAwaiter().GetResult();
             storageScope.NumberOfEmbeddingsInCache = batch.CachedEmbeddings;
             storageScope.NumberOfGeneratedEmbeddings = embeddingsScriptRun.Additions.Count;

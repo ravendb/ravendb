@@ -162,7 +162,6 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
              );
          }
 
-
         public ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsForQueryAsync(
             DocumentsOperationContext documentsContext, 
             string value)
@@ -364,8 +363,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                         $"('{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationMaxBatchSize)}') or increasing the " +
                         $"limits on your model deployment.", httpOperationException);
                 }
-
-
+                
                 PortableExceptions.ThrowIf<IOException>(allEmbeddings.Count != batch.Count, "Model returned a different count of embeddings than expected");
 
                 for (int i = 0; i < allEmbeddings.Count; i++)
