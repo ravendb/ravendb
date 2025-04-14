@@ -101,6 +101,10 @@ class footer {
     }
 
     private onDatabaseStats(event: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
+        if (!event) {
+            return;
+        }
+
         const stats = this.stats();
         stats.countOfDocuments(event.CountOfDocuments);
         stats.countOfIndexes(event.CountOfIndexes);
