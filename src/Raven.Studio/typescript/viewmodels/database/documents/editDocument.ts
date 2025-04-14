@@ -1404,7 +1404,7 @@ class editDocument extends shardViewModelBase {
     }
 
     private getRevisionPhysicalSize(changeVector: string): JQueryPromise<Raven.Client.Documents.Commands.SizeDetails> {
-        return new getDocumentRevisionsPhysicalSizeCommand(changeVector, this.activeDatabase()).execute().done((response) => {
+        return new getDocumentRevisionsPhysicalSizeCommand(changeVector, this.db).execute().done((response) => {
             this.sizeOnDiskActual(response.HumaneActualSize);
             this.sizeOnDiskAllocated(response.HumaneAllocatedSize);
             this.isCompressed(response.IsCompressed);
