@@ -12,7 +12,7 @@ class deleteDocuments extends dialogViewModelBase {
     private deletionStarted = false;
     deletionTask = $.Deferred<void>();
 
-    constructor(documentIds: Array<string>, private db: database) {
+    constructor(documentIds: Array<string>, private db: database, private transactionMode: Raven.Client.Documents.Session.TransactionMode = "SingleNode") {
         super(null);
 
         if (documentIds.length === 0) {
@@ -26,7 +26,7 @@ class deleteDocuments extends dialogViewModelBase {
         const docCount = this.documentIds().length;
         const docsDescription = docCount === 1 ? this.documentIds()[0] : docCount + " docs";
 
-        new deleteDocumentsCommand(this.documentIds(), this.db)
+        new deleteDocumentsCommand(this.documentIds(), this.db, this.transactionMode)
             .execute()
             .done(() => {
                 messagePublisher.reportSuccess("Deleted " + docsDescription);

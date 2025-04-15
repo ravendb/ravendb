@@ -3,9 +3,9 @@ import database = require("models/resources/database");
 
 class deleteDocumentsCommand extends executeBulkDocsCommand {
 
-    constructor(docIds: Array<string>, db: database) {
+    constructor(docIds: Array<string>, db: database, transactionMode: Raven.Client.Documents.Session.TransactionMode = "SingleNode") {
         const bulkDocs = docIds.map(id => deleteDocumentsCommand.createDeleteDocument(id));
-        super(bulkDocs, db);
+        super(bulkDocs, db, transactionMode);
     }
 
     private static createDeleteDocument(id: string): Partial<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> {

@@ -4,8 +4,13 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class saveDocumentCommand extends commandBase {
-
-    constructor(private id: string, private document: document, private db: database, private reportSaveProgress: boolean = true) {
+    constructor(
+        private id: string,
+        private document: document,
+        private db: database,
+        private reportSaveProgress: boolean = true,
+        private transactionMode: Raven.Client.Documents.Session.TransactionMode = "SingleNode"
+    ) {
         super();
     }
 
@@ -16,7 +21,10 @@ class saveDocumentCommand extends commandBase {
             this.document.toBulkDoc("PUT")
         ];
 
-        const args = ko.toJSON({ Commands: commands });
+        const args = JSON.stringify({
+            Commands: commands,
+            TransactionMode: this.transactionMode,
+        });
         const url = endpoints.databases.batch.bulk_docs;
         
         const saveTask = this.post<saveDocumentResponseDto>(url, args, this.db);

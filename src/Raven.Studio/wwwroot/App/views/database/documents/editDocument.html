@@ -51,22 +51,52 @@
             </div>
             <div class="btn-bar toolbar">
                 <div class="pull-left-sm">
-                    <button type="submit" class="btn btn-primary save-btn" 
-                            data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode() && !inDiffMode(), 
-                                       attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}, requiredAccess: 'DatabaseReadWrite'">
-                        <i class="icon-save"></i>
-                        <span>Save</span>
-                    </button>
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary save-btn" 
+                                data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode() && !inDiffMode(), 
+                                           attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}, requiredAccess: 'DatabaseReadWrite'">
+                            <i class="icon-save"></i>
+                            <span>Save</span>
+                        </button>
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                data-bind="visible: !inReadOnlyMode() && !inDiffMode(), enable: isSaveEnabled, requiredAccess: 'DatabaseReadWrite'">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#" data-bind="click: () => handleSaveDocument(true), enable: isSaveEnabled">
+                                    <i class="icon-cluster"></i>
+                                    <span>Save it via cluster wide transaction</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     <button type="button" class="clone-btn btn btn-default"
                             data-bind="click: tryCreateClone, enable: !showHugeDocumentWarning() && !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode() && !isClone() && !isCreatingNewDocument(), requiredAccess: 'DatabaseReadWrite'">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
-                    <button type="button" class="delete-btn btn btn-danger"
-                            data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode() && !isClone() && !isCreatingNewDocument(), requiredAccess: 'DatabaseReadWrite'">
-                        <i class="icon-trash"></i>
-                        <span>Delete</span>
-                    </button>
+                    <div class="btn-group">
+                        <button type="button" class="delete-btn btn btn-danger"
+                                data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode() && !isClone() && !isCreatingNewDocument(), requiredAccess: 'DatabaseReadWrite'">
+                            <i class="icon-trash"></i>
+                            <span>Delete</span>
+                        </button>
+                        <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                data-bind="visible: !inReadOnlyMode() && !inDiffMode() && !isClone() && !isCreatingNewDocument(), enable: !isCreatingNewDocument(), requiredAccess: 'DatabaseReadWrite'">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#" data-bind="click: () => deleteDocument(true), enable: !isCreatingNewDocument()">
+                                    <i class="icon-cluster"></i>
+                                    <span>Delete it via cluster wide transaction</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     <a data-bind="attr: { href: latestRevisionUrl }, visible: inReadOnlyMode() && !isDeleteRevision()" class="btn btn-default">
                         <i class="icon-latest"></i>
                         <span>See the current document</span>

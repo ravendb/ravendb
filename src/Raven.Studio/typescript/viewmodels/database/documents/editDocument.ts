@@ -881,6 +881,10 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
+        this.handleSaveDocument(false);
+    }
+
+    handleSaveDocument(isClusterWide = false) {
         if (!this.isSaveEnabled()) {
             return ;
         }
@@ -890,7 +894,7 @@ class editDocument extends viewModelBase {
                 .then((canSave: boolean) => {
                     if (canSave) {
                         eventsCollector.default.reportEvent("document", "save");
-                        this.saveInternal(this.userSpecifiedId());
+                        this.saveInternal(this.userSpecifiedId(), false, isClusterWide);
                     }
                 });
         }
@@ -914,7 +918,7 @@ class editDocument extends viewModelBase {
         return true;
     }
     
-    private saveInternal(documentId: string, forceRevisionCreation = false) {
+    private saveInternal(documentId: string, forceRevisionCreation = false, isClusterWide = false) {
         let message = "";
         let updatedDto: any;
 
@@ -969,9 +973,11 @@ class editDocument extends viewModelBase {
         // as result we don't know exact destination document id.
         const newDoc = new document(updatedDto);
         
+        const transactionMode: Raven.Client.Documents.Session.TransactionMode = isClusterWide ? "ClusterWide" : "SingleNode";
+
         const saveCommand = forceRevisionCreation ?
                             new forceRevisionCreationCommand(documentId, this.activeDatabase()) :
-                            new saveDocumentCommand(documentId, newDoc, this.activeDatabase());
+                            new saveDocumentCommand(documentId, newDoc, this.activeDatabase(), true, transactionMode);
         
         this.isSaving(true);
         saveCommand
@@ -1279,11 +1285,14 @@ class editDocument extends viewModelBase {
         this.displayDocumentDeleted(false);
     }
 
-    deleteDocument() {
+    deleteDocument(isClusterWide = false) {
         eventsCollector.default.reportEvent("document", "delete");
         const doc = this.document();
         if (doc) {
-            const viewModel = new deleteDocuments([doc.getId()], this.activeDatabase());
+            
+            const transactionMode: Raven.Client.Documents.Session.TransactionMode = isClusterWide ? "ClusterWide" : "SingleNode";
+
+            const viewModel = new deleteDocuments([doc.getId()], this.activeDatabase(), transactionMode);
             viewModel.deletionTask.done(() => {
                 this.dirtyFlag().reset();
                 this.connectedDocuments.onDocumentDeleted();
