@@ -101,9 +101,14 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         string docId,
         VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
     {
-        WaitForValue(() => 
-            AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: false), true);
+        Exception innerException = null;
+        var result = WaitForValue(() => 
+            RunAssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: false, out innerException), true);
+        
+        if (result is false)
+            throw innerException;
     }
+    
     protected void AssertMissingEmbeddingsForPath(
         IDocumentStore store,
         EmbeddingsGenerationTaskIdentifier integrationIdentifier,
@@ -113,11 +118,43 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         string docId,
         VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single)
     {
-        WaitForValue(() =>
-            AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: true), true);
+        Exception innerException = null;
+        var result = WaitForValue(() =>
+            RunAssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing: true, out innerException), true, timeout: (int)DefaultEtlTimeout.TotalMilliseconds);
+
+        if (result is false)
+            throw innerException;
     }
     
-    private bool AssertEmbeddingsForPath(
+    /// <summary>
+    /// Since embeddings are added to the database via TxMerger, there is no easy way to ensure the embeddings are
+    /// processed and stored.
+    /// This way we will loop the assertion in a specific time period (DefaultEtlTimeout) and wait until they appear.
+    /// If not, we will throw the inner exception to get information about which assertion failed.
+    /// </summary>
+    private bool RunAssertEmbeddingsForPath(IDocumentStore store,
+        EmbeddingsGenerationTaskIdentifier integrationIdentifier,
+        AiConnectionStringIdentifier connectionStringIdentifier,
+        string path,
+        string[] inputValues,
+        string docId,
+        VectorEmbeddingType targetQuantization,
+        bool assertMissing, out Exception exception)
+    {
+        try
+        {
+            AssertEmbeddingsForPath(store, integrationIdentifier, connectionStringIdentifier, path, inputValues, docId, targetQuantization, assertMissing);
+            exception = null;
+            return true;
+        }
+        catch (Exception e)
+        {
+            exception = e;
+            return false;
+        }
+    }
+    
+    private void AssertEmbeddingsForPath(
         IDocumentStore store,
         EmbeddingsGenerationTaskIdentifier integrationIdentifier,
         AiConnectionStringIdentifier connectionStringIdentifier,
@@ -139,51 +176,38 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(inputValue);
             var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, targetQuantization);
             var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
-
-            if (embeddingCacheDocument == null)
-                return false;
+            Assert.NotNull(embeddingCacheDocument);
 
             var attachmentsInEmbeddingCache = session.Advanced.Attachments.Get(embeddingsDocumentId, hashOfInput);
-            
-            if (attachmentsInEmbeddingCache == null)
-                return false;
-            
+            Assert.NotNull(attachmentsInEmbeddingCache);
             var hashContentHash = AttachmentsStorageHelper.CalculateHash(attachmentsInEmbeddingCache.Stream.ReadData());
 
             //Assert if embeddings document exists
             var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(docId);
             var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;
-
-            if (documentEmbeddings == null)
-                return false;
+            Assert.NotNull(documentEmbeddings);
 
             // Assert if contains current ETL result
             var currentEtlObject = documentEmbeddings[integrationIdentifier.Value];
-            
-            if (currentEtlObject is null)
-                return false;
+            Assert.NotNull(currentEtlObject);
 
             // Assert if ETL result contains current path
             var currentPathObject = currentEtlObject[path] as JArray;
-
-            if (currentPathObject == null)
-                return false;
+            Assert.NotNull(currentPathObject);
 
             var attachmentExistsInEmbeddingsDocument = session.Advanced.Attachments.Exists(documentEmbeddingsId, hashContentHash);
             if (assertMissing is false)
             {
                 // Assert if current path contain embedding of current input value
-                if (currentPathObject.Select(x => x.ToString()).Contains(hashContentHash) == false || attachmentExistsInEmbeddingsDocument == false)
-                    return false;
+                Assert.Contains(hashContentHash, currentPathObject.Select(x=>x.ToString()));
+                Assert.True(attachmentExistsInEmbeddingsDocument);
             }
             else
             {
-                if (currentPathObject.Select(x => x.ToString()).Contains(hashContentHash) || attachmentExistsInEmbeddingsDocument)
-                    return false;
+                Assert.DoesNotContain(hashContentHash, currentPathObject.Select(x=>x.ToString()));
+                Assert.False(attachmentExistsInEmbeddingsDocument);
             }
         }
-        
-        return true;
     }
 
     public override void Dispose()

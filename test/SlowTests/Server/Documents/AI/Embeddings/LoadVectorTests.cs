@@ -54,6 +54,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store);
         Assert.True(etlStatus.Wait(DefaultEtlTimeout));
+        AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Joe"], id);
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);

@@ -152,7 +152,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "SubDtos.Name" , ChunkingOptions = DefaultChunkingOptions}]);
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "SubDtos.Name", ["Subname1", "Subname2"], dto.Id);
+            AssertEmbeddingsForPath(store, config, connectionString, "SubDtos.Name", ["Subname1", "Subname2"], dto.Id);
         }
     }
 
@@ -501,9 +501,10 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             }
             
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            AddEmbeddingsGenerationTask(store);
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store);
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-
+            AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["Name1"], dto.Id);
+            
             using (var session = store.OpenSession())
             {
                 var allDocs = session.Advanced.RawQuery<Test>("from '@all_docs' as t select { Id: id(t), Expires: t[\"@metadata\"][\"@expires\"] }").ToList();
@@ -531,8 +532,9 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             }
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (config, _) = AddEmbeddingsGenerationTask(store);
+            var (config, connectionString) = AddEmbeddingsGenerationTask(store);
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Name1"], dto.Id);
 
             Test embeddingCache;
 
@@ -562,6 +564,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             }
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Name1"], dto.Id);
 
             using (var session = store.OpenSession())
             {
@@ -981,22 +984,23 @@ Console.WriteLine(""Hello, World!"");";
                 
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
+                var nameConfig = new EmbeddingPathConfiguration()
+                {
+                    Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 100 }
+                };
+
+                var subdtoNameConfig = new EmbeddingPathConfiguration()
+                {
+                    Path = "SubDto.Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 }
+                };
+                
                 var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                     targetQuantization: quantization,
-                    embeddingsPaths: [
-                        new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions()
-                        {
-                            ChunkingMethod = ChunkingMethod.PlainTextSplitLines,
-                            MaxTokensPerChunk = 2137
-                        }},
-                        new EmbeddingPathConfiguration() { Path = "SubDto.Name", ChunkingOptions = new ChunkingOptions()
-                        {
-                            ChunkingMethod = ChunkingMethod.PlainTextSplitLines,
-                            MaxTokensPerChunk = 5
-                        }}
-                    ]);
+                    embeddingsPaths: [nameConfig, subdtoNameConfig]);
                 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                AssertEmbeddingsForPath(store, configuration, connectionString, nameConfig.Path, Raven.Server.Documents.AI.TextChunker.Chunk(dto.Name, nameConfig.ChunkingOptions).ToArray(), dto.Id, quantization);
+                AssertEmbeddingsForPath(store, configuration, connectionString, subdtoNameConfig.Path, Raven.Server.Documents.AI.TextChunker.Chunk(dto.SubDto.Name, subdtoNameConfig.ChunkingOptions).ToArray(), dto.Id, quantization);
 
                 var result = session.Query<Dto>().VectorSearch(x =>
                         x.WithText("SubDto.Name").UsingTask(configuration.Identifier).TargetQuantization(quantization),
