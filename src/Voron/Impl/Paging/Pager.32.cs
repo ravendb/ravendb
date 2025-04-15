@@ -124,7 +124,7 @@ public unsafe partial class Pager
         {
             var pagerTxState = GetTxState(pager, state, ref txState);
             
-            if (pageNumber > state.NumberOfAllocatedPages || pageNumber < 0)
+            if (pageNumber >= state.NumberOfAllocatedPages || pageNumber < 0)
                 goto InvalidPage;
             if (state.Disposed)
                 goto AlreadyDisposed;

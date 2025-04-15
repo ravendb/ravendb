@@ -284,18 +284,20 @@ namespace Voron.Impl.FreeSpace
             var currentEndRange = current.GetEndRangeCount();
 
             var nextSectionId = currentSectionId + 1;
-            StreamBitArray? next = null;
+            StreamBitArray next = default;
+            var streamBitArrayHasValue = false;
             int nextRangeStart = 0;
             using (freeSpaceTree.Read(nextSectionId, out Slice read))
             {
                 if (read.HasValue)
                 {
                     next = new StreamBitArray(read.CreateReader().Base);
-                    nextRangeStart = next.Value.GetStartRangeCount();
+                    nextRangeStart = next.GetStartRangeCount();
+                    streamBitArrayHasValue = true;
                 }
             }
 
-            if (currentEndRange == 0 || next == null || currentEndRange + nextRangeStart < num)
+            if (currentEndRange == 0 || streamBitArrayHasValue == false || currentEndRange + nextRangeStart < num)
             {
                 // we update the cache in any of the following cases:
                 // - the current section has no more available space at its end
@@ -322,7 +324,7 @@ namespace Voron.Impl.FreeSpace
             }
 
             var nextRange = num - currentEndRange;
-            if (next.Value.SetCount == nextRange)
+            if (next.SetCount == nextRange)
             {
                 freeSpaceTree.Delete(nextSectionId);
             }
@@ -330,10 +332,10 @@ namespace Voron.Impl.FreeSpace
             {
                 for (int i = 0; i < nextRange; i++)
                 {
-                    next.Value.Set(i, false);
+                    next.Set(i, false);
                 }
 
-                next.Value.Write(freeSpaceTree, nextSectionId);
+                next.Write(freeSpaceTree, nextSectionId);
             }
 
             if (current.SetCount == currentEndRange)
@@ -489,7 +491,13 @@ namespace Voron.Impl.FreeSpace
                 {
                     sba = !result.HasValue ? new StreamBitArray() : new StreamBitArray(result.CreateReader().Base);
                 }
-                sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
+
+                var index = (int)(pageNumber % NumberOfPagesInSection);
+
+                if (sba.Get(index))
+                    throw new InvalidOperationException($"trying to double free page {pageNumber}");
+
+                sba.Set(index, true);
                 
                 if (_disableSparseRegions == false && sba.SetCount > NumberOfFreePagesForSparseConsideration)
                 {

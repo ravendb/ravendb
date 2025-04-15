@@ -43,7 +43,7 @@ public unsafe partial class Pager
         public static byte* AcquirePagePointer(Pager pager, State state, ref PagerTransactionState txState, long pageNumber)
         {
             _ = txState;
-            if (pageNumber > state.NumberOfAllocatedPages || pageNumber < 0)
+            if (pageNumber >= state.NumberOfAllocatedPages || pageNumber < 0)
                 goto InvalidPage;
             if (state.Disposed)
                 goto AlreadyDisposed;
