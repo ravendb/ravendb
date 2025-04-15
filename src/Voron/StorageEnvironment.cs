@@ -768,17 +768,19 @@ namespace Voron
                     DecrementUsageOnTransactionCreationFailure();
 
                     if (tx != null)
+                    {
                         ActiveTransactions.TryRemove(tx);
-                }
-
-                try
-                {
-                    if (_log.IsOperationsEnabled)
-                        _log.Operations("Failed to create transaction", e);
-                }
-                catch
-                {
-                   // ignored
+                        
+                        try
+                        {
+                            if (_log.IsOperationsEnabled)
+                                _log.Operations("Failed to create transaction so we removed it from ActiveTransactions", e);
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    }
                 }
 
                 throw;

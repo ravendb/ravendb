@@ -19,6 +19,7 @@ using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -96,7 +97,10 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     public override async ValueTask ExecuteAsync()
     {
-        using (AllocateContextForQueryOperation(out var queryContext, out var context))
+        TQueryContext queryContext;
+        TOperationContext context;
+        
+        using (AllocateContextForQueryOperation(out queryContext, out context))
         using (var tracker = CreateRequestTimeTracker())
         {
             try
@@ -199,6 +203,9 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
             }
             catch (Exception e)
             {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to handle GET request - Query", e);
+                
                 if (tracker.Query == null)
                 {
                     string errorMessage;
@@ -218,6 +225,15 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 }
 
                 throw;
+            }
+        }
+
+        if (context is DocumentsOperationContext docsContext)
+        {
+            if (docsContext.Transaction != null)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Not disposed docs transaction - Query");
             }
         }
     }

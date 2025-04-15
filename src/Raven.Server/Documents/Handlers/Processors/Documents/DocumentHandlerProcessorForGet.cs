@@ -73,7 +73,18 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         }
 
         long lastModifiedIndex = RequestHandler.Database.ClusterWideTransactionIndexWaiter.LastIndex;
-        context.OpenReadTransaction();
+        DocumentsTransaction readTx;
+        try
+        {
+            readTx = context.OpenReadTransaction();
+        }
+        catch (Exception e)
+        {
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations("Failed to open read transaction in GetDocumentsByIdImplAsync", e);
+                
+            throw;
+        }
 
         foreach (var id in ids)
         {
@@ -155,7 +166,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             RevisionIncludes = includeRevisions,
             CounterIncludes = includeCounters,
             TimeSeriesIncludes = includeTimeSeries,
-            CompareExchangeIncludes = includeCompareExchangeValues?.Results
+            CompareExchangeIncludes = includeCompareExchangeValues?.Results,
+            ReadTx = readTx,
         });
     }
 
