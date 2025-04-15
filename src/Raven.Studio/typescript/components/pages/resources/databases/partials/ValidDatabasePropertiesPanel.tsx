@@ -336,7 +336,9 @@ function getLocalGeneralInfo(
     dbStates: locationAwareLoadableData<DatabaseLocalInfo>[],
     localNodeTag: string
 ): LocalGeneralInfo {
-    const allShards = new Set(dbStates.map((x) => x.location.shardNumber ?? -1));
+    const allShards = new Set(
+        dbStates.filter((x) => x.location.nodeTag === localNodeTag).map((x) => x.location.shardNumber ?? -1)
+    );
 
     const localDbStatesWithoutErrors = dbStates.filter(
         (x) => x.location.nodeTag === localNodeTag && x.status === "success" && !x.data?.loadError

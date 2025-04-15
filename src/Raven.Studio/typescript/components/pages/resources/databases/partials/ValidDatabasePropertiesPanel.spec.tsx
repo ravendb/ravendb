@@ -39,7 +39,7 @@ describe("ValidDatabasePropertiesPanel", () => {
 
     describe("getLocalGeneralInfo", () => {
         describe("non-sharded", () => {
-            it("can get hasLocalNodeAllData", () => {
+            it("can get hasLocalNodeAllData for non-sharded database", () => {
                 const dbStates: locationAwareLoadableData<DatabaseLocalInfo>[] = [
                     getDatabaseLocalInfo({ status: "idle", location: { nodeTag: "A" } }),
                     getDatabaseLocalInfo({ status: "success", location: { nodeTag: "B" } }),
@@ -48,6 +48,25 @@ describe("ValidDatabasePropertiesPanel", () => {
 
                 expect(getLocalGeneralInfo(dbStates, "A").hasLocalNodeAllData).toBe(false);
                 expect(getLocalGeneralInfo(dbStates, "B").hasLocalNodeAllData).toBe(true);
+                expect(getLocalGeneralInfo(dbStates, "C").hasLocalNodeAllData).toBe(false);
+            });
+
+            it("can get hasLocalNodeAllData for sharded database", () => {
+                const dbStates: locationAwareLoadableData<DatabaseLocalInfo>[] = [
+                    getDatabaseLocalInfo({ status: "success", location: { nodeTag: "A", shardNumber: 0 } }),
+                    getDatabaseLocalInfo({
+                        status: "success",
+                        loadError: "Some Error",
+                        location: { nodeTag: "B", shardNumber: 0 },
+                    }),
+                    getDatabaseLocalInfo({ status: "success", location: { nodeTag: "B", shardNumber: 1 } }),
+                    getDatabaseLocalInfo({ status: "idle", location: { nodeTag: "C", shardNumber: 1 } }),
+                    getDatabaseLocalInfo({ status: "success", location: { nodeTag: "A", shardNumber: 2 } }),
+                    getDatabaseLocalInfo({ status: "success", location: { nodeTag: "C", shardNumber: 2 } }),
+                ];
+
+                expect(getLocalGeneralInfo(dbStates, "A").hasLocalNodeAllData).toBe(true);
+                expect(getLocalGeneralInfo(dbStates, "B").hasLocalNodeAllData).toBe(false);
                 expect(getLocalGeneralInfo(dbStates, "C").hasLocalNodeAllData).toBe(false);
             });
 
