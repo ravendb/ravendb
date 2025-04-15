@@ -290,6 +290,9 @@ namespace Raven.Client.Documents.Linq
 
         private static Expression SimplifyExpression(Expression expression)
         {
+            if (TryUnwrapImplicitOperatorIfNeeded(expression, out var newExpression))
+                expression = newExpression;
+
             while (true)
             {
                 switch (expression.NodeType)
@@ -393,6 +396,9 @@ namespace Raven.Client.Documents.Linq
                 case ExpressionType.Call:
                     if (expression is MethodCallExpression mce)
                     {
+                        if (TryUnwrapImplicitOperatorIfNeeded(expression, out var newExpression))
+                            return GetValueFromExpressionWithoutConversion(newExpression, out value);
+
                         if (mce.Method.DeclaringType == typeof(RavenQuery) &&
                             mce.Method.Name == nameof(RavenQuery.CmpXchg))
                         {
@@ -635,6 +641,19 @@ namespace Raven.Client.Documents.Linq
         public static bool IsIncludeCall(MethodCallExpression mce)
         {
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Include);
+        }
+
+        private static bool TryUnwrapImplicitOperatorIfNeeded(Expression expression, out Expression newExpression)
+        {
+            newExpression = expression;
+
+            if (expression is MethodCallExpression { Method.Name: "op_Implicit" } callExpression)
+            {
+                newExpression = callExpression.Arguments[0];
+                return true;
+            }
+
+            return false;
         }
     }
 }

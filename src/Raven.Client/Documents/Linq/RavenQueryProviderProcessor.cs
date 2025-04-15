@@ -1360,6 +1360,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
                 return;
             }
+
+            if (declaringType == typeof(MemoryExtensions))
+            {
+                VisitMemoryExtensionsMethodCall(expression);
+                return;
+            }
+
             if (declaringType == typeof(LinqExtensions) ||
                 declaringType == typeof(RavenQueryableExtensions))
             {
@@ -1434,6 +1441,23 @@ The recommended method is to use full text search (mark the field as Analyzed an
             DocumentQuery.WhereRegex(
                 memberInfo.Path,
                 GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo)).ToString());
+        }
+
+        private void VisitMemoryExtensionsMethodCall(MethodCallExpression expression)
+        {
+            switch (expression.Method.Name)
+            {
+                case nameof(RavenQueryableExtensions.ContainsAny):
+                    var memberInfo = GetMember(expression.Arguments[0]);
+                    var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
+                    DocumentQuery.ContainsAny(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
+                    break;
+                case nameof(MemoryExtensions.Contains):
+                    VisitContains(expression);
+                    break;
+                default:
+                    throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+            }
         }
 
         private void VisitLinqExtensionsMethodCall(MethodCallExpression expression)
