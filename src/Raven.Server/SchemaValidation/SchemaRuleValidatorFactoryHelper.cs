@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.SchemaValidation.Validators.Array;
 using Raven.Server.SchemaValidation.Validators.Object;
 using Sparrow.Json;

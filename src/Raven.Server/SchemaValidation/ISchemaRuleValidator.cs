@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.SchemaValidation;
+﻿using Raven.Server.SchemaValidation.ErrorMessage;
+
+namespace Raven.Server.SchemaValidation;
 
 public interface ISchemaRuleValidator
 {

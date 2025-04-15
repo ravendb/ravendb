@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.SchemaValidation.Validators;
 using Sparrow.Json;
 

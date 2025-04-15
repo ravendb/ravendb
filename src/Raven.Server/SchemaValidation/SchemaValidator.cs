@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
+using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.SchemaValidation.Validators;
 using Sparrow.Json;
 using Sparrow.Threading;
@@ -30,16 +30,14 @@ public class SchemaValidator : IDisposable
         _root = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(schemaDefinition, new SchemaPath(), refSchemas);
     }
 
-    public bool Validate(BlittableJsonReaderObject obj, out string errors)
+    public bool Validate(BlittableJsonReaderObject obj, ErrorBuilder errorBuilder)
     {
         ObjectDisposedException.ThrowIf(_disposing.IsRaised(), nameof(SchemaValidator));
         
         Interlocked.Increment(ref _activeValidations);
         try
         {
-            using var errorBuilder = new ErrorBuilder();
             var isValid = _root.Validate(obj, string.Empty, errorBuilder);
-            errors = errorBuilder.GetErrors();
             return isValid;
         }
         finally

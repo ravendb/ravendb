@@ -1,16 +1,37 @@
 ﻿using System;
 using System.Diagnostics;
+using Raven.Server.SchemaValidation.ErrorMessage;
+using Sparrow.Json;
+using Sparrow.Server;
 
 namespace Raven.Server.SchemaValidation;
 
 
 public class ValidationPath
 {
-    private readonly RentedBuffer<int> _sizes = new RentedBuffer<int>();
-    private readonly RentedCharBuffer _path = new RentedCharBuffer();
+    private readonly AbstractBuffer<int> _sizes;
+    private readonly AbstractBuffer<char> _path;
     private string _toString;
 
     public int Length => _path.Length;
+
+    public ValidationPath()
+    {
+        _sizes = new RentedBuffer<int>();
+        _path = new RentedBuffer<char>();   
+    }
+    
+    public ValidationPath(ByteStringContext allocator)
+    {
+        _sizes = new ByteStringContextBuffer<int>(allocator);
+        _path = new ByteStringContextBuffer<char>(allocator);   
+    }
+    
+    public ValidationPath(JsonOperationContext context)
+    {
+        _sizes = new JsonOperationContextBuffer<int>(context);
+        _path = new JsonOperationContextBuffer<char>(context);   
+    }
     
     public void StepIn(string property)
     {

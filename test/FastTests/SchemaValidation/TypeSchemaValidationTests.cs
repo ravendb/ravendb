@@ -452,44 +452,44 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         await AssertMultipleParallel(() =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = 15 }, out var obj);
-
+            
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "somevalue" }, out var obj);
-
+            
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonValue { ["prop"] = 8 } }, out var obj);
-
+            
                 if (schemaValidator.Validate(obj, out string errors) == false)
                     Assert.Fail(string.Join("\n", errors));
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "16" }, out var obj);
-
+            
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value '\"16\"' at 'prop' is not an allowed value. Expected one of: '15', 'somevalue', '{\"prop\":8}'.", errors);
+                AssertError("The value '\"16\"' at 'prop' is not an allowed value. Expected one of: '15', '\"somevalue\"', '{\"prop\":8}'.", errors);
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "someothervalue" }, out var obj);
-
+            
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value '\"someothervalue\"' at 'prop' is not an allowed value. Expected one of: '15', 'somevalue', '{\"prop\":8}'.", errors);
+                AssertError("The value '\"someothervalue\"' at 'prop' is not an allowed value. Expected one of: '15', '\"somevalue\"', '{\"prop\":8}'.", errors);
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonValue { ["prop"] = 9 } }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value '{\"prop\":9}' at 'prop' is not an allowed value. Expected one of: '15', 'somevalue', '{\"prop\":8}'.", errors);
+                AssertError("The value '{\"prop\":9}' at 'prop' is not an allowed value. Expected one of: '15', '\"somevalue\"', '{\"prop\":8}'.", errors);
             });
     }
     

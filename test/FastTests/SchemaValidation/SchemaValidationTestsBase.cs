@@ -3,6 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Raven.Server.SchemaValidation;
+using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -50,5 +52,24 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
     {
         ContextPool.Dispose();
         base.Dispose();
+    }
+}
+
+public static class SchemaValidationTestsHelper
+{
+    public static bool Validate(this SchemaValidator validator, BlittableJsonReaderObject obj, out string errors)
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (var errorBuilder = new ErrorBuilder(context))
+        {
+            if (validator.Validate(obj, errorBuilder))
+            {
+                errors = null;
+                return true;
+            }
+
+            errors = new string(errorBuilder.GetErrors());
+            return false;
+        }
     }
 }

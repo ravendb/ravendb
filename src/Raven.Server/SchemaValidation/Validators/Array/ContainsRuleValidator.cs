@@ -1,4 +1,5 @@
-﻿using Sparrow.Json;
+﻿using Raven.Server.SchemaValidation.ErrorMessage;
+using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Array;
 
@@ -21,7 +22,6 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
         var count = 0;
         for (int j = 0; j < value.Length; j++)
         {
-            //TODO Maybe to make sure the validation here return immediately after the first failure.
             if (_containsValidator.Validate(value, j, null) == false) 
                 continue;
             
