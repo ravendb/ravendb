@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
@@ -19,7 +20,6 @@ public class IfThenElseSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRe
 
     public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
-        //TODO Maybe to build a dedicated error
         return _ifValidator.Validate(value, null, null) 
             ? _thenValidator.Validate(value, null, errorBuilder) 
             : _elseValidator == null || _elseValidator.Validate(value, null, errorBuilder);

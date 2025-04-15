@@ -60,6 +60,9 @@ namespace Sparrow.Json
     // PERF: Sealed because in CoreCLR 2.0 it will devirtualize virtual calls methods like GetHashCode.
     public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable, IConvertible, IEnumerable<char>
+#if NET8_0_OR_GREATER
+    , ISpanFormattable
+#endif
     {
         internal JsonOperationContext _context;
         private string _string;
@@ -451,6 +454,37 @@ namespace Sparrow.Json
         public override string ToString()
         {
             return (string)this; // invoke the implicit string conversion
+        }
+
+        public string ToString(string format, IFormatProvider formatProvider) => ToString();
+
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider provider)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (_string != null)
+            {
+                if (_string.AsSpan().TryCopyTo(destination))
+                {
+                    charsWritten = _string.Length;
+                    return true;
+                }
+            }
+            else
+            {
+                fixed (char* pDestination = destination)
+                {
+                    var length = Encodings.Utf8.GetCharCount(Buffer, Size);
+                    if(Encodings.Utf8.GetChars(Buffer, Size, pDestination, destination.Length) == length)
+                    {
+                        charsWritten = length;
+                        return true;
+                    }
+                }
+            }
+            charsWritten = 0;
+            return false;
         }
 
         public int CompareTo(object obj)

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators;
@@ -19,7 +20,6 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
         if (_enums.Any(x => Equals(x, value))) 
             return true;
         
-        //TODO Differentiate between number and string for the expected(15 or "15")
         errorBuilder?.AddError($"The value '{WrapStringWithQuotationMarks(value)}' at '{errorBuilder.Path}' is not an allowed value. Expected one of: '{_enums:', '}'.");
         return false;
     }

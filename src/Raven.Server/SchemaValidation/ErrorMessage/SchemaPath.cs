@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Raven.Server.SchemaValidation;
+namespace Raven.Server.SchemaValidation.ErrorMessage;
 
 public readonly struct SchemaPath
 {

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
