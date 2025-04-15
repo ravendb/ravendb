@@ -25,10 +25,12 @@ using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
@@ -57,9 +59,34 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     public override async ValueTask ExecuteAsync()
     {
-        using (ContextPool.AllocateOperationContext(out TOperationContext context))
+        try
         {
-            await ExecuteInternalAsync(context);
+            TOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                await ExecuteInternalAsync(context);
+            }
+
+            if (context is DocumentsOperationContext documentsOperationContext)
+            {
+                if (documentsOperationContext.Transaction != null)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Not disposed docs transaction - Document");
+                }
+            }
+            
+            if (ReadTransaction != null && ReadTransaction.IsDisposed == false)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Not disposed LowLevel read transaction - Document");
+            }
+        }
+        catch (Exception e)
+        {
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations("Failed to handle GET request - Document", e);
+            throw;
         }
     }
 
@@ -191,6 +218,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         }
     }
 
+    public LowLevelTransaction ReadTransaction { get; set; }
+    
     protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> GetDocumentsByIdAsync(TOperationContext context,
         QueryStringParameters parameters, RevisionIncludeField revisions, HashSet<AbstractTimeSeriesRange> timeSeries, string etag)
     {
@@ -198,6 +227,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         var result = await GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries, parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag)
                                 .ConfigureAwait(false);
 
+        ReadTransaction = result.ReadTx?.InnerTransaction?.LowLevelTransaction;
+        
         if (result.StatusCode == HttpStatusCode.NotFound)
         {
             if (etag == HttpCache.NotFoundResponse)
@@ -481,6 +512,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     protected sealed class DocumentsByIdResult<T>
     {
+        public DocumentsTransaction ReadTx { get; set; }
         public List<T> Documents { get; set; }
 
         public List<T> Includes { get; set; }

@@ -3359,7 +3359,19 @@ namespace Raven.Server.Documents.Indexes
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         if (queryContext.AreTransactionsOpened() == false)
-                            queryContext.OpenReadTransaction();
+                        {
+                            try
+                            {
+                                queryContext.OpenReadTransaction();
+                            }
+                            catch (Exception e)
+                            {
+                                if (_logger.IsOperationsEnabled)
+                                    _logger.Operations("Failed to open read transaction in QueryInternal", e);
+                                
+                                throw;
+                            }
+                        }
 
                         // we have to open read tx for mapResults _after_ we open index tx
 
@@ -3372,7 +3384,16 @@ namespace Raven.Server.Documents.Indexes
                             isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
-                                queryContext.CloseTransaction();
+                                try
+                                {
+                                    queryContext.CloseTransaction();
+                                }
+                                catch (Exception e)
+                                {
+                                    if (_logger.IsOperationsEnabled)
+                                        _logger.Operations("Failed to close read transaction in QueryInternal", e);
+                                    throw;
+                                }
 
                                 Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 

@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+  <BuildWithNetFrameworkHostedCompiler>True</BuildWithNetFrameworkHostedCompiler>
     <Version></Version>
 
     <LangVersion>preview</LangVersion>
