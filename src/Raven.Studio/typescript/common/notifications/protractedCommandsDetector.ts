@@ -25,12 +25,6 @@ class protractedCommandsDetector {
 
         this.requestsInProgress = this.requestsInProgress.filter(x => !x.completed);
     }
-
-    private showServerNotRespondingAlert() {
-        this.showServerNotResponding(true);
-        $.blockUI({ message: '<div id="longTimeoutMessage"><span> This is taking longer than usual</span><br/><span>(Waiting for server to respond)</span></div>' });
-    }
-
 }
 
 export = protractedCommandsDetector;

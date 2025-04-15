@@ -11,7 +11,6 @@ import "jquery-fullscreen-plugin/jquery.fullscreen";
 import "bootstrap-select";
 
 import "bootstrap-multiselect";
-import "jquery-blockui";
 
 import "bootstrap-duration-picker/src/bootstrap-duration-picker";
 import "eonasdan-bootstrap-datetimepicker/src/js/bootstrap-datetimepicker";
