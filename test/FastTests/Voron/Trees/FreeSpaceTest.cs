@@ -466,8 +466,7 @@ namespace FastTests.Voron.Trees
 
             using (var tx = Env.WriteTransaction())
             {
-                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 4);
-
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 5);
                 // not commiting on purpose, this should simulate a rollback and clear the in memory state
             }
 
