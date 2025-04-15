@@ -46,7 +46,7 @@ namespace Voron.Impl.Journal
             FileName = new VoronPathSetting(filename);
             _journalNumber = journalNumber;
             _writeHandle = new SafeJournalHandle();
-            NumberOfAllocated4Kb = (int)(sourceFile.JournalSize.GetValue(SizeUnit.Bytes) / (4 * Constants.Size.Kilobyte));
+            NumberOfAllocated4Kb = (int)(sourceFile.JournalSize.GetValue(SizeUnit.Bytes) / Constants.Storage.JournalPageSize);
         }
         
         public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalNumber, long size, PalFlags.JournalMode mode = PalFlags.JournalMode.Safe)
@@ -60,7 +60,7 @@ namespace Voron.Impl.Journal
             if (result != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(result, error, $"Attempted to open journal file - Path: {filename.FullPath} Size :{size}");
 
-            NumberOfAllocated4Kb = (int)(actualSize / (4 * Constants.Size.Kilobyte));
+            NumberOfAllocated4Kb = (int)(actualSize / Constants.Storage.JournalPageSize);
         }
 
         public void Write(long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs)
@@ -70,11 +70,11 @@ namespace Voron.Impl.Journal
             fixed (Pal.journal_entry* pEntries = entries)
             {
                 using var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite,
-                    totalNumberOf4Kbs * 4L * Constants.Size.Kilobyte);
-                var result = Pal.rvn_write_journal(_writeHandle, pEntries, entries.Length, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
+                    totalNumberOf4Kbs * Constants.Storage.JournalPageSize);
+                var result = Pal.rvn_write_journal(_writeHandle, pEntries, entries.Length, posBy4Kb * Constants.Storage.JournalPageSize, out var error);
                 if (result != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(result, error,
-                        $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {totalNumberOf4Kbs * 4L * Constants.Size.Kilobyte}, numberOf4Kb={totalNumberOf4Kbs}");
+                        $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {totalNumberOf4Kbs * Constants.Storage.JournalPageSize}, numberOf4Kb={totalNumberOf4Kbs}");
 
                 if (error == ERROR_WORKING_SET_QUOTA && _log.IsDebugEnabled && _workingSetQuotaLogged == false)
                 {
@@ -84,7 +84,7 @@ namespace Voron.Impl.Journal
                     _workingSetQuotaLogged = true;
                 }
 
-                metrics.SetFileSize(NumberOfAllocated4Kb * (4L * Constants.Size.Kilobyte));
+                metrics.SetFileSize(NumberOfAllocated4Kb * Constants.Storage.JournalPageSize);
             }
         }
 
@@ -93,7 +93,7 @@ namespace Voron.Impl.Journal
             var flags = Pal.OpenFileFlags.None;
             if(_options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                 flags |= Pal.OpenFileFlags.DoNotMap;
-            return Pager.Create(_options, FileName.FullPath, 0, flags);
+            return Pager.Create(_options, FileName.FullPath, 0, flags, pageSize: Constants.Storage.JournalPageSize);
         }
 
         public void Read(byte* buffer, long numOfBytes, long offsetInFile)
@@ -131,7 +131,7 @@ namespace Voron.Impl.Journal
             var result = Pal.rvn_truncate_journal(_writeHandle, size, out var error);
             if (result != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(result, error, $"Attempted to truncate journal file - Path: {FileName.FullPath} Size: {size}");
-            NumberOfAllocated4Kb = checked((int)(size / (4 * Constants.Size.Kilobyte)));
+            NumberOfAllocated4Kb = checked((int)(size / Constants.Storage.JournalPageSize));
         }
 
         public void AddRef()

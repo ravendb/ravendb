@@ -768,7 +768,7 @@ namespace Voron
                 var flags = Pal.OpenFileFlags.ReadOnly;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
-                return Pager.Create(this, filename, 0, flags);
+                return Pager.Create(this, filename, 0, flags, pageSize: Constants.Storage.JournalPageSize);
                     }
 
             private FileInfo GetJournalFileInfo(long journalNumber, JournalInfo journalInfo)

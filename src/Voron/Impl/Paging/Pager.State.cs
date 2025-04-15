@@ -21,12 +21,12 @@ public unsafe partial class Pager
 
         public readonly WeakReference<State> WeakSelf;
 
-        public State(Pager pager, byte* readAddress, byte* writeMemory, long totalAllocatedSize, void* handle)
+        public State(Pager pager, byte* readAddress, byte* writeMemory, long totalAllocatedSize, void* handle, int pageSize)
         {
             ReadAddress = readAddress;
             WriteAddress = writeMemory;
             TotalAllocatedSize = totalAllocatedSize;
-            NumberOfAllocatedPages = totalAllocatedSize / Constants.Storage.PageSize;
+            NumberOfAllocatedPages = totalAllocatedSize / pageSize;
             Handle = handle;
 
             Pager = pager;

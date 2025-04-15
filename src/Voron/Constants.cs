@@ -27,6 +27,8 @@ namespace Voron.Global
         {
             public const int PageSize = 8 * Size.Kilobyte;
 
+            public const int JournalPageSize = 4 * Size.Kilobyte;
+
             static Storage()
             {
                 GC.KeepAlive(new int[

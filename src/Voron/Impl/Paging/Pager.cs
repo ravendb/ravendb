@@ -47,7 +47,7 @@ public unsafe partial class Pager : IDisposable
     private const int MinIncreaseSize = 16 * Constants.Size.Kilobyte;
     private const int MaxIncreaseSize = Constants.Size.Gigabyte;
 
-    public static (Pager Pager, State State) Create(StorageEnvironmentOptions options, string filename, long initialFileSize, Pal.OpenFileFlags flags)
+    public static (Pager Pager, State State) Create(StorageEnvironmentOptions options, string filename, long initialFileSize, Pal.OpenFileFlags flags, int? pageSize = null)
     {
         if (Pal.PalVoronPageSize != Constants.Storage.PageSize)// JIT should eliminate this
             throw new InvalidOperationException($"Expected the PAL to have page size matching Voron but was: {Pal.PalVoronPageSize}");
@@ -57,8 +57,9 @@ public unsafe partial class Pager : IDisposable
             out var handle, out var readOnlyMemory, out var writeMemory, out var memorySize, out var error);
         if (result != PalFlags.FailCodes.Success)
             RaiseError(filename, error, result, initialFileSize);
+
         pager.Write = Pal.rvn_get_writer(handle);
-        var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle);
+        var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle, pageSize ?? options.PageSize);
         (state.TotalFileSize, state.TotalDiskSpace) = pager.GetFileSize(state);
         pager.InstallState(state);
         pager.Initialize(memorySize);
@@ -353,12 +354,13 @@ public unsafe partial class Pager : IDisposable
         var rc = Pal.rvn_increase_pager_size(state.Handle, 
             allocationSize, out var handle, out var readAddress, out var writeAddress, 
             out var totalAllocatedSize, out var errorCode);
+
         if (rc != PalFlags.FailCodes.Success)
         {
             PalHelper.ThrowLastError(rc, errorCode, $"Failed to increase file '{state.Pager.FileName}' to {new Size(allocationSize, SizeUnit.Bytes)}");
         }
         Debug.Assert(totalAllocatedSize >= state.TotalAllocatedSize, "totalAllocatedSize >= state.TotalAllocatedSize");
-        state = new State(this, readAddress, writeAddress, totalAllocatedSize, handle);
+        state = new State(this, readAddress, writeAddress, totalAllocatedSize, handle, pageSize: Options.PageSize);
         InstallState(state);
     }
 
