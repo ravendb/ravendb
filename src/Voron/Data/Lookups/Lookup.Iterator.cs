@@ -129,10 +129,7 @@ namespace Voron.Data.Lookups
                     if (state.LastSearchPosition < state.Header->NumberOfEntries)
                     {
                         var read = Math.Min(results.Length, state.Header->NumberOfEntries - state.LastSearchPosition);
-                        for (int i = 0; i < read; i++)
-                        {
-                            results[i] = GetKeyData(ref state, state.LastSearchPosition++);
-                        }
+                        GetKeyDataInBulk(ref state, state.LastSearchPosition, results.Slice(0, read));
                         return read;
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)

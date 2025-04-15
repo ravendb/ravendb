@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -120,6 +119,31 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         return keyLen + valLen + 1;
     }
 
+    /// <summary>
+    /// Reads keys from a single cursor state into the provided buffer.
+    /// This method is bounded by the length of the specified destination buffer.
+    /// </summary>
+    /// <param name="state">Reference of the current state.</param>
+    /// <param name="fromIdx">Index from which to start reading.</param>
+    /// <param name="keyDataDest">The destination buffer for the keys.</param>
+    private static void GetKeyDataInBulk(ref CursorState state, int fromIdx, Span<long> keyDataDest)
+    {
+        Debug.Assert(fromIdx + keyDataDest.Length < state.Header->NumberOfEntries);
+        Debug.Assert(fromIdx >= 0 && fromIdx < state.Header->NumberOfEntries);
+        Debug.Assert(fromIdx >= 0 && fromIdx + keyDataDest.Length < state.Header->NumberOfEntries);
+        var pagePtr = state.Page.Pointer;
+        var entriesOffsetsPtr = state.EntriesOffsetsPtr;
+        var stateHeader = state.Header;
+        
+        for (int i = 0; i < keyDataDest.Length; i++)
+        {
+            var buffer = pagePtr + entriesOffsetsPtr[fromIdx + i];
+            keyDataDest[i] = GetKeyData(stateHeader, buffer);
+        }
+        
+        state.LastSearchPosition += keyDataDest.Length;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static long GetKeyData(ref CursorState state, int pos)
     {
@@ -189,7 +213,18 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
     public struct CursorState
     {
-        public Page Page;
+        private Page _page;
+
+        public Page Page
+        {
+            get => _page;
+            set
+            {
+                _page = value;
+                Header = (LookupPageHeader*)Page.Pointer;
+                EntriesOffsetsPtr = (ushort*)(Page.Pointer + PageHeader.SizeOf);
+            }
+        }
         
         /// <summary>
         /// Values:
@@ -201,10 +236,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         
         public int LastSearchPosition;
 
-        public LookupPageHeader* Header => (LookupPageHeader*)Page.Pointer;
+        public LookupPageHeader* Header;
 
-        public Span<ushort> EntriesOffsets => new Span<ushort>(Page.Pointer + PageHeader.SizeOf, Header->NumberOfEntries);
-        public ushort* EntriesOffsetsPtr => (ushort*)(Page.Pointer + PageHeader.SizeOf);
+        public Span<ushort> EntriesOffsets => new Span<ushort>(EntriesOffsetsPtr, Header->NumberOfEntries);
+        public ushort* EntriesOffsetsPtr;
 
         public int ComputeFreeSpace()
         {
@@ -630,8 +665,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         long pageNum = destinationState.Page.PageNumber;
         Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, sourceState.Page.Pointer, Constants.Storage.PageSize);
-        destinationState.Page.PageNumber = pageNum;
-
+        var overridenPage = destinationState.Page;
+        overridenPage.PageNumber = pageNum;
+        destinationState.Page = overridenPage;
+        
         // now ask that we'll remove the _sibling_ page, not us, since we copied it
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);
@@ -649,8 +686,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             var parentPageNumber = parent.Page.PageNumber;
             Debug.Assert(_llt.IsDirty(parent.Page.PageNumber));
             Memory.Copy(parent.Page.Pointer, stateToKeep.Page.Pointer, Constants.Storage.PageSize);
-            parent.Page.PageNumber = parentPageNumber; // we overwrote it...
 
+            var overridenPage = parent.Page;
+            overridenPage.PageNumber = parentPageNumber; // we overwrote it...
+            parent.Page = overridenPage;
+            
+            
             _llt.FreePage(stateToDelete.Page.PageNumber);
             _llt.FreePage(stateToKeep.Page.PageNumber);
             var copy = stateToKeep; // we are about to clear this value, but we need to set the search location here
