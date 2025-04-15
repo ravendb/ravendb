@@ -29,6 +29,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Extensions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -142,6 +143,9 @@ namespace Raven.Server.Documents.Handlers
         private void CheckBackwardCompatibility(ref bool disableAtomicDocumentWrites)
         {
             if (disableAtomicDocumentWrites)
+                return;
+
+            if (HttpContext.Request.IsFromStudio())
                 return;
 
             if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion) == false)
