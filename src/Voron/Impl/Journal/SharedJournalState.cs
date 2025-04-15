@@ -62,7 +62,7 @@ public class SharedJournalState()
 
         foreach (var record in _mergedJournalJournalRecordsBuffer)
         {
-            record.Tcs.SetCanceled();
+            record.Tcs.TrySetCanceled();
         }
     }
 }
