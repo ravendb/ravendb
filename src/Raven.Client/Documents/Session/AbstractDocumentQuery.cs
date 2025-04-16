@@ -1690,6 +1690,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var lastToken = tokens.Last.Value;
 
+            if (lastToken is TrueToken)
+            {
+                tokens.AddLast(GetDefaultOperatorToken());
+                return;
+            }
+
             if (lastToken is WhereToken == false && lastToken is CloseSubclauseToken == false)
                 return;
 
@@ -1706,12 +1712,18 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 current = current.Previous;
             }
 
-            var token = DefaultOperator == QueryOperator.And ? QueryOperatorToken.And : QueryOperatorToken.Or;
+            var token = GetDefaultOperatorToken();
 
             if (lastWhere.Options?.SearchOperator != null)
                 token = QueryOperatorToken.Or; // default to OR operator after search if AND was not specified explicitly
 
             tokens.AddLast(token);
+            return;
+
+            QueryOperatorToken GetDefaultOperatorToken()
+            {
+                return DefaultOperator == QueryOperator.And ? QueryOperatorToken.And : QueryOperatorToken.Or;
+            }
         }
 
         private IEnumerable<object> TransformEnumerable(string fieldName, IEnumerable<object> values)
