@@ -1304,7 +1304,7 @@ namespace Raven.Server.Documents.Replication
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
         {
             if (_logger.IsDebugEnabled)
-                _logger.Debug($"Initializing {connectionsToAdd.Count:#,#} outgoing replications from {Database} on {_server.NodeTag}.");
+                _logger.Debug($"Initializing {connectionsToAdd.Count:#,#} outgoing replications.");
 
             foreach (var destination in connectionsToAdd)
             {
@@ -1336,7 +1336,7 @@ namespace Raven.Server.Documents.Replication
                 return; // no connections to remove
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Dropping {outgoingChanged.Count:#,#} outgoing replications connections from {Database} on {_server.NodeTag}.");
+                _logger.Info($"Dropping {outgoingChanged.Count:#,#} outgoing replications connections.");
 
             foreach (var instance in outgoingChanged)
             {
