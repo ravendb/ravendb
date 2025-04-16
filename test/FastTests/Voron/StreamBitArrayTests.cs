@@ -115,7 +115,11 @@ namespace FastTests.Voron
 
             for (int j = 0; j < 2048; j += 1)
             {
-                sba.Set(j, random.Next(2) == 1);
+                var value = random.Next(2) == 1;
+                if (sba.Get(j) == value)
+                    continue;
+
+                sba.Set(j, value);
             }
 
             for (int j = 1; j <= 2048; j += 1)
@@ -146,6 +150,9 @@ namespace FastTests.Voron
 
                 for (int k = 0; k < blockSize && i < 2048; k++, i++)
                 {
+                    if (sba.Get(i) == value)
+                        continue;
+
                     sba.Set(i, value);
                 }
             }
@@ -178,6 +185,9 @@ namespace FastTests.Voron
 
                 for (int k = 0; k < blockSize && i >= 0; k++, i--)
                 {
+                    if (sba.Get(i) == value)
+                        continue;
+
                     sba.Set(i, value);
                 }
             }
@@ -206,6 +216,9 @@ namespace FastTests.Voron
 
                 for (int k = 0; k < blockSize && i < 2048; k++, i++)
                 {
+                    if (sba.Get(i) == value)
+                        continue;
+
                     sba.Set(i, value);
                 }
             }
@@ -234,6 +247,9 @@ namespace FastTests.Voron
 
                 for (int k = 0; k < blockSize && i < 2048; k++, i++)
                 {
+                    if (sba.Get(i) == value)
+                        continue;
+
                     sba.Set(i, value);
                 }
             }

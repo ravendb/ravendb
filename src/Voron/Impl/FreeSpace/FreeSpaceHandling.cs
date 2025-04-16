@@ -493,10 +493,6 @@ namespace Voron.Impl.FreeSpace
                 }
 
                 var index = (int)(pageNumber % NumberOfPagesInSection);
-
-                if (sba.Get(index))
-                    throw new InvalidOperationException($"trying to double free page {pageNumber}");
-
                 sba.Set(index, true);
                 
                 if (_disableSparseRegions == false && sba.SetCount > NumberOfFreePagesForSparseConsideration)

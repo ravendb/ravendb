@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -345,6 +346,10 @@ public unsafe struct StreamBitArray
 
     public void Set(int index, bool value)
     {
+        var current = Get(index);
+        if (current == value)
+            ThrowValueAlreadyExists(index, value);
+
         if (value)
         {
             _inner[index >> 5] |= (uint)(1 << (index & 31));
@@ -355,6 +360,12 @@ public unsafe struct StreamBitArray
             _inner[index >> 5] &= (uint)~(1 << (index & 31));
             SetCount--;
         }
+    }
+
+    [DoesNotReturn]
+    private static void ThrowValueAlreadyExists(int index, bool value)
+    {
+        throw new InvalidOperationException($"the index {index} is already has the requested value: {value}");
     }
 
     public int GetEndRangeCount()
