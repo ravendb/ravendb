@@ -671,12 +671,12 @@ namespace Raven.Client.Util
                     context.Visitor.Visit(methodCallExpression.Object);
                     javascriptWriter.Write($".{newName}");
                     javascriptWriter.Write("(");
-                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    context.Visitor.Visit(UnwrapImplicitOperatorIfNeeded(methodCallExpression.Arguments[0]));
                     javascriptWriter.Write(")");
                 }
                 else
                 {
-                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    context.Visitor.Visit(UnwrapImplicitOperatorIfNeeded(methodCallExpression.Arguments[0]));
 
                     // When having no other arguments, don't call the function, when it's a .map operation
                     // .Sum()/.Average()/.Select() for example can be called without arguments, which means,
@@ -687,7 +687,7 @@ namespace Raven.Client.Util
                         javascriptWriter.Write("(");
                         if (methodCallExpression.Arguments.Count > 1)
                         {
-                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            context.Visitor.Visit(UnwrapImplicitOperatorIfNeeded(methodCallExpression.Arguments[1]));
                         }
                         javascriptWriter.Write(")");
                     }
@@ -696,6 +696,16 @@ namespace Raven.Client.Util
                 if (methodName == "Sum")
                 {
                     javascriptWriter.Write(".reduce((a, b) => a + b, 0)");
+                }
+
+                return;
+
+                static Expression UnwrapImplicitOperatorIfNeeded(Expression expression)
+                {
+                    if (expression is MethodCallExpression { Method.Name: "op_Implicit" } callExpression)
+                        return callExpression.Arguments[0];
+
+                    return expression;
                 }
             }
 
@@ -798,9 +808,9 @@ namespace Raven.Client.Util
             {
                 if (type.IsArray)
                     return true;
-                
+
                 if (type.GetGenericArguments().Length == 0)
-                    return type == typeof(Enumerable);
+                    return type == typeof(Enumerable) || type == typeof(MemoryExtensions);
 
                 return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
@@ -1013,7 +1023,7 @@ namespace Raven.Client.Util
                     foreach (var innerType in methodCallExpression.Method.GetGenericArguments())
                         _loadedTypes.Add(innerType);
                 }
-                
+
                 var writer = context.GetWriter();
                 using (writer.Operation(methodCallExpression))
                 {
@@ -1527,7 +1537,7 @@ namespace Raven.Client.Util
         internal abstract class DateSupportBase<TDate> : JavascriptConversionExtension
         {
             public abstract void ObjectParameterTranslator(string name, JavascriptWriter writer);
-            
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (context.Node is NewExpression newExp && newExp.Type == typeof(TDate))
@@ -1669,16 +1679,16 @@ namespace Raven.Client.Util
                 }
             }
         }
-        
+
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
         internal sealed class DateOnlySupport : DateSupportBase<DateOnly>
         {
             public static DateOnlySupport Instance = new DateOnlySupport();
-            
+
             private DateOnlySupport()
             {
             }
-            
+
             public override void ObjectParameterTranslator(string name, JavascriptWriter writer)
             {
                 // Default values from DateOnly struct.
@@ -1695,7 +1705,7 @@ namespace Raven.Client.Util
             }
         }
 #endif
-        
+
         internal sealed class DateTimeSupport : DateSupportBase<DateTime>
         {
             public static DateTimeSupport Instance = new DateTimeSupport();
@@ -1703,7 +1713,7 @@ namespace Raven.Client.Util
             private DateTimeSupport()
             {
             }
-            
+
             public override void ObjectParameterTranslator(string name, JavascriptWriter writer)
             {
                 switch (name)
@@ -1731,7 +1741,7 @@ namespace Raven.Client.Util
                 }
             }
         }
-        
+
         internal sealed class TimeSpanSupport : JavascriptConversionExtension
         {
             public static TimeSpanSupport Instance = new TimeSpanSupport();
@@ -2620,7 +2630,7 @@ namespace Raven.Client.Util
             {
                 innerExpression = null;
 
-                if (expression is MethodCallExpression { Method.Name: nameof(RavenQuery.Id) } mce && mce.Method.DeclaringType == typeof(RavenQuery) )
+                if (expression is MethodCallExpression { Method.Name: nameof(RavenQuery.Id) } mce && mce.Method.DeclaringType == typeof(RavenQuery))
                 {
                     if (mce.Arguments.Count != 1)
                         throw new InvalidOperationException($"{nameof(RavenQuery.Id)} can only get one argument");
@@ -2635,7 +2645,7 @@ namespace Raven.Client.Util
                 if (expression is MemberExpression propertyExpression)
                 {
                     var expressionSourceType = propertyExpression.Expression?.Type ?? null;
-                    
+
                     foreach (var loadedType in loadTypes ?? Enumerable.Empty<Type>())
                     {
                         if (expressionSourceType != null && loadedType.IsEquivalentTo(expressionSourceType))
@@ -2645,7 +2655,7 @@ namespace Raven.Client.Util
                         }
                     }
                 }
-                
+
                 if (member.Expression is ParameterExpression parameter && (originalQueryType == null || originalQueryType.IsEquivalentTo(parameter.Type) || hasTypeInLoadType))
                 {
                     innerExpression = parameter;
@@ -2659,7 +2669,7 @@ namespace Raven.Client.Util
 
                 if (originalQueryType != null && innerExpression?.Type.IsEquivalentTo(originalQueryType) == false && hasTypeInLoadType == false)
                     return false;
-                
+
                 var p = GetParameter(innerMember)?.Name;
                 return p != null && (p.StartsWith(TransparentIdentifier) || p == parameterName);
             }
