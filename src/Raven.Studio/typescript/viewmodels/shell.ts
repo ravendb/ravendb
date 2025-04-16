@@ -61,6 +61,7 @@ import getStudioBootstrapCommand = require("commands/resources/getStudioBootstra
 import serverSettings = require("common/settings/serverSettings");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import StudioSearchWithDatabaseSwitcher = require("components/shell/studioSearchWithDatabaseSelector/StudioSearchWithDatabaseSwitcher");
+import ProtractedRequestMessage = require("components/shell/partials/ProtractedRequestMessage");
 
 class shell extends viewModelBase {
 
@@ -131,6 +132,8 @@ class shell extends viewModelBase {
     isUpgradeModalVisible = ko.observable<boolean>(false);
 
     studioSearchWithDatabaseSwitcherView: ReactInKnockout<typeof StudioSearchWithDatabaseSwitcher.default>;
+
+    protractedRequestMessageView: ReactInKnockout<typeof ProtractedRequestMessage.default>;
     
     constructor() {
         super();
@@ -274,6 +277,10 @@ class shell extends viewModelBase {
                     return "";
             }
         });
+
+        this.protractedRequestMessageView = ko.computed(() => ({
+            component: ProtractedRequestMessage.default,
+        }));
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.

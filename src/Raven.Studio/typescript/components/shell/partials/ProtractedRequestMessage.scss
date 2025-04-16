@@ -1,0 +1,26 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.protracted-request-message {
+    position: absolute;
+    z-index: 9999;
+    bottom: 20px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: sizes.$gutter-xs sizes.$gutter-sm;
+    border-radius: sizes.$border-radius;
+    background-color: var(--panel-bg-2);
+    box-shadow: 0px -3px 0px -1px colors.$progress-color;
+    transition: opacity 0.3s ease;
+
+    &.hidden {
+        opacity: 0 !important;
+    }
+
+    &:not(.hidden) {
+        opacity: 1;
+    }
+}
