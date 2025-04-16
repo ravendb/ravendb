@@ -34,6 +34,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public readonly string RemoteFolderName;
 
         public readonly string Region;
+        private readonly Amazon.S3.S3StorageClass _storageClass;
 
         public RavenAwsS3Client(S3Settings s3Settings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
@@ -95,6 +96,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _bucketName = s3Settings.BucketName;
             RemoteFolderName = s3Settings.RemoteFolderName;
             Region = s3Settings.AwsRegionName == null ? string.Empty : s3Settings.AwsRegionName.ToLower();
+            _storageClass = s3Settings.StorageClass?.ToAmazonS3StorageClass() ?? Amazon.S3.S3StorageClass.Standard;;
             _progress = progress;
             _cancellationToken = cancellationToken;
         }
@@ -106,7 +108,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
         {
-            return new AwsS3MultiPartUploader(_client, _bucketName, _progress, key, metadata, _cancellationToken);
+            return new AwsS3MultiPartUploader(_client, _bucketName, _storageClass, _progress, key, metadata, _cancellationToken);
         }
 
         public async Task PutObjectAsync(string key, Stream stream, Dictionary<string, string> metadata)
@@ -126,7 +128,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 {
                     _progress?.UploadProgress.ChangeType(UploadType.Chunked);
 
-                    var multiPartUploader = new AwsS3MultiPartUploader(_client, _bucketName, _progress, key, metadata, _cancellationToken);
+                    var multiPartUploader = new AwsS3MultiPartUploader(_client, _bucketName, _storageClass, _progress, key, metadata, _cancellationToken);
 
                     await multiPartUploader.InitializeAsync();
 
@@ -147,6 +149,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     Key = key,
                     BucketName = _bucketName,
                     InputStream = stream,
+                    StorageClass = _storageClass,
                     StreamTransferProgress = (_, args) =>
                     {
                         _progress?.UploadProgress.ChangeState(UploadState.Uploading);

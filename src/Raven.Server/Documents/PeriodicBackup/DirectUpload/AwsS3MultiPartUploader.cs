@@ -8,6 +8,7 @@ using Amazon.S3.Model;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using S3StorageClass = Amazon.S3.S3StorageClass;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
@@ -15,6 +16,7 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
 {
     private readonly AmazonS3Client _client;
     private readonly string _bucketName;
+    private readonly S3StorageClass _storageClass;
     private readonly Progress _progress;
     private readonly string _key;
     private readonly Dictionary<string, string> _metadata;
@@ -24,10 +26,12 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
     private int _partNumber;
     private List<PartETag> _partEtags;
 
-    public AwsS3MultiPartUploader(AmazonS3Client client, string bucketName, Progress progress, string key, Dictionary<string, string> metadata, CancellationToken cancellationToken)
+    public AwsS3MultiPartUploader(AmazonS3Client client, string bucketName, S3StorageClass storageClass, Progress progress, string key,
+        Dictionary<string, string> metadata, CancellationToken cancellationToken)
     {
         _client = client;
         _bucketName = bucketName;
+        _storageClass = storageClass;
         _progress = progress;
         _key = key;
         _metadata = metadata;
@@ -44,7 +48,8 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
         var multipartRequest = new InitiateMultipartUploadRequest
         {
             Key = _key,
-            BucketName = _bucketName
+            BucketName = _bucketName,
+            StorageClass = _storageClass
         };
 
         RavenAwsS3Client.FillMetadata(multipartRequest.Metadata, _metadata);

@@ -23,21 +23,12 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public virtual DynamicJsonValue ToAuditJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Disabled)] = Disabled,
-                [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToAuditJson()
-
-            };
+            return new DynamicJsonValue { [nameof(Disabled)] = Disabled, [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToAuditJson() };
         }
 
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Disabled)] = Disabled,
-                [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToJson()
-            };
+            return new DynamicJsonValue { [nameof(Disabled)] = Disabled, [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToJson() };
         }
     }
 
@@ -68,22 +59,12 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public DynamicJsonValue ToAuditJson()
         {
-
-            return new DynamicJsonValue
-            {
-                [nameof(Exec)] = Exec,
-                [nameof(TimeoutInMs)] = TimeoutInMs
-            };
+            return new DynamicJsonValue { [nameof(Exec)] = Exec, [nameof(TimeoutInMs)] = TimeoutInMs };
         }
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Exec)] = Exec,
-                [nameof(Arguments)] = Arguments,
-                [nameof(TimeoutInMs)] = TimeoutInMs
-            };
+            return new DynamicJsonValue { [nameof(Exec)] = Exec, [nameof(Arguments)] = Arguments, [nameof(TimeoutInMs)] = TimeoutInMs };
         }
     }
 
@@ -177,7 +158,6 @@ namespace Raven.Client.Documents.Operations.Backups
 
             return djv;
         }
-
     }
 
     public sealed class S3Settings : AmazonSettings
@@ -193,6 +173,8 @@ namespace Raven.Client.Documents.Operations.Backups
         public string CustomServerUrl { get; set; }
 
         public bool ForcePathStyle { get; set; }
+
+        public S3StorageClass? StorageClass { get; set; }
 
         public S3Settings()
         {
@@ -210,6 +192,7 @@ namespace Raven.Client.Documents.Operations.Backups
             AwsAccessKey = settings.AwsAccessKey;
             AwsSecretKey = settings.AwsSecretKey;
             AwsSessionToken = settings.AwsSessionToken;
+            StorageClass = settings.StorageClass;
 
             RemoteFolderName = settings.RemoteFolderName;
             Disabled = settings.Disabled;
@@ -249,6 +232,9 @@ namespace Raven.Client.Documents.Operations.Backups
             if (other.ForcePathStyle != ForcePathStyle)
                 return false;
 
+            if (other.StorageClass != StorageClass)
+                return false;
+
             return true;
         }
 
@@ -258,6 +244,10 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(BucketName)] = BucketName;
             djv[nameof(CustomServerUrl)] = CustomServerUrl;
             djv[nameof(ForcePathStyle)] = ForcePathStyle;
+
+            if (StorageClass.HasValue)
+                djv[nameof(StorageClass)] = StorageClass.Value;
+            
             return djv;
         }
 
@@ -267,6 +257,10 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(BucketName)] = BucketName;
             djv[nameof(CustomServerUrl)] = CustomServerUrl;
             djv[nameof(ForcePathStyle)] = ForcePathStyle;
+            
+            if (StorageClass.HasValue)
+                djv[nameof(StorageClass)] = StorageClass.Value;
+            
             return djv;
         }
     }
@@ -280,7 +274,6 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public GlacierSettings()
         {
-
         }
 
         internal GlacierSettings(GlacierSettings settings)
@@ -335,7 +328,7 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(VaultName)] = VaultName;
             return djv;
         }
-      
+
         public override DynamicJsonValue ToAuditJson()
         {
             var djv = base.ToAuditJson();
@@ -484,6 +477,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return djv;
         }
     }
+
     public sealed class GoogleCloudSettings : BackupSettings, ICloudBackupSettings
     {
         /// <summary>
@@ -545,7 +539,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public override DynamicJsonValue ToAuditJson()
         {
             var djv = base.ToAuditJson();
-            
+
             djv[nameof(BucketName)] = BucketName;
             djv[nameof(RemoteFolderName)] = RemoteFolderName;
 
