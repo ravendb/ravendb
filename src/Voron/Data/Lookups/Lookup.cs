@@ -128,9 +128,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     /// <param name="keyDataDest">The destination buffer for the keys.</param>
     private static void GetKeyDataInBulk(ref CursorState state, int fromIdx, Span<long> keyDataDest)
     {
-        Debug.Assert(fromIdx + keyDataDest.Length < state.Header->NumberOfEntries);
+        Debug.Assert(fromIdx + keyDataDest.Length <= state.Header->NumberOfEntries);
         Debug.Assert(fromIdx >= 0 && fromIdx < state.Header->NumberOfEntries);
-        Debug.Assert(fromIdx >= 0 && fromIdx + keyDataDest.Length < state.Header->NumberOfEntries);
+        Debug.Assert(fromIdx >= 0 && fromIdx + keyDataDest.Length <= state.Header->NumberOfEntries);
         var pagePtr = state.Page.Pointer;
         var entriesOffsetsPtr = state.EntriesOffsetsPtr;
         var stateHeader = state.Header;
@@ -142,6 +142,35 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
         
         state.LastSearchPosition += keyDataDest.Length;
+    }
+    
+    private static int GetValueDataInBulkUpTo(ref CursorState state, int fromIdx, long maxId, bool includeMax, Span<long> keyDataDest, out bool isFinished)
+    {
+        Debug.Assert(fromIdx + keyDataDest.Length <= state.Header->NumberOfEntries);
+        Debug.Assert(fromIdx >= 0 && fromIdx < state.Header->NumberOfEntries);
+        Debug.Assert(fromIdx >= 0 && fromIdx + keyDataDest.Length <= state.Header->NumberOfEntries);
+        var pagePtr = state.Page.Pointer;
+        var entriesOffsetsPtr = state.EntriesOffsetsPtr;
+        var stateHeader = state.Header;
+
+        var idX = 0;
+        for (; idX < keyDataDest.Length; idX++)
+        {
+            var buffer = pagePtr + entriesOffsetsPtr[fromIdx + idX];
+            var keyLen = buffer[0] >> 4;
+            var valLen = buffer[0] & 0xF;
+            long v = ReadBackward(buffer + 1 + keyLen, valLen);
+            keyDataDest[idX] = Unzag(v, stateHeader->ValuesBase);
+
+            if (keyDataDest[idX] == maxId)
+                break;
+        }
+        
+        var maxFound = idX != keyDataDest.Length;
+        isFinished = maxFound;
+        var read = idX + (maxFound && includeMax).ToInt32();
+        state.LastSearchPosition += read;
+        return read;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

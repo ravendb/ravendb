@@ -125,7 +125,7 @@ WaitForUserToContinueTheTest(store);
         }
 
         await new DynamicIndexProjection().ExecuteAsync(store);
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenAsyncSession())
         {
@@ -135,7 +135,6 @@ WaitForUserToContinueTheTest(store);
                 .Select(i => i.Name)
                 .SingleAsync();
                 
-            WaitForUserToContinueTheTest(store);
             var expected = (options.SearchEngineMode, projectionBehavior) switch
             {
                 (_, ProjectionBehavior.FromDocument) => "Jan",
