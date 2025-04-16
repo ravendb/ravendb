@@ -23,6 +23,7 @@
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">

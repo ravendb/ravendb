@@ -16,6 +16,12 @@ namespace Micro.Benchmark
 
             Console.WriteLine($"{nameof(Avx)} support: {Avx.IsSupported}");
             Console.WriteLine($"{nameof(Avx2)} support: {Avx2.IsSupported}");
+            Console.WriteLine($"{nameof(Avx512F)} support: {Avx512F.IsSupported}");
+            Console.WriteLine($"{nameof(Avx512BW)} support: {Avx512BW.IsSupported}");
+            Console.WriteLine($"{nameof(Avx512CD)} support: {Avx512CD.IsSupported}");
+            Console.WriteLine($"{nameof(Avx512DQ)} support: {Avx512DQ.IsSupported}");
+            Console.WriteLine($"{nameof(Avx512Vbmi)} support: {Avx512Vbmi.IsSupported}");
+            Console.WriteLine($"{nameof(AvxVnni)} support: {AvxVnni.IsSupported}");
 
             BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
         }

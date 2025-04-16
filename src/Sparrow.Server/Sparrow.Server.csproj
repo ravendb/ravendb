@@ -49,6 +49,7 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+    <PackageReference Include="System.Numerics.Tensors" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
