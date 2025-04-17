@@ -34,8 +34,6 @@ public class RavenDB_22767 : StorageTest
             }
         });
 
-        var oldestTxId = Env.ActiveTransactions.OldestTransaction;
-            
-        Assert.Equal(0, oldestTxId);
+        Assert.Empty(Env.ActiveTransactions.AllTransactionsInstances);
     }
 }
