@@ -1,26 +1,25 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Server.SchemaValidation.ErrorMessage;
-using Raven.Server.SchemaValidation.Validators.Array;
-using Raven.Server.SchemaValidation.Validators.Object;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators;
 
 [DebuggerDisplay("'{SchemaPath}' property validator")]
-public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
+public class ElementSchemaRuleValidator
 {
     // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
     private readonly ISchemaRuleValidator[] _ruleValidators;
-    private readonly BlittableJsonToken[] _typesRestriction;
+    private readonly Type[] _typesRestriction;
     private readonly string[] _publicTypesRestriction;
     protected readonly SchemaPath SchemaPath;
     
     public BlittableJsonReaderObject SchemaDefinition { get; init; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected ElementSchemaRuleValidator(BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators, SchemaPath schemaPath)
+    public ElementSchemaRuleValidator(Type[] typesRestriction, ISchemaRuleValidator[] ruleValidators, SchemaPath schemaPath)
     {
         _typesRestriction = typesRestriction;
         _publicTypesRestriction = _typesRestriction?.Select(SchemaValidationHelper.GetPublicType).Distinct().ToArray();
@@ -28,21 +27,16 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
         SchemaPath = schemaPath;
     }
     
-    public bool Validate(TParent parent, TAccessor accessor, ErrorBuilder errorBuilder)
+    public bool Validate(object value, ErrorBuilder errorBuilder)
     {
-        if (TryGetElement(parent, accessor, out var element) == false)
-            return true;
-
-        if (IsOfRequiredType(element.Type) == false)
+        if (IsOfRequiredType(value) == false)
         {
-            errorBuilder?.AddError($"'{errorBuilder.Path}' should be of type '{_publicTypesRestriction:' or '}' but actual type is '{SchemaValidationHelper.GetPublicType(element.Type)}'.");
+            errorBuilder?.AddError($"'{errorBuilder.Path}' should be of type '{_publicTypesRestriction:' or '}' but actual type is '{SchemaValidationHelper.GetPublicType(value.GetType())}'.");
             return false;
         }
         
-        return CheckAllValidators(element.Value, errorBuilder);
+        return CheckAllValidators(value, errorBuilder);
     }
-
-    protected abstract bool TryGetElement(TParent parent, TAccessor accessor, out (BlittableJsonToken Type, object Value) element);
 
     private bool CheckAllValidators(object value, ErrorBuilder errorBuilder)
     {
@@ -53,42 +47,28 @@ public abstract class ElementSchemaRuleValidator<TParent, TAccessor>
         foreach (var ruleValidator in _ruleValidators)
         {
             isValid &= ruleValidator.Validate(value, errorBuilder);
+            if(errorBuilder == null && isValid == false)
+                return false;
         }
         return isValid;
     }
 
-    private bool IsOfRequiredType(BlittableJsonToken jsonToken) => _typesRestriction == null || _typesRestriction.Length == 0 || _typesRestriction.Contains(jsonToken);
+    private bool IsOfRequiredType(object obj) => _typesRestriction == null || _typesRestriction.Length == 0 || _typesRestriction.Contains(obj?.GetType());
 }
 
 public static class ElementSchemaRuleValidatorFactory
 {
-    public static SelfObjectElementSchemaRuleValidator CreateSelfElementSchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+    public static ElementSchemaRuleValidator CreateElementSchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas)
     {
-        return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
-            ? new SelfObjectElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) : 
+        return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out Type[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
+            ? new ElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) : 
             null;
     }
     
-    
-    public static ArrayItemSchemaRuleValidator CreateArrayItemSchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
-        RefSchemas refSchemas)
-    {
-        return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
-            ? new ArrayItemSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath){SchemaDefinition = schemaDefinition} : 
-            null;
-    }
-    public static PropertySchemaRuleValidator CreatePropertySchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
-        RefSchemas refSchemas)
-    {
-        return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
-            ? new PropertySchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) : 
-            null;
-    }
-
     public static bool TryReadSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas,
-        out BlittableJsonToken[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
+        out Type[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
     {
         if (schemaDefinition == null)
         {
@@ -99,48 +79,35 @@ public static class ElementSchemaRuleValidatorFactory
         typesRestriction = ReadTypeRestrictionsRule(schemaDefinition, schemaPath);
         ruleValidators = ReadValueSchemaRuleValidators(schemaDefinition, schemaPath, refSchemas);
 
-        if (SchemaValidationHelper.TryGetString(schemaDefinition, SchemaValidatorConstants.Ref, schemaPath.ToString(), out var @ref))
-        {
-            if (refSchemas.TryGet(@ref, out var refSchema) == false)
-                throw new InvalidSchemaValidationDefinitionException(
-                    $"The reference '{@ref}' at '{schemaPath}' does not match any defined subschema.");
-
-            typesRestriction = Concat(typesRestriction, refSchema.TypesRestriction)?.Distinct().ToArray();
-            ruleValidators = Concat(ruleValidators, refSchema.RuleValidators);
-        }
-        
         return true;
-
-        T[] Concat<T>(T[] first, T[] second) => first == null ? second 
-            : second == null ? first : first.Concat(second).ToArray();
     }
 
-    private static BlittableJsonToken[] ReadTypeRestrictionsRule(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    private static Type[] ReadTypeRestrictionsRule(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         if (schemaDefinition.TryGet(SchemaValidatorConstants.Type, out object typesRestrictionSchema) == false)
             return null;
 
         schemaPath += SchemaValidatorConstants.Type;
-        var allowedTypes = new List<BlittableJsonToken>();
+        var allowedTypes = new List<Type>();
         if (typesRestrictionSchema is BlittableJsonReaderArray types)
         {
             foreach (var type in types)
             {
-                allowedTypes.AddRange(ConvertTypeToTokens(type, schemaPath));
+                allowedTypes.AddRange(ConvertToTypes(type, schemaPath));
             }
         }
         else 
         {
-            allowedTypes.AddRange(ConvertTypeToTokens(typesRestrictionSchema, schemaPath));
+            allowedTypes.AddRange(ConvertToTypes(typesRestrictionSchema, schemaPath));
         }
 
         return allowedTypes.ToArray();
     }
     
-    private static BlittableJsonToken[] ConvertTypeToTokens(object type, SchemaPath schemaPath)
+    private static Type[] ConvertToTypes(object type, SchemaPath schemaPath)
     {
         var stringType = GetLazyString(type, schemaPath);
-        if(SchemaValidationHelper.TryGetTokensForType(stringType, out BlittableJsonToken[] tokens) == false)
+        if(SchemaValidationHelper.TryGetTokensForType(stringType, out Type[] tokens) == false)
         {
             throw new InvalidSchemaValidationDefinitionException(
                 $"The '{SchemaValidatorConstants.Type}' restriction must be one of the allowed types ('{string.Join("', '", SchemaValidationHelper.PublicTypes)}'), but found '{type}'. " +

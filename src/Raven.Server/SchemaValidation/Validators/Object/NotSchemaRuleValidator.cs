@@ -6,17 +6,17 @@ namespace Raven.Server.SchemaValidation.Validators.Object;
 
 public class NotSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    private readonly SelfObjectElementSchemaRuleValidator _not;
+    private readonly ElementSchemaRuleValidator _not;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public NotSchemaRuleValidator([NotNull] SelfObjectElementSchemaRuleValidator not)
+    public NotSchemaRuleValidator([NotNull] ElementSchemaRuleValidator not)
     {
         _not = not;
     }
 
     public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
-        if (_not.Validate(value, null, null) == false)
+        if (_not.Validate(value, null) == false)
             return true;
         
         errorBuilder?.AddError($"The value at '{errorBuilder.Path}' is invalid because it matches a `not` schema.");
@@ -33,7 +33,7 @@ public class NotSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<NotSchem
         if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var not) == false)
             return null;
         
-        var notSchemaValidator = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(not, schemaPath + Rule, refSchemas);
+        var notSchemaValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(not, schemaPath + Rule, refSchemas);
 
         return new NotSchemaRuleValidator(notSchemaValidator);
     }

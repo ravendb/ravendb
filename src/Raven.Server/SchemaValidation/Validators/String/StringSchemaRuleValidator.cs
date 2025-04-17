@@ -2,21 +2,25 @@
 
 namespace Raven.Server.SchemaValidation.Validators.String;
 
-public abstract class StringSchemaRuleValidator : SchemaRuleValidator<string>
+public abstract class StringSchemaRuleValidator : SchemaRuleValidator<LazyStringValue>
 {
     protected string Target = "value";
     
     public void FocusOnPropertyName() => Target = "property name";
     
-    protected override bool CheckTypeAndGetValue(object value, out string stringValue)
+    protected override bool CheckTypeAndGetValue(object value, out LazyStringValue stringValue)
     {
-        if (value is LazyStringValue or LazyCompressedStringValue or string)
+        switch (value)
         {
-            stringValue = value.ToString();
-            return true;
+            case LazyStringValue lazyStringValue:
+                stringValue = lazyStringValue;
+                return true;
+            case LazyCompressedStringValue lazyCompressedStringValue:
+                stringValue = lazyCompressedStringValue.ToLazyStringValue();
+                return true;
+            default:
+                stringValue = null;
+                return false;
         }
-       
-        stringValue = null;
-        return false;
     }
 }

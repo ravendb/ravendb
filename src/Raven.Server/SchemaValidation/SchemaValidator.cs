@@ -9,7 +9,7 @@ namespace Raven.Server.SchemaValidation;
 
 public class SchemaValidator : IDisposable
 {
-    private SelfObjectElementSchemaRuleValidator _root;
+    private ElementSchemaRuleValidator _root;
     //The context is only written during the initialization phase. During validation, it is used for reading only and can be used in parallel.
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
     private int _activeValidations;
@@ -27,7 +27,7 @@ public class SchemaValidator : IDisposable
         var refSchemas = new RefSchemas();
         refSchemas.Init(schemaDefinition);
         
-        _root = ElementSchemaRuleValidatorFactory.CreateSelfElementSchemaRuleValidator(schemaDefinition, new SchemaPath(), refSchemas);
+        _root = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(schemaDefinition, new SchemaPath(), refSchemas);
     }
 
     public bool Validate(BlittableJsonReaderObject obj, ErrorBuilder errorBuilder)
@@ -37,7 +37,7 @@ public class SchemaValidator : IDisposable
         Interlocked.Increment(ref _activeValidations);
         try
         {
-            var isValid = _root.Validate(obj, string.Empty, errorBuilder);
+            var isValid = _root.Validate(obj, errorBuilder);
             return isValid;
         }
         finally
@@ -65,6 +65,6 @@ public class SchemaValidator : IDisposable
 
 public class RefSchema
 {
-    public (BlittableJsonToken[] typesRestriction, ISchemaRuleValidator[] ruleValidators) Rules { get; set; } 
+    public (Type[] typesRestriction, ISchemaRuleValidator[] ruleValidators) Rules { get; set; } 
     public BlittableJsonReaderObject Raw { get; set; }
 }

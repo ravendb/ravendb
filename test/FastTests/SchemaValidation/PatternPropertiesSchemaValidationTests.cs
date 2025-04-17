@@ -16,7 +16,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidationPatternProperties_WhenPatternMatchAndJsonValid_ShouldSucceed()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -45,7 +45,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidationPatternProperties_WhenPatternMatchAndJsonInvalid_ShouldFail()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -74,7 +74,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidationPatternProperties_WhenPatternDoesntMatch_ShouldSucceed()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
 
         var schemaDefinition = new DynamicJsonValue
         {

@@ -10,7 +10,7 @@ public class RefSchemas
 {
     private readonly Dictionary<string, RefSchema> _data = new Dictionary<string, RefSchema>();
 
-    public bool TryGet(string refPath, out (BlittableJsonToken[] TypesRestriction, ISchemaRuleValidator[] RuleValidators) rules)
+    public bool TryGet(string refPath, out (Type[] TypesRestriction, ISchemaRuleValidator[] RuleValidators) rules)
     {
         if (_data.TryGetValue(refPath, out var refSchema))
         {
@@ -42,40 +42,39 @@ public class RefSchemas
         if(schema == null)
             return;
         
-        foreach (var property in schema.GetPropertyNames())
+        var property = default(BlittableJsonReaderObject.PropertyDetails);
+        for (int i = 0; i < schema.Count; i++)
         {
-            var propertyPath =  schemaPath + property;
-            if (property.Equals(SchemaValidatorConstants.Defs))
+            schema.GetPropertyByIndex(i, ref property);
+            var propertyPath =  schemaPath + property.Name;
+            if (property.Name.Equals(SchemaValidatorConstants.Defs))
             {
-                if(SchemaValidationHelper.TryGetObject(schema, property, propertyPath.FullPath, out var defSchemas) == false)
-                    throw new InvalidOperationException(
-                        $"Should not happen. {property} exists and wrong type should throw {nameof(InvalidSchemaValidationDefinitionException)}");
-
-                foreach (var defSchemaName in defSchemas.GetPropertyNames())
+                var defSchemas = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(property.Name, property.Value, propertyPath.FullPath);
+                var defSchemaProp = default(BlittableJsonReaderObject.PropertyDetails);
+                for (int j = 0; j < defSchemas.Count; j++)
                 {
-                    var defSchemaPath = propertyPath + defSchemaName;
-                    if(SchemaValidationHelper.TryGetObject(defSchemas, defSchemaName, defSchemaPath.FullPath, out var defsSchema) == false)
-                        throw new InvalidOperationException(
-                            $"Should not happen. {property} exists and wrong type should throw {nameof(InvalidSchemaValidationDefinitionException)}");
+                    schema.GetPropertyByIndex(j, ref defSchemaProp);
+                    var defSchemaPath = propertyPath + defSchemaProp.Name;
+                    var defsSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(defSchemaProp.Name, defSchemaProp.Value, defSchemaPath.FullPath);
                     _data[defSchemaPath.FullPath] = new RefSchema {Raw = defsSchema};
                 }
             }
             
-            if (schema.TryGetWithoutThrowingOnError(property, out BlittableJsonReaderObject propSchema))
+            if (schema.TryGetWithoutThrowingOnError(property.Name, out BlittableJsonReaderObject propSchema))
                 ReadAllDefinitions(propSchema, propertyPath);
         }
     }
 
     private void ValidateReferences(BlittableJsonReaderObject schema, SchemaPath path, Stack<string> refStack)
     {
-        foreach (var property in schema.GetPropertyNames())
+        var property = default(BlittableJsonReaderObject.PropertyDetails);
+        for (int i = 0; i < schema.Count; i++)
         {
-            var propPath = path + property;
-            if (property.Equals(SchemaValidatorConstants.Ref))
+            schema.GetPropertyByIndex(i, ref property);
+            var propPath = path + property.Name;
+            if (property.Name.Equals(SchemaValidatorConstants.Ref))
             {
-                if (SchemaValidationHelper.TryGetString(schema, property, propPath.ToString(),out var @ref) == false)
-                    throw new InvalidOperationException($"Should not happen. {property} exists and wrong type should throw {nameof(InvalidSchemaValidationDefinitionException)}");
-                        
+                var @ref = SchemaValidationHelper.CheckTypeAndThrow<LazyStringValue>(property.Name, property.Value, propPath.ToString());
                 if (refStack.Contains(@ref))
                     throw new InvalidSchemaValidationDefinitionException(
                         $"A circular reference was detected at '{propPath.FullPath}'.");
@@ -90,7 +89,7 @@ public class RefSchemas
                 continue;
             }
                     
-            if (schema.TryGetWithoutThrowingOnError(property, out BlittableJsonReaderObject propSchema) == false || propSchema == null)
+            if (schema.TryGetWithoutThrowingOnError(property.Name, out BlittableJsonReaderObject propSchema) == false || propSchema == null)
                 continue;
 
             ValidateReferences(propSchema, propPath, refStack);

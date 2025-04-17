@@ -252,7 +252,7 @@ namespace Sparrow.Json
 
             return propertyNames;
         }
-
+        
         private LazyStringValue GetPropertyName(int propertyId)
         {
             AssertContextNotDisposed();
@@ -646,12 +646,6 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetMember(string name, out object result)
-        {
-            return TryGetMember(new StringSegment(name), out result);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryGetObjectByIndex(int index, BlittableJsonToken expectedToken, out object result)
         {
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
@@ -715,6 +709,26 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool TryGetMember(LazyStringValue name, out object result)
+        {
+            AssertContextNotDisposed();
+
+            if (_mem == null)
+                ThrowObjectDisposed();
+            
+            var propId = GetPropertyIndex(name);
+            if (propId == -1)
+            {
+                result = null;
+                return false;
+            }
+            var prop = default(PropertyDetails);
+            GetPropertyByIndex(propId, ref prop);
+            result = prop.Value;
+            return true;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddToCache(StringSegment name, object result, int index)
         {
             if (_objectsPathCache == null)
@@ -776,6 +790,26 @@ namespace Sparrow.Json
             }
 
             prop.Value = value;
+        }
+
+        internal LazyStringValue GetPropertyNameByIndex(int index)
+        {
+            AssertContextNotDisposed();
+
+            if (_mem == null)
+                ThrowObjectDisposed();
+
+            if (index < 0 || index >= _propCount)
+                ThrowOutOfRangeException(index);
+
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+
+            GetPropertyTypeAndPosition(index, metadataSize,
+                out var token,
+                out var position,
+                out var propertyId);
+
+            return GetPropertyName(propertyId);
         }
 
         private static void ThrowOutOfRangeException(int indexValue)
@@ -1462,25 +1496,6 @@ namespace Sparrow.Json
             return Contains(lazyName);
         }
 
-        public bool TryGetPropertyType(string name, out BlittableJsonToken jsonToken)
-            => TryGetPropertyType(new StringSegment(name), out jsonToken);
-        
-        //TODO Maybe use LazyStringValue
-        public  bool TryGetPropertyType(StringSegment name, out BlittableJsonToken jsonToken)
-        {
-            var lazyName = _context.GetLazyStringForFieldWithCaching(name);
-            var index = GetPropertyIndex(lazyName);
-            if (index == -1)
-            {
-                jsonToken = BlittableJsonToken.Null;
-                return false;
-            }
-            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-            GetPropertyTypeAndPosition(index, metadataSize, out var token, out var _, out var _);
-            jsonToken = token;
-            return true;
-        }
-        
         private int _hashCode;
 
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]

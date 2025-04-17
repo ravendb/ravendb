@@ -49,31 +49,31 @@ public class ErrorBuilder : IDisposable
         _errorBuffer.Append(value);
         return this;
     }
-
     public ErrorBuilder Append(BlittableJsonReaderObject value)
     {
         _errorBuffer.Append(value);
         return this;
     }
-
+    public ErrorBuilder Append(LazyStringValue value)
+    {
+        _errorBuffer.AppendUtf8(value.AsSpan());
+        return this;
+    }
     public ErrorBuilder Append(ValidationPath value)
     {
         _errorBuffer.Append(value.AsSpan());
         return this;
     }
-
     public ErrorBuilder Append(Regex value)
     {
         _errorBuffer.Append(value.ToString());
         return this;
     }
-
     public ErrorBuilder Append(bool value)
     {
         _errorBuffer.Append(value.ToString());
         return this;
     }
-
     public ErrorBuilder Append(ISpanFormattable value)
     {
         _errorBuffer.Append(value);
@@ -162,6 +162,7 @@ public class ErrorBuilder : IDisposable
         public void AppendLiteral(string value) => _errorBuilder.Append(value);
         public void AppendFormatted(string value) => _errorBuilder.Append(value);
         public void AppendFormatted(BlittableJsonReaderObject value) => _errorBuilder.Append(value);
+        public void AppendFormatted(LazyStringValue value) => _errorBuilder.Append(value);
         public void AppendFormatted(ValidationPath value) => _errorBuilder.Append(value);
         public void AppendFormatted(Regex value) => _errorBuilder.Append(value);
         public void AppendFormatted(bool value) => _errorBuilder.Append(value);

@@ -17,7 +17,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnUniqueItems()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue { [SchemaValidatorConstants.Properties] = new DynamicJsonValue { ["prop1"] = new DynamicJsonValue { [SchemaValidatorConstants.UniqueItems] = true } } };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
@@ -52,7 +52,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -120,7 +120,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -161,7 +161,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SchemaValidatorConstants.Items] = new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" } } }
@@ -193,7 +193,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SchemaValidatorConstants.Contains] = new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" } } }
@@ -226,7 +226,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -272,7 +272,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "somepropname";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
