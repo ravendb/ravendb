@@ -5,12 +5,12 @@ namespace Raven.Server.SchemaValidation.Validators.Array;
 
 public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
-    private readonly ArrayItemSchemaRuleValidator _containsValidator;
+    private readonly ElementSchemaRuleValidator _containsValidator;
     private readonly long _minContains;
     private readonly long _maxContains;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ContainsRuleValidator(ArrayItemSchemaRuleValidator containsValidator, long minContains, long maxContains)
+    public ContainsRuleValidator(ElementSchemaRuleValidator containsValidator, long minContains, long maxContains)
     {
         _containsValidator = containsValidator;
         _minContains = minContains;
@@ -22,7 +22,7 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
         var count = 0;
         for (int j = 0; j < value.Length; j++)
         {
-            if (_containsValidator.Validate(value, j, null) == false) 
+            if (_containsValidator.Validate(value, null) == false) 
                 continue;
             
             if (++count >= _minContains && _maxContains > (value.Length - j + count))
@@ -62,7 +62,7 @@ public class ContainsRuleValidatorRuleValidatorFactory : SchemaRuleValidatorFact
         if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.MaxContains, schemaPath.FullPath, out var maxContains) == false)
             maxContains = long.MaxValue;
         
-        var containsValidator = ElementSchemaRuleValidatorFactory.CreateArrayItemSchemaRuleValidator(containsSchema, schemaPath + Rule, refSchemas);
+        var containsValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(containsSchema, schemaPath + Rule, refSchemas);
         return new ContainsRuleValidator(containsValidator, minContains, maxContains);
     }
 }

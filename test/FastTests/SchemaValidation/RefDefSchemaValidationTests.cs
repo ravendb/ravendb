@@ -18,7 +18,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnStringWithReferenced()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -82,7 +82,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnNumberWithReferenced()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -136,7 +136,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnBooleanWithReferenced()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -190,7 +190,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnNullWithReferenced()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -244,7 +244,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnObjectWithReferenced()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -295,7 +295,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnArrayWithReferenced()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -343,7 +343,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public void RefSchema_WhenHasCircularReferences_ShouldFail()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Defs] = new DynamicJsonValue

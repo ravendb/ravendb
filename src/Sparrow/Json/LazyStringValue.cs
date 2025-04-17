@@ -475,16 +475,20 @@ namespace Sparrow.Json
             {
                 fixed (char* pDestination = destination)
                 {
-                    var length = Encodings.Utf8.GetCharCount(Buffer, Size);
-                    if(Encodings.Utf8.GetChars(Buffer, Size, pDestination, destination.Length) == length)
+                    if(Encodings.Utf8.GetChars(Buffer, Size, pDestination, destination.Length) == Length)
                     {
-                        charsWritten = length;
+                        charsWritten = Length;
                         return true;
                     }
                 }
             }
             charsWritten = 0;
             return false;
+        }
+
+        public bool TryCopyTo(Span<char> destination)
+        {
+            return TryFormat(destination, out _, default, null);
         }
 
         public int CompareTo(object obj)

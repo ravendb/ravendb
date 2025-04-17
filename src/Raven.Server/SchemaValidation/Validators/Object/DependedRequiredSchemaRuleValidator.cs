@@ -14,26 +14,24 @@ public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFa
         if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var dependentRequiredSchema) == false)
             return null;
 
-        var propertyNames = dependentRequiredSchema.GetPropertyNames();
-        if (propertyNames.Length == 0)
+        if (dependentRequiredSchema.Count == 0)
             return null;
-
         List<IfThenElseSchemaRuleValidator> dependentRequires = null;
-        foreach (var propertyName in propertyNames)
+        var prop = default(BlittableJsonReaderObject.PropertyDetails);
+        for (int i = 0; i < dependentRequiredSchema.Count; i++)
         {
-            if (SchemaValidationHelper.TryGetArray(dependentRequiredSchema, propertyName, schemaPath.FullPath, out var requiredSchema) == false)
-                throw new InvalidOperationException(
-                    $"Should not happen. {propertyName} exists and wrong type should throw {nameof(InvalidSchemaValidationDefinitionException)}");
+            dependentRequiredSchema.GetPropertyByIndex(i, ref prop);
+            var requiredSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderArray>(prop.Name, prop.Value, schemaPath.FullPath);
             
             if(requiredSchema.Length == 0)
                 continue;
                     
-            var propertySchemaPath = schemaPath + propertyName; 
-            var ifRequiredValidator = new RequiredSchemaRuleValidator(propertyName);
-            var ifValidator = new SelfObjectElementSchemaRuleValidator(null, [ifRequiredValidator], propertySchemaPath);
+            var propertySchemaPath = schemaPath + prop.Name; 
+            var ifRequiredValidator = new RequiredSchemaRuleValidator(prop.Name);
+            var ifValidator = new ElementSchemaRuleValidator(null, [ifRequiredValidator], propertySchemaPath);
             
             var thenRequiredValidator = new RequiredSchemaRuleValidator(requiredSchema);
-            var thenValidator = new SelfObjectElementSchemaRuleValidator(null, [thenRequiredValidator], propertySchemaPath);
+            var thenValidator = new ElementSchemaRuleValidator(null, [thenRequiredValidator], propertySchemaPath);
 
             (dependentRequires ??= new List<IfThenElseSchemaRuleValidator>()).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
         }

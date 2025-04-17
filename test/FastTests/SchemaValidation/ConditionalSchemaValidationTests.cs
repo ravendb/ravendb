@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -16,13 +17,14 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public async Task SchemaValidation_WhenValidateConditionalSchema()
+    public async Task SchemaValidation_WhenValidateConditionalSchemaOnObject()
     {
         const string ifProp = "ifProp";
         const string thenProp = "thenProp";
         const string elseProp = "elseProp";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
+        
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.If] = new DynamicJsonValue
@@ -105,11 +107,64 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
                 AssertError("The required property 'elseProp' is missing at ''.", errors);
             });
     }
+
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenValidateConditionalSchemaOnString()
+    {
+        const string stringProp = "stringProp";
+
+        using var schemaValidator = new SchemaValidator(ContextPool);
+
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.Properties] = new DynamicJsonValue
+            {
+                [stringProp] = new DynamicJsonValue
+                {
+                    [SVC.If] = new DynamicJsonValue
+                    {
+                        [SVC.Type] = "string"
+                    },
+                    [SVC.Then] = new DynamicJsonValue
+                    {
+                        [SVC.MaxLength] = 5
+                    }
+                },
+            }
+        };
+
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["stringProp"] = "123",
+                }, out var obj);
+            
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    [stringProp] = "123456789",
+                }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The length of the value '123456789' at 'stringProp' should not exceed 5, but its actual length is 9.", errors);
+            });
+    }
     
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnDependentRequired()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue { [SVC.DependentRequired] = new DynamicJsonValue { ["prop1"] = new[] { "prop2", "prop3" } } };
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {
@@ -149,7 +204,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnDependentSchemas()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue 
         { 
             [SVC.DependentSchemas] = new DynamicJsonValue 
@@ -198,7 +253,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnNot()
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue 
         { 
             [SVC.Not] = new DynamicJsonValue 

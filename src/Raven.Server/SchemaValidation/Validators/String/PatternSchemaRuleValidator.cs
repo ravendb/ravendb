@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Buffers;
+using System.Text.RegularExpressions;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
@@ -14,13 +16,22 @@ public class PatternSchemaRuleValidator : StringSchemaRuleValidator
         _pattern = new Regex(pattern, RegexOptions.Compiled);
     }
 
-    public override bool Validate(string value, ErrorBuilder errorBuilder)
+    public override bool Validate(LazyStringValue value, ErrorBuilder errorBuilder)
     {
-        if (_pattern.IsMatch(value)) 
-            return true;
+        var buffer = ArrayPool<char>.Shared.Rent(value.Length);
+        try
+        {
+            value.TryCopyTo(buffer);
+            if (_pattern.IsMatch(buffer.AsSpan(0, value.Length))) 
+                return true;
         
-        errorBuilder?.AddError($"The pattern of the {Target} '{value}' at '{errorBuilder.Path}' does not match the required pattern '{_pattern}'.");
-        return false;
+            errorBuilder?.AddError($"The pattern of the {Target} '{value}' at '{errorBuilder.Path}' does not match the required pattern '{_pattern}'.");
+            return false;
+        }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(buffer);
+        }
     }
 }
 

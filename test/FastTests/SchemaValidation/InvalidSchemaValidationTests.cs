@@ -22,9 +22,9 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
             new object[] { SVC.Pattern, 78, "The value of 'pattern' must be a string, but received '78' of type 'integer'. Schema path '#/properties/prop'." },
             new object[] { SVC.MinLength, "somestring", "The value of 'minLength' must be an integer, but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
             new object[] { SVC.MaxLength, "somestring", "The value of 'maxLength' must be an integer, but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
-            new object[] { SVC.Maximum, "somestring", "The value of 'maximum' must be a number or an integer but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
-            new object[] { SVC.Minimum, "somestring", "The value of 'minimum' must be a number or an integer but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
-            new object[] { SVC.MultipleOf, "somestring", "The value of 'multipleOf' must be a number or an integer but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
+            new object[] { SVC.Maximum, "somestring", "The value of 'maximum' must be a number or an integer, but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
+            new object[] { SVC.Minimum, "somestring", "The value of 'minimum' must be a number or an integer, but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
+            new object[] { SVC.MultipleOf, "somestring", "The value of 'multipleOf' must be a number or an integer, but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
             new object[] { SVC.Enum, "somestring", "The value of 'enum' must be an array, but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
             new object[] { SVC.Required, "somestring", "The value of 'required' must be an array, but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
             new object[] { SVC.MinProperties, "somestring", "The value of 'minProperties' must be an integer, but received 'somestring' of type 'string'. Schema path '#/properties/prop'." },
@@ -68,7 +68,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
     [RavenTheory(RavenTestCategory.JavaScript)]
     [InlineData(SVC.Properties, "invalidvalue", "The value of 'properties' must be an object, but received 'invalidvalue' of type 'string'. Schema path '#/properties'.")]
     [InlineData(SVC.PatternProperties, "invalidvalue", "The value of 'patternProperties' must be an object, but received 'invalidvalue' of type 'string'. Schema path '#/patternProperties'.")]
-    [InlineData(SVC.AdditionalProperties, "invalidvalue", "The value of 'additionalProperties' must be a boolean or an object but received 'invalidvalue' of type 'string'. Schema path '#/additionalProperties'.")]
+    [InlineData(SVC.AdditionalProperties, "invalidvalue", "The value of 'additionalProperties' must be a boolean or an object, but received 'invalidvalue' of type 'string'. Schema path '#/additionalProperties'.")]
     public void InvalidSchema_WhenDefineWithWrongValue(string key, object value, string error)
     {
         var schemaDefinition = new DynamicJsonValue
@@ -80,7 +80,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
 
     private void AssertInvalidSchemaThrow(DynamicJsonValue schemaDefinition, string error)
     {
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
 
         using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
         {

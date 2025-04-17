@@ -22,7 +22,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         const string definedProp = "definedProp";
         const string notDefinedProp = "notDefinedProp";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var jsonSchemaValidator = new DynamicJsonValue
         {
             [SVC.AdditionalProperties] = false
@@ -64,7 +64,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         const string definedProp = "definedProp";
         const string notDefinedProp = "notDefinedProp";
 
-        var schemaValidator = new SchemaValidator(ContextPool);
+        using var schemaValidator = new SchemaValidator(ContextPool);
         var jsonSchemaValidator = new DynamicJsonValue
         {
             [SVC.AdditionalProperties] = new DynamicJsonValue

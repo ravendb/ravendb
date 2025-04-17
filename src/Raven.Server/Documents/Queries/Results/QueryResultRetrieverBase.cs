@@ -768,7 +768,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (_query.QueryParameters == null)
                         throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", _query.Query, null);
 
-                    if (_query.QueryParameters.TryGetMember(fieldToFetch.QueryField.Name, out var nameObject) == false)
+                    if (_query.QueryParameters.TryGetMember((string)fieldToFetch.QueryField.Name, out var nameObject) == false)
                         throw new InvalidQueryException($"Value of parameter '{fieldToFetch.QueryField.Name}' was not provided", _query.Query, _query.QueryParameters);
 
                     name = nameObject.ToString();

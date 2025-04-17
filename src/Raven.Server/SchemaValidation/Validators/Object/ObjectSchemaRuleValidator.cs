@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -11,12 +13,12 @@ namespace Raven.Server.SchemaValidation.Validators.Object;
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly SchemaPath _schemaPath;
-    private readonly Dictionary<string, PropertySchemaRuleValidator> _namedPropertyValidators;
-    private readonly (Regex Regex, PropertySchemaRuleValidator Validator)[] _patternPropertiesValidators;
-    private readonly (bool Allowed, PropertySchemaRuleValidator Validator) _additionalPropertiesValidator;
+    private readonly Dictionary<LazyStringValue, ElementSchemaRuleValidator> _namedPropertyValidators;
+    private readonly (Regex Regex, ElementSchemaRuleValidator Validator)[] _patternPropertiesValidators;
+    private readonly (bool Allowed, ElementSchemaRuleValidator Validator) _additionalPropertiesValidator;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ObjectSchemaRuleValidator(Dictionary<string, PropertySchemaRuleValidator> named, (Regex, PropertySchemaRuleValidator x)[] pattern, (bool IsAllowed, PropertySchemaRuleValidator Validator) additional, SchemaPath schemaPath)
+    public ObjectSchemaRuleValidator(Dictionary<LazyStringValue, ElementSchemaRuleValidator> named, (Regex, ElementSchemaRuleValidator x)[] pattern, (bool IsAllowed, ElementSchemaRuleValidator Validator) additional, SchemaPath schemaPath)
     {
         _namedPropertyValidators = named;
         _patternPropertiesValidators = pattern;
@@ -31,48 +33,79 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         {
             foreach (var (prop, validator) in _namedPropertyValidators)
             {
-                isValid&= ValidateProperty(validator, value, prop, errorBuilder);
+                isValid &= ValidateProperty(validator, value, prop, errorBuilder);
+                if (errorBuilder == null && isValid == false)
+                    return false;
             }
         }
 
-        foreach (string prop in value.GetPropertyNames())
+        var buffer = ArrayPool<char>.Shared.Rent(1024);
+        try
         {
-            var hasValidator = _namedPropertyValidators != null && _namedPropertyValidators.ContainsKey(prop);
-            if (_patternPropertiesValidators != null)
+            for (int i = 0; i < value.Count; i++)
             {
-                foreach (var (regex, validator) in _patternPropertiesValidators)
-                {
-                    if(regex.IsMatch(prop) == false)
-                        continue;
+                var propName = value.GetPropertyNameByIndex(i);
                 
-                    hasValidator = true;
-                    isValid &= ValidateProperty(validator,value, prop, errorBuilder);
+                var hasValidator = _namedPropertyValidators != null && _namedPropertyValidators.ContainsKey(propName);
+                if (_patternPropertiesValidators != null)
+                {
+                    foreach (var (regex, validator) in _patternPropertiesValidators)
+                    {
+                        if (propName.Length > buffer.Length)
+                        {
+                            ArrayPool<char>.Shared.Return(buffer);
+                            buffer = ArrayPool<char>.Shared.Rent(propName.Length);
+                        }
+                        propName.TryCopyTo(buffer);
+                        if(regex.IsMatch(buffer.AsSpan(0, propName.Length)) == false)
+                            continue;
+                
+                        hasValidator = true;
+                        var prop = default(BlittableJsonReaderObject.PropertyDetails);
+                        value.GetPropertyByIndex(i, ref prop);
+                        isValid &= ValidateProperty(validator, propName, prop.Value, errorBuilder);
+                        if (errorBuilder == null && isValid == false)
+                            return false;
+                    }
+                }
+
+                if (hasValidator) 
+                    continue;
+            
+                var (allowed, additionalPropertiesValidator) = _additionalPropertiesValidator;
+                if (allowed == false)
+                {
+                    errorBuilder?.AddError($"The property '{propName}' at '{errorBuilder.Path}' is not defined and additional properties are not allowed.");
+                    isValid = false;
+                }
+                else if (additionalPropertiesValidator != null)
+                {
+                    var prop = default(BlittableJsonReaderObject.PropertyDetails);
+                    value.GetPropertyByIndex(i, ref prop);
+                    isValid &= ValidateProperty(additionalPropertiesValidator, propName, prop.Value, errorBuilder);
+                    if (errorBuilder == null && isValid == false)
+                        return false;
                 }
             }
-
-            if (hasValidator) 
-                continue;
-            
-            var (allowed, additionalPropertiesValidator) = _additionalPropertiesValidator;
-            if (allowed == false)
-            {
-                errorBuilder?.AddError($"The property '{prop}' at '{errorBuilder.Path}' is not defined and additional properties are not allowed.");
-                isValid = false;
-            }
-            else if (additionalPropertiesValidator != null)
-            {
-                isValid &= ValidateProperty(additionalPropertiesValidator, value, prop, errorBuilder);
-            }
         }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(buffer);
+        }
+
         return isValid;
     }
 
-    private static bool ValidateProperty(PropertySchemaRuleValidator validator, BlittableJsonReaderObject value, string prop,
+    private static bool ValidateProperty(ElementSchemaRuleValidator validator, BlittableJsonReaderObject value, LazyStringValue prop,
         ErrorBuilder errorBuilder)
     {
-        
+        return value.TryGetMember((string)prop, out object propValue) == false || ValidateProperty(validator, prop, propValue, errorBuilder);
+    }
+
+    private static bool ValidateProperty(ElementSchemaRuleValidator validator, LazyStringValue prop, object propValue, ErrorBuilder errorBuilder)
+    {
         errorBuilder?.Path.StepIn(prop);
-        var isValid = validator.Validate(value, prop, errorBuilder);
+        var isValid = validator.Validate(propValue, errorBuilder);
         errorBuilder?.Path.StepOut();
         return isValid;
     }
@@ -83,9 +116,9 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
     public override ObjectSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         var named = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.Properties, refSchemas)?
-            .ToDictionary(x => x.Property);
+            .ToDictionary(x => x.property, x => x.validator);
         var pattern = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.PatternProperties, refSchemas)?
-            .Select(x => (new Regex(x.Property), x)).ToArray();
+            .Select(x => (new Regex(x.property), x.validator)).ToArray();
 
         var additional = ReadAdditionalProperties(schemaDefinition, schemaPath, refSchemas);
 
@@ -95,7 +128,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
         return new ObjectSchemaRuleValidator(named, pattern, additional, schemaPath);
     }
     
-    private static (bool IsAllowed, PropertySchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+    private static (bool IsAllowed, ElementSchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas)
     {
         const string rule = SchemaValidatorConstants.AdditionalProperties;
@@ -111,31 +144,34 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
                 return (isAdditionalPropertiesAllowed, null);
             case BlittableJsonReaderObject additionalPropertiesSchema:
             {
-                var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(additionalPropertiesSchema, schemaPath, refSchemas);
+                var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(additionalPropertiesSchema, schemaPath, refSchemas);
                 return (true, validator);
             }
             default:
-                SchemaValidationHelper.TrowRuleTypeError(
-                    rule, additionalProperties, [BlittableJsonToken.Boolean, BlittableJsonToken.StartObject], SchemaValidationHelper.GetPublicTypeOfObj(additionalProperties), schemaPath.FullPath);
+                Type[] expectedTypes = [typeof(bool), typeof(BlittableJsonReaderObject)];
+                SchemaValidationHelper.ThrowRuleTypeError(rule, additionalProperties, expectedTypes, schemaPath.FullPath);
                 return (false, null);
         }
     }
 
-    private static List<PropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+    private static List<(LazyStringValue property, ElementSchemaRuleValidator validator)> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas)
     {
         if(SchemaValidationHelper.TryGetObject(schemaDefinition, schemaPath.Property, schemaPath.FullPath, out var propertySchema) == false)
             return null;
 
-        List<PropertySchemaRuleValidator> validators = null;
-        foreach (var propertySpecifier in propertySchema.GetPropertyNames())
+        List<(LazyStringValue property, ElementSchemaRuleValidator validator)> validators = null;
+        var prop = default(BlittableJsonReaderObject.PropertyDetails);
+        for (int i = 0; i < propertySchema.Count; i++)
         {
-            var propertySchemaPath = schemaPath + propertySpecifier;
-            SchemaValidationHelper.TryGetObject(propertySchema, propertySpecifier, propertySchemaPath.FullPath, out var propertySchemaDefinition);
+            propertySchema.GetPropertyByIndex(i, ref prop);
+            var propertySchemaPath = schemaPath + prop.Name;
 
-            var validator = ElementSchemaRuleValidatorFactory.CreatePropertySchemaRuleValidator(propertySchemaDefinition, propertySchemaPath, refSchemas);
+            var propertySchemaDefinition = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(prop.Name, prop.Value, schemaPath.FullPath);
+
+            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(propertySchemaDefinition, propertySchemaPath, refSchemas);
             if(validator != null)
-                (validators ??= []).Add(validator);
+                (validators ??= []).Add((prop.Name, validator));
         }
 
         return validators;

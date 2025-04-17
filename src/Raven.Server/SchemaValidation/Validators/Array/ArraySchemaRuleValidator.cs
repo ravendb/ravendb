@@ -11,11 +11,11 @@ namespace Raven.Server.SchemaValidation.Validators.Array;
 public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
     private readonly SchemaPath _schemaPath;
-    private readonly ArrayItemSchemaRuleValidator[] _prefixValidators;
-    private readonly (bool Allowed, ArrayItemSchemaRuleValidator validator) _itemsValidator;
+    private readonly ElementSchemaRuleValidator[] _prefixValidators;
+    private readonly (bool Allowed, ElementSchemaRuleValidator validator) _itemsValidator;
     
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ArraySchemaRuleValidator(ArrayItemSchemaRuleValidator[] prefixValidators, (bool Allowed, ArrayItemSchemaRuleValidator validator) itemsValidator, SchemaPath schemaPath)
+    public ArraySchemaRuleValidator(ElementSchemaRuleValidator[] prefixValidators, (bool Allowed, ElementSchemaRuleValidator validator) itemsValidator, SchemaPath schemaPath)
     {
         _prefixValidators = prefixValidators;
         _itemsValidator = itemsValidator;
@@ -35,8 +35,11 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
                 for (; i < length; i++)
                 {
                     errorBuilder?.Path.StepIn(i);
-                    isValid &= _prefixValidators[i].Validate(value, i, errorBuilder);
+                    isValid &= _prefixValidators[i].Validate(value[i], errorBuilder);
                     errorBuilder?.Path.StepOut();
+
+                    if (errorBuilder == null && isValid == false)
+                        return false;
                 }
             }
         }
@@ -45,6 +48,8 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         {
             errorBuilder?.AddError($"The array at '{errorBuilder.Path}' contains additional items, which are not allowed.");
             isValid = false;
+            if (errorBuilder == null)
+                return false;
         }
         
         if (_itemsValidator.validator != null)
@@ -52,8 +57,11 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
             for (; i < value.Length; i++)
             {
                 errorBuilder?.Path.StepIn(i);
-                isValid &=_itemsValidator.validator.Validate(value, i, errorBuilder);
+                isValid &=_itemsValidator.validator.Validate(value, errorBuilder);
                 errorBuilder?.Path.StepOut();
+                
+                if (errorBuilder == null && isValid == false)
+                    return false;
             }
         }
         
@@ -70,30 +78,44 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
         return new ArraySchemaRuleValidator(prefixValidators, itemsValidators, schemaPath);
     }
     
-    private static ArrayItemSchemaRuleValidator[] ReadPrefixItemsSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    private static ElementSchemaRuleValidator[] ReadPrefixItemsSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         const string rule =  SchemaValidatorConstants.PrefixItems;
         if(SchemaValidationHelper.TryGetArray(schemaDefinition, rule, schemaPath.FullPath, out var prefixItemsSchema) == false)
             return null;
         schemaPath += rule;
 
-        List<ArrayItemSchemaRuleValidator> validators = null;
-        for (int i = 0; i < prefixItemsSchema.Length; i++)
+        List<ElementSchemaRuleValidator> validators = null;
+        for (var i = 0; i < prefixItemsSchema.Length; i++)
         {
-            var (value, token) = prefixItemsSchema.GetValueTokenTupleByIndex(i);
-            
-            const BlittableJsonToken expectedType = BlittableJsonToken.StartObject;
-            if (token != expectedType)
-                SchemaValidationHelper.TrowRuleTypeError(rule, value, expectedType, token, schemaPath.FullPath);
+            var item = prefixItemsSchema[i];
+            if (item is not BlittableJsonReaderObject blittableItem)
+            {
+                SchemaValidationHelper.ThrowRuleTypeError(rule, item, typeof(BlittableJsonReaderObject), schemaPath.FullPath);
+                return null;// Required to satisfy compiler flow analysis; method above always throws
+            }
                     
-            var validator = ElementSchemaRuleValidatorFactory.CreateArrayItemSchemaRuleValidator((BlittableJsonReaderObject)prefixItemsSchema[i], schemaPath + i, refSchemas);
+            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(blittableItem, schemaPath + i, refSchemas);
+            (validators ??= []).Add(validator);
+        }
+
+        for (var i = 0; i < prefixItemsSchema.Length; i++)
+        {
+            var item = prefixItemsSchema[i];
+            if (item is not BlittableJsonReaderObject blittableItem)
+            {
+                SchemaValidationHelper.ThrowRuleTypeError(rule, item, typeof(BlittableJsonReaderObject), schemaPath.FullPath);
+                return null; // Required to satisfy compiler flow analysis; method above always throws
+            }
+                    
+            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(blittableItem, schemaPath + i, refSchemas);
             (validators ??= []).Add(validator);
         }
         return validators?.ToArray();
     }
     
-    private readonly BlittableJsonToken[] _prefixItemsSchemaTypes = [BlittableJsonToken.Boolean, BlittableJsonToken.StartObject];
-    private (bool Allowed, ArrayItemSchemaRuleValidator Validator) ReadItemsSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+    
+    private (bool Allowed, ElementSchemaRuleValidator Validator) ReadItemsSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas)
     {
         const string rule = SchemaValidatorConstants.Items;
@@ -105,11 +127,12 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
             case bool isAdditionalPropertiesAllowed:
                 return (isAdditionalPropertiesAllowed, null);
             case BlittableJsonReaderObject additionalPropertiesSchema:
-                var validator = ElementSchemaRuleValidatorFactory.CreateArrayItemSchemaRuleValidator(additionalPropertiesSchema, schemaPath + rule, refSchemas);
+                var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(additionalPropertiesSchema, schemaPath + rule, refSchemas);
                 return (true, validator);
             default:
-                SchemaValidationHelper.TrowRuleTypeError(
-                    rule, prefixItemsSchema, _prefixItemsSchemaTypes, SchemaValidationHelper.GetPublicTypeOfObj(prefixItemsSchema), schemaPath.FullPath);
+                Type[] expectedTypes = [typeof(bool), typeof(BlittableJsonReaderObject)];
+                SchemaValidationHelper.ThrowRuleTypeError(
+                    rule, prefixItemsSchema, expectedTypes, schemaPath.FullPath);
                 return (false, null);
         }
     }
