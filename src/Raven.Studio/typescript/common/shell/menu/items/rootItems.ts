@@ -51,7 +51,7 @@ function whatsNewItem({ isWhatsNewVisible = false }: WhatsNewItemOptions = {}) {
         title: 'Release notes',
         tooltip: "Release notes",
         nav: isWhatsNewVisible,
-        css: 'icon-sparkles',
+        css: 'icon-document2',
         dynamicHash: appUrl.forWhatsNew,
         search: {
             isExcluded: !isWhatsNewVisible,
