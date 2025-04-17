@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Tracing.Parsers;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
@@ -148,12 +148,19 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
-            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store);
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, 
+                embeddingsPaths: new List<EmbeddingPathConfiguration>()
+                {
+                    new EmbeddingPathConfiguration()
+                    {
+                        ChunkingOptions = DefaultChunkingOptions,
+                        Path = "TextualValue"
+                    }
+                });
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [queriedText], dto1.Id);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", ["computer"], dto2.Id);
-            
             
             using (var session = store.OpenSession())
             {
