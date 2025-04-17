@@ -76,7 +76,7 @@ class editIndex extends shardViewModelBase {
     editedIndex = ko.observable<indexDefinition>();
     isAutoIndex = ko.observable<boolean>(false);
     
-    testIndex: KnockoutComputed<testIndex>;
+    testIndex: testIndex;
     originalIndexName: string;
     isSaveEnabled: KnockoutComputed<boolean>;
     saveInProgress = ko.observable<boolean>(false);
@@ -175,6 +175,8 @@ class editIndex extends shardViewModelBase {
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
+        this.testIndex = new testIndex(() => this.db);
+
         this.initializeObservables();
 
         this.shardSelector = db.isSharded() ? new inlineShardSelector(db, { dropup: true }) : null;
@@ -187,7 +189,7 @@ class editIndex extends shardViewModelBase {
     detached() {
         super.detached();
         
-        this.testIndex().dispose();
+        this.testIndex.dispose();
     }
 
     textForArchivedDataProcessingBehavior(mode: Raven.Client.Documents.DataArchival.ArchivedDataProcessingBehavior) {
@@ -233,6 +235,10 @@ class editIndex extends shardViewModelBase {
         }
     }
 
+    private updateTestIndexName(name: string) {
+        this.testIndex.query(`from index "${name || '<TestIndexName>'}"`);
+    }
+
     private initializeObservables() {
         this.editedIndex.subscribe(indexDef => {
             const firstMap = indexDef.maps()[0].map;
@@ -241,8 +247,14 @@ class editIndex extends shardViewModelBase {
                 this.updateIndexFields();
             });
         });
+        
+        this.editedIndex.subscribe((indexDef) => {
+            this.updateTestIndexName(indexDef.name());
 
-        this.testIndex = ko.pureComputed(() => new testIndex(() => this.db, this.editedIndex));
+            indexDef.name.subscribe((name) => {
+                this.updateTestIndexName(name);
+            });
+        });
 
         this.canEditIndexName = ko.pureComputed(() => {
             return !this.isEditingExistingIndex();
@@ -518,7 +530,7 @@ class editIndex extends shardViewModelBase {
             event.preventDefault();
         })
         
-        this.testIndex().compositionComplete();
+        this.testIndex.compositionComplete();
     }
     
     private initValidation() {
@@ -678,7 +690,7 @@ class editIndex extends shardViewModelBase {
         
         // wait for animation
         setTimeout(() => {
-            this.testIndex().runTest(this.shardSelector ? this.shardSelector.location() : null);
+            this.testIndex.runTest(this.shardSelector ? this.shardSelector.location() : null, this.editedIndex());
         }, oldVisible ? 1 : 200);
     }
 

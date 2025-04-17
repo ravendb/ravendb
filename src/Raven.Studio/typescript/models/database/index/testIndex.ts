@@ -25,7 +25,6 @@ class testIndex {
         testing: ko.observable<boolean>(false)
     };
 
-    private readonly indexDefinitionProvider: () => indexDefinition;
     private readonly dbProvider: () => database;
 
     testTimeLimit = ko.observable<number>();
@@ -54,14 +53,8 @@ class testIndex {
 
     languageService: rqlLanguageService;
 
-    constructor(dbProvider: () => database, indexDefinitionProvider: () => indexDefinition) {
+    constructor(dbProvider: () => database) {
         this.dbProvider = dbProvider;
-        this.indexDefinitionProvider = indexDefinitionProvider;
-
-        if (indexDefinitionProvider().name()) {
-            this.query(`from index "${indexDefinitionProvider().name()}"`)
-        }
-
         aceEditorBindingHandler.install();
 
         this.languageService = new rqlLanguageService(dbProvider(), ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
@@ -75,9 +68,9 @@ class testIndex {
         });
     }
 
-    toDto(): Raven.Server.Documents.Indexes.Test.TestIndexParameters {
+    toDto(indexDef: indexDefinition): Raven.Server.Documents.Indexes.Test.TestIndexParameters {
         return {
-            IndexDefinition: this.indexDefinitionProvider().toDto(),
+            IndexDefinition: indexDef.toDto(),
             WaitForNonStaleResultsTimeoutInSec: this.testTimeLimit() ?? 15,
             Query: this.query(),
             QueryParameters: null,
@@ -130,14 +123,14 @@ class testIndex {
         }
     }
 
-    runTest(location: databaseLocationSpecifier) {
+    runTest(location: databaseLocationSpecifier, indexDef: indexDefinition) {
         const db = this.dbProvider();
 
         eventsCollector.default.reportEvent("index", "test");
 
         this.columnsSelector.reset();
 
-        this.fetchTask = this.fetchTestDocuments(db, location);
+        this.fetchTask = this.fetchTestDocuments(db, location, indexDef);
 
         this.goToTab("queryResults");
 
@@ -183,10 +176,10 @@ class testIndex {
         this.languageService.dispose();
     }
 
-    private fetchTestDocuments(db: database, location: databaseLocationSpecifier): JQueryPromise<TestIndexResult> {
+    private fetchTestDocuments(db: database, location: databaseLocationSpecifier, indexDef: indexDefinition): JQueryPromise<TestIndexResult> {
         this.spinners.testing(true);
 
-        const dto = this.toDto();
+        const dto = this.toDto(indexDef);
 
         return new testIndexCommand(dto, db, location).execute()
             .done(result => {
