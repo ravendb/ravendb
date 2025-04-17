@@ -1463,7 +1463,11 @@ class editDocument extends shardViewModelBase {
         });
     }
 
-    deleteDocument(isClusterWide = false) {
+    deleteDocument() {
+        this.handleDeleteDocument(false);
+    }
+
+    handleDeleteDocument(isClusterWide = false) {
         eventsCollector.default.reportEvent("document", "delete");
         const doc = this.document();
         if (doc) {
