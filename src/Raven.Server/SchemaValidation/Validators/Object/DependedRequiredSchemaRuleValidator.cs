@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Raven.Server.SchemaValidation.ErrorMessage;
+using Raven.Server.SchemaValidation.Validators.Untyped;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
@@ -33,7 +33,7 @@ public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFa
             var thenRequiredValidator = new RequiredSchemaRuleValidator(requiredSchema);
             var thenValidator = new ElementSchemaRuleValidator(null, [thenRequiredValidator], propertySchemaPath);
 
-            (dependentRequires ??= new List<IfThenElseSchemaRuleValidator>()).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
+            (dependentRequires ??= []).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
         }
 
         if (dependentRequires == null)

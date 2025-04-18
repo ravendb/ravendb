@@ -2,7 +2,7 @@
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators.Object;
+namespace Raven.Server.SchemaValidation.Validators.Untyped;
 
 public class IfThenElseSchemaRuleValidator : SchemaRuleValidator<object>
 {

@@ -1,9 +1,8 @@
 ﻿using Raven.Server.SchemaValidation.ErrorMessage;
-using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators.Object;
+namespace Raven.Server.SchemaValidation.Validators.Untyped;
 
-public class GroupedIfThenElseSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
+public class GroupedIfThenElseSchemaRuleValidator : SchemaRuleValidator<object>
 {
     private readonly IfThenElseSchemaRuleValidator[] _ifThenElseSchemaRuleValidators;
 
@@ -13,7 +12,7 @@ public class GroupedIfThenElseSchemaRuleValidator : SchemaRuleValidator<Blittabl
         _ifThenElseSchemaRuleValidators = ifThenElseSchemaRuleValidators;
     }
 
-    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(object value, ErrorBuilder errorBuilder)
     {
         var isValid = true;
         foreach (var dependentRequire in _ifThenElseSchemaRuleValidators)

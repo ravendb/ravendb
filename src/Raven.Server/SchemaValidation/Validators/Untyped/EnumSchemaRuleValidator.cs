@@ -3,7 +3,7 @@ using System.Linq;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators;
+namespace Raven.Server.SchemaValidation.Validators.Untyped;
 
 public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
 {
