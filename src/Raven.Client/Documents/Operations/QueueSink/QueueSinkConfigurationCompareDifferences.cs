@@ -15,5 +15,6 @@ namespace Raven.Client.Documents.Operations.QueueSink
         ConfigurationName = 1 << 7,
         MentorNode = 1 << 8,
         ConfigurationDisabled = 1 << 9,
+        ConnectionString = 1 << 10,
     }
 }

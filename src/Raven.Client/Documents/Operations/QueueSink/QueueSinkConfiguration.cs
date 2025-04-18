@@ -163,8 +163,11 @@ public class QueueSinkConfiguration : IDynamicJsonValueConvertible, IDatabaseTas
     {
         return PinToMentorNode;
     }
-    
-    internal QueueSinkConfigurationCompareDifferences Compare(QueueSinkConfiguration config, List<(string TransformationName, QueueSinkConfigurationCompareDifferences Difference)> transformationDiffs = null)
+
+    internal QueueSinkConfigurationCompareDifferences Compare(
+        QueueSinkConfiguration config,
+        Dictionary<string, QueueConnectionString> connectionStrings,
+        List<(string TransformationName, QueueSinkConfigurationCompareDifferences Difference)> transformationDiffs = null)
     {
         if (config == null)
             throw new ArgumentNullException(nameof(config), "Got null config to compare");
@@ -194,6 +197,15 @@ public class QueueSinkConfiguration : IDynamicJsonValueConvertible, IDatabaseTas
 
         if (config.ConnectionStringName != ConnectionStringName)
             differences |= QueueSinkConfigurationCompareDifferences.ConnectionStringName;
+        else if (config.ConnectionStringName != null)
+        {
+            var oldConnectionString = Connection;
+            QueueConnectionString newConnectionString = null;
+            connectionStrings?.TryGetValue(config.ConnectionStringName, out newConnectionString);
+
+            if (newConnectionString == null || oldConnectionString.IsEqual(newConnectionString) == false)
+                differences |= QueueSinkConfigurationCompareDifferences.ConnectionString;
+        }
 
         if (config.Name.Equals(Name, StringComparison.OrdinalIgnoreCase) == false)
             differences |= QueueSinkConfigurationCompareDifferences.ConfigurationName;
