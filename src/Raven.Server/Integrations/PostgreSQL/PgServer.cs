@@ -66,7 +66,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                     {
                         if (_logger.IsOperationsEnabled)
                             _logger.Operations($"You have enabled the PostgreSQL integration via '{RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)}' configuration but " +
-                                         "this is an experimental feature and the server does not support experimental features. " +
+                                         "this is an experimental feature and the current server configuration does not allow to use experimental features. " +
                                          $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
                     }
                 }

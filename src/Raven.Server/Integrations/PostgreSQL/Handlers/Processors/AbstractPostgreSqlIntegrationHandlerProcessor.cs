@@ -24,10 +24,15 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHa
 
         if (requestHandler.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true))
         {
-            requestHandler.ServerStore.FeatureGuardian.Assert(Feature.PostgreSql, () =>
-                $"You have enabled the PostgreSQL integration via '{RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)}' configuration but " +
-                "this is an experimental feature and the server does not support experimental features. " +
-                $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
+            // if Postgres is enabled in config, we need to alert it's an experimental feature
+            if (requestHandler.ServerStore.Configuration.Integrations.PostgreSql.Enabled)
+            {
+                requestHandler.ServerStore.FeatureGuardian.Assert(Feature.PostgreSql, () =>
+                    $"You have enabled the PostgreSQL integration via '{RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)}' configuration but " +
+                    "this is an experimental feature and the current server configuration does not allow to use experimental features. " +
+                    $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
+            }
+            // if license check for Postgres passed, but it's still disabled in the configuration, we don't need to alert about anything yet
             return;
         }
 
