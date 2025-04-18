@@ -10,15 +10,15 @@ public class RefSchemas
 {
     private readonly Dictionary<string, RefSchema> _data = new Dictionary<string, RefSchema>();
 
-    public bool TryGet(string refPath, out (Type[] TypesRestriction, ISchemaRuleValidator[] RuleValidators) rules)
+    public bool TryGet(string refPath, out ElementSchemaRuleValidator validator)
     {
         if (_data.TryGetValue(refPath, out var refSchema))
         {
-            rules = (refSchema?.Rules.typesRestriction, refSchema?.Rules.ruleValidators);
+            validator = refSchema.Validator;
             return true;
         }
 
-        rules = (null, null);
+        validator = null;
         return false;
     }
     
@@ -30,10 +30,8 @@ public class RefSchemas
 
         foreach (var (fullPath, refSchema) in _data)
         {
-            if (ElementSchemaRuleValidatorFactory.TryReadSchema(refSchema.Raw, root + fullPath, this, out var typesRestriction, out var ruleValidators) == false)
-                continue;
-            
-            refSchema.Rules = (typesRestriction, ruleValidators);
+            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(refSchema.Raw, root + fullPath, this);
+            refSchema.Validator = validator;
         }
     }
 
@@ -48,20 +46,23 @@ public class RefSchemas
             schema.GetPropertyByIndex(i, ref property);
             var propertyPath =  schemaPath + property.Name;
             if (property.Name.Equals(SchemaValidatorConstants.Defs))
-            {
-                var defSchemas = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(property.Name, property.Value, propertyPath.FullPath);
-                var defSchemaProp = default(BlittableJsonReaderObject.PropertyDetails);
-                for (int j = 0; j < defSchemas.Count; j++)
-                {
-                    schema.GetPropertyByIndex(j, ref defSchemaProp);
-                    var defSchemaPath = propertyPath + defSchemaProp.Name;
-                    var defsSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(defSchemaProp.Name, defSchemaProp.Value, defSchemaPath.FullPath);
-                    _data[defSchemaPath.FullPath] = new RefSchema {Raw = defsSchema};
-                }
-            }
+                ReadDefs(property, propertyPath);
             
             if (schema.TryGetWithoutThrowingOnError(property.Name, out BlittableJsonReaderObject propSchema))
                 ReadAllDefinitions(propSchema, propertyPath);
+        }
+    }
+
+    private void ReadDefs(BlittableJsonReaderObject.PropertyDetails property, SchemaPath propertyPath)
+    {
+        var defSchemas = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(property.Name, property.Value, propertyPath.FullPath);
+        var defSchemaProp = default(BlittableJsonReaderObject.PropertyDetails);
+        for (int i = 0; i < defSchemas.Count; i++)
+        {
+            defSchemas.GetPropertyByIndex(i, ref defSchemaProp);
+            var defSchemaPath = propertyPath + defSchemaProp.Name;
+            var defsSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(defSchemaProp.Name, defSchemaProp.Value, defSchemaPath.FullPath);
+            _data[defSchemaPath.FullPath] = new RefSchema {Raw = defsSchema};
         }
     }
 

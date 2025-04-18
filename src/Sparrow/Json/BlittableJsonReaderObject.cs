@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 
 namespace Sparrow.Json
 {
@@ -62,6 +63,17 @@ namespace Sparrow.Json
         {
             var bllitable = new BlittableJsonReaderObject(context, mem, size);
             bllitable.BlittableValidation();
+        }
+
+        public void WriteJsonTo(Stream stream)
+        {
+            AssertContextNotDisposed();
+
+            using (var writer = new BlittableJsonTextWriter(_context, stream))
+            {
+                writer.WriteObject(this);
+                writer.Flush();
+            }
         }
         
         //Only initiate directly for validation in Recovery tool

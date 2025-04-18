@@ -34,11 +34,13 @@ public class ErrorBuffer : IErrorBuffer
 
     public IErrorBuffer Append(BlittableJsonReaderObject value)
     {
+        if (value == null)
+            return this;
+        
         using (var memoryStream = new ErrorBufferStreamWrapper(this))
         {
-            value.WriteJsonToAsync(memoryStream).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+            value.WriteJsonTo(memoryStream);
         }
-
         return this;
     }
     

@@ -12,7 +12,7 @@ public class ErrorBufferStreamWrapper : Stream
         _errorBuffer = errorBuffer;
     }
 
-    public override void Flush() => throw new NotSupportedException();
+    public override void Flush() {}
 
     public override int Read(byte[] buffer, int offset, int count)  => throw new NotSupportedException();
 
