@@ -30,32 +30,42 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             if (S3Settings != null)
             {
                 if (S3Settings.HasSettings() == false)
-                    errors.Add($"{nameof(S3Settings)} has no valid setting. '{nameof(S3Settings.BucketName)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
+                    errors.Add(
+                        $"{nameof(S3Settings)} has no valid setting. '{nameof(S3Settings.BucketName)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
             }
+
             if (AzureSettings != null)
             {
                 if (AzureSettings.HasSettings() == false)
-                    errors.Add($"{nameof(AzureSettings)} has no valid setting. '{nameof(AzureSettings.StorageContainer)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
+                    errors.Add(
+                        $"{nameof(AzureSettings)} has no valid setting. '{nameof(AzureSettings.StorageContainer)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
             }
+
             if (GlacierSettings != null)
             {
                 if (GlacierSettings.HasSettings() == false)
-                    errors.Add($"{nameof(GlacierSettings)} has no valid setting. '{nameof(GlacierSettings.VaultName)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
+                    errors.Add(
+                        $"{nameof(GlacierSettings)} has no valid setting. '{nameof(GlacierSettings.VaultName)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
             }
+
             if (GoogleCloudSettings != null)
             {
                 if (GoogleCloudSettings.HasSettings() == false)
-                    errors.Add($"{nameof(GoogleCloudSettings)} has no valid setting. '{nameof(GoogleCloudSettings.BucketName)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
+                    errors.Add(
+                        $"{nameof(GoogleCloudSettings)} has no valid setting. '{nameof(GoogleCloudSettings.BucketName)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
             }
+
             if (FtpSettings != null)
             {
                 if (FtpSettings.HasSettings() == false)
                     errors.Add($"{nameof(FtpSettings)} has no valid setting. '{nameof(FtpSettings.Url)}' is null");
             }
+
             if (LocalSettings != null)
             {
                 if (LocalSettings.HasSettings() == false)
-                    errors.Add($"{nameof(LocalSettings)} has no valid setting. '{nameof(LocalSettings.FolderPath)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
+                    errors.Add(
+                        $"{nameof(LocalSettings)} has no valid setting. '{nameof(LocalSettings.FolderPath)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
             }
         }
 
@@ -72,6 +82,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                     destination = $"{destination}/{S3Settings.RemoteFolderName}";
                 sb.AppendFormat(DestinationFormat, type, destination);
             }
+
             if (AzureSettings != null)
             {
                 if (sb.Length > 0)
@@ -82,8 +93,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                 if (string.IsNullOrEmpty(AzureSettings.RemoteFolderName) == false)
                     destination = $"{destination}/{AzureSettings.RemoteFolderName}";
                 sb.AppendFormat(DestinationFormat, type, destination);
-
             }
+
             if (GlacierSettings != null)
             {
                 if (sb.Length > 0)
@@ -95,6 +106,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                     destination = $"{destination}/{GlacierSettings.RemoteFolderName}";
                 sb.AppendFormat(DestinationFormat, type, destination);
             }
+
             if (GoogleCloudSettings != null)
             {
                 if (sb.Length > 0)
@@ -106,6 +118,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                     destination = $"{destination}/{GoogleCloudSettings.RemoteFolderName}";
                 sb.AppendFormat(DestinationFormat, type, destination);
             }
+
             if (FtpSettings != null)
             {
                 if (sb.Length > 0)
@@ -115,6 +128,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                 destination = FtpSettings.Url;
                 sb.AppendFormat(DestinationFormat, type, destination);
             }
+
             if (LocalSettings != null)
             {
                 if (sb.Length > 0)
@@ -149,6 +163,51 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             json[nameof(GoogleCloudSettings)] = GoogleCloudSettings?.ToAuditJson();
             json[nameof(FtpSettings)] = FtpSettings?.ToAuditJson();
             return json;
+        }
+
+        public override bool IsEqual(ConnectionString connectionString)
+        {
+            if (connectionString is OlapConnectionString olapConnectionString)
+            {
+                var isEqual = base.IsEqual(connectionString);
+
+                if (isEqual == false)
+                    return false;
+
+                if ((LocalSettings == null && olapConnectionString.LocalSettings != null) ||
+                    (LocalSettings != null && olapConnectionString.LocalSettings == null) ||
+                    (LocalSettings != null && olapConnectionString.LocalSettings != null && LocalSettings.Equals(olapConnectionString.LocalSettings) == false))
+                    return false;
+
+                if ((S3Settings == null && olapConnectionString.S3Settings != null) ||
+                    (S3Settings != null && olapConnectionString.S3Settings == null) ||
+                    (S3Settings != null && olapConnectionString.S3Settings != null && S3Settings.Equals(olapConnectionString.S3Settings) == false))
+                    return false;
+
+                if ((AzureSettings == null && olapConnectionString.AzureSettings != null) ||
+                    (AzureSettings != null && olapConnectionString.AzureSettings == null) ||
+                    (AzureSettings != null && olapConnectionString.AzureSettings != null && AzureSettings.Equals(olapConnectionString.AzureSettings) == false))
+                    return false;
+
+                if ((GlacierSettings == null && olapConnectionString.GlacierSettings != null) ||
+                    (GlacierSettings != null && olapConnectionString.GlacierSettings == null) ||
+                    (GlacierSettings != null && olapConnectionString.GlacierSettings != null && GlacierSettings.Equals(olapConnectionString.GlacierSettings) == false))
+                    return false;
+
+                if ((GoogleCloudSettings == null && olapConnectionString.GoogleCloudSettings != null) ||
+                    (GoogleCloudSettings != null && olapConnectionString.GoogleCloudSettings == null) ||
+                    (GoogleCloudSettings != null && olapConnectionString.GoogleCloudSettings != null && GoogleCloudSettings.Equals(olapConnectionString.GoogleCloudSettings) == false))
+                    return false;
+
+                if ((FtpSettings == null && olapConnectionString.FtpSettings != null) ||
+                    (FtpSettings != null && olapConnectionString.FtpSettings == null) ||
+                    (FtpSettings != null && olapConnectionString.FtpSettings != null && FtpSettings.Equals(olapConnectionString.FtpSettings) == false))
+                    return false;
+
+                return true;
+            }
+
+            return false;
         }
     }
 }
