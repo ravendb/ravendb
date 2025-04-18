@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -251,7 +250,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
-    public async Task SchemaValidation_WhenRestrictOnNot()
+    public async Task SchemaValidation_WhenRestrictObjectOnNot()
     {
         using var schemaValidator = new SchemaValidator(ContextPool);
         var schemaDefinition = new DynamicJsonValue 
@@ -290,6 +289,45 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value at '' is invalid because it matches a `not` schema.", errors);
+            });
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictStringOnNot()
+    {
+        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaDefinition = new DynamicJsonValue 
+        { 
+            [SVC.Properties] = new DynamicJsonValue
+            {
+                ["prop"] = new DynamicJsonValue
+                {
+                    [SVC.Not] = new DynamicJsonValue 
+                    { 
+                        [SVC.MinLength] = 5
+                    } 
+                }
+            }
+        };
+        
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "123" }, out var obj);
+            
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "1234567" }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The value at 'prop' is invalid because it matches a `not` schema.", errors);
             });
     }
 }

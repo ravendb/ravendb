@@ -2,9 +2,9 @@
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators.Object;
+namespace Raven.Server.SchemaValidation.Validators.Untyped;
 
-public class NotSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
+public class NotSchemaRuleValidator : SchemaRuleValidator<object>
 {
     private readonly ElementSchemaRuleValidator _not;
 
@@ -14,7 +14,7 @@ public class NotSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObj
         _not = not;
     }
 
-    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(object value, ErrorBuilder errorBuilder)
     {
         if (_not.Validate(value, null) == false)
             return true;

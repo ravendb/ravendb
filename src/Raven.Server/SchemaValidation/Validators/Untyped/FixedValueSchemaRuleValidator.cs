@@ -1,7 +1,7 @@
 ﻿using System;
 using Sparrow.Json;
 
-namespace Raven.Server.SchemaValidation.Validators;
+namespace Raven.Server.SchemaValidation.Validators.Untyped;
 
 public abstract class FixedValueSchemaRuleValidator : SchemaRuleValidator<object>
 {
