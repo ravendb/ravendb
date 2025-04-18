@@ -38,8 +38,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
             ["abc"] = 1
         }, out var obj);
             
-        if (schemaValidator.Validate(obj, out string errors) == false)
-            Assert.Fail(string.Join("\n", errors));;
+        Assert.True(schemaValidator.Validate(obj, out var errors), errors);
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -96,7 +95,6 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
             ["ABC"] = -1
         }, out var obj);
             
-        if (schemaValidator.Validate(obj, out string errors) == false)
-            Assert.Fail(string.Join("\n", errors));
+        Assert.True(schemaValidator.Validate(obj, out var errors), errors);
     }
 }

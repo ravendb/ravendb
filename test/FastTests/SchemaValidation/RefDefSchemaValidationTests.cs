@@ -53,8 +53,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["prop2"] = "123",
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -63,8 +62,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["prop3"] = "value1"
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -117,8 +115,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["prop2"] = 3.4,
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -171,8 +168,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["prop2"] = true
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -225,8 +221,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["prop2"] = null
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -277,8 +272,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     }
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -325,8 +319,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["prop1"] = new DynamicJsonArray{1}
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -424,8 +417,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["myprop"] = "1234", 
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -486,8 +478,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["myprop"] = "123456", 
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -496,8 +487,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                     ["myprop"] = "a12", 
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -508,6 +498,93 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
                 AssertError("The value at 'myprop' matches more than one schema, but it must match exactly one.", errors);
+            });
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictAnyOneOf()
+    {
+        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SchemaValidatorConstants.Properties] = new DynamicJsonValue
+            {
+                ["myprop"] = new DynamicJsonValue
+                {
+                    [SchemaValidatorConstants.AnyOf] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue
+                        {
+                            [SchemaValidatorConstants.Ref] = "#/$defs/mySchema1"
+                        },
+                        new DynamicJsonValue
+                        {
+                            [SchemaValidatorConstants.Ref] = "#/$defs/mySchema2"
+                        },
+                        new DynamicJsonValue
+                        {
+                            [SchemaValidatorConstants.Ref] = "#/$defs/mySchema3"
+                        }
+                    }
+                }
+            },
+            [SchemaValidatorConstants.Defs] = new DynamicJsonValue
+            {
+                ["mySchema1"] = new DynamicJsonValue
+                {
+                    [SchemaValidatorConstants.Minimum] = 5
+                },
+                ["mySchema2"] = new DynamicJsonValue
+                {
+                    [SchemaValidatorConstants.MultipleOf] = 2
+                },
+                ["mySchema3"] = new DynamicJsonValue
+                {
+                    [SchemaValidatorConstants.Const] = 1
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["myprop"] = 1 
+                }, out var obj);
+
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["myprop"] = 4, 
+                }, out var obj);
+
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["myprop"] = 7, 
+                }, out var obj);
+
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["myprop"] = 3
+                }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The value at 'myprop' does not match any of the schema restrictions.", errors);
             });
     }
 }

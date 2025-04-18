@@ -38,8 +38,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                     ["ABC"] = "somevalue"
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -76,8 +75,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                     ["123"] = "somevalue"
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -86,8 +84,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                     ["1234"] = "somevalue"
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -124,8 +121,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                     ["123"] = "somevalue"
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -134,8 +130,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                     ["1234"] = "somevalue"
                 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
