@@ -20,7 +20,6 @@ public sealed class FeatureGuardian
     {
         switch (feature)
         {
-            case Feature.Corax:
             case Feature.PostgreSql:
                 AssertExperimental(feature, getExceptionMessage);
                 break;
