@@ -49,5 +49,6 @@ internal static class SchemaValidatorConstants
     public const string Then = "then";
     public const string Else = "else";
     public const string Not = "not";
+    public const string AllOf = "allOf";
     #endregion
 }

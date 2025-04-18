@@ -43,10 +43,11 @@ public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Mini
 {
     public override MinimumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath.FullPath, out var minimum) == false)
+        schemaPath += Rule;
+        if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var minimum) == false)
             return null;
         
-        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.ExclusiveMinimum, schemaPath.FullPath, out bool exclusiveMinimum);
+        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.ExclusiveMinimum, schemaPath, out bool exclusiveMinimum);
 
         return new MinimumSchemaRuleValidator(minimum, exclusiveMinimum);
     }

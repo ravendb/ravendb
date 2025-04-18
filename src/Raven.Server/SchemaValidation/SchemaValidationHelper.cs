@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow;
 using Sparrow.Json;
 
@@ -110,58 +111,58 @@ public static class SchemaValidationHelper
         return "aeiouAEIOU".Contains(word[0]) ? "an" : "a";
     }
     
-    public static bool TryGetBoolean(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out bool ret)
+    public static bool TryGetBoolean(BlittableJsonReaderObject schemaDefinition, string key, SchemaPath schemaPath, out bool ret)
     {
         return TryGetProperty(schemaDefinition, key, schemaPath, out ret);
     }
     
     private static readonly Type[] StringTypes = [typeof(LazyStringValue), typeof(LazyCompressedStringValue)];
-    public static bool TryGetString(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out string ret)
+    public static bool TryGetString(BlittableJsonReaderObject schemaDefinition, string key, SchemaPath schemaPath, out string ret)
     {
         return TryGetProperty(schemaDefinition, key, StringTypes, schemaPath, out ret);
     }
-    public static bool TryGetInteger(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out long ret)
+    public static bool TryGetInteger(BlittableJsonReaderObject schemaDefinition, string key, SchemaPath schemaPath, out long ret)
     {
         return TryGetProperty(schemaDefinition, key, schemaPath, out ret);
     }
     
-    public static bool TryGetObject(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out BlittableJsonReaderObject ret)
+    public static bool TryGetObject(BlittableJsonReaderObject schemaDefinition, string key, SchemaPath schemaPath, out BlittableJsonReaderObject ret)
     {
         return TryGetProperty(schemaDefinition, key, schemaPath, out ret);
     }
     
-    public static bool TryGetArray(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out BlittableJsonReaderArray ret)
+    public static bool TryGetArray(BlittableJsonReaderObject schemaDefinition, string key, SchemaPath schemaPath, out BlittableJsonReaderArray ret)
     {
         return TryGetProperty(schemaDefinition, key, schemaPath, out ret);
     }
     
     private static readonly Type[] NumberTypes = [typeof(LazyNumberValue), typeof(long)];
     //TODO Maybe to use LazyNumberValue instead of decimal
-    public static bool TryGetNumber(BlittableJsonReaderObject schemaDefinition, string key, string schemaPath, out decimal ret)
+    public static bool TryGetNumber(BlittableJsonReaderObject schemaDefinition, string key, SchemaPath schemaPath, out decimal ret)
     {
         return TryGetProperty(schemaDefinition, key, NumberTypes, schemaPath, out ret);
     }
     
     [DoesNotReturn]
-    public static void ThrowRuleTypeError(string rule, object ruleValue, Type expectedType, string schemaPath)
+    public static void ThrowRuleTypeError(object ruleValue, Type expectedType, SchemaPath schemaPath)
     {
         var expectedPublicType = GetPublicType(expectedType);
         throw new InvalidSchemaValidationDefinitionException(
-            $"The value of '{rule}' must be {GetIndefiniteArticle(expectedPublicType)} {expectedPublicType}, but received '{ruleValue}' of type '{GetPublicTypeOfObj(ruleValue)}'. Schema path '{schemaPath}'.");
+            $"The value of '{schemaPath.Property}' must be {GetIndefiniteArticle(expectedPublicType)} {expectedPublicType}, but received '{ruleValue}' of type '{GetPublicTypeOfObj(ruleValue)}'. Schema path '{schemaPath.FullPath}'.");
     }
 
     [DoesNotReturn]
-    public static void ThrowRuleTypeError(string rule, object ruleValue, Type[] expectedTypes, string schemaPath)
+    public static void ThrowRuleTypeError(object ruleValue, Type[] expectedTypes, SchemaPath schemaPath)
     {
         if (expectedTypes.Length == 1)
-            ThrowRuleTypeError(rule, ruleValue, expectedTypes[0], schemaPath);
+            ThrowRuleTypeError(ruleValue, expectedTypes[0], schemaPath);
         
         var expectedPublicType = expectedTypes.Select(GetPublicType).Distinct();
         throw new InvalidSchemaValidationDefinitionException(
-            $"The value of '{rule}' must be {string.Join(" or ", expectedPublicType.Select(x => $"{GetIndefiniteArticle(x)} {x}"))}, but received '{ruleValue}' of type '{GetPublicType(ruleValue.GetType())}'. Schema path '{schemaPath}'.");
+            $"The value of '{schemaPath.Property}' must be {string.Join(" or ", expectedPublicType.Select(x => $"{GetIndefiniteArticle(x)} {x}"))}, but received '{ruleValue}' of type '{GetPublicType(ruleValue.GetType())}'. Schema path '{schemaPath.FullPath}'.");
     }
 
-    private static bool TryGetProperty<T>(BlittableJsonReaderObject schemaDefinition, string rule, string schemaPath, out T value)
+    private static bool TryGetProperty<T>(BlittableJsonReaderObject schemaDefinition, string rule, SchemaPath schemaPath, out T value)
     {
         if (schemaDefinition.TryGetMember(new StringSegment(rule), out var objValue) == false)
         {
@@ -169,20 +170,20 @@ public static class SchemaValidationHelper
             return false;
         }
 
-        value = CheckTypeAndThrow<T>(rule, objValue, schemaPath);;
+        value = CheckTypeAndThrow<T>(objValue, schemaPath);;
         return true;
     }
 
-    public static T CheckTypeAndThrow<T>(string key, object objValue, string schemaPath)
+    public static T CheckTypeAndThrow<T>(object objValue, SchemaPath schemaPath)
     {
         if (objValue is T tValue) 
             return tValue;
         
-        ThrowRuleTypeError(key, objValue, typeof(T), schemaPath);
+        ThrowRuleTypeError(objValue, typeof(T), schemaPath);
         return default; // Required to satisfy compiler flow analysis; method above always throws
     }
 
-    private static bool TryGetProperty<T>(BlittableJsonReaderObject schemaDefinition,  string rule, Type[] expectedTypes, string schemaPath, out T prefixItems)
+    private static bool TryGetProperty<T>(BlittableJsonReaderObject schemaDefinition,  string rule, Type[] expectedTypes, SchemaPath schemaPath, out T prefixItems)
     {
         if (schemaDefinition.TryGetMember(new StringSegment(rule), out var value) == false)
         {
@@ -191,7 +192,7 @@ public static class SchemaValidationHelper
         }
 
         if (expectedTypes.Contains(value.GetType()) == false)
-            ThrowRuleTypeError(rule, schemaDefinition[rule], expectedTypes, schemaPath);
+            ThrowRuleTypeError(schemaDefinition[rule], expectedTypes, schemaPath);
 
         if (schemaDefinition.TryGet(rule, out prefixItems) == false)
             throw new InvalidOperationException($"'{rule}' must to convertable to {nameof(BlittableJsonReaderArray)} here. Should not happen");

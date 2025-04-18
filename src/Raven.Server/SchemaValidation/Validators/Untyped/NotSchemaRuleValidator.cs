@@ -30,10 +30,11 @@ public class NotSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<NotSchem
 {
     public override NotSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var not) == false)
+        schemaPath += Rule;
+        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var not) == false)
             return null;
         
-        var notSchemaValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(not, schemaPath + Rule, refSchemas);
+        var notSchemaValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(not, schemaPath, refSchemas);
 
         return new NotSchemaRuleValidator(notSchemaValidator);
     }

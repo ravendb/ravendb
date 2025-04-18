@@ -41,7 +41,7 @@ public class PatternSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Patt
 {
     public override PatternSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        return SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath.FullPath, out var pattern) 
+        return SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath + Rule, out var pattern) 
             ? new PatternSchemaRuleValidator(pattern)
             : null;
     }

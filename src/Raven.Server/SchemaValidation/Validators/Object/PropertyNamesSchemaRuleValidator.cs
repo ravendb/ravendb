@@ -42,9 +42,10 @@ public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
 {
     public override PropertyNamesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var propertyNames) == false)
-            return null;
         schemaPath += Rule;
+        if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var propertyNames) == false)
+            return null;
+        
         List<SchemaRuleValidator<LazyStringValue>> propertyNameValidators = null;
         for (int i = 0; i < propertyNames.Count; i++)
         {

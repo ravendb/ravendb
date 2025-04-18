@@ -55,13 +55,13 @@ public class RefSchemas
 
     private void ReadDefs(BlittableJsonReaderObject.PropertyDetails property, SchemaPath propertyPath)
     {
-        var defSchemas = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(property.Name, property.Value, propertyPath.FullPath);
+        var defSchemas = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(property.Value, propertyPath);
         var defSchemaProp = default(BlittableJsonReaderObject.PropertyDetails);
         for (int i = 0; i < defSchemas.Count; i++)
         {
             defSchemas.GetPropertyByIndex(i, ref defSchemaProp);
             var defSchemaPath = propertyPath + defSchemaProp.Name;
-            var defsSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(defSchemaProp.Name, defSchemaProp.Value, defSchemaPath.FullPath);
+            var defsSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(defSchemaProp.Value, defSchemaPath);
             _data[defSchemaPath.FullPath] = new RefSchema {Raw = defsSchema};
         }
     }
@@ -75,7 +75,7 @@ public class RefSchemas
             var propPath = path + property.Name;
             if (property.Name.Equals(SchemaValidatorConstants.Ref))
             {
-                var @ref = SchemaValidationHelper.CheckTypeAndThrow<LazyStringValue>(property.Name, property.Value, propPath.ToString());
+                var @ref = SchemaValidationHelper.CheckTypeAndThrow<LazyStringValue>(property.Value, propPath);
                 if (refStack.Contains(@ref))
                     throw new InvalidSchemaValidationDefinitionException(
                         $"A circular reference was detected at '{propPath.FullPath}'.");

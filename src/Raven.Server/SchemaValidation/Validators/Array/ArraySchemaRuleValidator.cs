@@ -81,9 +81,9 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
     private static ElementSchemaRuleValidator[] ReadPrefixItemsSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
         const string rule =  SchemaValidatorConstants.PrefixItems;
-        if(SchemaValidationHelper.TryGetArray(schemaDefinition, rule, schemaPath.FullPath, out var prefixItemsSchema) == false)
-            return null;
         schemaPath += rule;
+        if(SchemaValidationHelper.TryGetArray(schemaDefinition, rule, schemaPath, out var prefixItemsSchema) == false)
+            return null;
 
         List<ElementSchemaRuleValidator> validators = null;
         for (var i = 0; i < prefixItemsSchema.Length; i++)
@@ -91,7 +91,7 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
             var item = prefixItemsSchema[i];
             if (item is not BlittableJsonReaderObject blittableItem)
             {
-                SchemaValidationHelper.ThrowRuleTypeError(rule, item, typeof(BlittableJsonReaderObject), schemaPath.FullPath);
+                SchemaValidationHelper.ThrowRuleTypeError(item, typeof(BlittableJsonReaderObject), schemaPath);
                 return null;// Required to satisfy compiler flow analysis; method above always throws
             }
                     
@@ -106,6 +106,7 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
         RefSchemas refSchemas)
     {
         const string rule = SchemaValidatorConstants.Items;
+        schemaPath += rule;
         if (schemaDefinition.TryGet(rule, out object prefixItemsSchema) == false)
             return (true, null);
         
@@ -118,8 +119,7 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
                 return (true, validator);
             default:
                 Type[] expectedTypes = [typeof(bool), typeof(BlittableJsonReaderObject)];
-                SchemaValidationHelper.ThrowRuleTypeError(
-                    rule, prefixItemsSchema, expectedTypes, schemaPath.FullPath);
+                SchemaValidationHelper.ThrowRuleTypeError(prefixItemsSchema, expectedTypes, schemaPath);
                 return (false, null);
         }
     }

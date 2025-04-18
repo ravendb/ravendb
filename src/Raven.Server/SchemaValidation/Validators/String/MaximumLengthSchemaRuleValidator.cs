@@ -29,7 +29,7 @@ public class MaximumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
 {
     public override MaximumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath.FullPath, out var maximumLength) 
+        return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath + Rule, out var maximumLength) 
             ? new MaximumLengthSchemaRuleValidator(maximumLength)
             : null;
     }
