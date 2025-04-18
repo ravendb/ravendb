@@ -50,8 +50,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [longProp] = 0
             }, out var obj);
             
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -80,8 +79,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [doubleProp] = 0.5
             }, out var obj);
             
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -139,8 +137,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         {
             using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [longProp] = 1 }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -160,8 +157,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         {
             using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [doubleProp] = 1.5 }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -213,8 +209,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             {
                 [longProp] = 0
             }, out var obj);
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -243,8 +238,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [doubleProp] = 0.5
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -306,8 +300,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [longProp] = -1
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -336,8 +329,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [doubleProp] = -0.5
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -396,8 +388,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [longProp] = 3
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         }, 
         () =>
         {
@@ -406,8 +397,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [longProp] = 6
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -416,8 +406,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [longProp] = -9
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -446,8 +435,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [doubleProp] = 0.6
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -456,8 +444,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [doubleProp] = 6
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -466,8 +453,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 [doubleProp] = -1.8
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {

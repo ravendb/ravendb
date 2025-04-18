@@ -31,8 +31,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             schemaValidator.Init(blitSchemaDefinition);
         }
         using var obj = context.ReadObject(new DynamicJsonValue(), "test object");
-        if (schemaValidator.Validate(obj, out string errors) == false)
-            Assert.Fail(errors);
+        Assert.True(schemaValidator.Validate(obj, out var errors), errors);
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -62,8 +61,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             ["prop"] = new DynamicJsonValue()
         }, "test object");
 
-        if (schemaValidator.Validate(obj, out string errors) == false)
-            Assert.Fail(string.Join("\n", errors));
+        Assert.True(schemaValidator.Validate(obj, out var errors), errors);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -123,8 +121,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             ["prop"] = "some string"
         }, "test object");
 
-        if (schemaValidator.Validate(testObj, out string errors) == false)
-            Assert.Fail(string.Join("\n", errors));
+        Assert.True(schemaValidator.Validate(testObj, out var errors), errors);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -183,8 +180,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             ["prop"] = 1
         }, "test object");
 
-        if (schemaValidator.Validate(obj, out string errors) == false)
-            Assert.Fail(string.Join("\n", errors));
+        Assert.True(schemaValidator.Validate(obj, out var errors), errors);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -270,15 +266,13 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = true }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = false }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -312,8 +306,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = null }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -347,15 +340,13 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonArray() }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonArray{"somevalue"} }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -387,15 +378,13 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = null }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonValue() }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -427,8 +416,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = 54 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             });
     }
 
@@ -453,22 +441,19 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = 15 }, out var obj);
             
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = "somevalue" }, out var obj);
             
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop"] = new DynamicJsonValue { ["prop"] = 8 } }, out var obj);
             
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {

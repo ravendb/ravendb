@@ -38,8 +38,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["stringProp"] = "somevalue" }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -73,8 +72,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["intProp"] = 21 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -108,8 +106,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["doubleProp"] = 3.14 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -143,8 +140,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["objectProp"] = new DynamicJsonValue{["prop"] = 44} }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {

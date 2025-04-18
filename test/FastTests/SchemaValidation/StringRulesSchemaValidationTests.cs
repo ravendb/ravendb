@@ -42,8 +42,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = "12345"
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -84,8 +83,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = "12345"
             }, out var obj);
             
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {
@@ -125,8 +123,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = "is3"
             }, out var obj);
 
-            if (schemaValidator.Validate(obj, out string errors) == false)
-                Assert.Fail(string.Join("\n", errors));
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
         },
         () =>
         {

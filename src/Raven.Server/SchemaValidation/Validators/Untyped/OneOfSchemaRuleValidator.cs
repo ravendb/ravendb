@@ -28,6 +28,13 @@ public class OneOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
 
             alreadyHasOneValid = true;
         }
+
+        if (alreadyHasOneValid == false)
+        {
+            errorBuilder?.AddError($"The value at '{errorBuilder.Path}' does not match any of the schema restrictions, and it must match exactly one.");
+            return false;
+        }
+
         return true;
     }
 }

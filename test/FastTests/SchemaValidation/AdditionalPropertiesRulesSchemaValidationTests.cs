@@ -44,8 +44,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
                 
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [definedProp] = "12345" }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {
@@ -89,8 +88,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
                 
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["definedProp"] = 1 }, out var obj);
 
-                if (schemaValidator.Validate(obj, out string errors) == false)
-                    Assert.Fail(string.Join("\n", errors));
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
             () =>
             {

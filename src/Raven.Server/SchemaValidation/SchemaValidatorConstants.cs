@@ -51,5 +51,6 @@ internal static class SchemaValidatorConstants
     public const string Not = "not";
     public const string AllOf = "allOf";
     public const string OneOf = "oneOf";
+    public const string AnyOf = "anyOf";
     #endregion
 }

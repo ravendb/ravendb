@@ -39,7 +39,8 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
             new object[] { SVC.Not, 1, "The value of 'not' must be an object, but received '1' of type 'integer'. Schema path '#/properties/prop/not'." },
             new object[] { SVC.Ref, 1, "The value of '$ref' must be a string, but received '1' of type 'integer'. Schema path '#/properties/prop/$ref'." },
             new object[] { SVC.AllOf, 1, "The value of 'allOf' must be an array, but received '1' of type 'integer'. Schema path '#/properties/prop/allOf'." },
-            new object[] { SVC.OneOf, 1, "The value of 'allOf' must be an array, but received '1' of type 'integer'. Schema path '#/properties/prop/allOf'." },
+            new object[] { SVC.OneOf, 1, "The value of 'oneOf' must be an array, but received '1' of type 'integer'. Schema path '#/properties/prop/oneOf'." },
+            new object[] { SVC.AnyOf, 1, "The value of 'anyOf' must be an array, but received '1' of type 'integer'. Schema path '#/properties/prop/anyOf'." },
         };
 
     [RavenFact(RavenTestCategory.JavaScript)]
