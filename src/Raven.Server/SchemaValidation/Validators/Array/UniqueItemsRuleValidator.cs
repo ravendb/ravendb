@@ -31,7 +31,7 @@ public class UniqueItemsRuleValidatorFactory : SchemaRuleValidatorFactory<Unique
 {
     public override UniqueItemsRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        if (SchemaValidationHelper.TryGetBoolean(schemaDefinition, Rule, schemaPath.FullPath, out bool uniqueItems) == false) 
+        if (SchemaValidationHelper.TryGetBoolean(schemaDefinition, Rule, schemaPath + Rule, out bool uniqueItems) == false) 
             return null;
 
         return uniqueItems ? new UniqueItemsRuleValidator() : null;

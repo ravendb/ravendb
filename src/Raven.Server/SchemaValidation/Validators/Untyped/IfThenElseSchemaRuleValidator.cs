@@ -32,17 +32,20 @@ public class IfThenElseSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<I
 {
     public override IfThenElseSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var ifSchema) == false)
+        var ifPath = schemaPath + Rule;
+        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, ifPath, out var ifSchema) == false)
             return null;
         
-        var ifSchemaValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(ifSchema, schemaPath + Rule, refSchemas);
+        var ifSchemaValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(ifSchema, ifPath, refSchemas);
 
-        var thenValidator = SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.Then, schemaPath.FullPath, out var thenSchema)
-            ? ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(thenSchema, schemaPath + SchemaValidatorConstants.Then, refSchemas)
+        var thenPath = schemaPath + SchemaValidatorConstants.Then;
+        var thenValidator = SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.Then, thenPath, out var thenSchema)
+            ? ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(thenSchema, thenPath, refSchemas)
             : null;
 
-        var elseValidator = SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.Else, schemaPath.FullPath, out var elseSchema)
-            ? ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(elseSchema, schemaPath + SchemaValidatorConstants.Else, refSchemas)
+        var elsePath = schemaPath + SchemaValidatorConstants.Else;
+        var elseValidator = SchemaValidationHelper.TryGetObject(schemaDefinition, SchemaValidatorConstants.Else, elsePath, out var elseSchema)
+            ? ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(elseSchema, elsePath, refSchemas)
             : null;
 
         if (thenValidator == null && elseValidator == null)

@@ -46,10 +46,11 @@ public class MaximumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Maxi
 {
     public override MaximumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath.FullPath, out var maximum) == false)
+        schemaPath += Rule;
+        if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var maximum) == false)
             return null;
 
-        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.ExclusiveMaximum, schemaPath.FullPath, out bool exclusiveMaximum);
+        SchemaValidationHelper.TryGetBoolean(schemaDefinition, SchemaValidatorConstants.ExclusiveMaximum, schemaPath, out bool exclusiveMaximum);
         
         return new MaximumSchemaRuleValidator(maximum, exclusiveMaximum);
     }

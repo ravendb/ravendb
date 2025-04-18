@@ -149,7 +149,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
             }
             default:
                 Type[] expectedTypes = [typeof(bool), typeof(BlittableJsonReaderObject)];
-                SchemaValidationHelper.ThrowRuleTypeError(rule, additionalProperties, expectedTypes, schemaPath.FullPath);
+                SchemaValidationHelper.ThrowRuleTypeError(additionalProperties, expectedTypes, schemaPath);
                 return (false, null);
         }
     }
@@ -157,7 +157,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
     private static List<(LazyStringValue property, ElementSchemaRuleValidator validator)> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas)
     {
-        if(SchemaValidationHelper.TryGetObject(schemaDefinition, schemaPath.Property, schemaPath.FullPath, out var propertySchema) == false)
+        if(SchemaValidationHelper.TryGetObject(schemaDefinition, schemaPath.Property, schemaPath, out var propertySchema) == false)
             return null;
 
         List<(LazyStringValue property, ElementSchemaRuleValidator validator)> validators = null;
@@ -167,7 +167,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
             propertySchema.GetPropertyByIndex(i, ref prop);
             var propertySchemaPath = schemaPath + prop.Name;
 
-            var propertySchemaDefinition = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(prop.Name, prop.Value, schemaPath.FullPath);
+            var propertySchemaDefinition = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(prop.Value, schemaPath);
 
             var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(propertySchemaDefinition, propertySchemaPath, refSchemas);
             if(validator != null)

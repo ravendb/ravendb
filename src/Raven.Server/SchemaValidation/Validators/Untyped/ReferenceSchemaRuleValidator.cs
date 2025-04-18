@@ -23,7 +23,8 @@ public class ReferenceSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Re
 {
     public override ReferenceSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        if (SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath.FullPath, out var reference) == false)
+        schemaPath += Rule;
+        if (SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath, out var reference) == false)
             return null;
         
         if(refSchemas.TryGet(reference, out var validator) == false)

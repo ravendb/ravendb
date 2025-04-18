@@ -37,7 +37,7 @@ public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<EnumSch
 {
     public override EnumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath.FullPath, out var enums) 
+        return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath + Rule, out var enums) 
             ? new EnumSchemaRuleValidator(enums)
             : null;
     }

@@ -11,11 +11,10 @@ public class DependentSchemasSchemaRuleValidatorFactory : SchemaRuleValidatorFac
 {
     public override GroupedIfThenElseSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath.FullPath, out var dependentRequiredSchema) == false)
+        schemaPath += Rule;
+        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var dependentRequiredSchema) == false)
             return null;
 
-        schemaPath += Rule;
-        
         if (dependentRequiredSchema.Count == 0)
             return null;
 
@@ -24,7 +23,7 @@ public class DependentSchemasSchemaRuleValidatorFactory : SchemaRuleValidatorFac
         for (int i = 0; i < dependentRequiredSchema.Count; i++)
         {
             dependentRequiredSchema.GetPropertyByIndex(i, ref prop);
-            var dependentSchemas = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(prop.Name, prop.Value, schemaPath.FullPath);
+            var dependentSchemas = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(prop.Value, schemaPath);
             
             var propertySchemaPath = schemaPath + prop.Name;
             
