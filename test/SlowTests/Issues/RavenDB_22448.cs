@@ -53,7 +53,7 @@ public class RavenDB_22448 : RavenTestBase
             var ravenEtl2 = (RavenEtl)database.EtlLoader.Processes.SingleOrDefault(x => x.TaskId == addRavenEtlResult.TaskId);
             
             Assert.NotEqual(ravenEtl, ravenEtl2);
-            Assert.False(ravenEtl.Configuration.Connection.IsEqual(ravenEtl2.Configuration.Connection));;
+            Assert.False(ravenEtl.Configuration.Connection.IsEqual(ravenEtl2.Configuration.Connection));
         }
     }
 }

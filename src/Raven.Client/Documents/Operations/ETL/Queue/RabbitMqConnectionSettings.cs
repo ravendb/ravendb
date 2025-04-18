@@ -20,4 +20,19 @@ public sealed class RabbitMqConnectionSettings
     {
         return new DynamicJsonValue();
     }
+
+    private bool Equals(RabbitMqConnectionSettings other)
+    {
+        return ConnectionString == other.ConnectionString;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return ReferenceEquals(this, obj) || obj is RabbitMqConnectionSettings other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return (ConnectionString != null ? ConnectionString.GetHashCode() : 0);
+    }
 }

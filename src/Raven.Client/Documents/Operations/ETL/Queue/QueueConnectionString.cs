@@ -92,4 +92,52 @@ public sealed class QueueConnectionString : ConnectionString
 
         return json;
     }
+
+    public override bool IsEqual(ConnectionString connectionString)
+    {
+        if (connectionString is QueueConnectionString queueConnectionString)
+        {
+            var isEqual = base.IsEqual(connectionString);
+            if (isEqual == false)
+                return false;
+
+            if (BrokerType != queueConnectionString.BrokerType)
+                return false;
+            
+            switch (BrokerType)
+            {
+                case QueueBrokerType.Kafka:
+                    if (KafkaConnectionSettings == null && queueConnectionString.KafkaConnectionSettings == null)
+                        return true;
+            
+                    if (KafkaConnectionSettings == null || queueConnectionString.KafkaConnectionSettings == null)
+                        return false;
+            
+                    return KafkaConnectionSettings.Equals(queueConnectionString.KafkaConnectionSettings);
+            
+                case QueueBrokerType.RabbitMq:
+                    if (RabbitMqConnectionSettings == null && queueConnectionString.RabbitMqConnectionSettings == null)
+                        return true;
+            
+                    if (RabbitMqConnectionSettings == null || queueConnectionString.RabbitMqConnectionSettings == null)
+                        return false;
+            
+                    return RabbitMqConnectionSettings.Equals(queueConnectionString.RabbitMqConnectionSettings);
+            
+                case QueueBrokerType.AzureQueueStorage:
+                    if (AzureQueueStorageConnectionSettings == null && queueConnectionString.AzureQueueStorageConnectionSettings == null)
+                        return true;
+            
+                    if (AzureQueueStorageConnectionSettings == null || queueConnectionString.AzureQueueStorageConnectionSettings == null)
+                        return false;
+            
+                    return AzureQueueStorageConnectionSettings.Equals(queueConnectionString.AzureQueueStorageConnectionSettings);
+            
+                default:
+                    throw new NotSupportedException($"'{BrokerType}' broker is not supported");
+            }
+        }
+
+        return false;
+    }
 }

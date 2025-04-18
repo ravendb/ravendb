@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Newtonsoft.Json;
@@ -23,6 +24,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Confluent.Kafka.Admin;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.ETL.Providers.Raven;
 
 namespace SlowTests.Server.Documents.QueueSink
 {
@@ -438,6 +440,37 @@ output('test: ' + this.Id)
                     Assert.Contains("\"@collection\":\"Users\"", json);
                 }
             }
+        }
+        
+        [RequiresKafkaRetryFact]
+        public async Task ConnectionStringChanges_WillRestartKafkaSink()
+        {
+            using var store = GetDocumentStore();
+            var config = SetupKafkaQueueSink(store, "put(this.Id, this)", new List<string>() { UsersQueueName });
+            
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            var mre = new ManualResetEventSlim();
+            database.QueueSinkLoader.ProcessRemoved += process => mre.Set();
+
+            var kafkaQueueSink = (KafkaQueueSink)database.QueueSinkLoader.Processes.SingleOrDefault();
+            
+            store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
+            {
+                Name = config.ConnectionStringName,
+                BrokerType = QueueBrokerType.Kafka,
+                KafkaConnectionSettings = new KafkaConnectionSettings
+                {
+                    ConnectionOptions = null,
+                    BootstrapServers = KafkaConnectionString.Instance.VerifiedUrl.Value + "/",
+                }
+            }));
+            
+            Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
+
+            var kafkaQueueSink2 = (KafkaQueueSink)database.QueueSinkLoader.Processes.SingleOrDefault();
+
+            Assert.NotEqual(kafkaQueueSink, kafkaQueueSink2);
+            Assert.False(kafkaQueueSink.Configuration.Connection.IsEqual(kafkaQueueSink2.Configuration.Connection));
         }
 
         private readonly HashSet<string> _definedTopics = new HashSet<string>();
