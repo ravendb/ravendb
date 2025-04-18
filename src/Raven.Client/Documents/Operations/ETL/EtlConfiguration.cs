@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Operations.ETL
         public string Name { get; set; }
 
         public string MentorNode { get; set; }
-        
+
         public bool PinToMentorNode { get; set; }
 
         public abstract string GetDestination();
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.ETL
         public List<Transformation> Transforms { get; set; } = new List<Transformation>();
 
         public bool Disabled { get; set; }
-        
+
         public virtual bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
         {
             if (validateConnection && _initialized == false)
@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
             if (Transforms.Count == 0)
                 throw new InvalidOperationException($"'{nameof(Transforms)}' list cannot be empty.");
-            
+
             foreach (var script in Transforms)
             {
                 script.Validate(ref errors, EtlType);
@@ -134,7 +134,10 @@ namespace Raven.Client.Documents.Operations.ETL
             return ToJson();
         }
 
-        internal EtlConfigurationCompareDifferences Compare(EtlConfiguration<T> config, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
+        internal EtlConfigurationCompareDifferences Compare(
+            EtlConfiguration<T> config,
+            Dictionary<string, T> connectionStrings,
+            List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
         {
             if (config == null)
                 throw new ArgumentNullException(nameof(config), "Got null config to compare");
@@ -164,6 +167,15 @@ namespace Raven.Client.Documents.Operations.ETL
 
             if (config.ConnectionStringName != ConnectionStringName)
                 differences |= EtlConfigurationCompareDifferences.ConnectionStringName;
+            else if (config.ConnectionStringName != null)
+            {
+                var oldConnectionString = Connection;
+                T newConnectionString = null;
+                connectionStrings?.TryGetValue(config.ConnectionStringName, out newConnectionString);
+
+                if (newConnectionString == null || oldConnectionString.IsEqual(newConnectionString) == false)
+                    differences |= EtlConfigurationCompareDifferences.ConnectionString;
+            }
 
             if (config.Name.Equals(Name, StringComparison.OrdinalIgnoreCase) == false)
                 differences |= EtlConfigurationCompareDifferences.ConfigurationName;
