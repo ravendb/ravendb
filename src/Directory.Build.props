@@ -7,6 +7,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/ravendb/ravendb</RepositoryUrl>
     <WarningsAsErrors>true</WarningsAsErrors>
@@ -107,6 +108,6 @@
     <None Include="..\..\scripts\assets\icon.png" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="SourceLink.Create.CommandLine" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
   </ItemGroup>
 </Project>

@@ -94,6 +94,6 @@
     <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="SourceLink.Create.CommandLine" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
   </ItemGroup>
 </Project>

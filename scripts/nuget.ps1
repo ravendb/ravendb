@@ -2,6 +2,10 @@ function CreateNugetPackage ( $srcDir, $targetFilename, $versionSuffix ) {
     $command = "dotnet" 
     $commandArgs = @( "pack" )
 
+    $commandArgs += "/p:DebugType=portable"
+    $commandArgs += "/p:EmbedUntrackedSources=true"
+    $commandArgs += "/p:IncludeSymbols=true"
+    $commandArgs += "/p:SymbolPackageFormat=snupkg"
     $commandArgs += "/p:GenerateDocumentationFile=true"
     $commandArgs += @( "--output", $targetFilename )
     $commandArgs += @( "--configuration", "Release" )

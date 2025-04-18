@@ -32,8 +32,6 @@ function BuildServer ( $srcDir, $outDir, $target) {
         $commandArgs += "/p:UseAppHost=false"
     }
 
-    $commandArgs += '/p:SourceLinkCreate=true'
-    
     #if ($target -and $global:isPublishBundlingEnabled) {
     #    $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:Client_IncludeZstd=false'
     #}
@@ -51,7 +49,6 @@ function BuildClient ( $srcDir ) {
     $command = "dotnet" 
     $commandArgs = @( "build" )
 
-    $commandArgs += "/p:SourceLinkCreate=true"
     $commandArgs += "/p:GenerateDocumentationFile=true"
     $commandArgs += "--no-incremental"
     $commandArgs += @( "--configuration", "Release" )
@@ -71,7 +68,6 @@ function BuildTestDriver ( $srcDir ) {
     $command = "dotnet" 
     $commandArgs = @( "build" )
 
-    $commandArgs += "/p:SourceLinkCreate=true"
     $commandArgs += "/p:GenerateDocumentationFile=true"
     $commandArgs += "--no-incremental"
     $commandArgs += @( "--configuration", "Release" )
@@ -109,7 +105,6 @@ function BuildSparrow ( $srcDir ) {
     $command = "dotnet" 
     $commandArgs = @( "build" )
 
-    $commandArgs += "/p:SourceLinkCreate=true"
     $commandArgs += "/p:GenerateDocumentationFile=true"
     $commandArgs += "--no-incremental"
     $commandArgs += @( "--configuration", "Release" )
@@ -196,8 +191,6 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
     if ([string]::IsNullOrEmpty($target.Arch) -eq $false) {
         $commandArgs += "/p:Platform=$($target.Arch)"
     }
-
-    $commandArgs += "/p:SourceLinkCreate=true"
     
     #if ($target -and $global:isPublishBundlingEnabled) {
     #    $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim /p:Client_IncludeZstd=false"

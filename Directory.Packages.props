@@ -57,6 +57,7 @@
     <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="Microsoft.NETCore.Jit" Version="2.0.8" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
     <PackageVersion Include="MongoDB.Driver.GridFS" Version="2.30.0" />
@@ -83,7 +84,6 @@
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.11" />
     <PackageVersion Include="Snappier" Version="1.2.0" />
-    <PackageVersion Include="SourceLink.Create.CommandLine" Version="2.8.3" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
     <PackageVersion Include="System.Collections.Immutable" Version="8.0.0" />
