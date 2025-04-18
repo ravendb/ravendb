@@ -24,7 +24,6 @@ using Xunit;
 using Xunit.Abstractions;
 using Confluent.Kafka.Admin;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.ETL.Providers.Raven;
 
 namespace SlowTests.Server.Documents.QueueSink
 {

@@ -2,10 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
+using Raven.Server.Documents.QueueSink;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
@@ -59,7 +63,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
         Assert.Equal("Jane", fetchedUser2.FirstName);
         Assert.Equal("Smith", fetchedUser2.LastName);
     }
-    
+
     [RequiresRabbitMqRetryFact]
     public void SimpleScriptMultiQueues()
     {
@@ -81,7 +85,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
             body: new ReadOnlyMemory<byte>(userBytes1));
         producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes2));
-        
+
         producer.BasicPublish(exchange: "", routingKey: developersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes3));
         producer.BasicPublish(exchange: "", routingKey: developersQueueName, basicProperties: null,
@@ -91,7 +95,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
         var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
             new List<string>() { UsersQueueName, developersQueueName });
 
-        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses !>= 4);
+        var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses ! >= 4);
         AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
@@ -110,13 +114,13 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
         Assert.Equal("users/2", fetchedUser2.Id);
         Assert.Equal("Jane", fetchedUser2.FirstName);
         Assert.Equal("Smith", fetchedUser2.LastName);
-        
+
         var fetchedUser3 = session.Load<User>("users/3");
         Assert.NotNull(fetchedUser3);
         Assert.Equal("users/3", fetchedUser3.Id);
         Assert.Equal("Jane", fetchedUser3.FirstName);
         Assert.Equal("Smith", fetchedUser3.LastName);
-        
+
         var fetchedUser4 = session.Load<User>("users/4");
         Assert.NotNull(fetchedUser4);
         Assert.Equal("users/4", fetchedUser4.Id);
@@ -231,5 +235,46 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
         Assert.Equal(1, errors.Count);
 
         Assert.Equal("Script 'test' must not be empty", errors[0]);
+    }
+
+    [RequiresRabbitMqRetryFact]
+    public async Task ConnectionStringChanges_WillRestartRabbitMqSink()
+    {
+        var user1 = new User { Id = "users/1", FirstName = "John", LastName = "Doe" };
+        var user2 = new User { Id = "users/2", FirstName = "Jane", LastName = "Smith" };
+
+        byte[] userBytes1 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user1));
+        byte[] userBytes2 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user2));
+
+        var producer = CreateRabbitMqProducer(UsersQueueName);
+
+        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
+            body: new ReadOnlyMemory<byte>(userBytes1));
+        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
+            body: new ReadOnlyMemory<byte>(userBytes2));
+
+        using var store = GetDocumentStore();
+        var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
+            new List<string>() { UsersQueueName });
+
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        var mre = new ManualResetEventSlim();
+        database.QueueSinkLoader.ProcessRemoved += process => mre.Set();
+
+        var rabbitMqQueueSink = (RabbitMqQueueSink)database.QueueSinkLoader.Processes.SingleOrDefault();
+
+        store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
+        {
+            Name = config.ConnectionStringName,
+            BrokerType = QueueBrokerType.RabbitMq,
+            RabbitMqConnectionSettings = new RabbitMqConnectionSettings { ConnectionString = RabbitMqConnectionString.Instance.VerifiedUrl.Value + "/" }
+        }));
+
+        Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
+
+        var rabbitMqQueueSink2 = (RabbitMqQueueSink)database.QueueSinkLoader.Processes.SingleOrDefault();
+
+        Assert.NotEqual(rabbitMqQueueSink, rabbitMqQueueSink2);
+        Assert.False(rabbitMqQueueSink.Configuration.Connection.IsEqual(rabbitMqQueueSink2.Configuration.Connection));
     }
 }
