@@ -65,6 +65,6 @@ public class SchemaValidator : IDisposable
 
 public class RefSchema
 {
-    public (Type[] typesRestriction, ISchemaRuleValidator[] ruleValidators) Rules { get; set; } 
+    public ElementSchemaRuleValidator Validator { get; set; } 
     public BlittableJsonReaderObject Raw { get; set; }
 }

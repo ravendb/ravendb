@@ -62,11 +62,11 @@ public static class ElementSchemaRuleValidatorFactory
         RefSchemas refSchemas)
     {
         return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out Type[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
-            ? new ElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) : 
+            ? new ElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) {SchemaDefinition = schemaDefinition} : 
             null;
     }
     
-    public static bool TryReadSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+    private static bool TryReadSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas,
         out Type[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
     {
@@ -155,10 +155,6 @@ public static class ElementSchemaRuleValidatorFactory
                     validator = SchemaRuleValidatorFactoryHelper.CreateArrayValidator(propertySchemaDefinition, schemaPath, refSchemas);
                     alreadyHasArrayRestrictions = true;
                     break;
-                }
-                case SchemaValidatorConstants.Ref:
-                {
-                    continue;
                 }
                 default:
                 {

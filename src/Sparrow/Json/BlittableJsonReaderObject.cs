@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 
 namespace Sparrow.Json
 {
@@ -56,6 +57,16 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
 
             return _context.WriteAsync(stream, this, token);
+        }
+        public void WriteJsonTo(Stream stream)
+        {
+            AssertContextNotDisposed();
+
+            using (var writer = new BlittableJsonTextWriter(_context, stream))
+            {
+                writer.WriteObject(this);
+                writer.Flush();
+            }
         }
         
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))

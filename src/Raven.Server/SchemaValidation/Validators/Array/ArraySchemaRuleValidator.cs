@@ -57,7 +57,7 @@ public class ArraySchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
             for (; i < value.Length; i++)
             {
                 errorBuilder?.Path.StepIn(i);
-                isValid &=_itemsValidator.validator.Validate(value, errorBuilder);
+                isValid &=_itemsValidator.validator.Validate(value[i], errorBuilder);
                 errorBuilder?.Path.StepOut();
                 
                 if (errorBuilder == null && isValid == false)
@@ -98,24 +98,11 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
             var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(blittableItem, schemaPath + i, refSchemas);
             (validators ??= []).Add(validator);
         }
-
-        for (var i = 0; i < prefixItemsSchema.Length; i++)
-        {
-            var item = prefixItemsSchema[i];
-            if (item is not BlittableJsonReaderObject blittableItem)
-            {
-                SchemaValidationHelper.ThrowRuleTypeError(rule, item, typeof(BlittableJsonReaderObject), schemaPath.FullPath);
-                return null; // Required to satisfy compiler flow analysis; method above always throws
-            }
-                    
-            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(blittableItem, schemaPath + i, refSchemas);
-            (validators ??= []).Add(validator);
-        }
         return validators?.ToArray();
     }
     
     
-    private (bool Allowed, ElementSchemaRuleValidator Validator) ReadItemsSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
+    private static (bool Allowed, ElementSchemaRuleValidator Validator) ReadItemsSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         RefSchemas refSchemas)
     {
         const string rule = SchemaValidatorConstants.Items;

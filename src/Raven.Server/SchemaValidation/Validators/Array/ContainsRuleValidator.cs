@@ -20,12 +20,12 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
     public override bool Validate(BlittableJsonReaderArray value, ErrorBuilder errorBuilder)
     {
         var count = 0;
-        for (int j = 0; j < value.Length; j++)
+        for (var i = 0; i < value.Length; i++)
         {
-            if (_containsValidator.Validate(value, null) == false) 
+            if (_containsValidator.Validate(value[i], null) == false) 
                 continue;
             
-            if (++count >= _minContains && _maxContains > (value.Length - j + count))
+            if (++count >= _minContains && _maxContains > (value.Length - i + count))
                 return true;
         }
 
