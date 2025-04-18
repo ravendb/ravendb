@@ -438,4 +438,76 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 AssertError($"The length of the value 'a12345' at 'myprop' should not exceed 5, but its actual length is 6.{Environment.NewLine}The pattern of the value 'a12345' at 'myprop' does not match the required pattern '^\\d'", errors);
             });
     }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenRestrictOnOneOf()
+    {
+        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SchemaValidatorConstants.Properties] = new DynamicJsonValue
+            {
+                ["myprop"] = new DynamicJsonValue
+                {
+                    [SchemaValidatorConstants.OneOf] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue
+                        {
+                            [SchemaValidatorConstants.Ref] = "#/$defs/mySchema1"
+                        },
+                        new DynamicJsonValue
+                        {
+                            [SchemaValidatorConstants.Ref] = "#/$defs/mySchema2"
+                        }
+                    }
+                }
+            },
+            [SchemaValidatorConstants.Defs] = new DynamicJsonValue
+            {
+                ["mySchema1"] = new DynamicJsonValue
+                {
+                    [SchemaValidatorConstants.MaxLength] = 5
+                },
+                ["mySchema2"] = new DynamicJsonValue
+                {
+                    [SchemaValidatorConstants.Pattern] = "^\\d"
+                }
+            }
+        };
+        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        await AssertMultipleParallel(() =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["myprop"] = "123456", 
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["myprop"] = "a12", 
+                }, out var obj);
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
+                {
+                    ["myprop"] = "1234"
+                }, out var obj);
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The value at 'myprop' matches more than one schema, but it must match exactly one.", errors);
+            });
+    }
 }
