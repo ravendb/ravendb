@@ -19,28 +19,6 @@ namespace Raven.Client.Documents.Commands.Batches
         public TimeSpan? WaitForIndexesTimeout { get; set; }
         public bool ThrowOnTimeoutInWaitForIndexes { get; set; }
         public string[] WaitForSpecificIndexes { get; set; }
-
-        public DynamicJsonValue ToJson(DocumentConventions conventions)
-        {
-            var specificIndexes = new DynamicJsonArray();
-            if (WaitForSpecificIndexes != null)
-            {
-                foreach (var index in WaitForSpecificIndexes)
-                {
-                    specificIndexes.Add(index);
-                }
-            }
-
-            WaitForIndexesTimeout ??= conventions.WaitForIndexesAfterSaveChangesTimeout;
-
-            return new DynamicJsonValue
-            {
-                [nameof(WaitForIndexes)] = WaitForIndexes,
-                [nameof(WaitForIndexesTimeout)] = WaitForIndexesTimeout,
-                [nameof(ThrowOnTimeoutInWaitForIndexes)] = ThrowOnTimeoutInWaitForIndexes,
-                [nameof(WaitForSpecificIndexes)] = specificIndexes
-            };
-        }
     }
 
     public sealed class ReplicationBatchOptions

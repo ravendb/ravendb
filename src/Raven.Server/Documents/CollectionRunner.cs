@@ -40,64 +40,28 @@ namespace Raven.Server.Documents
             Context = context;
             _collectionQuery = collectionQuery;
         }
-        
-        public virtual async Task<IOperationResult> ExecuteDelete(string collectionName, long start, long take, QueryOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
-        {
-            var deleteCommands = new List<DeleteDocumentCommand>();
-            var opResult = await ExecuteOperation(collectionName, start, take, options, Context, onProgress, key =>
-                {
-                    var cmd = new DeleteDocumentCommand(key, null, Database);
-                    deleteCommands.Add(cmd);
-                    return cmd;
-                }
-                , token);
-            var collections = deleteCommands.Select(cmd => cmd.DeleteResult?.Collection).Where(collection => collection != null).Select(c => c.Name).ToHashSet();
-            long etag = 0;
-            foreach (var command in deleteCommands)
-            {
-                if (command.DeleteResult != null && command.DeleteResult.Value.Etag > etag)
-                {
-                    etag = command.DeleteResult.Value.Etag;
-                }
-            }
 
-            await WaitForIndexesAfterPatch(options, collections, etag, token);
-            return opResult;
+        public virtual Task<IOperationResult> ExecuteDelete(string collectionName, long start, long take, QueryOperationOptions options,
+            Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            return ExecuteOperation(collectionName, start, take, options, Context, onProgress, key =>
+                    new DeleteDocumentCommand(key, null, Database), token);
         }
 
-        public async Task<IOperationResult> ExecutePatch(string collectionName, long start, long take, QueryOperationOptions options, PatchRequest patch,
+        public Task<IOperationResult> ExecutePatch(string collectionName, long start, long take, QueryOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var patchCommands = new List<PatchDocumentCommand>();
-
-            var opResult = await ExecuteOperation(collectionName, start, take, options, Context, onProgress,
+            return ExecuteOperation(collectionName, start, take, options, Context, onProgress,
                 key =>
-                {
-                    var cmd = new PatchDocumentCommand(Context, key, expectedChangeVector: null, skipPatchIfChangeVectorMismatch: false, patch: (patch, patchArgs),
+                     new PatchDocumentCommand(Context, key, expectedChangeVector: null, skipPatchIfChangeVectorMismatch: false, patch: (patch, patchArgs),
                         patchIfMissing: (null, null), createIfMissing: null, identityPartsSeparator: Database.IdentityPartsSeparator, isTest: false, debugMode: false,
-                        collectResultsNeeded: false, returnDocument: false, ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
-                    patchCommands.Add(cmd);
-                    return cmd;
-                }, token);
-            var collections = patchCommands.Select(cmd => cmd.PatchResult?.Collection).Where(collection => collection != null).ToHashSet();
-            long etag = 0;
-            foreach (var command in patchCommands)
-            {
-                if (command.PatchResult != null)
-                {
-                    var docEtag = ChangeVectorUtils.GetEtagById(command.PatchResult.ChangeVector, Database.DbBase64Id);
-                    if (docEtag > etag)
-                        etag = docEtag;
-                }
-            }
-            if(options.IndexOptions.WaitForIndexes)
-                await WaitForIndexesAfterPatch(options, collections, etag, token);
-            return opResult;
+                        collectResultsNeeded: false, returnDocument: false, ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript), token);
         }
 
         private async Task WaitForIndexesAfterPatch(QueryOperationOptions options, HashSet<string> collections, long lastEtag, OperationCancelToken token)
         {
-                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexOptions.WaitForIndexesTimeout!.Value, options.IndexOptions.WaitForSpecificIndexes, options.IndexOptions.ThrowOnTimeoutInWaitForIndexes, lastEtag, 0, collections, token.Token);
+            await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexOptions.WaitForIndexesTimeout!.Value,
+                options.IndexOptions.WaitForSpecificIndexes, options.IndexOptions.ThrowOnTimeoutInWaitForIndexes, lastEtag, 0, collections, token.Token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, long start, long take, QueryOperationOptions options, DocumentsOperationContext context,
@@ -123,7 +87,7 @@ namespace Raven.Server.Documents
             var alreadySeenIdsCount = new Reference<long>();
             string startAfterId = null;
             var lastId = string.Empty;
-            var modifiedCollections = new HashSet<string>();
+            HashSet<string> modifiedCollections = null;
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
@@ -140,7 +104,8 @@ namespace Raven.Server.Documents
 
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, startAfterId, alreadySeenIdsCount, OperationBatchSize, isAllDocs, DocumentFields.Id, out bool isStartsWithOrIdQuery, token.Token))
+                        var fields = isAllDocs ? DocumentFields.Data | DocumentFields.Id : DocumentFields.Id;
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, startAfterId, alreadySeenIdsCount, OperationBatchSize, isAllDocs, fields, out bool isStartsWithOrIdQuery, token.Token))
                         {
                             using (document)
                             {
@@ -175,7 +140,12 @@ namespace Raven.Server.Documents
 
                                 startAfterId = document.Id;
                                 ids.Enqueue(document.Id);
-                                lastId = document.Id;
+
+                                if (isAllDocs)
+                                {
+                                    modifiedCollections ??= new HashSet<string>();
+                                    modifiedCollections.Add(Database.DocumentsStorage.ExtractCollectionName(context, document.Data)?.Name);
+                                }
                             }
                         }
                     }
@@ -202,6 +172,24 @@ namespace Raven.Server.Documents
                     if (end)
                         break;
                 }
+            }
+
+            if (options.IndexOptions.WaitForIndexes)
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var documentOrTombstone = Database.DocumentsStorage.GetDocumentOrTombstone(Context, startAfterId, DocumentFields.ChangeVector);
+                    if (documentOrTombstone.Missing == false)
+                    {
+                        if (documentOrTombstone.Document != null)
+                            lastEtag = ChangeVectorUtils.GetEtagById(documentOrTombstone.Document.ChangeVector, Database.DbBase64Id);
+                        else if (documentOrTombstone.Tombstone != null)
+                        {
+                            lastEtag = ChangeVectorUtils.GetEtagById(documentOrTombstone.Tombstone.ChangeVector, Database.DbBase64Id);
+                        }
+                    }
+                }
+                await WaitForIndexesAfterPatch(options, modifiedCollections ?? [collectionName], lastEtag, token);
             }
 
             return new BulkOperationResult

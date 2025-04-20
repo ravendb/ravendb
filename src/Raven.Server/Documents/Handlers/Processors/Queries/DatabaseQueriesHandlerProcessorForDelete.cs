@@ -15,7 +15,6 @@ internal sealed class DatabaseQueriesHandlerProcessorForDelete : AbstractDatabas
 
     protected override (QueryOperationFunction Action, OperationType Type) GetOperation(IndexQueryServerSide query)
     {
-        return ((runner, o, onProgress, token) =>
-            runner.ExecuteDeleteQuery(query, o, QueryOperationContext, onProgress, token), OperationType.DeleteByQuery);
+        return ((runner, o, onProgress, token) => runner.ExecuteDeleteQuery(query, o, QueryOperationContext, onProgress, token), OperationType.DeleteByQuery);
     }
 }

@@ -21,7 +21,6 @@ namespace SlowTests.Issues
 
         private const int NumberOfCompanies = 1024;
 
-
         /****************STATIC************************/
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void WaitForIndexesAfterPatch_Simple_Static()
@@ -636,33 +635,6 @@ namespace SlowTests.Issues
                     var count = session.Query<Company>().Count(x => x.Name == "Name2");
                     Assert.Equal(NumberOfCompanies, count);
                 }
-
-
-
-                /*var indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-
-                var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-                using (var session = store.OpenSession())
-                {
-                    // Because we waited for indexes, this query should immediately reflect the update.
-                    var company = Queryable.Where(session.Query<Company>(), x => x.Name == "Name2")
-                        .FirstOrDefault();
-
-                    Assert.NotNull(company);
-                    Assert.Equal("Name2", company.Name);
-                }*/
-                //to check that name changed to Name2
-                //session query changed
-                // and then check that after changing wait for indexes to false it fails to change to name 2. - if it doesn't fail add more document until it fails(and check them all).
-                // what will happand when the class is empty?
             }
         }
 
@@ -812,7 +784,6 @@ namespace SlowTests.Issues
 
 
         /****************DELETE************************/
-        //TODO should test it later after changing the logic so it will wait.
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void DeleteByQuery_With_WaitForIndexes_Static()
         {
@@ -856,7 +827,6 @@ namespace SlowTests.Issues
                 {
                     var count = session.Query<Company, Companies_ByName>().Count();
                     Assert.Equal(0, count);
-                    Console.WriteLine("Test passed: All documents were deleted.");
                 }
             }
         }
@@ -904,7 +874,6 @@ namespace SlowTests.Issues
                 {
                     var count = session.Query<Company, Companies_ByName>().Count();
                     Assert.Equal(0, count);
-                    Console.WriteLine("Test passed: All documents were deleted.");
                 }
             }
         }
@@ -1080,7 +1049,6 @@ namespace SlowTests.Issues
                 {
                     var count = session.Query<Company, Companies_ByName>().Count();
                     Assert.Equal(1, count);
-                    Console.WriteLine("Test passed: All documents were deleted.");
                 }
             }
         }
@@ -1263,7 +1231,6 @@ namespace SlowTests.Issues
                 {
                     var count = session.Query<Company, Companies_ByName>().Count();
                     Assert.Equal(1, count);
-                    Console.WriteLine("Test passed: All documents were deleted.");
                 }
             }
         }
@@ -1401,16 +1368,6 @@ namespace SlowTests.Issues
         }
 
 
-
-
-
-
-
-
-
-
-
-
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void PatchTwice_ShouldWaitOnFirstButNotOnSecond_OnMultiMapIndex()
         {
@@ -1430,35 +1387,29 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                // Wait for indexing to catch up.
                 Indexes.WaitForIndexing(store);
 
-                // Configure IndexBatchOptions to wait for indexes.
                 var indexBatchOptions = new IndexBatchOptions
                 {
                     WaitForIndexes = true,
                     WaitForIndexesTimeout = TimeSpan.FromMinutes(3),
-                    // WaitForSpecificIndexes = new string[0],
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 // ----------------------------
                 // FIRST PATCH: Change Name1 -> Name2
                 // ----------------------------
-                var iq1 = new IndexQuery { Query = $"from index '{index.IndexName}' as x update {{ x.Name = 'Name2'}}" };
+                var iq1 = new IndexQuery { Query = $"from index '{index.IndexName}' as x update {{ x.Name = 'Name2' ; x.FirstName = 'Name2'}}" };
 
                 var operation1 = store.Operations.Send(new PatchByQueryOperation(iq1,
                     new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexOptions = indexBatchOptions }));
 
                 operation1.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                // Verify both documents were updated.
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<CompaniesAndCustomers_ByName.Result, CompaniesAndCustomers_ByName>()
                         .Count(x => x.Name == "Name2");
-                    // var customers = session.Query<CompaniesAndCustomers_ByName.Result, CompaniesAndCustomers_ByName>()
-                    //     .Count(x => x.Name == "name2");
 
                     Assert.Equal(2 * NumberOfCompanies, count);
                 }
@@ -1468,25 +1419,12 @@ namespace SlowTests.Issues
                 // ----------------------------
                 var iq2 = new IndexQuery { Query = $"from index '{index.IndexName}' as x update {{ x.Name = 'Name2'; x.FirstName = 'Name2' }}" };
 
+                indexBatchOptions.WaitForIndexesTimeout = TimeSpan.Zero;
+
                 var operation2 = store.Operations.Send(new PatchByQueryOperation(iq2,
                     new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexOptions = indexBatchOptions }));
 
-                // var sw = Stopwatch.StartNew();
                 operation2.WaitForCompletion(TimeSpan.FromSeconds(30));
-                // sw.Stop();
-
-                // Since nothing changes, the wait for indexes should be minimal.
-                // Adjust the threshold as appropriate for your environment.
-                // Assert.True(sw.Elapsed < TimeSpan.FromSeconds(5), $"Second patch waited too long: {sw.Elapsed.TotalSeconds} seconds.");
-
-                // Verify that documents remain updated.
-                using (var session = store.OpenSession())
-                {
-                    var count = session.Query<CompaniesAndCustomers_ByName.Result, CompaniesAndCustomers_ByName>()
-                        .Count(x => x.Name == "Name2");
-                }
-
-                Console.WriteLine("done");
             }
         }
 
@@ -1528,13 +1466,10 @@ namespace SlowTests.Issues
 
                 operation1.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                // Verify both documents were updated.
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<CompaniesAndCustomers_ByName.Result, CompaniesAndCustomers_ByName>()
                         .Count(x => x.Name == "Name2");
-                    // var customers = session.Query<CompaniesAndCustomers_ByName.Result, CompaniesAndCustomers_ByName>()
-                    //     .Count(x => x.Name == "name2");
 
                     Assert.Equal(NumberOfCompanies, count);
                 }
@@ -1544,86 +1479,14 @@ namespace SlowTests.Issues
                 // ----------------------------
                 var iq2 = new IndexQuery { Query = $"from index '{index.IndexName}' as x where x.Collection == 'Companies' update {{ x.Name = 'Name2' }}" };
 
+                indexBatchOptions.WaitForIndexesTimeout = TimeSpan.Zero;
+
                 var operation2 = store.Operations.Send(new PatchByQueryOperation(iq2,
                     new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexOptions = indexBatchOptions }));
 
-                // var sw = Stopwatch.StartNew();
                 operation2.WaitForCompletion(TimeSpan.FromSeconds(30));
-                // sw.Stop();
-
-                // Since nothing changes, the wait for indexes should be minimal.
-                // Adjust the threshold as appropriate for your environment.
-                // Assert.True(sw.Elapsed < TimeSpan.FromSeconds(5), $"Second patch waited too long: {sw.Elapsed.TotalSeconds} seconds.");
-
-                // Verify that documents remain updated.
-                using (var session = store.OpenSession())
-                {
-                    var count = session.Query<CompaniesAndCustomers_ByName.Result, CompaniesAndCustomers_ByName>()
-                        .Count(x => x.Name == "Name2");
-                }
-
-                Console.WriteLine("done");
             }
         }
-
-
-
-        //NOT RELEVANT NOW!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void PatchAllowStaleIsSetToFalseAndTimeoutIsEnough_CollectionQuery()
-        {
-            using (var store = GetDocumentStore())
-            {
-                // write as string not with linq too.
-                var index = new Companies_ByName();
-                index.Execute(store);
-
-                using (var session = store.OpenSession())
-                {
-                    // session.Advanced.WaitForIndexesAfterSaveChanges();
-                    for (int i = 0; i < NumberOfCompanies; i++)
-                    {
-                        session.Store(new Company { Name = "Name1" }, "Companies/" + i);
-                    }
-                    // session.Advanced.WaitForIndexesAfterSaveChanges(); //see the parameters here and copy -- make class that includes them all.
-                    session.SaveChanges();
-                }
-
-                Indexes.WaitForIndexing(store);
-
-                var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
-
-                var indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
-                    WaitForIndexesTimeout = TimeSpan.FromHours(1),
-                    ThrowOnTimeoutInWaitForIndexes = true
-
-                    //make a test like that:
-                    // WaitForIndexes = false, and make it true; and don't mention the rest.
-                };
-
-                var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexOptions = indexBatchOptions }));
-
-                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-
-                using (var session = store.OpenSession())
-                {
-                    // Because we waited for indexes, this query should immediately reflect the update.
-                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
-                
-                    Assert.Equal(count, NumberOfCompanies);
-                }
-                //to check that name changed to Name2    V
-                //session query changed
-                // and then check that after changing wait for indexes to false it fails to change to name 2. - if it doesn't fail add more document until it fails(and check them all).
-                // what will happand when the class is empty?
-            }
-        }
-
-
 
         private class Companies_ByName : AbstractIndexCreationTask<Company>
         {
@@ -1631,11 +1494,10 @@ namespace SlowTests.Issues
             {
                 Map = companies => from c in companies
                     select new { c.Name };
-                //abstract multimap  רוצה אינדקס שיהיה על כמה קולקשיונס
             }
         }
 
-        public class CompaniesAndCustomers_ByName : AbstractMultiMapIndexCreationTask<CompaniesAndCustomers_ByName.Result>
+        private class CompaniesAndCustomers_ByName : AbstractMultiMapIndexCreationTask<CompaniesAndCustomers_ByName.Result>
         {
             public class Result
             {
@@ -1668,6 +1530,4 @@ namespace SlowTests.Issues
             public string LastName { get; set; }
         }
     }
-    // TODO
-    //to go through other cases of usage of queryoperationoptions and make tests for them.
 }

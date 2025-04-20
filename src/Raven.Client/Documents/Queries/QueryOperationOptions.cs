@@ -49,14 +49,9 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public bool RetrieveDetails { get; set; }
 
-
         /// <summary>
-        /// Encapsulates advanced options for waiting on indexes during bulk or patch operations.
-        /// When WaitForIndexes is true, the operation will wait until the affected indexes become non-stale.
-        /// WaitForIndexesTimeout specifies the maximum duration to wait, and if this period is exceeded while
-        /// ThrowOnTimeoutInWaitForIndexes is true, an exception will be thrown.
-        /// If WaitForSpecificIndexes contains one or more index names, the operation will restrict the wait
-        /// to those indexes only; otherwise, all relevant indexes are considered.
+        /// Advanced indexing options for patch operations.
+        /// Set the timeout, index preferences, and error-handling options.
         /// </summary>
         public IndexBatchOptions IndexOptions { get; set; }
     }

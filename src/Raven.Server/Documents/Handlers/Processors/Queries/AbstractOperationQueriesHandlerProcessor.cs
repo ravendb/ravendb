@@ -69,16 +69,16 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
             RetrieveDetails = RequestHandler.GetBoolValueQueryString("details", required: false) ?? false,
             IgnoreMaxStepsForScript = RequestHandler.GetBoolValueQueryString("ignoreMaxStepsForScript", required: false) ?? false,
         };
-        var WaitForIndexes = RequestHandler.GetBoolValueQueryString("waitForIndexes", required: false) ?? false;
-        var WaitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
-        var ThrowOnTimeoutInWaitForIndexes = RequestHandler.GetBoolValueQueryString("ThrowOnTimeoutInWaitForIndexes", required: false) ?? false;
-        var WaitForSpecificIndexes = RequestHandler.GetStringValuesQueryString("waitForSpecificIndexes", required: false);
+        var waitForIndexes = RequestHandler.GetBoolValueQueryString("waitForIndexes", required: false) ?? false;
+        var waitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+        var throwOnTimeoutInWaitForIndexes = RequestHandler.GetBoolValueQueryString("ThrowOnTimeoutInWaitForIndexes", required: false) ?? false;
+        var waitForSpecificIndexes = RequestHandler.GetStringValuesQueryString("waitForSpecificIndexes", required: false);
         options.IndexOptions = new IndexBatchOptions()
         {
-            WaitForIndexes = WaitForIndexes,
-            WaitForIndexesTimeout = WaitForIndexesTimeout,
-            WaitForSpecificIndexes = WaitForSpecificIndexes,
-            ThrowOnTimeoutInWaitForIndexes = ThrowOnTimeoutInWaitForIndexes,
+            WaitForIndexes = waitForIndexes,
+            WaitForIndexesTimeout = waitForIndexesTimeout,
+            WaitForSpecificIndexes = waitForSpecificIndexes,
+            ThrowOnTimeoutInWaitForIndexes = throwOnTimeoutInWaitForIndexes,
         };
         return options;
     }

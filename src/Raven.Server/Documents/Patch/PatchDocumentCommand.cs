@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     Status = PatchStatus.NotModified,
                     OriginalDocument = _isTest == false ? null : originalDocument?.Data?.Clone(_externalContext ?? context),
-                    ModifiedDocument = ModifiedDocumentRequired == false ? null : modifiedDoc?.Clone(_externalContext ?? context),
+                    ModifiedDocument = ModifiedDocumentRequired == false ? null : modifiedDoc?.Clone(_externalContext ?? context)
                 };
 
                 if (modifiedDoc == null)
