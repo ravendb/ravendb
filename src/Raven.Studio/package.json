@@ -1,5 +1,8 @@
 {
     "version": "1.0.0",
+    "engines": {
+        "node": ">=20.0.0"
+    },
     "name": "Raven.Studio",
     "scripts": {
         "webpack": "npm run fix-packages && webpack --config webpack.config.js",
