@@ -154,7 +154,7 @@ namespace Voron.Impl.FileHeaders
                 if (_disposed)
                     throw new ObjectDisposedException("Cannot access the header after it was disposed");
 
-                modifyAction(ref _theHeader);
+                modifyAction?.Invoke(ref _theHeader);
           
                 _revision++;
                 _theHeader.HeaderRevision = _revision;
@@ -193,6 +193,8 @@ namespace Voron.Impl.FileHeaders
             var buffer = MemoryMarshal.AsBytes(new Span<FileHeader>(ref header));
             header.Hash = Hashing.XXHash64.CalculateInline(buffer[..^sizeof(ulong)], (ulong)header.TransactionId);
         }
+
+        public void PersistHeader() => Modify(modifyAction: null);
 
         private bool IsEmptyHeader(in FileHeader header)
         {

@@ -10,6 +10,7 @@ using Sparrow.Platform;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Xunit;
@@ -24,6 +25,120 @@ public class BasicNextGen : StorageTest
     }
 
     private unsafe static Span<byte> AsSpan(Page p) => new Span<byte>(p.Pointer, Constants.Storage.PageSize);
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CannotRecoverWhenDataNotSyncedAndJournalsAreGone()
+    {
+        RequireFileBasedPager();
+
+        Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
+        
+        StartDatabase();
+        StopDatabase(shouldDisposeOptions: true);
+
+        var last = LatestJournalNumber();
+        Env.Options.TryDeleteJournal(last);
+
+        var e = Assert.Throws<VoronUnrecoverableErrorException>(StartDatabase);
+        Assert.Contains("First transaction initializing the struct", e.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void RecoverWhenDataSyncedButJournalsAreGone()
+    {
+        RequireFileBasedPager();
+
+        Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
+        
+        StartDatabase();
+
+        long pageId;
+        using (var tx2 = Env.WriteTransaction())
+        {
+            var allocatePage = tx2.LowLevelTransaction.AllocatePage(1);
+            pageId = allocatePage.PageNumber;
+            tx2.Commit();
+        }
+        
+        Env.FlushLogToDataFile();
+        Env.SyncDataFileImmediately();
+
+        StopDatabase(shouldDisposeOptions: true);
+
+        var last = LatestJournalNumber();
+        Env.Options.TryDeleteJournal(last);
+
+        StartDatabase();
+
+        using (var tx2 = Env.WriteTransaction())
+        {
+            tx2.LowLevelTransaction.GetPage(pageId);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CannotRecoverAfterTxWhenDataNotSyncedAndJournalsAreGone()
+    {
+        RequireFileBasedPager();
+
+        Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
+        
+        StartDatabase();
+
+        long pageId;
+        using (var tx2 = Env.WriteTransaction())
+        {
+            var allocatePage = tx2.LowLevelTransaction.AllocatePage(1);
+            pageId = allocatePage.PageNumber;
+            tx2.Commit();
+        }
+
+        // we aren't doing flush here to ensure we fail on the start 
+        // Env.FlushLogToDataFile();
+        // Env.SyncDataFileImmediately();
+
+        StopDatabase(shouldDisposeOptions: true);
+
+        var last = LatestJournalNumber();
+        Env.Options.TryDeleteJournal(last);
+
+        var e = Assert.Throws<VoronUnrecoverableErrorException>(StartDatabase);
+        Assert.Contains("First transaction initializing the struct", e.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CannotRecoverAfterTxWhenDataNotSyncedAndJournalsAreGone2()
+    {
+        RequireFileBasedPager();
+
+        Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
+        
+        StartDatabase();
+
+        long pageId;
+        using (var tx2 = Env.WriteTransaction())
+        {
+            var allocatePage = tx2.LowLevelTransaction.AllocatePage(1);
+            pageId = allocatePage.PageNumber;
+            tx2.Commit();
+        }
+
+        // we aren't doing flush here to ensure we fail on the start 
+        Env.FlushLogToDataFile();
+        // Env.SyncDataFileImmediately();
+
+        StopDatabase(shouldDisposeOptions: true);
+
+        var last = LatestJournalNumber();
+        Env.Options.TryDeleteJournal(last);
+
+        var e = Assert.Throws<VoronUnrecoverableErrorException>(StartDatabase);
+        Assert.Contains("First transaction initializing the struct", e.Message);
+    }
 
     [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.All64Bits)]
     public void WithAsyncCommit()

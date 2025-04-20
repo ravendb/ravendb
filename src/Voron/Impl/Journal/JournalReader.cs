@@ -310,7 +310,8 @@ namespace Voron.Impl.Journal
             using var _ = fileHandle;
             while (ReadOneTransactionToDataFile(ref dataPagerState, ref recoveryPagerState, ref txState, fileHandle, options))
             {
-                Debug.Assert(transactionHeaders.Count == 0 || LastTransactionHeader->TransactionId > transactionHeaders.Last().TransactionId);
+                Debug.Assert(transactionHeaders.Count == 0 || LastTransactionHeader->TransactionId > transactionHeaders.Last().TransactionId, 
+                    $"LastTransactionHeader->TransactionId: {LastTransactionHeader->TransactionId}, transactionHeaders.Last().TransactionId: {transactionHeaders.Last().TransactionId}");
 
                 if (LastTransactionHeader != null)
                     transactionHeaders.Add(*LastTransactionHeader);

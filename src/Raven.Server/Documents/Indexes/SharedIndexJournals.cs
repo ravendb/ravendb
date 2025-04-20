@@ -50,6 +50,11 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
         options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Storage.MinimumSharedJournalsMergeCount;
         options.MaxLogFileSize = documentDatabase.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
 
+        options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
+        options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError("JournalsForIndexing", s, e);
+        options.OnIntegrityErrorOfAlreadySyncedData += (s, e) => documentDatabase.HandleOnIndexIntegrityErrorOfAlreadySyncedData("JournalsForIndexing", s, e);
+        options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
+
         _env = new StorageEnvironment(options);
         _env.Journal.BranchJournalMerger = this;
         _scopeForSharedJournals = _env.Journal.SharedJournalsScope();
