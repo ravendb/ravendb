@@ -210,8 +210,16 @@ namespace Raven.Client.Documents
         /// </summary>
         Task ExecuteIndexAsync(IAbstractIndexCreationTask task, string database = null, CancellationToken token = default);
 
+        /// <summary>
+        /// Executes the index creation.
+        /// </summary>
         Task ExecuteIndexesAsync(IEnumerable<IAbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default);
 
+        /// <summary>
+        /// Executes the index creation.
+        /// </summary>
+        Task ExecuteIndexesAsync(IEnumerable<IAbstractIndexCreationTask> tasks, DocumentConventions conventions, string database, CancellationToken token = default);
+        
         TimeSeriesOperations TimeSeries { get; }
 
         /// <summary>

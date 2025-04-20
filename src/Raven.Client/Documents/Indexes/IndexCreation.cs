@@ -11,9 +11,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Exceptions.Documents.Compilation;
-using Raven.Client.Extensions;
 using Raven.Client.Logging;
 using Raven.Client.Util;
 using Sparrow.Logging;
@@ -50,44 +47,11 @@ namespace Raven.Client.Documents.Indexes
             AsyncHelpers.RunSync(() => CreateIndexesAsync(indexes, store, conventions, database));
         }
 
-        public static async Task CreateIndexesAsync(IEnumerable<IAbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default)
+        public static Task CreateIndexesAsync(IEnumerable<IAbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default)
         {
-            database = store.GetDatabase(database);
-
             var indexesList = indexes?.ToList() ?? new List<IAbstractIndexCreationTask>();
-
-            if (conventions == null)
-                conventions = store.Conventions;
-
-            var indexCompilationExceptions = new List<IndexCompilationException>();
-            try
-            {
-                var indexesToAdd = CreateIndexesToAdd(indexesList, conventions);
-                await store.Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexesToAdd), token).ConfigureAwait(false);
-            }
-            // For old servers that don't have the new endpoint for executing multiple indexes
-            catch (Exception ex)
-            {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
-                }
-
-                foreach (var task in indexesList)
-                {
-                    try
-                    {
-                        await task.ExecuteAsync(store, conventions, database, token).ConfigureAwait(false);
-                    }
-                    catch (IndexCompilationException e)
-                    {
-                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
-                    }
-                }
-            }
-
-            if (indexCompilationExceptions.Any())
-                throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+            
+            return store.ExecuteIndexesAsync(indexesList, conventions, database, token);
         }
 
         internal static IndexDefinition[] CreateIndexesToAdd(IEnumerable<IAbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions)

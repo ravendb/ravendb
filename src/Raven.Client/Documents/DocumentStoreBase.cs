@@ -100,10 +100,18 @@ namespace Raven.Client.Documents
         /// <inheritdoc />
         public Task ExecuteIndexesAsync(IEnumerable<IAbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default)
         {
-            AssertInitialized();
-            var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions);
+            return ExecuteIndexesAsync(tasks, Conventions, database, token);
+        }
 
+        /// <inheritdoc />
+        public Task ExecuteIndexesAsync(IEnumerable<IAbstractIndexCreationTask> tasks, DocumentConventions conventions, string database, CancellationToken token = default)
+        {
+            AssertInitialized();
+            
+            conventions ??= Conventions;
             database = this.GetDatabase(database);
+            
+            var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, conventions);
 
             return Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexesToAdd), token);
         }
