@@ -1532,8 +1532,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var text = fieldValueFactoryAccessor.Text;
             var texts = fieldValueFactoryAccessor.Texts;
             var embeddings = fieldValueFactoryAccessor.Embeddings;
+            var byId = fieldValueFactoryAccessor.ById;
 
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embeddings, embeddingsGenerationTaskIdentifier);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embeddings, byId, embeddingsGenerationTaskIdentifier);
         }
         
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
@@ -1547,15 +1548,17 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var text = embeddingValueFactory.Text;
             var texts = embeddingValueFactory.Texts;
             var embeddings = embeddingValueFactory.Embeddings;
+            var byId = embeddingValueFactory.ById;
             
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embeddings, embeddingsGenerationTaskIdentifier);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embeddings, byId, embeddingsGenerationTaskIdentifier);
         }
         
         private void VectorSearch(string fieldName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? minimumSimilarity,
-            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embeddings, string embeddingsGenerationTaskIdentifier = null)
+            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embeddings, string byId, string embeddingsGenerationTaskIdentifier = null)
         {
             string queryParameterName;
-            
+
+            bool isDocumentId = string.IsNullOrEmpty(byId) is false;
             if (text != null)
                 queryParameterName = AddQueryParameter(text);
             else if (texts != null)
@@ -1581,12 +1584,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     _  => embeddings
                 });
             }
+            else if (isDocumentId)
+            {
+                queryParameterName = AddQueryParameter(byId);
+            }
             else
             {
-                throw new InvalidOperationException("Cannot use VectorSearch without text(s) or embedding(s).");
+                throw new InvalidOperationException("Cannot use VectorSearch without text(s), document id or embedding(s).");
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, embeddingsGenerationTaskIdentifier);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, isDocumentId, embeddingsGenerationTaskIdentifier);
 
             WhereTokens.AddLast(vectorSearchToken);
         }

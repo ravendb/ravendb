@@ -227,6 +227,13 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             meta: AUTOCOMPLETE_META.function,
             score: AUTOCOMPLETE_SCORING.functionVectorTextualOverload,
             snippet: `embedding.text_i1(\${1}, ai.task('\${2}')), `
+            },
+        {
+            value: "embedding.forDor(",
+            caption: "embedding.forDor(docId)",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function,
+            snippet: `embedding.forDor(\${1}) `
         }]
     }
     

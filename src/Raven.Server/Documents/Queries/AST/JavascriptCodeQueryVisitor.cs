@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Queries.AST
         private static readonly string[] UnsupportedQueryMethodsInJavascript = {
             "Search","Boost","Lucene","Exact","Count","Sum","Circle","Wkt","Point","Within","Contains","Disjoint","Intersects","MoreLikeThis",
             "Spatial.Wkt", "Spatial.Point", "Spatial.Intersects", "Spatial.Contains", "Spatial.Disjoint", "Spatial.Sum", "Vector.Search", "Embedding.Text",
-            "Embedding.Text_I8", "Embedding.Text_I1", "Embedding.F32_I8", "Embedding.F32_I1", "Embedding.I8", "Embedding.I1"
+            "Embedding.Text_I8", "Embedding.Text_I1", "Embedding.F32_I8", "Embedding.F32_I1", "Embedding.I8", "Embedding.I1", "Embedding.For"
         };
 
         public JavascriptCodeQueryVisitor(StringBuilder sb, Query q)

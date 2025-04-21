@@ -9,7 +9,7 @@ public partial class Hnsw
     private static readonly Slice VectorsContainerIdSlice;
     private static readonly Slice NodeIdToLocationSlice;
     private static readonly Slice NodesByVectorIdSlice;
-    private static readonly Slice VectorsIdByHashSlice;
+    public static readonly Slice VectorsIdByHashSlice;
     private static readonly Slice HnswGlobalConfigSlice;
     internal static readonly Slice OptionsSlice;
     

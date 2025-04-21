@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Json;
 
 namespace Sparrow
 {
@@ -35,6 +36,8 @@ namespace Sparrow
         public readonly double Double;
 
         public UnmanagedMemoryStream ToStream() => new(Address, Length);
+        
+        public Memory<byte> AsMemory() => new UnmanagedMemoryManager(Address, Length).Memory;
 
         public override string ToString()
         {

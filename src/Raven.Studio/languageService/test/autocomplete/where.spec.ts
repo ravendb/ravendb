@@ -30,7 +30,7 @@ describe("can complete where", function () {
 
     it("vector.search <- suggest field or embedding method  - collection doesn't have fields", async () => {
         const suggestions = await autocomplete("from CollectionWithoutDefinedFields where vector.search(|", new EmptyMetadataProvider());
-        for (let specialFunction of ['embedding.text(', 'embedding.text_i8(', 'embedding.text_i1(', 'embedding.f32_i8(', 'embedding.f32_i1(', 'embedding.i8(', 'embedding.i1']) {
+        for (let specialFunction of ['embedding.text(', 'embedding.for(','embedding.text_i8(', 'embedding.text_i1(', 'embedding.f32_i8(', 'embedding.f32_i1(', 'embedding.i8(', 'embedding.i1']) {
             const matchingItem = suggestions.find(x => x.value.startsWith(specialFunction));
             expect(matchingItem)
                 .toBeTruthy();

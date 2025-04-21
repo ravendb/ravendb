@@ -14,11 +14,12 @@ public sealed class VectorSearchToken : WhereToken
     private readonly VectorEmbeddingType _sourceQuantizationType;
     private readonly VectorEmbeddingType _targetQuantizationType;
     private readonly int? _numberOfCandidatesForQuerying;
+    private readonly bool _isDocumentId;
     private readonly string _embeddingsGenerationTaskIdentifier;
 
     private static string AiTaskMethodName = "ai.task";
     
-    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? similarityThreshold, int? numberOfCandidatesForQuerying, bool isExact, string embeddingsGenerationTaskIdentifier)
+    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? similarityThreshold, int? numberOfCandidatesForQuerying, bool isExact, bool isDocumentId, string embeddingsGenerationTaskIdentifier)
     {
         FieldName = fieldName;
         ParameterName = parameterName;
@@ -29,6 +30,7 @@ public sealed class VectorSearchToken : WhereToken
         _similarityThreshold = similarityThreshold;
 
         _numberOfCandidatesForQuerying = numberOfCandidatesForQuerying;
+        _isDocumentId = isDocumentId;
         Options = new(isExact);
 
         _embeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
@@ -43,9 +45,11 @@ public sealed class VectorSearchToken : WhereToken
             writer.Append("exact(");
         
         writer.Append("vector.search(");
-        
+
         if (_sourceQuantizationType is VectorEmbeddingType.Single && _targetQuantizationType is VectorEmbeddingType.Single)
+        {
             writer.Append(FieldName);
+        }
         else
         {
             var methodName = Constants.VectorSearch.ConfigurationToMethodName(_sourceQuantizationType, _targetQuantizationType);
@@ -55,8 +59,16 @@ public sealed class VectorSearchToken : WhereToken
             else
                 writer.Append($"{methodName}({FieldName})");
         }
-        
-        writer.Append($", ${ParameterName}");
+        writer.Append(", ");
+
+        if (_isDocumentId)
+        {
+            writer.Append($"{Constants.VectorSearch.EmbeddingForDocument}(${ParameterName})");
+        }
+        else
+        {
+            writer.Append($"${ParameterName}");
+        }
 
         bool parametersAreDefault = _similarityThreshold is null &&
                                     _numberOfCandidatesForQuerying is null;

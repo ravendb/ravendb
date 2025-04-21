@@ -118,18 +118,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey)
-    {
-        if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
-
-        InitializeSpecialTermsMarkers();
-        
-        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers);
-    }
-
-    public unsafe EntryTermsReader GetEntryTermsReader(long id, ref Page p)
+    public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
     {
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);

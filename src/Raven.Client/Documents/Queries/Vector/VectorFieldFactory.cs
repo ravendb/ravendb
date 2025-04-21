@@ -210,6 +210,11 @@ public interface IVectorEmbeddingTextFieldValueFactory
     /// </summary>
     /// <param name="text">Queried text.</param>
     public void ByText(string text);
+
+    /// <summary>
+    /// Use specified vector for the provided document id  
+    /// </summary>
+    public void ForDocument(string documentId);
     
     /// <summary>
     /// Defines queried texts.
@@ -281,13 +286,17 @@ public interface IVectorEmbeddingFieldValueFactory
 
 public interface IVectorFieldValueFactory : IVectorEmbeddingTextFieldValueFactory, IVectorEmbeddingFieldValueFactory
 {
-    
+    /// <summary>
+    /// Use an existing vector belonging to the specified document
+    /// </summary>
+    public void ForDocument(string documentId);
 }
 
 public interface IVectorFieldValueFactoryAccessor
 {
     internal object Embeddings { get; set; }
     internal string Text { get; set; }
+    internal string ById { get; set; }
     internal IEnumerable<string> Texts { get; set; }
 }
 
@@ -295,6 +304,7 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldV
 {
     public object Embeddings { get; set; }
     public string Text { get; set; }
+    public string ById { get; set; }
     public IEnumerable<string> Texts { get; set; }
     
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(IEnumerable<T> embedding)
@@ -357,4 +367,8 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldV
         Embeddings = embedding;
     }
 
+    public void ForDocument(string documentId)
+    {
+        ById = documentId;
+    }
 }

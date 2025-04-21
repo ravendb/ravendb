@@ -21,14 +21,69 @@ public static partial class CoraxQueryBuilder
     private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me, bool exact)
     {
         var metadata = builderParameters.Metadata;
-        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[1],
-            allowObjectsInParameters: false, allowArraysInParameters: true);
+        
+        var minimumMatch = builderParameters.Index.Configuration.CoraxVectorSearchDefaultMinimumSimilarity;
+        if (me.Arguments.Count > 2)
+        {
+            var (similarityValue, similiarityValueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters,
+                (ValueExpression)me.Arguments[2]);
+            minimumMatch = similiarityValueType switch
+            {
+                ValueTokenType.Null => builderParameters.Index.Configuration.CoraxVectorSearchDefaultMinimumSimilarity,
+                ValueTokenType.Long => (long)similarityValue,
+                ValueTokenType.Double => (float)(double)similarityValue,
+                _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + similiarityValueType)
+            };
+        }
 
+        int numberOfCandidates = builderParameters.Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForQuerying;
+        if (me.Arguments.Count > 3)
+        {
+            var (candidatesValue, candidatesValueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters,
+                (ValueExpression)me.Arguments[3]);
+            numberOfCandidates = candidatesValueType switch
+            {
+                ValueTokenType.Long => Convert.ToInt32(candidatesValue),
+                ValueTokenType.Double => Convert.ToInt32(candidatesValue),
+                ValueTokenType.Null => builderParameters.Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForQuerying,
+                _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + candidatesValueType)
+            };
+        }
+        
         var fieldName = metadata.IsDynamic == false
             ? QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, builderParameters.QueryParameters, me.Arguments[0], metadata)
             : metadata.GetVectorFieldName(me, builderParameters.QueryParameters);
 
+        if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out var numberOfDimensions) == false)
+            return builderParameters.IndexSearcher.EmptyMatch(); // no vector indexed
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters, fieldName, hasBoost: builderParameters.HasBoost);
+        QueryExpression srcVector = me.Arguments[1];
+        
+
+        if (srcVector is MethodExpression forId) // embedding.for(docId) ...
+        {
+            PortableExceptions.ThrowIf<InvalidDataException>(forId.Name != "embedding.for", "Expected embedding.for() method call, but got: " + forId.Name);
+
+            var (forIdValue, _) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)forId.Arguments[0],
+                allowObjectsInParameters: false, allowArraysInParameters: true);
+            
+            switch (forIdValue)
+            {
+                case string docId:
+                    return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docId, minimumMatch, numberOfCandidates, exact,
+                        builderParameters.IsVectorSingleClause);
+                case StringSegment docIdSegment:
+                    return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docIdSegment.Value, minimumMatch, numberOfCandidates, exact,
+                        builderParameters.IsVectorSingleClause);
+                case BlittableJsonReaderArray {Length:> 0} arr:
+                    break;
+            }
+            
+        }
+        
+        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)srcVector,
+            allowObjectsInParameters: false, allowArraysInParameters: true);
+
         (VectorValue? SingleVector, VectorValue[] MultiVector) transformedEmbeddings = (null, null);
         IndexField indexField;
 
@@ -93,36 +148,6 @@ public static partial class CoraxQueryBuilder
             }
         }
 
-        var minimumMatch = builderParameters.Index.Configuration.CoraxVectorSearchDefaultMinimumSimilarity;
-        if (me.Arguments.Count > 2)
-        {
-            (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters,
-                (ValueExpression)me.Arguments[2]);
-            minimumMatch = valueType switch
-            {
-                ValueTokenType.Null => builderParameters.Index.Configuration.CoraxVectorSearchDefaultMinimumSimilarity,
-                ValueTokenType.Long => (long)value,
-                ValueTokenType.Double => (float)(double)value,
-                _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
-            };
-        }
-
-        int numberOfCandidates = builderParameters.Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForQuerying;
-        if (me.Arguments.Count > 3)
-        {
-            (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters,
-                (ValueExpression)me.Arguments[3]);
-            numberOfCandidates = valueType switch
-            {
-                ValueTokenType.Long => Convert.ToInt32(value),
-                ValueTokenType.Double => Convert.ToInt32(value),
-                ValueTokenType.Null => builderParameters.Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForQuerying,
-                _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
-            };
-        }
-
-        if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out var numberOfDimensions) == false)
-            return builderParameters.IndexSearcher.EmptyMatch(); // no vector indexed
 
         if (transformedEmbeddings.SingleVector != null)
         {
