@@ -40,12 +40,12 @@ public class BasicNextGen : StorageTest
         var last = LatestJournalNumber();
         Env.Options.TryDeleteJournal(last);
 
-        var e = Assert.Throws<VoronUnrecoverableErrorException>(StartDatabase);
-        Assert.Contains("First transaction initializing the struct", e.Message);
+        var e = Assert.Throws<InvalidJournalException>(StartDatabase);
+        Assert.Contains("No such journal", e.Message);
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void RecoverWhenDataSyncedButJournalsAreGone()
+    public void CannotRecoverEvenAfterDataSyncedWhenJournalsAreGone()
     {
         RequireFileBasedPager();
 
@@ -54,12 +54,10 @@ public class BasicNextGen : StorageTest
         
         StartDatabase();
 
-        long pageId;
-        using (var tx2 = Env.WriteTransaction())
+        using (var tx = Env.WriteTransaction())
         {
-            var allocatePage = tx2.LowLevelTransaction.AllocatePage(1);
-            pageId = allocatePage.PageNumber;
-            tx2.Commit();
+            tx.LowLevelTransaction.AllocatePage(1);
+            tx.Commit();
         }
         
         Env.FlushLogToDataFile();
@@ -70,12 +68,8 @@ public class BasicNextGen : StorageTest
         var last = LatestJournalNumber();
         Env.Options.TryDeleteJournal(last);
 
-        StartDatabase();
-
-        using (var tx2 = Env.WriteTransaction())
-        {
-            tx2.LowLevelTransaction.GetPage(pageId);
-        }
+        var e = Assert.Throws<InvalidJournalException>(StartDatabase);
+        Assert.Contains("No such journal", e.Message);
     }
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -105,8 +99,8 @@ public class BasicNextGen : StorageTest
         var last = LatestJournalNumber();
         Env.Options.TryDeleteJournal(last);
 
-        var e = Assert.Throws<VoronUnrecoverableErrorException>(StartDatabase);
-        Assert.Contains("First transaction initializing the struct", e.Message);
+        var e = Assert.Throws<InvalidJournalException>(StartDatabase);
+        Assert.Contains("No such journal", e.Message);
     }
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -136,8 +130,8 @@ public class BasicNextGen : StorageTest
         var last = LatestJournalNumber();
         Env.Options.TryDeleteJournal(last);
 
-        var e = Assert.Throws<VoronUnrecoverableErrorException>(StartDatabase);
-        Assert.Contains("First transaction initializing the struct", e.Message);
+        var e = Assert.Throws<InvalidJournalException>(StartDatabase);
+        Assert.Contains("No such journal", e.Message);
     }
 
     [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.All64Bits)]

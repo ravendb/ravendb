@@ -334,11 +334,6 @@ namespace Voron.Impl.Journal
             var deleteLastJournal = false;
 
             var lastJournal = _env.Options.GetLatestJournalNumber();
-            if (lastJournal.HasValue == false && journalToStartReadingFrom == 0)
-            {
-                goto FinishJournalRecovery;
-            }
-
             lastJournal ??= journalToStartReadingFrom;
 
             for (var journalNumber = journalToStartReadingFrom; journalNumber <= lastJournal.Value; journalNumber++)
@@ -443,7 +438,6 @@ namespace Voron.Impl.Journal
                 }
             }
 
-FinishJournalRecovery:
             if (_env.Options.Encryption.IsEnabled == false) // for encryption, we already use AEAD, so no need
             {
                 // here we want to check that the checksum on all the modified pages is valid
