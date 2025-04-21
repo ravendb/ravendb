@@ -394,19 +394,19 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     if (additionalAssembly.AssemblyName != null)
                     {
-                        newReferences.Add(FromAssemblyName(additionalAssembly.AssemblyName));
+                        newReferences.Add(FromAssemblyName(additionalAssembly.AssemblyName, definition.Name));
                         continue;
                     }
 
                     if (additionalAssembly.AssemblyPath != null)
                     {
-                        newReferences.Add(FromAssemblyPath(additionalAssembly.AssemblyPath));
+                        newReferences.Add(FromAssemblyPath(additionalAssembly.AssemblyPath, definition.Name));
                         continue;
                     }
 
                     if (additionalAssembly.PackageName != null)
                     {
-                        newReferences.AddRange(FromPackage(additionalAssembly.PackageName, additionalAssembly.PackageVersion, additionalAssembly.PackageSourceUrl));
+                        newReferences.AddRange(FromPackage(additionalAssembly.PackageName, additionalAssembly.PackageVersion, additionalAssembly.PackageSourceUrl, definition.Name));
                         continue;
                     }
 
@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return newReferences.ToArray();
 
-            static MetadataReference FromAssemblyName(string name)
+            static MetadataReference FromAssemblyName(string name, string indexName)
             {
                 try
                 {
@@ -429,11 +429,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Cannot load assembly '{name}'.", e);
+                    IndexCompilationException.ThrowFor(indexName, $"Cannot load assembly '{name}'.", e);
+                    return null; // never reached
                 }
             }
 
-            static MetadataReference FromAssemblyPath(string path)
+            static MetadataReference FromAssemblyPath(string path, string indexName)
             {
                 try
                 {
@@ -442,11 +443,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Cannot load assembly from path '{path}'.", e);
+                    IndexCompilationException.ThrowFor(indexName, $"Cannot load assembly from path '{path}'.", e);
+                    return null; // never reached
                 }
             }
 
-            static HashSet<MetadataReference> FromPackage(string packageName, string packageVersion, string packageSourceUrl)
+            static HashSet<MetadataReference> FromPackage(string packageName, string packageVersion, string packageSourceUrl, string indexName)
             {
                 try
                 {
@@ -470,7 +472,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.ForIndexes.DefaultPackageSourceUrl}'.", e);
+                    IndexCompilationException.ThrowFor(indexName, $"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.ForIndexes.DefaultPackageSourceUrl}'.", e);
+                    return null; // never reached
                 }
             }
 
@@ -548,7 +551,7 @@ namespace Raven.Server.Documents.Indexes.Static
             for (var i = 0; i < maps.Count; i++)
             {
                 var map = maps[i];
-                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
+                statements.AddRange(HandleMap(definition.Name, definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
                 
                 maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
                 stackDepthRetriever.Clear();
@@ -556,7 +559,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, out CompiledIndexField[] groupByFields));
+                statements.Add(HandleReduce(definition.Name, definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, out CompiledIndexField[] groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression<CompiledIndexField>(
                     groupByFields,
@@ -566,7 +569,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 
                 maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
                 if (methodDetector.Methods.HasCreateVector)
-                    throw new IndexCompilationException("'CreateMethod' and 'LoadVector' are not supported in the map of a map-reduce index.");
+                    IndexCompilationException.ThrowFor(definition.Name, "'CreateMethod' and 'LoadVector' are not supported in the map of a map-reduce index.");
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
@@ -644,7 +647,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return fields;
         }
 
-        private static List<StatementSyntax> HandleMap(IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever,
+        private static List<StatementSyntax> HandleMap(string indexName, IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever,
             ref SyntaxList<MemberDeclarationSyntax> members)
         {
             try
@@ -701,15 +704,12 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception ex)
             {
-                throw new IndexCompilationException(ex.Message, ex)
-                {
-                    IndexDefinitionProperty = nameof(IndexDefinition.Maps),
-                    ProblematicText = map
-                };
+                IndexCompilationException.ThrowFor(indexName, ex.Message, ex, nameof(IndexDefinition.Maps), map);
+                return null; // never reached
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
+        private static StatementSyntax HandleReduce(string indexName, string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
         {
             try
             {
@@ -766,11 +766,9 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception ex)
             {
-                throw new IndexCompilationException(ex.Message, ex)
-                {
-                    IndexDefinitionProperty = nameof(IndexDefinition.Reduce),
-                    ProblematicText = reduce
-                };
+                IndexCompilationException.ThrowFor(indexName, ex.Message, ex, nameof(IndexDefinition.Reduce), reduce);
+                groupByFields = null;
+                return null; // never reached
             }
         }
 

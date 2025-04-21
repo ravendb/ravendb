@@ -223,7 +223,7 @@ public abstract class AbstractIndexCreateController
             }
             catch (Exception e)
             {
-                throw new IndexCompilationException(e.Message, e);
+                IndexCompilationException.ThrowFor(definition.Name, e.Message, e);
             }
         }
     }
