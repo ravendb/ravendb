@@ -44,8 +44,18 @@ namespace Raven.Server.ServerWide
 
             var committed = InnerTransaction.LowLevelTransaction.Committed;
 
+            var llt = InnerTransaction?.LowLevelTransaction;
+            if (llt?.DebugInfo != null)
+                llt.DebugInfo_Add("Disposing LLT from RavenTransaction");
+
             InnerTransaction?.Dispose();
+
+            if (llt?.DebugInfo != null)
+                llt.DebugInfo_Add("Disposed LLT from RavenTransaction");
+
             InnerTransaction = null;
+
+            
 
             if (committed)
                 AfterCommit();

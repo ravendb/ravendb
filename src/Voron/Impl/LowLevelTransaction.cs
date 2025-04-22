@@ -961,6 +961,15 @@ namespace Voron.Impl
         }
 
         public string CallerName { get; set; }
+        public string DebugInfo { get; set; }
+
+        public void DebugInfo_Add(string msg)
+        {
+            if (DebugInfo == null)
+                DebugInfo = msg;
+            else
+                DebugInfo += $" {msg}{System.Environment.NewLine}";
+        }
 
         public void Dispose()
         {
