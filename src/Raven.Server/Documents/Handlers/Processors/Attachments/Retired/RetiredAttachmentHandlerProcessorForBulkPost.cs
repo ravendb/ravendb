@@ -24,9 +24,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
         {
             return await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment, collection);
         }
-        public override DirectBackupDownloader GetAttachmentsDownloader(DocumentsOperationContext context, OperationCancelToken tcs)
+        public override DirectBackupDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
         {
-            return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(context, tcs);
+            return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(tcs);
         }
 
         public override void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)

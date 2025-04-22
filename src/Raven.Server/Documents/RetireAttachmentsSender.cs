@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
 
         public RetiredAttachmentsConfiguration Configuration { get; }
 
-        private RetireAttachmentsSender(DocumentDatabase database, RetiredAttachmentsConfiguration retiredAttachmentsConfiguration) : base(database.Name, database.DatabaseShutdown)
+        internal RetireAttachmentsSender(DocumentDatabase database, RetiredAttachmentsConfiguration retiredAttachmentsConfiguration) : base(database.Name, database.DatabaseShutdown)
         {
             Configuration = retiredAttachmentsConfiguration;
             _database = database;
@@ -367,49 +367,6 @@ namespace Raven.Server.Documents
                 {
                     Attachments = _attachments.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray()
                 };
-            }
-        }
-
-        public static RetireAttachmentsSender LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, RetireAttachmentsSender retireAttachmentsSender)
-        {
-            try
-            {
-                if (dbRecord.RetiredAttachments == null)
-                {
-                    retireAttachmentsSender?.Dispose();
-                    return null;
-                }
-
-                if (retireAttachmentsSender != null)
-                {
-                    // no changes
-                    if (Equals(retireAttachmentsSender.Configuration, dbRecord.RetiredAttachments))
-                        return retireAttachmentsSender;
-                }
-
-                retireAttachmentsSender?.Dispose();
-
-
-                if (dbRecord.RetiredAttachments.Disabled)
-                    return null;
-
-                var cleaner = new RetireAttachmentsSender(database, dbRecord.RetiredAttachments);
-                cleaner.Start();
-                return cleaner;
-            }
-            catch (Exception e)
-            {
-                const string msg = $"Cannot enable {nameof(RetireAttachmentsSender)} as the configuration record is not valid.";
-                database.NotificationCenter.Add(AlertRaised.Create(
-                    database.Name,
-                    $"Expiration error in '{database.Name}'", msg,
-                    AlertType.RetireAttachmentsConfigurationNotValid, NotificationSeverity.Error, database.Name));
-
-                var logger = LoggingSource.Instance.GetLogger<RetireAttachmentsSender>(database.Name);
-                if (logger.IsOperationsEnabled)
-                    logger.Operations(msg, e);
-
-                return null;
             }
         }
     }

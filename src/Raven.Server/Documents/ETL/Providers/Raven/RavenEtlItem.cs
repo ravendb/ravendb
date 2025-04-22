@@ -67,10 +67,5 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             TimeSeriesDeletedRangeItem = deletedRange;
 
         }
-
-        ////TODO: egor move this to separate class
-        //public Slice AttachmentTombstoneId { get; }
-
-        //public bool IsAttachmentTombstone;
     }
 }

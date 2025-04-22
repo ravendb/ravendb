@@ -10,11 +10,13 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.Documents.Replication;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -32,15 +34,16 @@ namespace Raven.Server.Documents;
 
 public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 {
+    private DocumentInfoHelper _documentInfoHelper;
     private readonly Logger _logger;
+    private const string AttachmentsByRetire = "AttachmentsByRetire";
+
+    public RetiredAttachmentsConfiguration Configuration;
 
     public RetiredAttachmentsStorage(Transaction tx, DocumentDatabase database) : base(tx, database, AttachmentsByRetire, nameof(AttachmentName.RetireAt))
     {
         _logger = LoggingSource.Instance.GetLogger<RetiredAttachmentsStorage>(database.Name);
     }
-
-    private DocumentInfoHelper _documentInfoHelper;
-
 
     public IDisposable Initialize(DocumentsOperationContext context)
     {
@@ -52,7 +55,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         });
     }
 
-    private const string AttachmentsByRetire = "AttachmentsByRetire";
     protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
     {
         var type = GetRetireType(lowerId);
@@ -74,7 +76,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
         }
     }
-
 
     private void ProcessDocumentForPutRetire(DocumentsOperationContext context, Slice lowerId, string collection, DateTime currentTime)
     {
@@ -146,7 +147,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
     private DocumentExpirationInfo DocumentAndIdOrCollectionInternal(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice, out Document document, out string id, out string collectionStr)
     {
         document = null;
-         collectionStr = null;
+        collectionStr = null;
         //string id;
         using var scope = CleanRetiredAttachmentsKey(options.Context, clonedId, out var keySlice);
         using (var idLsv = _documentInfoHelper.GetDocumentId(keySlice))
@@ -357,7 +358,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
         Memory.Copy(keyMem.Ptr + pos, lowerId.Content.Ptr, lowerId.Content.Length);
 
-        outSlice=new Slice(SliceOptions.Key, keyMem);
+        outSlice = new Slice(SliceOptions.Key, keyMem);
         return scope;
     }
 
@@ -386,7 +387,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         switch (type)
         {
             case AttachmentRetireType.PutRetire:
-                return RemoveTypeFromRetiredAttachmentsKey2(context, lowerId, out  outSlice);
+                return RemoveTypeFromRetiredAttachmentsKey2(context, lowerId, out outSlice);
 
             case AttachmentRetireType.DeleteRetire:
                 return RemoveTypeAndCollectionFromRetiredAttachmentsKey(context, lowerId, out outSlice);
@@ -403,7 +404,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
     {
         var pos = 2;
         var size = lowerId.Content.Length - pos; // retireType - record separator - lowerId 
-        return  Slice.External(context.Allocator, lowerId.Content, pos, size, out outSlice);
+        return Slice.External(context.Allocator, lowerId.Content, pos, size, out outSlice);
     }
 
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
@@ -437,7 +438,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         {
             using (conflict)
             {
-                 collection = conflict.Collection;
+                collection = conflict.Collection;
                 if (conflict.Doc.TryGetMetadata(out var metadata) == false)
                     continue;
 
@@ -496,15 +497,14 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
     }
 
-    public DirectBackupDownloader GetDownloader(DocumentsOperationContext context, OperationCancelToken tcs)
+    public DirectBackupDownloader GetDownloader(OperationCancelToken tcs)
     {
-        var config = Database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(Database.Name);
-        if (config == null)
+        if (Configuration == null)
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is not configured on {Database.Name}.");
-        if (config.Disabled)
+        if (Configuration.Disabled)
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
 
-        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGet), config.S3Settings, config.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null);
+        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGet), Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null);
         return new DirectBackupDownloader(settings, retentionPolicyParameters: null, _logger, BackupUploaderBase.GenerateUploadResult(), progress => { }, tcs);
     }
 
@@ -595,5 +595,49 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
 
         return attachments.Count;
+    }
+
+    public RetireAttachmentsSender UpdateRetiredAttachmentsFromDatabaseRecord(DatabaseRecord dbRecord, RetireAttachmentsSender retireAttachmentsSender)
+    {
+        try
+        {
+            if (dbRecord.RetiredAttachments == null)
+            {
+                Configuration = null;
+                retireAttachmentsSender?.Dispose();
+                return null;
+            }
+
+            if (retireAttachmentsSender != null)
+            {
+                // no changes
+                if (Equals(retireAttachmentsSender.Configuration, dbRecord.RetiredAttachments))
+                    return retireAttachmentsSender;
+            }
+
+            retireAttachmentsSender?.Dispose();
+            Configuration = dbRecord.RetiredAttachments;
+
+            if (dbRecord.RetiredAttachments.Disabled)
+                return null;
+
+            var cleaner = new RetireAttachmentsSender(Database, dbRecord.RetiredAttachments);
+            cleaner.Start();
+            return cleaner;
+        }
+        catch (Exception e)
+        {
+            const string msg = $"Cannot enable {nameof(RetireAttachmentsSender)} as the configuration record is not valid.";
+            Database.NotificationCenter.Add(AlertRaised.Create(
+            Database.Name,
+                $"Attachment retirement error in '{Database.Name}'", msg,
+                AlertType.RetireAttachmentsConfigurationNotValid, NotificationSeverity.Error, Database.Name));
+
+            var logger = LoggingSource.Instance.GetLogger<RetireAttachmentsSender>(Database.Name);
+            if (logger.IsOperationsEnabled)
+                logger.Operations(msg, e);
+
+            return null;
+        }
     }
 }

@@ -164,8 +164,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
             else
             {
-
-                //TODO: egor continue from here :) need to make session.advance and etl DeleteAttachmentCommandData
                 _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, storageOnly: false, fromEtl: true, AttachmentFlags.None));
             }
             

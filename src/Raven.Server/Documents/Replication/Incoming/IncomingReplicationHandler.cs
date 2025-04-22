@@ -462,9 +462,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 else
                                 {
                                     // Here it is a document attachment or retired attachment that need to be deleted from both cloud && storage
-
-
-
                                     database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirectDocumentOrRetiredCloudAndStorage(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                         newChangeVector,
                                         attachmentTombstone.LastModifiedTicks);

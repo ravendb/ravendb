@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
                     $"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is doesn't have a collection. Should not happen a likely a bug !");
             }
 
-            var config = database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(database.Name);
+            var config = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Configuration;
 
             if (config == null)
             {
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
         protected override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, string collection, CancellationToken token)
         {
             var tcs = RequestHandler.CreateHttpRequestBoundOperationToken(token);
-            using var downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(context, tcs);
+            using var downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(tcs);
             await using var stream = await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment, collection);
             await WriteAttachmentToResponseStream(context, stream, token);
         }

@@ -73,8 +73,6 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
         {
             var cmd = ParsedCommands.Array[i];
 
-            var storageOnly = new Lazy<bool>(() => Database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(Database.Name) is not { Disabled: false, PurgeOnDelete: true });
-
             switch (cmd.Type)
             {
                 case CommandType.PUT:
@@ -221,26 +219,11 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     break;
 
                 case CommandType.AttachmentDELETE:
-
-                    Console.WriteLine(cmd.FromEtl);
-                    //TODO: egor add test that we ETL deleted retired attachment ?
-                    // in etl we send this command for  deleted retired attachment, but on destination it won't delete since my config is purge on delete false!
-                    // I think need to send fromETL flag and force delete it!
                     CollectionName collectionName;
-
-
 
                     //TODO: egor btw I think I dont care if its from ETL
                     if (cmd.FromEtl == false)
                     {
-                        ////TODO: egor ideally I need to drop this method at all!!
-                        //var config = Database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(Database.Name);
-                        //  Database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentWhenStateUnknown(config, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-
-
-                      
-
-
                         if (cmd.Flags == AttachmentFlags.Retired)
                         {
                             //retired attachment

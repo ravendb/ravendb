@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             return Task.FromResult(attachment.Stream);
         }
 
-        public virtual DirectBackupDownloader GetAttachmentsDownloader(DocumentsOperationContext context, OperationCancelToken tcs)
+        public virtual DirectBackupDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
         {
              return null;
         }
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             var attachmentsStreams = new List<Stream>();
 
             using DocumentsTransaction tx = context.OpenReadTransaction();
-            using (var downloader = GetAttachmentsDownloader(context, tcs))
+            using (var downloader = GetAttachmentsDownloader(tcs))
             using (var stream = new MemoryStream())
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))

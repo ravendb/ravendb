@@ -34,10 +34,8 @@ namespace SlowTests.Server.Documents.Attachments
         //TODO: egor do big attachments tests
         //TODO: egor test for "now we delete doc with retired attachemnt, it will delete the retire attachment from cloud!"
 
-        //TODO: egor move & copy attachment tests
+   
         //            // test: WaitForIndexesAfterSaveChangesSupportsMoveToDifferentCollection
-        //session.Advanced.Attachments.Move
-        //session.Advanced.Attachments.Copy
 
         public S3RetiredAttachmentsSlowTests(ITestOutputHelper output) : base(output)
         {
@@ -807,10 +805,7 @@ namespace SlowTests.Server.Documents.Attachments
 
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
-         [InlineData(64, 3)]
-        //[InlineData(128, 3)]
-
-        //TODO: egor add test that backup & restore already retired attachment (so the stream is null) (maybe should throw if there is no config?)
+        [InlineData(64, 3)]
         public async Task CanUploadRetiredAttachmentToS3FromBackupAndGet(int attachmentsCount, int size)
         {
 
@@ -914,12 +909,9 @@ namespace SlowTests.Server.Documents.Attachments
                 }
             }
         }
+
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
-        //[InlineData(64, 3)]
-        //[InlineData(128, 3)]
-
-        //TODO: egor add test that backup & restore already retired attachment (so the stream is null) (maybe should throw if there is no config?)
         public async Task CanBackupRetiredAttachments(int attachmentsCount, int size)
         {
             await CanBackupRetiredAttachmentsInternal(attachmentsCount, size);
@@ -928,9 +920,6 @@ namespace SlowTests.Server.Documents.Attachments
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
-        //[InlineData(128, 3)]
-
-        //TODO: egor add test that backup & restore already retired attachment (so the stream is null) (maybe should throw if there is no config?)
         public async Task CanExportImportWithRetiredAttachment(int attachmentsCount, int size)
         {
             await CanExportImportWithRetiredAttachmentInternal(attachmentsCount, size);
@@ -940,9 +929,6 @@ namespace SlowTests.Server.Documents.Attachments
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
-        //[InlineData(128, 3)]
-
-        //TODO: egor add test that backup & restore already retired attachment (so the stream is null) (maybe should throw if there is no config?)
         public async Task CanIndexWithRetiredAttachment(int attachmentsCount, int size)
         {
             await CanIndexWithRetiredAttachmentInternal(attachmentsCount, size);
@@ -951,8 +937,6 @@ namespace SlowTests.Server.Documents.Attachments
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
-        //[InlineData(128, 3)]
-
         public async Task CanEtlWithRetiredAttachmentAndRetireOnDestination(int attachmentsCount, int size)
         {
             await CanEtlWithRetiredAttachmentAndRetireOnDestinationInternal(attachmentsCount, size);
@@ -961,8 +945,6 @@ namespace SlowTests.Server.Documents.Attachments
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
-        //[InlineData(128, 3)]
-
         public async Task CanEtlRetiredAttachmentsToDestination(int attachmentsCount, int size)
         {
             await CanEtlRetiredAttachmentsToDestinationInternal(attachmentsCount, size);
