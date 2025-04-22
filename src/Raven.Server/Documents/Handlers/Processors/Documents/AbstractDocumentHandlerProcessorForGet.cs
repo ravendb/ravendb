@@ -67,8 +67,14 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                 await ExecuteInternalAsync(context);
             }
 
+            if (ReadTransaction != null)
+                    ReadTransaction.DebugInfo_Add($"Request completed. Context disposed: {context.Disposed}, in pool: {context.InPoolSince:O}, in use: {context.InUse.IsRaised()}");
+
             if (context is DocumentsOperationContext documentsOperationContext)
             {
+                if (ReadTransaction != null)
+                    ReadTransaction.DebugInfo_Add($"Context's transaction {documentsOperationContext.Transaction}");
+
                 if (documentsOperationContext.Transaction != null)
                 {
                     if (Logger.IsOperationsEnabled)
@@ -76,9 +82,11 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                 }
             }
             
-            if (ReadTransaction != null && ReadTransaction.IsDisposed == false)
+            if (ReadTransaction != null)
             {
-                if (Logger.IsOperationsEnabled)
+                ReadTransaction.DebugInfo_Add("After closing the context");
+
+                if (Logger.IsOperationsEnabled && ReadTransaction.IsDisposed == false)
                     Logger.Operations("Not disposed LowLevel read transaction - Document");
             }
         }
@@ -86,6 +94,10 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         {
             if (Logger.IsOperationsEnabled)
                 Logger.Operations("Failed to handle GET request - Document", e);
+
+            if (ReadTransaction != null)
+                ReadTransaction.DebugInfo_Add($"Exception: {e}");
+
             throw;
         }
     }
@@ -227,8 +239,10 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         var result = await GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries, parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag)
                                 .AsTask();
 
-        ReadTransaction = result.ReadTx?.InnerTransaction?.LowLevelTransaction;
-        
+        ReadTransaction = result.ReadTx;
+
+        ReadTransaction?.DebugInfo_Add($"Result status code: {result.StatusCode}");
+
         if (result.StatusCode == HttpStatusCode.NotFound)
         {
             if (etag == HttpCache.NotFoundResponse)
@@ -242,6 +256,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         if (etag == result.Etag)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+
+            ReadTransaction?.DebugInfo_Add($"Same etag. Result status code: {HttpStatusCode.NotModified})");
 
             return NoResults;
         }
@@ -512,7 +528,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     protected sealed class DocumentsByIdResult<T>
     {
-        public DocumentsTransaction ReadTx { get; set; }
+        public LowLevelTransaction ReadTx { get; set; }
         public List<T> Documents { get; set; }
 
         public List<T> Includes { get; set; }

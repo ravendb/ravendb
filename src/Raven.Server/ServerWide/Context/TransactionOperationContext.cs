@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Runtime.CompilerServices;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -157,12 +158,18 @@ namespace Raven.Server.ServerWide.Context
 
         public void CloseTransaction()
         {
+            if (Transaction?.InnerTransaction?.LowLevelTransaction?.DebugInfo != null)
+                Transaction?.InnerTransaction.LowLevelTransaction.DebugInfo_Add($"Closing {Transaction.GetType().Name}");
+
             Transaction?.Dispose();
             Transaction = null;
         }
 
         public override void Dispose()
         {
+            if (Transaction?.InnerTransaction?.LowLevelTransaction?.DebugInfo != null)
+                Transaction?.InnerTransaction.LowLevelTransaction.DebugInfo_Add($"Disposing {this.GetType().Name} context");
+
             base.Dispose();
 
             Allocator.Dispose();
@@ -193,6 +200,9 @@ namespace Raven.Server.ServerWide.Context
 
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
+            if (Transaction?.InnerTransaction?.LowLevelTransaction?.DebugInfo != null)
+                Transaction?.InnerTransaction.LowLevelTransaction.DebugInfo_Add($"Resetting {this.GetType().Name} context");
+
             CloseTransaction();
 
             base.Reset(forceResetLongLivedAllocator);
