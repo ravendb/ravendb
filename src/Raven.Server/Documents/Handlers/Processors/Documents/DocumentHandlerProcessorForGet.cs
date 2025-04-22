@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
@@ -77,6 +78,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         try
         {
             readTx = context.OpenReadTransaction();
+
+            readTx.InnerTransaction.LowLevelTransaction.DebugInfo_Add($"is cluster tx: {clusterWideTx}");
         }
         catch (Exception e)
         {
@@ -94,6 +97,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             {
                 document = RequestHandler.Database.DocumentsStorage.Get(context, id);
             }
+
+            readTx.InnerTransaction.LowLevelTransaction.DebugInfo_Add($"doc: {id} (found: {(document != null)})");
 
             if (document == null)
             {
@@ -158,6 +163,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             }
         }
 
+        readTx.InnerTransaction.LowLevelTransaction.DebugInfo_Add($"Return result");
+
         return new ValueTask<DocumentsByIdResult<Document>>(new DocumentsByIdResult<Document>
         {
             Etag = actualEtag,
@@ -167,7 +174,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             CounterIncludes = includeCounters,
             TimeSeriesIncludes = includeTimeSeries,
             CompareExchangeIncludes = includeCompareExchangeValues?.Results,
-            ReadTx = readTx,
+            ReadTx = readTx?.InnerTransaction?.LowLevelTransaction,
         });
     }
 
