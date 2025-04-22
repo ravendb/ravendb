@@ -820,6 +820,10 @@ class editDocument extends shardViewModelBase {
     copyChangeVectorToClipboard() {
         copyToClipboard.copy(this.changeVector().map(vectorItem => vectorItem.fullFormat).join(", "), "Change Vector has been copied to clipboard");
     }
+    
+    copyRevisionTimestampToClipboard(revisionTimestamp: string) {
+        copyToClipboard.copy(revisionTimestamp, "Revision timestamp has been copied to clipboard");
+    }
 
     togglePropertiesPanel() {
         this.propertiesPanelVisible.toggle();
@@ -1399,7 +1403,7 @@ class editDocument extends shardViewModelBase {
     }
 
     private getRevisionPhysicalSize(changeVector: string): JQueryPromise<Raven.Client.Documents.Commands.SizeDetails> {
-        return new getDocumentRevisionsPhysicalSizeCommand(changeVector, this.activeDatabase()).execute().done((response) => {
+        return new getDocumentRevisionsPhysicalSizeCommand(changeVector, this.db).execute().done((response) => {
             this.sizeOnDiskActual(response.HumaneActualSize);
             this.sizeOnDiskAllocated(response.HumaneAllocatedSize);
             this.isCompressed(response.IsCompressed);
