@@ -86,8 +86,6 @@ export function ReorderNodes(props: ReorderNodesProps) {
         radioToggleSelectedItem,
     } = useReorderNodes({ fixOrder, newOrder, setNewOrder });
 
-    const findCardIndex = useCallback((node: NodeInfo) => newOrder.findIndex((x) => x.tag === node.tag), [newOrder]);
-
     const newOrderWithId = newOrder.map((node) => ({
         ...node,
         id: node.tag,
@@ -115,12 +113,7 @@ export function ReorderNodes(props: ReorderNodesProps) {
                     >
                         <SortableContext strategy={horizontalListSortingStrategy} items={newOrderWithId}>
                             {newOrder.map((node) => (
-                                <NodeInfoReorderComponent
-                                    key={node.tag}
-                                    node={node}
-                                    setOrder={setNewOrder}
-                                    findCardIndex={findCardIndex}
-                                />
+                                <NodeInfoReorderComponent key={node.tag} node={node} />
                             ))}
                         </SortableContext>
                         <DragOverlay adjustScale>

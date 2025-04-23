@@ -266,13 +266,9 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
 
 interface NodeInfoReorderComponentProps {
     node: NodeInfo;
-    findCardIndex: (node: NodeInfo) => number;
-    setOrder: (order: React.SetStateAction<NodeInfo[]>) => void;
 }
 
-export function NodeInfoReorderComponent(props: NodeInfoReorderComponentProps) {
-    const { node } = props;
-
+export function NodeInfoReorderComponent({ node }: NodeInfoReorderComponentProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: node.tag,
     });
