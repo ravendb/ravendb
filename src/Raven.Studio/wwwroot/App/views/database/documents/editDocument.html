@@ -153,7 +153,6 @@
                                   data-bind="click: () => copyRevisionTimestampToClipboard($root.comparingWith().__metadata.lastModified())"
                                   title="Copy older revision timestamp to clipboard" class="btn btn-sm btn-default">
                                     <i class="icon-copy"></i>
-                                    <span>Copy</span>
                                 </button>
                                 <span data-bind="text: $root.comparingWith().__metadata.lastModified()"></span>
                                 <i title="Conflicted revision" data-bind="visible: $root.comparingWith().__metadata.hasFlag('Conflicted')" class="icon-conflicts"></i>
@@ -195,7 +194,6 @@
                         <button data-bind="click: () => copyRevisionTimestampToClipboard(document().__metadata.lastModified())"
                                 title="Copy newer revision timestamp to clipboard" class="btn btn-sm btn-default">
                             <i class="icon-copy"></i>
-                            <span>Copy</span>
                         </button>
                         <div class="btn-group">
                             <button class="btn btn-sm btn-default" title="Newer revision"
