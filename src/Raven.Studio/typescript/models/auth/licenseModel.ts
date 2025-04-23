@@ -25,7 +25,7 @@ class licenseModel {
         }
 
         if (licenseStatus.IsCloud) {
-            licenseType += " (Cloud)";
+            return "Cloud";
         }
 
         if (licenseStatus.IsIsv) {
