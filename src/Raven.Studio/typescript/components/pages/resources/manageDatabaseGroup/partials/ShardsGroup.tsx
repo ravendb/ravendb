@@ -1,7 +1,5 @@
 ﻿import React, { useCallback } from "react";
 import Button from "react-bootstrap/Button";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import {
     ReorderNodes,
     ReorderNodesControls,
@@ -120,14 +118,12 @@ export function ShardsGroup(props: ShardsGroupProps) {
             </RichPanelHeader>
 
             {sortableMode ? (
-                <DndProvider backend={HTML5Backend}>
-                    <ReorderNodes
-                        fixOrder={fixOrder}
-                        setFixOrder={setFixOrder}
-                        newOrder={newOrder}
-                        setNewOrder={setNewOrder}
-                    />
-                </DndProvider>
+                <ReorderNodes
+                    fixOrder={fixOrder}
+                    setFixOrder={setFixOrder}
+                    newOrder={newOrder}
+                    setNewOrder={setNewOrder}
+                />
             ) : (
                 <React.Fragment>
                     <DatabaseGroup>
