@@ -21,7 +21,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import Dropdown from "react-bootstrap/Dropdown";
 import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useSortableStyles } from "hooks/useSortableStyles";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
@@ -269,23 +269,16 @@ interface NodeInfoReorderComponentProps {
 }
 
 export function NodeInfoReorderComponent({ node }: NodeInfoReorderComponentProps) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    const sortable = useSortable({
         id: node.tag,
     });
+    const style = useSortableStyles(sortable);
 
-    const style: CSSProperties = {
-        cursor: isDragging ? "grabbing" : "grab",
-        opacity: isDragging ? 0.5 : 1,
-        transform: CSS.Transform.toString(transform),
-        transition,
-    };
+    const { attributes, listeners, setNodeRef } = sortable;
 
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            <DatabaseGroupItem className="item-reorder">
-                <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
-                <DatabaseGroupType node={node} />
-            </DatabaseGroupItem>
+            <NodeInfoReorderPreview node={node} />
         </div>
     );
 }

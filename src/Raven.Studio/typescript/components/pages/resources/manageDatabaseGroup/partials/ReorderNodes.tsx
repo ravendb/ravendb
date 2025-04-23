@@ -75,16 +75,30 @@ interface ReorderNodesProps {
 export function ReorderNodes(props: ReorderNodesProps) {
     const { fixOrder, setFixOrder, newOrder, setNewOrder } = props;
 
-    const {
-        activeNode,
-        sensors,
-        handleDragStart,
-        handleDragEnd,
-        handleDragCancel,
-        leftRadioToggleItem,
-        rightRadioToggleItem,
-        radioToggleSelectedItem,
-    } = useReorderNodes({ fixOrder, newOrder, setNewOrder });
+    const { activeNode, sensors, handleDragStart, handleDragEnd, handleDragCancel } = useReorderNodes({
+        newOrder,
+        setNewOrder,
+    });
+
+    const leftRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: (
+            <>
+                Shuffle nodes order
+                <br />
+                after failure recovery
+            </>
+        ),
+        value: "shuffle",
+        iconName: "shuffle",
+    };
+
+    const rightRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: "Try to maintain nodes order",
+        value: "order",
+        iconName: "order",
+    };
+
+    const radioToggleSelectedItem = fixOrder ? rightRadioToggleItem.value : leftRadioToggleItem.value;
 
     const newOrderWithId = newOrder.map((node) => ({
         ...node,
@@ -127,20 +141,14 @@ export function ReorderNodes(props: ReorderNodesProps) {
 }
 
 interface UseReorderNodesProps {
-    fixOrder: boolean;
     newOrder: NodeInfo[];
     setNewOrder: (newOrder: React.SetStateAction<NodeInfo[]>) => void;
 }
 
-function useReorderNodes({ fixOrder, newOrder, setNewOrder }: UseReorderNodesProps) {
+function useReorderNodes({ newOrder, setNewOrder }: UseReorderNodesProps) {
     const [activeNode, setActiveNode] = useState<NodeInfo | null>(null);
 
-    const sensors = useSensors(
-        useSensor(PointerSensor),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
+    const sensors = useSensors(useSensor(PointerSensor));
 
     const handleDragStart: DndContextProps["onDragStart"] = (event) => {
         const { active } = event;
@@ -165,34 +173,11 @@ function useReorderNodes({ fixOrder, newOrder, setNewOrder }: UseReorderNodesPro
         setActiveNode(null);
     };
 
-    const leftRadioToggleItem: RadioToggleWithIconInputItem = {
-        label: (
-            <>
-                Shuffle nodes order
-                <br />
-                after failure recovery
-            </>
-        ),
-        value: "shuffle",
-        iconName: "shuffle",
-    };
-
-    const rightRadioToggleItem: RadioToggleWithIconInputItem = {
-        label: "Try to maintain nodes order",
-        value: "order",
-        iconName: "order",
-    };
-
-    const radioToggleSelectedItem = fixOrder ? rightRadioToggleItem.value : leftRadioToggleItem.value;
-
     return {
         activeNode,
         sensors,
         handleDragStart,
         handleDragEnd,
         handleDragCancel,
-        leftRadioToggleItem,
-        rightRadioToggleItem,
-        radioToggleSelectedItem,
     };
 }
