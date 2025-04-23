@@ -109,7 +109,7 @@ public static class TextChunker
     public static List<string> ChunkPlainText(string textualValue, int maxTokensPerChunk)
     {
         var text = textualValue.AsMemory();
-        var pos = Tokenizer.GetIndexByTokenCount(text.Span, maxTokensPerChunk, out var normalizedText, out var tokenCount,
+        var pos = Tokenizer.GetIndexByTokenCount(LimitTextSize(text, maxTokensPerChunk), maxTokensPerChunk, out var normalizedText, out var tokenCount,
             considerNormalization: false, considerPreTokenization: false);
         if (pos == text.Length) // avoid allocation if we can fit all tokens at once
         {
@@ -122,12 +122,24 @@ public static class TextChunker
             text = text[pos..];
             if (text.IsEmpty)
                 break;
-            pos = Tokenizer.GetIndexByTokenCount(text.Span, maxTokensPerChunk, out normalizedText, out tokenCount,
+            pos = Tokenizer.GetIndexByTokenCount(LimitTextSize(text, maxTokensPerChunk), maxTokensPerChunk, out normalizedText, out tokenCount,
                 considerNormalization: false, considerPreTokenization: false);
             results.Add(new(text[..pos].Span));
         } 
 
         return results;
     }
-    
+
+    private static ReadOnlySpan<char> LimitTextSize(ReadOnlyMemory<char> text, int maxTokens)
+    {
+        ReadOnlySpan<char> span = text.Span;
+        if (span.Length <= maxTokens * 6)
+            return span;
+        // the issue is that CountTokens() use the whole string, but if we have a value that is ~500Kb in size, 
+        // and 2048 tokens, we'll spend huge amounts of time just splitting the whole string, since CountTokens()
+        // has to work on the entire input we give it - therefor, we "guesstimate" the max size and pass that
+        // to the CountTokens() function - most embeddings use 3 - 4 chars per token, so by using 6, we ensure that the
+        // text we send will be longer than the max tokens
+        return span[..(maxTokens * 6)];
+    }
 }

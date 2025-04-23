@@ -131,6 +131,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                      List<ReadOnlyMemory<byte>> cachedEmbeddingsBuffers = [];
                      foreach (var chunkedValue in TextChunker.Chunk(value, chunking))
                      {
+                         if(string.IsNullOrWhiteSpace(chunkedValue))
+                             continue; // this can happen if we have just spaces, or if we have an HTML with just <img/>, etc.
+                         
                          if (TryGetFromCache(documentsContext, chunkedValue, cacheDuration, ref expirationRefresh, out var cachedEntry))
                          {
                              cachedEmbeddingsBuffers.Add(cachedEntry);
