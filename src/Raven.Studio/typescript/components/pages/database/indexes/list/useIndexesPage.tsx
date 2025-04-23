@@ -17,7 +17,7 @@ import useInterval from "hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 import IndexUtils from "components/utils/IndexUtils";
 import genUtils from "common/generalUtils";
-import { delay } from "components/utils/common";
+import { databaseLocationComparator, delay } from "components/utils/common";
 import { useServices } from "hooks/useServices";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { useChanges } from "hooks/useChanges";
@@ -286,8 +286,9 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
                     const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
                     for (const location of locations) {
-                        const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details
-                            ?.status;
+                        const indexStatus = index.nodesInfo.find((x) =>
+                            databaseLocationComparator(x.location, location)
+                        )?.details?.status;
 
                         if (indexStatus === "Disabled") {
                             continue;
@@ -334,8 +335,9 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
                     const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
                     for (const location of locations) {
-                        const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details
-                            ?.status;
+                        const indexStatus = index.nodesInfo.find((x) =>
+                            databaseLocationComparator(x.location, location)
+                        )?.details?.status;
 
                         if (indexStatus === "Paused" || indexStatus === "Disabled") {
                             continue;
@@ -382,7 +384,9 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
                     const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
                     for (const location of locations) {
-                        const details = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details;
+                        const details = index.nodesInfo.find((x) =>
+                            databaseLocationComparator(x.location, location)
+                        )?.details;
 
                         if (details?.status === "Paused" && details?.state !== "Error") {
                             startRequests.push(
