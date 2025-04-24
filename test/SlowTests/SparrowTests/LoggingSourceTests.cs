@@ -354,6 +354,8 @@ namespace SlowTests.SparrowTests
             var logDirectory = new DirectoryInfo(path);
             var isRetentionPolicyApplied = WaitForValue(() =>
             {
+                logger.Operations($"somelog");
+
                 logDirectory.Refresh();
                 afterEndFiles = logDirectory.GetFiles();
                 AssertNoFileMissing(afterEndFiles.Select(f => f.Name).ToArray());
