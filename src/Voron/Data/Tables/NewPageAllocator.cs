@@ -199,6 +199,8 @@ namespace Voron.Data.Tables
                         {
                             if (TryMoveNextCyclic(it, startPage) == false)
                                 break;
+
+                            continue;
                         }
                         for (int i = 0; i < BitmapSize*8; i++)
                         {
@@ -210,8 +212,6 @@ namespace Voron.Data.Tables
                                 return _llt.ModifyPage(currentSectionStart + i);
                             }
                         }
-                        if (TryMoveNextCyclic(it, startPage) == false)
-                            break;
                     }
                 }
                 page = AllocateMoreSpace(fst);
