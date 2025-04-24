@@ -15,7 +15,7 @@ import ImportIndexesList from "components/pages/database/indexes/list/migration/
 import { useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import IndexUtils from "components/utils/IndexUtils";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -58,10 +58,9 @@ export function ImportIndexes(props: ImportIndexesProps) {
     });
     const { importMode, selectedDatabaseName, selectedIndexNames } = useWatch({ control });
 
-    const [disabledReason, setDisabledReason] = useState<string>();
-
+    const disabledReason = hasDatabaseAdminAccess ? null : "Creating a C# index requires database administrator access";
     const [indexDefinitions, setIndexDefinitions] = useState<IndexDefinition[]>([]);
-    const filteredIndexes = (() => {
+    const filteredIndexes = useMemo(() => {
         const sortedIndexes = [...indexDefinitions].sort((a, b) => a.Name.localeCompare(b.Name));
 
         const isAnyAutoIndex = sortedIndexes.some((x) => IndexUtils.isAutoIndex(x));
@@ -73,7 +72,6 @@ export function ImportIndexes(props: ImportIndexesProps) {
         if (!hasDatabaseAdminAccess) {
             availableIndexes = staticIndexes.filter((x) => !IndexUtils.isCsharpIndex(x));
             unavailableIndexes = staticIndexes.filter((x) => IndexUtils.isCsharpIndex(x));
-            setDisabledReason("Creating a C# index requires database administrator access");
         }
 
         setValue(
@@ -86,7 +84,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
             unavailableIndexes,
             isAnyAutoIndex,
         };
-    })();
+    }, [setValue, indexDefinitions]);
 
     const clearIndexes = useCallback(() => {
         setIndexDefinitions([]);
