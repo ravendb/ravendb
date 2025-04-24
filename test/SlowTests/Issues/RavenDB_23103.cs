@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
@@ -20,7 +19,6 @@ namespace SlowTests.Issues
         }
 
         private const int NumberOfCompanies = 1024;
-
         /****************STATIC************************/
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void WaitForIndexesAfterPatch_Simple_Static()
@@ -51,9 +49,10 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                         {
-                            WaitForIndexes = true
+                            WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
+                            ThrowOnTimeoutInWaitForIndexes = true
                         }
                     }));
 
@@ -68,7 +67,7 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void WaitForIndexesAfterPatch_StaticIndex_WithTimeout()
+        public void WaitForIndexesAfterPatch_StaticIndex_WithTimeout_NoSpecificIndexes()
         {
             using (var store = GetDocumentStore(new Options
             {
@@ -90,41 +89,66 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions
+                    {
+                        WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions
+                    }));
 
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
-
-                iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name3' }}" };
-                
-                indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
-                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
-                    WaitForSpecificIndexes = new[] { index.IndexName },
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-                
-                operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-                
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
             }
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void WaitForIndexesAfterPatch_StaticIndex_WithTimeoutInTheConventions()
+        public void WaitForIndexesAfterPatch_StaticIndex_WithTimeout_WithSpecificIndexes()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
+            }))
+            {
+                var index = new Companies_ByName();
+                index.Execute(store);
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < NumberOfCompanies; i++)
+                    {
+                        bulk.Store(new Company { Name = "Name1" }, "Companies/" + i);
+                    }
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                
+
+                var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name3' }}" };
+
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                {
+                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
+                    WaitForSpecificIndexes = new[] { index.IndexName },
+                    ThrowOnTimeoutInWaitForIndexes = true
+                };
+
+                var operation = store.Operations.Send(new PatchByQueryOperation(iq,
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+
+                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
+        public void WaitForIndexesAfterPatch_StaticIndex_WithoutTimeout_WithSpecificIndexes()
         {
             using (var store = GetDocumentStore(new Options
                    {
-                       ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                        ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
                    }))
             {
@@ -143,39 +167,30 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexBatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-
-                var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
-
-                iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name3' }}" };
-
-                indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
                     WaitForSpecificIndexes = new[] { index.IndexName },
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
-                operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                var operation = store.Operations.Send(new PatchByQueryOperation(iq,
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexBatchOptions }));
 
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
+                    Assert.NotEqual(NumberOfCompanies, count);
+                }
             }
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void WaitForIndexesAfterPatch_StaticIndex_WithTimeoutShouldntThrow()
+        public void WaitForIndexesAfterPatch_StaticIndex_WithoutTimeout_NoSpecificIndexes()
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
             }))
             {
@@ -194,13 +209,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexBatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
+                    ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexBatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -211,6 +226,48 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
+        public void WaitForIndexesAfterPatch_StaticIndex_WithTimeoutShouldntThrow()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
+            }))
+            {
+                var index = new Companies_ByName();
+                index.Execute(store);
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < NumberOfCompanies; i++)
+                    {
+                        bulk.Store(new Company { Name = "Name1" }, "Companies/" + i);
+                    }
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name2' }}" };
+
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                {
+                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
+                };
+
+                var operation = store.Operations.Send(new PatchByQueryOperation(iq,
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
+                    Assert.NotEqual(NumberOfCompanies, count);
+                }
+            }
+        }
+
 
         /****************COLLECTIONS************************/
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
@@ -234,14 +291,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
+                    WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -276,41 +332,24 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
-
-                iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name3' }}" };
-
-                indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
-                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
-                    WaitForSpecificIndexes = new[] { index.IndexName },
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-
-                operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
             }
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void WaitForIndexesAfterPatch_CollectionQuery_WithTimeoutInTheConventions()
+        public void WaitForIndexesAfterPatch_CollectionQuery_WithoutTimeout()
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
             }))
             {
@@ -329,30 +368,21 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name3' }}" };
-
-                indexBatchOptions = new IndexBatchOptions
+                using (var session = store.OpenSession())
                 {
-                    WaitForIndexes = true,
-                    WaitForSpecificIndexes = new[] { index.IndexName },
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-
-                operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
+                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
+                    Assert.NotEqual(NumberOfCompanies, count);
+                }
             }
         }
 
@@ -361,7 +391,6 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
                    {
-                       ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                        ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
                    }))
             {
@@ -380,13 +409,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
+                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -397,7 +426,6 @@ namespace SlowTests.Issues
                 }
             }
         }
-
 
 
         /****************AllDocs************************/
@@ -422,15 +450,14 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = "from @all_docs as c update { c.Name = 'Name2' }" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
                     WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
@@ -466,41 +493,26 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
 
                 iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name3' }}" };
-
-                indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
-                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
-                    WaitForSpecificIndexes = new[] { index.IndexName },
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-
-                operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
             }
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void WaitForIndexesAfterPatch_AllDocsQuery_WithTimeoutInTheConventions()
+        public void WaitForIndexesAfterPatch_AllDocsQuery_WithoutTimeout()
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
             }))
             {
@@ -519,64 +531,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                 {
-                    WaitForIndexes = true,
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
-
-                iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name3' }}" };
-
-                indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
-                    WaitForSpecificIndexes = new[] { index.IndexName },
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-
-                operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
-            }
-        }
-
-        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void WaitForIndexesAfterPatch_AllDocsQuery_WithTimeoutShouldntThrow()
-        {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
-            }))
-            {
-                var index = new Companies_ByName();
-                index.Execute(store);
-
-                using (var bulk = store.BulkInsert())
-                {
-                    for (int i = 0; i < NumberOfCompanies; i++)
-                    {
-                        bulk.Store(new Company { Name = "Name1" }, "Companies/" + i);
-                    }
-                }
-
-                Indexes.WaitForIndexing(store);
-
-                var iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name2' }}" };
-
-                var indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
-                };
-
-                var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -588,6 +549,46 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
+        public void WaitForIndexesAfterPatch_AllDocsQuery_WithTimeoutShouldntThrow()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
+            }))
+            {
+                var index = new Companies_ByName();
+                index.Execute(store);
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < NumberOfCompanies; i++)
+                    {
+                        bulk.Store(new Company { Name = "Name1" }, "Companies/" + i);
+                    }
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                var iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name2' }}" };
+
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                {
+                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
+                };
+
+                var operation = store.Operations.Send(new PatchByQueryOperation(iq,
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
+                    Assert.NotEqual(NumberOfCompanies, count);
+                }
+            }
+        }
 
 
         /****************DYNAMIC************************/
@@ -622,9 +623,10 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true
+                            WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
+                            ThrowOnTimeoutInWaitForIndexes = true
                         }
                     }));
 
@@ -661,39 +663,23 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c where c.Name != null update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true, WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1), ThrowOnTimeoutInWaitForIndexes = true
+                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1), ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
-
-                iq = new IndexQuery { Query = $"from companies as c where c.Name != null update {{ c.Name = 'Name3' }}" };
-
-                indexBatchOptions = new IndexBatchOptions
-                {
-                    WaitForIndexes = true,
-                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
-                    WaitForSpecificIndexes = new[] { index.IndexName },
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-
-                operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
             }
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void WaitForIndexesAfterPatch_DynamicQuery_WithTimeoutInTheConventions()
+        public void WaitForIndexesAfterPatch_DynamicQuery_WithoutTimeout()
         {
             using (var store = GetDocumentStore(new Options
                    {
-                       ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                        ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
                    }))
             {
@@ -712,30 +698,21 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c where c != null update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
                 {
-                    WaitForIndexes = true,
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                iq = new IndexQuery { Query = $"from companies as c where c != null update {{ c.Name = 'Name3' }}" };
-
-                indexBatchOptions = new IndexBatchOptions
+                using (var session = store.OpenSession())
                 {
-                    WaitForIndexes = true,
-                    WaitForSpecificIndexes = new[] { index.IndexName },
-                    ThrowOnTimeoutInWaitForIndexes = true
-                };
-
-                operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
+                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
+                    Assert.NotEqual(NumberOfCompanies, count);
+                }
             }
         }
 
@@ -744,7 +721,6 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
             }))
             {
@@ -763,13 +739,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c where c != null update {{ c.Name = 'Name2' }}" };
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                 {
-                    WaitForIndexes = true,
+                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -780,7 +756,6 @@ namespace SlowTests.Issues
                 }
             }
         }
-
 
 
         /****************DELETE************************/
@@ -815,9 +790,9 @@ namespace SlowTests.Issues
                     new QueryOperationOptions
                     {
                         AllowStale = false,
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
+                            WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                         }
                     }));
 
@@ -862,9 +837,9 @@ namespace SlowTests.Issues
                     new QueryOperationOptions
                     {
                         AllowStale = false,
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
+                            WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                         }
                     }));
 
@@ -908,9 +883,8 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
                             WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
@@ -921,11 +895,10 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void DeleteByQuery_With_WaitForIndexes_Static_WithTimeout_WithTimeoutInTheConventions()
+        public void DeleteByQuery_With_WaitForIndexes_Static_WithoutTimeout()
         {
             using (var store = GetDocumentStore(new Options
                    {
-                       ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                        ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
                    }))
             {
@@ -950,50 +923,9 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
                             ThrowOnTimeoutInWaitForIndexes = true
-                        }
-                    }));
-
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
-            }
-        }
-
-        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void DeleteByQuery_With_WaitForIndexes_Static_WithTimeout_WithTimeoutShouldntThrow()
-        {
-            using (var store = GetDocumentStore(new Options
-                   {
-                       ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
-                       ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
-                   }))
-            {
-                var index = new Companies_ByName();
-                index.Execute(store);
-
-                using (var bulk = store.BulkInsert())
-                {
-                    for (int i = 0; i < NumberOfCompanies; i++)
-                    {
-                        bulk.Store(new Company { Name = "Name1" }, "Companies/" + i);
-                    }
-                }
-
-                Indexes.WaitForIndexing(store);
-
-                var iq = new IndexQuery
-                {
-                    Query = $"from index '{index.IndexName}'"
-                };
-
-                var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
-                    new QueryOperationOptions
-                    {
-                        IndexOptions = new IndexBatchOptions
-                        {
-                            WaitForIndexes = true,
                         }
                     }));
 
@@ -1007,6 +939,50 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
+        public void DeleteByQuery_With_WaitForIndexes_Static_WithTimeout_WithTimeoutShouldntThrow()
+        {
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
+                   }))
+            {
+                var index = new Companies_ByName();
+                index.Execute(store);
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < NumberOfCompanies; i++)
+                    {
+                        bulk.Store(new Company { Name = "Name1" }, "Companies/" + i);
+                    }
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                var iq = new IndexQuery
+                {
+                    Query = $"from index '{index.IndexName}'"
+                };
+
+                var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
+                    new QueryOperationOptions
+                    {
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        {
+                            WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
+                        }
+                    }));
+
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
+                    Assert.NotEqual(NumberOfCompanies, count);
+                }
+            }
+        }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void DeleteByQuery_With_WaitForIndexes_Collection()
@@ -1037,9 +1013,9 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true
+                            WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                         }
                     }));
 
@@ -1084,9 +1060,8 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
                             WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
@@ -1097,11 +1072,10 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void DeleteByQuery_With_WaitForIndexes_Collection_WithTimeout_WithTimeoutInTheConventions()
+        public void DeleteByQuery_With_WaitForIndexes_Collection_WithoutTimeout()
         {
             using (var store = GetDocumentStore(new Options
                    {
-                       ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                        ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
                    }))
             {
@@ -1127,14 +1101,19 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
                     }));
 
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
+                    Assert.NotEqual(NumberOfCompanies, count);
+                }
             }
         }
 
@@ -1169,9 +1148,9 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true
+                            WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                         }
                     }));
 
@@ -1218,10 +1197,9 @@ namespace SlowTests.Issues
                     new QueryOperationOptions
                     {
                         AllowStale = false,
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
-                            WaitForIndexesTimeout = TimeSpan.FromMinutes(30)
+                            WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                         }
                     }));
 
@@ -1266,9 +1244,8 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
                             WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
@@ -1279,11 +1256,10 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
-        public void DeleteByQuery_With_WaitForIndexes_Dynamic_WithTimeout_WithTimeoutInTheConventions()
+        public void DeleteByQuery_With_WaitForIndexes_Dynamic_WithoutTimeout()
         {
             using (var store = GetDocumentStore(new Options
                    {
-                       ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1), 
                        ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
                    }))
             {
@@ -1309,14 +1285,19 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
                     }));
 
-                Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
+                    Assert.NotEqual(NumberOfCompanies, count);
+                }
             }
         }
 
@@ -1325,7 +1306,6 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
                    {
-                       ModifyDocumentStore = x => x.Conventions.WaitForIndexesAfterSaveChangesTimeout = TimeSpan.FromMicroseconds(1),
                        ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
                    }))
             {
@@ -1351,9 +1331,9 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexOptions = new IndexBatchOptions
+                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                         {
-                            WaitForIndexes = true,
+                            WaitForIndexesTimeout= TimeSpan.FromMicroseconds(1)
                         }
                     }));
 
@@ -1389,10 +1369,9 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                 {
-                    WaitForIndexes = true,
-                    WaitForIndexesTimeout = TimeSpan.FromMinutes(3),
+                    WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
@@ -1402,7 +1381,7 @@ namespace SlowTests.Issues
                 var iq1 = new IndexQuery { Query = $"from index '{index.IndexName}' as x update {{ x.Name = 'Name2' ; x.FirstName = 'Name2'}}" };
 
                 var operation1 = store.Operations.Send(new PatchByQueryOperation(iq1,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation1.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -1419,10 +1398,10 @@ namespace SlowTests.Issues
                 // ----------------------------
                 var iq2 = new IndexQuery { Query = $"from index '{index.IndexName}' as x update {{ x.Name = 'Name2'; x.FirstName = 'Name2' }}" };
 
-                indexBatchOptions.WaitForIndexesTimeout = TimeSpan.Zero;
+                waitForIndexingAfterPatchOptions.WaitForIndexesTimeout = TimeSpan.Zero;
 
                 var operation2 = store.Operations.Send(new PatchByQueryOperation(iq2,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation2.WaitForCompletion(TimeSpan.FromSeconds(30));
             }
@@ -1449,10 +1428,9 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                var indexBatchOptions = new IndexBatchOptions
+                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
                 {
-                    WaitForIndexes = true,
-                     WaitForIndexesTimeout = TimeSpan.FromMinutes(3),
+                    WaitForIndexesTimeout = TimeSpan.FromMinutes(3),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
@@ -1462,7 +1440,7 @@ namespace SlowTests.Issues
                 var iq1 = new IndexQuery { Query = $"from index '{index.IndexName}' as x where x.Collection == 'Companies' update {{ x.Name = 'Name2' }}" };
 
                 var operation1 = store.Operations.Send(new PatchByQueryOperation(iq1,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation1.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -1479,10 +1457,10 @@ namespace SlowTests.Issues
                 // ----------------------------
                 var iq2 = new IndexQuery { Query = $"from index '{index.IndexName}' as x where x.Collection == 'Companies' update {{ x.Name = 'Name2' }}" };
 
-                indexBatchOptions.WaitForIndexesTimeout = TimeSpan.Zero;
+                waitForIndexingAfterPatchOptions.WaitForIndexesTimeout = TimeSpan.Zero;
 
                 var operation2 = store.Operations.Send(new PatchByQueryOperation(iq2,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexOptions = indexBatchOptions }));
+                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation2.WaitForCompletion(TimeSpan.FromSeconds(30));
             }

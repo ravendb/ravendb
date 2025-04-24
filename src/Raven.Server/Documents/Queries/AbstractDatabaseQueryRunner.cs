@@ -12,12 +12,8 @@ using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Suggestions;
-using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Migration;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
@@ -103,7 +99,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
     protected Task<IOperationResult> ExecuteDelete(IndexQueryServerSide query, Index index, QueryOperationOptions options, QueryOperationContext queryContext,
         Action<DeterminateProgress> onProgress, OperationCancelToken token)
     {
-        return ExecuteOperation(query, index, options, queryContext, onProgress, (key, retrieveDetails) =>
+        return ExecuteOperation(query, index, options, queryContext, onProgress, (key) =>
         {
             var command = new DeleteDocumentCommand(key, null, Database);
 
@@ -116,8 +112,8 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
     protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index index, QueryOperationOptions options, PatchRequest patch,
         BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<DeterminateProgress> onProgress, OperationCancelToken token)
     {
-        var operation = ExecuteOperation(query, index, options, queryContext, onProgress,
-            (key, retrieveDetails) =>
+        return ExecuteOperation(query, index, options, queryContext, onProgress,
+            (key) =>
             {
                 var command = new PatchDocumentCommand(queryContext.Documents, key,
                     expectedChangeVector: null,
@@ -134,10 +130,9 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     );
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command,
-                    x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection},
-                    c => c.PatchResult?.Dispose());
-            }, token);
-        return operation;
+                    x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection },
+                    c => c.PatchResult.Dispose());
+            }, token); 
     }
 
     private async Task<IOperationResult> ExecuteOperation<T>(
@@ -146,7 +141,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         QueryOperationOptions options,
         QueryOperationContext queryContext,
         Action<DeterminateProgress> onProgress,
-        Func<string, bool, BulkOperationCommand<T>> createCommandForId,
+        Func<string, BulkOperationCommand<T>> createCommandForId,
         OperationCancelToken token)
         where T : DocumentMergedTransactionCommand
     {
@@ -156,7 +151,6 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         query = ConvertToOperationQuery(query, options);
 
         const int batchSize = 1024;
-
         Queue<string> resultIds;
 
         var progress = new DeterminateProgress
@@ -183,29 +177,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         onProgress(progress);
 
         var result = new BulkOperationResult();
-        WaitForIndexesInformation information = null;
-
-        void RetrieveDetails(IBulkOperationDetails details)
-        {
-            if (options.IndexOptions.WaitForIndexes)
-            {
-                information ??= new();
-                switch (details)
-                {
-                    case BulkOperationResult.DeleteDetails d:
-                        information.Collections.Add(d.Collection);
-                        if (d.Etag.HasValue)
-                            information.LastEtag = Math.Max(d.Etag.Value, information.LastEtag);
-                        break;
-                    case BulkOperationResult.PatchDetails p:
-                        information.Collections.Add(p.Collection);
-                        information.LastEtag = ChangeVectorUtils.GetEtagById(p.ChangeVector, Database.DbBase64Id);
-                        break;
-                }
-            }
-            if (options.RetrieveDetails)
-                result.Details.Add(details);
-        }
+        var information = new WaitForIndexesInformation(options, result, Database);
 
         using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
         {
@@ -213,15 +185,12 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
             {
                 var command = new ExecuteRateLimitedOperations<string>(resultIds, id =>
                     {
-                        var subCommand = createCommandForId(id, options.RetrieveDetails);
-
-                        if(options.RetrieveDetails || options.IndexOptions.WaitForIndexes)
-                            subCommand.RetrieveDetails = RetrieveDetails;
+                        var subCommand = createCommandForId(id);
+                        subCommand.RetrieveDetails = information.RetrieveDetails;
 
                         return subCommand;
                     }, rateGate, token,
                     batchSize: batchSize);
-
 
                 await Database.TxMerger.Enqueue(command).ConfigureAwait(false);
                 
@@ -232,10 +201,10 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     rateGate?.WaitToProceed();
             }
 
-            if (options.IndexOptions != null && options.IndexOptions.WaitForIndexes)
+            if (options.WaitForIndexingAfterPatchOptions != null)
             {
-                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexOptions.WaitForIndexesTimeout.Value,
-                    options.IndexOptions.WaitForSpecificIndexes, throwOnTimeout: options.IndexOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag,
+                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.WaitForIndexingAfterPatchOptions.WaitForIndexesTimeout!.Value,
+                    options.WaitForIndexingAfterPatchOptions.WaitForSpecificIndexes, throwOnTimeout: options.WaitForIndexingAfterPatchOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag,
                     lastTombstoneEtag: 0, information.Collections, token.Token);
             }
         }
@@ -244,12 +213,6 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         return result;
     }
 
-    private class WaitForIndexesInformation
-    {
-        public HashSet<string> Collections { get; } = new();
-
-        public long LastEtag { get; set; }
-    }
 
     private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)
     {
@@ -262,48 +225,5 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
             QueryParameters = query.QueryParameters,
             DocumentFields = DocumentFields.Id
         };
-    }
-
-    internal sealed class BulkOperationCommand<T> : DocumentMergedTransactionCommand where T : DocumentMergedTransactionCommand
-    {
-        private readonly T _command;
-        private readonly Func<T, IBulkOperationDetails> _getDetails;
-        private readonly Action<T> _afterExecuted;
-
-        public BulkOperationCommand(T command, Func<T, IBulkOperationDetails> getDetails, Action<T> afterExecuted)
-        {
-            _command = command;
-            _getDetails = getDetails;
-            _afterExecuted = afterExecuted;
-        }
-
-        public override long Execute(DocumentsOperationContext context, AbstractTransactionOperationsMerger<DocumentsOperationContext, DocumentsTransaction>.RecordingState recording)
-        {
-            try
-            {
-                var count = _command.Execute(context, recording);
-                if (_getDetails != null)
-                    RetrieveDetails?.Invoke(_getDetails(_command));
-
-                return count;
-            }
-            finally
-            {
-                _afterExecuted?.Invoke(_command);
-            }
-        }
-
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
-        {
-            throw new NotSupportedException($"ToDto() of {nameof(BulkOperationCommand<T>)} Should not be called");
-        }
-
-        protected override long ExecuteCmd(DocumentsOperationContext context)
-        {
-            throw new NotSupportedException("Should only call Execute() here");
-        }
-
-        public Action<IBulkOperationDetails> RetrieveDetails { private get; set; }
-
     }
 }

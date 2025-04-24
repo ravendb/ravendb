@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
@@ -32,7 +31,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
         {
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
             var options = GetQueryOperationOptions();
-
+            
             var returnContext = AllocateContextForAsyncOperation(out var asyncOperationContext); // we don't dispose this as operation is async
 
             try
@@ -69,14 +68,16 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
             RetrieveDetails = RequestHandler.GetBoolValueQueryString("details", required: false) ?? false,
             IgnoreMaxStepsForScript = RequestHandler.GetBoolValueQueryString("ignoreMaxStepsForScript", required: false) ?? false,
         };
-        var waitForIndexes = RequestHandler.GetBoolValueQueryString("waitForIndexes", required: false) ?? false;
         var waitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+
+        if (waitForIndexesTimeout == null)
+            return options;
+
         var throwOnTimeoutInWaitForIndexes = RequestHandler.GetBoolValueQueryString("ThrowOnTimeoutInWaitForIndexes", required: false) ?? false;
         var waitForSpecificIndexes = RequestHandler.GetStringValuesQueryString("waitForSpecificIndexes", required: false);
-        options.IndexOptions = new IndexBatchOptions()
+        options.WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
         {
-            WaitForIndexes = waitForIndexes,
-            WaitForIndexesTimeout = waitForIndexesTimeout,
+            WaitForIndexesTimeout = waitForIndexesTimeout.Value,
             WaitForSpecificIndexes = waitForSpecificIndexes,
             ThrowOnTimeoutInWaitForIndexes = throwOnTimeoutInWaitForIndexes,
         };

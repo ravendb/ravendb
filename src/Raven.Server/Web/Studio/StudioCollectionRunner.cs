@@ -27,10 +27,11 @@ namespace Raven.Server.Web.Studio
             // specific collection w/ exclusions
             return ExecuteOperation(collectionName, start, take, options, Context, onProgress, key =>
             {
-                if (_excludeIds.Contains(key) == false)
-                    return new DeleteDocumentCommand(key, null, Database);
+                if (_excludeIds.Contains(key)) 
+                    return null;
+                var command = new DeleteDocumentCommand(key, null, Database);
 
-                return null;
+                return new BulkOperationCommand<DeleteDocumentCommand>(command, null, null);
             }, token);
         }
     }

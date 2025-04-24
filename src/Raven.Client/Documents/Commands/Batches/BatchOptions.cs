@@ -1,8 +1,5 @@
 ﻿using System;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
-using Sparrow.Json.Parsing;
-
 namespace Raven.Client.Documents.Commands.Batches
 {
     public sealed class BatchOptions
@@ -16,7 +13,7 @@ namespace Raven.Client.Documents.Commands.Batches
     public sealed class IndexBatchOptions
     {
         public bool WaitForIndexes { get; set; }
-        public TimeSpan? WaitForIndexesTimeout { get; set; }
+        public TimeSpan WaitForIndexesTimeout { get; set; }
         public bool ThrowOnTimeoutInWaitForIndexes { get; set; }
         public string[] WaitForSpecificIndexes { get; set; }
     }

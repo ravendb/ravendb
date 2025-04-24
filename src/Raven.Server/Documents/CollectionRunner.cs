@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -18,6 +16,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Constants = Raven.Client.Constants;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
@@ -45,7 +44,11 @@ namespace Raven.Server.Documents
             Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, start, take, options, Context, onProgress, key =>
-                    new DeleteDocumentCommand(key, null, Database), token);
+            {
+                var command = new DeleteDocumentCommand(key, null, Database);
+                return new BulkOperationCommand<DeleteDocumentCommand>(command,
+                        x => new BulkOperationResult.DeleteDetails { Id = key, Etag = x.DeleteResult?.Etag, Collection = x.DeleteResult?.Collection.Name }, afterExecuted: null);
+            }, token);
         }
 
         public Task<IOperationResult> ExecutePatch(string collectionName, long start, long take, QueryOperationOptions options, PatchRequest patch,
@@ -53,19 +56,22 @@ namespace Raven.Server.Documents
         {
             return ExecuteOperation(collectionName, start, take, options, Context, onProgress,
                 key =>
-                     new PatchDocumentCommand(Context, key, expectedChangeVector: null, skipPatchIfChangeVectorMismatch: false, patch: (patch, patchArgs),
+                {
+                    var command = new PatchDocumentCommand(Context, key, expectedChangeVector: null, skipPatchIfChangeVectorMismatch: false, patch: (patch, patchArgs),
                         patchIfMissing: (null, null), createIfMissing: null, identityPartsSeparator: Database.IdentityPartsSeparator, isTest: false, debugMode: false,
-                        collectResultsNeeded: false, returnDocument: false, ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript), token);
+                        collectResultsNeeded: false, returnDocument: false, ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
+
+                    return new BulkOperationCommand<PatchDocumentCommand>(command,
+                        x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection },
+                        c => c.PatchResult.Dispose()) ;
+                }, token);
         }
 
-        private async Task WaitForIndexesAfterPatch(QueryOperationOptions options, HashSet<string> collections, long lastEtag, OperationCancelToken token)
-        {
-            await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexOptions.WaitForIndexesTimeout!.Value,
-                options.IndexOptions.WaitForSpecificIndexes, options.IndexOptions.ThrowOnTimeoutInWaitForIndexes, lastEtag, 0, collections, token.Token);
-        }
 
-        protected async Task<IOperationResult> ExecuteOperation(string collectionName, long start, long take, QueryOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Func<string, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> action, OperationCancelToken token)
+        protected async Task<IOperationResult> ExecuteOperation<T>(string collectionName, long start, long take, QueryOperationOptions options, DocumentsOperationContext context,
+             Action<DeterminateProgress> onProgress, Func<string, BulkOperationCommand<T>> createCommandForId, OperationCancelToken token)
+            where T : DocumentMergedTransactionCommand
+
         {
             var progress = new DeterminateProgress();
             var cancellationToken = token.Token;
@@ -86,8 +92,7 @@ namespace Raven.Server.Documents
             long startEtag = 0;
             var alreadySeenIdsCount = new Reference<long>();
             string startAfterId = null;
-            var lastId = string.Empty;
-            HashSet<string> modifiedCollections = null;
+            var information = new WaitForIndexesInformation(options, result: null, Database);
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
@@ -95,6 +100,7 @@ namespace Raven.Server.Documents
             {
                 var end = false;
                 var ids = new Queue<string>(OperationBatchSize);
+
                 while (startEtag <= lastEtag)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -104,8 +110,7 @@ namespace Raven.Server.Documents
 
                     using (context.OpenReadTransaction())
                     {
-                        var fields = isAllDocs ? DocumentFields.Data | DocumentFields.Id : DocumentFields.Id;
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, startAfterId, alreadySeenIdsCount, OperationBatchSize, isAllDocs, fields, out bool isStartsWithOrIdQuery, token.Token))
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, startAfterId, alreadySeenIdsCount, OperationBatchSize, isAllDocs, DocumentFields.Id, out bool isStartsWithOrIdQuery, token.Token))
                         {
                             using (document)
                             {
@@ -140,12 +145,6 @@ namespace Raven.Server.Documents
 
                                 startAfterId = document.Id;
                                 ids.Enqueue(document.Id);
-
-                                if (isAllDocs)
-                                {
-                                    modifiedCollections ??= new HashSet<string>();
-                                    modifiedCollections.Add(Database.DocumentsStorage.ExtractCollectionName(context, document.Data)?.Name);
-                                }
                             }
                         }
                     }
@@ -155,8 +154,16 @@ namespace Raven.Server.Documents
 
                     do
                     {
-                        var command = new ExecuteRateLimitedOperations<string>(ids, action, rateGate, token, 
-                            batchSize: OperationBatchSize);
+                        var command = new ExecuteRateLimitedOperations<string>(ids, id =>
+                        {
+                            var subCommand = createCommandForId(id);
+
+                            subCommand.RetrieveDetails = information.RetrieveDetails;
+
+                            return subCommand;
+                        }
+                        , rateGate, token, 
+                        batchSize: OperationBatchSize);
 
                         await Database.TxMerger.Enqueue(command).ConfigureAwait(false);
 
@@ -174,22 +181,10 @@ namespace Raven.Server.Documents
                 }
             }
 
-            if (options.IndexOptions.WaitForIndexes)
+            if (options.WaitForIndexingAfterPatchOptions != null && information.LastEtag > lastEtag)
             {
-                using (context.OpenReadTransaction())
-                {
-                    var documentOrTombstone = Database.DocumentsStorage.GetDocumentOrTombstone(Context, startAfterId, DocumentFields.ChangeVector);
-                    if (documentOrTombstone.Missing == false)
-                    {
-                        if (documentOrTombstone.Document != null)
-                            lastEtag = ChangeVectorUtils.GetEtagById(documentOrTombstone.Document.ChangeVector, Database.DbBase64Id);
-                        else if (documentOrTombstone.Tombstone != null)
-                        {
-                            lastEtag = ChangeVectorUtils.GetEtagById(documentOrTombstone.Tombstone.ChangeVector, Database.DbBase64Id);
-                        }
-                    }
-                }
-                await WaitForIndexesAfterPatch(options, modifiedCollections ?? [collectionName], lastEtag, token);
+                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.WaitForIndexingAfterPatchOptions.WaitForIndexesTimeout!.Value,
+                    options.WaitForIndexingAfterPatchOptions.WaitForSpecificIndexes, options.WaitForIndexingAfterPatchOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag, 0, information.Collections, token.Token);
             }
 
             return new BulkOperationResult
