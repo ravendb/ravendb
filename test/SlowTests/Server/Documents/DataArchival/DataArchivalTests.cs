@@ -14,6 +14,7 @@ using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.DataArchival;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
@@ -167,6 +168,93 @@ namespace SlowTests.Server.Documents.DataArchival
                     WaitForUserToContinueTheTest(store);
                     var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                     Assert.Equal(0, companies.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ArchiveFlagShouldNotBeRemoved()
+        {
+            using (var store = GetDocumentStore())
+            {
+                // Enable revisions
+                // ================
+                var usersConfig = new RevisionsCollectionConfiguration()
+                {
+                    MinimumRevisionsToKeep = int.MaxValue,
+                    Disabled = false
+                };
+                
+                var revisionsConfig = new RevisionsConfiguration()
+                {
+                    Default = new RevisionsCollectionConfiguration {Disabled = false},
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>()
+                    {
+                        { "Users", usersConfig }
+                    }
+                };
+                
+                var configureRevisionsOp = new ConfigureRevisionsOperation(revisionsConfig);
+                store.Maintenance.Send(configureRevisionsOp);
+                
+                // Create document 
+                // ===============
+                var user = new User {Name = "aaa"};
+                var archiveAt = SystemTime.UtcNow.AddSeconds(30);
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata[Constants.Documents.Metadata.ArchiveAt] = archiveAt.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    session.SaveChanges();
+                }
+                
+                // Activate the archival
+                await SetupDataArchival(store);
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                var documentsArchiver = database.DataArchivist;
+                await documentsArchiver.ArchiveDocs();
+
+                await Indexes.WaitForIndexingAsync(store);
+
+                
+                // Verify that @flags contains the "Archived" flag
+                // ===============================================
+                using (var session = store.OpenSession())
+                {
+                    var archivedUser = session.Load<User>(user.Id);
+                    var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
+                    
+                    var flagsValue = archivedUserMetadata["@flags"];
+                    Assert.True(flagsValue.ToString().Contains("Archived"));
+                }
+                
+                // Modify the document AFTER it was archived
+                // =========================================
+                using (var session = store.OpenSession())
+                {
+                    user = session.Load<User>(user.Id);
+                    user.Name += " some text";
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    // Check revisions:
+                    var revisions = session.Advanced.Revisions.GetFor<User>(user.Id);
+                    Assert.Equal(2, revisions.Count);
+                    
+                    // Check the content of @flags in the metadata:
+                    var archivedUser = session.Load<User>(user.Id);
+                    var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
+                    
+                    var flagsValue = archivedUserMetadata["@flags"];
+                    Assert.True(flagsValue.ToString().Contains("HasRevisions"));
+                    
+                    Assert.True(flagsValue.ToString().Contains("Archived"));
                 }
             }
         }

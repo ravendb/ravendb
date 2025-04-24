@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -176,6 +177,19 @@ namespace Raven.Server.Documents
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
                     newFlags = _documentsStorage.GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
+                    
+                    // if doc was Archived and isn't currently unarchived, leave the Archived flag
+                    if (oldFlags.Contain(DocumentFlags.Archived))
+                    {
+                        if (document.TryGetMetadata(out BlittableJsonReaderObject newDocMetadata))
+                        {
+                            newDocMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isStillArchived);
+                            if (isStillArchived)
+                            {
+                                newFlags |= DocumentFlags.Archived;
+                            }
+                        }
+                    }
                 }
 
                 var result = _documentsStorage.BuildChangeVectorAndResolveConflicts(context, lowerId, newEtag, document, changeVector, expectedChangeVector, newFlags, oldChangeVector);
