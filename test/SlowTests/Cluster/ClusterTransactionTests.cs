@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -13,7 +12,6 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
@@ -1204,21 +1202,33 @@ namespace SlowTests.Cluster
             sb.AppendLine("*********************************nodeA debug view*********************************");
             GetDebugView(nodeA, sb);
             sb.AppendLine("*********************************nodeA All Replication Items**********************");
-            var resA = await leaderStore.Maintenance.ForNode(nodeA.ServerStore.NodeTag).ForDatabase(leaderStore.Database).SendAsync(new GetAllReplicationItemsOperation());
+
+            var resA = string.Empty;
+            var resB = string.Empty;
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var rA = await leaderStore.Maintenance.ForNode(nodeA.ServerStore.NodeTag).ForDatabase(leaderStore.Database)
+                    .SendAsync(ctx, new GetAllReplicationItemsOperation());
+
+                var rB = await revivedStore.Maintenance.ForNode(nodeB.ServerStore.NodeTag).ForDatabase(revivedStore.Database)
+                    .SendAsync(ctx, new GetAllReplicationItemsOperation());
+
+                resA = $"DatabaseChangeVector: {rA.DatabaseChangeVector} \nResults: {rA.Results}";
+                resB = $"DatabaseChangeVector: {rB.DatabaseChangeVector} \nResults: {rB.Results}";
+            }
             sb.AppendLine(resA).AppendLine();
 
             sb.AppendLine("*********************************nodeB debug view*********************************");
             GetDebugView(nodeB, sb);
             sb.AppendLine("*********************************nodeB All Replication Items**********************");
-            var resB = await revivedStore.Maintenance.ForNode(nodeB.ServerStore.NodeTag).ForDatabase(revivedStore.Database).SendAsync(new GetAllReplicationItemsOperation());
             sb.AppendLine(resB).AppendLine();
             
             sb.AppendLine();
             sb.Append("*********************************nodeA GetClusterDebugLogs*****************************");
-            GetClusterDebugLogsFromSpecificServer(sb, nodeA);
+            GetDebugLogsForNode(nodeA, sb);
             sb.AppendLine();
             sb.Append("*********************************nodeB GetClusterDebugLogs******************************");
-            GetClusterDebugLogsFromSpecificServer(sb, nodeB);
+            GetDebugLogsForNode(nodeB, sb);
             
             sb.AppendLine().AppendLine();
             sb.Append("*********************************************************ClusterTransactionRequestWithRevisions(").Append(options.DatabaseMode)
@@ -1236,39 +1246,6 @@ namespace SlowTests.Cluster
                     sb.AppendLine(b.ToString());
                 }
             }
-        }
-
-
-
-        private class GetAllReplicationItemsOperation : IMaintenanceOperation<string>
-        {
-
-            public RavenCommand<string> GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new GetAllReplicationItemsCommand();
-            }
-
-            private class GetAllReplicationItemsCommand : RavenCommand<string>
-            {
-                public override bool IsReadRequest => true;
-
-                public GetAllReplicationItemsCommand()
-                {
-                }
-
-                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-                {
-                    url = $"{node.Url}/databases/{node.Database}/debug/replication/all-items";
-
-                    return new HttpRequestMessage { Method = HttpMethod.Get };
-                }
-
-                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-                {
-                    Result = response.ToString();
-                }
-            }
-
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -1222,15 +1223,6 @@ namespace Tests.Infrastructure
             AppendDebugInfo(sb, debugInfo);
         }
 
-        internal void GetClusterDebugLogsFromSpecificServer(StringBuilder sb, RavenServer server)
-        {
-            NodeDebugInfo debugInfo = null;
-
-            debugInfo = GetDebugInfoForNode(server);
-
-            AppendDebugInfo(sb, debugInfo);
-        }
-
         internal static void GetDebugLogsForNode(RavenServer node, StringBuilder sb) => AppendDebugInfo(sb, GetDebugInfoForNode(node));
 
         private static NodeDebugInfo GetDebugInfoForNode(RavenServer node)
@@ -1330,6 +1322,76 @@ namespace Tests.Infrastructure
             }
 
             base.Dispose();
+        }
+
+        public class GetAllReplicationItemsOperation : IMaintenanceOperation<GetAllReplicationItemsOperation.Result>
+        {
+            private readonly long _etag;
+            private readonly int _pageSize;
+
+            public GetAllReplicationItemsOperation()
+            {
+                _etag = 0;
+                _pageSize = Int32.MaxValue;
+            }
+
+            public GetAllReplicationItemsOperation(long etag, int pageSize)
+            {
+                _etag = etag;
+                _pageSize = pageSize;
+            }
+
+            public RavenCommand<Result> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetAllReplicationItemsCommand(_etag, _pageSize);
+            }
+
+            public class GetAllReplicationItemsCommand : RavenCommand<Result>
+            {
+                private readonly long _etag;
+                private readonly int _pageSize;
+
+                public override bool IsReadRequest => true;
+
+                public GetAllReplicationItemsCommand(long etag, int pageSize)
+                {
+                    _etag = etag;
+                    _pageSize = pageSize;
+                }
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/debug/replication/all-items?etag={_etag}&pageSize={_pageSize}";
+
+                    return new HttpRequestMessage { Method = HttpMethod.Get };
+                }
+
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+                {
+                    if (response == null ||
+                        response.TryGet("Results", out BlittableJsonReaderArray results) == false)
+                    {
+                        ThrowInvalidResponse();
+                        return; // never hit
+                    }
+
+                    if (response.TryGet("DatabaseChangeVector", out string databaseChangeVector) == false)
+                    {
+                        ThrowInvalidResponse();
+                        return; // never hit
+                    }
+
+                    Result = new Result() { Results = results, DatabaseChangeVector = databaseChangeVector };
+                }
+            }
+
+            public class Result
+            {
+                public BlittableJsonReaderArray Results { get; set; }
+
+                public string DatabaseChangeVector { get; set; }
+            }
+
         }
     }
 }

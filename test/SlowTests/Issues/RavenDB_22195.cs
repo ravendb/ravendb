@@ -25,49 +25,14 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var command = new GetAllReplicationItemsCommand(etag: 234, pageSize: 100);
+                    var command = new GetAllReplicationItemsOperation.GetAllReplicationItemsCommand(etag: 234, pageSize: 100);
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
-                    var results = command.Result;
+                    var results = command.Result.Results;
                     Assert.NotNull(results);
                 }
             }
         }
 
-        private class GetAllReplicationItemsCommand : RavenCommand<BlittableJsonReaderArray>
-        {
-            private readonly long _etag;
-            private readonly int _pageSize;
-
-            public override bool IsReadRequest => true;
-
-            public GetAllReplicationItemsCommand(long etag, int pageSize)
-            {
-                _etag = etag;
-                _pageSize = pageSize;
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/debug/replication/all-items?etag={_etag}&pageSize={_pageSize}";
-
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null ||
-                    response.TryGet("Results", out BlittableJsonReaderArray results) == false)
-                {
-                    ThrowInvalidResponse();
-                    return; // never hit
-                }
-
-                Result = results;
-            }
-        }
     }
 }
