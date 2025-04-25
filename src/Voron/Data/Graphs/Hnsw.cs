@@ -236,6 +236,7 @@ public unsafe partial class Hnsw
         private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
         private readonly Dictionary<long, int> _nodeIdToIdx = new();
         private NativeList<Node> _nodes = default;
+        private NativeList<int> _newNodes = default;
         private readonly Tree _tree;
         private readonly Lookup<Int64LookupKey> _nodeIdToLocations;
         public readonly LowLevelTransaction Llt;
@@ -243,11 +244,10 @@ public unsafe partial class Hnsw
         public readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> SimilarityCalc;
         public readonly bool IsEmpty;
         
-        
         public Span<Node> Nodes => _nodes.ToSpan();
         public Tree Tree => _tree;
 
-        public int CreatedNodesCount;
+        public Span<int> CreatedNodes => _newNodes.ToSpan();
 
         public Options Options;
 
@@ -339,8 +339,9 @@ public unsafe partial class Hnsw
         
         public int RegisterVectorNode(long newNodeId, long vectorId)
         {
-            CreatedNodesCount++;
             int nodeIndex = AllocateNodeIndex(newNodeId);
+            
+            _newNodes.Add(Llt.Allocator, nodeIndex);
             _nodes[nodeIndex].VectorId = vectorId;
 
             _nodeIdToIdx[newNodeId] = nodeIndex;
@@ -1104,13 +1105,14 @@ public unsafe partial class Hnsw
             _searchState.RegisterNodeLocation(node.NodeId, locationId);
             encoded.CopyTo(storage);
         }
-
-
+        
         void InsertVectorsToGraph(ref ContextBoundNativeList<byte> byteBuffer)
         {
+            var createdNodesIndexes = _searchState.CreatedNodes;
+            
             if (_searchState.TryGetLocationForNode(EntryPointId, out var entryPointNode) is false)
             {
-                if (_searchState.CreatedNodesCount == 0)
+                if (createdNodesIndexes.IsEmpty)
                     return;
 
                 ref Node startingNode = ref _searchState.Nodes[0];
@@ -1126,11 +1128,12 @@ public unsafe partial class Hnsw
 
             nearestNodesByLevel.EnsureCapacityFor(_searchState.Llt.Allocator, _searchState.Options.MaxLevel + 1);
 
-            for (int currentNodeIndex = 0; currentNodeIndex < _searchState.CreatedNodesCount; currentNodeIndex++)
+            for (int createdNodeIndex = 0; createdNodeIndex < createdNodesIndexes.Length; createdNodeIndex++)
             {
                 nearestNodesByLevel.Clear();
-
-                var currentMaxLevel = _searchState.Options.CurrentMaxLevel(_searchState.CreatedNodesCount - currentNodeIndex);
+                
+                var currentNodeIndex = createdNodesIndexes[createdNodeIndex];
+                var currentMaxLevel = _searchState.Options.CurrentMaxLevel(createdNodesIndexes.Length - createdNodeIndex);
                 int nodeRandomLevel = GetLevelForNewNode(currentMaxLevel);
                 Span<byte> vector;
                 {
