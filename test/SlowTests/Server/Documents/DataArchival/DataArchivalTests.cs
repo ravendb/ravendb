@@ -172,7 +172,7 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Revisions)]
         public async Task ArchiveFlagShouldNotBeRemoved()
         {
             using (var store = GetDocumentStore())
