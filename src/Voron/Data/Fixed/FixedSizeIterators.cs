@@ -7,7 +7,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Sparrow;
 using Sparrow.Server;
+using Sparrow.Utils;
 
 namespace Voron.Data.Fixed
 {
@@ -414,13 +416,29 @@ namespace Voron.Data.Fixed
                 if (_currentPage == null || _currentPage.IsLeaf == false)
                     throw new InvalidOperationException("No current page was set or is wasn't a leaf!");
 
+                var currentPageInfo = new CurrentPageInfo(_currentPage.PageHeader)
+                {
+                    LastSearchPosition = _currentPage.LastSearchPosition
+                };
+
                 while (skip >= 0)
                 {
-                    var skipInPage = (int)Math.Min(_currentPage.NumberOfEntries - _currentPage.LastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(currentPageInfo.NumberOfEntries - currentPageInfo.LastSearchPosition, skip);
                     skip -= skipInPage;
-                    _currentPage.LastSearchPosition += skipInPage;
+                    currentPageInfo.LastSearchPosition += skipInPage;
+
                     if (skip == 0)
                     {
+                        // We've completed skipping the requested number of entries. Now we need to:
+                        // 1. Set the _currentPage to the appropriate page based on the current page info
+                        // 2. Update its LastSearchPosition to point to the correct entry
+                        // 3. Check if we've reached the end of the current page, and if so, move to the next page
+
+                        if (_currentPage.PageNumber != currentPageInfo.PageNumber)
+                            _currentPage = _parent.GetReadOnlyPage(currentPageInfo.PageNumber);
+
+                        _currentPage.LastSearchPosition = currentPageInfo.LastSearchPosition;
+
                         if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
                             return MoveNext();
                         return true;
@@ -440,22 +458,24 @@ namespace Voron.Data.Fixed
                         }
                         
                         var nextChildPageNumber = parent.GetEntry(parent.LastSearchPosition)->PageNumber;
-                        var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
-
-                        if (childPage.IsBranch)
+                        var childPageHeader = _parent.GetPageHeader(nextChildPageNumber);
+                        if ((childPageHeader.TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch)
                         {
+                            var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+
                             // we set it to negative one so the first
                             // call will increment that to zero
                             childPage.LastSearchPosition = -1;
                             _parent._cursor.Push(childPage);
                             continue;
                         }
-                        else
+
+                        var pageInfo = new CurrentPageInfo(childPageHeader)
                         {
-                            childPage.LastSearchPosition = 0;
-                        }
-                        
-                        _currentPage = childPage;
+                            LastSearchPosition = 0
+                        };
+
+                        currentPageInfo = pageInfo;
                         break;
                     }
                 }
@@ -463,7 +483,6 @@ namespace Voron.Data.Fixed
 
                 return false;
             }
-
 
             public bool MovePrev()
             {
@@ -523,6 +542,20 @@ namespace Voron.Data.Fixed
                 if (seek == false)
                     _currentPage = null;
                 return seek;
+            }
+
+            private class CurrentPageInfo
+            {
+                private readonly FixedSizeTreePageHeader _header;
+                public int LastSearchPosition;
+
+                public CurrentPageInfo(FixedSizeTreePageHeader header)
+                {
+                    _header = header;
+                }
+
+                public ushort NumberOfEntries => _header.NumberOfEntries;
+                public long PageNumber => _header.PageNumber;
             }
         }
     }

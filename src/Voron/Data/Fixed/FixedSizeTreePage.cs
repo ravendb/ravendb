@@ -34,6 +34,12 @@ namespace Voron.Data.Fixed
             get { return (FixedSizeTreePageHeader*)_ptr; }
         }
 
+        public FixedSizeTreePageHeader PageHeader
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return *(FixedSizeTreePageHeader*)_ptr; }
+        }
+
         public long PageNumber
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
