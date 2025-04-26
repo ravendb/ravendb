@@ -365,13 +365,27 @@ namespace Voron.Data.Fixed
                 if (_currentPage == null || _currentPage.IsLeaf == false)
                     throw new InvalidOperationException("No current page was set or is wasn't a leaf!");
 
+                var currentPageInfo = new CurrentPageInfo(_currentPage.PageHeader)
+                {
+                    LastSearchPosition = _currentPage.LastSearchPosition
+                };
+
                 while (skip >= 0)
                 {
-                    var skipInPage = (int)Math.Min(_currentPage.LastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(currentPageInfo.LastSearchPosition, skip);
                     skip -= skipInPage;
-                    _currentPage.LastSearchPosition -= skipInPage;
+                    currentPageInfo.LastSearchPosition -= skipInPage;
                     if (skip == 0)
                     {
+                        // We've completed skipping the requested number of entries. Now we need to:
+                        // 1. Set the _currentPage to the appropriate page based on the current page info
+                        // 2. Update its LastSearchPosition to point to the correct entry
+
+                        if (_currentPage.PageNumber != currentPageInfo.PageNumber)
+                            _currentPage = _parent.GetReadOnlyPage(currentPageInfo.PageNumber);
+
+                        _currentPage.LastSearchPosition = currentPageInfo.LastSearchPosition;
+
                         return true;
                     }
                     
@@ -389,18 +403,25 @@ namespace Voron.Data.Fixed
                         }
                         
                         var nextChildPageNumber = parent.GetEntry(parent.LastSearchPosition)->PageNumber;
-                        var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
-                        
-                        // we move one beyond the end of elements because in both cases
-                        // (branch and leaf) we first decrement and then run it
-                        childPage.LastSearchPosition = childPage.NumberOfEntries;
-                        if (childPage.IsBranch)
+                        var childPageHeader = _parent.GetPageHeader(nextChildPageNumber);
+                        if ((childPageHeader.TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch)
                         {
+                            var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+
+                            // we move one beyond the end of elements because in both cases
+                            // (branch and leaf) we first decrement and then run it
+                            childPage.LastSearchPosition = childPage.NumberOfEntries;
+
                             _parent._cursor.Push(childPage);
                             continue;
                         }
 
-                        _currentPage = childPage;
+                        var pageInfo = new CurrentPageInfo(childPageHeader)
+                        {
+                            LastSearchPosition = childPageHeader.NumberOfEntries
+                        };
+
+                        currentPageInfo = pageInfo;
                         break;
                     }
                 }
