@@ -27,7 +27,7 @@ public class BasicNextGen : StorageTest
     private unsafe static Span<byte> AsSpan(Page p) => new Span<byte>(p.Pointer, Constants.Storage.PageSize);
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void CannotRecoverWhenDataNotSyncedAndJournalsAreGone()
+    public void CannotRecoverWhenJournalsAreGone()
     {
         RequireFileBasedPager();
 
@@ -44,8 +44,11 @@ public class BasicNextGen : StorageTest
         Assert.Contains("No such journal", e.Message);
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CannotRecoverEvenAfterDataSyncedWhenJournalsAreGone()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void CannotRecoverWhenJournalsAreGone(bool flush, bool sync)
     {
         RequireFileBasedPager();
 
@@ -59,71 +62,12 @@ public class BasicNextGen : StorageTest
             tx.LowLevelTransaction.AllocatePage(1);
             tx.Commit();
         }
-        
-        Env.FlushLogToDataFile();
-        Env.SyncDataFileImmediately();
 
-        StopDatabase(shouldDisposeOptions: true);
+        if (flush)
+            Env.FlushLogToDataFile();
 
-        var last = LatestJournalNumber();
-        Env.Options.TryDeleteJournal(last);
-
-        var e = Assert.Throws<InvalidJournalException>(StartDatabase);
-        Assert.Contains("No such journal", e.Message);
-    }
-
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CannotRecoverAfterTxWhenDataNotSyncedAndJournalsAreGone()
-    {
-        RequireFileBasedPager();
-
-        Options.ManualFlushing = true;
-        Options.ManualSyncing = true;
-        
-        StartDatabase();
-
-        long pageId;
-        using (var tx2 = Env.WriteTransaction())
-        {
-            var allocatePage = tx2.LowLevelTransaction.AllocatePage(1);
-            pageId = allocatePage.PageNumber;
-            tx2.Commit();
-        }
-
-        // we aren't doing flush here to ensure we fail on the start 
-        // Env.FlushLogToDataFile();
-        // Env.SyncDataFileImmediately();
-
-        StopDatabase(shouldDisposeOptions: true);
-
-        var last = LatestJournalNumber();
-        Env.Options.TryDeleteJournal(last);
-
-        var e = Assert.Throws<InvalidJournalException>(StartDatabase);
-        Assert.Contains("No such journal", e.Message);
-    }
-
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CannotRecoverAfterTxWhenDataNotSyncedAndJournalsAreGone2()
-    {
-        RequireFileBasedPager();
-
-        Options.ManualFlushing = true;
-        Options.ManualSyncing = true;
-        
-        StartDatabase();
-
-        long pageId;
-        using (var tx2 = Env.WriteTransaction())
-        {
-            var allocatePage = tx2.LowLevelTransaction.AllocatePage(1);
-            pageId = allocatePage.PageNumber;
-            tx2.Commit();
-        }
-
-        // we aren't doing flush here to ensure we fail on the start 
-        Env.FlushLogToDataFile();
-        // Env.SyncDataFileImmediately();
+        if (sync)
+            Env.SyncDataFileImmediately();
 
         StopDatabase(shouldDisposeOptions: true);
 
