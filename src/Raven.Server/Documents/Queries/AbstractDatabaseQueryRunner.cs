@@ -103,8 +103,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         {
             var command = new DeleteDocumentCommand(key, null, Database);
 
-            return new BulkOperationCommand<DeleteDocumentCommand>(command,
-                x =>
+            return new BulkOperationCommand<DeleteDocumentCommand>(command, x =>
                     new BulkOperationResult.DeleteDetails { Id = key, Etag = x.DeleteResult?.Etag, Collection = x.DeleteResult?.Collection.Name}, afterExecuted: null);
         }, token);
     }
@@ -126,12 +125,11 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     isTest: false,
                     collectResultsNeeded: true,
                     returnDocument: false,
-                    ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript
-                    );
+                    ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command,
                     x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection },
-                    c => c.PatchResult.Dispose());
+                    c => c.PatchResult?.Dispose());
             }, token); 
     }
 
@@ -177,7 +175,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         onProgress(progress);
 
         var result = new BulkOperationResult();
-        var information = new WaitForIndexesInformation(options, result, Database);
+        var information = new AdditionalPatchInformation(options, result, Database.DbBase64Id);
 
         using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
         {
@@ -186,6 +184,9 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                 var command = new ExecuteRateLimitedOperations<string>(resultIds, id =>
                     {
                         var subCommand = createCommandForId(id);
+                        if (subCommand == null)
+                            return null;
+
                         subCommand.RetrieveDetails = information.RetrieveDetails;
 
                         return subCommand;
@@ -193,7 +194,6 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     batchSize: batchSize);
 
                 await Database.TxMerger.Enqueue(command).ConfigureAwait(false);
-                
                 progress.Processed += command.Processed;
                 onProgress(progress);
 
@@ -201,10 +201,10 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     rateGate?.WaitToProceed();
             }
 
-            if (options.WaitForIndexingAfterPatchOptions != null)
+            if (options.IndexPatchOptions != null)
             {
-                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.WaitForIndexingAfterPatchOptions.WaitForIndexesTimeout!.Value,
-                    options.WaitForIndexingAfterPatchOptions.WaitForSpecificIndexes, throwOnTimeout: options.WaitForIndexingAfterPatchOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag,
+                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexPatchOptions.WaitForIndexesTimeout!.Value,
+                    options.IndexPatchOptions.WaitForSpecificIndexes, throwOnTimeout: options.IndexPatchOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag,
                     lastTombstoneEtag: 0, information.Collections, token.Token);
             }
         }
@@ -212,7 +212,6 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         result.Total = progress.Total;
         return result;
     }
-
 
     private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)
     {

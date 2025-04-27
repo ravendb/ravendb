@@ -31,7 +31,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
         {
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
             var options = GetQueryOperationOptions();
-            
+
             var returnContext = AllocateContextForAsyncOperation(out var asyncOperationContext); // we don't dispose this as operation is async
 
             try
@@ -75,7 +75,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
 
         var throwOnTimeoutInWaitForIndexes = RequestHandler.GetBoolValueQueryString("ThrowOnTimeoutInWaitForIndexes", required: false) ?? false;
         var waitForSpecificIndexes = RequestHandler.GetStringValuesQueryString("waitForSpecificIndexes", required: false);
-        options.WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+        options.IndexPatchOptions = new IndexPatchOptions()
         {
             WaitForIndexesTimeout = waitForIndexesTimeout.Value,
             WaitForSpecificIndexes = waitForSpecificIndexes,

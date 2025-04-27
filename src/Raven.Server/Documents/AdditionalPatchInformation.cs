@@ -6,26 +6,26 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents;
 
-public class WaitForIndexesInformation
+public class AdditionalPatchInformation
 {
     private readonly QueryOperationOptions _options;
     private readonly BulkOperationResult _result;
-    private readonly DocumentDatabase _database;
+    private readonly string _dbBase64Id;
 
     public HashSet<string> Collections { get; } = new();
 
     public long LastEtag { get; set; }
 
-    public WaitForIndexesInformation(QueryOperationOptions options, BulkOperationResult result, DocumentDatabase database)
+    public AdditionalPatchInformation(QueryOperationOptions options, BulkOperationResult result, string dbBase64Id)
     {
         _options = options;
         _result = result;
-        _database = database;
+        _dbBase64Id = dbBase64Id;
     }
 
     public void RetrieveDetails(IBulkOperationDetails details)
     {
-        if (_options.WaitForIndexingAfterPatchOptions != null)
+        if (_options.IndexPatchOptions != null)
         {
             switch (details)
             {
@@ -36,11 +36,11 @@ public class WaitForIndexesInformation
                     break;
                 case BulkOperationResult.PatchDetails p:
                     Collections.Add(p.Collection);
-                    LastEtag = ChangeVectorUtils.GetEtagById(p.ChangeVector, _database.DbBase64Id);
+                    LastEtag = ChangeVectorUtils.GetEtagById(p.ChangeVector, _dbBase64Id);
                     break;
             }
         }
-        if (_options.RetrieveDetails && _result != null)
+        if (_options.RetrieveDetails && _result?.Details != null)
             _result.Details.Add(details);
     }
 }

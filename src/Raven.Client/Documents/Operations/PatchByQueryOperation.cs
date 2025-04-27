@@ -99,18 +99,7 @@ namespace Raven.Client.Documents.Operations
                         .Append(_operationId.Value);
                 }
 
-                if (_options.WaitForIndexingAfterPatchOptions != null)
-                {
-                    path.Append("&waitForIndexesTimeout=").Append(_options.WaitForIndexingAfterPatchOptions.WaitForIndexesTimeout);
-                    path.Append("&throwOnTimeoutInWaitForIndexes=").Append(_options.WaitForIndexingAfterPatchOptions.ThrowOnTimeoutInWaitForIndexes.ToString());
-                    if (_options.WaitForIndexingAfterPatchOptions.WaitForSpecificIndexes != null)
-                    {
-                        foreach (var specificIndex in _options.WaitForIndexingAfterPatchOptions.WaitForSpecificIndexes)
-                        {
-                            path.Append("&WaitForSpecificIndexes=").Append(Uri.EscapeDataString(specificIndex));
-                        }
-                    }
-                }
+                AppendIndexPatchOptions(path, _options);
 
                 var request = new HttpRequestMessage
                 {
@@ -131,6 +120,20 @@ namespace Raven.Client.Documents.Operations
 
                 url = path.ToString();
                 return request;
+            }
+
+            internal static void AppendIndexPatchOptions(StringBuilder path, QueryOperationOptions options)
+            {
+                if (options.IndexPatchOptions == null || !options.IndexPatchOptions.WaitForIndexesTimeout.HasValue) 
+                    return;
+                path.Append("&waitForIndexesTimeout=").Append(options.IndexPatchOptions.WaitForIndexesTimeout);
+                path.Append("&throwOnTimeoutInWaitForIndexes=").Append(options.IndexPatchOptions.ThrowOnTimeoutInWaitForIndexes.ToString());
+                if (options.IndexPatchOptions.WaitForSpecificIndexes == null) 
+                    return;
+                foreach (var specificIndex in options.IndexPatchOptions.WaitForSpecificIndexes)
+                {
+                    path.Append("&WaitForSpecificIndexes=").Append(Uri.EscapeDataString(specificIndex));
+                }
             }
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)

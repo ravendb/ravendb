@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -323,9 +322,6 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, UpgradeInfoHandler.UpgradeInfoResponse> UpgradeInfoResponse = GenerateJsonDeserializationRoutine<UpgradeInfoHandler.UpgradeInfoResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, EventListenerToLog.EventListenerConfiguration> EventListenerConfiguration = GenerateJsonDeserializationRoutine<EventListenerToLog.EventListenerConfiguration>();
-
-        internal static readonly Func<BlittableJsonReaderObject, IndexBatchOptions> IndexBatchOptions = GenerateJsonDeserializationRoutine<IndexBatchOptions>();
-
 
         public sealed class Parameters
         {

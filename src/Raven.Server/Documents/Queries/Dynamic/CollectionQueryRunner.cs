@@ -7,7 +7,6 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -100,8 +99,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return runner.ExecuteDelete(query.Metadata.CollectionName, query.Start, query.PageSize, options, onProgress, token);
         }
 
-        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch,
-            BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var runner = new CollectionRunner(Database, queryContext.Documents, query);
             return runner.ExecutePatch(query.Metadata.CollectionName, query.Start, query.PageSize, options, patch, patchArgs,

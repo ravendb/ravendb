@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Session;
+
 namespace Raven.Client.Documents.Commands.Batches
 {
     public sealed class BatchOptions

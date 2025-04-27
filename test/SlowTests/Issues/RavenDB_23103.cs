@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                        IndexPatchOptions = new IndexPatchOptions
                         {
                             WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
                             ThrowOnTimeoutInWaitForIndexes = true
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                     ThrowOnTimeoutInWaitForIndexes = true
@@ -98,7 +98,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions
+                        IndexPatchOptions = waitForIndexingAfterPatchOptions
                     }));
 
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
@@ -130,7 +130,7 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name3' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                     WaitForSpecificIndexes = new[] { index.IndexName },
@@ -138,7 +138,7 @@ namespace SlowTests.Issues
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
             }
@@ -167,14 +167,14 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexBatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexBatchOptions = new IndexPatchOptions
                 {
                     WaitForSpecificIndexes = new[] { index.IndexName },
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexBatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexBatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -209,13 +209,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexBatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexBatchOptions = new IndexPatchOptions
                 {
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexBatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexBatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -250,13 +250,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from index '{index.IndexName}' as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -291,13 +291,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -332,14 +332,14 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
             }
@@ -368,13 +368,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -409,13 +409,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -450,14 +450,14 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = "from @all_docs as c update { c.Name = 'Name2' }" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
@@ -493,18 +493,16 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
-
-                iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name3' }}" };
             }
         }
 
@@ -531,13 +529,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions()
                 {
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -572,13 +570,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from @all_docs as c update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions()
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -623,7 +621,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
                             ThrowOnTimeoutInWaitForIndexes = true
@@ -663,13 +661,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c where c.Name != null update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1), ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(30)));
             }
@@ -698,13 +696,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c where c != null update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions
                 {
                     ThrowOnTimeoutInWaitForIndexes = true
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -739,13 +737,13 @@ namespace SlowTests.Issues
 
                 var iq = new IndexQuery { Query = $"from companies as c where c != null update {{ c.Name = 'Name2' }}" };
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions()
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
-                    new QueryOperationOptions { WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -790,7 +788,7 @@ namespace SlowTests.Issues
                     new QueryOperationOptions
                     {
                         AllowStale = false,
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                         }
@@ -837,7 +835,7 @@ namespace SlowTests.Issues
                     new QueryOperationOptions
                     {
                         AllowStale = false,
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                         }
@@ -883,7 +881,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                             ThrowOnTimeoutInWaitForIndexes = true
@@ -923,7 +921,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
@@ -968,7 +966,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                         }
@@ -1013,7 +1011,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                         }
@@ -1060,7 +1058,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                             ThrowOnTimeoutInWaitForIndexes = true
@@ -1101,7 +1099,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
@@ -1148,7 +1146,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
                         }
@@ -1197,7 +1195,7 @@ namespace SlowTests.Issues
                     new QueryOperationOptions
                     {
                         AllowStale = false,
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromSeconds(30)
                         }
@@ -1244,7 +1242,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1),
                             ThrowOnTimeoutInWaitForIndexes = true
@@ -1285,7 +1283,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
@@ -1331,7 +1329,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        WaitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                        IndexPatchOptions = new IndexPatchOptions()
                         {
                             WaitForIndexesTimeout= TimeSpan.FromMicroseconds(1)
                         }
@@ -1369,7 +1367,7 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions()
                 {
                     WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
                     ThrowOnTimeoutInWaitForIndexes = true
@@ -1381,7 +1379,7 @@ namespace SlowTests.Issues
                 var iq1 = new IndexQuery { Query = $"from index '{index.IndexName}' as x update {{ x.Name = 'Name2' ; x.FirstName = 'Name2'}}" };
 
                 var operation1 = store.Operations.Send(new PatchByQueryOperation(iq1,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation1.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -1401,9 +1399,10 @@ namespace SlowTests.Issues
                 waitForIndexingAfterPatchOptions.WaitForIndexesTimeout = TimeSpan.Zero;
 
                 var operation2 = store.Operations.Send(new PatchByQueryOperation(iq2,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation2.WaitForCompletion(TimeSpan.FromSeconds(30));
+                //everything is ok if no exception was thrown
             }
         }
 
@@ -1428,7 +1427,7 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                var waitForIndexingAfterPatchOptions = new WaitForIndexingAfterPatchOptions()
+                var waitForIndexingAfterPatchOptions = new IndexPatchOptions()
                 {
                     WaitForIndexesTimeout = TimeSpan.FromMinutes(3),
                     ThrowOnTimeoutInWaitForIndexes = true
@@ -1440,7 +1439,7 @@ namespace SlowTests.Issues
                 var iq1 = new IndexQuery { Query = $"from index '{index.IndexName}' as x where x.Collection == 'Companies' update {{ x.Name = 'Name2' }}" };
 
                 var operation1 = store.Operations.Send(new PatchByQueryOperation(iq1,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation1.WaitForCompletion(TimeSpan.FromSeconds(30));
 
@@ -1460,9 +1459,10 @@ namespace SlowTests.Issues
                 waitForIndexingAfterPatchOptions.WaitForIndexesTimeout = TimeSpan.Zero;
 
                 var operation2 = store.Operations.Send(new PatchByQueryOperation(iq2,
-                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, WaitForIndexingAfterPatchOptions = waitForIndexingAfterPatchOptions }));
+                    new QueryOperationOptions { AllowStale = true, RetrieveDetails = true, IndexPatchOptions = waitForIndexingAfterPatchOptions }));
 
                 operation2.WaitForCompletion(TimeSpan.FromSeconds(30));
+                //everything is ok if no exception was thrown
             }
         }
 

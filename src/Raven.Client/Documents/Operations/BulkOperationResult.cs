@@ -85,7 +85,7 @@ namespace Raven.Client.Documents.Operations
         public sealed class DeleteDetails : IBulkOperationDetails
         {
             public string Id { get; set; }
-            internal long? Etag { get; set; } 
+            public long? Etag { get; set; } 
 
             internal string Collection { get; set; }
 

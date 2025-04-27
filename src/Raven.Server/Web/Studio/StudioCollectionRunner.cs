@@ -14,7 +14,7 @@ namespace Raven.Server.Web.Studio
     {
         private readonly HashSet<string> _excludeIds;
 
-        public StudioCollectionRunner(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> excludeIds) : base(database, context, null)
+        public StudioCollectionRunner(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> excludeIds) : base(database, context, collectionQuery: null)
         {
             _excludeIds = excludeIds;
         }
@@ -29,9 +29,9 @@ namespace Raven.Server.Web.Studio
             {
                 if (_excludeIds.Contains(key)) 
                     return null;
-                var command = new DeleteDocumentCommand(key, null, Database);
+                var command = new DeleteDocumentCommand(key, changeVector: null, Database);
 
-                return new BulkOperationCommand<DeleteDocumentCommand>(command, null, null);
+                return new BulkOperationCommand<DeleteDocumentCommand>(command, getDetails: null, afterExecuted: null);
             }, token);
         }
     }

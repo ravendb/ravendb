@@ -1,5 +1,4 @@
 using System;
-using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -53,6 +52,6 @@ namespace Raven.Client.Documents.Queries
         /// Advanced indexing options for patch operations.
         /// Set the timeout, index preferences, and error-handling options.
         /// </summary>
-        public WaitForIndexingAfterPatchOptions WaitForIndexingAfterPatchOptions { get; set; }
+        public IndexPatchOptions IndexPatchOptions { get; set; }
     }
 }

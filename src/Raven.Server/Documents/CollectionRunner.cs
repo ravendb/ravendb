@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Util.RateLimiting;
+using Raven.Server.Commercial;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Patch;
@@ -40,14 +41,14 @@ namespace Raven.Server.Documents
             _collectionQuery = collectionQuery;
         }
 
-        public virtual Task<IOperationResult> ExecuteDelete(string collectionName, long start, long take, QueryOperationOptions options,
-            Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public virtual Task<IOperationResult> ExecuteDelete(string collectionName, long start, long take, QueryOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, start, take, options, Context, onProgress, key =>
             {
-                var command = new DeleteDocumentCommand(key, null, Database);
+                var command = new DeleteDocumentCommand(key, changeVector: null, Database);
                 return new BulkOperationCommand<DeleteDocumentCommand>(command,
-                        x => new BulkOperationResult.DeleteDetails { Id = key, Etag = x.DeleteResult?.Etag, Collection = x.DeleteResult?.Collection.Name }, afterExecuted: null);
+                        x => new BulkOperationResult.DeleteDetails { Id = key, Etag = x.DeleteResult?.Etag, Collection = x.DeleteResult?.Collection.Name }, 
+                        afterExecuted: null);
             }, token);
         }
 
@@ -63,15 +64,13 @@ namespace Raven.Server.Documents
 
                     return new BulkOperationCommand<PatchDocumentCommand>(command,
                         x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection },
-                        c => c.PatchResult.Dispose()) ;
+                        c => c.PatchResult?.Dispose());
                 }, token);
         }
 
-
-        protected async Task<IOperationResult> ExecuteOperation<T>(string collectionName, long start, long take, QueryOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Func<string, BulkOperationCommand<T>> createCommandForId, OperationCancelToken token)
+        protected async Task<IOperationResult> ExecuteOperation<T>(string collectionName, long start, long take, QueryOperationOptions options,
+            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, BulkOperationCommand<T>> createCommandForId, OperationCancelToken token)
             where T : DocumentMergedTransactionCommand
-
         {
             var progress = new DeterminateProgress();
             var cancellationToken = token.Token;
@@ -84,6 +83,7 @@ namespace Raven.Server.Documents
                 lastEtag = GetLastEtagForCollection(context, collectionName, isAllDocs);
                 totalCount = GetTotalCountForCollection(context, collectionName, isAllDocs);
             }
+
             progress.Total = totalCount;
 
             // send initial progress with total count set, and 0 as processed count
@@ -92,9 +92,9 @@ namespace Raven.Server.Documents
             long startEtag = 0;
             var alreadySeenIdsCount = new Reference<long>();
             string startAfterId = null;
-            var information = new WaitForIndexesInformation(options, result: null, Database);
+            var information = new AdditionalPatchInformation(options, result: null, Database.DbBase64Id);
 
-            using (var rateGate = options.MaxOpsPerSecond.HasValue
+            using (var rateGate = options.MaxOpsPerSecond.HasValue 
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
                     : null)
             {
@@ -155,15 +155,17 @@ namespace Raven.Server.Documents
                     do
                     {
                         var command = new ExecuteRateLimitedOperations<string>(ids, id =>
-                        {
-                            var subCommand = createCommandForId(id);
+                            {
+                                var subCommand = createCommandForId(id);
+                                if (subCommand == null)
+                                    return null;
 
-                            subCommand.RetrieveDetails = information.RetrieveDetails;
+                                subCommand.RetrieveDetails = information.RetrieveDetails;
 
-                            return subCommand;
-                        }
-                        , rateGate, token, 
-                        batchSize: OperationBatchSize);
+                                return subCommand;
+                            }
+                            , rateGate, token,
+                            batchSize: OperationBatchSize);
 
                         await Database.TxMerger.Enqueue(command).ConfigureAwait(false);
 
@@ -181,16 +183,14 @@ namespace Raven.Server.Documents
                 }
             }
 
-            if (options.WaitForIndexingAfterPatchOptions != null && information.LastEtag > lastEtag)
+            if (options.IndexPatchOptions != null && information.LastEtag > lastEtag)
             {
-                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.WaitForIndexingAfterPatchOptions.WaitForIndexesTimeout!.Value,
-                    options.WaitForIndexingAfterPatchOptions.WaitForSpecificIndexes, options.WaitForIndexingAfterPatchOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag, 0, information.Collections, token.Token);
+                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexPatchOptions.WaitForIndexesTimeout!.Value,
+                    options.IndexPatchOptions.WaitForSpecificIndexes, options.IndexPatchOptions.ThrowOnTimeoutInWaitForIndexes,
+                    information.LastEtag, 0, information.Collections, token.Token);
             }
 
-            return new BulkOperationResult
-            {
-                Total = progress.Processed
-            };
+            return new BulkOperationResult { Total = progress.Processed };
         }
 
         protected IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, string startAfterId, Reference<long> alreadySeenIdsCount, int batchSize, bool isAllDocs, DocumentFields fields, out bool isStartsWithOrIdQuery, CancellationToken token)

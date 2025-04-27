@@ -144,18 +144,8 @@ namespace Raven.Client.Documents.Operations
                         .Append(_operationId.Value);
                 }
 
-                if (_options.WaitForIndexingAfterPatchOptions != null)
-                {
-                    path.Append("&waitForIndexesTimeout=").Append(_options.WaitForIndexingAfterPatchOptions.WaitForIndexesTimeout);
-                    path.Append("&throwOnTimeoutInWaitForIndexes=").Append(_options.WaitForIndexingAfterPatchOptions.ThrowOnTimeoutInWaitForIndexes.ToString());
-                    if (_options.WaitForIndexingAfterPatchOptions.WaitForSpecificIndexes != null)
-                    {
-                        foreach (var specificIndex in _options.WaitForIndexingAfterPatchOptions.WaitForSpecificIndexes)
-                        {
-                            path.Append("&WaitForSpecificIndexes=").Append(Uri.EscapeDataString(specificIndex));
-                        }
-                    }
-                }
+                PatchByQueryOperation.PatchByQueryCommand<T>.AppendIndexPatchOptions(path, _options);
+
 
                 var request = new HttpRequestMessage
                 {
