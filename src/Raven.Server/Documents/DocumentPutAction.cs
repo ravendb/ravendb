@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -629,7 +630,9 @@ namespace Raven.Server.Documents
 
             public DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id)
             {
-                return _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, id);
+                var names = _storage.TimeSeriesStorage.Stats.GetTimeSeriesNamesForDocumentOriginalCasing(context, id);
+                var tsNamesList = new SortedSet<string>(names, StringComparer.OrdinalIgnoreCase);
+                return new DynamicJsonArray(tsNamesList);
             }
 
             public DocumentFlags HasFlag => DocumentFlags.HasTimeSeries;

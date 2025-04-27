@@ -460,9 +460,9 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 return true;
         }
 
-        foreach (var ts in TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, documentId))
+        foreach (var tsName in TimeSeriesStorage.Stats.GetTimeSeriesNamesForDocumentOriginalCasing(context, documentId))
         {
-            var segments = TimeSeriesStorage.GetSegmentsSummary(context, documentId, ts.ToString(), DateTime.MinValue, DateTime.MaxValue);
+            var segments = TimeSeriesStorage.GetSegmentsSummary(context, documentId, tsName, DateTime.MinValue, DateTime.MaxValue);
             foreach (var segment in segments)
             {
                 var tsCv = context.GetChangeVector(segment.ChangeVector);

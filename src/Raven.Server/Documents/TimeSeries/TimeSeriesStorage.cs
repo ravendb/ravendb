@@ -2831,12 +2831,6 @@ namespace Raven.Server.Documents.TimeSeries
             return tx.OpenTable(tableSchema, tableName);
         }
 
-        public DynamicJsonArray GetTimeSeriesNamesForDocument(DocumentsOperationContext context, string docId)
-        {
-            return new DynamicJsonArray(Stats.GetTimeSeriesNamesForDocumentOriginalCasing(context, docId));
-        }
-
-
         public long GetLastTimeSeriesEtag(DocumentsOperationContext context)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
