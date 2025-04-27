@@ -604,7 +604,9 @@ namespace Raven.Server.Documents
 
             public DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id)
             {
-                return _storage.CountersStorage.GetCountersForDocumentList(context, id);
+                var names = _storage.CountersStorage.GetCountersForDocument(context, id);
+                var countersNamesList = new SortedSet<string>(names, StringComparer.OrdinalIgnoreCase);
+                return new DynamicJsonArray(countersNamesList);
             }
 
             public DocumentFlags HasFlag => DocumentFlags.HasCounters;
