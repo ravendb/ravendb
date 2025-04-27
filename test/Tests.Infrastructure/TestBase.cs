@@ -294,7 +294,11 @@ namespace FastTests
                 {
                     if (_globalServer == null || _globalServer.Disposed)
                     {
-                        var globalServer = GetNewServer(new ServerCreationOptions { RegisterForDisposal = false }, "Global");
+                        var globalServer = GetNewServer(new ServerCreationOptions
+                        {
+                            ServerUsage = ServerCreationOptions.Usage.Global,
+                            RegisterForDisposal = false
+                        }, "Global");
                         using (var currentProcess = Process.GetCurrentProcess())
                         {
                             Console.WriteLine(
@@ -576,6 +580,13 @@ namespace FastTests
             public static ServerCreationOptions Default => _default.Value;
 
             public Action<ServerStore> BeforeDatabasesStartup;
+
+            public Usage ServerUsage = Usage.Local;
+            public enum Usage
+            {
+                Local,
+                Global
+            }
         }
 
         private static readonly ConcurrentDictionary<RavenServer, string> LeakedServers = new();
@@ -632,7 +643,7 @@ namespace FastTests
                 {
                     string dataDirectory = null;
                     if (options.DataDirectory == null)
-                        dataDirectory = NewDataPath(prefix: $"GetNewServer-{options.NodeTag}", forceCreateDir: true);
+                        dataDirectory = NewDataPath(prefix: $"GetNewServer-{options.NodeTag}", forceCreateDir: true, usage: options.ServerUsage);
                     else
                     {
                         if (Path.IsPathRooted(options.DataDirectory) == false)
@@ -732,14 +743,23 @@ namespace FastTests
             Process.Start("xdg-open", url);
         }
 
-        protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false)
+        protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false, ServerCreationOptions.Usage usage = ServerCreationOptions.Usage.Local)
         {
             if (suffix != null)
                 prefix += suffix;
             var path = RavenTestHelper.NewDataPath(prefix, 0, forceCreateDir);
 
-            GlobalPathsToDelete.Add(path);
-            _localPathsToDelete.Add(path);
+            switch (usage)
+            {
+                case ServerCreationOptions.Usage.Local:
+                    _localPathsToDelete.Add(path);
+                    break;
+                case ServerCreationOptions.Usage.Global:
+                    GlobalPathsToDelete.Add(path);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(usage), usage, null);
+            }
 
             return path;
         }
