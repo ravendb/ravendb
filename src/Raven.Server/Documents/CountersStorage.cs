@@ -1540,11 +1540,6 @@ namespace Raven.Server.Documents
             return all;
         }
 
-        public DynamicJsonArray GetCountersForDocumentList(DocumentsOperationContext context, string docId)
-        {
-            return new DynamicJsonArray(GetCountersForDocument(context, docId));
-        }
-
         internal static BlittableJsonReaderObject GetCounterValuesData(JsonOperationContext context, ref TableValueReader existing)
         {
             return new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
