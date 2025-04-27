@@ -18,6 +18,7 @@ using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
 using Raven.Server.ServerWide;
+using System.Collections.Generic;
 
 namespace Raven.Server.Documents
 {
@@ -686,7 +687,9 @@ namespace Raven.Server.Documents
 
             public DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id)
             {
-                return _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, id);
+                var names = _storage.TimeSeriesStorage.Stats.GetTimeSeriesNamesForDocumentOriginalCasing(context, id);
+                var tsNamesList = new SortedSet<string>(names, StringComparer.OrdinalIgnoreCase);
+                return new DynamicJsonArray(tsNamesList);
             }
 
             public DocumentFlags HasFlag => DocumentFlags.HasTimeSeries;
