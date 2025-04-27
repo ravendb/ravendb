@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -830,6 +832,34 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
                 var x = await session.Query<User, Users_ByName>().ToListAsync();
                 Assert.Equal(3, x.Count);
             }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Voron)]
+    public async Task SharedJournalsEventsConfig()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            var options = database.IndexStore.SharedJournals.Env.Options;
+
+            EventHandlerHasInvocations<StorageEnvironmentOptions>(options, ["OnDirectoryInitialize"]);
+        }
+    }
+
+    public static void EventHandlerHasInvocations<T>(object target, HashSet<string> exclude = null)
+    {
+        Assert.True(typeof(T).IsAssignableFrom(target.GetType()));
+
+        var events = typeof(T).GetEvents();
+        foreach (var @event in events)
+        {
+            if (exclude?.Contains(@event.Name) == true)
+                continue;
+
+            var fieldInfo = typeof(T).GetField(@event.Name, BindingFlags.NonPublic | BindingFlags.Instance);
+            var delegateValue = fieldInfo?.GetValue(target) as MulticastDelegate;
+            Assert.True(delegateValue?.GetInvocationList().Length > 0, $"{@event.Name} is not wired");
         }
     }
 
