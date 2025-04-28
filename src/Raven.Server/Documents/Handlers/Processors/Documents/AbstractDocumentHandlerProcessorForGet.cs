@@ -64,7 +64,10 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             TOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                await ExecuteInternalAsync(context);
+                await ExecuteInternalAsync(context).AsTask();
+                
+                if (ReadTransaction != null)
+                    ReadTransaction.DebugInfo_Add($"Request completed. About to dispose / reset the context");
             }
 
             if (ReadTransaction != null)
@@ -135,7 +138,9 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             var revisions = GetRevisionsToInclude(parameters);
             var timeSeries = GetTimeSeriesToInclude(parameters);
 
-            responseWriteStats = await GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag);
+            responseWriteStats = await GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag).AsTask();
+            
+            ReadTransaction?.DebugInfo_Add($"Response write stats: count - {responseWriteStats.NumberOfResults}, size - {responseWriteStats.TotalDocumentsSizeInBytes} bytes");
         }
         else
         {
@@ -167,6 +172,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         {
             if (RequestHandler.ShouldAddPagingPerformanceHint(responseWriteStats.NumberOfResults))
             {
+                ReadTransaction?.DebugInfo_Add($"Adding performance hint");
+                
                 string details;
 
                 if (parameters.Ids is { Count: > 0 })
@@ -237,8 +244,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     {
         var clusterWideTx = parameters.TxMode == TransactionMode.ClusterWide;
         var result = await GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries, parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag)
-                                .ConfigureAwait(false);
-
+                        .AsTask();
         ReadTransaction = result.ReadTx;
 
         ReadTransaction?.DebugInfo_Add($"Result status code: {result.StatusCode}");
@@ -264,8 +270,13 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.Etag + "\"";
 
-        return await WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result)
-                        .ConfigureAwait(false);
+        ReadTransaction?.DebugInfo_Add("About to write results");
+        
+        var writeResult = await WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result).AsTask();
+        
+        ReadTransaction?.DebugInfo_Add("Results written");
+
+        return writeResult;
     }
 
     private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsByIdResultAsync(
