@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Voron.FixedSize;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,9 +16,11 @@ namespace StressTests.Client
         {
         }
 
-        [Fact]
-        public async Task MultiGetCanGetFromCache()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineDataWithRandomSeed]
+        public async Task MultiGetCanGetFromCache(int seed)
         {
+            var random = new Random(seed);
             var store = GetDocumentStore();
 
             using (var bulk = store.BulkInsert())
@@ -33,8 +37,8 @@ namespace StressTests.Client
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        var n1 = Random.Shared.Next(0, 10_000);
-                        var n2 = Random.Shared.Next(0, 10_000);
+                        var n1 = random.Next(0, 10_000);
+                        var n2 = random.Next(0, 10_000);
                         session.Advanced.Lazily.LoadAsync<User>($"Users/{n1}");
                         session.Advanced.Lazily.LoadAsync<User>($"Users/{n2}");
                         await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();

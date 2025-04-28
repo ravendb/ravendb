@@ -1,30 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using FastTests.Voron;
+using SlowTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Voron.CompactTrees
 {
-    public class FuzzyUpsertsTests : StorageTest
+    public class FuzzyUpsertsTests(ITestOutputHelper output) : StorageTest(output)
     {
-
-        public FuzzyUpsertsTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        public static IEnumerable<object[]> Configuration =>
-            new List<object[]>
-            {
-                new object[] { 500000, Random.Shared.Next(), 4096 },
-                new object[] { 100000, Random.Shared.Next(), 1024 },
-                new object[] { 10000, Random.Shared.Next(), 64 },
-            };
-
         [RavenTheory(RavenTestCategory.Voron)]
-        [MemberData("Configuration")]
-        public void RandomUpsertsWithoutRemoves(int treeSize, int randomSeed = 1337, int transactionSize = 10000)
+        [InlineDataWithRandomSeed(500000, 4096)]
+        [InlineDataWithRandomSeed(100000, 1024)]
+        [InlineDataWithRandomSeed(10000, 64)]
+        public void RandomUpsertsWithoutRemoves(int treeSize, int transactionSize, int randomSeed)
         {
             var currentState = new Dictionary<long, long>();
             var keys = new List<long>();
@@ -88,8 +78,10 @@ namespace SlowTests.Voron.CompactTrees
 
 
         [RavenTheory(RavenTestCategory.Voron)]
-        [MemberData("Configuration")]
-        public void RandomUpsertsWithRemoves(int treeSize, int randomSeed = 1337, int transactionSize = 10000)
+        [InlineDataWithRandomSeed(500000, 4096)]
+        [InlineDataWithRandomSeed(100000, 1024)]
+        [InlineDataWithRandomSeed(10000, 64)]
+        public void RandomUpsertsWithRemoves(int treeSize, int transactionSize, int randomSeed)
         {
             var currentState = new Dictionary<long, long>();
             var currentKeys = new List<long>();

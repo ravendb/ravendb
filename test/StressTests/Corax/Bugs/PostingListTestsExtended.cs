@@ -1,26 +1,14 @@
 using System;
 using System.Collections.Generic;
+using SlowTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Corax.Bugs;
 
-public class PostingListTestsExtended : NoDisposalNoOutputNeeded
+public class PostingListTestsExtended(ITestOutputHelper output) : NoDisposalNoOutputNeeded(output)
 {
-    public PostingListTestsExtended(ITestOutputHelper output) : base(output)
-    {
-    }
-
-    public static IEnumerable<object[]> Configuration =>
-        new List<object[]>
-        {
-            new object[] {Random.Shared.Next(), Random.Shared.Next(20000000)},
-            new object[] {Random.Shared.Next(), Random.Shared.Next(2000000)},
-            new object[] {Random.Shared.Next(), Random.Shared.Next(200000)},
-            new object[] {Random.Shared.Next(), Random.Shared.Next(20000)},
-        };
-
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Voron)]
     [InlineData(1337, 200000)]
     [InlineData(1064156071, 796)]
@@ -30,10 +18,19 @@ public class PostingListTestsExtended : NoDisposalNoOutputNeeded
     public void CanDeleteAndInsertInRandomOrder(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
 
     [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Voron, RavenArchitecture.X64)]
-    [InlineData(1477187726, 1828658)]
-    [MemberData("Configuration")]
-    public void CanDeleteAndInsertInRandomOrderX64Only(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
-    
+    [InlineData(1477187726, true, 1828658)]
+    [InlineDataWithRandomSeed(20000000, false)]
+    [InlineDataWithRandomSeed(2000000, false)]
+    [InlineDataWithRandomSeed(200000, false)]
+    [InlineDataWithRandomSeed(20000, false)]
+    public void CanDeleteAndInsertInRandomOrderX64Only(int maxSize, bool maxSizeFinal, int seed)
+    {
+        var random = new Random(seed);
+        maxSize = maxSizeFinal ? maxSize : random.Next(maxSize);
+        
+        CanDeleteAndInsertInRandomOrderBase(seed, maxSize);
+    }
+
     [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Voron, RavenPlatform.Windows, RavenArchitecture.X64)]
     [InlineData(391060845, 31707323)]
     public void CanDeleteAndInsertInRandomOrderWindows(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);

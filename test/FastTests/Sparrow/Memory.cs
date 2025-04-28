@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using FastTests.Voron.FixedSize;
 using Sparrow;
 using Sparrow.Server;
 using Xunit;
@@ -208,11 +209,9 @@ namespace FastTests.Sparrow
 
             Assert.Equal(reference, Math.Sign(Memory.CompareSmallInlineNet7(ref first[0], ref second[0], length)));
         }
-
-        public static IEnumerable<object[]> RandomSeeds => new[] { new object[] { Random.Shared.Next() } };
-
+        
         [Theory]
-        [MemberData(nameof(RandomSeeds))]
+        [InlineDataWithRandomSeed]
         public void LoopDifferencesWithRandomData(int seed)
         {
             var s1 = new byte[1024];
