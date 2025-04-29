@@ -100,7 +100,8 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                         ModifiedDocument = document.Data?.Clone(_externalContext),
                         ChangeVector = putResult.Value.ChangeVector,
                         Collection = putResult.Value.Collection.Name,
-                        LastModified = putResult.Value.LastModified
+                        LastModified = putResult.Value.LastModified,
+                        Etag = putResult.Value.Etag
                     };
                 }
             }
@@ -126,7 +127,8 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = _patchResult.ChangeVector,
                 [nameof(Constants.Documents.Metadata.LastModified)] = _patchResult.LastModified,
                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.JsonPatch),
-                [nameof(PatchStatus)] = _patchResult.Status
+                [nameof(PatchStatus)] = _patchResult.Status,
+                [nameof(PatchResultBase.Etag)] = _patchResult.Etag
             };
 
             if (_returnDocument)

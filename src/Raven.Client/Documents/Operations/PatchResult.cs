@@ -60,6 +60,8 @@ namespace Raven.Client.Documents.Operations
 
         public string Collection;
 
+        internal long Etag;
+
         public virtual void Dispose()
         {
             ModifiedDocument?.Dispose();

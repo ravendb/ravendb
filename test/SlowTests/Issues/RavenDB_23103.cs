@@ -49,9 +49,8 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
                     new QueryOperationOptions
                     {
-                        IndexPatchOptions = new IndexPatchOptions
+                        IndexPatchOptions = new IndexPatchOptions(TimeSpan.FromSeconds(30))
                         {
-                            WaitForIndexesTimeout = TimeSpan.FromSeconds(30),
                             ThrowOnTimeoutInWaitForIndexes = true
                         }
                     }));
@@ -181,7 +180,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
-                    Assert.NotEqual(NumberOfCompanies, count);
+                    Assert.Equal(NumberOfCompanies, count);
                 }
             }
         }
@@ -222,7 +221,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
-                    Assert.NotEqual(NumberOfCompanies, count);
+                    Assert.Equal(NumberOfCompanies, count);
                 }
             }
         }
@@ -381,7 +380,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
-                    Assert.NotEqual(NumberOfCompanies, count);
+                    Assert.Equal(NumberOfCompanies, count);
                 }
             }
         }
@@ -542,7 +541,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
-                    Assert.NotEqual(NumberOfCompanies, count);
+                    Assert.Equal(NumberOfCompanies, count);
                 }
             }
         }
@@ -709,7 +708,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
-                    Assert.NotEqual(NumberOfCompanies, count);
+                    Assert.Equal(NumberOfCompanies, count);
                 }
             }
         }

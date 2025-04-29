@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Operations
 
             internal static void AppendIndexPatchOptions(StringBuilder path, QueryOperationOptions options)
             {
-                if (options.IndexPatchOptions == null || !options.IndexPatchOptions.WaitForIndexesTimeout.HasValue) 
+                if (options.IndexPatchOptions == null) 
                     return;
                 path.Append("&waitForIndexesTimeout=").Append(options.IndexPatchOptions.WaitForIndexesTimeout);
                 path.Append("&throwOnTimeoutInWaitForIndexes=").Append(options.IndexPatchOptions.ThrowOnTimeoutInWaitForIndexes.ToString());
@@ -132,7 +132,7 @@ namespace Raven.Client.Documents.Operations
                     return;
                 foreach (var specificIndex in options.IndexPatchOptions.WaitForSpecificIndexes)
                 {
-                    path.Append("&WaitForSpecificIndexes=").Append(Uri.EscapeDataString(specificIndex));
+                    path.Append("&waitForSpecificIndexes=").Append(Uri.EscapeDataString(specificIndex));
                 }
             }
 

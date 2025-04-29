@@ -12,7 +12,7 @@ public class AdditionalPatchInformation
     private readonly BulkOperationResult _result;
     private readonly string _dbBase64Id;
 
-    public HashSet<string> Collections { get; } = new();
+    public HashSet<string> Collections { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public long LastEtag { get; set; }
 
@@ -32,11 +32,11 @@ public class AdditionalPatchInformation
                 case BulkOperationResult.DeleteDetails d:
                     Collections.Add(d.Collection);
                     if (d.Etag.HasValue)
-                        LastEtag = Math.Max(d.Etag.Value, LastEtag);
+                        LastEtag = d.Etag.Value;
                     break;
                 case BulkOperationResult.PatchDetails p:
                     Collections.Add(p.Collection);
-                    LastEtag = ChangeVectorUtils.GetEtagById(p.ChangeVector, _dbBase64Id);
+                    LastEtag = p.Etag;
                     break;
             }
         }

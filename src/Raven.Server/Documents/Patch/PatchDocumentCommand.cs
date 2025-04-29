@@ -232,6 +232,7 @@ namespace Raven.Server.Documents.Patch
                     result.ChangeVector = putResult.Value.ChangeVector;
                     result.Collection = putResult.Value.Collection.Name;
                     result.LastModified = putResult.Value.LastModified;
+                    result.Etag = putResult.Value.Etag;
                 }
 
                 if (_isTest && result.Status == PatchStatus.NotModified)

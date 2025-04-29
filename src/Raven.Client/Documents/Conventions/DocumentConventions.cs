@@ -62,6 +62,8 @@ namespace Raven.Client.Documents.Conventions
             DisableTopologyCache = true
         };
 
+        internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15);
+
         private static readonly bool DefaultDisableTcpCompression = false;
 
         private static TypeCache<string> CachedDefaultTypeCollectionNames = new(128);
@@ -317,7 +319,7 @@ namespace Raven.Client.Documents.Conventions
 
             _waitForIndexesAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
             _waitForReplicationAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
-            _waitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15);
+            _waitForNonStaleResultsTimeout = DefaultWaitForNonStaleResultsTimeout;
 
             _sendApplicationIdentifier = true;
             _maxContextSizeToKeep = PlatformDetails.Is32Bits == false

@@ -63,7 +63,7 @@ namespace Raven.Server.Documents
                         collectResultsNeeded: false, returnDocument: false, ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
 
                     return new BulkOperationCommand<PatchDocumentCommand>(command,
-                        x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection },
+                        x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Etag = x.PatchResult.Etag, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection },
                         c => c.PatchResult?.Dispose());
                 }, token);
         }
@@ -185,9 +185,9 @@ namespace Raven.Server.Documents
 
             if (options.IndexPatchOptions != null && information.LastEtag > lastEtag)
             {
-                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexPatchOptions.WaitForIndexesTimeout!.Value,
+                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexPatchOptions.WaitForIndexesTimeout,
                     options.IndexPatchOptions.WaitForSpecificIndexes, options.IndexPatchOptions.ThrowOnTimeoutInWaitForIndexes,
-                    information.LastEtag, 0, information.Collections, token.Token);
+                    information.LastEtag, lastTombstoneEtag: 0, information.Collections, token.Token);
             }
 
             return new BulkOperationResult { Total = progress.Processed };

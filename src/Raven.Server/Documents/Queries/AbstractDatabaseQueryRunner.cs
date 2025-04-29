@@ -128,7 +128,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command,
-                    x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection },
+                    x => new BulkOperationResult.PatchDetails { Id = key, ChangeVector = x.PatchResult.ChangeVector, Etag = x.PatchResult.Etag, Status = x.PatchResult.Status, Collection = x.PatchResult.Collection },
                     c => c.PatchResult?.Dispose());
             }, token); 
     }
@@ -203,7 +203,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
 
             if (options.IndexPatchOptions != null)
             {
-                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexPatchOptions.WaitForIndexesTimeout!.Value,
+                await BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(Database, options.IndexPatchOptions.WaitForIndexesTimeout,
                     options.IndexPatchOptions.WaitForSpecificIndexes, throwOnTimeout: options.IndexPatchOptions.ThrowOnTimeoutInWaitForIndexes, information.LastEtag,
                     lastTombstoneEtag: 0, information.Collections, token.Token);
             }
