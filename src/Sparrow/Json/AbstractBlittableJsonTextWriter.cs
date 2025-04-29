@@ -584,7 +584,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteRawString(ReadOnlySpan<byte> buffer)
+        public void WriteRawString(ReadOnlySpan<byte> buffer)
         {
             if (buffer.Length < JsonOperationContext.MemoryBuffer.DefaultSize)
             {

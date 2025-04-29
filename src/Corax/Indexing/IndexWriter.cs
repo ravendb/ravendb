@@ -76,6 +76,8 @@ namespace Corax.Indexing
         private Lookup<Int64LookupKey> _entryIdToLocation;
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
+        public int? MaximumConcurrentBatchesForHnswAcceleration;
+        
         private long _compactTreeDictionaryId = Constants.IndexSearcher.InvalidId;
 
         /// <summary>

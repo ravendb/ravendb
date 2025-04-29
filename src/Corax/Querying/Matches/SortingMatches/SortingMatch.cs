@@ -372,7 +372,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             if (_smallPostListIds.Count == 0)
                 return;
 
-            Container.GetAll(_llt, _smallPostListIds.ToSpan(), _containerItems, long.MinValue, _pageLocator);
+            Container.GetAll(_llt, _smallPostListIds.ToSpan(), new Span<UnmanagedSpan>(_containerItems, _smallPostListIds.Count), long.MinValue, _pageLocator);
         }
 
         private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)

@@ -1,13 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
+using Corax.Querying;
+using Microsoft.AspNetCore.Connections.Features;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -21,6 +28,7 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
+using Voron.Data.Graphs;
 using Voron.Data.Tables;
 using Constants = Raven.Client.Constants;
 
@@ -190,6 +198,54 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 return scope.Delay();
             }
         }
+        
+        public static void HnswOutput(this Index self, string field, AsyncBlittableJsonTextWriter writer)
+        {
+            using var _ = self._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext);
+            using var tx = indexContext.OpenReadTransaction();
+            writer.WriteStartArray();
+            bool first = true;
+            var indexReader = (CoraxIndexReadOperation)self.IndexPersistence.OpenIndexReader(tx.InnerTransaction);
+            foreach (var node in Hnsw.IterateNodes(tx.InnerTransaction.LowLevelTransaction, field))
+            {
+                if (first is false)
+                {
+                    writer.WriteComma();
+                    writer.WriteRawString("\n"u8);
+                }
+                first = false;
+                var edges = new DynamicJsonArray();
+                for (int i = 0; i < node.EdgesByLevel.Length; i++)
+                {
+                    var lists = new DynamicJsonArray();
+                    for (int j = 0; j < node.EdgesByLevel[i].Length; j++)
+                    {
+                        (long NodeId, float Distance) = node.EdgesByLevel[i][j];
+                        lists.Add(new DynamicJsonValue
+                        {
+                            [nameof(NodeId)] = NodeId,
+                            [nameof(Distance)] = Distance
+                        });
+                    }
+                    edges.Add(new DynamicJsonValue
+                    {
+                        ["Level"] = i,
+                        ["Links"] = lists
+                    });
+                }
+
+                var djv = new DynamicJsonValue
+                {
+                    [nameof(node.NodeId)] = node.NodeId,
+                    [nameof(node.Entries)] = node.Entries.Select(indexReader.GetDocumentIdFor),
+                    [nameof(node.EdgesByLevel)] = edges
+                };
+                
+                indexContext.Write(writer, djv);
+            }
+            writer.WriteEndArray();
+        }
+
 
         private static IEnumerable<ReduceTree> IterateTrees(Index self, List<FixedSizeTree> mapEntries,
             Tree reducePhaseTree, FixedSizeTree typePerHash, TransactionOperationContext indexContext, DisposableScope scope)

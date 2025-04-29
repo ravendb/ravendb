@@ -187,7 +187,7 @@ unsafe partial struct SortingMatch<TInner>
 
             match._cancellationToken.ThrowIfCancellationRequested();
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
+            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), long.MinValue, pageLocator);
             var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer(), descending);
             var indexes = SortByTerms(ref match, batchTermIds, batchTerms, descending, indirectComparer);
             for (int i = 0; i < indexes.Length; i++)
@@ -446,7 +446,7 @@ unsafe partial struct SortingMatch<TInner>
 
             match._cancellationToken.ThrowIfCancellationRequested();
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
+            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), long.MinValue, pageLocator);
             var heapCapacity = _take == -1 ? batchResults.Length : Math.Min(_take, batchResults.Length);
             var documents = MemoryMarshal.Cast<long, int>(batchTermIds)[..(heapCapacity)];
 

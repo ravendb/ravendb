@@ -268,7 +268,7 @@ namespace Corax.Querying.Matches.TermProviders
             using var _ = allocator.Allocate((sizeof(UnmanagedSpan)) * postingLists.Count, out ByteString containers);
             var containersPtr = (UnmanagedSpan*)containers.Ptr;
       
-            Container.GetAll(_searcher._transaction.LowLevelTransaction, postingLists.ToSpan(), containersPtr, singleMarker, _searcher._transaction.LowLevelTransaction.PageLocator);
+            Container.GetAll(_searcher._transaction.LowLevelTransaction, postingLists.ToSpan(), new Span<UnmanagedSpan>(containersPtr, postingLists.Count), singleMarker, _searcher._transaction.LowLevelTransaction.PageLocator);
 
             long totalCount = 0;
             for (int i = 0; i < postingLists.Count; ++i)

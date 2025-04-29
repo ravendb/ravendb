@@ -644,7 +644,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.MaxNumberOfThreadsForLocalEmbeddingsGeneration", ConfigurationEntryScope.ServerWideOnly)]
         public int MaxNumberOfThreadsForLocalEmbeddingsGeneration { get; set; }
-        
+
+        [Description("Expert: The maximum number of concurrent batches for HNSW distance computation acceleration.")]
+        [DefaultValue(512)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int MaximumConcurrentBatchesForHnswAcceleration { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

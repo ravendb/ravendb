@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -85,6 +86,13 @@ internal sealed class IndexHandlerProcessorForDebug : AbstractIndexHandlerProces
 
                 writer.WriteEndObject();
 
+                return;
+            }
+            
+            if (string.Equals(operation, "hnsw", StringComparison.OrdinalIgnoreCase))
+            {
+                var field = RequestHandler.GetStringQueryString("field");
+                index.HnswOutput(field, writer);
                 return;
             }
 

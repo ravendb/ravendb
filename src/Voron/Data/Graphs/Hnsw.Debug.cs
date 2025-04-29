@@ -13,29 +13,70 @@ using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Util;
+using Voron.Util.PFor;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Graphs;
 
 public unsafe partial class Hnsw
 {
-    private static long GetPostingListCount(LowLevelTransaction llt,long postingListId)
+    public record NodeForDebug(
+        long NodeId,
+        long[] Entries,
+        (long NodeId, float Distance)[][] EdgesByLevel
+    );
+    
+    public static IEnumerable<NodeForDebug> IterateNodes(LowLevelTransaction llt, string name)
     {
+        var searchState = new SearchState(llt, name);
+        for (long nodeId = 1; nodeId <= searchState.Options.CountOfVectors; nodeId++)
+        {
+            var node = searchState.GetNodeById(nodeId);
+            int nodeIndex = searchState.GetNodeIndexById(nodeId);
+            long[] entries = GetEntries(llt, node.PostingListId);
+            var edgesByLevel = new (long NodeId, float Distance)[node.EdgesPerLevel.Count][];
+            for (int i = 0; i < node.EdgesPerLevel.Count; i++)
+            {
+                edgesByLevel[i] = new (long NodeId, float Distance)[node.EdgesPerLevel[i].Count];
+                for (int j = 0; j <  node.EdgesPerLevel[i].Count; j++)
+                {
+                    long id = node.EdgesPerLevel[i][j];
+                    int index = searchState.GetNodeIndexById(id);
+                    edgesByLevel[i][j] = (id, searchState.Distance(ReadOnlySpan<byte>.Empty, nodeIndex, index));
+                }
+            }
+            yield return new NodeForDebug(nodeId, entries, edgesByLevel);
+        }
+    }
+
+    public static long[] GetEntries(LowLevelTransaction llt,long postingListId)
+    {
+        long rawPostingListId = postingListId & Constants.Graphs.VectorId.ContainerType;
         switch (postingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
         {
             case Constants.Graphs.VectorId.Tombstone:
-                return 0;
+                return [];
             case Constants.Graphs.VectorId.Single:
-                return 1;
+                return [rawPostingListId];
             case Constants.Graphs.VectorId.SmallPostingList:
             {
-                var item = Container.Get(llt, postingListId & Constants.Graphs.VectorId.ContainerType);
-                return VariableSizeEncoding.Read<int>(item.Address, out _);
+                var list = new ContextBoundNativeList<long>(llt.Allocator);
+                FastPForDecoder decoder = new();
+                SearchState.ReadPostingList(llt, rawPostingListId, ref list, ref decoder, out var size);
+                list.Count = size;
+                long[] array = list.ToSpan().ToArray();
+                list.Dispose();
+                return array;
             }
             case Constants.Graphs.VectorId.PostingList:
             {
-                var item = Container.Get(llt, postingListId & Constants.Graphs.VectorId.ContainerType);
-                return ((PostingListState*)item.Address)->NumberOfEntries;
+                var setStateSpan = Container.GetReadOnly(llt, rawPostingListId);
+                ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
+                var postingList = new PostingList(llt, Slices.Empty, setState);
+                var result = new long[(int)Math.Min(postingList.State.NumberOfEntries, 16)];
+                var it = postingList.Iterate();
+                it.Fill(result, out var count);
+                return result;
             }
         }
 
@@ -123,19 +164,20 @@ table, th, td {
                 int cols = 0;
                 for (int j = 1; j <= searchState.Options.CountOfVectors; j++)
                 {
-                    ref var n = ref searchState.GetNodeById(j);
+                    var nodeIdx = searchState.GetNodeIndexById(j);
+                    ref var n = ref searchState.Nodes[nodeIdx];
                     if (level >= n.EdgesPerLevel.Count)
                         continue;
 
-                    var dist = searchState.Distance(vector, -1, j);
-                    var isPath = path[level] == j ? "path" : "";
-                    var isResult =  level == 0 && edges.Items.Contains(j) ? "result": "";
-                    var nextId = level == 0 ? (edges.Items.Contains(j) ?"***": "") : $"N_{path[level - 1]}_{level - 1}";
+                    var dist = searchState.Distance(vector, -1, nodeIdx);
+                    var isPath = path[level] == nodeIdx ? "path" : "";
+                    var isResult =  level == 0 && edges.Items.Contains(nodeIdx) ? "result": "";
+                    var nextId = level == 0 ? (edges.Items.Contains(nodeIdx) ?"***": "") : $"N_{path[level - 1]}_{level - 1}";
                     f.WriteLine($"<td> <table id='N_{j}_{level}'><tr><th class='{isPath} {isResult}'>N_{j}_{level} - {GetEntryId(llt,n.PostingListId)}</th>" +
                                 $"<th>{n.EdgesPerLevel[level].Count}</th><th>{dist} (<a href='#{nextId}'>{nextId}</a>)</th></tr><tr>");
                     foreach (var to in n.EdgesPerLevel[level])
                     {
-                        dist = searchState.Distance(Span<byte>.Empty, j, searchState.GetNodeIndexById(to));
+                        dist = searchState.Distance(Span<byte>.Empty, nodeIdx, searchState.GetNodeIndexById(to));
                         var srcDist = searchState.Distance(vector, -1, searchState.GetNodeIndexById(to));
                         var id = $"N_{to}_{Math.Max(0, level-1)}";
                      

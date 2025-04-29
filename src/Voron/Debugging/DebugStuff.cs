@@ -221,13 +221,15 @@ namespace Voron.Debugging
             {
                 string pathToChromeX86 = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
                 string pathToChromeX64 = @"C:\Program Files\Google\Chrome\Application\chrome.exe";
-
+                string pathToEdge = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
                 string pathToChrome;
 
                 if (File.Exists(pathToChromeX64))
                     pathToChrome = pathToChromeX64;
                 else if (File.Exists(pathToChromeX86))
                     pathToChrome = pathToChromeX86;
+                else if (File.Exists(pathToEdge))
+                    pathToChrome = pathToEdge;
                 else
                     throw new InvalidOperationException("Make sure path to chrome.exe is valid");
 

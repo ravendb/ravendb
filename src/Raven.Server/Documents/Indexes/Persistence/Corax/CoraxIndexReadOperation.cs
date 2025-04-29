@@ -1323,6 +1323,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             QueryPool.Return(ids);
         }
 
+        public string GetDocumentIdFor(long entryId)
+        {
+            return _documentIdReader.GetTermFor(entryId);
+        }
+        
         public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<long> totalResults,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
         {

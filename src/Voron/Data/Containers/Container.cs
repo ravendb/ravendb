@@ -1417,7 +1417,7 @@ namespace Voron.Data.Containers
         /// <summary>
         /// Assumes that ids is sorted 
         /// </summary>
-        public static void GetAll(LowLevelTransaction llt, Span<long> ids, UnmanagedSpan* spans, long missingValue, PageLocator pageCache)
+        public static void GetAll(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, long missingValue, PageLocator pageCache)
         {
             for (int i = 0; i < ids.Length; i++)
             {
@@ -1434,14 +1434,14 @@ namespace Voron.Data.Containers
                     pageCache.SetReadable(page);
                 }
 
-                var container = new Container(page);
-                
-                if (container._page.IsOverflow)
+                if (page.IsOverflow)
                 {
                     spans[i] = new(page.DataPointer, page.OverflowSize);
                     continue;
                 }
-
+                
+                var container = new Container(page);
+                
                 var metadata = container.MetadataFor(OffsetToIndex(offset));
                 Debug.Assert(metadata.IsFree == false);
                 var p = page.Pointer;

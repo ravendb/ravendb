@@ -46,9 +46,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _allocator = writeTransaction.Allocator;
             try
             {
-                _indexWriter =  new IndexWriter(writeTransaction, knownFields, new SupportedFeatures(
+                _indexWriter = new IndexWriter(writeTransaction, knownFields, new SupportedFeatures(
                     isPhraseQuerySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes,
-                    isStoreOnlySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.StoreOnlySupportInCoraxIndexes));
+                    isStoreOnlySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.StoreOnlySupportInCoraxIndexes))
+                {
+                    MaximumConcurrentBatchesForHnswAcceleration = index.Configuration.MaximumConcurrentBatchesForHnswAcceleration
+                };
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {

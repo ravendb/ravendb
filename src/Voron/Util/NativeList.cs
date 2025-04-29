@@ -40,7 +40,11 @@ public unsafe struct NativeList<T>
 
     public ref T this[int index]
     {
-        get => ref Unsafe.AsRef<T>((T*)_storage.Ptr + index);
+        get
+        {
+            Debug.Assert(index >= 0 && index < Count);
+            return ref Unsafe.AsRef<T>((T*) _storage.Ptr +index);
+        }
     }
 
     public bool TryAdd(in T l)
@@ -139,9 +143,13 @@ public unsafe struct NativeList<T>
     public void Grow(ByteStringContext ctx, int addition)
     {
         var capacity = Math.Max(1, Bits.NextAllocationSize(Capacity + addition));
-        
+
         if (capacity > MaxCapacity)
-            ThrowMaxCapacityExceeded(capacity);
+        {
+            if(Capacity + addition > MaxCapacity)
+                ThrowMaxCapacityExceeded(capacity);
+            capacity = MaxCapacity;
+        }
         
         ctx.Allocate(capacity * sizeof(T), out var mem);
 

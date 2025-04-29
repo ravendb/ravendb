@@ -81,14 +81,14 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         // nearest to v2, then v1
         float[] v3 = v2.Select(x => x + 0.05f).ToArray();
 
-        
-        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1,v1)));
-        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1,v2)));
-        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1,v3)));
-        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v2,v2)));
-        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v2,v3)));
-        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v3,v3)));
-        
+
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1, v1)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1, v2)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1, v3)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v2, v2)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v2, v3)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v3, v3)));
+
         using (var txw = Env.WriteTransaction())
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 1536 * sizeof(float), 3, 12, VectorEmbeddingType.Single);
@@ -99,7 +99,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
                 registration.Register(2, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit();
             }
-            
+
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(3, MemoryMarshal.Cast<float, byte>(v1));
@@ -124,14 +124,14 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             Span<float> distances = new float[8];
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test", numberOfCandidates: 32, MemoryMarshal.Cast<float, byte>(v3), 0f);
             int read = nearest.Fill(matches, distances);
-             Assert.Equal(3, read);
+            Assert.Equal(3, read);
             Assert.False(distances.Slice(0, read).ToArray().Any(float.IsNaN));
             Assert.Equal(2, matches[0]);
             Assert.Equal(1, matches[1]);
             Assert.Equal(3, matches[2]);
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Voron)]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
