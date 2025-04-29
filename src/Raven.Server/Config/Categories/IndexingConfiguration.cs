@@ -95,6 +95,8 @@ namespace Raven.Server.Config.Categories
             
             EncryptedTransactionSizeLimit = defaultEncryptedTransactionSizeLimit;
             MaxAllocationsAtDictionaryTraining = defaultMaxAllocationsAtDictionaryTraining;
+
+            MaxMemoizationSize = Size.Max(new Size(512, SizeUnit.Megabytes), totalMem / 10);
         }
         
         private static HashSet<string> GetValidIndexingConfigurationKeys()
@@ -572,7 +574,7 @@ namespace Raven.Server.Config.Categories
         public bool CoraxIncludeSpatialDistance { get; set; }
         
         [Description("The maximum amount of memory that Corax can use for a memoization clause during query processing")]
-        [DefaultValue(512)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Corax.MaxMemoizationSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
