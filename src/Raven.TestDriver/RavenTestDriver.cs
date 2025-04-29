@@ -26,14 +26,17 @@ namespace Raven.TestDriver
 {
     public class RavenTestDriver : IDisposable
     {
-        private static readonly EmbeddedServer TestServer = new EmbeddedServer();
+        private static readonly EmbeddedServer GlobalServer = new();
+        private static ServerOptions GlobalServerOptions;
+        private static readonly Lazy<IDocumentStore> GlobalDocumentStore = new(CreateGlobalDocumentStore, LazyThreadSafetyMode.ExecutionAndPublication);
 
-        private static readonly Lazy<IDocumentStore> TestServerStore = new Lazy<IDocumentStore>(RunServer, LazyThreadSafetyMode.ExecutionAndPublication);
+        private EmbeddedServer _scopedServer;
+        private ServerOptions _scopedServerOptions;
+        private readonly Lazy<IDocumentStore> _scopedDocumentStore;
 
         private readonly ConcurrentDictionary<DocumentStore, object> _documentStores = new ConcurrentDictionary<DocumentStore, object>();
 
         private static int _index;
-        private static ServerOptions _globalServerOptions;
 
         private static FileInfo _emptySettingsFile;
 
@@ -57,15 +60,50 @@ namespace Raven.TestDriver
 
         protected bool IsDisposed { get; private set; }
 
-        public static void ConfigureServer(TestServerOptions options)
+        internal RavenTestDriver()
         {
-            if (TestServerStore.IsValueCreated)
-                throw new InvalidOperationException($"Cannot configure server after it was started. Please call '{nameof(ConfigureServer)}' method before any '{nameof(GetDocumentStore)}' is called.");
-
-            _globalServerOptions = options;
+            _scopedDocumentStore = new Lazy<IDocumentStore>(CreateScopeDocumentStore, LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
-        protected IDocumentStore GetDocumentStore(GetDocumentStoreOptions options = null, [CallerMemberName] string database = null)
+        public static void ConfigureServer(TestServerOptions options)
+        {
+            if (GlobalDocumentStore.IsValueCreated)
+                throw new InvalidOperationException($"Cannot configure server after it was started. Please call '{nameof(ConfigureServer)}' method before any '{nameof(GetDocumentStore)}' is called.");
+
+            GlobalServerOptions = options;
+        }
+
+        internal IDisposable ConfigureScopedServer(ServerOptions options, EmbeddedServer server = null)
+        {
+            if (_scopedServer != null)
+                throw new InvalidOperationException("Local embedded server is already set.");
+
+            if (_scopedDocumentStore.IsValueCreated)
+                throw new InvalidOperationException(
+                    "Cannot set embedded server after document store has been initialized.");
+
+            _scopedServer = server ?? new EmbeddedServer();
+            _scopedServerOptions = options;
+
+            return new DisposableAction(() =>
+            {
+                try
+                {
+                    _scopedServer?.Dispose();
+                }
+                catch
+                {
+                    // swallow exceptions
+                }
+                finally
+                {
+                    _scopedServer = null;
+                    _scopedServerOptions = null;
+                }
+            });
+        }
+
+        protected internal IDocumentStore GetDocumentStore(GetDocumentStoreOptions options = null, [CallerMemberName] string database = null)
         {
             options = options ?? GetDocumentStoreOptions.Default;
 
@@ -75,7 +113,7 @@ namespace Raven.TestDriver
                 database = $"{GetType().Name}_cctor";
 
             var name = database + "_" + Interlocked.Increment(ref _index);
-            var documentStore = TestServerStore.Value;
+            var documentStore = _scopedServer != null ? _scopedDocumentStore.Value : GlobalDocumentStore.Value;
 
             var createDatabaseOperation = new CreateDatabaseOperation(new DatabaseRecord(name));
             documentStore.Maintenance.Server.Send(createDatabaseOperation);
@@ -242,6 +280,30 @@ namespace Raven.TestDriver
                 }
             }
 
+            if (_scopedServer != null && _scopedDocumentStore.IsValueCreated)
+            {
+                try
+                {
+                    _scopedDocumentStore.Value?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    exceptions.Add(e);
+                }
+            }
+
+            if (_scopedServer != null)
+            {
+                try
+                {
+                    _scopedServer.Dispose();
+                }
+                catch (Exception e)
+                {
+                    exceptions.Add(e);
+                }
+            }
+
             DatabaseDumpFileStream?.Dispose();
 
             IsDisposed = true;
@@ -267,15 +329,15 @@ namespace Raven.TestDriver
             }
         }
 
-        private static IDocumentStore RunServer()
+        private static IDocumentStore CreateGlobalDocumentStore()
         {
-            var options = _globalServerOptions ?? new TestServerOptions();
+            var options = GlobalServerOptions ?? new TestServerOptions();
             options.CommandLineArgs.Insert(0, $"-c {CommandLineArgumentEscaper.EscapeSingleArg(EmptySettingsFile.FullName)}");
             options.CommandLineArgs.Add("--RunInMemory=true");
 
-            TestServer.StartServer(options);
+            GlobalServer.StartServer(options);
 
-            var url = AsyncHelpers.RunSync(() => TestServer.GetServerUriAsync());
+            var url = AsyncHelpers.RunSync(() => GlobalServer.GetServerUriAsync());
 
             var store = new DocumentStore
             {
@@ -290,5 +352,31 @@ namespace Raven.TestDriver
 
             return store;
         }
+
+        private IDocumentStore CreateScopeDocumentStore()
+        {
+            var options = _scopedServerOptions ?? GlobalServerOptions ?? new TestServerOptions();
+            options.CommandLineArgs.Insert(0, $"-c {CommandLineArgumentEscaper.EscapeSingleArg(EmptySettingsFile.FullName)}");
+            options.CommandLineArgs.Add("--RunInMemory=true");
+
+            _scopedServer.StartServer(options);
+
+            var url = AsyncHelpers.RunSync(() => _scopedServer.GetServerUriAsync());
+
+            var store = new DocumentStore
+            {
+                Urls = [url.AbsoluteUri],
+                Conventions =
+                {
+                    DisableTopologyCache = true
+                }
+            };
+
+            store.Initialize();
+
+            return store;
+        }
+
+
     }
 }
