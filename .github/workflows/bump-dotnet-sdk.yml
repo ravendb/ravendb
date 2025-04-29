@@ -1,0 +1,33 @@
+name: 🔄 Bump .NET SDK
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'   
+  workflow_dispatch: {}    
+
+jobs:
+  bump-sdk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install jq (for JSON editing)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Make updater script executable
+        run: chmod +x ravendb/scripts/linux/update-global.sh
+
+      - name: Run .NET SDK updater
+        run: ravendb/scripts/linux/update-global.sh
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ravendb/global.json
+          git diff --quiet || git commit -m "chore: bump .NET SDK via automation"
+          git push
