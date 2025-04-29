@@ -124,7 +124,20 @@ vectorSearch
     ;
 
 vectorSearchParam
-    : OP_PAR ((EMBEDDING OP_PAR variable CL_PAR) | literal) COMMA literal CL_PAR
+    : OP_PAR ((EMBEDDING_ARRAY OP_PAR variable CL_PAR) | literal) COMMA vectorSearchValue vectorSearchAdditionalParams? CL_PAR
+    | OP_PAR EMBEDDING_TEXT OP_PAR literal aiTaskMethod? CL_PAR COMMA vectorSearchValue vectorSearchAdditionalParams? CL_PAR
+    ;
+
+aiTaskMethod
+    : COMMA AI_TASK OP_PAR literal CL_PAR
+    ;
+
+vectorSearchAdditionalParams
+    : COMMA (NUM | NULL) (COMMA (NUM | NULL))?;
+
+vectorSearchValue
+    : literal
+    | EMBEDDING_FOR OP_PAR literal CL_PAR
     ;
 
 specialParam

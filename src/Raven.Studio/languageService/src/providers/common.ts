@@ -7,6 +7,9 @@ import { RqlQueryMetaInfo } from "../rqlQueryVisitor";
 export const AUTOCOMPLETE_SCORING = {
     operator: 1007,
     function: 1004,
+    functionVectorTextual: 1023,
+    functionVectorTextualOverload: 1022,
+    functionVector: 1021,
     keyword: 1004,
     field: 1020,
     index: 1010,

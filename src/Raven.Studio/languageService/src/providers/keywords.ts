@@ -162,49 +162,105 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         }));
     }
 
-    static handleEmbedding(): autoCompleteWordList[] {
+    static handleEmbeddingArray(): autoCompleteWordList[] {
         return [{
             value: "embedding.f32_i8(",
             caption: "embedding.f32_i8(field)",
             meta: AUTOCOMPLETE_META.function,
-            score: AUTOCOMPLETE_SCORING.function,
-            snippet: `embedding.f32_i8(\${1}) `
+            score: AUTOCOMPLETE_SCORING.functionVector,
+            snippet: `embedding.f32_i8(\${1}), `
         },{
             value: "embedding.f32_i1(",
             caption: "embedding.f32_i1(field)",
             meta: AUTOCOMPLETE_META.function,
-            score: AUTOCOMPLETE_SCORING.function,
-            snippet: `embedding.f32_i1(\${1}) `
+            score: AUTOCOMPLETE_SCORING.functionVector,
+            snippet: `embedding.f32_i1(\${1}), `
         },{
             value: "embedding.i8(",
             caption: "embedding.i8(field)",
             meta: AUTOCOMPLETE_META.function,
-            score: AUTOCOMPLETE_SCORING.function,
-            snippet: `embedding.i8(\${1}) `
+            score: AUTOCOMPLETE_SCORING.functionVector,
+            snippet: `embedding.i8(\${1}), `
         },{
             value: "embedding.i1(",
             caption: "embedding.i1(field)",
             meta: AUTOCOMPLETE_META.function,
-            score: AUTOCOMPLETE_SCORING.function,
-            snippet: `embedding.i1(\${1}) `
-        },{
+            score: AUTOCOMPLETE_SCORING.functionVector,
+            snippet: `embedding.i1(\${1}), `
+        }]
+    }
+    
+    static handleEmbeddingText(): autoCompleteWordList[] {
+        return [{
             value: "embedding.text(",
             caption: "embedding.text(field)",
             meta: AUTOCOMPLETE_META.function,
-            score: AUTOCOMPLETE_SCORING.function,
-            snippet: `embedding.text(\${1}) `
+            score: AUTOCOMPLETE_SCORING.functionVectorTextual,
+            snippet: `embedding.text(\${1}), `
         },{
             value: "embedding.text_i8(",
             caption: "embedding.text_i8(field)",
             meta: AUTOCOMPLETE_META.function,
-            score: AUTOCOMPLETE_SCORING.function,
-            snippet: `embedding.text_i8(\${1}) `
+            score: AUTOCOMPLETE_SCORING.functionVectorTextual,
+            snippet: `embedding.text_i8(\${1}), `
         },{
             value: "embedding.text_i1(",
             caption: "embedding.text_i1(field)",
             meta: AUTOCOMPLETE_META.function,
-            score: AUTOCOMPLETE_SCORING.function,
-            snippet: `embedding.text_i8(\${1}) `
+            score: AUTOCOMPLETE_SCORING.functionVectorTextual,
+            snippet: `embedding.text_i1(\${1}), `
+        },{
+            value: "embedding.text(",
+            caption: "embedding.text(field, ai.task('name')",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.functionVectorTextualOverload,
+            snippet: `embedding.text(\${1}, ai.task('\${2}')), `
+        },{
+            value: "embedding.text_i8(",
+            caption: "embedding.text_i8(field, ai.task('name'))",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.functionVectorTextualOverload,
+            snippet: `embedding.text_i8(\${1}, ai.task('\${2}')), `
+        },{
+            value: "embedding.text_i1(",
+            caption: "embedding.text_i1(field, ai.task('name'))",
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.functionVectorTextualOverload,
+            snippet: `embedding.text_i1(\${1}, ai.task('\${2}')), `
+        }]
+    }
+    
+    static handleAiTask(): autoCompleteWordList[] {
+        return [
+            {
+                value: "ai_task(",
+                caption: "ai_task(name)",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.functionVectorTextualOverload,
+                snippet: `ai.task('\${1}')`
+        }]   
+    }
+
+    static handleVectorSearchParameter(): autoCompleteWordList[] {
+        return [
+            {
+                value: "textual value",
+                caption: "search phrase",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.functionVectorTextual,
+                snippet: `'\${1}' `
+            },{
+                value: "parameter",
+                caption: "parameter",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.functionVectorTextual,
+                snippet: `$\${1} `
+            },{
+                value: "embedding.for(",
+                caption: "embedding.for('documentId')",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.functionVectorTextual,
+                snippet: `embedding.for('\${1}')`
         }]
     }
     
@@ -440,9 +496,18 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             completions.push(...AutocompleteKeywords.handleSpecialFunctions(candidates, writtenText));
         }
         
-        if (candidates.tokens.has(RqlParser.EMBEDDING))
-            completions.push(...AutocompleteKeywords.handleEmbedding())
-            
+        if (candidates.tokens.has(RqlParser.EMBEDDING_ARRAY))
+            completions.push(...AutocompleteKeywords.handleEmbeddingArray())
+
+        if (candidates.tokens.has(RqlParser.EMBEDDING_TEXT))
+            completions.push(...AutocompleteKeywords.handleEmbeddingText())
+        
+        if (candidates.tokens.has(RqlParser.AI_TASK))
+            completions.push(...AutocompleteKeywords.handleAiTask())
+        
+        if (candidates.tokens.has(RqlParser.EMBEDDING_FOR))
+            completions.push(...AutocompleteKeywords.handleVectorSearchParameter())
+        
         if (candidates.tokens.has(RqlParser.EQUAL)) {
             completions.push(...AutocompleteKeywords.handleEqual(writtenText))
         }

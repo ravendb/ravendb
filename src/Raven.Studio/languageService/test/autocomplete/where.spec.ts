@@ -36,7 +36,25 @@ describe("can complete where", function () {
                 .toBeTruthy();
         }
     });
-    
+
+    it("vector.search(embedding.text(Name,  <- suggest method ai_task", async () => {
+        const suggestions = await autocomplete("from CollectionWithoutDefinedFields where vector.search(embedding.text(Name, |", new EmptyMetadataProvider());
+        for (let specialFunction of ['ai_task']) {
+            const matchingItem = suggestions.find(x => x.value.startsWith(specialFunction));
+            expect(matchingItem)
+                .toBeTruthy();
+        }
+    });
+
+    it("vector.search(embedding.text(Name),  <- suggest embedding.for, parameter or string input", async () => {
+        const suggestions = await autocomplete("from CollectionWithoutDefinedFields where vector.search(embedding.text(Name), |", new EmptyMetadataProvider());
+        for (let specialFunction of ['embedding.for', 'parameter', 'textual value']) {
+            const matchingItem = suggestions.find(x => x.value.startsWith(specialFunction));
+            expect(matchingItem)
+                .toBeTruthy();
+        }
+    });
+        
     it("can complete fields - at root level", async () => {
         const suggestions = await autocomplete("from Orders where |");
         

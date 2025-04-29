@@ -6,6 +6,11 @@ import { ParseTreeVisitor } from "antlr4ts/tree/ParseTreeVisitor";
 import { CollectionByIndexContext } from "./BaseRqlParser";
 import { AllCollectionsContext } from "./BaseRqlParser";
 import { CollectionByNameContext } from "./BaseRqlParser";
+import { TsMathExpressionContext } from "./BaseRqlParser";
+import { TsBinaryExpressionContext } from "./BaseRqlParser";
+import { TsOpParContext } from "./BaseRqlParser";
+import { TsBooleanExpressionContext } from "./BaseRqlParser";
+import { TsLiteralExpressionContext } from "./BaseRqlParser";
 import { GetAllDistinctContext } from "./BaseRqlParser";
 import { ProjectIndividualFieldsContext } from "./BaseRqlParser";
 import { JavascriptCodeContext } from "./BaseRqlParser";
@@ -28,11 +33,6 @@ import { FilterNormalFuncContext } from "./BaseRqlParser";
 import { FilterBooleanExpressionContext } from "./BaseRqlParser";
 import { JavaScriptFunctionContext } from "./BaseRqlParser";
 import { TimeSeriesFunctionContext } from "./BaseRqlParser";
-import { TsMathExpressionContext } from "./BaseRqlParser";
-import { TsBinaryExpressionContext } from "./BaseRqlParser";
-import { TsOpParContext } from "./BaseRqlParser";
-import { TsBooleanExpressionContext } from "./BaseRqlParser";
-import { TsLiteralExpressionContext } from "./BaseRqlParser";
 import { ProgContext } from "./BaseRqlParser";
 import { FunctionStatmentContext } from "./BaseRqlParser";
 import { UpdateStatementContext } from "./BaseRqlParser";
@@ -55,6 +55,9 @@ import { SpecialFunctionsContext } from "./BaseRqlParser";
 import { SpecialFunctionNameContext } from "./BaseRqlParser";
 import { VectorSearchContext } from "./BaseRqlParser";
 import { VectorSearchParamContext } from "./BaseRqlParser";
+import { AiTaskMethodContext } from "./BaseRqlParser";
+import { VectorSearchAdditionalParamsContext } from "./BaseRqlParser";
+import { VectorSearchValueContext } from "./BaseRqlParser";
 import { SpecialParamContext } from "./BaseRqlParser";
 import { LoadModeContext } from "./BaseRqlParser";
 import { LoadStatementContext } from "./BaseRqlParser";
@@ -160,6 +163,46 @@ export interface BaseRqlParserVisitor<Result> extends ParseTreeVisitor<Result> {
      * @return the visitor result
      */
     visitCollectionByName?: (ctx: CollectionByNameContext) => Result;
+
+    /**
+     * Visit a parse tree produced by the `tsMathExpression`
+     * labeled alternative in `BaseRqlParser.tsExpr`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitTsMathExpression?: (ctx: TsMathExpressionContext) => Result;
+
+    /**
+     * Visit a parse tree produced by the `tsBinaryExpression`
+     * labeled alternative in `BaseRqlParser.tsExpr`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitTsBinaryExpression?: (ctx: TsBinaryExpressionContext) => Result;
+
+    /**
+     * Visit a parse tree produced by the `tsOpPar`
+     * labeled alternative in `BaseRqlParser.tsExpr`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitTsOpPar?: (ctx: TsOpParContext) => Result;
+
+    /**
+     * Visit a parse tree produced by the `tsBooleanExpression`
+     * labeled alternative in `BaseRqlParser.tsExpr`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitTsBooleanExpression?: (ctx: TsBooleanExpressionContext) => Result;
+
+    /**
+     * Visit a parse tree produced by the `tsLiteralExpression`
+     * labeled alternative in `BaseRqlParser.tsExpr`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitTsLiteralExpression?: (ctx: TsLiteralExpressionContext) => Result;
 
     /**
      * Visit a parse tree produced by the `getAllDistinct`
@@ -338,46 +381,6 @@ export interface BaseRqlParserVisitor<Result> extends ParseTreeVisitor<Result> {
     visitTimeSeriesFunction?: (ctx: TimeSeriesFunctionContext) => Result;
 
     /**
-     * Visit a parse tree produced by the `tsMathExpression`
-     * labeled alternative in `BaseRqlParser.tsExpr`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitTsMathExpression?: (ctx: TsMathExpressionContext) => Result;
-
-    /**
-     * Visit a parse tree produced by the `tsBinaryExpression`
-     * labeled alternative in `BaseRqlParser.tsExpr`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitTsBinaryExpression?: (ctx: TsBinaryExpressionContext) => Result;
-
-    /**
-     * Visit a parse tree produced by the `tsOpPar`
-     * labeled alternative in `BaseRqlParser.tsExpr`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitTsOpPar?: (ctx: TsOpParContext) => Result;
-
-    /**
-     * Visit a parse tree produced by the `tsBooleanExpression`
-     * labeled alternative in `BaseRqlParser.tsExpr`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitTsBooleanExpression?: (ctx: TsBooleanExpressionContext) => Result;
-
-    /**
-     * Visit a parse tree produced by the `tsLiteralExpression`
-     * labeled alternative in `BaseRqlParser.tsExpr`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitTsLiteralExpression?: (ctx: TsLiteralExpressionContext) => Result;
-
-    /**
      * Visit a parse tree produced by `BaseRqlParser.prog`.
      * @param ctx the parse tree
      * @return the visitor result
@@ -530,6 +533,27 @@ export interface BaseRqlParserVisitor<Result> extends ParseTreeVisitor<Result> {
      * @return the visitor result
      */
     visitVectorSearchParam?: (ctx: VectorSearchParamContext) => Result;
+
+    /**
+     * Visit a parse tree produced by `BaseRqlParser.aiTaskMethod`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitAiTaskMethod?: (ctx: AiTaskMethodContext) => Result;
+
+    /**
+     * Visit a parse tree produced by `BaseRqlParser.vectorSearchAdditionalParams`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitVectorSearchAdditionalParams?: (ctx: VectorSearchAdditionalParamsContext) => Result;
+
+    /**
+     * Visit a parse tree produced by `BaseRqlParser.vectorSearchValue`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitVectorSearchValue?: (ctx: VectorSearchValueContext) => Result;
 
     /**
      * Visit a parse tree produced by `BaseRqlParser.specialParam`.
