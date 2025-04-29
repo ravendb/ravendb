@@ -143,7 +143,8 @@ public partial class Hnsw
             private ulong[] _visitedBitmap = [];
             private int[] _visitedBitmapVersion = [];
             private int _visitedVersion;
-
+            private readonly LinkedListNode<int> _listNode = new(-1);
+            
             private void ClearVisited()
             {
                 // this needs to be _cheap_, since it is called per node per level
@@ -199,10 +200,13 @@ public partial class Hnsw
                         // to keep whatever is "in-flight" in a linked list that we can 
                         // cheaply add & remove to
                         var currentNodeIndex = _searchState.GetCreatedNodeIndex(createdNodeIndex); 
+                        _listNode.Value = currentNodeIndex;
+                        runner.AddInFlight(_listNode);
                         foreach (var item in FindGraphPlacementForNode(createdNodeIndex, currentNodeIndex))
                         {
                             yield return item;
                         }
+                        runner.RemoveInFlight(_listNode);
                     }
                 }
                 finally
@@ -285,22 +289,19 @@ public partial class Hnsw
                 }
             }
 
-            private void AddEdgesFromInFlightNodes(ref Node n, int currentNodeIndex)
+            private void AddEdgesFromInFlightNodes(ref Node n, int createdNodeIndex)
             {
-                CollectionsMarshal.SetCount(_indexes, _searchState.Options.NumberOfEdges);
-
                 // Here we add "number of edges" previously added items to as the edges in all their levels
                 // so the next stage will add the edges that were already added to the graph and then find 
                 // only the most suitable ones. It has the impact of increasing the likelihood that 
                 // items that are added at the same time (and thus temporally linked, at least) will
                 // be joined. Quite important when you consider that a single document may have multiple
                 // vectors associated with it (for example, because of chunking).
-                var limit = Math.Max(0, currentNodeIndex - _searchState.Options.NumberOfEdges);
-                for (int i = currentNodeIndex -1; i >= limit; i--)
+                CollectionsMarshal.SetCount(_indexes, _searchState.Options.NumberOfEdges);
+                var used = runner.GetInFlightIndexes(_listNode, CollectionsMarshal.AsSpan(_indexes));
+                for (int i = 0; i < used; i++)
                 {
-                    ref var edge = ref _searchState.GetNodeByIndex(
-                        _searchState.GetCreatedNodeIndex(i)
-                    );
+                    ref var edge = ref _searchState.GetNodeByIndex(_indexes[i]);
                     int sharedLevels = Math.Min(edge.EdgesPerLevel.Count, n.EdgesPerLevel.Count);
                     for (int level = 0; level < sharedLevels; level++)
                     {
@@ -599,8 +600,20 @@ public partial class Hnsw
             private readonly SearchState _searchState;
             private readonly CancellationTokenSource _cts = new();
             private readonly List<Exception> _errors = [];
+            private readonly LinkedList<int> _inFlightIndexes = [];
 
             public bool IsCancelled => _cts.IsCancellationRequested;
+            
+
+            public void AddInFlight(LinkedListNode<int> node)
+            {
+                _inFlightIndexes.AddLast(node);
+            }
+
+            public void RemoveInFlight(LinkedListNode<int> node)
+            {
+                _inFlightIndexes.Remove(node);
+            }
 
             public NodePlacementRunner(Registration parent, int activeTasksCount)
             {
@@ -740,6 +753,19 @@ public partial class Hnsw
             public void Done()
             {
                 _completed++;
+            }
+            
+            public int GetInFlightIndexes(LinkedListNode<int> n, Span<int> buffer)
+            {
+                var index = 0;
+                var cur = n.Previous;
+                while(cur != null && index < buffer.Length)
+                {
+                    buffer[index++] = cur.Value;
+                    cur = cur.Previous;
+                }
+
+                return index;
             }
         }
         
