@@ -408,7 +408,7 @@ namespace Voron.Data.Fixed
 
         internal FixedSizeTreePageHeader GetPageHeader(long pageNumber)
         {
-            return _tx.GetPageHeaderForDebug<FixedSizeTreePageHeader>(pageNumber);
+            return _tx.GetPageHeader<FixedSizeTreePageHeader>(pageNumber);
         }
 
         private FixedSizeTreePage<TVal> FindPageFor(TVal key)

@@ -189,7 +189,7 @@ namespace Voron.Debugging
 
             foreach (PersistentDictionaryRootHeader dic in input.PersistentDictionaries)
             {
-                // cannot use GetPageHeaderForDebug since the header is at the data pointer
+                // cannot use GetPageHeader since the header is at the data pointer
                 Page page = _tx.GetPage(dic.PageNumber);
                 var header = (PersistentDictionaryHeader*)page.DataPointer;
 
@@ -513,7 +513,7 @@ namespace Voron.Debugging
                 var it = Container.GetAllPagesIterator(_tx, page);
                 while (it.MoveNext(out var pageNum))
                 {
-                    // cannot use GetPageHeaderForDebug since we are reading not just from the header
+                    // cannot use GetPageHeader since we are reading not just from the header
                     Page cur = _tx.GetPage(pageNum);
                     if (cur.IsOverflow)
                     {
@@ -530,7 +530,7 @@ namespace Voron.Debugging
             
             var (allPages, freePages) = Container.GetPagesFor(_tx, page);
             
-            // cannot use GetPageHeaderForDebug since we are reading not just from the header
+            // cannot use GetPageHeader since we are reading not just from the header
             var root = new Container(_tx.GetPage(page));
             double density = pageDensities?.Average() ?? -1;
             long totalPages = allPages.State.NumberOfEntries + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount;
@@ -785,7 +785,7 @@ namespace Voron.Debugging
             for (var i = 0; i < allPages.Count; i++)
             {
                 // we don't need the entire page contents in order to calculate the page density, just the header
-                var pageHeaderUnion = tree.Llt.GetPageHeaderForDebug<PageHeaderUnion>(allPages[i]);
+                var pageHeaderUnion = tree.Llt.GetPageHeader<PageHeaderUnion>(allPages[i]);
 
                 if ((pageHeaderUnion.PageHeader.Flags & PageFlags.Overflow) == PageFlags.Overflow)
                 {
@@ -825,7 +825,7 @@ namespace Voron.Debugging
 
             foreach (var p in allPages)
             {
-                // cannot use GetPageHeaderForDebug since we are reading not just from the header
+                // cannot use GetPageHeader since we are reading not just from the header
                 var page = postingList.Llt.GetPage(p);
                 var state = new PostingListCursorState { Page = page };
                 if (state.IsLeaf)
@@ -849,7 +849,7 @@ namespace Voron.Debugging
             var densities = new List<double>();
             foreach (var p in allPages)
             {
-                var lookupPageHeader = llt.GetPageHeaderForDebug<LookupPageHeader>(p);
+                var lookupPageHeader = llt.GetPageHeader<LookupPageHeader>(p);
                 densities.Add((double)lookupPageHeader.FreeSpace / Constants.Storage.PageSize);
             }
             return densities;
@@ -865,7 +865,7 @@ namespace Voron.Debugging
 
             foreach (var pageNumber in allPages)
             {
-                var fstph = tree.Llt.GetPageHeaderForDebug<FixedSizeTreePageHeader>(pageNumber);
+                var fstph = tree.Llt.GetPageHeader<FixedSizeTreePageHeader>(pageNumber);
                 var isLeaf = (fstph.TreeFlags & FixedSizeTreePageFlags.Leaf) == FixedSizeTreePageFlags.Leaf;
                 var sizeUsed = Constants.FixedSizeTree.PageHeaderSize +
                                fstph.NumberOfEntries * (isLeaf ? fstph.ValueSize + sizeof(long) : FixedSizeTree.BranchEntrySize);

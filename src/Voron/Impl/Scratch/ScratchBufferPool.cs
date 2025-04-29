@@ -383,12 +383,12 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public T ReadPageHeaderForDebug<T>(LowLevelTransaction tx, int scratchNumber, long p, PagerState pagerState = null) where T : unmanaged
+        public T ReadPageHeader<T>(LowLevelTransaction tx, int scratchNumber, long p, PagerState pagerState = null) where T : unmanaged
         {
             var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.ReadPageHeaderForDebug<T>(tx, p, pagerState);
+            return bufferFile.ReadPageHeader<T>(tx, p, pagerState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

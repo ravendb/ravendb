@@ -673,7 +673,7 @@ namespace Voron.Impl
             return p;
         }
 
-        public T GetPageHeaderForDebug<T>(long pageNumber) where T : unmanaged
+        public T GetPageHeader<T>(long pageNumber) where T : unmanaged
         {
             if (_txState != TxState.None)
                 ThrowObjectDisposed();
@@ -700,18 +700,18 @@ namespace Voron.Impl
                     }
                 }
 
-                result = _env.ScratchBufferPool.ReadPageHeaderForDebug<T>(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
+                result = _env.ScratchBufferPool.ReadPageHeader<T>(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
             }
             else
             {
-                var pageFromJournal = _journal.ReadPageHeaderForDebug<T>(this, pageNumber, _scratchPagerStates);
+                var pageFromJournal = _journal.ReadPageHeader<T>(this, pageNumber, _scratchPagerStates);
                 if (pageFromJournal != null)
                 {
                     result = pageFromJournal.Value;
                 }
                 else
                 {
-                    result = DataPager.AcquirePagePointerHeaderForDebug<T>(this, pageNumber);
+                    result = DataPager.AcquirePagePointerHeader<T>(this, pageNumber);
                 }
             }
 
