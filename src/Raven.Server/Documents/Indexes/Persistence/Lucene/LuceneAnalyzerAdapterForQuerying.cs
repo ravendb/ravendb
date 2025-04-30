@@ -47,13 +47,16 @@ internal sealed unsafe class LuceneAnalyzerAdapterForQuerying : LuceneAnalyzerAd
             var currentTokenIdx = 0;
 
             var stream = analyzer.ReusableTokenStream(null, reader);
+            stream.Reset();
             if (ReferenceEquals(stream, Stream) == false)
             {
                 Stream = stream;
                 Offset = offset = stream.GetAttribute<IOffsetAttribute>();
                 Term = term = stream.GetAttribute<ITermAttribute>();
             }
-            do
+            
+            bool continueWork = stream.IncrementToken();
+            while (continueWork)
             {
                 int start = offset.StartOffset;
                 int length = offset.EndOffset - start;
@@ -71,7 +74,8 @@ internal sealed unsafe class LuceneAnalyzerAdapterForQuerying : LuceneAnalyzerAd
                 // Advance the current token output.
                 currentOutputIdx += outputLength;
                 currentTokenIdx++;
-            } while (stream.IncrementToken());
+                continueWork = stream.IncrementToken();
+            }
 
             output = output[..currentOutputIdx];
             tokens = tokens[..currentTokenIdx];
