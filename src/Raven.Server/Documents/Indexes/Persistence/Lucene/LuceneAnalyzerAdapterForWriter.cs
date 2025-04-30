@@ -39,18 +39,22 @@ internal sealed unsafe class LuceneAnalyzerAdapterForWriter : LuceneAnalyzerAdap
             int currentOutputIdx = 0;
             var currentTokenIdx = 0;
             var stream = analyzer.ReusableTokenStream(null, reader);
+            stream.Reset();
             if (ReferenceEquals(stream, self._stream) == false)
             {
                 self._stream = stream;
                 self._offset = offset = stream.GetAttribute<IOffsetAttribute>();
                 self._term = term = stream.GetAttribute<ITermAttribute>();
             }
-            do
+
+            bool continueWork = stream.IncrementToken();
+            while (continueWork)
             {
                 int start = offset.StartOffset;
                 int length = offset.EndOffset - start;
                 if (length == 0)
                     continue; // We skip any empty token. 
+                
 
                 ReadOnlySpan<char> termChars = term.TermBuffer();
                 int outputLength = Encoding.UTF8.GetBytes(termChars[..term.TermLength()], output[currentOutputIdx..]);
@@ -63,7 +67,9 @@ internal sealed unsafe class LuceneAnalyzerAdapterForWriter : LuceneAnalyzerAdap
                 // Advance the current token output.
                 currentOutputIdx += outputLength;
                 currentTokenIdx++;
-            } while (stream.IncrementToken());
+                
+                continueWork = stream.IncrementToken();
+            }
 
             output = output[..currentOutputIdx];
             tokens = tokens[..currentTokenIdx];
