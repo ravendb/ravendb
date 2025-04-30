@@ -596,12 +596,12 @@ namespace Raven.Client
                 public const string ThrowRevisionKeyTooBigFix = "ThrowRevisionKeyTooBigFix";
             }
         }
-        
+
         internal static class VectorSearch
         {
             private const string EmbeddingPrefix = "embedding.";
 
-            internal const string EmbeddingForDocument = EmbeddingPrefix + "for";
+            internal const string EmbeddingForDocument = EmbeddingPrefix + "forDoc";
             internal const string EmbeddingText = EmbeddingPrefix + "text";
             internal const string EmbeddingTextInt8 = EmbeddingPrefix + "text_i8";
             internal const string EmbeddingTextInt1 = EmbeddingPrefix + "text_i1";

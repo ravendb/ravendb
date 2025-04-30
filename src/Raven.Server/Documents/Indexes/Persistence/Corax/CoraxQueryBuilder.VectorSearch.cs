@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
+using Raven.Client;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI.Embeddings;
@@ -54,15 +55,13 @@ public static partial class CoraxQueryBuilder
             ? QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, builderParameters.QueryParameters, me.Arguments[0], metadata)
             : metadata.GetVectorFieldName(me, builderParameters.QueryParameters);
 
-        if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out var numberOfDimensions) == false)
-            return builderParameters.IndexSearcher.EmptyMatch(); // no vector indexed
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters, fieldName, hasBoost: builderParameters.HasBoost);
         QueryExpression srcVector = me.Arguments[1];
-        
 
-        if (srcVector is MethodExpression forId) // embedding.for(docId) ...
+        if (srcVector is MethodExpression forId) // embedding.forDoc(docId) ...
         {
-            PortableExceptions.ThrowIf<InvalidDataException>(forId.Name != "embedding.for", "Expected embedding.for() method call, but got: " + forId.Name);
+            PortableExceptions.ThrowIf<InvalidDataException>(forId.Name != Constants.VectorSearch.EmbeddingForDocument,
+                $"Expected {Constants.VectorSearch.EmbeddingForDocument}() method call, but got: {forId.Name}");
 
             var (forIdValue, _) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)forId.Arguments[0],
                 allowObjectsInParameters: false, allowArraysInParameters: true);
@@ -148,6 +147,8 @@ public static partial class CoraxQueryBuilder
             }
         }
 
+        if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out var numberOfDimensions) == false)
+            return builderParameters.IndexSearcher.EmptyMatch(); // no vector indexed
 
         if (transformedEmbeddings.SingleVector != null)
         {

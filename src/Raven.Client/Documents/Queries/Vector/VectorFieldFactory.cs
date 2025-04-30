@@ -286,10 +286,7 @@ public interface IVectorEmbeddingFieldValueFactory
 
 public interface IVectorFieldValueFactory : IVectorEmbeddingTextFieldValueFactory, IVectorEmbeddingFieldValueFactory
 {
-    /// <summary>
-    /// Use an existing vector belonging to the specified document
-    /// </summary>
-    public void ForDocument(string documentId);
+    
 }
 
 public interface IVectorFieldValueFactoryAccessor

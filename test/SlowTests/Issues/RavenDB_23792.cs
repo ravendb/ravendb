@@ -26,13 +26,13 @@ public class RavenDB_23792 : RavenTestBase
                     .VectorSearch(x => x.WithField(i=>i.Vector), 
                         x=>x.ForDocument("items/1-A")).ToString();
 
-                Assert.Equal("from 'Items' where vector.search(Vector, embedding.for($p0))", q1);
+                Assert.Equal("from 'Items' where vector.search(Vector, embedding.forDoc($p0))", q1);
                 
                 var q2 = session.Advanced.DocumentQuery<Item>()
                     .VectorSearch(x => x.WithText(i=>i.Name),
                         x =>x.ForDocument("items/1-A"))
                     .ToString();
-                Assert.Equal("from 'Items' where vector.search(embedding.text(Name), embedding.for($p0))", q2);
+                Assert.Equal("from 'Items' where vector.search(embedding.text(Name), embedding.forDoc($p0))", q2);
             }
         }
     }
