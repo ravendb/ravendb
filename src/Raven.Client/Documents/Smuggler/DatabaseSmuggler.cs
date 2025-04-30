@@ -105,10 +105,24 @@ namespace Raven.Client.Documents.Smuggler
 
         public Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Stream toStream, CancellationToken token = default)
         {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
             return ExportAsync(options, async stream =>
             {
-                await stream.CopyToAsync(toStream, 8192, token).ConfigureAwait(false);
-            }, token);
+                try
+                {
+                    await stream.CopyToAsync(toStream, 8192, token).ConfigureAwait(false);
+                    tcs.TrySetResult(null);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Could not export to provided stream.", e);
+
+                    tcs.TrySetException(e);
+                    throw new InvalidOperationException("Could not export to provided stream.", e);
+                }
+            }, tcs.Task, token);
         }
 
         private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, Task additionalTask, CancellationToken token = default)
