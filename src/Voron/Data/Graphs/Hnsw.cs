@@ -185,6 +185,7 @@ public unsafe partial class Hnsw
             if ((VectorId & Constants.Graphs.VectorStorage.VectorContainerInternalIndexer) == 0)
             {
                 _vectorSpan = span;
+                return;
             }
 
             var count = (byte)(VectorId >> 1);
