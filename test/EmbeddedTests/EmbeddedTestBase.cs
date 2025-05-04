@@ -97,6 +97,15 @@ namespace EmbeddedTests
                     continue;
 
                 DeleteAllFilesAndSubfolders(directoryInfo);
+
+                try
+                {
+                    Directory.Delete(path);
+                }
+                catch
+                {
+                    // we should have tried...
+                }
             }
         }
 
