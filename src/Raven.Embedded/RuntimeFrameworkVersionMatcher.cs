@@ -88,7 +88,7 @@ namespace Raven.Embedded
 
             var insideRuntimes = false;
             var runtimeLines = new List<string>();
-            await ProcessHelper.ReadOutput(process.StandardOutput, elapsed: null, options, (line, builder) =>
+            await ProcessHelper.ReadOutputAsync(process.StandardOutput, elapsed: null, options, (line, builder) =>
             {
                 line = line.Trim();
 

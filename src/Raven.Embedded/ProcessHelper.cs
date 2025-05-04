@@ -10,7 +10,7 @@ namespace Raven.Embedded
 {
     internal static class ProcessHelper
     {
-        internal static async Task<string?> ReadOutput(StreamReader output, Stopwatch elapsed, ServerOptions options, Func<string, StringBuilder, Task<bool>>? onLine)
+        internal static async Task<string?> ReadOutputAsync(StreamReader output, Stopwatch elapsed, ServerOptions options, Func<string, StringBuilder, Task<bool>>? onLine)
         {
             var sb = new StringBuilder();
 

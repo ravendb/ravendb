@@ -275,15 +275,28 @@ namespace Raven.Embedded
             string? url = null;
             var startupDuration = Stopwatch.StartNew();
 
+            var errorLock = new object();
             var stderrBuilder = new StringBuilder();
+            var errorTcs  = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+
             process.ErrorDataReceived += (_, receivedEventArgs) =>
             {
-                if (receivedEventArgs.Data != null)
+                if (receivedEventArgs.Data == null)
+                {
+                    string final;
+                    lock (errorLock)
+                        final = stderrBuilder.ToString();
+
+                    errorTcs.TrySetResult(final);
+                    return;
+                }
+
+                lock (errorLock)
                     stderrBuilder.AppendLine(receivedEventArgs.Data);
             };
             process.BeginErrorReadLine();
 
-            var stdoutString = await ProcessHelper.ReadOutput(process.StandardOutput, startupDuration, _serverOptions, (line, _) =>
+            var stdoutTask = ProcessHelper.ReadOutputAsync(process.StandardOutput, startupDuration, _serverOptions, (line, _) =>
             {
                 const string prefix = "Server available on: ";
                 if (line.StartsWith(prefix) == false)
@@ -291,17 +304,26 @@ namespace Raven.Embedded
 
                 url = line.Substring(prefix.Length);
                 return Task.FromResult(true);
+            });
 
-            }).ConfigureAwait(false);
+            var stdoutString = await stdoutTask.ConfigureAwait(false);
 
             if (url != null)
-                return (ServerUrl: new Uri(url), process);
+                return (new Uri(url), process);
 
-            process.CancelErrorRead();
-            var stderrString = stderrBuilder.ToString();
+            string stderrString;
+            var completedTask = await Task.WhenAny(errorTcs.Task, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+            if (completedTask == errorTcs.Task)
+            {
+                stderrString = errorTcs.Task.Result;
+            }
+            else
+            {
+                lock (errorLock)
+                    stderrString = stderrBuilder.ToString();
+            }
 
             ShutdownServerProcess(process);
-
             throw new InvalidOperationException(BuildStartupExceptionMessage(stdoutString, stderrString));
         }
 
