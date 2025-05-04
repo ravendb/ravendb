@@ -275,37 +275,34 @@ namespace Raven.Embedded
             string? url = null;
             var startupDuration = Stopwatch.StartNew();
 
-            var outputString = await ProcessHelper.ReadOutput(process.StandardOutput, startupDuration, _serverOptions, async (line, builder) =>
+            var stderrBuilder = new StringBuilder();
+            process.ErrorDataReceived += (_, receivedEventArgs) =>
             {
-                if (line == null)
-                {
-                    var errorString = await ProcessHelper.ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
+                if (receivedEventArgs.Data != null)
+                    stderrBuilder.AppendLine(receivedEventArgs.Data);
+            };
+            process.BeginErrorReadLine();
 
-                    ShutdownServerProcess(process);
-
-                    throw new InvalidOperationException(BuildStartupExceptionMessage(builder.ToString(), errorString));
-                }
-
+            var stdoutString = await ProcessHelper.ReadOutput(process.StandardOutput, startupDuration, _serverOptions, (line, _) =>
+            {
                 const string prefix = "Server available on: ";
-                if (line.StartsWith(prefix))
-                {
-                    url = line.Substring(prefix.Length);
-                    return true;
-                }
+                if (line.StartsWith(prefix) == false)
+                    return Task.FromResult(false);
 
-                return false;
+                url = line.Substring(prefix.Length);
+                return Task.FromResult(true);
+
             }).ConfigureAwait(false);
 
-            if (url == null)
-            {
-                var errorString = await ProcessHelper.ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
+            if (url != null)
+                return (ServerUrl: new Uri(url), process);
 
-                ShutdownServerProcess(process);
+            process.CancelErrorRead();
+            var stderrString = stderrBuilder.ToString();
 
-                throw new InvalidOperationException(BuildStartupExceptionMessage(outputString, errorString));
-            }
+            ShutdownServerProcess(process);
 
-            return (new Uri(url), process);
+            throw new InvalidOperationException(BuildStartupExceptionMessage(stdoutString, stderrString));
         }
 
         private static string BuildStartupExceptionMessage(string? outputString, string? errorString)

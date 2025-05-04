@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using EmbeddedTests;
@@ -289,6 +290,19 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
 
         LicenseOptionTestHelper.AssertInnerLicenseVerificationException<InvalidOperationException>(exception, expectedMessageBuilder);
+    }
+
+    [RavenFact(RavenTestCategory.Embedded | RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceTrue_InvalidLicense_ShouldThrowImmediately()
+    {
+        var sw = Stopwatch.StartNew();
+
+        ServerOptions options = null;
+        Assert.Throws(typeof(AggregateException), () =>
+            StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
+
+        Assert.True(sw.ElapsedMilliseconds < options.MaxServerStartupTimeDuration.TotalMilliseconds,
+            $"The server should throw an error as soon as possible, without reaching the maximum server startup time (ServerOptions.MaxServerStartupTimeDuration = {options.MaxServerStartupTimeDuration}), but it took {sw.ElapsedMilliseconds}ms.");
     }
 
     private void StartEmbeddedServerLicenseOptionTest(bool? throwOnInvalidOrMissingLicense, string license, LicenseSource licenseSource, string configurationKeyToTest, out ServerOptions options)
