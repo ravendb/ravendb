@@ -1131,7 +1131,7 @@ namespace SlowTests.Cluster
                     }
                     catch
                     {
-                        Console.WriteLine(await CollectDebugInfo(leader, revived, leaderStore, revivedStore, options));
+                        Output.WriteLine(await CollectDebugInfo(leader, revived, leaderStore, revivedStore, options));
                         throw;
                     }
                     using (var session = revivedStore.OpenAsyncSession())
