@@ -295,14 +295,14 @@ namespace Raven.Server.Documents
                 foreach (var fieldPair in properties.ToList())
                 {
                     var field = fieldPair.Value;
-                    if (field.Name == root.Name)
+                    if (field.Name == root.Item1.Name)
                     {
                         properties[fieldPair.Key] = new FieldType(name, field.IsArray, field.IsPrimitive);
                         changed = true;
                     }
                 }
 
-                if (@class.Name == root.Name)
+                if (@class.Name == root.Item1.Name)
                 {
                     _generatedTypes[pair.Key] = new ClassType(name, properties);
                 }
@@ -316,9 +316,10 @@ namespace Raven.Server.Documents
             return _generatedTypes.Select(x => x.Value).ToList();
         }
 
-        internal ClassType GenerateClassTypesFromObject(string name, BlittableJsonReaderObject blittableObject)
+        internal (ClassType, Dictionary<string, FieldType>) GenerateClassTypesFromObject(string name, BlittableJsonReaderObject blittableObject)
         {
             var fields = new Dictionary<string, FieldType>();
+            var vectorFieldsToAdd = new Dictionary<string, FieldType>();
 
             for (var i = 0; i < blittableObject.Count; i++)
             {
@@ -333,23 +334,35 @@ namespace Raven.Server.Documents
                 {
                     case BlittableJsonToken.EmbeddedBlittable:
                     case BlittableJsonToken.StartObject:
-                        var type = GenerateClassTypesFromObject(prop.Name, (BlittableJsonReaderObject)prop.Value);
+                        var (type, newVectorFields) = GenerateClassTypesFromObject(prop.Name, (BlittableJsonReaderObject)prop.Value);
                         fields[prop.Name] = new FieldType(type.Name, type.IsArray);
+                        vectorFieldsToAdd = vectorFieldsToAdd.Concat(newVectorFields).ToDictionary(x => x.Key, x => x.Value);
                         break;
                     case BlittableJsonToken.StartArray:
                         var array = (BlittableJsonReaderArray)prop.Value;
                         fields[prop.Name] = GetArrayField(array, prop.Name);
                         break;
+                    case BlittableJsonToken.Vector:
+                        var vector = (BlittableJsonReaderVector)prop.Value;
+                        var vectorField = GetVectorField(vector);
+                        vectorFieldsToAdd[name] = vectorField;
+                        
+                        return (new ClassType(name, fields), vectorFieldsToAdd);
                     default:
                         fields[prop.Name] = GetTokenTypeFromPrimitiveType(prop.Token, prop.Value);
                         break;
                 }
             }
 
+            foreach (var field in vectorFieldsToAdd)
+            {
+                fields[field.Key] = field.Value;
+            }
+            
             // check if we can get the name from the metadata. 
-            var clazz = new ClassType(name, fields);
-            clazz = IncludeGeneratedClass(clazz);
-            return clazz;
+            var classType = new ClassType(name, fields);
+            classType = IncludeGeneratedClass(classType);
+            return (classType, vectorFieldsToAdd);
         }
 
         private FieldType GetArrayField(BlittableJsonReaderArray array, string name)
@@ -369,27 +382,46 @@ namespace Raven.Server.Documents
             return new FieldType(guessedType.Name, true, true);
         }
 
-        private ClassType IncludeGeneratedClass(ClassType clazz)
+        private FieldType GetVectorField(BlittableJsonReaderVector vector)
         {
-            var key = clazz.Name;
+            return vector.Type switch
+            {
+                BlittableVectorType.Float => new FieldType("RavenVector<float>"),
+                BlittableVectorType.Byte => new FieldType("RavenVector<byte>"),
+                BlittableVectorType.SByte => new FieldType("RavenVector<sbyte>"),
+                BlittableVectorType.UInt64 => new FieldType("RavenVector<ulong>"),
+                BlittableVectorType.UInt32 => new FieldType("RavenVector<uint>"),
+                BlittableVectorType.UInt16 => new FieldType("RavenVector<ushort>"),
+                BlittableVectorType.Int64 => new FieldType("RavenVector<long>"),
+                BlittableVectorType.Int32 => new FieldType("RavenVector<int>"),
+                BlittableVectorType.Int16 => new FieldType("RavenVector<short>"),
+                BlittableVectorType.Double => new FieldType("RavenVector<double>"),
+                BlittableVectorType.Half => new FieldType("RavenVector<Half>"),
+                _ => throw new NotSupportedException($"{vector.Type} is not a supported vector type.")
+            };
+        }
+
+        private ClassType IncludeGeneratedClass(ClassType classType)
+        {
+            var key = classType.Name;
 
             var i = 1;
             while (_generatedTypes.TryGetValue(key, out ClassType dummy))
             {
-                key = clazz.Name + i;
+                key = classType.Name + i;
                 i++;
             }
 
-            clazz = new ClassType(key, clazz.Properties);
+            classType = new ClassType(key, classType.Properties);
 
             foreach (var pair in _generatedTypes)
             {
-                if (pair.Value == clazz)
+                if (pair.Value == classType)
                     return pair.Value;
             }
 
-            _generatedTypes[key] = clazz;
-            return clazz;
+            _generatedTypes[key] = classType;
+            return classType;
         }
 
         private FieldType GuessTokenTypeFromArray(string name, BlittableJsonReaderArray array)
@@ -401,7 +433,7 @@ namespace Raven.Server.Documents
                 case BlittableJsonToken.EmbeddedBlittable:
                 case BlittableJsonToken.StartObject:
                 case BlittableJsonToken.StartObject | BlittableJsonToken.OffsetSizeByte | BlittableJsonToken.PropertyIdSizeByte:
-                    return GenerateClassTypesFromObject(name, (BlittableJsonReaderObject)firstElement.Item1);
+                    return GenerateClassTypesFromObject(name, (BlittableJsonReaderObject)firstElement.Item1).Item1;
                 case BlittableJsonToken.StartArray:
                 case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeByte:
                 case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeShort:
