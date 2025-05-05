@@ -57,10 +57,10 @@ namespace Raven.Server.Documents.Indexes.Auto
                 .IndexFields
                 .Keys
                 .ToHashSet();
+            
+            staticEntries.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
 
             var dynamicEntries = GetDynamicEntriesFields(staticEntries);
-
-            staticEntries.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
 
             return (staticEntries, dynamicEntries);
         }
