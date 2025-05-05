@@ -378,7 +378,7 @@ public partial class IndexSearcher
         foreach (var word in values)
         {
             terms.Clear();
-            //When a word contains asterisks, it's not our responsibility to persist it; the analyzer should not remove them either.
+            var termType = GetTermType(word);
             EncodeAndApplyAnalyzerForMultipleTerms(field, word, ref terms);
             var tokensInWord = terms.Count;
             
@@ -386,13 +386,18 @@ public partial class IndexSearcher
                 continue;
 
             //single word
-            if (tokensInWord is 1)
+            if (tokensInWord is 1 || termType is Constants.Search.SearchMatchOptions.StartsWith)
             {
                 var value = terms[0];
-                var termType = GetTermType(value);
-                
+                var valueAsSpan = value.AsSpan();
+
+                //Adjustment to Lucene builder.
+                if (termType is not Constants.Search.SearchMatchOptions.StartsWith)
+                    termType = GetTermType(valueAsSpan);
+                    
                 (int startIncrement, int lengthIncrement) = termType switch
                 {
+                    Constants.Search.SearchMatchOptions.StartsWith when valueAsSpan[^1] != '*' => (0, 0),
                     Constants.Search.SearchMatchOptions.StartsWith => (0, -1),
                     Constants.Search.SearchMatchOptions.EndsWith => (1, 0),
                     Constants.Search.SearchMatchOptions.Contains => (1, -1),
@@ -404,8 +409,7 @@ public partial class IndexSearcher
                 //Rewrite term without asterisks.
                 if (termType is not (Constants.Search.SearchMatchOptions.Exists or Constants.Search.SearchMatchOptions.TermMatch))
                 {
-                    var span = value.AsSpan();
-                    Slice.From(Allocator, span.Slice(startIncrement, span.Length - startIncrement + lengthIncrement), ByteStringType.Immutable, out value);
+                    Slice.From(Allocator, valueAsSpan.Slice(startIncrement, valueAsSpan.Length - startIncrement + lengthIncrement), ByteStringType.Immutable, out value);
                 }
                 
                 if (termType is Constants.Search.SearchMatchOptions.TermMatch)
