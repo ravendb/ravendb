@@ -26,7 +26,11 @@ public class RavenDB_24072 : RavenTestBase
                     Name = "TestName", 
                     FloatsVector = new RavenVector<float>([0.1f, 0.2f, 0.3f]), 
                     BytesVector = new RavenVector<byte>([21, 37]), 
-                    SbytesVector = new RavenVector<sbyte>([21, 37])
+                    SbytesVector = new RavenVector<sbyte>([21, 37]),
+                    SubDto = new SubDto()
+                    {
+                        Subvector = new RavenVector<float>([0.5f, 0.6f])
+                    }
                 };
                 
                 await session.StoreAsync(dto);
@@ -50,6 +54,12 @@ public class RavenDB_24072 : RavenTestBase
         public RavenVector<float> FloatsVector { get; set; }
         public RavenVector<byte> BytesVector { get; set; }
         public RavenVector<sbyte> SbytesVector { get; set; }
+        public SubDto SubDto { get; set; }
+    }
+
+    private class SubDto
+    {
+        public RavenVector<float> Subvector { get; set; }
     }
     
     private const string ExpectedResult = """
@@ -61,12 +71,18 @@ public class RavenDB_24072 : RavenTestBase
 
                                           namespace SlowTests.Issues
                                           {
+                                              public class SubDto
+                                              {
+                                                  public RavenVector<float> Subvector { get; set; } 
+                                              }
+                                          
                                               public class RavenDB_24072+Dto
                                               {
                                                   public RavenVector<sbyte> BytesVector { get; set; } 
                                                   public RavenVector<float> FloatsVector { get; set; } 
                                                   public string Name { get; set; } 
                                                   public RavenVector<sbyte> SbytesVector { get; set; } 
+                                                  public SubDto SubDto { get; set; } 
                                               }
                                           }
                                           """;

@@ -295,14 +295,14 @@ namespace Raven.Server.Documents
                 foreach (var fieldPair in properties.ToList())
                 {
                     var field = fieldPair.Value;
-                    if (field.Name == root.Item1.Name)
+                    if (field.Name == root.ClassType.Name)
                     {
                         properties[fieldPair.Key] = new FieldType(name, field.IsArray, field.IsPrimitive);
                         changed = true;
                     }
                 }
 
-                if (@class.Name == root.Item1.Name)
+                if (@class.Name == root.ClassType.Name)
                 {
                     _generatedTypes[pair.Key] = new ClassType(name, properties);
                 }
@@ -316,7 +316,7 @@ namespace Raven.Server.Documents
             return _generatedTypes.Select(x => x.Value).ToList();
         }
 
-        internal (ClassType, Dictionary<string, FieldType>) GenerateClassTypesFromObject(string name, BlittableJsonReaderObject blittableObject)
+        internal (ClassType ClassType, Dictionary<string, FieldType> VectorFieldsToAdd) GenerateClassTypesFromObject(string name, BlittableJsonReaderObject blittableObject)
         {
             var fields = new Dictionary<string, FieldType>();
             var vectorFieldsToAdd = new Dictionary<string, FieldType>();
@@ -362,7 +362,9 @@ namespace Raven.Server.Documents
             // check if we can get the name from the metadata. 
             var classType = new ClassType(name, fields);
             classType = IncludeGeneratedClass(classType);
-            return (classType, vectorFieldsToAdd);
+            
+            // Clearing vector fields to add
+            return (classType, []);
         }
 
         private FieldType GetArrayField(BlittableJsonReaderArray array, string name)
@@ -433,7 +435,7 @@ namespace Raven.Server.Documents
                 case BlittableJsonToken.EmbeddedBlittable:
                 case BlittableJsonToken.StartObject:
                 case BlittableJsonToken.StartObject | BlittableJsonToken.OffsetSizeByte | BlittableJsonToken.PropertyIdSizeByte:
-                    return GenerateClassTypesFromObject(name, (BlittableJsonReaderObject)firstElement.Item1).Item1;
+                    return GenerateClassTypesFromObject(name, (BlittableJsonReaderObject)firstElement.Item1).ClassType;
                 case BlittableJsonToken.StartArray:
                 case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeByte:
                 case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeShort:
