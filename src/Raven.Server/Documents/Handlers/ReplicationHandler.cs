@@ -1,14 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
+using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
-using NuGet.Protocol;
+using CsvHelper;
+using CsvHelper.Configuration;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Routing;
@@ -49,9 +55,13 @@ namespace Raven.Server.Documents.Handlers
         {
             var etag = GetLongQueryString("etag", required: false) ?? 0L;
             var pageSize = GetPageSize();
+            var types = GetStringValuesQueryString("type", required: false)
+                .Select(x => (ReplicationBatchItem.ReplicationItemType)Enum.Parse(typeof(ReplicationBatchItem.ReplicationItemType), x, ignoreCase: true))
+                .ToArray();
+            var format = GetStringQueryString("format", false) ?? "json";
+            var columns = GetStringValuesQueryString("column", false).ToArray();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var runStats = new OutgoingReplicationRunStats();
@@ -66,12 +76,65 @@ namespace Raven.Server.Documents.Handlers
                     TimeSeriesRead = new OutgoingReplicationStatsScope(runStats),
                 };
 
-                var items = ReplicationDocumentSender.GetReplicationItems(Database, context, etag, stats, false)
-                    .Take(pageSize);
-                
+                var items = ReplicationDocumentSender.GetReplicationItems(Database, context, etag == 0 ? 0 : etag - 1, stats, false);
+                if(types.Length > 0)
+                    items = items.Where(x => types.Contains(x.Type));
+                items = items.Take(pageSize);
+
+                var debugItems = items.Select(x => x.ToDebugJson());
+
+                switch (format)
+                {
+                    case "json":
+                        await WriteJsonReplicationItems(context, debugItems);
+                        break;
+                    case "csv":
+                        await WriteCsvReplicationItems(columns, debugItems);
+                        break;
+                }
+            }
+        }
+
+        private async Task WriteCsvReplicationItems(string[] columns, IEnumerable<DynamicJsonValue> debugItems)
+        {
+            if (columns.Length == 0)
+                columns =
+                [
+                    nameof(ReplicationBatchItem.Type), nameof(ReplicationBatchItem.Etag), nameof(ReplicationBatchItem.ChangeVector),
+                    nameof(ReplicationBatchItem.LastModifiedTicks), nameof(ReplicationBatchItem.TransactionMarker), nameof(ReplicationBatchItem.Size)
+                ];
+            var encodedCsvFileName = Uri.EscapeDataString($"replication-all-items_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv");
+                        
+            HttpContext.Response.Headers.ContentDisposition = $"attachment; filename=\"{encodedCsvFileName}\"; filename*=UTF-8''{encodedCsvFileName}";
+            HttpContext.Response.Headers[Constants.Headers.ContentType] = "text/csv";
+
+            await using (var writer = new StreamWriter(HttpContext.Response.Body, Encoding.UTF8))
+            await using (var csvWriter = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = "," }))
+            {
+                foreach (string column in columns)
+                {
+                    csvWriter.WriteConvertedField(column, typeof(string));
+                }
+                await csvWriter.NextRecordAsync();
+                foreach (var item in debugItems)
+                {
+                    foreach (string column in columns)
+                    {
+                        var value = item[column];
+                        csvWriter.WriteConvertedField(value?.ToString(), typeof(string));
+                    }
+                    await csvWriter.NextRecordAsync();
+                }
+            }
+        }
+
+        private async Task WriteJsonReplicationItems(DocumentsOperationContext context, IEnumerable<DynamicJsonValue> debugItems)
+        {
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = new DynamicJsonArray(items.Select(x=>x.ToDebugJson()))
+                    ["Results"] = new DynamicJsonArray(debugItems)
                 });
             }
         }
