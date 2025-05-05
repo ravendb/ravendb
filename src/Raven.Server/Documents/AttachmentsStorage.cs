@@ -1279,12 +1279,12 @@ namespace Raven.Server.Documents
                 {
                     case DocType:
                         attachmentNameIndex = thirdPartIndex;
-                        sizeOfAttachmentName = attachmentNameIndex - endOfThirdPart;
+                        sizeOfAttachmentName = endOfThirdPart - attachmentNameIndex;
                         type = AttachmentType.Document;
                         break;
                     case RevisionType:
                         attachmentNameIndex = endOfThirdPart + 1;
-                        sizeOfAttachmentName = attachmentNameIndex - FindNextSeparator(key, thirdPartIndex);;
+                        sizeOfAttachmentName = FindNextSeparator(key, thirdPartIndex) - attachmentNameIndex;
                         type = AttachmentType.Revision;
                         break;
                     default:
