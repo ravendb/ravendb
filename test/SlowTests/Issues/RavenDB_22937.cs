@@ -237,10 +237,11 @@ public class RavenDB_22937 : RavenTestBase
         Assert.Contains($"Name:maciej)", explanations.GetExplanations(results[0].Id)[0]);
     }
     
-    [RavenFact(RavenTestCategory.Querying)]
-    public void CustomStandardAnalyzerSearchWillNotRestoreAsterisksCorax()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CustomStandardAnalyzerSearchWillNotRestoreAsterisksCorax(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition()
         {
             Name = nameof(StandardAnalyzerWrapperAnalyzer), 
@@ -254,11 +255,13 @@ public class RavenDB_22937 : RavenTestBase
         session.Store(new Dto("Maciej"));
         session.Store(new Dto("RavenDB"));
         session.SaveChanges();
+
         //startsWith:
         var result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
             .Search(x => x.Name, "mac*")
             .FirstOrDefault();
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal("Maciej", result.Name);
 
         //endsWith
         result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
