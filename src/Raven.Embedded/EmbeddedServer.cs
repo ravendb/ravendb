@@ -278,6 +278,8 @@ namespace Raven.Embedded
             var stderrBuilder = new StringBuilder();
             var errorTcs  = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+            // DataReceived callbacks run on ThreadPool threads → can overlap.
+            // Lock prevents AppendLine/ToString races.
             process.ErrorDataReceived += (_, receivedEventArgs) =>
             {
                 if (receivedEventArgs.Data == null)
