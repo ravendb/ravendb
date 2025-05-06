@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using CsvHelper;
@@ -13,6 +12,7 @@ using CsvHelper.Configuration;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication;
@@ -49,17 +49,17 @@ namespace Raven.Server.Documents.Handlers
                 });
             }
         }
-        
+
         [RavenAction("/databases/*/debug/replication/all-items", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAllItems()
         {
             var etag = GetLongQueryString("etag", required: false) ?? 0L;
             var pageSize = GetPageSize();
             var types = GetStringValuesQueryString("type", required: false)
-                .Select(x => (ReplicationBatchItem.ReplicationItemType)Enum.Parse(typeof(ReplicationBatchItem.ReplicationItemType), x, ignoreCase: true))
-                .ToArray();
-            var format = GetStringQueryString("format", false) ?? "json";
-            var columns = GetStringValuesQueryString("column", false).ToArray();
+                .Select(x => Enum.Parse<ReplicationBatchItem.ReplicationItemType>(x, ignoreCase: true))
+                .ToHashSet();
+            var format = (GetStringQueryString("format", required: false) ?? "json").ToLower();
+            var columns = GetStringValuesQueryString("column", required: false).ToArray();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -76,8 +76,8 @@ namespace Raven.Server.Documents.Handlers
                     TimeSeriesRead = new OutgoingReplicationStatsScope(runStats),
                 };
 
-                var items = ReplicationDocumentSender.GetReplicationItems(Database, context, etag == 0 ? 0 : etag - 1, stats, false);
-                if(types.Length > 0)
+                var items = ReplicationDocumentSender.GetReplicationItems(Database, context, etag: etag == 0 ? 0 : etag - 1, stats, caseInsensitiveCounters: false);
+                if (types.Count > 0)
                     items = items.Where(x => types.Contains(x.Type));
                 items = items.Take(pageSize);
 
@@ -90,7 +90,9 @@ namespace Raven.Server.Documents.Handlers
                         break;
                     case "csv":
                         await WriteCsvReplicationItems(columns, debugItems);
-                        break;
+                        break; 
+                    default:
+                        throw new BadRequestException($"Unknown format: '{format}'. Supported formats are 'json' and 'csv'.");
                 }
             }
         }
@@ -104,7 +106,7 @@ namespace Raven.Server.Documents.Handlers
                     nameof(ReplicationBatchItem.LastModifiedTicks), nameof(ReplicationBatchItem.TransactionMarker), nameof(ReplicationBatchItem.Size)
                 ];
             var encodedCsvFileName = Uri.EscapeDataString($"replication-all-items_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv");
-                        
+
             HttpContext.Response.Headers.ContentDisposition = $"attachment; filename=\"{encodedCsvFileName}\"; filename*=UTF-8''{encodedCsvFileName}";
             HttpContext.Response.Headers[Constants.Headers.ContentType] = "text/csv";
 
@@ -113,16 +115,18 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (string column in columns)
                 {
-                    csvWriter.WriteConvertedField(column, typeof(string));
+                    csvWriter.WriteField(column);
                 }
+
                 await csvWriter.NextRecordAsync();
                 foreach (var item in debugItems)
                 {
                     foreach (string column in columns)
                     {
                         var value = item[column];
-                        csvWriter.WriteConvertedField(value?.ToString(), typeof(string));
+                        csvWriter.WriteField(field: value?.ToString());
                     }
+
                     await csvWriter.NextRecordAsync();
                 }
             }
