@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Commands
         //We take the current ticks in advance to ensure consistent results of the command execution on all nodes
         public long CommandCreationTicks = long.MinValue;
 
-        public class ClusterTransactionDataCommand : IDisposable
+        public class ClusterTransactionDataCommand : IDynamicJson, IDisposable
         {
             public CommandType Type;
             public string Id;
@@ -66,13 +66,26 @@ namespace Raven.Server.ServerWide.Commands
 
             public DynamicJsonValue ToJson(JsonOperationContext context)
             {
+                var djv = ToJsonInternal();
+                djv[nameof(Document)] = Document?.Clone(context);
+                return djv;
+            }
+
+            public DynamicJsonValue ToJson()
+            {
+                var djv = ToJsonInternal();
+                djv[nameof(Document)] = Document;
+                return djv;
+            }
+            
+            private DynamicJsonValue ToJsonInternal()
+            {
                 var djv = new DynamicJsonValue
                 {
                     [nameof(Type)] = Type,
                     [nameof(Id)] = Id,
                     [nameof(Index)] = Index,
                     [nameof(ChangeVector)] = ChangeVector,
-                    [nameof(Document)] = Document?.Clone(context),
                     [nameof(Error)] = Error
                 };
 

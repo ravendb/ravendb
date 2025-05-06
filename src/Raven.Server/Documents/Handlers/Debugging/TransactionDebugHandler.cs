@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, Database.Name, from, take))
+                    ["Results"] = new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, Database.Name, from, take:take))
                 });
             }
         }
