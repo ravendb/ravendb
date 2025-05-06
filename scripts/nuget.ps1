@@ -102,6 +102,10 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     CopyLicenseFile($EMBEDDED_OUT_DIR);
     CopyIconFile($EMBEDDED_OUT_DIR);
     
+    $readmeDst = [io.path]::combine($EMBEDDED_OUT_DIR, "README.md")
+    $readme = [io.path]::combine($EMBEDDED_SRC_DIR, "README.md")
+    Copy-Item $readme -Destination $readmeDst
+
     try {
         Push-Location $EMBEDDED_OUT_DIR
         $command = "../../scripts/assets/bin/nuget.exe"

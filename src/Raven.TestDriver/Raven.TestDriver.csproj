@@ -2,6 +2,7 @@
   <PropertyGroup>
     <Version></Version>
     <Description></Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Title>RavenDB TestDriver</Title>
     <Product>RavenDB TestDriver</Product>
     <Authors>Hibernating Rhinos</Authors>
@@ -26,10 +27,10 @@
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath=""/>
     <None Include="..\..\LICENSE.txt" Pack="true" Visible="false" PackagePath="" />
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Raven.Embedded\Raven.Embedded.csproj">
       <PrivateAssets>analyzers;build</PrivateAssets>

@@ -2,6 +2,7 @@
   <PropertyGroup>
     <Version></Version>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFrameworks>net8.0;net7.0;net6.0;netstandard2.1;netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
@@ -18,6 +19,9 @@
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath=""/>
+  </ItemGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Remove="Properties\AssemblyInfo.Linux.cs" />
     <Compile Include="..\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />

@@ -2,6 +2,7 @@
   <PropertyGroup>
     <Version></Version>
     <Description>RavenDB Embedded library to run ravendb in embedded way</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Authors>Hibernating Rhinos</Authors>
     <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -30,6 +31,7 @@
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath=""/>
     <None Include="..\..\LICENSE.txt" Pack="true" Visible="false" PackagePath="" />
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
