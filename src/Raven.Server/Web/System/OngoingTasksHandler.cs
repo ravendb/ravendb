@@ -548,7 +548,16 @@ namespace Raven.Server.Web.System
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                     }
 
-                    LogTaskToAudit(BackupDatabaseOnceTag, operationId, json);
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                    {
+                        var target = $"'{BackupDatabaseOnceTag}' with operation ID: '{operationId}'";
+
+                        var configurationJson = JsonDeserializationServer.BackupConfiguration(json).ToAuditJson();
+                        if (configurationJson != null)
+                            target += $" Configuration: {context.ReadObject(configurationJson, BackupDatabaseOnceTag)}";
+
+                        LogAuditFor(Database.Name, action: "BACKUP", target);
+                    }
                 }
                 catch (Exception e)
                 {
