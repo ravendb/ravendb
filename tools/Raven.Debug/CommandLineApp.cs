@@ -309,7 +309,11 @@ namespace Raven.Debug
 
                     var logTrafficWatch = new LogTrafficWatch.LogTrafficWatch(path, url, cert, certPass, database, changeTypes?.ToArray(), verboseArg.HasValue());
 
-                    Console.CancelKeyPress += (sender, args) => logTrafficWatch.Stop();
+                    Console.CancelKeyPress += (_, args) =>
+                    {
+                        args.Cancel = true;
+                        logTrafficWatch.Stop();
+                    };
 
                     using (logTrafficWatch)
                         logTrafficWatch.Connect().Wait();
