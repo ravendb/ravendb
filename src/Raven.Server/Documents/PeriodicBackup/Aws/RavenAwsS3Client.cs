@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
     {
         private readonly Progress _progress;
         private readonly CancellationToken _cancellationToken;
-        internal Size MaxUploadPutObject = new Size(256, SizeUnit.Megabytes);
-        internal Size MinOnePartUploadSizeLimit = new Size(100, SizeUnit.Megabytes);
+        internal Size MaxUploadPutObject = new Size(1, SizeUnit.Gigabytes);
+        internal Size MinOnePartUploadSizeLimit = new Size(512, SizeUnit.Megabytes);
         internal readonly AmazonS3Config Config;
 
         private static readonly Size TotalBlocksSizeLimit = new Size(5, SizeUnit.Terabytes);
