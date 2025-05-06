@@ -275,7 +275,6 @@ namespace Raven.Embedded
             string? url = null;
             var startupDuration = Stopwatch.StartNew();
 
-            var errorLock = new object();
             var stderrBuilder = new StringBuilder();
             var errorTcs  = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -284,14 +283,14 @@ namespace Raven.Embedded
                 if (receivedEventArgs.Data == null)
                 {
                     string final;
-                    lock (errorLock)
+                    lock (stderrBuilder)
                         final = stderrBuilder.ToString();
 
                     errorTcs.TrySetResult(final);
                     return;
                 }
 
-                lock (errorLock)
+                lock (stderrBuilder)
                     stderrBuilder.AppendLine(receivedEventArgs.Data);
             };
             process.BeginErrorReadLine();
@@ -319,7 +318,7 @@ namespace Raven.Embedded
             }
             else
             {
-                lock (errorLock)
+                lock (stderrBuilder)
                     stderrString = stderrBuilder.ToString();
             }
 
