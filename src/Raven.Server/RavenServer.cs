@@ -2112,7 +2112,7 @@ namespace Raven.Server
                     {
                         if (tcpAuditLog != null)
                         {
-                            tcpAuditLog.Info($"Failed to authenticate TCP connection {remoteEndPoint} with error: {e}");
+                            tcpAuditLog.Info($"Failed to authenticate TCP connection '{remoteEndPoint}' with error: {e}");
                         }
                         throw;
                     }
@@ -2145,13 +2145,13 @@ namespace Raven.Server
                                 if (tcpAuditLog != null)
                                 {
                                     tcpAuditLog.Info(
-                                        $"Failed to negotiate TCP connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Error: {e}");
+                                        $"Failed to negotiate TCP connection from '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Error: {e}");
                                 }
                                 throw;
                             }
 
                             if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Opened TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
+                                tcpAuditLog.Info($"Opened TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
 
                             if (ShouldUseDataCompression(header))
                             {
@@ -2185,7 +2185,7 @@ namespace Raven.Server
                         finally
                         {
                             if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Closed TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+                                tcpAuditLog.Info($"Closed TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
                         }
                     }
                 }
