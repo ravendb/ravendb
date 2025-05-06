@@ -73,7 +73,7 @@ namespace Raven.TestDriver
             GlobalServerOptions = options;
         }
 
-        internal IDisposable ConfigureScopedServer(ServerOptions options, EmbeddedServer server = null)
+        internal IDisposable ConfigureScopedServer(TestServerOptions options, EmbeddedServer server = null)
         {
             if (_scopedServer != null)
                 throw new InvalidOperationException("Local embedded server is already set.");
