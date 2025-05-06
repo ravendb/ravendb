@@ -27,7 +27,6 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// Operation to retrieve revisions of a document in the RavenDB database.
         /// Initializes a new instance of the <see cref="GetRevisionsOperation{T}"/> class for the specified document ID.
         /// </summary>
-        /// <typeparam name="T">The type of the document for which the revisions are being retrieved.</typeparam>
         /// <param name="id">The ID of the document for which revisions are being retrieved.</param>
         public GetRevisionsOperation(string id)
             : this(new Parameters { Id = id })
@@ -40,7 +39,6 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// Initializes a new instance of the <see cref="GetRevisionsOperation{T}"/> class for the specified document ID,
         /// with pagination parameters to retrieve a specific subset of revisions.
         /// </summary>
-        /// <typeparam name="T">The type of the document for which the revisions are being retrieved.</typeparam>
         /// <param name="id">The ID of the document for which revisions are being retrieved.</param>
         /// <param name="start">The starting index of the revisions to be retrieved.</param>
         /// <param name="pageSize">The number of revisions to retrieve.</param>
@@ -54,7 +52,6 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// Provides the ability to specify pagination through start index and page size.
         /// Initializes a new instance of the <see cref="GetRevisionsOperation{T}"/> class with the specified parameters.
         /// </summary>
-        /// <typeparam name="T">The type of the document for which the revisions are being retrieved.</typeparam>
         /// <param name="parameters">The parameters specifying the document ID and optional pagination settings.</param>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="parameters"/> are null or invalid.</exception>
         public GetRevisionsOperation(Parameters parameters)

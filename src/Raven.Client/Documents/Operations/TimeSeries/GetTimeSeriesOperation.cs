@@ -12,6 +12,10 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
+    /// <summary>
+    /// Represents an operation to retrieve entries from a time series associated with a document.
+    /// This non-generic version retrieves raw results without projecting entries into a specific type.
+    /// </summary>
     public sealed class GetTimeSeriesOperation : GetTimeSeriesOperation<TimeSeriesEntry>
     {
         /// <summary>
@@ -24,7 +28,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
-
+    /// <summary>
+    /// Represents an operation to retrieve a range of entries from a time series associated with a specific document.
+    /// Supports filtering by date range, pagination, and optional inclusion of detailed results.
+    /// </summary>
+    /// <typeparam name="TValues">
+    /// The type to which each time series entry will be deserialized. 
+    /// Must inherit from <see cref="TimeSeriesEntry"/>.
+    /// </typeparam>
     public class GetTimeSeriesOperation<TValues> : IOperation<TimeSeriesRangeResult<TValues>> where TValues : TimeSeriesEntry
     {
         private readonly string _docId, _name;
@@ -37,10 +48,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// Initializes a new instance of the <see cref="GetTimeSeriesOperation{TValues}"/> class, 
         /// retrieving multiple entries from a time series associated with a document within a specified date range.
         /// </summary>
-        /// <typeparam name="TValues">
-        /// The type to which each time series entry should be projected. 
-        /// Must be a subtype of <see cref="TimeSeriesEntry"/>.
-        /// </typeparam>
         /// <param name="docId">The ID of the document that holds the time series.</param>
         /// <param name="timeseries">The name of the time series to retrieve.</param>
         /// <param name="from">The start date of the range from which entries should be retrieved. If <c>null</c>, retrieval begins from the earliest entry.</param>

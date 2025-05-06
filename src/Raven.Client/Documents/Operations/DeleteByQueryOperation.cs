@@ -24,7 +24,8 @@ namespace Raven.Client.Documents.Operations
         where TIndexCreator : AbstractIndexCreationTask, new()
     {
         /// <summary>
-        ///     Returns an awaitable operation which deletes all documents that satisfy the provided <param name="expression">query expression</param>
+        /// Initializes a new instance of the <see cref="DeleteByQueryOperation{TEntity, TIndexCreator}"/> class,
+        /// returning an awaitable operation which deletes all documents that satisfy the provided query expression.
         /// </summary>
         /// <param name="expression">The criteria for selecting documents to be deleted</param>
         /// <param name="options">Provides additional options for configuring the query execution when deleting documents</param>
@@ -41,10 +42,12 @@ namespace Raven.Client.Documents.Operations
         private readonly Expression<Func<TEntity, bool>> _expression;
 
         /// <summary>
-        ///     Returns an awaitable operation which deletes all documents that satisfy the provided <param name="expression">query expression</param>
+        /// Initializes a new instance of the <see cref="DeleteByQueryOperation{TEntity}"/> class,
+        /// returning an awaitable operation which deletes all documents that satisfy the provided query expression.
         /// </summary>
-        /// <param name="expression">The criteria for selecting documents to be deleted</param>
-        /// <param name="options">Provides additional options for configuring the query execution when deleting documents</param>
+        /// <param name="indexName">The name of the index used to run the query.</param>
+        /// <param name="expression">The criteria for selecting documents to delete.</param>
+        /// <param name="options">Additional options for configuring the query execution.</param>
         public DeleteByQueryOperation(string indexName, Expression<Func<TEntity, bool>> expression, QueryOperationOptions options = null)
             : base(DummyQuery, options)
         {
@@ -81,9 +84,10 @@ namespace Raven.Client.Documents.Operations
         private readonly QueryOperationOptions _options;
 
         /// <summary>
-        ///     Returns an awaitable operation which deletes all documents that satisfy the provided <param name="queryToDelete">query</param>
+        /// Initializes a new instance of the <see cref="DeleteByQueryOperation"/> class.
+        /// Returns an returning an awaitable operation which deletes all documents that satisfy the provided query expression.
         /// </summary>
-        /// <param name="queryToDelete">The criteria for selecting documents to be deleted</param>
+        /// <param name="queryToDelete">The criteria for selecting documents to be deleted.</param>
         public DeleteByQueryOperation(string queryToDelete)
             : this(new IndexQuery { Query = queryToDelete })
         {

@@ -21,7 +21,9 @@ namespace Raven.Client.Documents.Operations.Attachments
     /// Represents an operation to retrieve multiple attachments associated with specified documents.
     /// </summary>
     /// <remarks>
-    /// This class implements the <see cref="IOperation{IEnumerator{AttachmentEnumeratorResult}}"/> interface,
+    /// This class implements <see cref="IOperation{T}"/> with <c>T</c> as 
+    /// an <see cref="System.Collections.Generic.IEnumerator{T}"/> of 
+    /// <see cref="AttachmentEnumeratorResult"/>.
     /// allowing for the retrieval of attachments in a batch operation.
     /// </remarks>
     public sealed class GetAttachmentsOperation : IOperation<IEnumerator<AttachmentEnumeratorResult>>
