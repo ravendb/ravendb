@@ -561,7 +561,7 @@ namespace Raven.Server.Documents.Replication.Senders
                     if (MissingAttachmentsInLastBatch)
                         return false;
 
-                    var type = AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key);
+                    var type = AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key);
                     if (type == AttachmentType.Revision)
                     {
                         return false;

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
                 if (stream == null)
-                    ThrowMissingAttachment(GetDocIdAndAttachmentName(context, attachment.Key));
+                    ThrowMissingAttachment(context, attachment.Key);
 
                 attachment.Stream = stream;
 
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
         private static int GetBucketFromAttachmentKey(int keyIndex, TableValueReader tvr, ShardedDocumentDatabase database)
         {
             var keyPtr = tvr.Read(keyIndex, out var keySize);
-            int sizeOfDocId = GetSizeOfDocId(new ReadOnlySpan<byte>(keyPtr, keySize));
+            int sizeOfDocId = AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(keyPtr, keySize));
             var keySpan = new ReadOnlySpan<byte>(keyPtr, sizeOfDocId);
             return ShardHelper.GetBucketFor(database.ShardingConfiguration, keySpan);
         }

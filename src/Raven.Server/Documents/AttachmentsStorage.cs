@@ -84,7 +84,7 @@ namespace Raven.Server.Documents
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
                 if (stream == null)
-                    ThrowMissingAttachment(GetDocIdAndAttachmentName(context, attachment.Key));
+                    ThrowMissingAttachment(context, attachment.Key);
 
                 attachment.Stream = stream;
 
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents
         internal IEnumerable<AttachmentNameWithCount> GetAttachmentsMetadataForDocumentWithCounts(DocumentsOperationContext context, string lowerDocumentId)
         {
             using (Slice.From(context.Allocator, lowerDocumentId, out Slice lowerDocumentIdSlice))
-            using (GetAttachmentPrefix(context, lowerDocumentIdSlice, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            using (AttachmentKey.GetPrefix(context, lowerDocumentIdSlice, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
                 foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
                 {
@@ -163,8 +163,8 @@ namespace Raven.Server.Documents
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                 using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
-                using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
-                    lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
+                using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
+                           lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
                 {
                     Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
 
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents
                         var attachmentExists = false;
 
                         // We already asserted that the document is not in conflict, so we might have just one partial key, not more.
-                        using (GetAttachmentPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
+                        using (AttachmentKey.GetPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
                         {
                             if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
                             {
@@ -421,8 +421,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, lowerDocId, out Slice lowerId, out Slice idSlice))
             {
-                GetAttachmentKeyInternal(context, lowerId.Content.Ptr, lowerId.Content.Length, default, default, default(Slice), null, 0,
-                    KeyType.Prefix, AttachmentType.Document, default, out var key);
+                AttachmentKey.GetPrefix(context, lowerId.Content.Ptr, lowerId.Content.Length, AttachmentType.Document, default, out var key);
                 table.DeleteByPrimaryKeyPrefix(key);
             }
         }
@@ -462,8 +461,8 @@ namespace Raven.Server.Documents
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice nameSlice))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                 using (Slice.External(context.Allocator, hash, out Slice base64Hash))
-                using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
-                    base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
+                using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
+                           base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                 {
                     PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
                 }
@@ -479,8 +478,8 @@ namespace Raven.Server.Documents
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice lowerName, out Slice namePtr))
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice lowerContentType, out Slice contentTypePtr))
             using (Slice.From(context.Allocator, attachment.Hash, out var hashSlice))
-            using (GetAttachmentKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, hashSlice,
-                lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, changeVector, out Slice keySlice))
+            using (AttachmentKey.GetKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, hashSlice,
+                       lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, changeVector, out Slice keySlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
@@ -570,7 +569,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (DocumentIdWorker.GetLower(context.Allocator, documentId, out var lowerDocumentIdSlice))
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
-            using (GetAttachmentPrefix(context, lowerDocumentIdSlice, type, type == AttachmentType.Document ? Slices.Empty : changeVectorSlice, out Slice prefixSlice))
+            using (AttachmentKey.GetPrefix(context, lowerDocumentIdSlice, type, type == AttachmentType.Document ? Slices.Empty : changeVectorSlice, out Slice prefixSlice))
             {
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
@@ -588,7 +587,7 @@ namespace Raven.Server.Documents
         public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
         {
             var attachments = new DynamicJsonArray();
-            using (GetAttachmentPrefix(context, lowerDocumentId, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            using (AttachmentKey.GetPrefix(context, lowerDocumentId, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
                 foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
                 {
@@ -607,7 +606,7 @@ namespace Raven.Server.Documents
         public List<AttachmentDetails> GetAttachmentDetailsForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
         {
             var attachments = new List<AttachmentDetails>();
-            using (GetAttachmentPrefix(context, lowerDocumentId, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            using (AttachmentKey.GetPrefix(context, lowerDocumentId, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
                 foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
                 {
@@ -708,14 +707,15 @@ namespace Raven.Server.Documents
                 ByteStringContext<ByteStringMemoryCache>.InternalScope scope;
                 if (usePartialKey)
                 {
-                    scope = GetAttachmentPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, type, changeVector, out keySlice);
+                    scope = AttachmentKey.GetPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, type, changeVector, out keySlice);
                 }
                 else
                 {
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                     using (Slice.From(context.Allocator, hash, out Slice base64Hash))
                     {
-                        scope = GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
+                        scope = AttachmentKey.GetKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
+                            lowerContentType.Content.Ptr,
                             lowerContentType.Size, AttachmentType.Document, Slices.Empty, out keySlice);
                     }
                 }
@@ -763,169 +763,6 @@ namespace Raven.Server.Documents
             return info->TotalSize;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.InternalScope GetAttachmentKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize,
-            byte* lowerName, int lowerNameSize, Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize,
-            AttachmentType type, Slice changeVector, out Slice keySlice)
-        {
-            return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, base64Hash, lowerContentTypePtr, lowerContentTypeSize, KeyType.Key, type, changeVector, out keySlice);
-        }
-
-        // NOTE: GetAttachmentPartialKey should be called only when the document's that hold the attachment does not have a conflict.
-        // In this specific case it is ensured that we have a unique partial keys.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.InternalScope GetAttachmentPartialKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte
-            * lowerName, int lowerNameSize, AttachmentType type, string changeVector, out Slice partialKeySlice)
-        {
-            Slice cvSlice;
-            ByteStringContext.InternalScope cvDispose;
-            if (changeVector == null)
-            {
-                cvSlice = Slices.Empty;
-                cvDispose = default(ByteStringContext.InternalScope);
-            }
-            else
-            {
-                cvDispose = Slice.From(context.Allocator, changeVector, out cvSlice);
-            }
-
-            using (cvDispose)
-            {
-                return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, default(Slice), null, 0,
-                    KeyType.PartialKey, type, cvSlice, out partialKeySlice);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.ExternalScope GetAttachmentPartialKey(DocumentsOperationContext context, Slice key,
-            int base64HashSize, int lowerContentTypeSize, out Slice partialKeySlice)
-        {
-            return Slice.External(context.Allocator, key.Content, 0, key.Size - base64HashSize - 1 - lowerContentTypeSize, out partialKeySlice);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.InternalScope GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, AttachmentType type, Slice changeVector, out Slice prefixSlice)
-        {
-            return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, null, 0, default(Slice), null, 0, KeyType.Prefix, type, changeVector, out prefixSlice);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.InternalScope GetAttachmentPrefix(DocumentsOperationContext context, Slice lowerId, AttachmentType type, Slice changeVector, out Slice prefixSlice)
-        {
-            return GetAttachmentKeyInternal(context, lowerId.Content.Ptr, lowerId.Size, null, 0, default(Slice), null, 0, KeyType.Prefix, type, changeVector, out prefixSlice);
-        }
-
-        /*
-        // Document key: {lowerDocumentId|d|lowerName|hash|lowerContentType}
-        // Revision key: {lowerDocumentId|r|changeVector|lowerName|hash|lowerContentType}
-        //
-        // Document partial key: {lowerDocumentId|d|lowerName|}
-        // Revision partial key: {lowerDocumentId|r|changeVector|}
-        //
-        // Document prefix: {lowerDocumentId|d|}
-        // Revision prefix: {lowerDocumentId|r|changeVector|}
-        */
-
-        private ByteStringContext.InternalScope GetAttachmentKeyInternal(
-            DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize,
-            Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize, KeyType keyType, AttachmentType type,
-            Slice changeVector, out Slice keySlice)
-        {
-            var size = lowerIdSize + 3;
-            if (type != AttachmentType.Document)
-            {
-                size += changeVector.Size + 1;
-            }
-            if (keyType == KeyType.Key)
-            {
-                size += lowerNameSize + 1 + base64Hash.Size + 1 + lowerContentTypeSize;
-            }
-            else if (keyType == KeyType.PartialKey)
-            {
-                size += lowerNameSize + 1;
-            }
-
-            var scope = context.Allocator.Allocate(size, out ByteString keyMem);
-
-            Memory.Copy(keyMem.Ptr, lowerId, lowerIdSize);
-            var pos = lowerIdSize;
-            keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
-
-            switch (type)
-            {
-                case AttachmentType.Document:
-                    keyMem.Ptr[pos++] = (byte)'d';
-                    break;
-
-                case AttachmentType.Revision:
-                    keyMem.Ptr[pos++] = (byte)'r';
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }
-            keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
-
-            if (type != AttachmentType.Document)
-            {
-                Memory.Copy(keyMem.Ptr + pos, changeVector.Content.Ptr, changeVector.Size);
-                pos += changeVector.Size;
-                keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
-            }
-
-            if (keyType != KeyType.Prefix)
-            {
-                Memory.Copy(keyMem.Ptr + pos, lowerName, lowerNameSize);
-                pos += lowerNameSize;
-                keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
-
-                if (keyType == KeyType.Key)
-                {
-                    base64Hash.CopyTo(keyMem.Ptr + pos);
-                    pos += base64Hash.Size;
-                    keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
-
-                    Memory.Copy(keyMem.Ptr + pos, lowerContentTypePtr, lowerContentTypeSize);
-                }
-            }
-
-            keySlice = new Slice(SliceOptions.Key, keyMem);
-            return scope;
-        }
-
-        public static AttachmentType GetAttachmentTypeByKey(Slice keySlice)
-        {
-            var index = 0;
-            var found = false;
-            for (int i = 0; i < keySlice.Size; i++)
-            {
-                if (Convert.ToChar(keySlice[i]) == SpecialChars.RecordSeparator)
-                {
-                    index = i;
-                    found = true;
-                    break;
-                }
-            }
-
-            if (found == false)
-                throw new InvalidOperationException($"Could not parse {nameof(keySlice)}");
-
-            var b = keySlice[index + 1];
-            var c = Convert.ToChar(b);
-            if (c == 'r')
-                return AttachmentType.Revision;
-
-            Debug.Assert(c == 'd');
-            return AttachmentType.Document;
-        }
-
-        private enum KeyType
-        {
-            Key,
-            PartialKey,
-            Prefix
-        }
-
         public static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new Attachment
@@ -946,9 +783,10 @@ namespace Raven.Server.Documents
         }
 
         [DoesNotReturn]
-        private static void ThrowMissingAttachment((LazyStringValue DocId, LazyStringValue AttachmentName) details)
+        private static void ThrowMissingAttachment(DocumentsOperationContext context, LazyStringValue attachmentKey)
         {
-            throw new FileNotFoundException($"Attachment's stream for file '{details.AttachmentName}' in document '{details.DocId}' was not found. This should never happen.");
+            var (attachmentName, docId) = AttachmentKey.ExtractDocIdAndAttachmentName(context, attachmentKey);
+            throw new FileNotFoundException($"Attachment's stream for file '{attachmentName}' in document '{docId}' was not found. This should never happen. AttachmentKey:{attachmentKey}");
         }
 
         [DoesNotReturn]
@@ -1033,7 +871,8 @@ namespace Raven.Server.Documents
             while (true)
             {
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerName, out _))
-                using (GetAttachmentPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, changeVector: null, out Slice partialKeySlice))
+                using (AttachmentKey.GetPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document,
+                           changeVector: null, out Slice partialKeySlice))
                 {
                     if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out _) == false)
                         break;
@@ -1084,14 +923,16 @@ namespace Raven.Server.Documents
                     ByteStringContext<ByteStringMemoryCache>.InternalScope scope;
                     if (usePartialKey)
                     {
-                        scope = GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, null, out keySlice);
+                        scope = AttachmentKey.GetPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
+                            AttachmentType.Document, null, out keySlice);
                     }
                     else
                     {
                         using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                         using (Slice.From(context.Allocator, hash, out Slice base64Hash))
                         {
-                            scope = GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
+                            scope = AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
+                                lowerContentType.Content.Ptr,
                                 lowerContentType.Size, AttachmentType.Document, Slices.Empty, out keySlice);
                         }
                     }
@@ -1167,9 +1008,9 @@ namespace Raven.Server.Documents
             using (DocumentIdWorker.GetSliceFromId(context, conflictName, out Slice lowerName))
             using (DocumentIdWorker.GetSliceFromId(context, conflictContentType, out Slice lowerContentType))
             using (Slice.External(context.Allocator, conflictHash, out Slice base64Hash))
-            using (_documentsStorage.AttachmentsStorage.GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size,
-                lowerName.Content.Ptr, lowerName.Size,
-                base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
+            using (AttachmentKey.GetKey(context, lowerId.Content.Ptr, lowerId.Size,
+                       lowerName.Content.Ptr, lowerName.Size,
+                       base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
                 DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
@@ -1315,7 +1156,7 @@ namespace Raven.Server.Documents
         public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, ChangeVector changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
             using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
-            using (GetAttachmentPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
+            using (AttachmentKey.GetPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
             {
                 DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector.Version, lastModifiedTicks, flags);
             }
@@ -1324,7 +1165,7 @@ namespace Raven.Server.Documents
         public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector,
             long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
-            using (GetAttachmentPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            using (AttachmentKey.GetPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
                 DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, flags);
             }
@@ -1338,68 +1179,10 @@ namespace Raven.Server.Documents
             return new StreamsTempFile(tempPath.FullPath, _documentDatabase.DocumentsStorage.Environment.Options.Encryption.IsEnabled);
         }
 
-        public static (LazyStringValue DocId, LazyStringValue AttachmentName) GetDocIdAndAttachmentName(JsonOperationContext context,
-            LazyStringValue attachmentKey)
-        {
-            var p = attachmentKey.Buffer;
-            var size = attachmentKey.Size;
-
-            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName);
-
-            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
-            var name = context.AllocateStringValue(null, p + attachmentNameIndex, sizeOfAttachmentName);
-
-            return (doc, name);
-        }
-
-        public static (string DocId, string AttachmentName) ExtractDocIdAndAttachmentNameFromTombstone(Slice attachmentTombstoneId)
-        {
-            var p = attachmentTombstoneId.Content.Ptr;
-            var size = attachmentTombstoneId.Size;
-
-            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName);
-
-            var doc = Encodings.Utf8.GetString(p, sizeOfDocId);
-            var name = Encodings.Utf8.GetString(p + attachmentNameIndex, sizeOfAttachmentName);
-
-            return (doc, name);
-        }
-
-
-        public static int GetSizeOfDocId(ReadOnlySpan<byte> key)
-        {
-            int sizeOfDocId = 0;
-            for (; sizeOfDocId < key.Length; sizeOfDocId++)
-            {
-                if (key[sizeOfDocId] == SpecialChars.RecordSeparator)
-                    break;
-            }
-
-            return sizeOfDocId;
-        }
-
-        private static void ExtractDocIdAndAttachmentNameFromTombstone(byte* p, int size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName)
-        {
-            sizeOfDocId = GetSizeOfDocId(new ReadOnlySpan<byte>(p, size));
-
-            attachmentNameIndex = sizeOfDocId +
-                                  1 + // separator
-                                  1 + // type: d
-                                  1;
-
-            sizeOfAttachmentName = 0;
-
-            for (; sizeOfAttachmentName < size - (sizeOfDocId + 3); sizeOfAttachmentName++)
-            {
-                if (p[attachmentNameIndex + sizeOfAttachmentName] == SpecialChars.RecordSeparator)
-                    break;
-            }
-        }
-
         public static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
         {
-            if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
             {
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
@@ -1434,6 +1217,230 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, AttachmentsTombstones);
             return table?.NumberOfEntries ?? 0;
+        }
+
+        public static class AttachmentKey
+        {
+            /*
+            // Document key: {lowerDocumentId|d|lowerName|hash|lowerContentType}
+            // Revision key: {lowerDocumentId|r|changeVector|lowerName|hash|lowerContentType}
+            //
+            // Document partial key: {lowerDocumentId|d|lowerName|}
+            // Revision partial key: {lowerDocumentId|r|changeVector|}
+            //
+            // Document prefix: {lowerDocumentId|d|}
+            // Revision prefix: {lowerDocumentId|r|changeVector|}
+            */
+
+            public enum KeyType
+            {
+                Key,
+                PartialKey,
+                Prefix
+            }
+            
+            private const byte RecordSeparator = SpecialChars.RecordSeparator;
+            private const byte DocType = (byte)'d';
+            private const byte RevisionType = (byte)'r';
+
+            public static int GetSizeOfDocId(ReadOnlySpan<byte> key) => FindNextSeparator(key, 0);
+
+            public static (LazyStringValue DocId, LazyStringValue AttachmentName) ExtractDocIdAndAttachmentName(JsonOperationContext context,
+                LazyStringValue key)
+            {
+                var spanKey = key.AsReadOnlySpan();
+                ExtractDocIdAndAttachmentName(spanKey, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out _);
+
+                var doc = context.AllocateStringValue(null, key.Buffer, sizeOfDocId);
+                var name = context.AllocateStringValue(null, key.Buffer + attachmentNameIndex, sizeOfAttachmentName);
+
+                return (doc, name);
+            }
+
+            public static (string DocId, string AttachmentName) ExtractDocIdAndAttachmentName(Slice key)
+            {
+                var spanKey = key.AsReadOnlySpan();
+                ExtractDocIdAndAttachmentName(spanKey, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out _);
+
+                var docId = Encodings.Utf8.GetString(spanKey[..sizeOfDocId]);
+                var attachmentName = Encodings.Utf8.GetString(spanKey.Slice(attachmentNameIndex, sizeOfAttachmentName));
+
+                return (docId, attachmentName);
+            }
+
+            private static void ExtractDocIdAndAttachmentName(ReadOnlySpan<byte> key, out int sizeOfDocId, out int attachmentNameIndex,
+                out int sizeOfAttachmentName, out AttachmentType type)
+            {
+                sizeOfDocId = FindNextSeparator(key, 0);
+
+                var thirdPartIndex = sizeOfDocId +
+                                      1 + // separator
+                                      1 + // type: d
+                                      1;
+
+                int endOfThirdPart = FindNextSeparator(key, thirdPartIndex);
+                byte keyType = key[sizeOfDocId + 1];
+                switch (keyType)
+                {
+                    case DocType:
+                        attachmentNameIndex = thirdPartIndex;
+                        sizeOfAttachmentName = endOfThirdPart - attachmentNameIndex;
+                        type = AttachmentType.Document;
+                        break;
+                    case RevisionType:
+                        attachmentNameIndex = endOfThirdPart + 1;
+                        sizeOfAttachmentName = FindNextSeparator(key, thirdPartIndex) - attachmentNameIndex;
+                        type = AttachmentType.Revision;
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Invalid attachment key type {(char)keyType}({keyType:X}). Key {Encodings.Utf8.GetString(key)}");
+                }
+            }
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static ByteStringContext.InternalScope GetKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize,
+                byte* lowerName, int lowerNameSize, Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize,
+                AttachmentType type, Slice changeVector, out Slice keySlice)
+            {
+                return GetKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, base64Hash, lowerContentTypePtr, lowerContentTypeSize,
+                    KeyType.Key, type, changeVector, out keySlice);
+            }
+
+            // NOTE: GetAttachmentPartialKey should be called only when the document's that hold the attachment does not have a conflict.
+            // In this specific case it is ensured that we have a unique partial keys.
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static ByteStringContext.InternalScope GetPartialKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte
+                * lowerName, int lowerNameSize, AttachmentType type, string changeVector, out Slice partialKeySlice)
+            {
+                Slice cvSlice;
+                ByteStringContext.InternalScope cvDispose;
+                if (changeVector == null)
+                {
+                    cvSlice = Slices.Empty;
+                    cvDispose = default(ByteStringContext.InternalScope);
+                }
+                else
+                {
+                    cvDispose = Slice.From(context.Allocator, changeVector, out cvSlice);
+                }
+
+                using (cvDispose)
+                {
+                    return GetKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, default(Slice), null, 0,
+                        KeyType.PartialKey, type, cvSlice, out partialKeySlice);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static ByteStringContext.ExternalScope GetPartialKey(DocumentsOperationContext context, Slice key,
+                int base64HashSize, int lowerContentTypeSize, out Slice partialKeySlice)
+            {
+                return Slice.External(context.Allocator, key.Content, 0, key.Size - base64HashSize - 1 - lowerContentTypeSize, out partialKeySlice);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static ByteStringContext.InternalScope GetPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, AttachmentType type,
+                Slice changeVector, out Slice prefixSlice)
+            {
+                return GetKeyInternal(context, lowerId, lowerIdSize, null, 0, default(Slice), null, 0, KeyType.Prefix, type, changeVector, out prefixSlice);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static ByteStringContext.InternalScope GetPrefix(DocumentsOperationContext context, Slice lowerId, AttachmentType type, Slice changeVector,
+                out Slice prefixSlice)
+            {
+                return GetKeyInternal(context, lowerId.Content.Ptr, lowerId.Size, null, 0, default(Slice), null, 0, KeyType.Prefix, type, changeVector,
+                    out prefixSlice);
+            }
+
+            public static ByteStringContext.InternalScope GetKeyInternal(
+                DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize,
+                Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize, KeyType keyType, AttachmentType type,
+                Slice changeVector, out Slice keySlice)
+            {
+                var size = lowerIdSize + 3;
+                if (type != AttachmentType.Document)
+                {
+                    size += changeVector.Size + 1;
+                }
+
+                if (keyType == KeyType.Key)
+                {
+                    size += lowerNameSize + 1 + base64Hash.Size + 1 + lowerContentTypeSize;
+                }
+                else if (keyType == KeyType.PartialKey)
+                {
+                    size += lowerNameSize + 1;
+                }
+
+                var scope = context.Allocator.Allocate(size, out ByteString keyMem);
+
+                Memory.Copy(keyMem.Ptr, lowerId, lowerIdSize);
+                var pos = lowerIdSize;
+                keyMem.Ptr[pos++] = RecordSeparator;
+
+                keyMem.Ptr[pos++] = type switch
+                {
+                    AttachmentType.Document => DocType,
+                    AttachmentType.Revision => RevisionType,
+                    _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+                };
+
+                keyMem.Ptr[pos++] = RecordSeparator;
+
+                if (type != AttachmentType.Document)
+                {
+                    Memory.Copy(keyMem.Ptr + pos, changeVector.Content.Ptr, changeVector.Size);
+                    pos += changeVector.Size;
+                    keyMem.Ptr[pos++] = RecordSeparator;
+                }
+
+                if (keyType != KeyType.Prefix)
+                {
+                    Memory.Copy(keyMem.Ptr + pos, lowerName, lowerNameSize);
+                    pos += lowerNameSize;
+                    keyMem.Ptr[pos++] = RecordSeparator;
+
+                    if (keyType == KeyType.Key)
+                    {
+                        base64Hash.CopyTo(keyMem.Ptr + pos);
+                        pos += base64Hash.Size;
+                        keyMem.Ptr[pos++] = RecordSeparator;
+
+                        Memory.Copy(keyMem.Ptr + pos, lowerContentTypePtr, lowerContentTypeSize);
+                    }
+                }
+
+                keySlice = new Slice(SliceOptions.Key, keyMem);
+                return scope;
+            }
+
+            public static AttachmentType GetAttachmentType(Slice key)
+            {
+                var separatorIndex = FindNextSeparator(key.AsReadOnlySpan(), 0);
+                var typeIndex = separatorIndex + 1;
+                
+                if (typeIndex >= key.Size)
+                    throw new InvalidOperationException($"Could not parse {nameof(key)}");
+
+                var c = key[typeIndex];
+                if (c == RevisionType)
+                    return AttachmentType.Revision;
+
+                Debug.Assert(c == DocType);
+                return AttachmentType.Document;
+            }
+            
+            private static int FindNextSeparator(ReadOnlySpan<byte> key, int start)
+            {
+                for (var i = start; i < key.Length; i++)
+                {
+                    if (key[i] == RecordSeparator)
+                        return i;
+                }
+
+                return key.Length;
+            }
         }
     }
 }

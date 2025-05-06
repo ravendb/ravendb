@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Replication
                 case AttachmentReplicationItem a:
                     return $"Attachment '{a.Name}' for {GetDocumentId(a.Key)}";
                 case AttachmentTombstoneReplicationItem at:
-                    var result = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(at.Key);
+                    var result = AttachmentsStorage.AttachmentKey.ExtractDocIdAndAttachmentName(at.Key);
                     return $"Attachment tombstone '{result.AttachmentName}' for {result.DocId}";
                 case CounterReplicationItem c:
                     return $"Counter for {c.Id}";
