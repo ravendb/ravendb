@@ -136,7 +136,105 @@ namespace FastTests.Sparrow
             RunFunc(&Functions.CosineDistance, expectedDistance);
             RunWithMagnitudeFunc(&Functions.CosineSimilarity, expectedSim);
             RunWithMagnitudeFunc(&Functions.CosineDistance, expectedDistance);
-            RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarityFloatingPoint, expectedSim);
+            RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarity, expectedSim);
+        }
+
+        // A randomized test to compare your implementation with a reference implementation.
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public void RandomVectors_ReferenceComparison_Double(int seed = 1337)
+        {
+            var rnd = new Random(seed);
+            int size = rnd.Next(1024) + 1;
+
+            // Generate two random vectors of the same size.
+            double[] vector1 = new double[size];
+            float[] fvector1 = new float[size];
+            double[] vector2 = new double[size];
+            float[] fvector2 = new float[size];
+            for (int i = 0; i < size; i++)
+            {
+                vector1[i] = rnd.NextDouble();
+                fvector1[i] = (float)vector1[i];
+                vector2[i] = rnd.NextDouble();
+                fvector2[i] = (float)vector2[i];
+            }
+
+            // Compute reference similarity (using conventional cosine similarity).
+            float expectedSim = TensorPrimitives.CosineSimilarity(fvector1, fvector2);
+            float expectedDistance = 1.0f - expectedSim;
+
+            void RunFunc(delegate* managed<ReadOnlySpan<double>, ReadOnlySpan<double>, double> func, float expected)
+            {
+                double actual = func(vector1.AsSpan(), vector2.AsSpan());
+
+                // Verify they match within a small tolerance.
+                Assert.InRange(actual, (float)(expected - Eps), (float)(expected + Eps));
+            }
+
+            void RunWithMagnitudeFunc(delegate* managed<ReadOnlySpan<double>, float, ReadOnlySpan<double>, float, float> func, float expected)
+            {
+                float actual = func(vector1.AsSpan(), 1.0f, vector2.AsSpan(), 1.0f);
+
+                // Verify they match within a small tolerance.
+                Assert.InRange(actual, (float)(expected - Eps), (float)(expected + Eps));
+            }
+
+            // These are the normal functions.
+            RunFunc(&Functions.CosineSimilarity, expectedSim);
+            RunFunc(&Functions.CosineDistance, expectedDistance);
+            RunWithMagnitudeFunc(&Functions.CosineSimilarity, expectedSim);
+            RunWithMagnitudeFunc(&Functions.CosineDistance, expectedDistance);
+            RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarity, expectedSim);
+        }
+
+        // A randomized test to compare your implementation with a reference implementation.
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public void RandomVectors_ReferenceComparison_Integers(int seed = 1337)
+        {
+            var rnd = new Random(seed);
+            int size = rnd.Next(1024) + 1;
+
+            // Generate two random vectors of the same size.
+            sbyte[] vector1 = new sbyte[size];
+            sbyte[] vector2 = new sbyte[size];
+            float[] fvector1 = new float[size];
+            float[] fvector2 = new float[size];
+            for (int i = 0; i < size; i++)
+            {
+                vector1[i] = (sbyte)rnd.Next();
+                fvector1[i] = vector1[i];
+                vector2[i] = (sbyte)rnd.Next();
+                fvector2[i] = vector2[i];
+            }
+
+            // Compute reference similarity (using conventional cosine similarity).
+            float expectedSim = TensorPrimitives.CosineSimilarity(fvector1, fvector2);
+            float expectedDistance = 1.0f - expectedSim;
+
+            void RunWithMagnitudeFunc(delegate* managed<ReadOnlySpan<sbyte>, float, ReadOnlySpan<sbyte>, float, float> func, float expected)
+            {
+                float actual = func(vector1.AsSpan(), 1.0f, vector2.AsSpan(), 1.0f);
+
+                // Verify they match within a small tolerance.
+                Assert.InRange(actual, (float)(expected - Eps), (float)(expected + Eps));
+            }
+
+            // These are the normal functions.
+            RunWithMagnitudeFunc(&Functions.CosineSimilarity, expectedSim);
+            RunWithMagnitudeFunc(&Functions.CosineDistance, expectedDistance);
+
+            // AVX-2 path
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
+                RunWithMagnitudeFunc(&Functions.Vectorized256.CosineSimilarityIntegersAvx2, expectedSim);
+
+            if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
+                RunWithMagnitudeFunc(&Functions.Vectorized256.CosineSimilarityIntegersNeon, expectedSim);
+
+            // AVX-512 path
+            if (Avx512BW.IsSupported && Avx512F.IsSupported)
+                RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarityIntegersAvx512, expectedSim);
         }
 
         // A randomized test to compare your implementation with a reference implementation.

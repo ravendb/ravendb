@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Net;
 using System.Numerics;
 using System.Numerics.Tensors;
 using System.Runtime.CompilerServices;
@@ -133,14 +135,14 @@ namespace Sparrow.Server.Tensors
             {
                 if (typeof(T) == typeof(float))
                 {
-                    return Vectorized512.CosineSimilarityFloatingPoint(
+                    return Vectorized512.CosineSimilarity(
                         MemoryMarshal.Cast<T, float>(a), aMagnitude,
                         MemoryMarshal.Cast<T, float>(b), bMagnitude);
                 }
 
                 if (typeof(T) == typeof(double))
                 {
-                    return Vectorized512.CosineSimilarityFloatingPoint(
+                    return Vectorized512.CosineSimilarity(
                         MemoryMarshal.Cast<T, double>(a), aMagnitude,
                         MemoryMarshal.Cast<T, double>(b), bMagnitude);
                 }
@@ -299,82 +301,15 @@ namespace Sparrow.Server.Tensors
                 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 512 bits
             ];
 
-
-            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-            public static TResult CosineSimilarity<T, TResult>(ReadOnlySpan<T> a, ReadOnlySpan<T> b)
-                where T : unmanaged, IFloatingPoint<T>, IRootFunctions<T>, INumber<T>
-                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static double CosineSimilarityInternal(ref float aRef, float aMagnitude, ref float bRef, float bMagnitude, nuint size)
             {
-                Vector512<T> abVec = Vector512<T>.Zero;
-                Vector512<T> a2Vec = Vector512<T>.Zero;
-                Vector512<T> b2Vec = Vector512<T>.Zero;
+                Vector512<float> abVec = Vector512<float>.Zero;
+                Vector512<float> a2Vec = Vector512<float>.Zero;
+                Vector512<float> b2Vec = Vector512<float>.Zero;
 
-                int i = a.Length;
-                ref T aRef = ref MemoryMarshal.GetReference(a);
-                ref T bRef = ref MemoryMarshal.GetReference(b);
-
-                Loop:
-
-                // PERF: The reason why this would work on hardware not supporting 512-bit vectors is
-                // that it will effectively create 2 lanes (xmm and ymm) of 256-bit vectors. And because
-                // there are no overlapping lanes, there will be less pipeline dependencies hiding latency
-                // of the instructions themselves.
-                Vector512<T> aVec = Vector512.LoadUnsafe(ref aRef);
-                Vector512<T> bVec = Vector512.LoadUnsafe(ref bRef);
-
-                abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
-                a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
-                b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
-
-                i -= Vector512<T>.Count;
-                aRef = ref Unsafe.Add(ref aRef, Vector512<T>.Count);
-                bRef = ref Unsafe.Add(ref bRef, Vector512<T>.Count);
-                if (i >= Vector512<T>.Count)
-                    goto Loop;
-
-                if (i > 0)
-                {
-                    int offset = Vector512<T>.Count - i;
-                    aRef = ref Unsafe.Subtract(ref aRef, offset);
-                    bRef = ref Unsafe.Subtract(ref bRef, offset);
-
-                    ref var moveMaskTable = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, T>(MoveMaskTable));
-                    var mask = Vector512.LoadUnsafe<T>(ref moveMaskTable, (nuint)i);
-
-                    aVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref aRef), mask);
-                    bVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref bRef), mask);
-
-                    abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
-                    a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
-                    b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
-                }
-
-                T ab = Vector512.Sum(abVec);
-                T a2 = Vector512.Sum(a2Vec);
-                T b2 = Vector512.Sum(b2Vec);
-
-                // Special cases
-                if (T.IsZero(a2) && T.IsZero(b2))
-                    return TResult.CreateTruncating(double.NaN); // Both zero vectors: nan
-                if (T.IsZero(ab))
-                    return TResult.Zero; // Orthogonal or one zero: distance = 1, similarity 0
-
-                // Normalization
-                return Vectorized256.CosineSimilarityNormalize<T, TResult>(ab, a2, b2);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-            internal static TResult CosineSimilarityFloatingPoint<T, TResult>(ReadOnlySpan<T> a, TResult aMagnitude, ReadOnlySpan<T> b, TResult bMagnitude)
-                where T : unmanaged, IFloatingPoint<T>, IRootFunctions<T>, INumber<T>
-                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
-            {
-                Vector512<T> abVec = Vector512<T>.Zero;
-                Vector512<T> a2Vec = Vector512<T>.Zero;
-                Vector512<T> b2Vec = Vector512<T>.Zero;
-
-                int i = a.Length;
-                ref T aRef = ref MemoryMarshal.GetReference(a);
-                ref T bRef = ref MemoryMarshal.GetReference(b);
+                nuint i = 0;
+                nuint oneVectorFromEnd = size - (nuint)Vector512<float>.Count;
 
             Loop:
 
@@ -382,57 +317,272 @@ namespace Sparrow.Server.Tensors
                 // that it will effectively create 2 lanes (xmm and ymm) of 256-bit vectors. And because
                 // there are no overlapping lanes, there will be less pipeline dependencies hiding latency
                 // of the instructions themselves.
-                Vector512<T> aVec = Vector512.LoadUnsafe(ref aRef);
-                Vector512<T> bVec = Vector512.LoadUnsafe(ref bRef);
+                Vector512<float> aVec = Vector512.LoadUnsafe(ref aRef, i);
+                Vector512<float> bVec = Vector512.LoadUnsafe(ref bRef, i);
+
+                i += (nuint)Vector512<float>.Count;
+
+            LoopWithoutLoad:
 
                 abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
                 a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
                 b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
 
-                i -= Vector512<T>.Count;
-                aRef = ref Unsafe.Add(ref aRef, Vector512<T>.Count);
-                bRef = ref Unsafe.Add(ref bRef, Vector512<T>.Count);
-                if (i >= Vector512<T>.Count)
+                if (i <= oneVectorFromEnd)
                     goto Loop;
 
-                if (i > 0)
+                if (i != (nuint)size)
                 {
-                    int offset = Vector512<T>.Count - i;
-                    aRef = ref Unsafe.Subtract(ref aRef, offset);
-                    bRef = ref Unsafe.Subtract(ref bRef, offset);
+                    nuint offset = size - i;
+                    Debug.Assert((int)offset * sizeof(float) + Vector512<byte>.Count <= MoveMaskTable.Length);
 
-                    ref var moveMaskTable = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, T>(MoveMaskTable));
-                    var mask = Vector512.LoadUnsafe<T>(ref moveMaskTable, (nuint)i);
+                    var mask = Vector512.LoadUnsafe<float>(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, float>(MoveMaskTable)), (nuint)offset);
 
-                    aVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref aRef), mask);
-                    bVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref bRef), mask);
+                    aVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref aRef, oneVectorFromEnd), mask);
+                    bVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref bRef, oneVectorFromEnd), mask);
 
-                    abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
-                    a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
-                    b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
+                    i = (nuint)size;
+                    goto LoopWithoutLoad;
                 }
 
-                T ab = Vector512.Sum(abVec);
-                T a2 = Vector512.Sum(a2Vec);
-                T b2 = Vector512.Sum(b2Vec);
+                float ab = aMagnitude * bMagnitude * Vector512.Sum(abVec);
+                float a2 = aMagnitude * aMagnitude * Vector512.Sum(a2Vec);
+                float b2 = bMagnitude * bMagnitude * Vector512.Sum(b2Vec);
 
                 // Special cases
-                if (T.IsZero(a2) && T.IsZero(b2))
-                    return TResult.CreateTruncating(double.NaN); // Both zero vectors: nan
-                if (T.IsZero(ab))
-                    return TResult.Zero; // Orthogonal or one zero: distance = 1, similarity 0
+                if (a2 == 0 && b2 == 0)
+                    return double.NaN; // Both zero vectors: nan
+                if (ab == 0)
+                    return 0; // Orthogonal or one zero: distance = 1, similarity 0
 
                 // Normalization
-                TResult fab = aMagnitude * bMagnitude * TResult.CreateTruncating(ab);
-                TResult fa2 = aMagnitude * aMagnitude * TResult.CreateTruncating(a2);
-                TResult fb2 = bMagnitude * bMagnitude * TResult.CreateTruncating(b2);
-                return Vectorized256.CosineSimilarityNormalize<TResult, TResult>(fab, fa2, fb2);
+                // Create a 128-bit vector with a2 in the high lane and b2 in the low lane.
+                // Note: _mm_set_pd(a2, b2) in C sets lane1=a2 and lane0=b2.
+                // In .NET, Vector128.Create(x, y) sets lane0 = x and lane1 = y.
+                // So we swap the order.
+                var squares = Vector128.Create((double)b2, (double)a2);
+
+                // Compute approximate reciprocal square root (single precision).
+                var rsqrts = Sse2.ConvertToVector128Double(
+                    Sse.ReciprocalSqrt(
+                        Sse2.ConvertToVector128Single(squares))
+                );
+
+                // Newton-Raphson iteration for reciprocal square root:
+                // https://en.wikipedia.org/wiki/Newton%27s_method
+                rsqrts = Sse2.Add(
+                    Sse2.Multiply(Vector128.Create(1.5d), rsqrts),
+                    Sse2.Multiply(
+                        Sse2.Multiply(
+                            Sse2.Multiply(squares, Vector128.Create(-0.5d)),
+                            rsqrts),
+                        Sse2.Multiply(rsqrts, rsqrts)
+                    )
+                );
+
+                // Extract the results.
+                // According to our lane ordering:
+                //   - Lane 0 contains b2 reciprocal.
+                //   - Lane 1 contains a2 reciprocal.
+                double b2Reciprocal = rsqrts.ToScalar(); // lane 0
+                double a2Reciprocal = Sse2.UnpackHigh(rsqrts, rsqrts).ToScalar(); // lane 1
+                return  ab * a2Reciprocal * b2Reciprocal;
+           }
+
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static double CosineSimilarityInternal(ref double aRef, double aMagnitude, ref double bRef, double bMagnitude, nuint size)
+            {
+                Vector512<double> abVec = Vector512<double>.Zero;
+                Vector512<double> a2Vec = Vector512<double>.Zero;
+                Vector512<double> b2Vec = Vector512<double>.Zero;
+
+                nuint i = 0;
+                nuint oneVectorFromEnd = size - (nuint)Vector512<double>.Count;
+
+            Loop:
+
+                // PERF: The reason why this would work on hardware not supporting 512-bit vectors is
+                // that it will effectively create 2 lanes (xmm and ymm) of 256-bit vectors. And because
+                // there are no overlapping lanes, there will be less pipeline dependencies hiding latency
+                // of the instructions themselves.
+                Vector512<double> aVec = Vector512.LoadUnsafe(ref aRef, i);
+                Vector512<double> bVec = Vector512.LoadUnsafe(ref bRef, i);
+
+                i += (nuint)Vector512<double>.Count;
+
+            LoopWithoutLoad:
+
+                abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
+                a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
+                b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
+
+                if (i <= oneVectorFromEnd)
+                    goto Loop;
+
+                if (i != (nuint)size)
+                {
+                    nuint offset = (nuint)size - i;
+                    Debug.Assert((int)offset * sizeof(double) + Vector512<byte>.Count <= MoveMaskTable.Length);
+
+                    var mask = Vector512.LoadUnsafe<double>(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, double>(MoveMaskTable)), (nuint)offset);
+
+                    aVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref aRef, oneVectorFromEnd), mask);
+                    bVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref bRef, oneVectorFromEnd), mask);
+
+                    i = (nuint)size;
+                    goto LoopWithoutLoad;
+                }
+
+                double ab = aMagnitude * bMagnitude * Vector512.Sum(abVec);
+                double a2 = aMagnitude * aMagnitude * Vector512.Sum(a2Vec);
+                double b2 = bMagnitude * bMagnitude * Vector512.Sum(b2Vec);
+
+                // Special cases
+                if (a2 == 0 && b2 == 0)
+                    return double.NaN; // Both zero vectors: nan
+                if (ab == 0)
+                    return 0; // Orthogonal or one zero: distance = 1, similarity 0
+
+                // Normalization
+                // Create a 128-bit vector with a2 in the high lane and b2 in the low lane.
+                // Note: _mm_set_pd(a2, b2) in C sets lane1=a2 and lane0=b2.
+                // In .NET, Vector128.Create(x, y) sets lane0 = x and lane1 = y.
+                // So we swap the order.
+                var squares = Vector128.Create((double)b2, (double)a2);
+
+                // Compute approximate reciprocal square root (single precision).
+                var rsqrts = Sse2.ConvertToVector128Double(
+                    Sse.ReciprocalSqrt(
+                        Sse2.ConvertToVector128Single(squares))
+                );
+
+                // Newton-Raphson iteration for reciprocal square root:
+                // https://en.wikipedia.org/wiki/Newton%27s_method
+                rsqrts = Sse2.Add(
+                    Sse2.Multiply(Vector128.Create(1.5d), rsqrts),
+                    Sse2.Multiply(
+                        Sse2.Multiply(
+                            Sse2.Multiply(squares, Vector128.Create(-0.5d)),
+                            rsqrts),
+                        Sse2.Multiply(rsqrts, rsqrts)
+                    )
+                );
+
+                // Extract the results.
+                // According to our lane ordering:
+                //   - Lane 0 contains b2 reciprocal.
+                //   - Lane 1 contains a2 reciprocal.
+                double b2Reciprocal = rsqrts.ToScalar(); // lane 0
+                double a2Reciprocal = Sse2.UnpackHigh(rsqrts, rsqrts).ToScalar(); // lane 1
+                return ab * a2Reciprocal * b2Reciprocal;
+            }
+
+
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            public static TResult CosineSimilarity<T, TResult>(ReadOnlySpan<T> a, ReadOnlySpan<T> b)
+                where T : unmanaged, IFloatingPoint<T>, IRootFunctions<T>, INumber<T>
+                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
+            {
+                if (a.Length < Vector512<T>.Count)
+                    return Serial.CosineSimilarity<T, TResult>(a, b);
+
+                double similarity;
+                if (typeof(T) == typeof(float))
+                {
+                    similarity = CosineSimilarityInternal(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(a)), 1.0f,
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(b)), 1.0f,
+                        (nuint)a.Length);
+                } 
+                else if (typeof(T) == typeof(double))
+                {
+                    similarity = CosineSimilarityInternal(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(a)), 1.0d,
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(b)), 1.0d,
+                        (nuint)a.Length);
+                }
+                else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+
+                if (typeof(TResult) == typeof(float))
+                {
+                    return (TResult)(object)(float)similarity;
+                }
+
+                return (TResult)(object)similarity;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            public static TResult CosineSimilarity<T, TResult>(ReadOnlySpan<T> a, TResult aMagnitude, ReadOnlySpan<T> b, TResult bMagnitude)
+                where T : unmanaged, IFloatingPoint<T>, IRootFunctions<T>, INumber<T>
+                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
+            {
+                if (a.Length < Vector512<T>.Count)
+                    return Serial.CosineSimilarity<T, TResult>(a, b);
+
+                double similarity;
+                if (typeof(T) == typeof(float))
+                {
+                    float aMag, bMag;
+                    if (typeof(TResult) == typeof(float))
+                    {
+                        aMag = (float)(object)aMagnitude;
+                        bMag = (float)(object)bMagnitude;
+                    }
+                    else if (typeof(TResult) == typeof(double))
+                    {
+                        aMag = (float)(double)(object)aMagnitude;
+                        bMag = (float)(double)(object)bMagnitude;
+                    }
+                    else
+                        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+
+                    similarity = CosineSimilarityInternal(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(a)), aMag,
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(b)), bMag,
+                        (nuint)a.Length);
+                }
+                else if (typeof(T) == typeof(double))
+                {
+                    double aMag, bMag;
+                    if (typeof(TResult) == typeof(float))
+                    {
+                        aMag = (float)(object)aMagnitude;
+                        bMag = (float)(object)bMagnitude;
+                    }
+                    else if (typeof(TResult) == typeof(double))
+                    {
+                        aMag = (double)(object)aMagnitude;
+                        bMag = (double)(object)bMagnitude;
+                    }
+                    else
+                        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+
+                    similarity = CosineSimilarityInternal(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(a)), aMag,
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(b)), bMag,
+                        (nuint)a.Length);
+                }
+                else
+                    throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+
+                if (typeof(TResult) == typeof(float))
+                {
+                    return (TResult)(object)(float)similarity;
+                }
+
+                return (TResult)(object)similarity;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal static TResult CosineSimilarityIntegersAvx512<TResult>(ReadOnlySpan<sbyte> a, TResult aMagnitude, ReadOnlySpan<sbyte> b, TResult bMagnitude)
                 where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
             {
+                if (Avx512BW.IsSupported == false || Avx512F.IsSupported == false)
+                    throw new NotSupportedException("This method should not be called on the current architecture");
+
                 // 1) 512-bit accumulators for ab, a2, b2
                 var abVec = Vector512<int>.Zero;
                 var a2Vec = Vector512<int>.Zero;
@@ -449,16 +599,16 @@ namespace Sparrow.Server.Tensors
                 Vector512<short> aVec = Avx512BW.ConvertToVector512Int16(Vector256.LoadUnsafe(ref aRef));
                 Vector512<short> bVec = Avx512BW.ConvertToVector512Int16(Vector256.LoadUnsafe(ref bRef));
 
-                i -= Vector256<sbyte>.Count;
-                aRef = ref Unsafe.Add(ref aRef, Vector256<sbyte>.Count);
-                bRef = ref Unsafe.Add(ref bRef, Vector256<sbyte>.Count);
-
                 // 3) multiply-add pairs: i16×i16→i32
                 abVec = Avx512F.Add(abVec, Avx512BW.MultiplyAddAdjacent(aVec, bVec));
                 a2Vec = Avx512F.Add(a2Vec, Avx512BW.MultiplyAddAdjacent(aVec, aVec));
                 b2Vec = Avx512F.Add(b2Vec, Avx512BW.MultiplyAddAdjacent(bVec, bVec));
 
-                if (i > 0)
+                i -= Vector256<sbyte>.Count;
+                aRef = ref Unsafe.Add(ref aRef, Vector256<sbyte>.Count);
+                bRef = ref Unsafe.Add(ref bRef, Vector256<sbyte>.Count);
+
+                if (i >= Vector256<sbyte>.Count)
                     goto Loop;
 
                 // 4) horizontal reductions
@@ -467,7 +617,7 @@ namespace Sparrow.Server.Tensors
                 int b2 = Vector512.Sum(b2Vec);
 
                 // Tail loop for remaining elements
-                while (i >= 0)
+                while (i > 0)
                 {
                     ab += aRef * bRef;
                     a2 += aRef * aRef;
@@ -574,7 +724,7 @@ namespace Sparrow.Server.Tensors
                 T ab = Vector256.Sum(abVec);
                 T a2 = Vector256.Sum(a2Vec);
                 T b2 = Vector256.Sum(b2Vec);
-                while (i >= 0)
+                while (i > 0)
                 {
                     ab += aRef * bRef;
                     a2 += aRef * aRef;
@@ -599,6 +749,9 @@ namespace Sparrow.Server.Tensors
             internal static TResult CosineSimilarityIntegersAvx2<TResult>(ReadOnlySpan<sbyte> a, TResult aMagnitude, ReadOnlySpan<sbyte> b, TResult bMagnitude)
                 where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
             {
+                if (Avx2.IsSupported == false)
+                    throw new NotSupportedException("This method should not be called on the current architecture");
+
                 //  Prepare six 256-bit accumulators: low/high lanes for ab, a2, b2
                 Vector256<int> abLo = Vector256<int>.Zero, abHi = Vector256<int>.Zero;
                 Vector256<int> a2Lo = Vector256<int>.Zero, a2Hi = Vector256<int>.Zero;
@@ -647,7 +800,7 @@ namespace Sparrow.Server.Tensors
                 int b2 = Vector256.Sum(Avx2.Add(b2Lo, b2Hi));
 
                 // Tail loop for remaining elements
-                while (i >= 0)
+                while (i > 0)
                 {
                     ab += aRef * bRef;
                     a2 += aRef * aRef;
@@ -675,6 +828,9 @@ namespace Sparrow.Server.Tensors
             internal static TResult CosineSimilarityIntegersNeon<TResult>(ReadOnlySpan<sbyte> a, TResult aMagnitude, ReadOnlySpan<sbyte> b, TResult bMagnitude)
                 where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
             {
+                if (Dp.IsSupported == false)
+                    throw new NotSupportedException("This method should not be called on the current architecture");
+
                 Vector128<int> abVec = Vector128<int>.Zero;
                 Vector128<int> a2Vec = Vector128<int>.Zero;
                 Vector128<int> b2Vec = Vector128<int>.Zero;
@@ -704,7 +860,7 @@ namespace Sparrow.Server.Tensors
                 int ab = Vector128.Sum(abVec);
                 int a2 = Vector128.Sum(a2Vec);
                 int b2 = Vector128.Sum(b2Vec);
-                while (i >= 0)
+                while (i > 0)
                 {
                     ab += aRef * bRef;
                     a2 += aRef * aRef;

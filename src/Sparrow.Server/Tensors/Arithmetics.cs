@@ -27,6 +27,7 @@ namespace Sparrow.Server.Tensors
                 return Vector256.MultiplyAddEstimate(x.AsSingle(), y.AsSingle(), z.AsSingle()).As<float, T>();
             }
 #else
+
             if (Fma.IsSupported)
             {
                 if (typeof(T) == typeof(float))
@@ -53,29 +54,36 @@ namespace Sparrow.Server.Tensors
                 return Vector512.MultiplyAddEstimate(x.AsSingle(), y.AsSingle(), z.AsSingle()).As<float, T>();
             }
 #else
+            if (Avx512F.IsSupported)
+            {
+                if (typeof(T) == typeof(float))
+                    return Avx512F.FusedMultiplyAdd(x.AsSingle(), y.AsSingle(), z.AsSingle()).As<float, T>();
+                if (typeof(T) == typeof(double))
+                    return Avx512F.FusedMultiplyAdd(x.AsDouble(), y.AsDouble(), z.AsDouble()).As<double, T>();
+            }
 
             if (Fma.IsSupported)
             {
                 // PERF: we do the FMA on the upper and lower lanes separately
-                Vector256<T> upperX = x.GetUpper();
-                Vector256<T> upperY = y.GetUpper();
-                Vector256<T> upperZ = z.GetUpper();
-
-                Vector256<T> lowerX = x.GetLower();
-                Vector256<T> lowerY = y.GetLower();
-                Vector256<T> lowerZ = z.GetLower();
-
                 if (typeof(T) == typeof(float))
                 {
-                    var upperS = Fma.MultiplyAdd(upperX.AsSingle(), upperY.AsSingle(), upperZ.AsSingle());
-                    var lowerS = Fma.MultiplyAdd(lowerX.AsSingle(), lowerY.AsSingle(), lowerZ.AsSingle());
+                    Vector512<float> fx = x.AsSingle();
+                    Vector512<float> fy = y.AsSingle();
+                    Vector512<float> fz = z.AsSingle();
+
+                    var upperS = Fma.MultiplyAdd(fx.GetUpper(), fy.GetUpper(), fz.GetUpper());
+                    var lowerS = Fma.MultiplyAdd(fx.GetLower(), fy.GetLower(), fz.GetLower());
                     return Vector512.Create(upperS, lowerS).As<float, T>();
                 }
 
                 if (typeof(T) == typeof(double))
                 {
-                    var upperS = Fma.MultiplyAdd(upperX.AsDouble(), upperY.AsDouble(), upperZ.AsDouble());
-                    var lowerS = Fma.MultiplyAdd(lowerX.AsDouble(), lowerY.AsDouble(), lowerZ.AsDouble());
+                    Vector512<double> dx = x.AsDouble();
+                    Vector512<double> dy = y.AsDouble();
+                    Vector512<double> dz = z.AsDouble();
+
+                    var upperS = Fma.MultiplyAdd(dx.GetUpper(), dy.GetUpper(), dz.GetUpper());
+                    var lowerS = Fma.MultiplyAdd(dx.GetLower(), dy.GetLower(), dz.GetLower());
                     return Vector512.Create(upperS, lowerS).As<double, T>();
                 }
             }
