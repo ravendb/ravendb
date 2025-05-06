@@ -2103,10 +2103,19 @@ namespace Raven.Server
                     tcpClient.ReceiveTimeout = tcpClient.SendTimeout = sendTimeout;
 
                     Stream stream = tcpClient.GetStream();
-                    (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
-                    if (tcpAuditLog != null)
-                        tcpAuditLog.Info($"Opened TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+                    try
+                    {
+                        (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
+                    }
+                    catch (Exception e)
+                    {
+                        if (tcpAuditLog != null)
+                        {
+                            tcpAuditLog.Info($"Failed to authenticate TCP connection {remoteEndPoint} with error: {e}");
+                        }
+                        throw;
+                    }
 
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
                         throw new Exception("Simulated TCP failure.");
@@ -2127,7 +2136,22 @@ namespace Raven.Server
                             if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInTrafficWatchTcp)
                                 throw new Exception("Simulated TCP failure.");
 
-                            header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
+                            try
+                            {
+                                header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
+                            }
+                            catch (Exception e)
+                            {
+                                if (tcpAuditLog != null)
+                                {
+                                    tcpAuditLog.Info(
+                                        $"Failed to negotiate TCP connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Error: {e}");
+                                }
+                                throw;
+                            }
+
+                            if (tcpAuditLog != null)
+                                tcpAuditLog.Info($"Opened TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
 
                             if (ShouldUseDataCompression(header))
                             {
