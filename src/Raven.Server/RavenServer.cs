@@ -2105,6 +2105,9 @@ namespace Raven.Server
                     Stream stream = tcpClient.GetStream();
                     (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
+                    if (tcpAuditLog != null)
+                        tcpAuditLog.Info($"Opened TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
                         throw new Exception("Simulated TCP failure.");
 
