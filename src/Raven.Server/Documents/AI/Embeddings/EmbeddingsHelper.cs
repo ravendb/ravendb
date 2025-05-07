@@ -81,7 +81,8 @@ public static class EmbeddingsHelper
             case VectorEmbeddingType.Single:
                 return MemoryMarshalEx.Cast<float, byte>(embedding);
             case VectorEmbeddingType.Int8:
-            {   var dest = MemoryMarshal.Cast<float, sbyte>(embedding.Span);
+            {   
+                var dest = MemoryMarshal.Cast<float, sbyte>(embedding.Span);
                 if (VectorQuantizer.TryToInt8(embedding.Span, dest, out int usedBytes) == false)
                 {
                     var newMemory = new ReadOnlyMemory<float>(new float[embedding.Length + 1]);

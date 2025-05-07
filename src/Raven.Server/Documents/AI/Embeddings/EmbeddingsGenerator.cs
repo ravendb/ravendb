@@ -726,7 +726,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     public VectorEmbeddingType GetQuantizationOf(EmbeddingsGenerationTaskIdentifier taskId)
     {
-        if(_workers.TryGetValue(taskId, out var worker)is false)
+        if (_workers.TryGetValue(taskId, out var worker) is false)
             return VectorEmbeddingType.Single;
         return worker.Configuration.Quantization;
     }
@@ -737,7 +737,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         params ReadOnlySpan<string> values)
     {
         var valueTask = GetEmbeddingsForQueryAsync(documentsContext, taskId, values);
-        if(valueTask.IsCompletedSuccessfully)
+        if (valueTask.IsCompletedSuccessfully)
             return valueTask.Result;
         
         return valueTask.AsTask().GetAwaiter().GetResult();
@@ -748,7 +748,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         EmbeddingsGenerationTaskIdentifier taskId,
         params ReadOnlySpan<string> values)
     {
-        if(_workers.TryGetValue(taskId, out var worker) is false)
+        if (_workers.TryGetValue(taskId, out var worker) is false)
         {
             throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{taskId.Value}' identifier");
         }

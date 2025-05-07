@@ -308,18 +308,18 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
             
             case ValueType.Vector:
-                using (var vectorField = (VectorValue)value)
+                using (var vectorValue = (VectorValue)value)
                 {
-                    if (vectorField.IsNull)
+                    if (vectorValue.IsNull)
                     {
                         builder.WriteNull(fieldId, path);
                         break;
                     }
                     
-                    var embedding = vectorField.GetEmbedding();
+                    var embedding = vectorValue.GetEmbedding();
                     var destinationEmbeddingType = field.Vector.DestinationEmbeddingType;
                     
-                    _index.IndexFieldsPersistence.SetFieldEmbeddingDimension(field.Name, vectorField.Length, destinationEmbeddingType);
+                    _index.IndexFieldsPersistence.SetFieldEmbeddingDimension(field.Name, vectorValue.Length, destinationEmbeddingType);
                     
                     builder.WriteVector(fieldId, path, embedding);
                 }

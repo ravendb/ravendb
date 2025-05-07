@@ -323,8 +323,7 @@ public static partial class CoraxQueryBuilder
             var database = builderParameters.Index.DocumentDatabase;
             
             var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
-
-
+            
             var embeddingsGenerator = database.EmbeddingsGeneratorQueries;
             
             var sourceEmbeddingType = embeddingsGenerator.GetQuantizationOf(embeddingsTaskId);
