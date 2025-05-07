@@ -28,14 +28,15 @@ $outputDir = $env:OUTPUT_DIR
 
 Write-Host "Build DEB of RavenDB $ravenVersion for distro $distName $distVer $distVerName $env:DEB_ARCHITECTURE"
 
-if ($env:DEB_ARCHITECTURE -eq "amd64") {
-    $DOCKER_FILE = "./ubuntu_amd64.Dockerfile"
+if ([string]::IsNullOrEmpty($env:QEMU_ARCH)) {
+    $DOCKER_FILE = "./ubuntu_native.Dockerfile"
 } else {
     $DOCKER_FILE = "./ubuntu_multiarch.Dockerfile"
 }
 
 $DEB_BUILD_ENV_IMAGE = "ravendb-deb_ubuntu_$env:DEB_ARCHITECTURE"
 
+docker pull --platform $env:DOCKER_BUILDPLATFORM ubuntu:$env:DISTRO_VERSION
 docker build `
     --platform $env:DOCKER_BUILDPLATFORM `
     --build-arg "DISTRO_VERSION_NAME=$env:DISTRO_VERSION_NAME" `
@@ -58,10 +59,16 @@ if (-not (Test-Path $distroOutputDir)) {
     mkdir $distroOutputDir
 }
 
-docker run --rm -it `
+$packageFileDir = "$PSScriptRoot/temp"
+if ($env:TARBALL_DIR)
+{
+    $packageFileDir = $($env:TARBALL_DIR)
+}
+
+docker run --rm -t `
     --platform $env:DOCKER_BUILDPLATFORM `
     -v "$($env:OUTPUT_DIR):/dist" `
-    -v "$PSScriptRoot/temp:/cache" `
+    -v "$($packageFileDir):/cache" `
     -e RAVENDB_VERSION=$ravenVersion  `
     -e "DOTNET_RUNTIME_VERSION=$env:DOTNET_RUNTIME_VERSION" `
     -e "DOTNET_DEPS_VERSION=$env:DOTNET_DEPS_VERSION" `

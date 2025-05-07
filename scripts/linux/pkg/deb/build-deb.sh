@@ -29,8 +29,8 @@ outputDir="$OUTPUT_DIR"
 
 echo "Build DEB of RavenDB $ravenVersion for distro $distName $distVer $distVerName $DEB_ARCHITECTURE"
 
-if [ "$DEB_ARCHITECTURE" == "amd64" ]; then
-    DOCKER_FILE="./ubuntu_amd64.Dockerfile"
+if [[ -z $QEMU_ARCH ]]; then
+    DOCKER_FILE="./ubuntu_native.Dockerfile"
 else
     DOCKER_FILE="./ubuntu_multiarch.Dockerfile"
 fi
