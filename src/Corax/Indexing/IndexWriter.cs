@@ -993,6 +993,8 @@ namespace Corax.Indexing
                 {
                     using var __ = staticFieldScope.For(CommitOperation.VectorValues);
                     RegisterVectorRootPage(indexedField.FieldRootPage);
+                    if (MaximumConcurrentBatchesForHnswAcceleration != null)
+                        indexedField.VectorIndexer.MaxConcurrentBatches = MaximumConcurrentBatchesForHnswAcceleration.Value;
                     indexedField.VectorIndexer.Commit();
                 }
                 
