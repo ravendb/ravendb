@@ -123,29 +123,21 @@ namespace Voron.Data.Lookups
                 if (_cursor._pos < 0)
                     return 0;
                 ref var state = ref _cursor._stk[_cursor._pos];
-                int totalRead = 0;
-                while (results.IsEmpty is false)
+                while (true)
                 {
                     Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries)
                     {
                         var read = Math.Min(results.Length, state.Header->NumberOfEntries - state.LastSearchPosition);
-                        totalRead += read;
-                        for (int i = 0; i < read; i++)
-                        {
-                            results[i] = GetKeyData(ref state, state.LastSearchPosition++);
-                        }
-
-                        results = results[read..];
-                        continue;
+                        GetKeyDataInBulk(ref state, state.LastSearchPosition, results.Slice(0, read));
+                        return read;
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)
                     {
-                        break;
+                        return 0;
                     }
                     state = ref _cursor._stk[_cursor._pos];
                 }
-                return totalRead;
             }
 
             public int Fill(Span<long> results, long lastId = long.MaxValue, bool includeMax = true)
