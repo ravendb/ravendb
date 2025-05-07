@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture) ?? CollectionName.GetCollectionName(Data);
             djv[nameof(Id)] = Id.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Flags)] = Flags;
+            djv["DataSize"] = Data?.Size ?? 0;
+            
             return djv;
         }
 
