@@ -564,8 +564,8 @@ namespace SlowTests.Sharding.Backup
 
                 using (var store = Sharding.GetDocumentStore(new Options
                 {
-                   AdminCertificate = result.Certificates.ServerCertificate.Value,
-                   ClientCertificate = result.Certificates.ServerCertificate.Value,
+                   AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                   ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                    ModifyDatabaseName = s => result.DatabaseName,
                    ModifyDatabaseRecord = record => record.Encrypted = true
                 }))
@@ -682,7 +682,7 @@ namespace SlowTests.Sharding.Backup
 
                 var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
                 options.ClientCertificate = certificates.ClientCertificate1.Value;
-                options.AdminCertificate = certificates.ServerCertificate.Value;
+                options.AdminCertificate = certificates.ServerCertificateForCommunication.Value;
                 options.ModifyDatabaseName = _ => result.DatabaseName;
                 options.ModifyDatabaseRecord += record => record.Encrypted = true;
                 options.RunInMemory = false;

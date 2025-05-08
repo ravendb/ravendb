@@ -64,7 +64,7 @@ public sealed class AllOrchestratorNodesExecutor : AbstractExecutor
 
             var url = _store.PublishedServerUrls.SelectUrl(tag, clusterTopology);
 
-            newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
+            newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.ClientCertificate,
                 ServerStore.Sharding.DocumentConventionsForOrchestrator);
         }
 

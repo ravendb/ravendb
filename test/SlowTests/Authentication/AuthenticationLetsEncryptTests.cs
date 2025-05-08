@@ -131,7 +131,7 @@ namespace SlowTests.Authentication
             Server.ServerCertificateChanged += (sender, args) => mre.Set();
 
             var ct = Certificates.GenerateAndSaveSelfSignedCertificate();
-            var first = Server.Certificate.Certificate.Thumbprint;
+            var first = Server.Certificate.ServerCertificate.Thumbprint;
 
             using (var store = GetDocumentStore(new Options { AdminCertificate = serverCert, ClientCertificate = serverCert }))
             {
@@ -146,7 +146,7 @@ namespace SlowTests.Authentication
             }
 
             await mre.WaitAsync(TimeSpan.FromSeconds(15));
-            Assert.NotEqual(first, Server.Certificate.Certificate.Thumbprint);
+            Assert.NotEqual(first, Server.Certificate.ServerCertificate.Thumbprint);
         }
 
         [RavenFact(RavenTestCategory.Certificates)]
@@ -157,7 +157,7 @@ namespace SlowTests.Authentication
             var (_, leader, certificates) = await CreateRaftClusterWithSsl(1);
 
             X509Certificate2 certificateWithPassword;
-            using (var store = GetDocumentStore(new Options { Server = leader, CreateDatabase = false, ClientCertificate = certificates.ServerCertificate.Value }))
+            using (var store = GetDocumentStore(new Options { Server = leader, CreateDatabase = false, ClientCertificate = certificates.ServerCertificateForCommunication.Value }))
             {
                 var rawData = certificates.ServerCertificate.Value.Export(X509ContentType.Pkcs12, password);
                 var certificateDefinition = new CertificateDefinition { Certificate = Convert.ToBase64String(rawData), Password = password };
@@ -305,7 +305,7 @@ namespace SlowTests.Authentication
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await Server.ServerStore.EnsureNotPassiveAsync();
-                Assert.Equal(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
+                Assert.Equal(firstServerCertThumbprint, Server.Certificate.ServerCertificate.Thumbprint);
 
                 Server.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(80);
 
@@ -336,7 +336,7 @@ namespace SlowTests.Authentication
 
                 Assert.True(result, "Refresh task didn't complete. Waited too long for the cluster cert to be replaced");
 
-                Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
+                Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.ServerCertificate.Thumbprint);
 
                 var r = await clusterReplacementConfirmed.WaitAsync(TimeSpan.FromMinutes(2));
                 Assert.True(r, "missing ConfirmServerCertificateReplacedCommand");
@@ -407,7 +407,7 @@ namespace SlowTests.Authentication
                 DebuggerAttachedTimeout.DisableLongTimespan = true;
                 var clusterSize = 3;
                 var (leader, nodes, serverCert) = await CreateLetsEncryptCluster(clusterSize, acmeStagingUrl);
-                Assert.Equal(serverCert.Thumbprint, nodes[0].Certificate.Certificate.Thumbprint);
+                Assert.Equal(serverCert.Thumbprint, nodes[0].Certificate.ServerCertificate.Thumbprint);
                 var databaseName = GetDatabaseName();
 
                 var options = Sharding.GetOptionsForCluster(leader, clusterSize, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
@@ -455,10 +455,10 @@ namespace SlowTests.Authentication
                     //make sure all cluster nodes have the new server cert
                     foreach (var node in nodes)
                     {
-                        Assert.NotEqual(serverCert.Thumbprint, node.Certificate.Certificate.Thumbprint);
+                        Assert.NotEqual(serverCert.Thumbprint, node.Certificate.ServerCertificate.Thumbprint);
                     }
 
-                    newCert = nodes[0].Certificate.Certificate;
+                    newCert = nodes[0].Certificate.ClientCertificate;
                 }
 
                 using (var store = new DocumentStore()

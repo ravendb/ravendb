@@ -108,11 +108,11 @@ namespace Raven.Server.ServerWide
 
             var cert2 = cert as X509Certificate2;
 
-            if (cert2!.Thumbprint == _serverStore.Server.Certificate.Certificate.Thumbprint)
+            if (cert2!.Thumbprint == _serverStore.Server.Certificate.ServerCertificate.Thumbprint)
                 return true;
 
             // Here we handle the case of the server certificate replacement 
-            if (cert2.GetPublicKeyPinningHash() == _serverStore.Server.Certificate.Certificate.GetPublicKeyPinningHash())
+            if (cert2.GetPublicKeyPinningHash() == _serverStore.Server.Certificate.ServerCertificate.GetPublicKeyPinningHash())
                 return true;
 
             return RequestExecutor.OnServerCertificateCustomValidationCallback(message, cert, chain, errors);

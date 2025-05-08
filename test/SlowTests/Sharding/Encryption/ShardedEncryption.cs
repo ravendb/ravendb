@@ -34,8 +34,8 @@ namespace SlowTests.Sharding.Encryption
 
             var options = new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseRecord = record =>
                 {
                     record.Encrypted = true;
@@ -70,8 +70,8 @@ namespace SlowTests.Sharding.Encryption
 
             var options = new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseRecord = record =>
                 {
                     record.Encrypted = true;
@@ -144,7 +144,7 @@ namespace SlowTests.Sharding.Encryption
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
             options.ClientCertificate = certificates.ClientCertificate1.Value;
-            options.AdminCertificate = certificates.ServerCertificate.Value;
+            options.AdminCertificate = certificates.ServerCertificateForCommunication.Value;
             options.ModifyDatabaseName = _ => databaseName;
             options.ModifyDatabaseRecord += record =>
             {
@@ -220,7 +220,7 @@ namespace SlowTests.Sharding.Encryption
 
             var options = new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ClientCertificate1.Value,
                 ModifyDatabaseRecord = record =>
                 {
@@ -262,7 +262,7 @@ namespace SlowTests.Sharding.Encryption
 
             var userCert = result.Certificates.ClientCertificate2.Value;
 
-            Certificates.RegisterClientCertificate(result.Certificates.ServerCertificate.Value,
+            Certificates.RegisterClientCertificate(result.Certificates.ServerCertificateForCommunication.Value,
                 clientCertificate: userCert,
                 permissions: new Dictionary<string, DatabaseAccess>
                 {
@@ -324,7 +324,7 @@ namespace SlowTests.Sharding.Encryption
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
             options.ClientCertificate = certificates.ClientCertificate1.Value;
-            options.AdminCertificate = certificates.ServerCertificate.Value;
+            options.AdminCertificate = certificates.ServerCertificateForCommunication.Value;
             options.ModifyDatabaseName = _ => databaseName;
             options.ModifyDatabaseRecord += record => record.Encrypted = true;
             options.RunInMemory = false;
@@ -379,7 +379,7 @@ namespace SlowTests.Sharding.Encryption
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
             options.ClientCertificate = certificates.ClientCertificate1.Value;
-            options.AdminCertificate = certificates.ServerCertificate.Value;
+            options.AdminCertificate = certificates.ServerCertificateForCommunication.Value;
             options.ModifyDatabaseName = _ => databaseName;
             options.ModifyDatabaseRecord += record => record.Encrypted = true;
             options.RunInMemory = false;
@@ -433,7 +433,7 @@ namespace SlowTests.Sharding.Encryption
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
             options.ClientCertificate = certificates.ClientCertificate1.Value;
-            options.AdminCertificate = certificates.ServerCertificate.Value;
+            options.AdminCertificate = certificates.ServerCertificateForCommunication.Value;
             options.ModifyDatabaseName = _ => databaseName;
             options.ModifyDatabaseRecord += record => record.Encrypted = true;
             options.RunInMemory = false;

@@ -1045,8 +1045,8 @@ public class MyAnalyzer2 : Analyzer
             string dbName = Encryption.SetupEncryptedDatabase(out var certificates, out var _);
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => dbName,
                 ModifyDatabaseRecord = record =>
                 {

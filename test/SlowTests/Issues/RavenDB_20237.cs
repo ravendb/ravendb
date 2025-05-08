@@ -23,8 +23,8 @@ public class RavenDB_20237 : RavenTestBase
         using (var store = GetDocumentStore(new Options
                {
                    ModifyDatabaseName = _ => result.DatabaseName,
-                   ClientCertificate = result.Certificates.ServerCertificate.Value,
-                   AdminCertificate = result.Certificates.ServerCertificate.Value,
+                   ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                   AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                    Encrypted = true
                }))
         {

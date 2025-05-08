@@ -18,7 +18,7 @@ class getCertificatesCommand extends commandBase {
     ) {
         super();
     }
-
+    
     execute(): JQueryPromise<Result> {
         const args = {
             secondary: this.includeSecondary,
