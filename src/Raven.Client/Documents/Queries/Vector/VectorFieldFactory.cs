@@ -212,7 +212,7 @@ public interface IVectorEmbeddingTextFieldValueFactory
     public void ByText(string text);
 
     /// <summary>
-    /// Use specified vector for the provided document id  
+    /// Query by the embedding(s) indexed from the specified document for the queried field. 
     /// </summary>
     public void ForDocument(string documentId);
     

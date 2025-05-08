@@ -1272,8 +1272,8 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Performs vector search on existing vector field.
         /// </summary>
-        /// <param name="vectorFieldFactory">Factory using existing, already indexed vector field.</param>
-        /// <param name="vectorValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="embeddingFieldFactory">Factory using existing, already indexed vector field.</param>
+        /// <param name="embeddingValueFactory">Factory preparing queried data to be used in vector search.</param>
         /// <param name="minimumSimilarity">Minimum similarity between queried value and indexed value of a document to be matched by the query.</param>
         /// <param name="numberOfCandidates">Number of candidate nodes for HNSW algorithm. The bigger the value, the more accurate search will be performed for the cost of more computation.</param>
         /// <param name="isExact">Defines whether vector search will be performed in approximate or exact manner.</param>
