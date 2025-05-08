@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -33,8 +33,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -75,7 +75,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -83,8 +83,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -128,7 +128,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -136,8 +136,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -181,7 +181,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -189,8 +189,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -232,7 +232,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -240,8 +240,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -286,7 +286,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -294,8 +294,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -339,7 +339,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -347,8 +347,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -387,7 +387,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -395,8 +395,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -436,7 +436,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -445,8 +445,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -485,7 +485,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -493,8 +493,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -537,7 +537,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task snapshot_encrypted_db__with_incremental_and_restore_to_encrypted_DB()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -548,8 +548,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             const string key2 = "users/2";
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -607,7 +607,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -653,7 +653,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -693,7 +693,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -739,7 +739,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task backup_unencrypted_db_and_encrypted_backup_fail_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -769,7 +769,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task can_backup_and_restore_encrypted()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -844,7 +844,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task can_backup_and_restore_sample_data_encrypted()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -925,7 +925,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public unsafe void failed_to_restore_backup_wrong_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -974,7 +974,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public void encryption_settings_validation()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1041,7 +1041,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1049,8 +1049,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -1083,7 +1083,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1116,7 +1116,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1148,7 +1148,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task snapshot_and_restore_unencrypted_db_and_unencrypted_backup_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1198,8 +1198,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()

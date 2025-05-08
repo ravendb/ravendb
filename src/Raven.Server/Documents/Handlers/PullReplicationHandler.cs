@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
 
-                    pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
+                    pullReplication.Validate(ServerStore.Server.Certificate?.ServerCertificate != null);
                     var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName, guid)
                     {
                         Definition = pullReplication
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/pull-replication/generate-certificate", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task GeneratePullReplicationCertificate()
         {
-            if (ServerStore.Server.Certificate?.Certificate == null)
+            if (ServerStore.Server.Certificate?.ServerCertificate == null)
                 throw new BadRequestException("This endpoint requires secured server.");
 
             ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();

@@ -26,7 +26,7 @@ namespace SlowTests.Client.Attachments
             {
                 var result = await Encryption.EncryptedServerAsync();
                 dbName = result.DatabaseName;
-                adminCert = result.Certificates.ServerCertificate.Value;
+                adminCert = result.Certificates.ServerCertificateForCommunication.Value;
             }
             else
             {
@@ -87,7 +87,7 @@ namespace SlowTests.Client.Attachments
             {
                 var result = await Encryption.EncryptedServerAsync();
                 dbName = result.DatabaseName;
-                adminCert = result.Certificates.ServerCertificate.Value;
+                adminCert = result.Certificates.ServerCertificateForCommunication.Value;
             }
             else
             {

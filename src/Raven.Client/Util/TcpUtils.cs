@@ -205,7 +205,8 @@ namespace Raven.Client.Util
                 return networkStream;
 
             var expectedCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(info.Certificate));
-            var sslStream = new SslStream(networkStream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
+            var sslStream = new SslStream(networkStream, false,
+                (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
             
             var targetHost = new Uri(info.Url).Host;
             var clientCertificates = new X509CertificateCollection(new X509Certificate[] { storeCertificate });
@@ -230,6 +231,7 @@ namespace Raven.Client.Util
 
             return sslStream;
         }
+
 
         private static TcpClient NewTcpClient(TimeSpan? timeout, bool useIPv6)
         {

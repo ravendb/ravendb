@@ -235,7 +235,7 @@ namespace RachisTests
             var dest = raft2.ServerStore.GetNodeHttpServerUrl();
 
             using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(source, raft1.ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(source, raft1.ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
                 await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
@@ -265,7 +265,7 @@ namespace RachisTests
             var dest = raft2.ServerStore.GetNodeHttpServerUrl();
 
             using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(source, raft1.ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(source, raft1.ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
                 await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
@@ -296,7 +296,7 @@ namespace RachisTests
 
             // here we pusblish a wrong PublicServerUrl, but connect to the ServerUrl, so the HTTP connection should be okay, but will when trying to the TCP connection.
             using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(source, raft1.ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(source, raft1.ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
                 await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
@@ -326,7 +326,7 @@ namespace RachisTests
             var dest = raft2.ServerStore.GetNodeHttpServerUrl();
 
             using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(source, raft1.ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(source, raft1.ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
                 await requestExecutor.ExecuteAsync(nodeConnectionTest, context);

@@ -63,7 +63,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, $"/admin/cluster-dashboard/remote/watch?thumbprint={currentCert?.Thumbprint}", ServerStore.ContextPool, ServerStore.ServerShutdown))
                         {
-                            await connection.Establish(Server.Certificate?.Certificate);
+                            await connection.Establish(Server.Certificate?.ClientCertificate);
 
                             await connection.RelayData();
                         }

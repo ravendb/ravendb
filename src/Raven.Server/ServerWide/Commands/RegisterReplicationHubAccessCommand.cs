@@ -65,12 +65,12 @@ namespace Raven.Server.ServerWide.Commands
 
             if (certificate != null)
             {
-                CertificatePublicKeyHash = certificate.GetPublicKeyPinningHash();
+                CertificatePublicKeyHash = PublicKeyPinningHashHelpers.GetPublicKeyPinningHash(certificate);
                 CertificateThumbprint = certificate.Thumbprint;
                 NotBefore = certificate.NotBefore;
                 NotAfter = certificate.NotAfter;
                 Issuer = certificate.Issuer;
-                Subject = certificate.Subject;
+                Subject = certificate.GetDisplayName();
             }
 
             UniqueRequestId = uniqueRequestId;

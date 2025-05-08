@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 
 namespace Raven.Server.Commercial;
@@ -19,4 +18,5 @@ public class CreateSetupPackageParameters
     public bool RegisterTcpDnsRecords;
     public string AcmeUrl;
     public CancellationToken CancellationToken;
+    public string AcmeProfile;
 }

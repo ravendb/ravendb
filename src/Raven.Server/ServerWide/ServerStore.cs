@@ -33,6 +33,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -350,9 +351,9 @@ namespace Raven.Server.ServerWide
                                 {
                                     var leaderWsUrl = new Uri($"{leaderUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}/server/notification-center/watch");
 
-                                    if (Server.Certificate?.Certificate != null)
+                                    if (Server.Certificate?.ServerCertificate != null)
                                     {
-                                        ws.Options.ClientCertificates.Add(Server.Certificate.Certificate);
+                                        ws.Options.ClientCertificates.Add(Server.Certificate.ServerCertificate);
                                     }
 
                                     ws.ConnectAsync(leaderWsUrl, cts.Token).Wait(cts.Token);
@@ -910,7 +911,7 @@ namespace Raven.Server.ServerWide
                 Configuration.Security.AuditLogCompress);
 
             var auditLog = LoggingSource.AuditLog.GetLogger("ServerStartup", "Audit");
-            auditLog.Operations($"Server started up, listening to {string.Join(", ", Configuration.Core.ServerUrls)} with certificate {_server.Certificate?.Certificate?.Subject} ({_server.Certificate?.Certificate?.Thumbprint}), public url: {Configuration.Core.PublicServerUrl}");
+            auditLog.Operations($"Server started up, listening to {string.Join(", ", Configuration.Core.ServerUrls)} with certificate {_server.Certificate?.ServerCertificate?.Subject} ({_server.Certificate?.ServerCertificate?.Thumbprint}), public url: {Configuration.Core.PublicServerUrl}");
         }
 
         private void AssertCanWriteToAuditLogDirectory()
@@ -1375,7 +1376,7 @@ namespace Raven.Server.ServerWide
                         nodesInCluster = GetClusterTopology(context).AllNodes.Count;
                     }
 
-                    if (thumbprint == Server.Certificate?.Certificate?.Thumbprint)
+                    if (thumbprint == Server.Certificate?.ServerCertificate?.Thumbprint)
                     {
                         if (nodesInCluster > replaced)
                         {
@@ -1511,11 +1512,11 @@ namespace Raven.Server.ServerWide
 
                         if (nodesInCluster > confirmations && replaceImmediately == false)
                         {
-                            if (Server.Certificate?.Certificate?.NotAfter != null &&
-                                (Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
+                            if (Server.Certificate?.ServerCertificate?.NotAfter != null &&
+                                (Server.Certificate.ServerCertificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
                             {
                                 var msg = $"Not all nodes have confirmed the certificate replacement. Confirmation count: {confirmations}. " +
-                                          $"We still have {(Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} days until expiration. " +
+                                          $"We still have {(Server.Certificate.ServerCertificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} days until expiration. " +
                                           "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
                                           $"If you wish to force replacing the certificate just for the nodes that are up, please set '{nameof(CertificateReplacement.ReplaceImmediately)}' to true.";
 
@@ -1537,7 +1538,7 @@ namespace Raven.Server.ServerWide
                             throw new InvalidOperationException(
                                 $"Invalid 'server/cert' value, expected to get '{nameof(CertificateReplacement.Certificate)}' and '{nameof(CertificateReplacement.Thumbprint)}' properties");
 
-                        if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
+                        if (certThumbprint == Server.Certificate?.ServerCertificate?.Thumbprint)
                             return;
 
                         if (cert.TryGet(nameof(CertificateReplacement.OldThumbprint), out oldThumbprint) == false)
@@ -1582,7 +1583,7 @@ namespace Raven.Server.ServerWide
                         catch (Exception e)
                         {
                             if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Unable to notify executable about the cluster certificate change '{Server.Certificate.Certificate.Thumbprint}'.", e);
+                                Logger.Operations($"Unable to notify executable about the cluster certificate change '{Server.Certificate.ServerCertificate.Thumbprint}'.", e);
                         }
                     }
                     else
@@ -1604,7 +1605,7 @@ namespace Raven.Server.ServerWide
 
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Replacing the certificate used by the server to: {newClusterCertificate.Thumbprint} ({newClusterCertificate.SubjectName.Name})");
-
+                    
                     Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
 
                     NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceError, null));
@@ -2910,7 +2911,8 @@ namespace Raven.Server.ServerWide
                 long? index = null;
                 using (ctx.OpenReadTransaction())
                 {
-                    foreach (var localCertKey in Cluster.GetCertificateThumbprintsFromLocalState(ctx))
+                    var localCertKeys = Cluster.GetCertificateThumbprintsFromLocalState(ctx).ToList();
+                    foreach (var localCertKey in localCertKeys)
                     {
                         // if there are trusted certificates in the local state, we will register them in the cluster now
                         using (var localCertificate = Cluster.GetLocalStateByThumbprint(ctx, localCertKey))
@@ -3008,7 +3010,7 @@ namespace Raven.Server.ServerWide
             {
                 NodeTag = NodeTag,
                 TopologyId = clusterTopology.TopologyId,
-                Certificate = Server.Certificate.CertificateForClients,
+                Certificate = Server.Certificate.ServerCertificateForClients,
                 NumberOfCores = ProcessorInfo.ProcessorCount,
                 InstalledMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes),
                 UsableMemoryInGb = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes),
@@ -3135,7 +3137,7 @@ namespace Raven.Server.ServerWide
         {
             await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 
-            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(GetClusterTopology().GetUrlFromTag(node), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(GetClusterTopology().GetUrlFromTag(node), Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
                 await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: oct.Token);
         }
@@ -3147,7 +3149,7 @@ namespace Raven.Server.ServerWide
             if (members == null || members.Count == 0)
                 throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute on.");
 
-            using (var requestExecutor = ClusterRequestExecutor.Create(GetClusterTopology().Members.Values.ToArray(), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.Create(GetClusterTopology().Members.Values.ToArray(), Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
             {
                 List<Exception> exceptions = null;
@@ -3209,7 +3211,7 @@ namespace Raven.Server.ServerWide
 
         private ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)
         {
-            var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+            var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer);
             requestExecutor.DefaultTimeout = Engine.OperationTimeout;
 
             return requestExecutor;
@@ -3355,7 +3357,7 @@ namespace Raven.Server.ServerWide
 
                 using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                 {
-                    connectionInfo = ReplicationUtils.GetDatabaseTcpInfoAsync(GetNodeHttpServerUrl(), url, database, "Test-Connection", Server.Certificate.Certificate,
+                    connectionInfo = ReplicationUtils.GetDatabaseTcpInfoAsync(GetNodeHttpServerUrl(), url, database, "Test-Connection", Server.Certificate.ClientCertificate,
                         cts.Token);
                 }
                 Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);
@@ -3409,7 +3411,7 @@ namespace Raven.Server.ServerWide
             var res = new DynamicJsonValue
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
-                [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.CertificateForClients,
+                [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.ServerCertificateForClients,
                 [nameof(TcpConnectionInfo.NodeTag)] = NodeTag,
                 [nameof(TcpConnectionInfo.ServerId)] = ServerId.ToString()
             };

@@ -1411,7 +1411,7 @@ namespace Raven.Server.Web.System
 
             var nodesUrls = topology.AllNodes.Select(clusterTopology.GetUrlFromTag).ToArray();
 
-            using var requestExecutor = RequestExecutor.Create(nodesUrls, databaseName, Server.Certificate.Certificate, DocumentConventions.Default);
+            using var requestExecutor = RequestExecutor.Create(nodesUrls, databaseName, Server.Certificate.ClientCertificate, DocumentConventions.Default);
 
             foreach (var nodeTag in topology.AllNodes)
             {

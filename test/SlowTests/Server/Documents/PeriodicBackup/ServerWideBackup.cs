@@ -31,7 +31,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             DoNotReuseServer();
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanAddServerWideBackupToNewDatabase()
         {
             using (var store = GetDocumentStore())
@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanStoreServerWideBackup()
         {
             using (var store = GetDocumentStore())
@@ -126,7 +126,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task UpdateServerWideBackupThroughUpdatePeriodicBackupFails()
         {
             using (var store = GetDocumentStore())
@@ -162,7 +162,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task ToggleDisableServerWideBackupFails()
         {
             using (var store = GetDocumentStore())
@@ -188,7 +188,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task ServerWideBackup_WhenToggleState_ShouldWork()
         {
             using var store = GetDocumentStore();
@@ -223,7 +223,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CreatePeriodicBackupFailsWhenUsingReservedName()
         {
             using (var store = GetDocumentStore())
@@ -333,7 +333,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanCreateMoreThanOneServerWideBackup()
         {
             using (var store = GetDocumentStore())
@@ -386,7 +386,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task DeleteServerWideBackup_WhenDoesntExit_ShouldBeHandledProperly()
         {
             var server = GetNewServer();
@@ -413,7 +413,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await store.Maintenance.Server.SendAsync(new DeleteServerWideTaskOperation(existentTaskName, OngoingTaskType.Backup));
         }
         
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanDeleteServerWideBackup()
         {
             using (var store = GetDocumentStore())
@@ -468,7 +468,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task SkipExportingTheServerWideBackup1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -546,7 +546,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.Smuggler)]
         [InlineData(EncryptionMode.None)]
         [InlineData(EncryptionMode.UseProvidedKey)]
         [InlineData(EncryptionMode.UseDatabaseKey)]
@@ -557,8 +557,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -643,7 +643,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task SkipExportingTheServerWideBackup2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -721,7 +721,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CantCreateServerWideBackupWithExistingNameButCanEdit()
         {
             var backupName = "TestServerWideBackup";
@@ -771,7 +771,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-            [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanExcludeDatabase()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -811,7 +811,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanExcludeForNewDatabase()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -883,7 +883,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task FailToAddNullOrEmptyDatabaseNames()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -930,7 +930,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanCreateSnapshotBackupForNonEncryptedDatabase()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1057,7 +1057,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task ServerWideBackup_WhenEditingNameWithOldTaskId_ShouldThrow()
         {
             const string firstName = "FirstName";

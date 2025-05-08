@@ -150,7 +150,7 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
 
             foreach (var eku in kue.EnhancedKeyUsages)
             {
-                if (eku.Value != "1.3.6.1.5.5.7.3.2")
+                if (eku.Value != Constants.Certificates.ClientAuthenticationOid)
                     continue;
 
                 supported = true;

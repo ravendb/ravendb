@@ -626,9 +626,6 @@ namespace Raven.Server.Utils.Cli
             return isOn; // here rc is not an exit code, it is a setter to _experimental
         }
 
-        private const string ServerAuthenticationOid = "1.3.6.1.5.5.7.3.1";
-        private const string ClientAuthenticationOid = "1.3.6.1.5.5.7.3.2";
-
         private static bool CommandTrustServerCert(List<string> args, RavenCli cli)
         {
             if (args.Count < 2 || args.Count > 3)
@@ -657,16 +654,16 @@ namespace Raven.Server.Utils.Cli
             {
                 foreach (var oid in extension.EnhancedKeyUsages)
                 {
-                    if (oid.Value.Equals(ServerAuthenticationOid, StringComparison.Ordinal))
+                    if (oid.Value.Equals(Constants.Certificates.ServerAuthenticationOid, StringComparison.Ordinal))
                         serverAuth = true;
-                    if (oid.Value.Equals(ClientAuthenticationOid, StringComparison.Ordinal))
+                    if (oid.Value.Equals(Constants.Certificates.ClientAuthenticationOid, StringComparison.Ordinal))
                         clientAuth = true;
                 }
             }
 
             if (clientAuth == false || serverAuth == false)
             {
-                WriteError($"Certificate {cert.Thumbprint} cannot be a ravendb server certificate. It does not include both Extended Key Usages: Server Authentication ({ServerAuthenticationOid}), Client Authentication ({ClientAuthenticationOid}).", cli);
+                WriteError($"Certificate {cert.Thumbprint} cannot be a ravendb server certificate. It does not include both Extended Key Usages: Server Authentication ({Constants.Certificates.ServerAuthenticationOid}), Client Authentication ({Constants.Certificates.ClientAuthenticationOid}).", cli);
                 return false;
             }
 
@@ -747,14 +744,14 @@ namespace Raven.Server.Utils.Cli
             {
                 foreach (var oid in extension.EnhancedKeyUsages)
                 {
-                    if (oid.Value.Equals(ClientAuthenticationOid, StringComparison.Ordinal))
+                    if (oid.Value.Equals(Constants.Certificates.ClientAuthenticationOid, StringComparison.Ordinal))
                         clientAuth = true;
                 }
             }
 
             if (clientAuth == false)
             {
-                WriteError($"Certificate {cert.Thumbprint} cannot be used as a client certificate. It does not include the Extended Key Usage: Client Authentication ({ClientAuthenticationOid}).", cli);
+                WriteError($"Certificate {cert.Thumbprint} cannot be used as a client certificate. It does not include the Extended Key Usage: Client Authentication ({Constants.Certificates.ClientAuthenticationOid}).", cli);
                 return false;
             }
 

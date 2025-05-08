@@ -831,16 +831,16 @@ namespace SlowTests.Server.Replication
                 Server = server,
                 ModifyDatabaseName = s => $"Sink_{s}",
                 RunInMemory = false,
-                ClientCertificate = certificates.ServerCertificate.Value,
-                AdminCertificate = certificates.ServerCertificate.Value
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value
             }))
             using (var hub = GetDocumentStore(new Options
             {
                 Server = server,
                 ModifyDatabaseName = s => $"Hub_{s}",
                 RunInMemory = false,
-                ClientCertificate = certificates.ServerCertificate.Value,
-                AdminCertificate = certificates.ServerCertificate.Value
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value
             }))
             {
                 await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)

@@ -24,11 +24,11 @@ namespace SlowTests.Issues
             using (var encryptedStore = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = _ => result.DatabaseName,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 Encrypted = true
             }))
-            using (var store2 = GetDocumentStore(new Options { ClientCertificate = result.Certificates.ServerCertificate.Value }))
+            using (var store2 = GetDocumentStore(new Options { ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value }))
             {
                 var db = await Databases.GetDocumentDatabaseInstanceFor(encryptedStore);
                 var maxSizeToSend = new Size(16, SizeUnit.Kilobytes);

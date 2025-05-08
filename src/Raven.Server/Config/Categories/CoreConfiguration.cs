@@ -79,6 +79,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue("https://acme-v02.api.letsencrypt.org/directory")]
         [ConfigurationEntry("AcmeUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string AcmeUrl { get; set; }
+
+        [Description("The profile which the server should use when creating new certificate request to ACME.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("LetsEncrypt.AcmeProfile", ConfigurationEntryScope.ServerWideOnly)]
+        public string AcmeProfile { get; set; }
         
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]

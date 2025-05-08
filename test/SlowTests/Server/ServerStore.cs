@@ -6,6 +6,7 @@ using FastTests;
 using Org.BouncyCastle.Crypto.Tls;
 using Raven.Client;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

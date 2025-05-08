@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -55,7 +56,8 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                 _remoteWebSocket.Options.ClientCertificates.Add(certificate);
 
-                _remoteWebSocket.Options.RemoteCertificateValidationCallback += (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert);
+                _remoteWebSocket.Options.RemoteCertificateValidationCallback += (sender, actualCert, chain, errors) =>
+                    expectedCert.Equals(actualCert);
             }
 
             return _remoteWebSocket.ConnectAsync(_remoteWebSocketUri, _cts.Token);

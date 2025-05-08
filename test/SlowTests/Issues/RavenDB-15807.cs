@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,17 +25,19 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ChangeCertificateTypeInPullReplication()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ChangeCertificateTypeInPullReplication(bool with2Eku)
         {
             var hubSettings = new ConcurrentDictionary<string, string>();
             var sinkSettings = new ConcurrentDictionary<string, string>();
 
             var hubCertificates = Certificates.GenerateAndSaveSelfSignedCertificate();
-            Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates);
+            Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates, with2Eku: with2Eku);
 
             var sinkCertificates = Certificates.GenerateAndSaveSelfSignedCertificate();
-            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
+            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates, with2Eku: with2Eku);
 
             var hubDB = GetDatabaseName();
             var sinkDB = GetDatabaseName();
@@ -48,13 +51,13 @@ namespace SlowTests.Issues
 
             using (var hubStore = GetDocumentStore(new Options
             {
-                ClientCertificate = sinkCerts.ServerCertificate.Value,
+                ClientCertificate = sinkCerts.ServerCertificateForCommunication.Value,
                 Server = hubServer,
                 ModifyDatabaseName = _ => hubDB
             }))
             using (var sinkStore = GetDocumentStore(new Options
             {
-                ClientCertificate = sinkCerts.ServerCertificate.Value,
+                ClientCertificate = sinkCerts.ServerCertificateForCommunication.Value,
                 Server = sinkServer,
                 ModifyDatabaseName = _ => sinkDB
             }))

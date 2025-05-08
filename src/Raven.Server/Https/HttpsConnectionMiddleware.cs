@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Raven.Client;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Https
 {
@@ -20,7 +22,6 @@ namespace Raven.Server.Https
 
         // See http://oid-info.com/get/1.3.6.1.5.5.7.3.1
         // Indicates that a certificate can be used as a SSL server certificate
-        private const string ServerAuthenticationOid = "1.3.6.1.5.5.7.3.1";
         private readonly X509Certificate2 _originalServerCertificate;
         public HttpsConnectionMiddleware(RavenServer server, KestrelServerOptions options, X509Certificate2 originalServerCertificate)
         {
@@ -66,12 +67,12 @@ namespace Raven.Server.Https
                     if (CipherSuitesPolicy != null)
                         sslServerAuthenticationOptions.CipherSuitesPolicy = CipherSuitesPolicy;
 
-                    if (server.Certificate?.Certificate != null && _originalServerCertificate.Thumbprint != server.Certificate.Certificate.Thumbprint)
+                    if (server.Certificate?.ServerCertificate != null && _originalServerCertificate.Thumbprint != server.Certificate.ServerCertificate.Thumbprint)
                     {
                         // the certificate got changed (refresh) we need to update ssl auth options
 
-                        sslServerAuthenticationOptions.ServerCertificateContext = server.Certificate.CertificateContext;
-                        sslServerAuthenticationOptions.ServerCertificate = server.Certificate.Certificate;
+                        sslServerAuthenticationOptions.ServerCertificateContext = server.Certificate.ServerCertificateContext;
+                        sslServerAuthenticationOptions.ServerCertificate = server.Certificate.ServerCertificate;
                     }
                 };
             });
@@ -86,6 +87,8 @@ namespace Raven.Server.Https
             X509Certificate2 certificate = null;
             if (tlsConnectionFeature != null)
                 certificate = await tlsConnectionFeature.GetClientCertificateAsync(context.ConnectionClosed);
+
+            certificate = RavenServer.GetCertificateForAuthorization(certificate);
 
             var httpConnectionFeature = context.Features.Get<IHttpConnectionFeature>();
             var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, httpConnectionFeature);
@@ -135,7 +138,7 @@ namespace Raven.Server.Https
                 hasEkuExtension = true;
                 foreach (var oid in extension.EnhancedKeyUsages)
                 {
-                    if (oid.Value.Equals(ServerAuthenticationOid, StringComparison.Ordinal))
+                    if (oid.Value.Equals(Constants.Certificates.ServerAuthenticationOid, StringComparison.Ordinal))
                     {
                         return;
                     }
@@ -144,7 +147,7 @@ namespace Raven.Server.Https
 
             if (hasEkuExtension)
             {
-                throw new InvalidOperationException($"Certificate {certificate.Thumbprint} cannot be used as an SSL server certificate. It has an Extended Key Usage extension but the usages do not include Server Authentication (OID 1.3.6.1.5.5.7.3.1)");
+                throw new InvalidOperationException($"Certificate {certificate.Thumbprint} cannot be used as an SSL server certificate. It has an Extended Key Usage extension but the usages do not include Server Authentication (OID {Constants.Certificates.ServerAuthenticationOid})");
             }
         }
     }

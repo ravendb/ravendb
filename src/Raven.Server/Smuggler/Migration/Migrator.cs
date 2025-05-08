@@ -45,7 +45,7 @@ namespace Raven.Server.Smuggler.Migration
             _skipServerCertificateValidation = configuration.SkipServerCertificateValidation;
 
             //because of backward compatibility useCompression == false here
-            var httpClientHandler = DefaultRavenHttpClientFactory.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false, useCompression: false, hasExplicitlySetCompressionUsage: false, DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime, DocumentConventions.DefaultForServer.HttpPooledConnectionIdleTimeout);
+            var httpClientHandler = DefaultRavenHttpClientFactory.CreateHttpMessageHandler(_serverStore.Server.Certificate.ClientCertificate, setSslProtocols: false, useCompression: false, hasExplicitlySetCompressionUsage: false, DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime, DocumentConventions.DefaultForServer.HttpPooledConnectionIdleTimeout);
             httpClientHandler.UseDefaultCredentials = false;
 
             if (configuration.SkipServerCertificateValidation)

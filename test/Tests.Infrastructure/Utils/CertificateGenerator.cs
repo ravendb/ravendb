@@ -11,6 +11,7 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Raven.Server.Utils;
+using Raven.Client;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Tests.Infrastructure.Utils;
@@ -35,11 +36,67 @@ public static class CertificateGenerator
         return GenerateCertificate(subjectName, yearsValid, intermediateKeyPair, signerKeyPair: rootPrivateKey, signerCertificate: rootCertificate, isCa: true);
     }
 
-    public static X509Certificate2 GenerateSignedClientCertificate(X509Certificate2 signerCertificate, AsymmetricCipherKeyPair signerKeyPair, string subjectName,
+    public static X509Certificate2 GenerateSignedClientServerCertificate(X509Certificate2 signerCertificate, AsymmetricCipherKeyPair signerKeyPair, string subjectName,
         int yearsValid, AsymmetricCipherKeyPair clientKeyPair, string[] sans = null)
     {
         var keyUsage = new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment);
-        var extendedKeyUsage = new ExtendedKeyUsage(new[] { KeyPurposeID.id_kp_serverAuth, KeyPurposeID.id_kp_clientAuth });
+        var extendedKeyUsage = new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth, KeyPurposeID.id_kp_clientAuth);
+        GeneralNames subjectAlternativeNames;
+        if (sans == null)
+        {
+            subjectAlternativeNames = new GeneralNames(new GeneralName(GeneralName.DnsName, "localhost"));
+        }
+        else if (sans.Length == 0)
+        {
+            subjectAlternativeNames = null;
+        }
+        else
+        {
+            var names = new List<GeneralName>(sans.Length);
+            foreach (var san in sans)
+            {
+                names.Add(new GeneralName(GeneralName.DnsName, san));
+            }
+
+            subjectAlternativeNames = new GeneralNames(names.ToArray());
+        }
+
+        return GenerateCertificate(subjectName, yearsValid, clientKeyPair, keyUsage, extendedKeyUsage, subjectAlternativeNames, signerCertificate, signerKeyPair);
+    }
+    
+    public static X509Certificate2 GenerateSignedServerOnlyCertificate(X509Certificate2 signerCertificate, AsymmetricCipherKeyPair signerKeyPair, string subjectName,
+        int yearsValid, AsymmetricCipherKeyPair clientKeyPair, string[] sans = null)
+    {
+        var keyUsage = new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment);
+        var extendedKeyUsage = new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth);
+        GeneralNames subjectAlternativeNames;
+        if (sans == null)
+        {
+            subjectAlternativeNames = new GeneralNames(new GeneralName(GeneralName.DnsName, "localhost"));
+        }
+        else if (sans.Length == 0)
+        {
+            subjectAlternativeNames = null;
+        }
+        else
+        {
+            var names = new List<GeneralName>(sans.Length);
+            foreach (var san in sans)
+            {
+                names.Add(new GeneralName(GeneralName.DnsName, san));
+            }
+
+            subjectAlternativeNames = new GeneralNames(names.ToArray());
+        }
+
+        return GenerateCertificate(subjectName, yearsValid, clientKeyPair, keyUsage, extendedKeyUsage, subjectAlternativeNames, signerCertificate, signerKeyPair);
+    }
+    
+    public static X509Certificate2 GenerateSignedClientOnlyCertificate(X509Certificate2 signerCertificate, AsymmetricCipherKeyPair signerKeyPair, string subjectName,
+        int yearsValid, AsymmetricCipherKeyPair clientKeyPair, string[] sans = null)
+    {
+        var keyUsage = new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment);
+        var extendedKeyUsage = new ExtendedKeyUsage(KeyPurposeID.id_kp_clientAuth);
         GeneralNames subjectAlternativeNames;
         if (sans == null)
         {
@@ -134,7 +191,7 @@ public static class CertificateGenerator
         store.SetKeyEntry(friendlyName, keyEntry, new[] { certificateEntry });
         var stream = new MemoryStream();
         store.Save(stream, Array.Empty<char>(), random);
-
-        return new X509Certificate2(stream.ToArray());
+        
+        return CertificateLoaderUtil.CreateCertificate(stream.ToArray(), null, CertificateLoaderUtil.FlagsForExport);
     }
 }

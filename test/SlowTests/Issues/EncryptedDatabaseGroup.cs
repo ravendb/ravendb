@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                 Server = leader,
                 ReplicationFactor = 2,
                 ClientCertificate = certificates.ClientCertificate1.Value,
-                AdminCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => databaseName,
                 Encrypted = true,
                 RunInMemory = false
@@ -80,7 +80,7 @@ namespace SlowTests.Issues
                 Server = leader,
                 ReplicationFactor = 2,
                 ClientCertificate = certificates.ClientCertificate1.Value,
-                AdminCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => databaseName,
                 Encrypted = true,
                 RunInMemory = false
@@ -146,7 +146,7 @@ namespace SlowTests.Issues
                 Server = leader,
                 ReplicationFactor = 2,
                 ClientCertificate = certificates.ClientCertificate1.Value,
-                AdminCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => databaseName,
                 Encrypted = true
             };
@@ -196,8 +196,8 @@ namespace SlowTests.Issues
             var options = new Options
             {
                 ModifyDatabaseName = _ => result.DatabaseName,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 Encrypted = true
             };
 
@@ -231,7 +231,7 @@ namespace SlowTests.Issues
                 Server = server,
                 ReplicationFactor = 3,
                 Encrypted = true,
-                AdminCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = certificates.ClientCertificate1.Value,
                 ModifyDatabaseName = _ => databaseName
             };
@@ -270,15 +270,15 @@ namespace SlowTests.Issues
             var databaseName = GetDatabaseName();
             foreach (var node in nodes)
             {
-                Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, userCert, new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser, node);
-                Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, adminClusterCert, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, node);
+                Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, userCert, new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser, node);
+                Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, adminClusterCert, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, node);
             }
 
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
                 ReplicationFactor = 3,
-                AdminCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = userCert,
                 ModifyDatabaseName = _ => databaseName,
                 DeleteDatabaseOnDispose = false

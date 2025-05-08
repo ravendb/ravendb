@@ -391,7 +391,7 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["X-XSS-Protection"] = "1; mode=block";
             HttpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
 
-            var isSecuredServer = ServerStore.Server.Certificate?.Certificate != null;
+            var isSecuredServer = ServerStore.Server.Certificate?.ServerCertificate != null;
 
             if (isSecuredServer && Server.Configuration.Security.DisableHsts == false)
             {

@@ -37,9 +37,9 @@ namespace SlowTests.Issues
         {
             var dbName = GetDatabaseName();
             var certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
+            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate3.Value,
+            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate3.Value,
                 new Dictionary<string, DatabaseAccess>(), sc);
 
             var path = NewDataPath(forceCreateDir: true);
@@ -78,9 +78,9 @@ namespace SlowTests.Issues
         {
             var dbName = GetDatabaseName();
             var certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
+            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
+            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>() { [dbName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
 
             var path = NewDataPath(forceCreateDir: true);
@@ -128,9 +128,9 @@ namespace SlowTests.Issues
         {
             var dbName = GetDatabaseName();
             var certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
+            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
+            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>(), sc);
 
             var path = NewDataPath(forceCreateDir: true);
@@ -174,9 +174,9 @@ namespace SlowTests.Issues
         {
             var dbName = GetDatabaseName();
             var certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
+            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
+            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>() { [dbName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
 
             var path = NewDataPath(forceCreateDir: true);
@@ -225,9 +225,9 @@ namespace SlowTests.Issues
 
             var dbName = GetDatabaseName();
             TestCertificatesHolder certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
+            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
+            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>(), sc);
 
             var path = NewDataPath(forceCreateDir: true);
@@ -272,9 +272,9 @@ namespace SlowTests.Issues
 
             var dbName = GetDatabaseName();
             TestCertificatesHolder certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
+            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
+            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>() { [dbName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
 
             var path = NewDataPath(forceCreateDir: true);

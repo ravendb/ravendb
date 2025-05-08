@@ -29,8 +29,8 @@ namespace SlowTests.Issues
 
             using (var storeToExport = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -63,8 +63,8 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -87,8 +87,8 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -110,8 +110,8 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record =>
                 {

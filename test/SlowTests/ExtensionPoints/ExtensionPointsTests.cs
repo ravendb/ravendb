@@ -358,7 +358,7 @@ exit 0";
             var secrets = Server.ServerStore.Secrets;
             var serverMasterKey = (Lazy<byte[]>)typeof(SecretProtection).GetField("_serverMasterKey", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(secrets);
             Assert.True(serverMasterKey.Value.SequenceEqual(buffer));
-            Assert.True(Server.Certificate.Certificate.Equals(serverCertificate));
+            Assert.True(Server.IsServerCertificate(serverCertificate));
         }
 
         [RavenFact(RavenTestCategory.Certificates)]

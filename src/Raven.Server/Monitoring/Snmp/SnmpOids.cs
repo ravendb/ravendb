@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Reflection;
+using Raven.Client;
 using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -14,7 +15,7 @@ namespace Raven.Server.Monitoring.Snmp
         {
         }
 
-        public const string Root = "1.3.6.1.4.1.45751.1.1.";
+        public const string Root = Constants.Monitoring.Snmp.SnmpRootOid + ".";
 
         public class Server
         {

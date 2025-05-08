@@ -60,8 +60,8 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options()
             {
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -98,8 +98,8 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options()
             {
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
             }))
             {
                 var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()

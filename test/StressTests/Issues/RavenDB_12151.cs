@@ -128,8 +128,8 @@ namespace StressTests.Issues
 
             using (var store = GetDocumentStore(new Options()
             {
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbName,
                 Path = NewDataPath(),
                 ModifyDatabaseRecord = r =>
