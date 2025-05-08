@@ -110,6 +110,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
@@ -171,6 +172,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
@@ -236,6 +238,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Tag == "watches/fitbit")
@@ -297,6 +300,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries("Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
@@ -352,6 +356,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries("Heartrate")
                             .GroupBy(g => g.Months(1))
@@ -408,6 +413,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Tag.In(new[] { "watches/fitbit", "watches/apple" }))
@@ -483,6 +489,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .LoadByTag<Watch>()
@@ -549,7 +556,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var query = from p in session.Query<Person>()
+                    var query = from p in session.Query<Person>().Customize(x => x.WaitForNonStaleResults())
                                 where p.Age > 21
                                 let company = RavenQuery.Load<Company>(p.WorksAt)
                                 select RavenQuery.TimeSeries(company, "Stock", baseline, baseline.AddMonths(2))
@@ -626,6 +633,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .LoadByTag<Watch>()
@@ -688,6 +696,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
@@ -749,6 +758,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => new
                         {
@@ -819,6 +829,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => new QueryResult
                         {
@@ -899,6 +910,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new QueryResult
                         {
                             Id = p.Id,
@@ -1013,6 +1025,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     }
 
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Id == id)
                         .Statistics(out var stats)
                         .Select(u => RavenQuery.TimeSeries(u, name, baseline, DateTime.MaxValue)
@@ -1063,6 +1076,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Id == id)
                         .Statistics(out var stats)
                         .Select(u => RavenQuery.TimeSeries(u, name)
@@ -1111,6 +1125,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     double val = 70;
 
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Values[0] > val)
                             .GroupBy(g => g.Months(1))
@@ -1174,6 +1189,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     string timeseriesName = "Heartrate";
 
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, timeseriesName)
                             .Where(ts => ts.Values[0] > 70)
                             .GroupBy(g => g.Months(1))
@@ -1232,6 +1248,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Values[0] < 70 || ts.Tag == "watches/apple")
                             .GroupBy(g => g.Months(1))
@@ -1300,6 +1317,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .LoadByTag<Watch>()
                             .Where((ts, src) => src != null && src.Accuracy > 2.2)
@@ -1363,6 +1381,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
@@ -1424,6 +1443,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 {
                     var d = 70d;
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .LoadByTag<Watch>()
                             .Where((ts, src) => (src != null && src.Accuracy > 2.2) ||
@@ -1488,6 +1508,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
                             .GroupBy(g => g.Minutes(2))
                             .Select(x => new
@@ -1532,6 +1553,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
                             .Where(ts => ts.Tag != "watches/sony")
                             .GroupBy(g => g.Minutes(2))
@@ -1568,6 +1590,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
                             .Where(ts => ts.Tag != "watches/sony")
                             .LoadByTag<Watch>()
@@ -1583,6 +1606,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
                             .Where(ts => ts.Tag != "watches/sony")
                             .GroupBy(g => g.Months(1))
@@ -1612,6 +1636,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries(p, "Heartrate")
@@ -1624,6 +1649,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
                                 .Where(ts => ts.Tag != "watches/fitbit"));
 
@@ -1634,6 +1660,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
                                 .LoadByTag<Watch>());
 
@@ -1644,6 +1671,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries(p, "Heartrate")
@@ -1658,6 +1686,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries(p, "Heartrate")
@@ -1672,6 +1701,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries(p, "Heartrate")
@@ -1690,6 +1720,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
@@ -1702,6 +1733,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
                             .LoadByTag<Watch>());
 
@@ -1712,6 +1744,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
@@ -1726,6 +1759,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
@@ -1775,6 +1809,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
                             .ToList());
@@ -1845,6 +1880,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
@@ -1911,6 +1947,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Tag == "watches/fitbit")
@@ -1971,6 +2008,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Tag.In(new[] { "watches/fitbit", "watches/apple" }))
@@ -2022,6 +2060,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .ToList());
@@ -2074,6 +2113,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = from p in session.Query<Person>()
+                            .Customize(x => x.WaitForNonStaleResults())
                                 where p.Age > 21
                                 let company = RavenQuery.Load<Company>(p.WorksAt)
                                 select RavenQuery.TimeSeries(company, "Stock", baseline, baseline.AddMonths(2))
@@ -2146,6 +2186,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .LoadByTag<Watch>()
@@ -2219,6 +2260,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .LoadByTag<Watch>()
@@ -2279,6 +2321,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     double val = 70;
 
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Values[0] > val)
                             .ToList());
@@ -2345,6 +2388,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => new QueryResult2
                         {
                             Id = p.Id,
@@ -2412,6 +2456,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Value > 75 && ts.Value < 175)
@@ -2465,6 +2510,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Tag != null)
@@ -2531,6 +2577,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var offset = TimeSpan.FromHours(2);
 
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddMonths(6))
                             .GroupBy(g => g.Hours(1))
                             .Select(ts => new
@@ -2650,6 +2697,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var offset = TimeSpan.FromHours(-2);
 
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddMonths(6))
                             .GroupBy(g => g.Hours(1))
                             .Select(ts => new
@@ -2750,6 +2798,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddYears(1))
                             .Offset(TimeSpan.FromHours(2))
                             .ToList());
@@ -2833,6 +2882,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var offset = TimeZoneInfo.Local.BaseUtcOffset;
 
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
                             .Offset(offset)
                             .ToList());
@@ -2905,6 +2955,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                         RavenQuery.TimeSeries(p, "HeartRate")
@@ -2950,6 +3001,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -2995,6 +3047,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3045,6 +3098,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
                             .FromLast(g => g.Hours(12))
@@ -3096,6 +3150,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3175,6 +3230,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3228,6 +3284,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var tag = "watches/apple";
 
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3281,6 +3338,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var offset = TimeZoneInfo.Local.BaseUtcOffset;
 
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
                             .FromLast(g => g.Hours(12))
@@ -3334,6 +3392,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3379,6 +3438,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3429,6 +3489,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3484,6 +3545,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
                             .FromFirst(g => g.Hours(12))
@@ -3532,6 +3594,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3609,6 +3672,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3668,6 +3732,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var tag = "watches/apple";
 
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p =>
                             RavenQuery.TimeSeries(p, "HeartRate")
@@ -3726,6 +3791,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var offset = TimeZoneInfo.Local.BaseUtcOffset;
 
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
                             .FromFirst(g => g.Hours(12))
@@ -3771,6 +3837,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(x => RavenQuery.TimeSeries(x, "HeartRate", baseline, baseline.AddDays(1))
                             .FromLast(g => g.Hours(6))
@@ -3809,6 +3876,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(x => RavenQuery.TimeSeries(x, "HeartRate", baseline, baseline.AddDays(1))
                             .FromFirst(g => g.Hours(6))
@@ -3847,6 +3915,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(x => RavenQuery.TimeSeries(x, "HeartRate", baseline, baseline.AddDays(1))
                             .FromFirst(g => g.Hours(6))
@@ -3910,6 +3979,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Company>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(c => c.Id == "companies/1")
                         .Select(c => RavenQuery.TimeSeries<StockPrice>(c, seriesName, baseline.AddDays(-1), baseline.AddDays(1))
                             .Where(entry => entry.Value.High > 45.99)
@@ -3974,6 +4044,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Company>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(c => c.Id == "companies/1")
                         .Select(c => RavenQuery.TimeSeries<StockPrice>(c, seriesName, baseline, baseline.AddMonths(3))
                             .Where(entry => entry.Value.High > 45.99)
@@ -4026,6 +4097,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p => RavenQuery.TimeSeries(p, name, baseline, baseline.AddDays(3))
                             .Scale(0.001)
@@ -4086,6 +4158,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var scale = 0.01;
 
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p => RavenQuery.TimeSeries(p, name, baseline, baseline.AddDays(3))
                             .GroupBy(g => g.Hours(1))
@@ -4157,6 +4230,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var scale = 0.001;
 
                     var result = session.Query<Person>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(p => p.Id == id)
                         .Select(p => RavenQuery.TimeSeries(p, name, baseline, baseline.AddDays(3))
                             .Scale(scale)
