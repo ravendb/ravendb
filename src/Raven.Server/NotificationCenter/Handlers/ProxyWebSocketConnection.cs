@@ -11,7 +11,6 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Extensions;
 using Raven.Server.Logging;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -61,7 +60,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 var tcpConnection = ReplicationUtils.GetServerTcpInfo(_nodeUrl, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _cts.Token);
 
                 var expectedCert = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(tcpConnection.Certificate));
-
+                
                 handler.ServerCertificateCustomValidationCallback = (_, actualCert, _, _) => expectedCert.Equals(actualCert);
             }
 

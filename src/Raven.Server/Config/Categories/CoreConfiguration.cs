@@ -94,7 +94,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(30)]
         [ConfigurationEntry("AcmeRenewalThresholdPercentage", ConfigurationEntryScope.ServerWideOnly)]
         public int AcmeRenewalThresholdPercentage { get; set; }
-
+        
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
         [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened", ConfigurationEntryScope.ServerWideOrPerDatabase)]

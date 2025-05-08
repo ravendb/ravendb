@@ -21,7 +21,7 @@ namespace SlowTests.Server.Replication
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var store = GetDocumentStore(new Options

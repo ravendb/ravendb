@@ -64,8 +64,8 @@ namespace SlowTests.Issues
             {
                 var database = GetDatabaseName();
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
-                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     var record = new DatabaseRecord(database);
                     options.ModifyDatabaseRecord?.Invoke(record);
@@ -115,8 +115,8 @@ namespace SlowTests.Issues
             {
                 var database = GetDatabaseName();
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
-                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     var record = new DatabaseRecord(database);
                     options.ModifyDatabaseRecord?.Invoke(record);
@@ -168,9 +168,9 @@ namespace SlowTests.Issues
                 var databaseB = GetDatabaseName("DB_B");
                 var databaseC = GetDatabaseName("DB_C");
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = databaseB, Conventions = { DisposeCertificate = false } }.Initialize())
-                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = databaseA, Conventions = { DisposeCertificate = false } }.Initialize())
-                using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = databaseC, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.ClientCertificate, Database = databaseB, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.ClientCertificate, Database = databaseA, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.ClientCertificate, Database = databaseC, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     var recordA = new DatabaseRecord(databaseA);
                     options.ModifyDatabaseRecord?.Invoke(recordA);
@@ -210,9 +210,9 @@ namespace SlowTests.Issues
             {
                 var database = GetDatabaseName();
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
-                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
-                using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     var record = new DatabaseRecord(database);
                     options.ModifyDatabaseRecord?.Invoke(record);
@@ -245,7 +245,7 @@ namespace SlowTests.Issues
             var cluster = await CreateRaftClusterWithSsl(1, watcherCluster: true);
             var serverB = CreateSecuredServer(cluster.Leader.ServerStore.GetNodeTcpServerUrl(), uniqueCerts: false);
 
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(cluster.Leader.WebUrl, cluster.Leader.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(cluster.Leader.WebUrl, cluster.Leader.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
             {
                 string database = GetDatabaseName();
@@ -253,7 +253,7 @@ namespace SlowTests.Issues
                 await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(serverB.WebUrl, serverB.ServerStore.NodeTag), ctx);
 
                 using (var leaderStore =
-                    new DocumentStore { Urls = new[] { cluster.Leader.WebUrl }, Certificate = cluster.Leader.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                    new DocumentStore { Urls = new[] { cluster.Leader.WebUrl }, Certificate = cluster.Leader.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     var record = new DatabaseRecord(database);
                     options.ModifyDatabaseRecord?.Invoke(record);
@@ -261,7 +261,7 @@ namespace SlowTests.Issues
                     var res = leaderStore.Maintenance.Server.Send(new CreateDatabaseOperation(record));
                 }
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.ClientCertificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     var name = await WaitForValueAsync(() =>
                     {
@@ -279,7 +279,7 @@ namespace SlowTests.Issues
             using (var serverA = CreateSecuredServer())
             using (var serverB = CreateSecuredServer(serverA.ServerStore.GetNodeTcpServerUrl(), false))
             {
-                using (var handler = DefaultRavenHttpClientFactory.CreateHttpMessageHandler(serverA.Certificate.Certificate, true, true))
+                using (var handler = DefaultRavenHttpClientFactory.CreateHttpMessageHandler(serverA.Certificate.ClientCertificate, true, true))
                 using (var client = new HttpClient(handler).WithConventions(DocumentConventions.DefaultForServer))
                 {
                     var url = $"{serverA.WebUrl}/admin/debug/node/ping?url={Uri.EscapeDataString(serverB.WebUrl)}";

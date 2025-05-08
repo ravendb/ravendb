@@ -389,12 +389,13 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                     Output.WriteLine(tuple.Exception.Message);
                 }
             })
-        {
-            Processed = 0,
-            Total = 4
-        },
+            {
+                Processed = 0,
+                Total = 4
+            },
             false,
             StagingAcmeClientUrl,
+            DefaultAcmeProfile,
             cts.Token);
 
         X509Certificate2 serverCert;
@@ -535,12 +536,13 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                     Output.WriteLine(tuple.Exception.Message);
                 }
             })
-        {
-            Processed = 0,
-            Total = 4
-        },
+            {
+                Processed = 0,
+                Total = 4
+            },
             false,
             StagingAcmeClientUrl,
+            DefaultAcmeProfile,
             cts.Token);
 
         X509Certificate2 serverCert;
@@ -719,4 +721,5 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     }
 
     private const string StagingAcmeClientUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
+    private const string DefaultAcmeProfile = "";
 }

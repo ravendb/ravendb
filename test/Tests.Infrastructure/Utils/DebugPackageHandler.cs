@@ -22,7 +22,7 @@ namespace Tests.Infrastructure.Utils
         }
 
         private static IDocumentStore InitDocumentStore(RavenServer ravenServer)
-            => new DocumentStore { Urls = new[] { ravenServer.WebUrl }, Certificate = ravenServer.Certificate?.Certificate }
+            => new DocumentStore { Urls = new[] { ravenServer.WebUrl }, Certificate = ravenServer.Certificate?.ClientCertificate }
                 .Initialize();
 
         private static void SaveDebugPackage(Context testContext, ClusterDebugInfoPackageResult operationResult)

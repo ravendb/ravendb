@@ -63,7 +63,7 @@ public static class CertificateGenerator
 
         return GenerateCertificate(subjectName, yearsValid, clientKeyPair, keyUsage, extendedKeyUsage, subjectAlternativeNames, signerCertificate, signerKeyPair);
     }
-
+    
     public static X509Certificate2 GenerateSignedServerOnlyCertificate(X509Certificate2 signerCertificate, AsymmetricCipherKeyPair signerKeyPair, string subjectName,
         int yearsValid, AsymmetricCipherKeyPair clientKeyPair, string[] sans = null)
     {

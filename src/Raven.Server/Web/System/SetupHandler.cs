@@ -459,7 +459,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    SecretProtection.ValidateKeyUsages("Setup Wizard", certificate, ServerStore.Configuration.Security.CertificateValidationKeyUsages);
+                    SecretProtection.ValidateServerKeyUsages("Setup Wizard", certificate, ServerStore.Configuration.Security.CertificateValidationKeyUsages);
                 }
                 catch (Exception e)
                 {
@@ -491,7 +491,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-        
+
         [RavenAction("/setup/unsecured/package", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupUnsecuredPackage()
         {
@@ -580,7 +580,7 @@ namespace Raven.Server.Web.System
 
                 var fileName = $"{cn}.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
                 var contentDisposition = $"attachment; filename={fileName}";
-                
+
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
@@ -640,7 +640,7 @@ namespace Raven.Server.Web.System
 
                 var fileName = $"{setupInfo.Domain}.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
                 var contentDisposition = $"attachment; filename={fileName}";
-                
+
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
@@ -691,7 +691,7 @@ namespace Raven.Server.Web.System
                                 }
                         }
                     }
-    
+
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartArray();
@@ -719,7 +719,7 @@ namespace Raven.Server.Web.System
                                 writer.WriteString(node.Value);
                                 writer.WriteEndObject();
                             }
-                            
+
                             first = false;
                         }
 
@@ -761,8 +761,7 @@ namespace Raven.Server.Web.System
             NoContentStatus();
         }
 
-        
-        
+
         [RavenAction("/setup/continue", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task ContinueClusterSetup()
         {

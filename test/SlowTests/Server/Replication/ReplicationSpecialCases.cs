@@ -732,15 +732,15 @@ namespace SlowTests.Server.Replication
 
             using (var source = GetDocumentStore(new Options
             {
-                AdminCertificate = cert.ServerCertificate.Value,
-                ClientCertificate = cert.ServerCertificate.Value,
+                AdminCertificate = cert.ServerCertificateForCommunication.Value,
+                ClientCertificate = cert.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => databaseName,
                 ModifyDatabaseRecord = r => r.Encrypted = true
             }))
             using (var destination = Sharding.GetDocumentStore(new Options
             {
-                AdminCertificate = cert2.ServerCertificate.Value,
-                ClientCertificate = cert2.ServerCertificate.Value,
+                AdminCertificate = cert2.ServerCertificateForCommunication.Value,
+                ClientCertificate = cert2.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => databaseName2,
                 ModifyDatabaseRecord = r => r.Encrypted = true
             }))

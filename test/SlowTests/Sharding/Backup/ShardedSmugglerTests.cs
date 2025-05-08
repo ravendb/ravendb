@@ -507,7 +507,7 @@ namespace SlowTests.Sharding.Backup
 
             using (var hubStore = GetDocumentStore(new Options
             {
-                ClientCertificate = hubCerts.ServerCertificate.Value,
+                ClientCertificate = hubCerts.ServerCertificateForCommunication.Value,
                 Server = hubServer,
                 ModifyDatabaseName = _ => hubDB
             }))
@@ -531,7 +531,7 @@ namespace SlowTests.Sharding.Backup
 
                 using (var shardStore = Sharding.GetDocumentStore(new Options
                 {
-                    ClientCertificate = hubCerts.ServerCertificate.Value,
+                    ClientCertificate = hubCerts.ServerCertificateForCommunication.Value,
                     Server = hubServer,
                     ModifyDatabaseName = _ => hubDB + "shard"
                 }))
@@ -552,7 +552,7 @@ namespace SlowTests.Sharding.Backup
 
                     using (var store2 = GetDocumentStore(new Options
                     {
-                        ClientCertificate = hubCerts.ServerCertificate.Value,
+                        ClientCertificate = hubCerts.ServerCertificateForCommunication.Value,
                         Server = hubServer,
                         ModifyDatabaseName = _ => hubDB + "shard2"
                     }))

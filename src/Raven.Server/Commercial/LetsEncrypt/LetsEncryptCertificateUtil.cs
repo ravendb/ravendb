@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using Sparrow.Server.Platform.Posix;
 
@@ -17,11 +18,11 @@ public sealed class LetsEncryptCertificateUtil
 {
     internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition, X509Certificate2 SelfSignedCertificate) GenerateClientCertificateTask(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
     {
-        if (certificateHolder.Certificate == null)
+        if (certificateHolder.ServerCertificate == null)
             throw new InvalidOperationException($"Cannot generate the client certificate '{certificateName}' because the server certificate is not loaded.");
 
         // this creates a client certificate which is signed by the current server certificate
-        var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificateName, certificateHolder, out var certBytes, setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
+        var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificateName, certificateHolder.ServerCertificate, certificateHolder.PrivateKey.Key, out var certBytes, setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
         var newCertDef = new CertificateDefinition
         {

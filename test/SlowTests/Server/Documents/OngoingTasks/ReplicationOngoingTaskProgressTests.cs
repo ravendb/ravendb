@@ -184,8 +184,8 @@ namespace SlowTests.Server.Documents.OngoingTasks
             using var hub = GetDocumentStore(new Options()
             {
                 Server = leader,
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => "HubDB",
                 CreateDatabase = true
             });
@@ -193,8 +193,8 @@ namespace SlowTests.Server.Documents.OngoingTasks
             using var sink = GetDocumentStore(new Options()
             {
                 Server = leader,
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => "SinkDB",
                 CreateDatabase = true
             });

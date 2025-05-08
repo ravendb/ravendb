@@ -70,7 +70,7 @@ namespace Raven.Server.ServerWide.Commands
                 NotBefore = certificate.NotBefore;
                 NotAfter = certificate.NotAfter;
                 Issuer = certificate.Issuer;
-                Subject = certificate.Subject;
+                Subject = certificate.GetDisplayName();
             }
 
             UniqueRequestId = uniqueRequestId;
