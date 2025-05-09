@@ -523,7 +523,7 @@ public partial class AbstractStaticIndexBase
         
         var vectors = ProcessLoadVector(fieldName, path, embeddingGeneratorTaskName, out vectorField);
 
-        //for js indexes we've no choice than create dynamic field, in such cases let's assume it is single. 
+        // for js indexes we've no choice than create dynamic field, in such cases let's assume it is single. 
         if (vectorField == null)
         {
             vectorField = RetrieveCreateVectorField(fieldName, null);
@@ -585,8 +585,8 @@ public partial class AbstractStaticIndexBase
                 if (Enum.TryParse(enumAsStr.AsSpan(), out expectedVectorType) == false)
                     expectedVectorType = VectorEmbeddingType.Single;
             }
-        
-            indexField = currentIndexingScope.GetLoadVectorField(fieldName, embeddingGenerationTaskIdentifier,  expectedVectorType);
+
+            indexField = currentIndexingScope.GetLoadVectorField(fieldName, embeddingGenerationTaskIdentifier, expectedVectorType);
         }
         
         if (embeddingContainerObject is BlittableJsonReaderArray bjra)

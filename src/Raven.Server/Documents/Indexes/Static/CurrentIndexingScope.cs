@@ -474,21 +474,70 @@ namespace Raven.Server.Documents.Indexes.Static
             
             Debug.Assert(embeddingsGenerationTaskIdentifier.Value is not null);
             var fieldExists = Index.Definition.MapFields.TryGetValue(fieldName, out var mapField);
-            var fieldHasVector = fieldExists && mapField is IndexField { Vector: not null };
-
+            var fieldHasVector = fieldExists && mapField is IndexField { Vector: not null } or AutoIndexField { Vector: not null };
+            
+            // vectorEmbeddingTypeInDocument is the quantization (destination EmbeddingType) of task used for embeddings generation
+            // If auto field should use a different quantization, we have to override the index field by making a dynamic field with new configuration 
+            var autoIndexFieldRequiresQuantization =
+                fieldHasVector && mapField is AutoIndexField aif && aif.Vector.DestinationEmbeddingType != vectorEmbeddingTypeInDocument;
+            
             IndexField vectorField;
-            switch (FieldExists: fieldExists, FieldHasVector: fieldHasVector)
+            switch (FieldExists: fieldExists, FieldHasVector: fieldHasVector, AutoIndexFieldRequiresQuantization: autoIndexFieldRequiresQuantization)
             {
-                case (FieldExists: true, FieldHasVector: true):
+                case (FieldExists: true, FieldHasVector: true, AutoIndexFieldRequiresQuantization: true):
                 {
-                    field = (IndexField)mapField;
-                    PortableExceptions.ThrowIfNot<InvalidOperationException>(vectorEmbeddingTypeInDocument == field!.Vector.SourceEmbeddingType, $"Document contains vector in format '{vectorEmbeddingTypeInDocument}' but field '{fieldName}' is configured to source: '{field.Vector.SourceEmbeddingType}'");
+                    AutoIndexField autoField = mapField as AutoIndexField;
+                    var destinationTargetEmbeddingType = autoField!.Vector.DestinationEmbeddingType;
                     
-                    vectorField =  field;
+                    // The task produced quantized embeddings, but auto index field has F32 set (default value)
+                    // This means the same quantization as in task should be used
+                    if (vectorEmbeddingTypeInDocument is not VectorEmbeddingType.Single && destinationTargetEmbeddingType is VectorEmbeddingType.Single)
+                        destinationTargetEmbeddingType = vectorEmbeddingTypeInDocument;
+                    
+                    vectorField = IndexField.Create(fieldName,
+                        new IndexFieldOptions()
+                        {
+                            Vector = new VectorOptions()
+                            {
+                                SourceEmbeddingType = vectorEmbeddingTypeInDocument,
+                                DestinationEmbeddingType = destinationTargetEmbeddingType,
+                                Dimensions = VectorOptions.DefaultText.Dimensions,
+                                NumberOfEdges = Index.Configuration.CoraxVectorDefaultNumberOfEdges,
+                                NumberOfCandidatesForIndexing = Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                            }
+                        }, null, Corax.Constants.IndexWriter.DynamicField);
+                    
+                    vectorField.Vector.Validate();
                     break;
                 }
-                case (FieldExists: true, FieldHasVector: false):
-                case (FieldExists: false, _):
+                case (FieldExists: true, FieldHasVector: true, AutoIndexFieldRequiresQuantization: false):
+                {
+                    if (mapField is AutoIndexField)
+                    {
+                        vectorField = IndexField.Create(fieldName,
+                            new IndexFieldOptions()
+                            {
+                                Vector = new VectorOptions()
+                                {
+                                    SourceEmbeddingType = vectorEmbeddingTypeInDocument,
+                                    DestinationEmbeddingType = vectorEmbeddingTypeInDocument,
+                                    Dimensions = VectorOptions.DefaultText.Dimensions,
+                                    NumberOfEdges = Index.Configuration.CoraxVectorDefaultNumberOfEdges,
+                                    NumberOfCandidatesForIndexing = Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                                }
+                            }, null, Corax.Constants.IndexWriter.DynamicField);
+                    }
+
+                    else
+                        vectorField = (IndexField)mapField;
+
+                    var fieldVectorOptions = vectorField!.Vector;
+                    PortableExceptions.ThrowIfNot<InvalidOperationException>(vectorEmbeddingTypeInDocument == fieldVectorOptions.SourceEmbeddingType, $"Document contains vector in format '{vectorEmbeddingTypeInDocument}' but field '{fieldName}' is configured to source: '{fieldVectorOptions.SourceEmbeddingType}'");
+                    
+                    break;
+                }
+                case (FieldExists: true, FieldHasVector: false, AutoIndexFieldRequiresQuantization: _):
+                case (FieldExists: false, _, _):
                 {
                     vectorField = IndexField.Create(fieldName,
                         new IndexFieldOptions()

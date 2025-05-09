@@ -143,31 +143,31 @@ namespace Raven.Server.Documents.Indexes
             _vectorSourceEmbeddingTypeToWrite.Add(fieldName, embeddingType);
         }
         
-        internal void SetFieldEmbeddingDimension(string fieldName, int dimensions, VectorEmbeddingType destinationEmbeddingType)
+        internal void SetFieldEmbeddingDimension(string fieldName, int embeddingLengthInBytes, VectorEmbeddingType destinationEmbeddingType)
         {
             _vectorFieldsDimensionsToWrite ??= new Dictionary<string, int>();
             
             if (_vectorFieldsDimensions.TryGetValue(fieldName, out int storedDimensions) || _vectorFieldsDimensionsToWrite.TryGetValue(fieldName, out storedDimensions))
             {
-                if (storedDimensions == dimensions)
+                if (storedDimensions == embeddingLengthInBytes)
                     return;
                 
                 if (destinationEmbeddingType == VectorEmbeddingType.Binary)
-                    throw new InvalidDataException($"Field {fieldName} contains embeddings with different number of dimensions.");
+                    throw new InvalidDataException($"Field {fieldName} contains embeddings with different number of dimensions than currently processed embedding.");
 
                 // Because dimensions number we get as a parameter is a length of a vector after the quantization and cast to bytes, we have to restore original 
                 // length for exception message
                 var (originalInputDimensions, originalDimensions) = destinationEmbeddingType switch
                 {
-                    VectorEmbeddingType.Single => (storedDimensions / sizeof(float), dimensions / sizeof(float)),
-                    VectorEmbeddingType.Int8 => (storedDimensions - sizeof(float), dimensions - sizeof(float)),
+                    VectorEmbeddingType.Single => (storedDimensions / sizeof(float), embeddingLengthInBytes / sizeof(float)),
+                    VectorEmbeddingType.Int8 => (storedDimensions - sizeof(float), embeddingLengthInBytes - sizeof(float)),
                     _ => throw new InvalidDataException($"Unexpected embedding type - {destinationEmbeddingType}.")
                 };
 
                 throw new InvalidDataException($"Attempted to index embedding with {originalDimensions} dimensions, but field {fieldName} already contains indexed embedding with {originalInputDimensions} dimensions, or was explicitly configured for embeddings with {originalInputDimensions} dimensions.");
             }
             
-            _vectorFieldsDimensionsToWrite.Add(fieldName, dimensions);
+            _vectorFieldsDimensionsToWrite.Add(fieldName, embeddingLengthInBytes);
         }
         
         internal void Persist(TransactionOperationContext indexContext)

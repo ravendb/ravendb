@@ -162,10 +162,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var defaultAutoIndexingEngineType = Database.Configuration.Indexing.AutoIndexingEngineType;
             
             var map = DynamicQueryMapping.Create(query, defaultAutoIndexingEngineType);
-
-            if (query.Metadata.HasVectorSearch)
-                ValidateVectorFields();
-
+            
             (long? Index, Index Instance) result = default;
 
             while (TryMatchExistingIndexToQuery(map, out result.Instance) == false)
@@ -176,6 +173,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (query.DisableAutoIndexCreation)
                     throw new InvalidOperationException("Creation of Auto Indexes was disabled and no Auto Index matching the given query was found.");
 
+                if (query.Metadata.HasVectorSearch)
+                    ValidateVectorFields();
+                
                 var definition = map.CreateAutoIndexDefinition();
                 result = await _indexStore.CreateIndex(definition, RaftIdGenerator.NewId());
                 var index = result.Instance;
