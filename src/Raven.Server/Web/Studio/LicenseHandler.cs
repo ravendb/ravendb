@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web.Studio
 {
@@ -83,6 +84,9 @@ namespace Raven.Server.Web.Studio
                 license = JsonDeserializationServer.License(json);
             }
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                LogAuditFor("Server", "ACTIVATE", $"License '{license.Id}'");
+            
             await ServerStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
             await ServerStore.LicenseManager.ActivateAsync(license, GetRaftRequestIdFromQuery());
 
@@ -98,6 +102,9 @@ namespace Raven.Server.Web.Studio
                 return;
             }
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                LogAuditFor("Server", "UPDATE", $"License");
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -126,6 +133,9 @@ namespace Raven.Server.Web.Studio
                 return;
             }
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                LogAuditFor("Server", "RENEW", $"License");
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
