@@ -9,6 +9,7 @@ using Raven.Client.Properties;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
 
@@ -27,6 +28,9 @@ namespace Raven.Server.Web.System
             if (string.IsNullOrWhiteSpace(path))
                 path = Path.GetTempPath();
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                LogAuditFor("Server", "CREATE",  $"{typeAsString} Memory Dump");
+            
             using (var process = Process.GetCurrentProcess())
             {
                 var fileNames = GetFileNames(".dmp");
@@ -54,6 +58,9 @@ namespace Raven.Server.Web.System
             if (string.IsNullOrWhiteSpace(path))
                 path = Path.GetTempPath();
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                LogAuditFor("Server", "CREATE",  "GC Memory Dump");
+            
             using (var process = Process.GetCurrentProcess())
             {
                 var fileNames = GetFileNames(".gcdump");
