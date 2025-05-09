@@ -7,10 +7,12 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -137,6 +139,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
 
             var result = _databasesLandlord.TryGetOrCreateDatabase(databaseName);
+            var nodeTag = result.DatabaseTask.Result.ServerStore.NodeTag;
 
             if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Missing)
             {
@@ -193,6 +196,8 @@ namespace Raven.Server.Integrations.PostgreSQL
                     try
                     {
                         await message.Init(transaction.MessageReader, reader, _token);
+                        if (TrafficWatchManager.HasRegisteredClients && message is Query queryMessage)
+                            DispatchPostgresQueryMessageToTrafficWatch(queryMessage, nodeTag);
                         await message.Handle(transaction, messageBuilder, reader, writer, _token);
                     }
                     catch (PgErrorException e)
@@ -272,6 +277,23 @@ namespace Raven.Server.Integrations.PostgreSQL
                 details += $" - Username: {userName}";
 
             return details;
+        }
+        
+        private void DispatchPostgresQueryMessageToTrafficWatch(Query message, string nodeTag)
+        {
+            var clientIp = _client.Client.LocalEndPoint?.ToString();
+            string databaseName = _clientOptions.GetValueOrDefault("database", "N/A");
+
+            var twn = new TrafficWatchPostgresChange()
+            {
+                TimeStamp = DateTime.UtcNow,
+                DatabaseName = databaseName,  
+                CertificateThumbprint = _serverCertificateHolder.Certificate?.Thumbprint,
+                CustomInfo = message.QueryString,
+                ClientIP = clientIp,
+                Source = nodeTag,
+            };
+            TrafficWatchManager.DispatchMessage(twn);
         }
     }
 }

@@ -405,7 +405,8 @@ namespace Raven.Client.Documents.Changes
     public enum TrafficWatchType
     {
         Http,
-        Tcp
+        Tcp,
+        Postgres
     }
 
     internal sealed class TrafficWatchHttpChange : TrafficWatchChangeBase
@@ -458,6 +459,19 @@ namespace Raven.Client.Documents.Changes
             return json;
         }
     }
+    
+    internal sealed class TrafficWatchPostgresChange : TrafficWatchChangeBase
+    {
+        public override TrafficWatchType TrafficWatchType => TrafficWatchType.Postgres;
+        public string Source { get; set; }
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Source)] = Source;
+            return json;
+        }
+    }
+    
 
     public enum TrafficWatchChangeType
     {
