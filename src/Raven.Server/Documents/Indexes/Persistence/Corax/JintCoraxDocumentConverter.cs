@@ -292,8 +292,18 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     var embeddingGeneratorName = nameofEmbeddingsGeneratorJsv.AsString();
                     var path = pathOfEmbeddingJsv.AsString();
                     
-                    // todo pass id
                     object objectForIndexing = AbstractStaticIndexBase.LoadVectorJs(field.Name, path, embeddingGeneratorName, out var indexField);
+                    
+                    if (objectForIndexing is CoraxDynamicItem dynamicItem)
+                        indexField = dynamicItem.Field;
+
+                    // Means we're in dictionary training phase
+                    else if (indexField is null)
+                    {
+                        shouldProcessAsBlittable = false;
+                        return;
+                    }
+                    
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
                     shouldProcessAsBlittable = false;
                     return;
