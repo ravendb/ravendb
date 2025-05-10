@@ -130,7 +130,7 @@ namespace Voron.Impl
         {
             get
             {
-                return new Size(_allocator._totalAllocated + TotalEncryptionBufferInBytes, SizeUnit.Bytes);
+                return new Size(DecompressedBufferBytes + TotalEncryptionBufferInBytes, SizeUnit.Bytes);
             }
         }
 

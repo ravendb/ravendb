@@ -28,8 +28,8 @@ $outputDir = $env:OUTPUT_DIR
 
 Write-Host "Build DEB of RavenDB $ravenVersion for distro $distName $distVer $distVerName $env:DEB_ARCHITECTURE"
 
-if ($env:DEB_ARCHITECTURE -eq "amd64") {
-    $DOCKER_FILE = "./ubuntu_amd64.Dockerfile"
+if ([string]::IsNullOrEmpty($env:QEMU_ARCH)) {
+    $DOCKER_FILE = "./ubuntu_native.Dockerfile"
 } else {
     $DOCKER_FILE = "./ubuntu_multiarch.Dockerfile"
 }
