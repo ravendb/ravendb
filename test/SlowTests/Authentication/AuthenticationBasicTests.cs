@@ -79,7 +79,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CanGetDocWithValidPermission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -107,7 +107,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CanGetAttachmentWithValidPermission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -135,7 +135,7 @@ namespace SlowTests.Authentication
         {
             var version = httpVersion != null ? new Version(httpVersion) : null;
 
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -164,7 +164,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CanReachOperatorEndpointWithOperatorPermission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
@@ -184,7 +184,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotReachOperatorEndpointWithoutOperatorPermission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -210,7 +210,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CanReachDatabaseAdminEndpointWithDatabaseAdminPermission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -243,7 +243,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotReachDatabaseAdminEndpointWithoutDatabaseAdminPermission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -275,7 +275,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CanOnlyGetRelevantDbsAccordingToPermissions()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var dbName1 = GetDatabaseName();
             var dbName2 = GetDatabaseName();
@@ -317,7 +317,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotGetDocWithoutCertificate()
         {
-            SetupServerAuthentication();
+            SetupServerAuthentication(Certificates);
 
             Assert.Throws<AuthorizationException>(() =>
             {
@@ -329,7 +329,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotGetDocWithInvalidPermission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var otherDbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
@@ -357,7 +357,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotContactServerWhenNotUsingHttps()
         {
-            var certificates = SetupServerAuthentication(serverUrl: $"http://{Environment.MachineName}:0");
+            var certificates = SetupServerAuthentication(Certificates, serverUrl: $"http://{Environment.MachineName}:0");
             Assert.Throws<InvalidOperationException>(() =>
             {
                 Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
@@ -367,7 +367,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotGetCertificateWithInvalidDbNamePermission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var e = Assert.Throws<RavenException>(() =>
             {
@@ -383,7 +383,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotGetDocWithExpiredCertificate()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = CreateAndPutExpiredClientCertificate(certificates.ServerCertificatePath, new Dictionary<string, DatabaseAccess>
@@ -445,7 +445,7 @@ namespace SlowTests.Authentication
         {
             const string certificateName = "Client&Certificate 2";
 
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "ClientCertificate1");
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
@@ -493,7 +493,7 @@ namespace SlowTests.Authentication
         {
             const string certificateName = "ClientCertificate2";
 
-            var certificatesHolder = SetupServerAuthentication();
+            var certificatesHolder = SetupServerAuthentication(Certificates);
             var certificates = new[]
             {
                 (Name: certificateName, Certificate: certificatesHolder.ClientCertificate1.Value),
@@ -548,7 +548,7 @@ namespace SlowTests.Authentication
         {
             const string certificateName = "ClientCertificate";
 
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var serverCert = certificates.ServerCertificate.Value;
             var permissions = new Dictionary<string, DatabaseAccess>();
 
@@ -593,7 +593,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CanGetDocWith_Read_Permission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -639,7 +639,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotPutDocWith_Read_Permission_MultiGet()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -684,7 +684,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotPutDocWith_Read_Permission()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication(Certificates);
             var dbName = GetDatabaseName();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -704,607 +704,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public void Routes_Conventions()
-        {
-            foreach (var route in RouteScanner.AllRoutes.Values)
-            {
-                if (IsDatabaseRoute(route))
-                {
-                    AssertDatabaseRoute(route);
-                    return;
-                }
-
-                AssertServerRoute(route);
-            }
-
-            static bool IsDatabaseRoute(RouteInformation route)
-            {
-                return route.Path.Contains("/databases/*/", StringComparison.OrdinalIgnoreCase);
-            }
-
-            static void AssertDatabaseRoute(RouteInformation route)
-            {
-                if (string.Equals(route.Method, "OPTIONS", StringComparison.OrdinalIgnoreCase) == false) // artificially added routes for CORS
-                    Assert.True(RouteInformation.RouteType.Databases == route.TypeOfRoute, $"{route.Method} {route.Path} - {route.AuthorizationStatus}");
-
-                Assert.True(route.AuthorizationStatus == AuthorizationStatus.ValidUser
-                    || route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin, $"{route.Method} {route.Path} - {route.AuthorizationStatus}");
-            }
-
-            static void AssertServerRoute(RouteInformation route)
-            {
-                Assert.True(route.AuthorizationStatus == AuthorizationStatus.ValidUser
-                    || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin
-                    || route.AuthorizationStatus == AuthorizationStatus.Operator
-                    || route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess
-                    || route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients, $"{route.Method} {route.Path} - {route.AuthorizationStatus}");
-            }
-        }
-
-        [Fact]
-        public void Routes_Database_Read()
-        {
-            var certificates = SetupServerAuthentication();
-            var databaseName1 = GetDatabaseName();
-            var databaseName2 = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
-            {
-                [databaseName1] = DatabaseAccess.Read
-            });
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => databaseName1
-            }))
-            {
-                using (var adminStore = new DocumentStore
-                {
-                    Urls = new[] { Server.WebUrl },
-                    Database = databaseName2,
-                    Certificate = adminCert
-                }.Initialize())
-                {
-                    adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
-                }
-
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
-                using (var httpClientHandler = new HttpClientHandler())
-                {
-                    httpClientHandler.ClientCertificates.Add(userCert);
-                    httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-
-                    var httpClient = new HttpClient(httpClientHandler);
-                    httpClient.BaseAddress = new Uri(Server.WebUrl);
-
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-                        if (route.EndpointType == EndpointType.Write)
-                            canAccess = false;
-                        else
-                        {
-                            canAccess = route.AuthorizationStatus == AuthorizationStatus.ValidUser
-                            || route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients
-                            || route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess;
-                        }
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-                        if (route.EndpointType == EndpointType.Write)
-                            canAccess = false;
-                        else
-                        {
-                            canAccess = route.AuthorizationStatus == AuthorizationStatus.ValidUser;
-                        }
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = false;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-                }
-            }
-        }
-
-        [Fact]
-        public void Routes_Database_ReadWrite()
-        {
-            var certificates = SetupServerAuthentication();
-            var databaseName1 = GetDatabaseName();
-            var databaseName2 = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
-            {
-                [databaseName1] = DatabaseAccess.ReadWrite
-            });
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => databaseName1
-            }))
-            {
-                using (var adminStore = new DocumentStore
-                {
-                    Urls = new[] { Server.WebUrl },
-                    Database = databaseName2,
-                    Certificate = adminCert
-                }.Initialize())
-                {
-                    adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
-                }
-
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
-                using (var httpClientHandler = new HttpClientHandler())
-                {
-                    httpClientHandler.ClientCertificates.Add(userCert);
-                    httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-
-                    var httpClient = new HttpClient(httpClientHandler);
-                    httpClient.BaseAddress = new Uri(Server.WebUrl);
-
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-                        if (route.EndpointType == EndpointType.Write)
-                            canAccess = false;
-                        else
-                        {
-                            canAccess = route.AuthorizationStatus == AuthorizationStatus.ValidUser
-                            || route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients
-                            || route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess;
-                        }
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = route.AuthorizationStatus == AuthorizationStatus.ValidUser;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = false;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-                }
-            }
-        }
-
-        [Fact]
-        public void Routes_Database_Admin()
-        {
-            var certificates = SetupServerAuthentication();
-            var databaseName1 = GetDatabaseName();
-            var databaseName2 = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
-            {
-                [databaseName1] = DatabaseAccess.Admin
-            });
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => databaseName1
-            }))
-            {
-                using (var adminStore = new DocumentStore
-                {
-                    Urls = new[] { Server.WebUrl },
-                    Database = databaseName2,
-                    Certificate = adminCert
-                }.Initialize())
-                {
-                    adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
-                }
-
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
-                using (var httpClientHandler = new HttpClientHandler())
-                {
-                    httpClientHandler.ClientCertificates.Add(userCert);
-                    httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-
-                    var httpClient = new HttpClient(httpClientHandler);
-                    httpClient.BaseAddress = new Uri(Server.WebUrl);
-
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-                        if (route.EndpointType == EndpointType.Write)
-                            canAccess = false;
-                        else
-                        {
-                            canAccess = route.AuthorizationStatus == AuthorizationStatus.ValidUser
-                            || route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients
-                            || route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess;
-                        }
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = false;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-                }
-            }
-        }
-
-        [NightlyBuildMultiplatformFact(RavenArchitecture.AllX64)]
-        public void Routes_Operator()
-        {
-            var certificates = SetupServerAuthentication();
-            var databaseName1 = GetDatabaseName();
-            var databaseName2 = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => databaseName1
-            }))
-            {
-                using (var adminStore = new DocumentStore
-                {
-                    Urls = new[] { Server.WebUrl },
-                    Database = databaseName2,
-                    Certificate = adminCert
-                }.Initialize())
-                {
-                    adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
-                }
-
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
-                using (var httpClientHandler = new HttpClientHandler())
-                {
-                    httpClientHandler.ClientCertificates.Add(userCert);
-                    httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-
-                    var httpClient = new HttpClient(httpClientHandler);
-                    httpClient.BaseAddress = new Uri(Server.WebUrl);
-
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = route.AuthorizationStatus == AuthorizationStatus.Operator
-                            || route.AuthorizationStatus == AuthorizationStatus.ValidUser
-                            || route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients
-                            || route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-                }
-            }
-        }
-
-        [NightlyBuildMultiplatformFact(RavenArchitecture.AllX64)]
-        public void Routes_ClusterAdmin()
-        {
-            var certificates = SetupServerAuthentication();
-            var databaseName1 = GetDatabaseName();
-            var databaseName2 = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = userCert,
-                ModifyDatabaseName = s => databaseName1
-            }))
-            {
-                using (var adminStore = new DocumentStore
-                {
-                    Urls = new[] { Server.WebUrl },
-                    Database = databaseName2,
-                    Certificate = adminCert
-                }.Initialize())
-                {
-                    adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
-                }
-
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
-                using (var httpClientHandler = new HttpClientHandler())
-                {
-                    httpClientHandler.ClientCertificates.Add(userCert);
-                    httpClientHandler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-
-                    var httpClient = new HttpClient(httpClientHandler);
-                    httpClient.BaseAddress = new Uri(Server.WebUrl);
-
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
-                    {
-                        var canAccess = true;
-
-                        var accessGiven = statusCode != HttpStatusCode.Forbidden;
-
-                        if (canAccess != accessGiven)
-                        {
-                            throw new InvalidOperationException($"Wrong access on route '{route.Method} {route.Path}'. Should be '{canAccess}' but was '{accessGiven}'.");
-                        }
-                    });
-                }
-            }
-        }
-
-        private TestCertificatesHolder SetupServerAuthentication(Dictionary<string, string> customSettings = null, string serverUrl = null)
+        internal static TestCertificatesHolder SetupServerAuthentication(CertificatesTestBase certificatesBase, Dictionary<string, string> customSettings = null, string serverUrl = null, TestCertificatesHolder certificates = null)
         {
             customSettings ??= new Dictionary<string, string>();
 
@@ -1312,71 +712,7 @@ namespace SlowTests.Authentication
             customSettings[RavenConfiguration.GetKey(x => x.Licensing.CanForceUpdate)] = "false";
             customSettings[RavenConfiguration.GetKey(x => x.Licensing.CanRenew)] = "false";
 
-            return Certificates.SetupServerAuthentication(customSettings, serverUrl);
-        }
-
-        private static void AssertServerRoutes(IEnumerable<RouteInformation> routes, HashSet<(string Method, string Path)> endpointsToIgnore, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
-        {
-            foreach (var route in routes)
-            {
-                if (route.TypeOfRoute != RouteInformation.RouteType.None)
-                    continue;
-
-                if (route.Method == "OPTIONS")
-                    continue; // artificially added routes for CORS
-
-                if (endpointsToIgnore.Contains((route.Method, route.Path)))
-                    continue;
-
-                var requestUri = new Uri(route.Path, UriKind.Relative);
-                HttpResponseMessage response;
-                try
-                {
-                    response = httpClient.Send(new HttpRequestMessage
-                    {
-                        Method = new HttpMethod(route.Method),
-                        RequestUri = requestUri
-                    });
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException($"Could not get response from {route.Method} '{requestUri}'.", e);
-                }
-
-                assert(route, response.StatusCode);
-            }
-        }
-
-        private static void AssertDatabaseRoutes(IEnumerable<RouteInformation> routes, HashSet<(string Method, string Path)> endpointsToIgnore, string databaseName, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
-        {
-            foreach (var route in routes)
-            {
-                if (route.TypeOfRoute != RouteInformation.RouteType.Databases)
-                    continue;
-
-                if (route.Method == "OPTIONS")
-                    continue; // artificially added routes for CORS
-
-                if (endpointsToIgnore.Contains((route.Method, route.Path)))
-                    continue;
-
-                var requestUri = new Uri(route.Path.Replace("/databases/*/", $"/databases/{databaseName}/", StringComparison.OrdinalIgnoreCase), UriKind.Relative);
-                HttpResponseMessage response;
-                try
-                {
-                    response = httpClient.Send(new HttpRequestMessage
-                    {
-                        Method = new HttpMethod(route.Method),
-                        RequestUri = requestUri
-                    });
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException($"Could not get response from {route.Method} '{requestUri}'.", e);
-                }
-
-                assert(route, response.StatusCode);
-            }
+            return certificatesBase.SetupServerAuthentication(customSettings, serverUrl, certificates);
         }
 
         private static void StoreSampleDoc(DocumentStore store, string docName)
