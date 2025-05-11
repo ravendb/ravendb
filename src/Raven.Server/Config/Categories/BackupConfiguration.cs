@@ -41,6 +41,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.MaxNumberOfConcurrentBackups", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaxNumberOfConcurrentBackups { get; set; }
 
+        [Description("Maximum number of Read operations per second allowed during backup. This setting is used to limit the impact of backup operations on the database performance.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Backup.MaxReadOpsPerSecond", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int? MaxReadOpsPerSecond { get; set; }
+
         [Description("Number of seconds to delay the backup after hitting the maximum number of concurrent backups limit")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]

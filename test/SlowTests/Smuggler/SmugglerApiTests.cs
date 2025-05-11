@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -2197,6 +2198,112 @@ namespace SlowTests.Smuggler
             finally
             {
                 File.Delete(file);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldRespect_Option_MaxReadOpsPerSec_OnExport(Options options)
+        {
+            const int documentsToCreate = 150;
+            const int maxReadOpsPerSecToTest = 10;
+            const int expectedMinimumExportDurationInSeconds = (documentsToCreate - maxReadOpsPerSecToTest) / maxReadOpsPerSecToTest;
+
+            var file = GetTempFileName();
+
+            using (var store = GetDocumentStore(options))
+            {
+                // We want to store all documents in the same shard to get clear understanding the number of documents per shard to do clear measurements
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "InitialDocument" }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 1; i < documentsToCreate - 1; i++)
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = $"Name{i}" }, $"{nameof(User)}s/{i}$foo/bar");
+                        await session.SaveChangesAsync();
+                    }
+
+                var exportOptions = new DatabaseSmugglerExportOptions();
+
+                var sw = Stopwatch.StartNew();
+                var operation = await store.Smuggler.ExportAsync(exportOptions, file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                var exportDurationDefaultOptions = sw.Elapsed;
+                File.Delete(file);
+
+                exportOptions.MaxReadOpsPerSecond = maxReadOpsPerSecToTest;
+
+                sw.Restart();
+                operation = await store.Smuggler.ExportAsync(exportOptions, file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                var exportDurationWithMaxReadOps = sw.Elapsed;
+
+                Assert.True(exportDurationWithMaxReadOps > exportDurationDefaultOptions,
+                    $"Export with {nameof(exportOptions.MaxReadOpsPerSecond)} with value '{maxReadOpsPerSecToTest}' should take more time than default export, " +
+                    $"but it took '{exportDurationWithMaxReadOps}' seconds, while with default value took '{exportDurationDefaultOptions}' seconds");
+                Assert.True(exportDurationDefaultOptions.TotalSeconds < expectedMinimumExportDurationInSeconds,
+                    $"Export with default options should take less than '{expectedMinimumExportDurationInSeconds}' seconds, but it took " +
+                    $"'{exportDurationDefaultOptions}' seconds despite {nameof(exportOptions.MaxReadOpsPerSecond)} was not set");
+                Assert.True(exportDurationWithMaxReadOps.TotalSeconds > expectedMinimumExportDurationInSeconds,
+                    $"Export with {nameof(exportOptions.MaxReadOpsPerSecond)} with value '{maxReadOpsPerSecToTest}' should take more than " +
+                    $"'{expectedMinimumExportDurationInSeconds}' seconds, but it took '{exportDurationWithMaxReadOps}' seconds");
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldRespect_Option_MaxReadOpsPerSec_OnImport(Options dstOptions)
+        {
+            const int documentsToCreate = 150;
+            const int maxReadOpsPerSecToTest = 10;
+            const int expectedMinimumImportDurationInSeconds = (documentsToCreate - maxReadOpsPerSecToTest) / maxReadOpsPerSecToTest;
+
+            var file = GetTempFileName();
+
+            using (var srcStore = GetDocumentStore())
+            using (var destStoreForDefaultValue = GetDocumentStore(dstOptions))
+            using (var destStoreForMaxReadOpsPerSec = GetDocumentStore(dstOptions))
+            {
+                using (var session = srcStore.OpenAsyncSession())
+                {
+                    for (int i = 0; i < documentsToCreate; i++)
+                        await session.StoreAsync(new User { Name = $"Name{i}" });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var exportOptions = new DatabaseSmugglerExportOptions();
+
+                var operation = await srcStore.Smuggler.ExportAsync(exportOptions, file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var importOptions = new DatabaseSmugglerImportOptions();
+
+                var sw = Stopwatch.StartNew();
+                operation = await destStoreForDefaultValue.Smuggler.ImportAsync(importOptions, file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                var importDurationDefaultOptions = sw.Elapsed;
+
+                importOptions.MaxReadOpsPerSecond = maxReadOpsPerSecToTest;
+
+                sw.Restart();
+                operation = await destStoreForMaxReadOpsPerSec.Smuggler.ImportAsync(importOptions, file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                var importDurationWithMaxReadOps = sw.Elapsed;
+
+                Assert.True(importDurationWithMaxReadOps > importDurationDefaultOptions,
+                    $"Import with {nameof(importOptions.MaxReadOpsPerSecond)} with value '{maxReadOpsPerSecToTest}' should take more time than default import, " +
+                    $"but it took '{importDurationWithMaxReadOps}' seconds, while with default value took '{importDurationDefaultOptions}' seconds");
+                Assert.True(importDurationDefaultOptions.TotalSeconds < expectedMinimumImportDurationInSeconds,
+                    $"Import with default options should take less than '{expectedMinimumImportDurationInSeconds}' seconds, but it took " +
+                    $"'{importDurationDefaultOptions}' seconds despite {nameof(importOptions.MaxReadOpsPerSecond)} was not set");
+                Assert.True(importDurationWithMaxReadOps.TotalSeconds > expectedMinimumImportDurationInSeconds,
+                    $"Import with {nameof(importOptions.MaxReadOpsPerSecond)} with value '{maxReadOpsPerSecToTest}' should take more than " +
+                    $"'{expectedMinimumImportDurationInSeconds}' seconds, but it took '{importDurationWithMaxReadOps}' seconds");
             }
         }
 

@@ -17,7 +17,8 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions.Database;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server;
@@ -374,6 +375,19 @@ public partial class RavenTestBase
             WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
 
             return result.TaskId;
+        }
+
+        public async Task<long> UpdateServerWideConfigAsync(RavenServer server, ServerWideBackupConfiguration config, DocumentStore store)
+        {
+            await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(config));
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var backup = record.PeriodicBackups.First();
+            var backupTaskId = backup.TaskId;
+
+            WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backupTaskId);
+
+            return backupTaskId;
         }
 
         public void WaitForResponsibleNodeUpdate(ServerStore serverStore, string databaseName, long taskId, string differentThan = null)

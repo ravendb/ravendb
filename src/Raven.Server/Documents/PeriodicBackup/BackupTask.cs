@@ -577,7 +577,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
                         {
                             IncludeArtificial = true, // we want to include artificial in backup
-                            IncludeArchived = true // wa want also to include archived documents in backup
+                            IncludeArchived = true, // we want also to include archived documents in the backup
+                            MaxReadOpsPerSecond = Configuration.MaxReadOpsPerSecond ?? Database.Configuration.Backup.MaxReadOpsPerSecond,
                         };
 
                         options.OperateOnTypes |= DatabaseItemType.Tombstones;
@@ -619,12 +620,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var compressionAlgorithm = Configuration.SnapshotSettings?.CompressionAlgorithm ?? Database.Configuration.Backup.SnapshotCompressionAlgorithm;
                         var compressionLevel = Configuration.SnapshotSettings?.CompressionLevel ?? Database.Configuration.Backup.SnapshotCompressionLevel;
                         var excludeIndexes = Configuration.SnapshotSettings?.ExcludeIndexes ?? false;
+                        var maxReadOpsPerSecond = Configuration.MaxReadOpsPerSecond ?? Database.Configuration.Backup.MaxReadOpsPerSecond;
 
                         using (var stream = GetStreamForBackupDestination(tempBackupFilePath, folderName, fileName))
                         {
                             try
                             {
-                                var smugglerResult = Database.FullBackupTo(stream, compressionAlgorithm, compressionLevel, excludeIndexes,
+                                var smugglerResult = Database.FullBackupTo(stream, compressionAlgorithm, compressionLevel, excludeIndexes, maxReadOpsPerSecond,
                                     info =>
                                     {
                                         AddInfo(info.Message);

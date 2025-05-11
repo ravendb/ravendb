@@ -31,6 +31,11 @@ namespace Raven.Client.Documents.Operations.Backups
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
 
         /// <summary>
+        /// The maximum number of read operations per second allowed during backup.
+        /// </summary>
+        public int? MaxReadOpsPerSecond { get; set; }
+
+        /// <summary>
         /// Settings for local storage backup.
         /// </summary>
         public LocalSettings LocalSettings { get; set; }
@@ -147,6 +152,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(BackupUploadMode)] = BackupUploadMode,
                 [nameof(SnapshotSettings)] = SnapshotSettings?.ToJson(),
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToJson(),
+                [nameof(MaxReadOpsPerSecond)] = MaxReadOpsPerSecond,
                 [nameof(LocalSettings)] = LocalSettings?.ToJson(),
                 [nameof(S3Settings)] = S3Settings?.ToJson(),
                 [nameof(GlacierSettings)] = GlacierSettings?.ToJson(),
@@ -162,13 +168,13 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(BackupType)] = BackupType,
                 [nameof(SnapshotSettings)] = SnapshotSettings?.ToAuditJson(),
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToAuditJson(),
+                [nameof(MaxReadOpsPerSecond)] = MaxReadOpsPerSecond,
                 [nameof(LocalSettings)] = LocalSettings?.ToAuditJson(),
                 [nameof(S3Settings)] = S3Settings?.ToAuditJson(),
                 [nameof(GlacierSettings)] = GlacierSettings?.ToAuditJson(),
                 [nameof(AzureSettings)] = AzureSettings?.ToAuditJson(),
                 [nameof(GoogleCloudSettings)] = GoogleCloudSettings?.ToAuditJson(),
                 [nameof(FtpSettings)] = FtpSettings?.ToAuditJson()
-
             };
         }
 

@@ -1472,8 +1472,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public SmugglerResult FullBackupTo(Stream stream, SnapshotBackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel = CompressionLevel.Optimal,
-            bool excludeIndexes = false, Action<(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
+        public SmugglerResult FullBackupTo(Stream stream,
+            SnapshotBackupCompressionAlgorithm compressionAlgorithm,
+            CompressionLevel compressionLevel = CompressionLevel.Optimal,
+            bool excludeIndexes = false,
+            int? maxReadOpsPerSecond = null,
+            Action<(string Message, int FilesCount)> infoNotify = null,
+            CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
 
@@ -1500,7 +1505,8 @@ namespace Raven.Server.Documents
                             var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, compressionAlgorithm.ToExportCompressionAlgorithm(), compressionLevel);
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
                             {
-                                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
+                                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities,
+                                MaxReadOpsPerSecond = maxReadOpsPerSecond
                             };
 
                             var smuggler = Smuggler.Create(
@@ -1572,7 +1578,7 @@ namespace Raven.Server.Documents
 
                 infoNotify?.Invoke(("Backed up database values", 1));
 
-                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), zipArchive, compressionAlgorithm, compressionLevel, infoNotify: infoNotify, cancellationToken: cancellationToken);
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), zipArchive, compressionAlgorithm, compressionLevel, maxReadOpsPerSecond, infoNotify, cancellationToken);
             }
 
             return smugglerResult;

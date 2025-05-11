@@ -1,5 +1,5 @@
 ﻿using Sparrow.Json;
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Smuggler
@@ -94,6 +94,8 @@ namespace Raven.Client.Documents.Smuggler
 
         public List<string> Collections { get; set; }
 
+        public int? MaxReadOpsPerSecond { get; set; }
+
         /// <summary>
         /// In case the database is corrupted (for example, Compression Dictionaries are lost), it is possible to export all the remaining data.
         /// If '<c>true</c>', the process will continue in the presence of corrupted data, with an entry of error data into the export result report.
@@ -116,7 +118,8 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(TransformScript)] = TransformScript,
                 [nameof(MaxStepsForTransformScript)] = MaxStepsForTransformScript,
                 [nameof(Collections)] = Collections,
-                [nameof(SkipCorruptedData)] = SkipCorruptedData
+                [nameof(SkipCorruptedData)] = SkipCorruptedData,
+                [nameof(MaxReadOpsPerSecond)] = MaxReadOpsPerSecond
             };
     }
 
@@ -131,6 +134,7 @@ namespace Raven.Client.Documents.Smuggler
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }
         List<string> Collections { get; set; }
+        int? MaxReadOpsPerSecond { get; set; }
         DynamicJsonValue ToAuditJson();
     }
 

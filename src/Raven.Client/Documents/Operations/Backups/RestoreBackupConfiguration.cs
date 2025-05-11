@@ -24,6 +24,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
 
+        public int? MaxReadOpsPerSecond { get; set; }
+
         protected RestoreBackupConfigurationBase(RestoreBackupConfigurationBase other)
         {
             if (other == null)
@@ -35,6 +37,7 @@ namespace Raven.Client.Documents.Operations.Backups
             EncryptionKey = other.EncryptionKey;
             DisableOngoingTasks = other.DisableOngoingTasks;
             SkipIndexes = other.SkipIndexes;
+            MaxReadOpsPerSecond = other.MaxReadOpsPerSecond;
             if (other.ShardRestoreSettings != null)
                 ShardRestoreSettings = new ShardedRestoreSettings(other.ShardRestoreSettings);
             if (other.BackupEncryptionSettings != null)
@@ -59,7 +62,8 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(SkipIndexes)] = SkipIndexes,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
                 [nameof(Type)] = Type,
-                [nameof(ShardRestoreSettings)] = ShardRestoreSettings?.ToJson()
+                [nameof(ShardRestoreSettings)] = ShardRestoreSettings?.ToJson(),
+                [nameof(MaxReadOpsPerSecond)] = MaxReadOpsPerSecond
             };
         }
 
@@ -72,7 +76,8 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(DisableOngoingTasks)] = DisableOngoingTasks,
                 [nameof(SkipIndexes)] = SkipIndexes,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
-                [nameof(Type)] = Type
+                [nameof(Type)] = Type,
+                [nameof(MaxReadOpsPerSecond)] = MaxReadOpsPerSecond
             };
     }
 

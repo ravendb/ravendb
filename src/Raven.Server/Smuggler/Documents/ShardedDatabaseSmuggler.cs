@@ -205,6 +205,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.CompareExchange.ReadCount++;
                     if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
@@ -248,6 +252,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var kvp in _source.GetCompareExchangeTombstonesAsync())
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.CompareExchangeTombstones.ReadCount++;
 
                     if (kvp.Equals(default))

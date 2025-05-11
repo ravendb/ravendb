@@ -98,7 +98,8 @@ namespace Raven.Server.Smuggler.Documents.Data
                 OperateOnTypes = OperateOnTypes,
                 RemoveAnalyzers = RemoveAnalyzers,
                 TransformScript = TransformScript,
-                IsShard = IsShard
+                IsShard = IsShard,
+                MaxReadOpsPerSecond = MaxReadOpsPerSecond
             };
         }
         

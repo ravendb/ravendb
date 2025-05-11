@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task RestoreAsync()
         {
-            await RestoreFromSmugglerFileAsync(Progress, Database, _firstFile, Context);
+            await RestoreFromSmugglerFileAsync(Progress, Database, _firstFile, Context, RestoreConfiguration.MaxReadOpsPerSecond);
             await HandleSubscriptionFromSnapshot(FilesToRestore, RestoreSettings.Subscriptions, DatabaseName, Database);
             await SmugglerRestoreAsync(Database, Context, Database.Smuggler.CreateDestinationForSnapshotRestore(RestoreSettings.Subscriptions));
 
@@ -266,6 +266,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         restoreResult.SnapshotRestore.ReadCount++;
                         onProgress.Invoke(restoreResult.Progress);
                     },
+                    RestoreConfiguration.MaxReadOpsPerSecond,
                     cancellationToken: OperationCancelToken.Token);
             }
 
@@ -275,14 +276,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return restoreSettings;
         }
 
-        private async Task RestoreFromSmugglerFileAsync(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, JsonOperationContext context)
+        private async Task RestoreFromSmugglerFileAsync(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, JsonOperationContext context, int? maxReadOpsPerSecond)
         {
             var destination = database.Smuggler.CreateDestination();
 
             var smugglerOptions = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
             {
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
-                SkipRevisionCreation = true
+                SkipRevisionCreation = true,
+                MaxReadOpsPerSecond = maxReadOpsPerSecond,
             };
 
             Result.Files.CurrentFileName = smugglerFile; 

@@ -22,6 +22,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
+using Voron.Util.RateLimiting;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Smuggler.Documents
@@ -41,6 +42,7 @@ namespace Raven.Server.Smuggler.Documents
         public BackupKind BackupKind = BackupKind.None;
         internal readonly ISmugglerDestination _destination;
         private SmugglerPatcher _patcher;
+        internal RateGate _rateGate;
 
         protected SmugglerBase(
             [NotNull] string databaseName,
@@ -78,6 +80,7 @@ namespace Raven.Server.Smuggler.Documents
                 _patcher = CreatePatcher();
 
             var result = _result ?? new SmugglerResult();
+            using (_rateGate = _options.MaxReadOpsPerSecond.HasValue ? new RateGate(_options.MaxReadOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             using (var initializeResult = await _source.InitializeAsync(_options, result))
             using (_patcher?.Initialize())
             await using (await _destination.InitializeAsync(_options, result, _onProgress, initializeResult.BuildNumber))
@@ -409,6 +412,9 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _token.ThrowIfCancellationRequested();
 
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     var isPreV4Revision = DatabaseSmuggler.IsPreV4Revision(buildType, item.Document.Id, item.Document);
                     if (isPreV4Revision)
                     {
@@ -475,13 +481,13 @@ namespace Raven.Server.Smuggler.Documents
                             continue;
                         }
                     }
-                    
+
                     if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
                     {
                         SkipDocument(item, result.Documents);
                         continue;
                     }
-                    
+
                     if (_options.IncludeArchived == false && item.Document.Flags.HasFlag(DocumentFlags.Archived))
                     {
                         SkipDocument(item, result.Documents);
@@ -541,6 +547,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var item in _source.GetRevisionDocumentsAsync(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.RevisionDocuments.ReadCount++;
 
                     if (item.Document != null)
@@ -602,6 +612,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var tombstone in _source.GetTombstonesAsync(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.Tombstones.ReadCount++;
 
                     if (result.Tombstones.ReadCount % 1000 == 0)
@@ -672,6 +686,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var conflict in _source.GetConflictsAsync(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.Conflicts.ReadCount++;
 
                     if (result.Conflicts.ReadCount % 1000 == 0)
@@ -704,6 +722,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var index in _source.GetIndexesAsync())
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.Indexes.ReadCount++;
 
                     if (index == null)
@@ -814,6 +836,9 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _token.ThrowIfCancellationRequested();
 
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.Documents.ReadCount++;
                     result.Documents.Attachments.ReadCount++;
                     if (result.Documents.Attachments.ReadCount % 1000 == 0)
@@ -896,6 +921,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var counterGroup in _source.GetCounterValuesAsync(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.Counters.ReadCount++;
 
                     if (result.Counters.ReadCount % 1000 == 0)
@@ -938,6 +967,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var ts in _source.GetTimeSeriesAsync(actions, _options.Collections))
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;
                     result.TimeSeries.SizeInBytes += ts.Segment.NumberOfBytes;
 
@@ -977,6 +1010,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var deletedRange in _source.GetTimeSeriesDeletedRangesAsync(actions, _options.Collections))
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.TimeSeriesDeletedRanges.ReadCount++;
 
                     if (result.TimeSeriesDeletedRanges.ReadCount % 1000 == 0)
@@ -1008,6 +1045,9 @@ namespace Raven.Server.Smuggler.Documents
                 var databaseRecord = await _source.GetDatabaseRecordAsync();
 
                 _token.ThrowIfCancellationRequested();
+
+                if (_rateGate != null)
+                    await _rateGate.WaitToProceedAsync();
 
                 if (OnDatabaseRecordAction != null)
                 {
@@ -1050,6 +1090,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var identity in _source.GetIdentitiesAsync())
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.Identities.ReadCount++;
 
                     if (identity.Equals(default))
@@ -1090,6 +1134,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var subscription in _source.GetSubscriptionsAsync())
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.Subscriptions.ReadCount++;
 
                     if (result.Subscriptions.ReadCount % 1000 == 0)
@@ -1111,6 +1159,10 @@ namespace Raven.Server.Smuggler.Documents
                 await foreach (var (hub, access) in _source.GetReplicationHubCertificatesAsync())
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    if (_rateGate != null)
+                        await _rateGate.WaitToProceedAsync();
+
                     result.ReplicationHubCertificates.ReadCount++;
 
                     if (result.ReplicationHubCertificates.ReadCount % 1000 == 0)

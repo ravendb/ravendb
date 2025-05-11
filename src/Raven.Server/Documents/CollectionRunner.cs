@@ -6,8 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Util.RateLimiting;
-using Raven.Server.Commercial;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Patch;
@@ -17,6 +15,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Voron.Util.RateLimiting;
 using Constants = Raven.Client.Constants;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 

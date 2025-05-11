@@ -76,6 +76,10 @@ namespace Raven.Server.Smuggler.Documents
             ICompareExchangeActions actions)
         {
             _token.ThrowIfCancellationRequested();
+
+            if (_rateGate != null)
+                await _rateGate.WaitToProceedAsync();
+
             result.CompareExchange.ReadCount++;
             if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
                 AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
@@ -101,6 +105,10 @@ namespace Raven.Server.Smuggler.Documents
         protected virtual async Task InternalProcessCompareExchangeTombstonesAsync(SmugglerResult result, (CompareExchangeKey Key, long Index) key, ICompareExchangeActions actions)
         {
             _token.ThrowIfCancellationRequested();
+
+            if (_rateGate != null)
+                await _rateGate.WaitToProceedAsync();
+
             result.CompareExchangeTombstones.ReadCount++;
 
             if (key.Equals(default))
