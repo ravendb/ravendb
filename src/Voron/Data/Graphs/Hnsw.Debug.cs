@@ -52,35 +52,39 @@ public unsafe partial class Hnsw
     public static long[] GetEntries(LowLevelTransaction llt,long postingListId)
     {
         long rawPostingListId = postingListId & Constants.Graphs.VectorId.ContainerType;
+        long[] result;
         switch (postingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
         {
             case Constants.Graphs.VectorId.Tombstone:
-                return [];
+                result= [];
+                break;
             case Constants.Graphs.VectorId.Single:
-                return [rawPostingListId];
+                result = [rawPostingListId];
+                break;
             case Constants.Graphs.VectorId.SmallPostingList:
             {
                 var list = new ContextBoundNativeList<long>(llt.Allocator);
                 FastPForDecoder decoder = new();
                 SearchState.ReadPostingList(llt, rawPostingListId, ref list, ref decoder, out var size);
-                list.Count = size;
-                long[] array = list.ToSpan().ToArray();
+                result = list.ToSpan().ToArray();
                 list.Dispose();
-                return array;
+                break;
             }
             case Constants.Graphs.VectorId.PostingList:
             {
                 var setStateSpan = Container.GetReadOnly(llt, rawPostingListId);
                 ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                 var postingList = new PostingList(llt, Slices.Empty, setState);
-                var result = new long[(int)Math.Min(postingList.State.NumberOfEntries, 16)];
+                result = new long[(int)Math.Min(postingList.State.NumberOfEntries, 16)];
                 var it = postingList.Iterate();
-                it.Fill(result, out var count);
-                return result;
+                it.Fill(result, out _);
+                break;
             }
+            default:
+                throw new NotSupportedException($"Got unknown {nameof(postingListId)} type: {postingListId}");
         }
-
-        throw new NotSupportedException($"Got unknown {nameof(postingListId)} type: {postingListId}");
+        Registration.InternalEntryIdToEntryId(result);
+        return result;
     }
     
     private static long GetEntryId(LowLevelTransaction llt,long postingListId)
