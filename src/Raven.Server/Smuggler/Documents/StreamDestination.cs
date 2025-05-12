@@ -1339,7 +1339,33 @@ namespace Raven.Server.Smuggler.Documents
                             Writer.WriteComma();
                         First = false;
 
-                        Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
+                        try
+                        {
+                            Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
+                        }
+                        catch (Exception e)
+                        {
+                            var msg = $"document.Etag {document.Etag}, document.Flags '{document.Flags}', ";
+                            List<Func<string>> actions = [
+                                () => $"document.Id '{document.Id}', ", 
+                                () => $"document.LowerId '{document.LowerId}', ", 
+                                () => $"\ndocument.Data '{document.Data}'", 
+                            ];
+                            foreach (var action in actions)
+                            {
+                                try
+                                {
+                                    msg += action();
+                                }
+                                catch
+                                {
+                                    // ignored
+                                }
+                            }
+
+                            throw new InvalidOperationException($"Error writing document {msg}", e);
+                        }
+
 
                         await Writer.MaybeFlushAsync();
                     }
