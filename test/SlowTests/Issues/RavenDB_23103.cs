@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
@@ -721,8 +722,19 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
             }))
             {
-                var index = new Companies_ByName();
-                index.Execute(store);
+                var indexDef = new Companies_ByName();
+                indexDef.Execute(store);
+                string indexName;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Query<Company>()
+                        .Statistics(out var stats)
+                        .Where(x => x.Name == "___")
+                        .ToList();
+
+                    indexName = stats.IndexName;
+                }
 
                 using (var bulk = store.BulkInsert())
                 {
@@ -732,13 +744,15 @@ namespace SlowTests.Issues
                     }
                 }
 
+                var database = Databases.GetDocumentDatabaseInstanceFor(store).Result;
+                database.IndexStore.GetIndex(indexName).ForTestingPurposesOnly().CallDuringFinallyOfExecuteIndexing(() => Thread.Sleep(1));
                 Indexes.WaitForIndexing(store);
 
                 var iq = new IndexQuery { Query = $"from companies as c where c != null update {{ c.Name = 'Name2' }}" };
 
                 var waitForIndexingAfterPatchOptions = new IndexPatchOptions()
                 {
-                    WaitForIndexesTimeout = TimeSpan.FromMicroseconds(1)
+                    WaitForIndexesTimeout = TimeSpan.FromMilliseconds(1)
                 };
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(iq,
@@ -749,7 +763,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
-                    Assert.NotEqual(NumberOfCompanies, count);
+                     Assert.NotEqual(NumberOfCompanies, count);
                 }
             }
         }
