@@ -1360,7 +1360,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
         }
 
-        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
+        internal static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
         {
             if (s3Settings == null)
                 return;
