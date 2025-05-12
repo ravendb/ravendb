@@ -196,12 +196,14 @@ namespace Raven.Server.Integrations.PostgreSQL
                     try
                     {
                         await message.Init(transaction.MessageReader, reader, _token);
+                        await message.Handle(transaction, messageBuilder, reader, writer, _token);
                         if (TrafficWatchManager.HasRegisteredClients && message is Query queryMessage)
                             DispatchPostgresQueryMessageToTrafficWatch(queryMessage, nodeTag);
-                        await message.Handle(transaction, messageBuilder, reader, writer, _token);
                     }
                     catch (PgErrorException e)
                     {
+                        if (TrafficWatchManager.HasRegisteredClients && message is Query queryMessage)
+                            DispatchPostgresQueryMessageToTrafficWatch(queryMessage, nodeTag, e);
                         await message.HandleError(e, transaction, messageBuilder, writer, _token);
                     }
                 }
@@ -279,19 +281,22 @@ namespace Raven.Server.Integrations.PostgreSQL
             return details;
         }
         
-        private void DispatchPostgresQueryMessageToTrafficWatch(Query message, string nodeTag)
+        private void DispatchPostgresQueryMessageToTrafficWatch(Query message, string nodeTag, PgErrorException e = null)
         {
             var clientIp = _client.Client.LocalEndPoint?.ToString();
             string databaseName = _clientOptions.GetValueOrDefault("database", "N/A");
+            string username = _clientOptions.GetValueOrDefault("username", "N/A");
 
             var twn = new TrafficWatchPostgresChange()
             {
                 TimeStamp = DateTime.UtcNow,
                 DatabaseName = databaseName,  
-                CertificateThumbprint = _serverCertificateHolder.Certificate?.Thumbprint,
-                CustomInfo = message.QueryString,
+                CertificateThumbprint = null,
+                CustomInfo = e is null ? null : $"{e.ErrorCode} - {e.Message}",
                 ClientIP = clientIp,
                 Source = nodeTag,
+                Username = username,
+                Query = message.QueryString
             };
             TrafficWatchManager.DispatchMessage(twn);
         }

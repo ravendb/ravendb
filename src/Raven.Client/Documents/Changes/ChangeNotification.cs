@@ -464,10 +464,14 @@ namespace Raven.Client.Documents.Changes
     {
         public override TrafficWatchType TrafficWatchType => TrafficWatchType.Postgres;
         public string Source { get; set; }
+        public string Username { get; set; }
+        public string Query { get; set; }
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Source)] = Source;
+            json[nameof(Username)] = Username;
+            json[nameof(Query)] = Query;
             return json;
         }
     }
