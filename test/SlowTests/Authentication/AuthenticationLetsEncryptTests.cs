@@ -39,6 +39,7 @@ using Raven.Client.Exceptions;
 using System.Runtime.CompilerServices;
 using Raven.Client.Json;
 using Raven.Client.Util;
+using System.Threading;
 
 namespace SlowTests.Authentication
 {
@@ -398,81 +399,87 @@ namespace SlowTests.Authentication
         [RavenRetryFact(RavenTestCategory.Certificates | RavenTestCategory.Sharding, delayBetweenRetriesMs: 1000)]
         public async Task CertificateReplaceSharded()
         {
-            var acmeStagingUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
-            RemoveAcmeCache(acmeStagingUrl);
-
-            DebuggerAttachedTimeout.DisableLongTimespan = true;
-            var clusterSize = 3;
-            var (leader, nodes, serverCert) = await CreateLetsEncryptCluster(clusterSize, acmeStagingUrl);
-            Assert.Equal(serverCert.Thumbprint, nodes[0].Certificate.Certificate.Thumbprint);
-            var databaseName = GetDatabaseName();
-
-            var options = Sharding.GetOptionsForCluster(leader, clusterSize, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
-            options.ClientCertificate = serverCert;
-            options.AdminCertificate = serverCert;
-            options.ModifyDatabaseName = _ => databaseName;
-            options.RunInMemory = false;
-            options.DeleteDatabaseOnDispose = false;
-            options.ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false;
-
-            X509Certificate2 newCert;
-
-            using (var store = Sharding.GetDocumentStore(options))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(300)))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                foreach (var topology in record.Sharding.Shards.Values)
+                var acmeStagingUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
+                RemoveAcmeCache(acmeStagingUrl);
+
+                DebuggerAttachedTimeout.DisableLongTimespan = true;
+                var clusterSize = 3;
+                var (leader, nodes, serverCert) = await CreateLetsEncryptCluster(clusterSize, acmeStagingUrl);
+                Assert.Equal(serverCert.Thumbprint, nodes[0].Certificate.Certificate.Thumbprint);
+                var databaseName = GetDatabaseName();
+
+                var options = Sharding.GetOptionsForCluster(leader, clusterSize, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
+                options.ClientCertificate = serverCert;
+                options.AdminCertificate = serverCert;
+                options.ModifyDatabaseName = _ => databaseName;
+                options.RunInMemory = false;
+                options.DeleteDatabaseOnDispose = false;
+                options.ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false;
+
+                X509Certificate2 newCert;
+
+                using (var store = Sharding.GetDocumentStore(options))
                 {
-                    Assert.Equal(1, topology.Members.Count);
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName), cts.Token);
+                    foreach (var topology in record.Sharding.Shards.Values)
+                    {
+                        Assert.Equal(1, topology.Members.Count);
+                    }
+
+                    var requestExecutor = store.GetRequestExecutor(databaseName);
+
+                    var replaceTasks = new Dictionary<string, AsyncManualResetEvent>();
+                    foreach (var node in nodes)
+                    {
+                        replaceTasks.Add(node.ServerStore.NodeTag, new AsyncManualResetEvent(cts.Token));
+                    }
+
+                    foreach (var server in nodes)
+                    {
+                        server.ServerCertificateChanged += (sender, args) => replaceTasks[server.ServerStore.NodeTag].Set();
+                    }
+
+                    //trigger cert refresh
+                    await requestExecutor.HttpClient.SendAsync(
+                        new HttpRequestMessage(HttpMethod.Post, $"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew").WithConventions(store.Conventions), cts.Token);
+
+                    var result = await Task.WhenAll(replaceTasks.Values.Select(x => x.WaitAsync(cts.Token)).ToArray());
+
+                    foreach (var res in result)
+                    {
+                        Assert.True(res, "Refresh task didn't complete. Waited too long for the cluster cert to be replaced");
+                    }
+
+                    //make sure all cluster nodes have the new server cert
+                    foreach (var node in nodes)
+                    {
+                        Assert.NotEqual(serverCert.Thumbprint, node.Certificate.Certificate.Thumbprint);
+                    }
+
+                    newCert = nodes[0].Certificate.Certificate;
                 }
 
-                var requestExecutor = store.GetRequestExecutor(databaseName);
-
-                var replaceTasks = new Dictionary<string, AsyncManualResetEvent>();
-                foreach (var node in nodes)
+                using (var store = new DocumentStore()
                 {
-                    replaceTasks.Add(node.ServerStore.NodeTag, new AsyncManualResetEvent());
-                }
-
-                foreach (var server in nodes)
+                    Certificate = newCert,
+                    Database = databaseName,
+                    Urls = new string[] { leader.WebUrl },
+                    Conventions = { DisposeCertificate = false }
+                }.Initialize())
                 {
-                    server.ServerCertificateChanged += (sender, args) => replaceTasks[server.ServerStore.NodeTag].Set();
-                }
+                    //try a request that will not use shard executors
+                    await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName), cts.Token);
 
-                //trigger cert refresh
-                await requestExecutor.HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew").WithConventions(store.Conventions));
+                    //try a request that will use shard executors
+                    await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation(), cts.Token);
 
-                await Task.WhenAll(replaceTasks.Values.Select(x => x.WaitAsync()).ToArray());
-
-                //make sure all cluster nodes have the new server cert
-                foreach (var node in nodes)
-                {
-                    Assert.NotEqual(serverCert.Thumbprint, node.Certificate.Certificate.Thumbprint);
-                }
-
-                newCert = nodes[0].Certificate.Certificate;
-            }
-
-            using (var store = new DocumentStore()
-            {
-                Certificate = newCert,
-                Database = databaseName,
-                Urls = new string[] { leader.WebUrl },
-                Conventions =
-                {
-                    DisposeCertificate = false
-                }
-            }.Initialize())
-            {
-                //try a request that will not use shard executors
-                await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-
-                //try a request that will use shard executors
-                await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User(), "users/1");
-                    await session.SaveChangesAsync();
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User(), "users/1", cts.Token);
+                        await session.SaveChangesAsync(cts.Token);
+                    }
                 }
             }
         }
