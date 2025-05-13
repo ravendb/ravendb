@@ -99,12 +99,15 @@ public unsafe partial class Pager
                     {
                         pager32BitsState.MemoryMapping.TryRemove(addr.StartPage, out set);
                     }
-                    
+
                     NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
-                    var rc = Pal.rvn_unmap_memory(txState.Handle, (void*)addr.Address, addr.Size, out var errorCode);
-                    if (rc != PalFlags.FailCodes.Success)
+                    if (addr.State.Disposed is false) // we may closed the entire file during rollback
                     {
-                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to unmap memory in 32 bits mode for {pager.FileName}");
+                        var rc = Pal.rvn_unmap_memory(txState.Handle, (void*)addr.Address, addr.Size, out var errorCode);
+                        if (rc != PalFlags.FailCodes.Success)
+                        {
+                            PalHelper.ThrowLastError(rc, errorCode, $"Failed to unmap memory in 32 bits mode for {pager.FileName}");
+                        }
                     }
                 }
             }
@@ -168,7 +171,7 @@ public unsafe partial class Pager
             try
             {
                 var addresses = pager._32BitsState.MemoryMapping.GetOrAdd(startPage,
-                    _ => new ConcurrentSet<MappedAddresses>());
+                    static _ => []);
 
                 foreach (var addr in addresses)
                 {
@@ -203,7 +206,7 @@ public unsafe partial class Pager
                 }
 
                 NativeMemory.RegisterFileMapping(pager.FileName, new IntPtr(result), size, null);
-                var mappedAddresses = new MappedAddresses(pager.FileName, (IntPtr)result, startPage, size);
+                var mappedAddresses = new MappedAddresses(pager.FileName, state, (IntPtr)result, startPage, size);
                 addresses.Add(mappedAddresses);
                 return AddMappingToTransaction(pagerTxState, startPage, size, mappedAddresses);
             }

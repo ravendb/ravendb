@@ -16,12 +16,13 @@ public partial class Pager
         public long TotalLoadedSize;
     }
 
-    public sealed class MappedAddresses(string file, IntPtr address, long startPage, long size)
+    public sealed class MappedAddresses(string file, Pager.State state, IntPtr address, long startPage, long size)
     {
-        public string File = file;
-        public IntPtr Address = address;
-        public long StartPage = startPage;
-        public long Size = size;
+        public readonly Pager.State State = state;
+        public readonly string File = file;
+        public readonly IntPtr Address = address;
+        public readonly long StartPage = startPage;
+        public readonly long Size = size;
         public int Usages = 1;
     }
 
