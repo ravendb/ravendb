@@ -274,20 +274,12 @@ namespace Raven.Server
                 var webHostBuilder = new WebHostBuilder()
                     .UseNLog(new NLogAspNetCoreOptions
                     {
-                        //RegisterServiceProvider = false,
-                        //IncludeScopes = false,
-                        //CaptureMessageProperties = false,
-                        //CaptureMessageTemplates = false,
-                        //CaptureEventId = EventIdCaptureType.None,
-                        //IgnoreEmptyEventId = true,
-                        //RegisterHttpContextAccessor = false,
-                        //AutoShutdown = false,
-                        //IncludeActivityIdsWithBeginScope = false,
-                        //ParseMessageTemplates = false,
-                        //RemoveLoggerFactoryFilter = false,
-                        //ReplaceLoggerFactory = false,
-                        //ShutdownOnDispose = false
+                        IncludeScopes = false,
+                        CaptureMessageTemplates = false,
+                        RegisterHttpContextAccessor = false,
+                        IncludeActivityIdsWithBeginScope = false,
                     })
+
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrls)
