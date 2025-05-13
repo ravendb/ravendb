@@ -330,7 +330,7 @@ public class RavenDB_22076 : RavenTestBase
                 var indexErrors = Indexes.WaitForIndexingErrors(store);
 
                 Assert.Equal(1, indexErrors.Length);
-                Assert.Contains("Field Binary contains embeddings with different number of dimensions.", indexErrors[0].Errors[0].Error);
+                Assert.Contains("Field Binary contains embeddings with different number of dimensions than currently processed embedding.", indexErrors[0].Errors[0].Error);
             }
         }
     }

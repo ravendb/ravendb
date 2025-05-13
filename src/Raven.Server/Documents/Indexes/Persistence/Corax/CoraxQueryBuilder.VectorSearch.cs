@@ -330,9 +330,21 @@ public static partial class CoraxQueryBuilder
 
             // Quantized dynamic field indicates that the task generated embeddings with different quantization than requested in the index
             // In this case we want to use quantization defined in dynamic field (which was set in CurrentIndexingScope.GetLoadVectorField)
-            var destinationEmbeddingType = builderParameters.Metadata.IsDynamic 
-                ? (sourceEmbeddingType is not VectorEmbeddingType.Single ? sourceEmbeddingType : vectorOptions!.DestinationEmbeddingType)
-                : (vectorOptions?.DestinationEmbeddingType ?? sourceEmbeddingType);
+            VectorEmbeddingType destinationEmbeddingType;
+            if (builderParameters.Metadata.IsDynamic)
+            {
+                if (sourceEmbeddingType is not VectorEmbeddingType.Single)
+                    destinationEmbeddingType = sourceEmbeddingType;
+                else
+                    destinationEmbeddingType = vectorOptions!.DestinationEmbeddingType;
+            }
+            else
+            {
+                if (vectorOptions?.DestinationEmbeddingType is not null)
+                    destinationEmbeddingType = vectorOptions!.DestinationEmbeddingType;
+                else
+                    destinationEmbeddingType = sourceEmbeddingType;
+            }
             
             ReadOnlyMemory<ReadOnlyMemory<byte>> embeddingValues;
 

@@ -293,13 +293,14 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     var path = pathOfEmbeddingJsv.AsString();
                     
                     object objectForIndexing = AbstractStaticIndexBase.LoadVectorJs(field.Name, path, embeddingGeneratorName, out var indexField);
-                    
-                    if (objectForIndexing is CoraxDynamicItem dynamicItem)
-                        indexField = dynamicItem.Field;
 
-                    // Means we're in dictionary training phase
+                    if (objectForIndexing is CoraxDynamicItem dynamicItem)
+                    {
+                        indexField = dynamicItem.Field;
+                    }
                     else if (indexField is null)
                     {
+                        // Means we're in dictionary training phase
                         shouldProcessAsBlittable = false;
                         return;
                     }

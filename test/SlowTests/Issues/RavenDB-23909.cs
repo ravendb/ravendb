@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_23909(ITestOutputHelper output) : GenerateEmbeddingsTests(output)
+public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
@@ -141,6 +141,11 @@ public class RavenDB_23909(ITestOutputHelper output) : GenerateEmbeddingsTests(o
                 Assert.Single(result);
             }
         }
+    }
+
+    private class Dto
+    {
+        public string Name { get; set; }
     }
 
     private class DummyIndex : AbstractIndexCreationTask<Dto, DummyIndex.IndexEntry>

@@ -489,8 +489,14 @@ namespace Raven.Server.Documents.Indexes.Static
                     AutoIndexField autoField = mapField as AutoIndexField;
                     var destinationTargetEmbeddingType = autoField!.Vector.DestinationEmbeddingType;
                     
-                    // The task produced quantized embeddings, but auto index field has F32 set (default value)
-                    // This means the same quantization as in task should be used
+                    // The embeddings generation task used by this index field produced quantized (I8 or I1) embeddings, but field settings assume no quantization
+                    // (F32 - default value), which was set because query syntax isn't aware of embeddings generation task settings.
+                    //
+                    // This means we have to set the correct source quantization type for currently processed auto index field (equal to destination quantization type
+                    // of embeddings generation task used by this field).
+                    //
+                    // We can't handle this when creating index fields based on query syntax (in dynamic query matcher & runner), it would require us to read database
+                    // record every time we do the query. Instead, we have to rewrite it here by creating a dynamic field with updated quantization type.
                     if (vectorEmbeddingTypeInDocument is not VectorEmbeddingType.Single && destinationTargetEmbeddingType is VectorEmbeddingType.Single)
                         destinationTargetEmbeddingType = vectorEmbeddingTypeInDocument;
                     
