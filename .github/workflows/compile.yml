@@ -19,6 +19,10 @@ jobs:
           git clean -xfd
           dotnet restore
 
+      - name: Build Client
+        run: |
+          dotnet build ./src/Raven.Client/Raven.Client.csproj /p:GenerateDocumentationFile=true
+          
       - name: Build Server
         run: |
           dotnet build
