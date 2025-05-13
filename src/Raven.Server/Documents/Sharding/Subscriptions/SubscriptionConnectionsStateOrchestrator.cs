@@ -167,9 +167,9 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
             catch (Exception ex)
             {
                 // connection is disposed
-                if (connection._logger.IsInfoEnabled)
+                if (connection._logger.IsDebugEnabled)
                 {
-                    connection._logger.Info("Got exception while disposing sharded subscription workers", ex);
+                    connection._logger.Debug("Got exception while disposing sharded subscription workers", ex);
                 }
             }
         }

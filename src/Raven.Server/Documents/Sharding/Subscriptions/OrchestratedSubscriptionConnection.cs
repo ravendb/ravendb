@@ -54,8 +54,8 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Finished processing sharded subscription."));
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Finished processing sharded subscription '{SubscriptionId}' / from client '{ClientUri}'.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Finished processing sharded subscription '{SubscriptionId}' / from client '{ClientUri}'.");
         }
 
         protected override StatusMessageDetails GetStatusMessageDetails()

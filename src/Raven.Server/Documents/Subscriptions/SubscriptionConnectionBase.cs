@@ -148,9 +148,9 @@ namespace Raven.Server.Documents.Subscriptions
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to process subscription"));
-            if (_logger.IsInfoEnabled)
+            if (_logger.IsDebugEnabled)
             {
-                _logger.Info($"Starting processing documents for subscription {SubscriptionId} received from {ClientUri}");
+                _logger.Debug($"Starting processing documents for subscription {SubscriptionId} received from {ClientUri}");
             }
 
             using (Processor = CreateProcessor(this))
@@ -258,9 +258,9 @@ namespace Raven.Server.Documents.Subscriptions
             }
             else
             {
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
-                    _logger.Info($"Expected to get '{SubscriptionConnectionClientMessage.MessageType.DisposedNotification}' from client, but there was no reply.");
+                    _logger.Debug($"Expected to get '{SubscriptionConnectionClientMessage.MessageType.DisposedNotification}' from client, but there was no reply.");
                 }
             }
 
@@ -269,8 +269,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected async Task LogBatchStatusAndUpdateStatsAsync(Stopwatch sendingCurrentBatchStopwatch, string logMessage)
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info(logMessage);
+            if (_logger.IsDebugEnabled)
+                _logger.Debug(logMessage);
 
             Stats.UpdateBatchPerformanceStats(0, false);
 
@@ -755,9 +755,9 @@ namespace Raven.Server.Documents.Subscriptions
                             }
 
                             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Redirecting subscription client to different server"));
-                            if (_logger.IsInfoEnabled)
+                            if (_logger.IsDebugEnabled)
                             {
-                                _logger.Info("Subscription does not belong to current node", ex);
+                                _logger.Debug("Subscription does not belong to current node", ex);
                             }
 
                             await WriteJsonAsync(new DynamicJsonValue
@@ -782,9 +782,9 @@ namespace Raven.Server.Documents.Subscriptions
                         {
                             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
                                 $"Subscription change vector update concurrency error, reporting to '{ClientUri}'"));
-                            if (_logger.IsInfoEnabled)
+                            if (_logger.IsDebugEnabled)
                             {
-                                _logger.Info("Subscription change vector update concurrency error", ex);
+                                _logger.Debug("Subscription change vector update concurrency error", ex);
                             }
 
                             await WriteJsonAsync(new DynamicJsonValue
@@ -1066,8 +1066,8 @@ namespace Raven.Server.Documents.Subscriptions
         {
             token.ThrowIfCancellationRequested();
 
-            if (logger is { IsInfoEnabled: true })
-                logger.Info($"Flushing {flushedDocs} documents for subscription {subscriptionId} sending to {tcpConnection.TcpClient.Client.RemoteEndPoint} {(endOfBatch ? ", ending batch" : string.Empty)}");
+            if (logger is { IsDebugEnabled: true })
+                logger.Debug($"Flushing {flushedDocs} documents for subscription {subscriptionId} sending to {tcpConnection.TcpClient.Client.RemoteEndPoint} {(endOfBatch ? ", ending batch" : string.Empty)}");
 
             await writer.FlushAsync(token);
             var bufferSize = buffer.Length;

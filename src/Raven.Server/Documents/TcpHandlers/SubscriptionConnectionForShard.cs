@@ -122,9 +122,9 @@ public sealed class SubscriptionConnectionForShard : SubscriptionConnection
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
                 $"Skipped '{_processor.Skipped.Count}' docs after apply '{nameof(RecordBatchSubscriptionDocumentsCommand)}' command."));
 
-            if (_logger.IsInfoEnabled)
+            if (_logger.IsDebugEnabled)
             {
-                _logger.Info($"Skipped '{_processor.Skipped.Count}' docs after apply '{nameof(RecordBatchSubscriptionDocumentsCommand)}' command. Skipped docs:{Environment.NewLine}{string.Join(",", _processor.Skipped)}");
+                _logger.Debug($"Skipped '{_processor.Skipped.Count}' docs after apply '{nameof(RecordBatchSubscriptionDocumentsCommand)}' command. Skipped docs:{Environment.NewLine}{string.Join(",", _processor.Skipped)}");
             }
         }
 

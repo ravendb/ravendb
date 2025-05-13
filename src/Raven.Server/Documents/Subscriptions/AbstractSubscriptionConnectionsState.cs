@@ -258,9 +258,9 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
             }
             catch (TimeoutException)
             {
-                if (connection._logger.IsInfoEnabled)
+                if (connection._logger.IsDebugEnabled)
                 {
-                    connection._logger.Info(
+                    connection._logger.Debug(
                         $"A connection from IP {connection.ClientUri} is starting to wait until previous connection from " +
                         $"{GetConnectionsAsString()} is released");
                 }
