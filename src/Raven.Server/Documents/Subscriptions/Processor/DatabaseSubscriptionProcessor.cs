@@ -88,8 +88,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 return batchItem;
             }
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info(reason, batchItem.Exception);
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Subscription '{Connection.Options.SubscriptionName}' skipped a document, the reason is: {reason}", batchItem.Exception);
 
             if (batchItem.Status  == SubscriptionBatchItemStatus.Exception)
             {
