@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.15</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.16</RuntimeFrameworkVersion>
     <AssemblyName>TypingsGenerator</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>TypingsGenerator</PackageId>
