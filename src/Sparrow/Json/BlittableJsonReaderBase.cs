@@ -288,7 +288,7 @@ namespace Sparrow.Json
             return -1;
         }
 
-        [Conditional("DEBUG")]
+        //[Conditional("DEBUG")]
         protected void AssertContextNotDisposed()
         {
             if (_context?.Disposed ?? false)
