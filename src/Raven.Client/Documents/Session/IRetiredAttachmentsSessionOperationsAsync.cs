@@ -65,14 +65,5 @@ namespace Raven.Client.Documents.Session
         /// <param name="name">The name of the retired attachment.</param>
         /// <param name="storageOnly">Indicates if the deletion is only from storage.</param>
         Task DeleteAsync(object entity, string name, bool storageOnly);
-
-        /* TODO: egor in the end open ticket to implement those in the future, if needed
-        Task RenameAsync(object entity, string name, string newName);
-        Task RenameAsync(string documentId, string name, string newName);
-        Task CopyAsync(object sourceEntity, string sourceName, object destinationEntity, string destinationName);
-        Task CopyAsync(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName);
-        Task MoveAsync(object sourceEntity, string sourceName, object destinationEntity, string destinationName);
-        Task MoveAsync(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName);
-        */
     }
 }

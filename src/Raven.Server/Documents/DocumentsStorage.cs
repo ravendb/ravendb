@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Mono.Unix.Native;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
@@ -133,7 +132,6 @@ namespace Raven.Server.Documents
             CompressedDocsSchema = Schemas.Documents.CompressedDocsSchemaBase;
 
             AttachmentsSchema = Schemas.Attachments.AttachmentsSchemaBase;
-            //RetiredAttachmentsSchema = Schemas.Attachments.RetiredAttachmentsSchemaBase;
             ConflictsSchema = Schemas.Conflicts.ConflictsSchemaBase;
             CountersSchema = Schemas.Counters.CountersSchemaBase;
             CounterTombstonesSchema = Schemas.CounterTombstones.CounterTombstonesSchemaBase;
@@ -1112,7 +1110,7 @@ namespace Raven.Server.Documents
 
         public Document Get(DocumentsOperationContext context, LazyStringValue id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
-            if (string.IsNullOrWhiteSpace(id))
+            if (id == null)
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));

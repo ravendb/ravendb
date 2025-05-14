@@ -13,6 +13,7 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
     {
         private readonly IEnumerable<AttachmentRequest> _attachments;
         private readonly bool _storageOnly;
+
         public DeleteRetiredAttachmentsOperation(IEnumerable<AttachmentRequest> attachments, bool storageOnly = false)
         {
             _attachments = attachments;

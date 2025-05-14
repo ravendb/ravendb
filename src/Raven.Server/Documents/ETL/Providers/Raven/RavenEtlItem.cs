@@ -1,11 +1,7 @@
-﻿using System.Diagnostics;
-using Raven.Client.Documents.Operations.Counters;
+﻿using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Voron;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -24,8 +20,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             DocumentId = context.GetLazyString(attachment.Key.ToString());
 
-            //AttachmentTombstoneId = attachment.Key;
-            //IsAttachmentTombstone = true;
             Collection = "__undefined";
             Type = EtlItemType.Document;
             IsDelete = true;

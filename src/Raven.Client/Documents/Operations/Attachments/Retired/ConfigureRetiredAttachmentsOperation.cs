@@ -16,6 +16,9 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
 
         public ConfigureRetiredAttachmentsOperation(RetiredAttachmentsConfiguration configuration)
         {
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
             configuration.AssertConfiguration();
             _configuration = configuration;
         }

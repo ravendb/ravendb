@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
         private readonly string _name;
         private readonly string _changeVector;
         private readonly bool _storageOnly;
-
+        //TODO: egor delete this operation
         public DeleteRetiredAttachmentOperation(string documentId, string name, string changeVector = null, bool storageOnly = false)
         {
             _documentId = documentId;

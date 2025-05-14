@@ -17,8 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext context, BlittableJsonReaderArray attachments,
-            OperationCancelToken operationCancelToken)
+        protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext context, BlittableJsonReaderArray attachments, OperationCancelToken operationCancelToken)
         {
             var attachmentRequests = new List<AttachmentRequest>();
             using (context.OpenReadTransaction())

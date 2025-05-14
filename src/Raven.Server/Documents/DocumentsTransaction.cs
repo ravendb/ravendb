@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Amazon.Runtime.Internal.Transform;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Changes;

@@ -47,12 +47,14 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
+        //TODO: egor add DeleteAttachmentsOperation
         [RavenAction("/databases/*/attachments/bulk", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task DeleteAttachments()
         {
             using (var processor = new AttachmentHandlerProcessorForBulkDeleteAttachment(this))
                 await processor.ExecuteAsync();
         }
+
         [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetHashCount()
         {

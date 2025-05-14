@@ -52,14 +52,5 @@ namespace Raven.Client.Documents.Session
         /// <param name="name">the retired attachment name</param>
         /// <param name="storageOnly">indicates if the deletion is only from storage</param>
         void Delete(object entity, string name, bool storageOnly);
-
-        /* TODO: egor in the end open ticket to implement those in the future, if needed
-        void Rename(object entity, string name, string newName);
-        void Rename(string documentId, string name, string newName);
-        void Copy(object sourceEntity, string sourceName, object destinationEntity, string destinationName);
-        void Copy(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName);
-        void Move(object sourceEntity, string sourceName, object destinationEntity, string destinationName);
-        void Move(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName);
-        */
     }
 }

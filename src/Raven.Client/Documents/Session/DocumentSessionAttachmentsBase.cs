@@ -127,9 +127,9 @@ namespace Raven.Client.Documents.Session
     }
 
     /// <summary>
-        /// Abstract implementation for in memory session operations
-        /// </summary>
-        public abstract class DocumentSessionAttachmentsBase : DocumentSessionAttachmentsBaseOfTheBase
+    /// Abstract implementation for in memory session operations
+    /// </summary>
+    public abstract class DocumentSessionAttachmentsBase : DocumentSessionAttachmentsBaseOfTheBase
     {
         protected DocumentSessionAttachmentsBase(InMemoryDocumentSessionOperations session) : base(session)
         {
